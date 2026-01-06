@@ -462,7 +462,7 @@ docs/
 - **2026-01-06**: BEST_PRACTICES.md追加、Next.js 16、React 19、Prisma 7、Auth.js 5の最新ベストプラクティスを反映
 - **2026-01-06**: CACHING_STRATEGY.md追加、Next.js 16の最新キャッシングAPIに基づく詳細なキャッシング戦略を記載
 - **2026-01-06**: ARCHITECTURE.md更新、最新のキャッシングAPIとデータフェッチングパターンを反映
-- **2026-01-06**: PROJECT_STRUCTURE.md更新、最新のキャッシュ戦略を反映
+- **2026-01-06**: PROJECT_STRUCTURE.md更新、最新のキャッシング戦略を反映
 - **2026-01-06**: API.md更新、最新のServer Actionsパターンとキャッシュ無効化方法を追加
 - **2026-01-06**: DATABASE_DESIGN.md更新、Prisma 7の最新ベストプラクティス（トランザクション、並列フェッチング等）を追加
 - **2026-01-05**: REQUIREMENTS_GUIDE.md、REQUIREMENTS_TEMPLATE.md追加、要件定義のガイドラインとテンプレートを整備

@@ -22,8 +22,8 @@
 - Setup environment: `cp .env.example .env.local` (then edit `.env.local`)
 - Database migration: `bunx prisma migrate dev`
 - Start dev server: `bun run dev` (runs on `http://localhost:3000`)
- - **Note**: Next.js 16 uses Turbopack by default for both development and production builds
- - **Project policy**: This project uses Turbopack only. Webpack is not used.
+  - **Note**: Next.js 16 uses Turbopack by default for both development and production builds
+  - **Project policy**: This project uses Turbopack only. Webpack is not used.
 - Build: `bun run build`
 - Start production: `bun run start`
 - Lint: `bun run lint`
@@ -104,16 +104,16 @@
 ## PR instructions
 
 - Commit message format: Conventional Commits `<type>(<scope>): <subject>`
- - Types: `feat` (new feature), `fix` (bug fix), `docs` (documentation), `style` (formatting), `refactor`, `test`, `chore`
- - Examples: `feat(admin): add space management form`, `fix(reservation): correct time slot validation`
+  - Types: `feat` (new feature), `fix` (bug fix), `docs` (documentation), `style` (formatting), `refactor`, `test`, `chore`
+  - Examples: `feat(admin): add space management form`, `fix(reservation): correct time slot validation`
 - PR title: Follow commit message format
 - PR description: Include change summary, reason, and testing approach
 - Before committing: Quality checks run automatically via Git hooks (pre-commit)
 - Pre-review checklist:
- - [ ] `bun run lint` passes (automatically checked by pre-commit hook)
- - [ ] `bun run type-check` passes (automatically checked by pre-commit hook)
- - [ ] `bun run test` passes (automatically checked by pre-commit hook)
- - [ ] Related documentation updated
+  - [ ] `bun run lint` passes (automatically checked by pre-commit hook)
+  - [ ] `bun run type-check` passes (automatically checked by pre-commit hook)
+  - [ ] `bun run test` passes (automatically checked by pre-commit hook)
+  - [ ] Related documentation updated
 
 ---
 
@@ -178,8 +178,8 @@ A reservation and management system for rental spaces. Provides a highly designe
 ### Security considerations
 - **Critical**: React 19.0-19.2.0 and Next.js 15.x-16.0.6 have a critical security vulnerability (CVE-2025-55182)
 - **Required**: Upgrade to React 19.2.3 and Next.js 16.1.1 immediately (latest stable as of 2026-01-05)
- - This vulnerability allows unauthenticated remote code execution on the server
- - **Note**: Next.js 16.1.1 was released on 2025-12-22 and includes the security fix
+  - This vulnerability allows unauthenticated remote code execution on the server
+  - **Note**: Next.js 16.1.1 was released on 2025-12-22 and includes the security fix
 - Apply React Server Components security patches
 - Manage environment variables with Google Secret Manager (do not commit `.env.local` to Git)
 - Configure Supabase RLS policies appropriately
@@ -240,7 +240,7 @@ Key documents:
 ## Deployment
 
 - **Google Cloud Run**: Bun 1.3.5 runtime (via Docker container), multi-stage Dockerfile, Artifact Registry, Secret Manager
- - **Note**: Bun has Node.js compatibility, so Prisma works perfectly with Bun runtime
+  - **Note**: Bun has Node.js compatibility, so Prisma works perfectly with Bun runtime
 - **Supabase**: PostgreSQL database, Storage, Realtime, Edge Functions
 - **CI/CD**: GitHub Actions or Cloud Build, automatic Prisma migrations
 - **Environment variables**: `.env.local` (dev), Google Secret Manager (prod)
@@ -257,11 +257,11 @@ Key documents:
 - Validate all required environment variables on application startup
 - Never hardcode sensitive information in source code
 - **Required environment variables**:
- - `TURNSTILE_SITE_KEY`: Cloudflare Turnstile site key (public)
- - `TURNSTILE_SECRET_KEY`: Cloudflare Turnstile secret key (confidential)
- - `NEXT_PUBLIC_TURNSTILE_SITE_KEY`: Client-side site key (public)
- - See `.env.example` for all required variables
- - See [`docs/TURNSTILE_REQUIREMENTS.md`](docs/TURNSTILE_REQUIREMENTS.md) for Turnstile-specific environment variables
+  - `TURNSTILE_SITE_KEY`: Cloudflare Turnstile site key (public)
+  - `TURNSTILE_SECRET_KEY`: Cloudflare Turnstile secret key (confidential)
+  - `NEXT_PUBLIC_TURNSTILE_SITE_KEY`: Client-side site key (public)
+  - See `.env.example` for all required variables
+  - See [`docs/TURNSTILE_REQUIREMENTS.md`](docs/TURNSTILE_REQUIREMENTS.md) for Turnstile-specific environment variables
 
 ### Input validation
 - Validate all user inputs with Zod schemas (both client and server)
@@ -276,12 +276,12 @@ Key documents:
 - Protect API routes and Server Actions with authentication checks
 - Implement role-based access control (RBAC) in Middleware and Server Actions
 - **Bot protection**: Integrate Cloudflare Turnstile for form submissions (reservation, contact, login forms)
- - See [`docs/TURNSTILE_REQUIREMENTS.md`](docs/TURNSTILE_REQUIREMENTS.md) for detailed requirements
+  - See [`docs/TURNSTILE_REQUIREMENTS.md`](docs/TURNSTILE_REQUIREMENTS.md) for detailed requirements
 
 ### Security headers
 - Configure security headers in `next.config.js`
 - Implement Content Security Policy (CSP) with strict directives (avoid `unsafe-eval` and `unsafe-inline` when possible)
- - **Cloudflare Turnstile**: Add `https://challenges.cloudflare.com` to `script-src`, `frame-src`, and `connect-src` directives
+  - **Cloudflare Turnstile**: Add `https://challenges.cloudflare.com` to `script-src`, `frame-src`, and `connect-src` directives
 - Set `X-Frame-Options` to `DENY` (or `SAMEORIGIN` if iframes are needed)
 - Set `X-Content-Type-Options` to `nosniff`
 - Configure `Permissions-Policy` to disable unnecessary browser features
@@ -291,13 +291,13 @@ Key documents:
 
 ### Bot protection
 - **Cloudflare Turnstile**: Integrated for form submissions (reservation, contact, login forms)
- - Non-interactive CAPTCHA alternative (managed mode)
- - Server-side verification required
- - Integrated with rate limiting for multi-layer defense
- - See [`docs/TURNSTILE_REQUIREMENTS.md`](docs/TURNSTILE_REQUIREMENTS.md) for detailed requirements
+  - Non-interactive CAPTCHA alternative (managed mode)
+  - Server-side verification required
+  - Integrated with rate limiting for multi-layer defense
+  - See [`docs/TURNSTILE_REQUIREMENTS.md`](docs/TURNSTILE_REQUIREMENTS.md) for detailed requirements
 - **Cloudflare Bot Fight Mode**: Already enabled (free plan)
- - Works alongside Turnstile for comprehensive bot protection
- - See [`docs/CLOUDFLARE_CDN.md`](docs/CLOUDFLARE_CDN.md) for details
+  - Works alongside Turnstile for comprehensive bot protection
+  - See [`docs/CLOUDFLARE_CDN.md`](docs/CLOUDFLARE_CDN.md) for details
 
 ### Database security
 - Configure Supabase Row Level Security (RLS) policies
@@ -321,9 +321,9 @@ Key documents:
 ### Rendering strategies
 - Use Server Components by default (reduces client-side JavaScript)
 - Implement appropriate rendering strategies per page:
- - Static Site Generation (SSG) for static content
- - Server-Side Rendering (SSR) for dynamic content
- - Incremental Static Regeneration (ISR) for semi-static content
+  - Static Site Generation (SSG) for static content
+  - Server-Side Rendering (SSR) for dynamic content
+  - Incremental Static Regeneration (ISR) for semi-static content
 - Use `generateStaticParams` for dynamic routes when possible
 
 ### Caching strategy
