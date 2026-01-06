@@ -29,7 +29,19 @@
   - 主要機能へのナビゲーション（予約、詳細ページ、お問い合わせ）
 - **技術**:
   - Three.js/Pixi.jsによる3D/2Dビジュアル
+    - **Three.js**: `@react-three/fiber`（React Three Fiber）を使用してReactコンポーネントとして宣言的に実装
+      - `@react-three/drei`（ヘルパーライブラリ）を使用してよく使う3Dコンポーネントを効率的に実装
+    - **Pixi.js**: `@pixi/react`を使用してReactコンポーネントとして実装
+    - 動的インポート（`dynamic`）を使用してクライアントサイドのみでロード（SSR対策）
   - GSAP/Motionによるスムーズなアニメーション
+    - **GSAP**: React専用ラッパーは不要、Client Componentsで直接使用
+      - モジュラーインポート（必要なプラグインのみインポート）でバンドルサイズを最適化
+      - `useEffect`や`useLayoutEffect`でアニメーションを初期化
+      - 動的インポート（`dynamic`）を使用してクライアントサイドのみでロード（SSR対策）
+      - 集中化されたGSAP設定ファイルでプラグイン登録を管理
+    - **Motion**（旧Framer Motion）: React専用アニメーションライブラリ
+      - `motion`パッケージを使用（`framer-motion`から移行）
+      - Server Componentsとの統合を考慮した実装
   - レスポンシブデザイン
 
 ### ヘッダー & フッター（すべての公開ページ共通）
@@ -394,7 +406,7 @@
 
 | 機能 | 技術的難易度 | 実装可能性 | 備考 |
 |------|------------|----------|------|
-| ホームページ (`/`) | 中 | ✅ 可能 | Three.js/Pixi.js + GSAP/Motion統合 |
+| ホームページ (`/`) | 中 | ✅ 可能 | `@react-three/fiber`/`@react-three/drei`/`@pixi/react` + GSAP/Motion統合 |
 | 予約ページ (`/reservation`) | 中〜高 | ✅ 可能 | リアルタイム空き状況表示が必要 |
 | お問い合わせページ (`/contact`) | 低 | ✅ 可能 | 標準的なフォーム実装 |
 | スペース詳細ページ (`/spaces/[id]`) | 低〜中 | ✅ 可能 | ISRによるキャッシュ戦略 |
@@ -563,11 +575,25 @@
 
 1. Three.js/Pixi.js統合
    - ホームページへの統合
+     - `@react-three/fiber`または`@pixi/react`を使用してReactコンポーネントとして実装
+     - `@react-three/drei`を使用してよく使う3Dコンポーネントを効率的に実装（Three.js選択時）
+     - 動的インポート（`dynamic`）を使用してクライアントサイドのみでロード
    - パフォーマンス最適化
+     - バンドルサイズの最適化
+     - レンダリングパフォーマンスの最適化
 
 2. GSAP/Motionアニメーション
+   - GSAP統合
+     - Client Componentsでの実装（DOM操作が必要なため）
+     - モジュラーインポートによるバンドルサイズ最適化
+     - 動的インポート（`dynamic`）を使用してクライアントサイドのみでロード
+     - 集中化されたGSAP設定ファイルでプラグイン登録を管理
+   - Motion統合
+     - `motion`パッケージを使用（`framer-motion`から移行）
+     - Server Componentsとの統合を考慮した実装
    - ページ遷移アニメーション
    - インタラクティブ要素
+   - アクセシビリティ対応（`prefers-reduced-motion`の尊重）
 
 3. UI/UX改善
    - レスポンシブデザインの最適化
@@ -601,7 +627,7 @@
 | React/Next.js セキュリティ脆弱性（CVE-2025-55182） | **重大** | 高 | React 19.2.3、Next.js 16.1.1にアップグレード | ⚠️ **即座に対応必須** |
 | Prisma Edge Runtime非対応 | 高 | 低 | Node.js Runtime指定 | ✅ 対策済み |
 | Auth.js 5互換性問題 | 中 | 中 | バージョン固定、互換性確認 | ✅ 対策済み |
-| Three.js SSR問題 | 中 | 中 | 動的インポート | ✅ 対策済み |
+| Three.js/Pixi.js SSR問題 | 中 | 中 | `@react-three/fiber`/`@pixi/react` + 動的インポート | ✅ 対策済み |
 | Supabase接続問題 | 低 | 低 | 接続プーリング設定 | ✅ 対策済み |
 | パフォーマンス問題 | 中 | 中 | 最適化実装 | ⏭️ 実装時対応 |
 
@@ -618,7 +644,7 @@
 1. **技術的制約への対応**
    - PrismaはNode.js Runtimeを使用
    - Auth.js 5のバージョン管理
-   - Three.js/Pixi.jsのSSR対策
+   - Three.js/Pixi.jsのSSR対策（`@react-three/fiber`/`@pixi/react` + 動的インポート）
 
 2. **段階的な実装**
    - 基盤→公開ページ→管理画面→デザイン強化の順で実装

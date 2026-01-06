@@ -130,6 +130,28 @@
   - npmではセマンティックバージョニング（例: 0.182.0）に変換
 - **npm**: [three package](https://www.npmjs.com/package/three)
 
+### @react-three/fiber
+
+- **最新安定版**: **9.4.2** (2026-01-06時点)
+- **状態**: 安定版
+- **用途**: Three.jsのReactレンダラー（React Three Fiber）
+- **重要な機能**:
+  - React 19対応
+  - 宣言的なReactコンポーネントとしてThree.jsシーンを構築可能
+  - Server Componentsとの統合を考慮した実装が可能
+- **npm**: [@react-three/fiber package](https://www.npmjs.com/package/@react-three/fiber)
+- **公式サイト**: [React Three Fiber Documentation](https://r3f.docs.pmnd.rs)
+
+### @react-three/drei
+
+- **最新安定版**: **9.114.3** (2026-01-06時点、推定)
+- **状態**: 安定版
+- **用途**: React Three Fiber用のヘルパーと抽象化ライブラリ
+- **重要な機能**:
+  - よく使う3Dコンポーネントのコレクション
+  - カメラ、ライト、コントロールなどの便利なヘルパー
+- **npm**: [@react-three/drei package](https://www.npmjs.com/package/@react-three/drei)
+
 ### Pixi.js
 
 - **最新安定版**: **8.15.0** (2026-01-05時点)
@@ -138,6 +160,22 @@
   - ステージ`Container`が既に存在する場合、初期化時にのみ作成されるように修正
 - **用途**: 2Dグラフィックスライブラリ（公開ページ用）
 - **npm**: [pixi.js package](https://www.npmjs.com/package/pixi.js)
+
+### @pixi/react
+
+- **最新安定版**: **8.0.0** (2026-01-06時点)
+- **状態**: 安定版（React 19対応）
+- **用途**: PixiJSのReact統合ライブラリ
+- **重要な機能**:
+  - React 19対応
+  - PixiJS v8対応
+  - カスタムJSXプラグマ（`pixi`プレフィックス）による宣言的な実装
+  - `@react-three/fiber`に影響を受けた設計
+- **注意事項**:
+  - 旧バージョン（7.1.2）はReact 17/18、PixiJS v6/v7対応
+  - プロジェクトはReact 19.2.3を使用しているため、v8.0.0を使用可能
+- **npm**: [@pixi/react package](https://www.npmjs.com/package/@pixi/react)
+- **公式サイト**: [PixiJS React Documentation](https://react.pixijs.io)
 
 ---
 
@@ -235,8 +273,11 @@
 5. **Tailwind CSS**: 最新版 4.1.18
 6. **Framer Motion / Motion**: 最新版 12.23.28（`motion`パッケージへの移行も検討）
 7. **Three.js**: 最新版 0.182.0
-8. **Pixi.js**: 最新版 8.15.0
-9. **@auth/prisma-adapter**: 最新版 2.11.1
+8. **@react-three/fiber**: 最新版 9.4.2（React 19対応）
+9. **@react-three/drei**: 最新版 9.114.3（推定）
+10. **Pixi.js**: 最新版 8.15.0
+11. **@pixi/react**: 最新版 8.0.0（React 19、PixiJS v8対応）
+12. **@auth/prisma-adapter**: 最新版 2.11.1
 
 ---
 
@@ -259,7 +300,10 @@
 
 ## 更新履歴
 
-- **2026-01-06 (更新)**: nuqsの最新バージョン情報を追加
+- **2026-01-06 (更新)**: React専用パッケージの情報を追加
+  - @react-three/fiber: 9.4.2が最新安定版（React 19対応）
+  - @react-three/drei: 9.114.3が最新安定版（推定）
+  - @pixi/react: 8.0.0が最新安定版（React 19、PixiJS v8対応）
   - nuqs: 2.8.5が最新安定版
 - **2026-01-05 (更新)**: 最新バージョン情報を再調査・更新
   - TypeScript: 5.9.3が最新

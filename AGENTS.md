@@ -1,7 +1,12 @@
-# Rental Space Management System - AGENTS.md
+# AGENTS.md
 
-- **Priority: High** - Before starting any task, the agent must check and follow user rules configured in Cursor Settings → Rules. User rules take precedence and contain important guidelines about communication language, documentation standards, development practices, and project-specific requirements (e.g., date verification, external information retrieval, AI usage guidelines).
-- **Note**: This document follows the [AGENTS.md format](https://agents.md/), an open format for guiding coding agents. AGENTS.md serves as a "README for agents"—a dedicated place for build steps, tests, conventions, and project-specific guidance. **This document must be written and maintained in English** to align with the official format, though general communication with AI agents may be in Japanese.
+> **Priority: High** - Before starting any task, the agent must check and follow user rules configured in Cursor Settings → Rules. User rules take precedence and contain important guidelines about communication language, documentation standards, development practices, and project-specific requirements (e.g., date verification, external information retrieval, AI usage guidelines).
+>
+> **Note**: This document follows the [AGENTS.md format](https://agents.md/), an open format for guiding coding agents. AGENTS.md serves as a "README for agents"—a dedicated place for build steps, tests, conventions, and project-specific guidance. **This document must be written and maintained in English** to align with the official format, though general communication with AI agents may be in Japanese.
+
+## Project overview
+
+A reservation and management system for rental spaces. Provides a highly designed public-facing website and a practical admin interface.
 
 ## Implementation Philosophy
 
@@ -13,8 +18,6 @@
 - Prefer modern patterns (Server Components, Server Actions, JWT sessions) over legacy approaches
 - Remove deprecated code patterns and replace them with modern alternatives
 - No polyfills or compatibility layers unless absolutely necessary for production stability
-
----
 
 ## Setup commands
 
@@ -33,62 +36,23 @@
 - Test coverage: `bun run test:coverage`
 - Prisma Studio: `bunx prisma studio`
 
----
-
 ## Code style
 
-- TypeScript strict mode enabled
-- Explicit type annotations for function parameters and return values
-- Naming: PascalCase for components (`ReservationForm`), camelCase for functions/variables (`getReservationById`), UPPER_SNAKE_CASE for constants (`MAX_RESERVATION_HOURS`), kebab-case for file names (`reservation-form.tsx`)
-- Single quotes, no semicolons (follow Prettier config)
-- Import order: React/Next.js → third-party libraries → internal modules (`@/`) → relative imports → type-only imports (`import type`)
-- Server Components by default; use `'use client'` directive explicitly for Client Components
-- Define component props with `interface` or `type`
-
----
+**See Project Rules**: Detailed code style standards are defined in `.cursor/rules/code-style/RULE.md` (always applied).
 
 ## Testing instructions
 
+**See Project Rules**: Detailed testing standards are defined in `.cursor/rules/testing/RULE.md` (applied to test files).
+
 - The agent will automatically run relevant programmatic checks and fix failures before finishing tasks
 - Before running tests, always run `bun run lint` and `bun run type-check` after code changes
-- Fix type and lint errors before running tests
 - Run all tests: `bun run test`
 - Run specific test file: `bun run test reservation-form.test.tsx`
 - Watch mode: `bun run test:watch`
 - E2E tests: `bun run test:e2e` (Playwright)
-- E2E UI mode: `bun run test:e2e:ui`
 - Coverage report: `bun run test:coverage`
-- Always add/update tests when changing code
-- Include clear descriptions in `describe` and `it` blocks
-- Use mocks sparingly
-- Tests must be independently executable
-- **For detailed testing requirements**: See [`docs/TEST_REQUIREMENTS.md`](docs/TEST_REQUIREMENTS.md) for comprehensive test requirements, test environment setup, CI/CD integration, and testing best practices
 
-### Test structure
-- **Unit tests**: `tests/unit/` - Test individual functions and components
-- **Integration tests**: `tests/integration/` - Test component interactions
-- **E2E tests**: `tests/e2e/` - Test complete user flows (Playwright)
-- **Test coverage target**: 80% or higher
-
-### Test coverage areas
-- Form validation (Zod schemas)
-- Authentication flows (login, logout, session management)
-- Reservation flows (create, update, delete)
-- Customer management (profile management, statistics calculation)
-- Admin CRUD operations
-- Server Actions
-- API routes (Route Handlers)
-- Error handling
-
-### Testing best practices
-- Always run `bun run lint` and `bun run type-check` before tests
-- Write tests alongside code (not after)
-- Use clear descriptions in `describe` and `it` blocks
-- Use mocks sparingly (prefer real implementations when possible)
-- Ensure tests are independently executable
-- Maintain test coverage reports
-
----
+**For detailed testing requirements**: See [`docs/TEST_REQUIREMENTS.md`](docs/TEST_REQUIREMENTS.md)
 
 ## Dev environment tips
 
@@ -97,9 +61,7 @@
 - Environment variables: Use `.env.local` for development (don't commit), Google Secret Manager for production, see `.env.example` for required variables
 - Debugging: Server Components log to server console, Client Components use browser dev tools, enable Prisma query logs with `DEBUG=prisma:*`
 - Performance: Use Next.js `Image` component, lazy-load large libraries with `dynamic`, use appropriate cache strategies in Server Components
-- **Dependency management (Bun)**: Check outdated packages with `bun outdated` (shows Current/Wanted/Latest), get package info with `bun info <package>`, check upgrade impact with `bun add <package>@latest --dry-run`, use `bunx npm-check-updates` for major version updates, verify installed versions with `bun pm ls`. **Recommended workflow**: 1) `bun outdated` for overview, 2) `bun info <package> version` for specific packages, 3) `bun add <package>@latest --dry-run` to check impact, 4) `bunx npm-check-updates` for generation updates. **Important**: Bun prioritizes lockfile (`bun.lockb`), use `bun install --frozen-lockfile` in CI/Cloud Run, `latest` may not always be appropriate (Next.js/Prisma/React have breaking changes)
-
----
+- **Dependency management (Bun)**: Check outdated packages with `bun outdated`, get package info with `bun info <package>`, check upgrade impact with `bun add <package>@latest --dry-run`, use `bunx npm-check-updates` for major version updates, verify installed versions with `bun pm ls`. **Important**: Bun prioritizes lockfile (`bun.lockb`), use `bun install --frozen-lockfile` in CI/Cloud Run, `latest` may not always be appropriate (Next.js/Prisma/React have breaking changes)
 
 ## PR instructions
 
@@ -115,115 +77,62 @@
   - [ ] `bun run test` passes (automatically checked by pre-commit hook)
   - [ ] Related documentation updated
 
----
-
-## Project overview
-
-A reservation and management system for rental spaces. Provides a highly designed public-facing website and a practical admin interface.
-
----
-
 ## Technical stack
 
-### Core technologies
-- **React**: 19.2.3 (latest stable with CVE-2025-55182 fix)
-- **Next.js**: 16.1.1 (latest stable with CVE-2025-55182 fix)
-- **TypeScript**: 5.9.3
-- **Bun**: 1.3.5 (package manager & runtime)
+- **React**: 19.2.3, **Next.js**: 16.1.1, **TypeScript**: 5.9.3, **Bun**: 1.3.5
+- **Prisma**: 7.2.0, **Supabase**: PostgreSQL, **Zod**: 4.3.5
+- **Tailwind CSS**: 4.1.18, **GSAP** or **Motion** (formerly Framer Motion), **Three.js** (`@react-three/fiber` + `@react-three/drei`) or **Pixi.js** (`@pixi/react`)
+- **Auth.js**: 5.0.0-beta.30, **nuqs**: 2.8.5
+- **Deployment**: Google Cloud Run (Bun runtime), Supabase
 
-### Database & ORM
-- **Prisma**: 7.2.0
-- **Supabase**: PostgreSQL (database)
-- **Zod**: 4.3.5 (schema validation)
-
-### URL State Management
-- **nuqs**: 2.8.5 (type-safe query parameter management for Next.js 16 App Router)
-
-### UI & Styling
-- **Tailwind CSS**: 4.1.18
-- **GSAP** or **Framer Motion**: Animation
-- **Three.js** or **Pixi.js**: 3D/2D graphics (public pages)
-
-### Authentication
-- **Auth.js**: 5.0.0-beta.30 (beta; latest stable 4.24.13)
-
-### Deployment
-- **Google Cloud Run**: Application
-- **Supabase**: Database & authentication
-
----
+**For detailed version information**: See [`docs/TECH_STACK_VERSIONS.md`](docs/TECH_STACK_VERSIONS.md)
 
 ## Important technical constraints
 
-### Prisma and Edge Runtime
-- **Prisma does not support Edge Runtime**
-- Next.js API Routes and Server Actions use Bun Runtime
-- Explicitly specify `runtime = "nodejs"` (Bun has Node.js compatibility)
-- If Edge Runtime is required, consider an alternative approach without Prisma
+- **Prisma does not support Edge Runtime**: Use Bun Runtime (`runtime = "nodejs"`) for API Routes and Server Actions
+- **Full Bun Runtime Support**: This project runs fully on Bun 1.3.5 (package manager, runtime, build tool, test runner)
+- **Auth.js 5**: Use `@auth/prisma-adapter` 2.11.1, verify compatibility before version updates
+- **Security**: React 19.2.3 and Next.js 16.1.1 required (CVE-2025-55182 fix). Always validate inputs with Zod schemas (client and server)
 
-### Full Bun Runtime Support
-- **This project runs fully on Bun 1.3.5**: Package manager, runtime, build tool, and test runner
-- **Development**: All commands use Bun (`bun run dev`, `bun run build`, etc.)
-- **Production**: Docker container uses `oven/bun:1.3.5` base image
-- **Cloud Run**: Deployed as Docker container with Bun runtime
-- **Compatibility**: Prisma, Next.js, Auth.js all work perfectly with Bun due to Node.js compatibility
-- See [`docs/BUN_RUNTIME.md`](docs/BUN_RUNTIME.md) for detailed information
+**For detailed constraints**: See [`docs/BUN_RUNTIME.md`](docs/BUN_RUNTIME.md) and [`docs/SECURITY.md`](docs/SECURITY.md)
 
-### Auth.js 5 and Prisma Adapter
-- Pay attention to Prisma Adapter version compatibility
-- Use the latest stable version of `@auth/prisma-adapter` (2.11.1)
-- Session management integrates with Supabase Row Level Security (RLS)
-- Verify compatibility before applying version updates
+## Project Rules
 
-### Security considerations
-- **Critical**: React 19.0-19.2.0 and Next.js 15.x-16.0.6 have a critical security vulnerability (CVE-2025-55182)
-- **Required**: Upgrade to React 19.2.3 and Next.js 16.1.1 immediately (latest stable as of 2026-01-05)
-  - This vulnerability allows unauthenticated remote code execution on the server
-  - **Note**: Next.js 16.1.1 was released on 2025-12-22 and includes the security fix
-- Apply React Server Components security patches
-- Manage environment variables with Google Secret Manager (do not commit `.env.local` to Git)
-- Configure Supabase RLS policies appropriately
-- Always perform input validation with Zod schemas (both client and server)
+This project uses **Project Rules** (`.cursor/rules/`) for detailed, context-specific guidance:
 
----
+- **Code Style** (`.cursor/rules/code-style/`): Always applied - TypeScript, React, naming conventions
+- **Testing** (`.cursor/rules/testing/`): Applied to test files - Test standards and best practices
+- **Security** (`.cursor/rules/security/`): Always applied - Security best practices
+- **Server Actions** (`.cursor/rules/server-actions/`): Applied to `src/actions/**` - Server Actions patterns
+- **Components** (`.cursor/rules/components/`): Applied to `src/components/**` - Component standards
+- **API Routes** (`.cursor/rules/api-routes/`): Applied to `src/app/api/**` - API Routes patterns
 
-## Additional documentation
+Project Rules provide more granular, context-aware guidance than `AGENTS.md`. They are automatically applied based on file patterns or can be manually invoked with `@rule-name`.
 
-For detailed information, see [`docs/README.md`](docs/README.md) for the documentation index.
+## Security best practices
 
-Key documents:
-- **Documentation index**: [`docs/README.md`](docs/README.md)
-- **Feature requirements**: [`docs/FEATURE_REQUIREMENTS.md`](docs/FEATURE_REQUIREMENTS.md)
-- **Blog requirements**: [`docs/BLOG_REQUIREMENTS.md`](docs/BLOG_REQUIREMENTS.md)
-- **Email requirements**: [`docs/EMAIL_REQUIREMENTS.md`](docs/EMAIL_REQUIREMENTS.md)
-- **Settings requirements**: [`docs/SETTINGS_REQUIREMENTS.md`](docs/SETTINGS_REQUIREMENTS.md)
-- **Customer name design**: [`docs/CUSTOMER_NAME_DESIGN.md`](docs/CUSTOMER_NAME_DESIGN.md)
-- **JWT auth requirements**: [`docs/JWT_AUTH_REQUIREMENTS.md`](docs/JWT_AUTH_REQUIREMENTS.md)
-- **Database design**: [`docs/DATABASE_DESIGN.md`](docs/DATABASE_DESIGN.md)
-- **Project structure**: [`docs/PROJECT_STRUCTURE.md`](docs/PROJECT_STRUCTURE.md)
-- **Architecture**: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-- **API specification**: [`docs/API.md`](docs/API.md)
-- **Deployment guide**: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
-- **Docker guide**: [`docs/DOCKER.md`](docs/DOCKER.md)
-- **Cloudflare CDN guide**: [`docs/CLOUDFLARE_CDN.md`](docs/CLOUDFLARE_CDN.md)
-- **Security policy**: [`docs/SECURITY.md`](docs/SECURITY.md)
-- **Test requirements**: [`docs/TEST_REQUIREMENTS.md`](docs/TEST_REQUIREMENTS.md)
-- **Turbopack requirements**: [`docs/TURBOPACK_REQUIREMENTS.md`](docs/TURBOPACK_REQUIREMENTS.md)
-- **Bun runtime guide**: [`docs/BUN_RUNTIME.md`](docs/BUN_RUNTIME.md)
-- **Tech stack versions**: [`docs/TECH_STACK_VERSIONS.md`](docs/TECH_STACK_VERSIONS.md)
-- **Consistency check**: [`docs/CONSISTENCY_CHECK.md`](docs/CONSISTENCY_CHECK.md)
-- **Best practices**: [`docs/BEST_PRACTICES.md`](docs/BEST_PRACTICES.md)
-- **Caching strategy**: [`docs/CACHING_STRATEGY.md`](docs/CACHING_STRATEGY.md)
-- **Turnstile requirements**: [`docs/TURNSTILE_REQUIREMENTS.md`](docs/TURNSTILE_REQUIREMENTS.md)
-- **DDoS protection requirements**: [`docs/DDOS_PROTECTION_REQUIREMENTS.md`](docs/DDOS_PROTECTION_REQUIREMENTS.md)
-- **Abuse protection requirements**: [`docs/ABUSE_PROTECTION_REQUIREMENTS.md`](docs/ABUSE_PROTECTION_REQUIREMENTS.md)
-- **NUQS requirements**: [`docs/NUQS_REQUIREMENTS.md`](docs/NUQS_REQUIREMENTS.md)
-- **Extensibility plan**: [`docs/EXTENSIBILITY_PLAN.md`](docs/EXTENSIBILITY_PLAN.md)
-- **Extensibility plan consistency check**: [`docs/EXTENSIBILITY_PLAN_CONSISTENCY_CHECK.md`](docs/EXTENSIBILITY_PLAN_CONSISTENCY_CHECK.md)
-- **Verification report**: [`docs/VERIFICATION_REPORT.md`](docs/VERIFICATION_REPORT.md)
-- **Document consistency report**: [`docs/DOCUMENT_CONSISTENCY_REPORT.md`](docs/DOCUMENT_CONSISTENCY_REPORT.md)
+**See Project Rules**: Detailed security standards are defined in `.cursor/rules/security/RULE.md` (always applied).
 
----
+- Environment variables: Use `.env.local` (dev), Google Secret Manager (prod)
+- Input validation: Validate all inputs with Zod schemas (client and server)
+- Authentication & authorization: Rate limiting, secure sessions, RBAC
+- Bot protection: Cloudflare Turnstile for forms
+- Database security: Supabase RLS policies, parameterized queries
+- Caching security: Never cache sensitive data, use `unstable_noStore()` for authenticated data
+
+**For detailed security configuration**: See [`docs/SECURITY.md`](docs/SECURITY.md) and [`docs/TURNSTILE_REQUIREMENTS.md`](docs/TURNSTILE_REQUIREMENTS.md)
+
+## Performance optimization
+
+- Use Server Components by default (reduces client-side JavaScript)
+- Leverage Next.js 16 Cache API (`unstable_cache`, `unstable_noStore`, `revalidatePath`, `revalidateTag`)
+- Always use Next.js `Image` component with Supabase Storage
+- Use dynamic imports for large libraries (`@react-three/fiber`, `@pixi/react`, Three.js, Pixi.js)
+- Fetch data in Server Components when possible, use `Promise.all` for parallel fetching
+- Fetch only necessary fields with Prisma `select`, use `include` to avoid N+1 queries
+- **Turbopack**: Next.js 16 uses Turbopack by default (2-5× faster builds). This project uses Turbopack only. Webpack is not used.
+
+**For detailed optimization strategies**: See [`docs/CACHING_STRATEGY.md`](docs/CACHING_STRATEGY.md) and [`docs/BEST_PRACTICES.md`](docs/BEST_PRACTICES.md)
 
 ## Authentication & authorization
 
@@ -235,8 +144,6 @@ Key documents:
 - **Supabase RLS**: Database-level security
 - **Bot protection**: Cloudflare Turnstile integrated for login form (see [`docs/TURNSTILE_REQUIREMENTS.md`](docs/TURNSTILE_REQUIREMENTS.md))
 
----
-
 ## Deployment
 
 - **Google Cloud Run**: Bun 1.3.5 runtime (via Docker container), multi-stage Dockerfile, Artifact Registry, Secret Manager
@@ -245,124 +152,37 @@ Key documents:
 - **CI/CD**: GitHub Actions or Cloud Build, automatic Prisma migrations
 - **Environment variables**: `.env.local` (dev), Google Secret Manager (prod)
 
----
+## Agent Skills
 
----
+This project includes Cursor Agent Skills that provide domain-specific guidance for common development tasks. Skills are automatically applied by the agent based on context.
 
-## Security best practices
+**Available Skills**:
+- **Next.js 16 App Router**: Server Components, Server Actions, caching strategies
+- **Prisma 7**: Query optimization, transactions, best practices
+- **Auth.js 5**: Authentication, authorization, JWT sessions
+- **Bun Runtime**: Development, build, testing, deployment
+- **TypeScript Strict Mode**: Type safety, explicit annotations
 
-### Environment variables
-- Use `.env.local` for development (never commit to Git)
-- Use Google Secret Manager for production
-- Validate all required environment variables on application startup
-- Never hardcode sensitive information in source code
-- **Required environment variables**:
-  - `TURNSTILE_SITE_KEY`: Cloudflare Turnstile site key (public)
-  - `TURNSTILE_SECRET_KEY`: Cloudflare Turnstile secret key (confidential)
-  - `NEXT_PUBLIC_TURNSTILE_SITE_KEY`: Client-side site key (public)
-  - See `.env.example` for all required variables
-  - See [`docs/TURNSTILE_REQUIREMENTS.md`](docs/TURNSTILE_REQUIREMENTS.md) for Turnstile-specific environment variables
+**Enabling Skills**:
+1. Open **Cursor Settings → Rules**
+2. Find the **Import Settings** section
+3. Toggle **Agent Skills** on
 
-### Input validation
-- Validate all user inputs with Zod schemas (both client and server)
-- Implement file upload validation (size, format, malware scanning)
-- Use Prisma ORM to prevent SQL injection attacks
-- Sanitize user inputs before database operations
+See [`.cursor/skills/README.md`](.cursor/skills/README.md) for detailed information about each skill.
 
-### Authentication & authorization
-- Implement rate limiting for login attempts
-- Use secure session management (JWT with appropriate `maxAge`)
-- Configure secure cookies (`HttpOnly`, `Secure`, `SameSite`)
-- Protect API routes and Server Actions with authentication checks
-- Implement role-based access control (RBAC) in Middleware and Server Actions
-- **Bot protection**: Integrate Cloudflare Turnstile for form submissions (reservation, contact, login forms)
-  - See [`docs/TURNSTILE_REQUIREMENTS.md`](docs/TURNSTILE_REQUIREMENTS.md) for detailed requirements
+## Additional documentation
 
-### Security headers
-- Configure security headers in `next.config.js`
-- Implement Content Security Policy (CSP) with strict directives (avoid `unsafe-eval` and `unsafe-inline` when possible)
-  - **Cloudflare Turnstile**: Add `https://challenges.cloudflare.com` to `script-src`, `frame-src`, and `connect-src` directives
-- Set `X-Frame-Options` to `DENY` (or `SAMEORIGIN` if iframes are needed)
-- Set `X-Content-Type-Options` to `nosniff`
-- Configure `Permissions-Policy` to disable unnecessary browser features
-- Use `strict-origin-when-cross-origin` for `Referrer-Policy`
-- Enable HTTPS for all communications (HSTS with `preload`)
-- See [`docs/SECURITY.md`](docs/SECURITY.md) for detailed configuration examples
+For detailed information, see [`docs/README.md`](docs/README.md) for the documentation index.
 
-### Bot protection
-- **Cloudflare Turnstile**: Integrated for form submissions (reservation, contact, login forms)
-  - Non-interactive CAPTCHA alternative (managed mode)
-  - Server-side verification required
-  - Integrated with rate limiting for multi-layer defense
-  - See [`docs/TURNSTILE_REQUIREMENTS.md`](docs/TURNSTILE_REQUIREMENTS.md) for detailed requirements
-- **Cloudflare Bot Fight Mode**: Already enabled (free plan)
-  - Works alongside Turnstile for comprehensive bot protection
-  - See [`docs/CLOUDFLARE_CDN.md`](docs/CLOUDFLARE_CDN.md) for details
-
-### Database security
-- Configure Supabase Row Level Security (RLS) policies
-- Use parameterized queries (Prisma ORM handles this)
-- Implement proper access controls at the database level
-- Regular security audits and dependency updates
-
-### Caching security
-- **Never cache sensitive data**: User-specific data, session information, authentication tokens must not be cached
-- **Use `unstable_noStore()` for authenticated data**: All data that depends on authentication state should use `unstable_noStore()`
-- **Avoid sensitive information in cache keys**: Do not include user IDs, session tokens, or other sensitive data in cache keys or tags
-- **Separate public and private caches**: Public data and private data should use separate cache keys and tags
-- **Invalidate cache on authentication changes**: When user authentication state changes (login, logout, role change), invalidate related caches
-- **Cache poisoning prevention**: Be careful with user input-based cache keys; validate and sanitize inputs
-- See [`docs/CACHING_STRATEGY.md`](docs/CACHING_STRATEGY.md) for detailed security considerations
-
----
-
-## Performance optimization
-
-### Rendering strategies
-- Use Server Components by default (reduces client-side JavaScript)
-- Implement appropriate rendering strategies per page:
-  - Static Site Generation (SSG) for static content
-  - Server-Side Rendering (SSR) for dynamic content
-  - Incremental Static Regeneration (ISR) for semi-static content
-- Use `generateStaticParams` for dynamic routes when possible
-
-### Caching strategy
-- Leverage Next.js 16 Cache API for optimal performance
-- Use `unstable_cache` for function result caching with tags
-- Use `unstable_noStore` to opt out of caching for dynamic data
-- Use `revalidate` option in `fetch()` for flexible caching
-- Implement ISR with appropriate revalidation intervals
-- Use `revalidatePath`, `revalidateTag`, `updateTag`, and `refresh` for on-demand revalidation
-- Cache database queries appropriately with `unstable_cache`
-- See [`docs/CACHING_STRATEGY.md`](docs/CACHING_STRATEGY.md) for detailed caching strategies
-
-### Image optimization
-- Always use Next.js `Image` component
-- Integrate with Supabase Storage for image hosting
-- Enable lazy loading for images
-- Convert images to WebP format automatically
-- Optimize image sizes and dimensions
-
-### Bundle size optimization
-- Use dynamic imports for large libraries (Three.js, Pixi.js)
-- Implement route-based code splitting
-- Verify tree-shaking is working correctly
-- Monitor bundle sizes regularly
-- Lazy-load components that are not immediately needed
-- **Turbopack**: Next.js 16 uses Turbopack by default, which provides faster builds (2-5× faster) and improved Fast Refresh (up to 10× faster). This project uses Turbopack only. Webpack is not used. Custom configurations are handled via `turbopack` option in `next.config.js`. See [`docs/TURBOPACK_REQUIREMENTS.md`](docs/TURBOPACK_REQUIREMENTS.md) for details.
-
-### Data fetching optimization
-- Fetch data in Server Components when possible (use `await` directly in Server Components)
-- Use parallel data fetching with `Promise.all`
-- Fetch only necessary fields with Prisma `select`
-- Use Prisma `include` to avoid N+1 query problems
-- Implement pagination for large datasets
-- Optimize database queries with proper indexes
-- Use transactions for multiple related operations
-- **Customer management**: Customer names are stored as separate `lastName` and `firstName` fields for internationalization support and better search/sort capabilities. See [`docs/CUSTOMER_NAME_DESIGN.md`](docs/CUSTOMER_NAME_DESIGN.md) for design rationale
-- See [`docs/BEST_PRACTICES.md`](docs/BEST_PRACTICES.md) for detailed best practices
-
----
+Key documents:
+- **Documentation index**: [`docs/README.md`](docs/README.md)
+- **Feature requirements**: [`docs/FEATURE_REQUIREMENTS.md`](docs/FEATURE_REQUIREMENTS.md)
+- **Architecture**: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- **Database design**: [`docs/DATABASE_DESIGN.md`](docs/DATABASE_DESIGN.md)
+- **API specification**: [`docs/API.md`](docs/API.md)
+- **Security policy**: [`docs/SECURITY.md`](docs/SECURITY.md)
+- **Best practices**: [`docs/BEST_PRACTICES.md`](docs/BEST_PRACTICES.md)
+- **Caching strategy**: [`docs/CACHING_STRATEGY.md`](docs/CACHING_STRATEGY.md)
 
 ## Reference resources
 
@@ -371,7 +191,5 @@ Key documents:
 - [Auth.js Documentation](https://authjs.dev)
 - [Supabase Documentation](https://supabase.com/docs)
 - [Google Cloud Run Documentation](https://cloud.google.com/run/docs)
-- [Next.js App Router Best Practices](https://nextjs.org/docs/app/building-your-application/routing)
-- [Prisma Best Practices](https://www.prisma.io/docs/guides/performance-and-optimization)
-- [Auth.js Security Best Practices](https://authjs.dev/getting-started/security)
 - [AGENTS.md Format](https://agents.md/)
+- [Cursor Agent Skills Documentation](https://cursor.com/docs/context/skills)
