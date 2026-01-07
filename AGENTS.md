@@ -1,8 +1,10 @@
-# AGENTS.md
+# [AGENTS.md](http://AGENTS.md)
 
-> **Priority: High** - Before starting any task, the agent must check and follow user rules configured in Cursor Settings → Rules. User rules take precedence and contain important guidelines about communication language, documentation standards, development practices, and project-specific requirements (e.g., date verification, external information retrieval, AI usage guidelines).
+> **Priority: High** - **Cursor-specific**: When using Cursor, agents must check and follow user rules configured in Cursor Settings → Rules. User rules take precedence and contain important guidelines about communication language, documentation standards, development practices, and project-specific requirements (e.g., date verification, external information retrieval, AI usage guidelines). This section is specific to Cursor and does not apply to other IDEs or agents.
 >
 > **Note**: This document follows the [AGENTS.md format](https://agents.md/), an open format for guiding coding agents. AGENTS.md serves as a "README for agents"—a dedicated place for build steps, tests, conventions, and project-specific guidance. **This document must be written and maintained in English** to align with the official format, though general communication with AI agents may be in Japanese.
+>
+> **Communication Language**: **Agents must respond in Japanese** for all user interactions, explanations, and general communication. This includes code comments, error messages, and documentation that is not part of the official AGENTS.md format. Only the AGENTS.md file itself should be maintained in English to comply with the official format standard.
 
 ## Project overview
 
@@ -13,6 +15,7 @@ A reservation and management system for rental spaces. Provides a highly designe
 **Clean Implementation Without Backward Compatibility**: This project prioritizes clean, modern implementations following the latest official best practices. We do **not** maintain backward compatibility with older versions or deprecated APIs. All implementations should use the latest stable versions of frameworks and libraries, following their official recommendations without legacy workarounds.
 
 **Key Principles**:
+
 - Use the latest stable versions of Next.js 16, React 19, Prisma 7, Auth.js 5, and other dependencies
 - Follow official best practices and recommended patterns (no deprecated APIs)
 - Prefer modern patterns (Server Components, Server Actions, JWT sessions) over legacy approaches
@@ -54,7 +57,7 @@ A reservation and management system for rental spaces. Provides a highly designe
 - E2E tests: `bun run test:e2e` (Playwright)
 - Coverage report: `bun run test:coverage`
 
-**For detailed testing requirements**: See [`docs/requirements/TEST_REQUIREMENTS.md`](docs/requirements/TEST_REQUIREMENTS.md)
+**For detailed testing requirements**: See `[docs/requirements/TEST_REQUIREMENTS.md](docs/requirements/TEST_REQUIREMENTS.md)`
 
 ## Dev environment tips
 
@@ -74,10 +77,10 @@ A reservation and management system for rental spaces. Provides a highly designe
 - PR description: Include change summary, reason, and testing approach
 - Before committing: Quality checks run automatically via Git hooks (pre-commit)
 - Pre-review checklist:
-  - [ ] `bun run lint` passes (automatically checked by pre-commit hook)
-  - [ ] `bun run type-check` passes (automatically checked by pre-commit hook)
-  - [ ] `bun run test` passes (automatically checked by pre-commit hook)
-  - [ ] Related documentation updated
+  - `bun run lint` passes (automatically checked by pre-commit hook)
+  - `bun run type-check` passes (automatically checked by pre-commit hook)
+  - `bun run test` passes (automatically checked by pre-commit hook)
+  - Related documentation updated
 
 ## Technical stack
 
@@ -87,7 +90,7 @@ A reservation and management system for rental spaces. Provides a highly designe
 - **Auth.js**: 5.0.0-beta.30, **nuqs**: 2.8.5
 - **Deployment**: Google Cloud Run (Bun runtime), Supabase
 
-**For detailed version information**: See [`docs/development/TECH_STACK_VERSIONS.md`](docs/development/TECH_STACK_VERSIONS.md)
+**For detailed version information**: See `[docs/development/TECH_STACK_VERSIONS.md](docs/development/TECH_STACK_VERSIONS.md)`
 
 ## Important technical constraints
 
@@ -96,7 +99,7 @@ A reservation and management system for rental spaces. Provides a highly designe
 - **Auth.js 5**: Use `@auth/prisma-adapter` 2.11.1, verify compatibility before version updates
 - **Security**: React 19.2.3 and Next.js 16.1.1 required (CVE-2025-55182 fix). Always validate inputs with Zod schemas (client and server)
 
-**For detailed constraints**: See [`docs/development/BUN_RUNTIME.md`](docs/development/BUN_RUNTIME.md) and [`docs/security/SECURITY.md`](docs/security/SECURITY.md)
+**For detailed constraints**: See `[docs/development/BUN_RUNTIME.md](docs/development/BUN_RUNTIME.md)` and `[docs/security/SECURITY.md](docs/security/SECURITY.md)`
 
 ## Project Rules
 
@@ -122,7 +125,7 @@ Project Rules provide more granular, context-aware guidance than `AGENTS.md`. Th
 - Database security: Supabase RLS policies, parameterized queries
 - Caching security: Never cache sensitive data, use `unstable_noStore()` for authenticated data
 
-**For detailed security configuration**: See [`docs/security/SECURITY.md`](docs/security/SECURITY.md) and [`docs/requirements/TURNSTILE_REQUIREMENTS.md`](docs/requirements/TURNSTILE_REQUIREMENTS.md)
+**For detailed security configuration**: See `[docs/security/SECURITY.md](docs/security/SECURITY.md)` and `[docs/requirements/TURNSTILE_REQUIREMENTS.md](docs/requirements/TURNSTILE_REQUIREMENTS.md)`
 
 ## Performance optimization
 
@@ -134,7 +137,7 @@ Project Rules provide more granular, context-aware guidance than `AGENTS.md`. Th
 - Fetch only necessary fields with Prisma `select`, use `include` to avoid N+1 queries
 - **Turbopack**: Next.js 16 uses Turbopack by default (2-5× faster builds). This project uses Turbopack only. Webpack is not used.
 
-**For detailed optimization strategies**: See [`docs/development/CACHING_STRATEGY.md`](docs/development/CACHING_STRATEGY.md) and [`docs/development/BEST_PRACTICES.md`](docs/development/BEST_PRACTICES.md)
+**For detailed optimization strategies**: See `[docs/development/CACHING_STRATEGY.md](docs/development/CACHING_STRATEGY.md)` and `[docs/development/BEST_PRACTICES.md](docs/development/BEST_PRACTICES.md)`
 
 ## Authentication & authorization
 
@@ -144,7 +147,7 @@ Project Rules provide more granular, context-aware guidance than `AGENTS.md`. Th
 - **Roles**: `admin`, `user`
 - **Protection**: Next.js Middleware for routes, permission checks in Server Actions
 - **Supabase RLS**: Database-level security
-- **Bot protection**: Cloudflare Turnstile integrated for login form (see [`docs/requirements/TURNSTILE_REQUIREMENTS.md`](docs/requirements/TURNSTILE_REQUIREMENTS.md))
+- **Bot protection**: Cloudflare Turnstile integrated for login form (see `[docs/requirements/TURNSTILE_REQUIREMENTS.md](docs/requirements/TURNSTILE_REQUIREMENTS.md)`)
 
 ## Deployment
 
@@ -159,6 +162,7 @@ Project Rules provide more granular, context-aware guidance than `AGENTS.md`. Th
 This project includes Cursor Agent Skills that provide domain-specific guidance for common development tasks. Skills are automatically applied by the agent based on context.
 
 **Available Skills**:
+
 - **Next.js 16 App Router**: Server Components, Server Actions, caching strategies
 - **Prisma 7**: Query optimization, transactions, best practices
 - **Auth.js 5**: Authentication, authorization, JWT sessions
@@ -166,32 +170,48 @@ This project includes Cursor Agent Skills that provide domain-specific guidance 
 - **TypeScript Strict Mode**: Type safety, explicit annotations
 
 **Enabling Skills**:
+
 1. Open **Cursor Settings → Rules**
 2. Find the **Import Settings** section
 3. Toggle **Agent Skills** on
 
-See [`.cursor/skills/README.md`](.cursor/skills/README.md) for detailed information about each skill.
+See `[.cursor/skills/README.md](.cursor/skills/README.md)` for detailed information about each skill.
 
 ## Additional documentation
 
-For detailed information, see [`docs/README.md`](docs/README.md) for the documentation index.
+For detailed information, see `[docs/README.md](docs/README.md)` for the documentation index.
 
 Key documents:
-- **Documentation index**: [`docs/README.md`](docs/README.md)
-- **Feature requirements**: [`docs/requirements/FEATURE_REQUIREMENTS.md`](docs/requirements/FEATURE_REQUIREMENTS.md)
-- **Architecture**: [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md)
-- **Database design**: [`docs/architecture/DATABASE_DESIGN.md`](docs/architecture/DATABASE_DESIGN.md)
-- **API specification**: [`docs/development/API.md`](docs/development/API.md)
-- **Security policy**: [`docs/security/SECURITY.md`](docs/security/SECURITY.md)
-- **Best practices**: [`docs/development/BEST_PRACTICES.md`](docs/development/BEST_PRACTICES.md)
-- **Caching strategy**: [`docs/development/CACHING_STRATEGY.md`](docs/development/CACHING_STRATEGY.md)
 
-## Reference resources
+- **Documentation index**: `[docs/README.md](docs/README.md)`
+- **Feature requirements**: `[docs/requirements/FEATURE_REQUIREMENTS.md](docs/requirements/FEATURE_REQUIREMENTS.md)`
+- **Architecture**: `[docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md)`
+- **Database design**: `[docs/architecture/DATABASE_DESIGN.md](docs/architecture/DATABASE_DESIGN.md)`
+- **API specification**: `[docs/development/API.md](docs/development/API.md)`
+- **Security policy**: `[docs/security/SECURITY.md](docs/security/SECURITY.md)`
+- **Best practices**: `[docs/development/BEST_PRACTICES.md](docs/development/BEST_PRACTICES.md)`
+- **Caching strategy**: `[docs/development/CACHING_STRATEGY.md](docs/development/CACHING_STRATEGY.md)`
+
+## Documentation and external resources
+
+**Context7 MCP**: Always use Context7 MCP when library/API documentation, code generation, setup or configuration steps are needed without explicit user request. Context7 provides up-to-date, version-specific documentation and code examples directly from source libraries.
+
+- **Automatic usage**: The agent should automatically invoke Context7 MCP for:
+  - Library/API documentation queries
+  - Code generation requiring library-specific patterns
+  - Setup or configuration steps
+  - Version-specific implementation guidance
+- **Library ID format**: When a specific library is known, use the Context7 library ID format (e.g., `/vercel/next.js`, `/supabase/supabase`) for direct access
+- **Version specification**: Mention specific versions in queries to get version-appropriate documentation
+
+**Reference resources**:
 
 - [Next.js 16 Documentation](https://nextjs.org/docs)
 - [Prisma Documentation](https://www.prisma.io/docs)
 - [Auth.js Documentation](https://authjs.dev)
 - [Supabase Documentation](https://supabase.com/docs)
 - [Google Cloud Run Documentation](https://cloud.google.com/run/docs)
+- [Context7 MCP](https://github.com/upstash/context7) - Up-to-date code documentation for LLMs
 - [AGENTS.md Format](https://agents.md/)
 - [Cursor Agent Skills Documentation](https://cursor.com/docs/context/skills)
+
