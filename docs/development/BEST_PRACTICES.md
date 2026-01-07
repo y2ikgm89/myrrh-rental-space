@@ -14,6 +14,42 @@
 
 ## Next.js 16 App Router ベストプラクティス
 
+### Proxy（ルート保護）ベストプラクティス
+
+**原則**: Next.js 16 では `middleware.ts` ではなく `proxy.ts` を使用し、エクスポート名は `proxy` に統一します。`proxy` は **nodejs runtime 専用** で、Edge Runtime は使えません。
+
+```typescript
+// ✅ 良い例: proxy.ts で auth() ラッパーを使う
+// src/proxy.ts
+import { NextResponse } from 'next/server'
+import { auth } from '@/lib/auth'
+
+export const proxy = auth((req) => {
+  const { pathname } = req.nextUrl
+  const session = req.auth
+
+  if (pathname.startsWith('/admin')) {
+    if (pathname === '/admin/login') {
+      return NextResponse.next()
+    }
+
+    if (!session) {
+      return NextResponse.redirect(new URL('/admin/login', req.url))
+    }
+
+    if (session.user.role !== 'ADMIN') {
+      return NextResponse.redirect(new URL('/admin/login', req.url))
+    }
+  }
+
+  return NextResponse.next()
+})
+
+export const config = {
+  matcher: ['/admin/:path*'],
+}
+```
+
 ### Server Components優先アーキテクチャ
 
 **原則**: デフォルトでServer Componentsを使用し、必要な場合のみClient Componentsを使用します。
