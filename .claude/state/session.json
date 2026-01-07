@@ -1,0 +1,26 @@
+{
+  "session_id": "e5df9195-e85e-46aa-af1b-45a0978f6107",
+  "started_at": "2026-01-07T11:30:06Z",
+  "cwd": "/mnt/g/workspace/work/website/customer/myrrh-rental-space",
+  "project_name": "myrrh-rental-space",
+  "prompt_seq": 0,
+  "git": {
+    "branch": "main",
+    "uncommitted_changes": 15,
+    "last_commit": "2f41c3f"
+  },
+  "plans": {
+    "exists": true,
+    "last_modified":   File: "Plans.md"
+    ID: 100000000 Namelen: 255     Type: v9fs
+Block size: 4096       Fundamental block size: 4096
+Blocks: Total: 244190207  Free: 133669245  Available: 133669245
+Inodes: Total: 999        Free: 1000000
+1767781897,
+    "wip_tasks": 0,
+    "todo_tasks": 0,
+    "pending_tasks": 0,
+    "completed_tasks": 6
+  },
+  "changes_this_session": []
+}
