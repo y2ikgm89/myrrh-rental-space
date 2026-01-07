@@ -11,6 +11,13 @@ alwaysApply: false
 
 This rule provides guidance for writing and maintaining tests.
 
+**Related Rules**: See `@code-style` for TypeScript and code style standards, `@components` for component testing patterns, `@server-actions` for Server Actions testing patterns.
+
+**Example Files**:
+- `@tests/unit/reservation-form.test.tsx` (if exists)
+- `@tests/integration/reservation-flow.test.ts` (if exists)
+- `@tests/e2e/reservation.spec.ts` (if exists)
+
 ## Test Structure
 
 - **Unit tests**: `tests/unit/` - Test individual functions and components
@@ -140,4 +147,6 @@ The agent will automatically run relevant programmatic checks and fix failures b
 - Type checks (`bun run type-check`)
 - Test execution (`bun run test`)
 
-For detailed testing requirements, see [`docs/TEST_REQUIREMENTS.md`](../../docs/TEST_REQUIREMENTS.md).
+**Related Documentation**:
+- [`docs/TEST_REQUIREMENTS.md`](../../docs/TEST_REQUIREMENTS.md) - Detailed testing requirements
+- [`docs/BEST_PRACTICES.md`](../../docs/BEST_PRACTICES.md) - Testing best practices

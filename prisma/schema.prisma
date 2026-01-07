@@ -1,0 +1,421 @@
+// ==============================================
+// Myrrh Rental Space - Prisma Schema
+// ==============================================
+// Prisma 7 + PostgreSQL 16
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==============================================
+// Enums
+// ==============================================
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+enum InquiryStatus {
+  NEW
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum CustomerStatus {
+  NEW
+  REGULAR
+  VIP
+  INACTIVE
+  BLACKLIST
+}
+
+enum NavigationType {
+  HEADER
+  FOOTER
+}
+
+enum SocialPlatform {
+  TWITTER
+  FACEBOOK
+  INSTAGRAM
+  YOUTUBE
+  LINE
+  TIKTOK
+  OTHER
+}
+
+// ==============================================
+// Auth.js Models
+// ==============================================
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String?
+  emailVerified DateTime?
+  image         String?
+  role          Role      @default(USER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  accounts     Account[]
+  sessions     Session[]
+  reservations Reservation[]
+  blogPosts    BlogPost[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(uuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ==============================================
+// Business Models
+// ==============================================
+
+model Space {
+  id            String   @id @default(uuid())
+  name          String
+  description   String   @db.Text
+  address       String
+  access        String?  @db.Text
+  capacity      Int
+  area          Decimal? @db.Decimal(10, 2)
+  hourlyPrice   Decimal  @db.Decimal(10, 2)
+  dailyPrice    Decimal? @db.Decimal(10, 2)
+  mainImageUrl  String
+  imageUrls     Json     @default("[]")
+  facilities    Json     @default("[]")
+  businessHours Json?
+  isPublished   Boolean  @default(false)
+  publishedAt   DateTime?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  reservations Reservation[]
+
+  @@index([isPublished, isActive])
+  @@map("spaces")
+}
+
+model Reservation {
+  id         String            @id @default(uuid())
+  spaceId    String
+  userId     String?
+  customerId String
+  startTime  DateTime
+  endTime    DateTime
+  status     ReservationStatus @default(PENDING)
+  totalPrice Decimal?          @db.Decimal(10, 2)
+  notes      String?           @db.Text
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  // Relations
+  space    Space    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([spaceId])
+  @@index([customerId])
+  @@index([startTime])
+  @@index([endTime])
+  @@index([status])
+  @@index([spaceId, startTime, endTime])
+  @@index([customerId, startTime])
+  @@map("reservations")
+}
+
+model Customer {
+  id                 String         @id @default(uuid())
+  lastName           String
+  firstName          String
+  email              String         @unique
+  phoneNumber        String?
+  address            String?        @db.Text
+  status             CustomerStatus @default(NEW)
+  notes              String?        @db.Text
+  totalReservations  Int            @default(0)
+  totalSpent         Decimal?       @db.Decimal(10, 2)
+  lastReservationAt  DateTime?
+  firstReservationAt DateTime?
+  isActive           Boolean        @default(true)
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  // Relations
+  reservations Reservation[]
+
+  @@index([lastName])
+  @@index([status])
+  @@index([isActive])
+  @@index([lastReservationAt])
+  @@index([lastName, firstName])
+  @@map("customers")
+}
+
+model Inquiry {
+  id        String        @id @default(uuid())
+  name      String
+  email     String
+  subject   String
+  message   String        @db.Text
+  status    InquiryStatus @default(NEW)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("inquiries")
+}
+
+model News {
+  id          String    @id @default(uuid())
+  title       String
+  content     String    @db.Text
+  publishedAt DateTime?
+  isPublished Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([isPublished, publishedAt])
+  @@map("news")
+}
+
+// ==============================================
+// Blog Models
+// ==============================================
+
+model BlogPost {
+  id              String    @id @default(uuid())
+  title           String
+  slug            String    @unique
+  excerpt         String    @db.Text
+  content         String    @db.Text
+  thumbnailUrl    String
+  ogpImageUrl     String?
+  categoryId      String
+  tags            Json      @default("[]")
+  metaDescription String?
+  metaKeywords    String?
+  ogpTitle        String?
+  ogpDescription  String?
+  publishedAt     DateTime?
+  isPublished     Boolean   @default(false)
+  isDraft         Boolean   @default(true)
+  authorId        String
+  viewCount       Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  category BlogCategory @relation(fields: [categoryId], references: [id])
+  author   User         @relation(fields: [authorId], references: [id])
+
+  @@index([isPublished, publishedAt])
+  @@index([categoryId, isPublished, publishedAt])
+  @@index([viewCount])
+  @@map("blog_posts")
+}
+
+model BlogCategory {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?  @db.Text
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  posts BlogPost[]
+
+  @@index([order])
+  @@map("blog_categories")
+}
+
+model BlogTag {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("blog_tags")
+}
+
+// ==============================================
+// CMS Models
+// ==============================================
+
+model Page {
+  id              String    @id @default(uuid())
+  slug            String    @unique
+  title           String
+  description     String?   @db.Text
+  content         String    @db.Text
+  metaDescription String?
+  metaKeywords    String?
+  ogpTitle        String?
+  ogpDescription  String?
+  ogpImageUrl     String?
+  isPublished     Boolean   @default(true)
+  publishedAt     DateTime?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([isPublished, isActive])
+  @@map("pages")
+}
+
+model NavigationItem {
+  id         String         @id @default(uuid())
+  type       NavigationType
+  parentId   String?
+  label      String
+  url        String
+  isExternal Boolean        @default(false)
+  order      Int
+  isActive   Boolean        @default(true)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  // Self-relation for submenus
+  parent   NavigationItem?  @relation("NavigationHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children NavigationItem[] @relation("NavigationHierarchy")
+
+  @@index([type, order])
+  @@map("navigation_items")
+}
+
+model SocialLink {
+  id        String         @id @default(uuid())
+  platform  SocialPlatform
+  url       String
+  iconUrl   String?
+  order     Int
+  isActive  Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([order])
+  @@map("social_links")
+}
+
+// ==============================================
+// Settings (Singleton)
+// ==============================================
+
+model Settings {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Site Basic Info
+  siteName           String?
+  siteDescription    String? @db.Text
+  faviconUrl         String?
+  defaultOgpImageUrl String?
+  headerLogoUrl      String?
+  footerCopyright    String?
+
+  // Contact Info
+  phoneNumber          String?
+  email                String?
+  address              String? @db.Text
+  defaultBusinessHours Json?
+
+  // Email Settings
+  senderEmail                        String?
+  senderName                         String?
+  replyToEmail                       String?
+  reservationConfirmationTemplateId  String?
+  reservationCancelledTemplateId     String?
+  reservationUpdatedTemplateId       String?
+  adminNotificationTemplateId        String?
+
+  // SEO Settings
+  defaultMetaDescription  String?
+  defaultMetaKeywords     String?
+  defaultOgpTitle         String?
+  defaultOgpDescription   String?
+  googleAnalyticsId       String?
+  googleSearchConsoleId   String?
+
+  // Reservation Settings
+  defaultTimeSlot                 Int?     @default(60)
+  minReservationDuration          Int?     @default(60)
+  maxReservationDuration          Int?     @default(480)
+  cancellationPolicy              String?  @db.Text
+  sendReservationConfirmationEmail Boolean @default(true)
+  sendAdminNotificationEmail       Boolean @default(true)
+
+  // Notification Settings
+  notifyNewReservation       Boolean @default(true)
+  notifyReservationChange    Boolean @default(true)
+  notifyReservationCancel    Boolean @default(true)
+  notifyNewInquiry           Boolean @default(true)
+  notificationEmailAddresses String?
+
+  // Other Settings
+  timezone           String?  @default("Asia/Tokyo")
+  language           String?  @default("ja")
+  maintenanceMode    Boolean  @default(false)
+  maintenanceMessage String?  @db.Text
+
+  @@map("settings")
+}

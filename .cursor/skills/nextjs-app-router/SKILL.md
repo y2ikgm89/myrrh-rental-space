@@ -137,7 +137,7 @@ export async function createSpace(formData: FormData) {
   // 4. Cache invalidation
   revalidatePath('/spaces')
   revalidatePath(`/spaces/${space.id}`)
-  revalidateTag('spaces-list')
+  revalidateTag('spaces-list', 'max') // stale-while-revalidate semantics
 
   return { success: true, spaceId: space.id }
 }
@@ -232,8 +232,8 @@ export async function updateSpace(id: string, data: UpdateSpaceData) {
   revalidatePath('/spaces')
   revalidatePath(`/spaces/${id}`)
 
-  // Option 2: Revalidate by tag
-  revalidateTag('spaces-list')
+  // Option 2: Revalidate by tag (stale-while-revalidate semantics)
+  revalidateTag('spaces-list', 'max')
 
   // Option 3: Update tag timestamp (more granular)
   updateTag('spaces-list')

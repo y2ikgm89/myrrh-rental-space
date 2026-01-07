@@ -7,6 +7,13 @@ alwaysApply: true
 
 This rule enforces security standards across the project.
 
+**Related Rules**: This rule is referenced by `@api-routes`, `@server-actions`, and `@components` for security patterns.
+
+**Example Files**:
+- `@src/lib/auth.ts` (authentication configuration)
+- `@src/lib/turnstile.ts` (Turnstile verification utilities)
+- `@src/lib/ratelimit.ts` (rate limiting utilities, if exists)
+
 ## Environment Variables
 
 - **Development**: Use `.env.local` (never commit to Git)
@@ -30,7 +37,10 @@ This rule enforces security standards across the project.
 
 ## Authentication & Authorization
 
-- **Rate limiting**: Implement rate limiting for login attempts
+- **Rate limiting**: Implement rate limiting for login attempts and form submissions
+  - **Global rate limiting**: IP-based global rate limit for DDoS protection (100 requests per 15 minutes)
+  - **Endpoint-specific limits**: Reservation form (5 per 15 min), Contact form (3 per 15 min), Login (5 per 15 min)
+  - Use `@upstash/ratelimit` with Redis for distributed rate limiting
 - **Session management**: Use secure session management (JWT with appropriate `maxAge`)
 - **Secure cookies**: Configure secure cookies (`HttpOnly`, `Secure`, `SameSite`)
 - **Route protection**: Protect API routes and Server Actions with authentication checks
@@ -74,11 +84,23 @@ Configure security headers in `next.config.js`:
 - **Cloudflare Bot Fight Mode**: Already enabled (free plan)
   - Works alongside Turnstile for comprehensive bot protection
 
+## Security Logging & Monitoring
+
+- **Log security events**: Log all security-related events (authentication failures, authorization errors, invalid inputs, rate limit violations, Turnstile verification failures, IP blocks, spam detection)
+- **Structured logging**: Use JSON format for logs
+- **Never log sensitive data**: Do not log passwords, tokens, or other sensitive information
+- **Monitor access patterns**: Track and alert on unusual access patterns
+
 ## Security Vulnerabilities
 
 - **Critical**: React 19.0-19.2.0 and Next.js 15.x-16.0.6 have a critical security vulnerability (CVE-2025-55182)
 - **Required**: Upgrade to React 19.2.3 and Next.js 16.1.1 immediately
   - This vulnerability allows unauthenticated remote code execution on the server
 - **Server Components**: Apply React Server Components security patches
+- **Regular audits**: Run `bun audit` regularly and apply security patches immediately
 
-For detailed security configuration, see [`docs/SECURITY.md`](../../docs/SECURITY.md) and [`docs/TURNSTILE_REQUIREMENTS.md`](../../docs/TURNSTILE_REQUIREMENTS.md).
+**Related Documentation**:
+- [`docs/SECURITY.md`](../../docs/SECURITY.md) - Detailed security configuration
+- [`docs/TURNSTILE_REQUIREMENTS.md`](../../docs/TURNSTILE_REQUIREMENTS.md) - Turnstile integration requirements
+- [`docs/DDOS_PROTECTION_REQUIREMENTS.md`](../../docs/DDOS_PROTECTION_REQUIREMENTS.md) - DDoS protection requirements
+- [`docs/ABUSE_PROTECTION_REQUIREMENTS.md`](../../docs/ABUSE_PROTECTION_REQUIREMENTS.md) - Abuse protection requirements

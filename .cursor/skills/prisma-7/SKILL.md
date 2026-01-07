@@ -181,7 +181,7 @@ export default async function DashboardPage() {
 
 ```typescript
 // ✅ Good: Prisma error handling
-import { Prisma } from '@prisma/client'
+import type { Prisma } from '@/generated/prisma/client'
 
 try {
   const space = await prisma.space.create({ data })
@@ -218,6 +218,31 @@ export async function getSpaces() {
     where: { isPublished: true },
   })
 }
+```
+
+### Prisma 7 Configuration File
+
+- **Use `prisma.config.ts`**: Required for migrations in Prisma 7
+- **Use `datasource.url`**: For database connection URL (not `migrate.url`)
+- **Use `defineConfig`**: For type-safe configuration
+
+```typescript
+// prisma/prisma.config.ts
+import path from 'node:path'
+import { defineConfig } from 'prisma/config'
+
+export default defineConfig({
+  earlyAccess: true,
+  schema: path.join(__dirname, 'schema.prisma'),
+  datasource: {
+    url: process.env.DATABASE_URL || 'postgresql://...',
+  },
+})
+```
+
+**Migration command**:
+```bash
+bunx prisma migrate dev --name <migration-name> --config prisma/prisma.config.ts
 ```
 
 ## Best Practices

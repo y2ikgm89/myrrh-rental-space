@@ -95,18 +95,24 @@ bun run test:e2e:ui        # E2E tests with UI
 
 ### Prisma with Bun
 
+- **Start PostgreSQL**: Use Docker Desktop for development database
 - **Use `bunx prisma migrate dev`**: For creating migrations
 - **Use `bunx prisma migrate deploy`**: For deploying migrations
 - **Use `bunx prisma studio`**: For viewing database
 - **Use `bunx prisma generate`**: For generating Prisma Client
 
 ```bash
+# Development database setup (Docker Desktop)
+docker-compose up -d postgres
+
 # Prisma commands
 bunx prisma migrate dev --name <migration_name>
 bunx prisma migrate deploy
 bunx prisma studio
 bunx prisma generate
 ```
+
+**Note**: Development environment uses PostgreSQL in Docker Desktop. Production uses Supabase cloud.
 
 ### Runtime Compatibility
 
@@ -138,7 +144,7 @@ FROM oven/bun:1.3.5 AS base
 WORKDIR /app
 
 # Install dependencies
-COPY package.json bun.lockb ./
+COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
 
 # Build application

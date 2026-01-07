@@ -39,6 +39,7 @@ Use this skill when:
 - **Function parameters**: Always annotate function parameters
 - **Return types**: Always annotate return types
 - **Variables**: Use type inference when possible, but annotate when unclear
+- **Avoid `any`**: Use `unknown` instead of `any` and validate with type guards
 
 ```typescript
 // ✅ Good: Explicit type annotations
@@ -53,6 +54,50 @@ const spaces = await prisma.space.findMany() // Type inferred from Prisma
 
 // ✅ Good: Explicit type when needed
 const spaceIds: string[] = spaces.map(space => space.id)
+
+// ❌ Bad: Using `any`
+function processData(data: any) {
+  return data.name.toUpperCase() // No type safety
+}
+
+// ✅ Good: Using `unknown` with type guard
+function processData(data: unknown): string {
+  if (typeof data === 'object' && data !== null && 'name' in data) {
+    if (typeof data.name === 'string') {
+      return data.name.toUpperCase()
+    }
+  }
+  throw new Error('Invalid data')
+}
+```
+
+### TypeScript 5.9 Features
+
+- **`satisfies` operator**: Use `satisfies` to validate types while preserving inference
+- **Utility types**: Leverage `Partial<T>`, `Required<T>`, `Pick<T>`, `Omit<T>`, etc.
+
+```typescript
+// ✅ Good: Using `satisfies` operator
+const config = {
+  apiUrl: 'https://api.example.com',
+  timeout: 5000,
+  retries: 3,
+} satisfies {
+  apiUrl: string
+  timeout: number
+  retries: number
+}
+
+// ✅ Good: Utility types
+interface User {
+  id: string
+  name: string
+  email: string
+}
+
+type UserUpdate = Partial<User>
+type UserPublic = Pick<User, 'id' | 'name'>
+type UserWithoutId = Omit<User, 'id'>
 ```
 
 ### Component Props
@@ -82,10 +127,11 @@ export function SpaceCard({ space }: SpaceCardProps) {
 }
 ```
 
-### Type Safety with Zod
+### Type Safety with Zod 4.3.5
 
 - **Use Zod schemas**: For runtime validation and type inference
 - **Infer types**: Use `z.infer` for type inference from Zod schemas
+- **Use `z.input` and `z.output`**: Distinguish between input and output types when using transforms
 
 ```typescript
 // ✅ Good: Zod schema with type inference
@@ -98,25 +144,44 @@ const createSpaceSchema = z.object({
   hourlyPrice: z.number().nonnegative(),
 })
 
+// z.infer: Inferred type (usually same as z.output)
 type CreateSpaceInput = z.infer<typeof createSpaceSchema>
 
-export async function createSpace(data: CreateSpaceInput): Promise<{ success: boolean; spaceId?: string }> {
+// z.input: Input type (before transforms)
+type CreateSpaceInputRaw = z.input<typeof createSpaceSchema>
+
+// z.output: Output type (after transforms)
+type CreateSpaceOutput = z.output<typeof createSpaceSchema>
+
+export async function createSpace(
+  data: CreateSpaceInput
+): Promise<{ success: boolean; spaceId?: string }> {
+  // parse() returns z.output type
   const validatedData = createSpaceSchema.parse(data)
   // ... implementation
 }
+
+// ✅ Good: Using Zod schema as type guard
+function isSpace(data: unknown): data is z.infer<typeof createSpaceSchema> {
+  return createSpaceSchema.safeParse(data).success
+}
 ```
 
-### Prisma Types
+### Prisma 7 Types
 
-- **Use Prisma types**: Import types from `@prisma/client`
+- **Use Prisma types**: Import types from `@/generated/prisma/client` (Prisma 7 requires custom output path)
 - **Use `Prisma.SpaceCreateInput`**: For Prisma input types
 - **Use `Prisma.SpaceUpdateInput`**: For Prisma update types
+- **Use `Prisma.SpaceGetPayload`**: For custom types with select/include
+- **Leverage type inference**: Prisma automatically infers types from select/include
 
 ```typescript
-// ✅ Good: Prisma types
-import { Prisma } from '@prisma/client'
+// ✅ Good: Prisma types (Prisma 7)
+import type { Prisma } from '@/generated/prisma/client'
 
-export async function createSpace(data: Prisma.SpaceCreateInput): Promise<Space> {
+export async function createSpace(
+  data: Prisma.SpaceCreateInput
+): Promise<Space> {
   return await prisma.space.create({
     data,
   })
@@ -131,6 +196,32 @@ export async function updateSpace(
     data,
   })
 }
+
+// ✅ Good: Custom types with Prisma.GetPayload
+type SpaceWithReservations = Prisma.SpaceGetPayload<{
+  include: {
+    reservations: true
+  }
+}>
+
+type SpacePublic = Prisma.SpaceGetPayload<{
+  select: {
+    id: true
+    name: true
+    hourlyPrice: true
+  }
+}>
+
+// ✅ Good: Type inference from select/include
+const space = await prisma.space.findUnique({
+  where: { id },
+  select: {
+    id: true,
+    name: true,
+    hourlyPrice: true,
+  },
+})
+// spaceの型は自動的に推論される: { id: string; name: string; hourlyPrice: number }
 ```
 
 ### Type Guards
@@ -162,25 +253,111 @@ export function processSpace(data: unknown): Space {
 ### Error Handling Types
 
 - **Use error types**: Define specific error types
-- **Use discriminated unions**: For error handling
+- **Use discriminated unions**: For error handling with type narrowing
+- **Handle specific error types**: Use `instanceof` for type guards
 
 ```typescript
-// ✅ Good: Error types
+// ✅ Good: Discriminated union for error handling
 type Result<T> =
   | { success: true; data: T }
-  | { success: false; error: string; details?: unknown }
+  | { success: false; error: string; code?: string; details?: unknown }
 
-export async function createSpace(data: CreateSpaceInput): Promise<Result<Space>> {
+export async function createSpace(
+  data: CreateSpaceInput
+): Promise<Result<Space>> {
   try {
-    const space = await prisma.space.create({ data })
+    const validatedData = createSpaceSchema.parse(data)
+    const space = await prisma.space.create({ data: validatedData })
     return { success: true, data: space }
   } catch (error) {
+    // Type narrowing with instanceof
+    if (error instanceof z.ZodError) {
+      return {
+        success: false,
+        error: 'Validation error',
+        code: 'VALIDATION_ERROR',
+        details: error.errors,
+      }
+    }
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2002') {
+        return {
+          success: false,
+          error: 'Duplicate entry',
+          code: 'DUPLICATE_ENTRY',
+        }
+      }
+    }
+
     return {
       success: false,
-      error: 'Failed to create space',
+      error: 'An unexpected error occurred',
+      code: 'UNKNOWN_ERROR',
       details: error,
     }
   }
+}
+
+// ✅ Good: Using discriminated union with type narrowing
+const result = await createSpace(data)
+if (result.success) {
+  // TypeScript knows result.data exists here
+  console.log(result.data.name)
+} else {
+  // TypeScript knows result.error exists here
+  console.error(result.error, result.code)
+}
+```
+
+### React 19 + Next.js 16 Type Safety
+
+- **Server Components**: Use proper types for params (Promise in Next.js 16)
+- **Server Actions**: Use Zod schemas for type inference
+- **Promise types**: Explicitly type Promise props for React 19's `use()` hook
+
+```typescript
+// ✅ Good: Server Component with proper types
+interface PageProps {
+  params: Promise<{ id: string }>
+}
+
+export default async function SpacePage({ params }: PageProps) {
+  const { id } = await params // Next.js 16: params is Promise
+  
+  const space = await prisma.space.findUnique({
+    where: { id },
+  })
+  
+  if (!space) {
+    notFound()
+  }
+  
+  return <SpaceDetails space={space} />
+}
+
+// ✅ Good: Server Action with type safety
+'use server'
+
+type CreateSpaceInput = z.infer<typeof createSpaceSchema>
+type CreateSpaceResult =
+  | { success: true; spaceId: string }
+  | { success: false; error: string }
+
+export async function createSpace(
+  data: CreateSpaceInput
+): Promise<CreateSpaceResult> {
+  // Implementation
+}
+
+// ✅ Good: Promise type for React 19's use() hook
+interface CommentsProps {
+  commentsPromise: Promise<Comment[]>
+}
+
+function Comments({ commentsPromise }: CommentsProps) {
+  const comments = use(commentsPromise) // Type is guaranteed
+  return <div>{/* ... */}</div>
 }
 ```
 
@@ -196,7 +373,7 @@ import { NextRequest } from 'next/server'
 
 // 2. Third-party libraries
 import { z } from 'zod'
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient } from '@/generated/prisma/client'
 
 // 3. Internal modules (@/ alias)
 import { prisma } from '@/lib/prisma'
@@ -212,12 +389,15 @@ import type { Reservation } from '@/types/reservation'
 ## Best Practices
 
 1. **Explicit types**: Always annotate function parameters and return types
-2. **Type inference**: Use type inference when types are clear
-3. **Zod schemas**: Use Zod for runtime validation and type inference
-4. **Prisma types**: Use Prisma-generated types for database operations
-5. **Type guards**: Use type guards for runtime type checking
-6. **Error types**: Define specific error types for better error handling
-7. **Import order**: Follow consistent import order
+2. **Type inference**: Use type inference when types are clear (e.g., Prisma queries)
+3. **Avoid `any`**: Use `unknown` instead and validate with type guards
+4. **Zod schemas**: Use Zod 4.3.5 for runtime validation and type inference (`z.infer`, `z.input`, `z.output`)
+5. **Prisma types**: Use Prisma 7-generated types (`Prisma.*`, `Prisma.GetPayload`)
+6. **Type guards**: Use type guards (`instanceof`, custom guards) for runtime type checking
+7. **Error types**: Use discriminated unions for type-safe error handling
+8. **React 19/Next.js 16**: Use proper types for Server Components (Promise params) and Server Actions
+9. **Type reuse**: Follow DRY principle, centralize type definitions
+10. **Import order**: Follow consistent import order (React/Next.js → third-party → internal → relative → type-only)
 
 ## References
 

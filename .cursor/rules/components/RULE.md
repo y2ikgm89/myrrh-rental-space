@@ -9,6 +9,13 @@ alwaysApply: false
 
 This rule provides guidance for implementing React components in Next.js 16 App Router.
 
+**Related Rules**: See `@code-style` for TypeScript and naming conventions, `@server-actions` for Server Actions integration patterns, `@security` for security best practices.
+
+**Example Files**:
+- `@src/components/public/reservation-form.tsx` (if exists)
+- `@src/components/ui/button.tsx` (if exists)
+- `@src/app/spaces/[id]/page.tsx` (Server Component example)
+
 ## Component Types
 
 ### Server Components (Default)
@@ -78,23 +85,7 @@ export function ReservationForm({ spaceId, onSubmit }: ReservationFormProps) {
 
 ## Component Structure
 
-### File Organization
-
-- **One component per file**: Each component should be in its own file
-- **Named exports**: Use named exports for components
-- **Props interface**: Define props interface at the top of the file
-
-```typescript
-// reservation-form.tsx
-interface ReservationFormProps {
-  spaceId: string
-  onSubmit: (data: ReservationData) => Promise<void>
-}
-
-export function ReservationForm({ spaceId, onSubmit }: ReservationFormProps) {
-  // Component implementation
-}
-```
+- **Props interface**: Define props interface at the top of the file (see `@code-style` for file organization and naming conventions)
 
 ### Component Directory Structure
 
@@ -203,18 +194,19 @@ export function Comments({ commentsPromise }: CommentsProps) {
 
 ### Client Component with Server Action
 
+**Recommended**: Use `useTransition` for better UX with Server Actions (React 19 + Next.js 16).
+
 ```typescript
 'use client'
 
-import { useState } from 'react'
+import { useTransition } from 'react'
 import { createReservation } from '@/actions/reservation'
 
 export function ReservationForm({ spaceId }: { spaceId: string }) {
-  const [isLoading, setIsLoading] = useState(false)
+  const [isPending, startTransition] = useTransition()
 
   const handleSubmit = async (formData: FormData) => {
-    setIsLoading(true)
-    try {
+    startTransition(async () => {
       const result = await createReservation({
         spaceId,
         date: formData.get('date') as string,
@@ -224,14 +216,15 @@ export function ReservationForm({ spaceId }: { spaceId: string }) {
       if (!result.success) {
         // Handle error
       }
-    } finally {
-      setIsLoading(false)
-    }
+    })
   }
 
   return (
     <form action={handleSubmit}>
       {/* Form fields */}
+      <button type="submit" disabled={isPending}>
+        {isPending ? 'Submitting...' : 'Submit'}
+      </button>
     </form>
   )
 }
@@ -275,6 +268,40 @@ const ThreeJSComponent = dynamic(
 )
 ```
 
+### Static Generation (generateStaticParams)
+
+- **Pre-render dynamic routes**: Use `generateStaticParams` for dynamic routes that can be pre-rendered
+- **Improve performance**: Pre-rendering improves performance and SEO
+- **Use in page files**: Export `generateStaticParams` function in page files
+
+```typescript
+// src/app/spaces/[id]/page.tsx
+import { prisma } from '@/lib/prisma'
+
+export async function generateStaticParams() {
+  const spaces = await prisma.space.findMany({
+    where: { isPublished: true },
+    select: { id: true },
+  })
+
+  return spaces.map(space => ({
+    id: space.id,
+  }))
+}
+
+export default async function SpacePage({ params }: { params: { id: string } }) {
+  const space = await prisma.space.findUnique({
+    where: { id: params.id },
+  })
+
+  if (!space) {
+    notFound()
+  }
+
+  return <SpaceDetails space={space} />
+}
+```
+
 ## Component Composition
 
 - **Composition over inheritance**: Prefer component composition
@@ -283,8 +310,10 @@ const ThreeJSComponent = dynamic(
 
 ## Type Safety
 
-- **Props types**: Always define props with `interface` or `type`
-- **Explicit types**: Use explicit types for component props
+- **Props types**: Always define props with `interface` (see `@code-style` for type definitions)
 - **Type exports**: Export types for use in other components
 
-For detailed component patterns, see [`docs/PROJECT_STRUCTURE.md`](../../docs/PROJECT_STRUCTURE.md).
+**Related Documentation**:
+- [`docs/PROJECT_STRUCTURE.md`](../../docs/PROJECT_STRUCTURE.md) - Component organization and patterns
+- [`docs/BEST_PRACTICES.md`](../../docs/BEST_PRACTICES.md) - Performance optimization
+- [`docs/CACHING_STRATEGY.md`](../../docs/CACHING_STRATEGY.md) - Caching strategies for Server Components

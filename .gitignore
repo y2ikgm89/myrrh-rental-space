@@ -1,73 +1,91 @@
-# Dependencies
-node_modules/
-.pnp
-.pnp.js
 
-# Testing
-coverage/
-.nyc_output
 
-# Next.js
-.next/
-out/
-build/
-dist/
-
-# Production
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-# Misc
-.DS_Store
-*.pem
-
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+!prisma/migrations/.gitkeep
+# Bun
 # Debug
-*.log
-
+# Dependencies
+# IDE
 # Local env files
+# Misc
+# Next.js
+# OS
+# Playwright
+# Prisma
+# Production
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# Temporary files
+# Testing
+# Turbopack
+# TypeScript
+# Vercel
+# debug
+# dependencies
+# env files (can opt-in for committing if needed)
+# misc
+# next.js
+# production
+# testing
+# typescript
+# vercel
+*.log
+*.pem
+*.pem
+*.swo
+*.swp
+*.temp
+*.tmp
+*.tsbuildinfo
+*.tsbuildinfo
+*~
+.DS_Store
+.DS_Store
+.bun/
 .env
+.env*
 .env*.local
 .env.development.local
-.env.test.local
 .env.production.local
-
-# Vercel
-.vercel
-
-# TypeScript
-*.tsbuildinfo
-next-env.d.ts
-
-# Prisma
-prisma/migrations/*.sql
-!prisma/migrations/.gitkeep
-
-# IDE
-.vscode/
+.env.test.local
 .idea/
-*.swp
-*.swo
-*~
-
-# OS
-Thumbs.db
-.DS_Store
-
-# Bun
-.bun/
-
-# Turbopack
+.next/
+.nyc_output
+.pnp
+.pnp.*
+.pnp.js
+.pnpm-debug.log*
 .turbo/
-
-# Playwright
-test-results/
+.vercel
+.vercel
+.vscode/
+.yarn/*
+/.next/
+/.pnp
+/build
+/coverage
+/node_modules
+/out/
+Thumbs.db
+build/
+coverage/
+dist/
+lerna-debug.log*
+next-env.d.ts
+next-env.d.ts
+node_modules/
+npm-debug.log*
+npm-debug.log*
+out/
 playwright-report/
 playwright/.cache/
-
-# Temporary files
-*.tmp
-*.temp
+pnpm-debug.log*
+prisma/migrations/*.sql
+src/generated/
+test-results/
+yarn-debug.log*
+yarn-debug.log*
+yarn-error.log*
+yarn-error.log*

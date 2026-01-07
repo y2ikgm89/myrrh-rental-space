@@ -116,8 +116,8 @@ export async function createSpace(data: CreateSpaceData) {
 - **Check roles**: Verify user roles for admin routes
 
 ```typescript
-// ✅ Good: Middleware for route protection
-// src/middleware.ts
+// ✅ Good: Proxy for route protection (Next.js 16)
+// src/proxy.ts
 import { auth } from '@/lib/auth'
 import { NextResponse } from 'next/server'
 
