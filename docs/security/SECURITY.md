@@ -32,9 +32,29 @@
 
 ### セッション管理
 
+**重要**: Prisma 7では、`@/generated/prisma/client`からPrismaClientをインポートします。
+
 ```typescript
+// ✅ 良い例: Auth.js 5の設定（Prisma 7対応）
 // src/lib/auth.ts
-export const authOptions = {
+import NextAuth from 'next-auth'
+import { PrismaAdapter } from '@auth/prisma-adapter'
+import { PrismaClient } from '@/generated/prisma/client'
+import { prisma } from '@/lib/prisma'
+import authConfig from './auth.config'
+
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  adapter: PrismaAdapter(prisma),
+  session: { strategy: 'jwt' },
+  ...authConfig,
+})
+```
+
+**セッション設定**:
+
+```typescript
+// auth.config.ts
+export default {
   session: {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30日
@@ -53,6 +73,11 @@ export const authOptions = {
   },
 }
 ```
+
+**重要なポイント**:
+- **Prisma 7対応**: `@/generated/prisma/client`からPrismaClientをインポート
+- **JWTセッション推奨**: パフォーマンス向上のため、JWTセッション戦略を推奨
+- **Prisma Adapter**: `@auth/prisma-adapter`を使用（`@next-auth/prisma-adapter`は非推奨）
 
 ### 認可（ロールベースアクセス制御）
 
@@ -80,6 +105,62 @@ export default async function proxy(request: NextRequest) {
 ```
 
 **注意**: Auth.js 5では`auth()`メソッドを使用します。`getServerSession`は非推奨です。
+
+### ログインページへのアクセス制限
+
+管理画面のログインページ（`/admin/login`）へのアクセスは、シークレットトークンまたはワンタイムトークンで制限されています。これにより、URLを知っている人だけがログインページにアクセスできるようになります。
+
+**環境変数の設定（必須）**:
+
+```bash
+# .env.local (開発環境)
+ADMIN_LOGIN_TOKEN=your-secret-token-here
+
+# Google Secret Manager (本番環境)
+ADMIN_LOGIN_TOKEN=your-production-secret-token-here
+```
+
+**重要**: `ADMIN_LOGIN_TOKEN` 環境変数は開発環境・本番環境ともに**必須**です。設定されていない場合、アプリケーションは起動時にエラーを返します。
+
+**スタッフへのログインURL共有方法**:
+
+#### 方法1: トークン生成（推奨）
+
+1. 管理画面のダッシュボードにアクセス
+2. 「スタッフ用ログインURL生成」セクションで「新しいログインURLを生成」をクリック
+3. 生成されたURLをスタッフに共有
+   - 生成されたURLは30日間有効
+   - **使用されるたびに自動的に30日間延長される**（定期的に使用されるトークンは自動的に延長されるため、新しいトークンを生成する必要はありません）
+   - 有効期限内であれば複数回使用可能（別日に再度ログインする場合も同じURLを使用可能）
+   - セキュリティ上、より安全な方法
+
+#### 方法2: 環境変数トークンを使用（開発・緊急時のみ）
+
+1. 環境変数 `ADMIN_LOGIN_TOKEN` の値を確認
+2. ログインページにアクセスする際は、`?token=your-secret-token-here` を付与
+   - 例: `https://example.com/admin/login?token=your-secret-token-here`
+3. この方法は永続的に有効なため、セキュリティリスクが高い
+
+**実装の詳細**:
+
+- `proxy.ts` で起動時に環境変数の存在を検証（未設定の場合はエラー）
+- ログインページへのアクセス時に以下の順序でトークンを検証:
+  1. 環境変数のトークンと一致するかチェック
+  2. 生成されたトークンがデータベースに存在し、有効期限内かチェック
+- 有効なトークンの場合のみログインページを表示
+- **ログイン成功時に有効期限を自動延長**: スタッフがログインに成功した際に、有効期限が30日間自動的に延長される
+  - 定期的にログインされるトークンは自動的に延長されるため、新しいトークンを生成する必要はない
+  - 使用されなくなったトークンは期限切れになる（セキュリティ上良い）
+- 生成されたトークンは有効期限内であれば複数回使用可能（別日に再度ログインする場合も同じURLを使用可能）
+- 未認証ユーザーが管理画面にアクセスした際は、トークン付きURLにリダイレクト
+
+**セキュリティ上の注意**:
+
+- **ワンタイムトークン生成を推奨**: より安全で、使用後に自動的に無効化される
+- 環境変数のトークンは開発・緊急時のみ使用（永続的に有効なため）
+- トークンは推測困難な長いランダム文字列を使用（推奨: 32文字以上）
+- 環境変数は開発環境・本番環境ともに必須
+- 環境変数のトークンは定期的に変更することを推奨
 
 ### Server Actionsでの権限チェック
 
@@ -131,17 +212,58 @@ export const createSpaceSchema = z.object({
 
 ### ファイルアップロードの検証
 
+**画像ファイル**:
 ```typescript
-// ファイルサイズチェック
-if (file.size > 10 * 1024 * 1024) {
-  throw new Error('File size exceeds 10MB')
+// 画像ファイルサイズチェック（用途に応じて異なる）
+const maxImageSize = 10 * 1024 * 1024 // 10MB（スペース管理用）
+// または
+const maxImageSize = 5 * 1024 * 1024 // 5MB（ブログ管理用）
+
+if (file.size > maxImageSize) {
+  throw new Error(`File size exceeds ${maxImageSize / 1024 / 1024}MB`)
 }
 
-// ファイル形式チェック
-const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
-if (!allowedTypes.includes(file.type)) {
-  throw new Error('Invalid file type')
+// 画像ファイル形式チェック
+const allowedImageTypes = [
+  'image/jpeg',  // JPEG
+  'image/png',   // PNG
+  'image/webp',  // WebP
+  'image/avif'   // AVIF（次世代画像フォーマット、高圧縮率）
+]
+if (!allowedImageTypes.includes(file.type)) {
+  throw new Error('Invalid image file type. Allowed: JPEG, PNG, WebP, AVIF')
 }
+```
+
+**動画ファイル**:
+```typescript
+// 動画ファイルサイズチェック（用途に応じて異なる）
+const maxVideoSize = 100 * 1024 * 1024 // 100MB（スペース紹介動画用）
+// または
+const maxVideoSize = 50 * 1024 * 1024 // 50MB（ブログ埋め込み動画用）
+
+if (file.size > maxVideoSize) {
+  throw new Error(`File size exceeds ${maxVideoSize / 1024 / 1024}MB`)
+}
+
+// 動画ファイル形式チェック
+const allowedVideoTypes = [
+  'video/mp4',   // MP4（H.264コーデック推奨、広くサポート）
+  'video/webm'   // WebM（オープン形式、モダンブラウザでサポート）
+]
+if (!allowedVideoTypes.includes(file.type)) {
+  throw new Error('Invalid video file type. Allowed: MP4 (H.264), WebM')
+}
+
+// 動画のコーデック検証（オプション、より厳密な検証が必要な場合）
+// MP4ファイルの場合はH.264コーデックを推奨（H.265/HEVCは現時点では対応しない）
+// WebMファイルの場合はVP8またはVP9コーデックを推奨
+
+// 注意: H.265（HEVC）コーデックは現時点では対応しない
+// 理由:
+// 1. Firefoxが特許ライセンス問題でサポートしていない
+// 2. 一部のPCでハードウェアデコーダーが無効化されている場合がある
+// 3. すべてのユーザー環境で確実に再生できるとは限らない
 ```
 
 ---
@@ -894,6 +1016,20 @@ export function logSecurityEvent(
 - [ ] ログの確認
 - [ ] アクセスログの監視
 - [ ] セキュリティ監査の実施
+
+---
+
+## 更新履歴
+
+- **2026-01-08**: Context7で取得した最新情報に基づき、Auth.js 5の最新パターンを更新
+  - Prisma 7対応の設定例を追加（`@/generated/prisma/client`からのインポート）
+  - `auth()`メソッドの使用を確認（`getServerSession`は非推奨）
+  - JWTセッション戦略の推奨を明確化
+  - Prisma Adapterの最新パターン（`@auth/prisma-adapter`）を確認
+- **2026-01-07**: ファイルアップロードの検証を拡張:
+  - 画像フォーマットにAVIFを追加（次世代画像フォーマット、高圧縮率）
+  - 動画ファイルの検証を追加（MP4/WebM、サイズ制限、コーデック検証）
+  - 用途別のサイズ制限を明確化（画像: 5MB/10MB、動画: 50MB/100MB）
 
 ---
 

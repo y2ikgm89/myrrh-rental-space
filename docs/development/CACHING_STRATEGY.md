@@ -2,7 +2,7 @@
 
 > **Note**: このドキュメントには、Next.js 16 App Routerの最新のキャッシングAPIに基づく詳細なキャッシング戦略が記載されています。技術スタックの詳細については、[`AGENTS.md`](../AGENTS.md)を参照してください。
 
-**最終更新**: 2026-01-06
+**最終更新**: 2026-01-08
 
 ## 実装方針
 
@@ -113,35 +113,70 @@ export async function updateSpace(id: string, data: UpdateSpaceData) {
 ```
 
 **`profile`パラメータ**:
-- `'max'`: stale-while-revalidate semantics（推奨）
+- `'max'`: stale-while-revalidate semantics（**推奨**）
   - 古いコンテンツを即座に表示し、バックグラウンドで新しいデータを取得
   - ユーザー体験が向上し、パフォーマンスも最適化される
-- 指定なし: 即座にキャッシュを無効化し、次のリクエストで新しいデータを取得
+  - 次のリクエストから新しいデータを表示
+  - **動作の仕組み**:
+    1. 古いコンテンツを即座に表示（キャッシュされたコンテンツ）
+    2. バックグラウンドで新しいデータを取得
+    3. 次のリクエストから新しいデータを表示
+- 指定なし: 即座にキャッシュを無効化し、次のリクエストで新しいデータを取得（**非推奨、レガシー動作**）
+
+**使用例**:
+
+```typescript
+// ✅ 推奨: stale-while-revalidate semantics
+revalidateTag('spaces-list', 'max')
+
+// ❌ 非推奨: レガシー動作（即座にキャッシュを無効化）
+revalidateTag('spaces-list')
+```
 
 ### 6. `updateTag`
 
-**用途**: タグのタイムスタンプを更新（より細かい制御）
+**用途**: 即座にキャッシュを無効化（read-your-own-writesシナリオ）。Server Actionsでのみ使用可能。
 
 ```typescript
 import { updateTag } from 'next/cache'
+import { redirect } from 'next/navigation'
 
-export async function updateSpace(id: string, data: UpdateSpaceData) {
-  await prisma.space.update({
-    where: { id },
-    data,
+export async function createBlogPost(formData: FormData) {
+  const post = await prisma.blogPost.create({
+    data: {
+      title: formData.get('title') as string,
+      content: formData.get('content') as string,
+      // ...
+    },
   })
 
-  // タグのタイムスタンプを更新
-  updateTag('spaces-list')
+  // 即座にキャッシュを無効化（stale-while-revalidateなし）
+  // 作成したばかりの投稿を即座に表示する必要があるため
+  updateTag('blog-posts-list')
+  updateTag(`blog-post-${post.id}`)
+
+  redirect(`/blog/${post.slug}`)
 }
 ```
 
+**重要なポイント**:
+- **Server Actionsでのみ使用可能**: Route Handlersでは使用できません
+- **即座にキャッシュを無効化**: stale-while-revalidate semanticsなし
+- **read-your-own-writesシナリオに最適**: データ作成後に即座にそのデータを表示する必要がある場合
+- **`revalidateTag`との違い**: `revalidateTag`はstale-while-revalidate semanticsをサポートしますが、`updateTag`は即座に無効化します
+
+**使用シナリオ**:
+- データ作成後に即座にそのデータを表示する必要がある場合
+- ユーザーが作成したコンテンツを即座に確認できるようにする場合
+- stale-while-revalidateが不要な場合
+
 ### 7. `refresh`
 
-**用途**: 現在のページのキャッシュを更新
+**用途**: 現在のページのキャッシュを更新。ページリロードなしで最新データを表示できます。
 
 ```typescript
 import { refresh } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 
 export async function updateSpace(id: string, data: UpdateSpaceData) {
   await prisma.space.update({
@@ -151,8 +186,23 @@ export async function updateSpace(id: string, data: UpdateSpaceData) {
 
   // 現在のページのキャッシュを更新
   refresh()
+  
+  // 関連するパスも無効化
+  revalidatePath('/spaces')
+  revalidatePath(`/spaces/${id}`)
+  revalidateTag('spaces-list', 'max')
 }
 ```
+
+**重要なポイント**:
+- **現在のページのみ**: 現在のページのキャッシュを更新します
+- **ページリロードなし**: ページリロードなしで最新データを表示できます
+- **`revalidatePath`と組み合わせ**: 関連するパスも無効化する場合は、`revalidatePath`と組み合わせて使用します
+
+**使用シナリオ**:
+- 現在のページのデータを更新した場合
+- ページリロードなしで最新データを表示したい場合
+- `revalidatePath`と組み合わせて使用
 
 ---
 
@@ -196,9 +246,11 @@ export const revalidate = false
 
 ```typescript
 // src/app/spaces/[id]/page.tsx
-export default async function SpacePage({ params }: { params: { id: string } }) {
+export default async function SpacePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params // Next.js 16ではparamsはPromise
+
   const space = await prisma.space.findUnique({
-    where: { id: params.id },
+    where: { id },
   })
   return <SpaceDetails space={space} />
 }
@@ -275,11 +327,25 @@ export default async function ReservationPage() {
 
 `revalidateTag`の第2引数に`'max'`を指定することで、stale-while-revalidate semanticsが適用されます。
 
+**重要**: Next.js 16では、`revalidateTag`の第2引数に`'max'`を指定することが**推奨**されています。第2引数を指定しない場合（レガシー動作）は非推奨です。
+
 ### 動作の仕組み
 
 1. **古いコンテンツを即座に表示**: キャッシュされた古いコンテンツを即座にユーザーに表示
 2. **バックグラウンドで更新**: 同時にバックグラウンドで新しいデータを取得
 3. **次回リクエストで更新**: 次のリクエストから新しいデータを表示
+
+**レガシー動作との違い**:
+
+```typescript
+// ✅ 推奨: stale-while-revalidate semantics
+revalidateTag('spaces-list', 'max')
+// 動作: 古いコンテンツを即座に表示 → バックグラウンドで更新 → 次回リクエストで新しいデータ
+
+// ❌ 非推奨: レガシー動作（即座にキャッシュを無効化）
+revalidateTag('spaces-list')
+// 動作: 即座にキャッシュを無効化 → 次のリクエストで新しいデータを取得（ローディング時間が発生）
+```
 
 ### 利点
 
@@ -403,8 +469,10 @@ export async function generateStaticParams() {
   return spaces.map(space => ({ id: space.id }))
 }
 
-export default async function SpacePage({ params }: { params: { id: string } }) {
-  const space = await getSpace(params.id)
+export default async function SpacePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params // Next.js 16ではparamsはPromise
+
+  const space = await getSpace(id)
 
   if (!space) {
     notFound()
@@ -653,15 +721,217 @@ export async function updateSpace(id: string, data: UpdateSpaceData) {
 }
 ```
 
+### パターン5: PPR（Partial Prerendering） / Cache Components
+
+> **Note**: Next.js 16では、実験的なPPRフラグが削除され、`cacheComponents`設定で有効化されます。`"use cache"`ディレクティブを使用して、コンポーネントや関数レベルでキャッシュを明示的に制御できます。
+
+**用途**: 静的コンテンツと動的コンテンツを同じルート内で組み合わせ、高速な初期ページロードを実現
+
+**特徴**:
+- 静的コンテンツは事前レンダリング
+- 動的コンテンツはランタイムで取得
+- `"use cache"`ディレクティブで明示的なキャッシュ制御
+- デフォルトで15分間のサーバーサイド再検証期間
+
+**設定**:
+
+```typescript
+// next.config.ts
+import type { NextConfig } from 'next'
+
+const nextConfig: NextConfig = {
+  cacheComponents: true, // PPR/Cache Componentsを有効化
+}
+
+export default nextConfig
+```
+
+**実装例**:
+
+```typescript
+// ページレベルでのキャッシュ
+// app/blog/page.tsx
+"use cache"
+
+export default async function BlogPage() {
+  const posts = await prisma.blogPost.findMany({
+    where: { isPublished: true },
+    orderBy: { publishedAt: 'desc' },
+  })
+
+  return (
+    <div>
+      {posts.map(post => (
+        <Article key={post.id} {...post} />
+      ))}
+    </div>
+  )
+}
+```
+
+```typescript
+// コンポーネントレベルでのキャッシュ
+// components/UserProfile.tsx
+"use cache"
+
+async function UserProfile({ userId }: { userId: string }) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+  })
+  return <div>{user?.name}</div>
+}
+```
+
+```typescript
+// 関数レベルでのキャッシュ
+// lib/data.ts
+export async function getPopularPosts() {
+  "use cache"
+
+  const posts = await prisma.blogPost.findMany({
+    where: { isPublished: true },
+    orderBy: { views: 'desc' },
+    take: 10,
+  })
+
+  return posts
+}
+```
+
+**注意事項**:
+- `"use cache"`を使用する関数やコンポーネントは、シリアライズ可能な値を返す必要があります
+- レイアウトやページのトップレベルで使用すると、ルートセグメントが事前レンダリングされます
+- ランタイムリクエストAPI（`cookies()`、`headers()`など）にアクセスする場合は、実験的な`'use cache: private'`ディレクティブを使用できます（ブラウザのメモリにのみキャッシュされ、ページリロード後は保持されません）
+
+### パターン6: CSR（Client-Side Rendering）
+
+> **Note**: Next.js 16では、デフォルトでServer Componentsを使用します。Client Componentsは`'use client'`ディレクティブで明示的に指定し、`dynamic`インポートで`ssr: false`を指定することで、完全にクライアントサイドのみでレンダリングできます。
+
+**用途**: ブラウザAPIへのアクセス、インタラクティブなUI、クライアントサイドのみで実行する必要があるコンポーネント
+
+**特徴**:
+- クライアントサイドでのみ実行
+- ブラウザAPI（`localStorage`、`navigator.geolocation`など）にアクセス可能
+- 状態管理、エフェクト、イベントリスナーを使用可能
+- サーバーサイドリソースに直接アクセス不可
+- クライアント側のJavaScriptバンドルサイズが増加
+
+**実装例**:
+
+```typescript
+// Client Component（デフォルトでサーバーサイドでも事前レンダリングされる）
+// components/Counter.tsx
+'use client'
+
+import { useState } from 'react'
+
+export default function Counter() {
+  const [count, setCount] = useState(0)
+
+  return (
+    <div>
+      <p>Counter {count}</p>
+      <button onClick={() => setCount(count + 1)}>Increment</button>
+      <button onClick={() => setCount(count - 1)}>Decrement</button>
+    </div>
+  )
+}
+```
+
+```typescript
+// 完全にクライアントサイドのみでレンダリング（SSRを無効化）
+// components/ClientOnly.tsx
+'use client'
+
+import dynamic from 'next/dynamic'
+
+// SSRを無効化してクライアントサイドのみで実行
+const ClientOnlyApp = dynamic(
+  () => import('./ClientOnlyApp'),
+  { ssr: false }
+)
+
+export function ClientOnly() {
+  return <ClientOnlyApp />
+}
+```
+
+```typescript
+// ブラウザAPIを使用するClient Component
+// components/Geolocation.tsx
+'use client'
+
+import { useState, useEffect } from 'react'
+
+export default function Geolocation() {
+  const [location, setLocation] = useState<GeolocationCoordinates | null>(null)
+
+  useEffect(() => {
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition((position) => {
+        setLocation(position.coords)
+      })
+    }
+  }, [])
+
+  if (!location) {
+    return <div>位置情報を取得中...</div>
+  }
+
+  return (
+    <div>
+      <p>緯度: {location.latitude}</p>
+      <p>経度: {location.longitude}</p>
+    </div>
+  )
+}
+```
+
+**Server ComponentsとClient Componentsの組み合わせ**:
+
+```typescript
+// Server ComponentからClient Componentをレンダリング
+// app/page.tsx
+import Counter from '@/components/Counter'
+import Geolocation from '@/components/Geolocation'
+
+export default async function HomePage() {
+  // Server Componentでデータ取得
+  const spaces = await prisma.space.findMany({
+    where: { isPublished: true },
+  })
+
+  return (
+    <div>
+      <h1>ホームページ</h1>
+      {/* Server Componentで取得したデータを表示 */}
+      <SpaceList spaces={spaces} />
+      
+      {/* Client Componentを組み合わせ */}
+      <Counter />
+      <Geolocation />
+    </div>
+  )
+}
+```
+
+**ベストプラクティス**:
+- `'use client'`境界は可能な限り深い位置に配置し、クライアント側JavaScriptバンドルサイズを最小化
+- Server Componentsをデフォルトとして使用し、必要な場合のみClient Componentsを使用
+- ブラウザAPIを使用する場合のみ`ssr: false`を指定
+- Server ComponentsとClient Componentsを適切に組み合わせて、パフォーマンスとインタラクティビティのバランスを取る
+
 ---
 
 ## ベストプラクティス
 
 ### 1. 適切なキャッシュ戦略の選択
 
-- **静的コンテンツ**: `revalidate: false` または `cache: 'force-cache'`
+- **静的コンテンツ**: `revalidate: false` または `cache: 'force-cache'`（SSG）
 - **半静的コンテンツ**: ISR（`revalidate: <seconds>`）
-- **動的コンテンツ**: `unstable_noStore()` または `cache: 'no-store'`
+- **動的コンテンツ**: `unstable_noStore()` または `cache: 'no-store'`（SSR）
+- **静的と動的の混合**: PPR/Cache Components（`cacheComponents: true` + `"use cache"`ディレクティブ）
+- **クライアントサイドのみ**: CSR（`'use client'` + `dynamic`インポートで`ssr: false`）
 
 ### 2. タグベースの無効化の活用
 
@@ -1048,5 +1318,12 @@ const spaces = await prisma.space.findMany({
 
 ## 更新履歴
 
+- **2026-01-08**: Context7で取得した最新情報に基づき、以下の更新を実施
+  - `revalidateTag`の`profile`パラメータ（`'max'`）の詳細な説明を追加（stale-while-revalidate semanticsの動作の仕組み、レガシー動作との違い）
+  - `updateTag`の詳細な説明を追加（read-your-own-writesシナリオ、Server Actionsでのみ使用可能、`revalidateTag`との違い）
+  - `refresh`の詳細な説明を追加（現在のページのキャッシュ更新、`revalidatePath`との組み合わせ）
+  - stale-while-revalidate semanticsの説明を強化（動作の仕組み、レガシー動作との違いを明確化）
+- **2026-01-08**: Next.js 16の非同期paramsパターンに全コード例を修正（`Promise<{ id: string }>`形式、`await params`使用）
+- **2026-01-07**: PPR（Partial Prerendering）/ Cache ComponentsとCSR（Client-Side Rendering）の詳細な説明を追加、Next.js 16の最新機能を反映
 - **2026-01-06**: セキュリティ考慮事項セクション追加、機密情報のキャッシュ回避、キャッシュポイズニング対策を追加
 - **2026-01-06**: 初版作成、Next.js 16の最新キャッシングAPIを反映

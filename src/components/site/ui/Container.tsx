@@ -1,5 +1,6 @@
 import { tv, type VariantProps } from 'tailwind-variants'
 import { cn } from '@/lib/utils'
+import type { ComponentPropsWithoutRef, ReactElement } from 'react'
 
 const containerVariants = tv({
   base: 'mx-auto w-full px-4 sm:px-6 lg:px-8',
@@ -16,10 +17,14 @@ const containerVariants = tv({
   },
 })
 
-type ContainerProps = React.ComponentPropsWithoutRef<'div'> &
+type ContainerProps = ComponentPropsWithoutRef<'div'> &
   VariantProps<typeof containerVariants>
 
-export function Container({ className, size, ...props }: ContainerProps) {
+export function Container({
+  className,
+  size,
+  ...props
+}: ContainerProps): ReactElement {
   return <div className={cn(containerVariants({ size }), className)} {...props} />
 }
 

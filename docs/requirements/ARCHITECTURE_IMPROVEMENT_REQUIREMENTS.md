@@ -2,7 +2,7 @@
 
 > **Note**: このドキュメントには、Next.js 16、React 19、Prisma 7の最新公式ベストプラクティスに準拠したアーキテクチャ改善の詳細な要件定義が記載されています。実装は行わず、要件定義のみを記載します。
 
-**最終更新**: 2026-01-06
+**最終更新**: 2026-01-08
 
 ## 実装方針
 
@@ -135,10 +135,12 @@
 
 ```typescript
 // Server Component
-async function BlogPostPage({ params }: { params: { slug: string } }) {
+async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params // Next.js 16ではparamsはPromise
+
   // 重要なデータはawaitで取得
-  const post = await prisma.blogPost.findUnique({ 
-    where: { slug: params.slug } 
+  const post = await prisma.blogPost.findUnique({
+    where: { slug }
   })
   
   if (!post) {
@@ -779,7 +781,8 @@ const ratelimit = new Ratelimit({
 })
 
 export async function createReservation(data: ReservationData) {
-  const ip = headers().get('x-forwarded-for') ?? 'unknown'
+  const headersList = await headers() // Next.js 15+ではheaders()はPromise
+  const ip = headersList.get('x-forwarded-for') ?? 'unknown'
   const { success } = await ratelimit.limit(ip)
   
   if (!success) {
@@ -1466,10 +1469,10 @@ export async function createSpace(data: CreateSpaceInput) {
 ### 8.1 プロジェクトドキュメント
 
 - [`AGENTS.md`](../AGENTS.md) - プロジェクト全体の仕様書
-- [`ARCHITECTURE.md`](./ARCHITECTURE.md) - 現状のアーキテクチャ
-- [`BEST_PRACTICES.md`](./BEST_PRACTICES.md) - ベストプラクティス
-- [`CACHING_STRATEGY.md`](./CACHING_STRATEGY.md) - キャッシング戦略
-- [`SECURITY.md`](./SECURITY.md) - セキュリティポリシー
+- [`ARCHITECTURE.md`](../architecture/ARCHITECTURE.md) - 現状のアーキテクチャ
+- [`BEST_PRACTICES.md`](../development/BEST_PRACTICES.md) - ベストプラクティス
+- [`CACHING_STRATEGY.md`](../development/CACHING_STRATEGY.md) - キャッシング戦略
+- [`SECURITY.md`](../security/SECURITY.md) - セキュリティポリシー
 - [`FEATURE_REQUIREMENTS.md`](./FEATURE_REQUIREMENTS.md) - 機能要件
 
 ### 8.2 外部リソース
@@ -1483,4 +1486,5 @@ export async function createSpace(data: CreateSpaceInput) {
 
 ## 9. 更新履歴
 
+- **2026-01-08**: Next.js 16の非同期paramsパターンに修正（`Promise<{ slug: string }>`形式）、`headers()`を`await`を使用する形式に修正
 - **2026-01-06**: 初版作成、詳細な要件定義を追加

@@ -1,10 +1,10 @@
 # 型安全・型定義要件定義
 
-> **Note**: このドキュメントには、レンタルスペース管理システムにおける型安全・型定義の包括的な要件定義が記載されています。技術スタックの詳細については、`[AGENTS.md](../AGENTS.md)`を参照してください。実装ベストプラクティスについては、`[BEST_PRACTICES.md](./BEST_PRACTICES.md)`を参照してください。
+> **Note**: このドキュメントには、レンタルスペース管理システムにおける型安全・型定義の包括的な要件定義が記載されています。技術スタックの詳細については、`[AGENTS.md](../AGENTS.md)`を参照してください。実装ベストプラクティスについては、`[BEST_PRACTICES.md](../development/BEST_PRACTICES.md)`を参照してください。
 
-**最終更新**: 2026-01-06
+**最終更新**: 2026-01-08
 
-**注意**: このドキュメントは、公式ドキュメント（TypeScript 5.9、Zod 4.3、Prisma 7、Next.js 16、React 19、nuqs 2.8）の最新情報を確認して作成されています。
+**注意**: このドキュメントは、公式ドキュメント（TypeScript 5.9、Zod 4.3、Prisma 7、Next.js 16、React 19、nuqs 2.8.6）の最新情報を確認して作成されています。
 
 ---
 
@@ -33,7 +33,7 @@
 - **TypeScript 5.9.3**: 型システムの基盤
 - **Prisma 7.2.0**: データベーススキーマから型を自動生成
 - **Zod 4.3.5**: ランタイムバリデーションと型推論
-- **nuqs 2.8.5**: URLクエリパラメータの型安全な管理
+- **nuqs 2.8.6**: URLクエリパラメータの型安全な管理
 - **React 19.2.3 + Next.js 16.1.1**: Server Components、Server Actionsの型安全性
 
 ---
@@ -89,7 +89,7 @@
 **参照ドキュメント**:
 
 - `[ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md](./ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md)` - REQ-TYPE-001
-- `[BEST_PRACTICES.md](./BEST_PRACTICES.md)` - 型安全性の基本原則
+- `[BEST_PRACTICES.md](../development/BEST_PRACTICES.md)` - 型安全性の基本原則
 - `[.cursor/skills/typescript-strict/SKILL.md](../.cursor/skills/typescript-strict/SKILL.md)` - TypeScript strict modeガイド
 
 ---
@@ -196,8 +196,8 @@ export async function createSpace(
 **参照ドキュメント**:
 
 - `[ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md](./ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md)` - REQ-TYPE-002
-- `[BEST_PRACTICES.md](./BEST_PRACTICES.md)` - 型の再利用とDRY原則
-- `[PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md)` - 型定義の配置（`src/types/`）
+- `[BEST_PRACTICES.md](../development/BEST_PRACTICES.md)` - 型の再利用とDRY原則
+- `[PROJECT_STRUCTURE.md](../architecture/PROJECT_STRUCTURE.md)` - 型定義の配置（`src/types/`）
 
 ---
 
@@ -214,6 +214,24 @@ export async function createSpace(
 - **クライアントとサーバーで同じZodスキーマを使用**: フォームバリデーションとServer Actionsで同じスキーマを使用
 - **バリデーションエラーの型安全な処理**: `z.ZodError`を型安全に処理
 - **エラーメッセージの国際化対応**: 将来的な多言語対応を考慮した設計（現時点では日本語のみ）
+
+#### 3.1.1.1 最新推奨（Zod 4.3.5）
+
+- **入力境界は`unknown`からZodで確定**: `safeParse`で検証し、成功時のみ`z.output`型を扱う
+- **`z.input`/`z.output`の使い分け**: 前処理/変換がある場合は`z.input`と`z.output`を分離する
+- **キャスト禁止**: `as`による型の強制は避け、Zodスキーマで型を確定する
+- **デフォルト値の一元化**: 検証失敗時のフォールバックはスキーマと同じ場所に定義する
+
+**推奨パターン**:
+
+```typescript
+const input = { email: value, password: value }
+const result = credentialsSchema.safeParse(input)
+if (!result.success) {
+  return { error: '入力内容を確認してください' }
+}
+const data = result.data // z.output<typeof credentialsSchema>
+```
 
 #### 3.1.2 バリデーションスキーマの管理
 
@@ -309,8 +327,8 @@ export function ReservationForm() {
 **参照ドキュメント**:
 
 - `[ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md](./ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md)` - REQ-TYPE-003
-- `[API.md](./API.md)` - Server Actionsのバリデーション
-- `[SECURITY.md](./SECURITY.md)` - 入力検証
+- `[API.md](../development/API.md)` - Server Actionsのバリデーション
+- `[SECURITY.md](../security/SECURITY.md)` - 入力検証
 
 ---
 
@@ -401,9 +419,9 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
 **参照ドキュメント**:
 
-- `[PRISMA_7_IMPORT_GUIDE.md](./PRISMA_7_IMPORT_GUIDE.md)` - Prisma 7のインポート方法
+- `[PRISMA_7.md](../development/PRISMA_7.md)` - Prisma 7のインポート方法
 - `[DATABASE_DESIGN.md](./DATABASE_DESIGN.md)` - Prismaスキーマ設計
-- `[BEST_PRACTICES.md](./BEST_PRACTICES.md)` - Prisma 7の型安全性
+- `[BEST_PRACTICES.md](../development/BEST_PRACTICES.md)` - Prisma 7の型安全性
 
 ---
 
@@ -504,7 +522,7 @@ if (result.success) {
 
 **参照ドキュメント**:
 
-- `[BEST_PRACTICES.md](./BEST_PRACTICES.md)` - Zod 4.3.5の型安全性
+- `[BEST_PRACTICES.md](../development/BEST_PRACTICES.md)` - Zod 4.3.5の型安全性
 - [Zod Documentation - safeParse](https://zod.dev/?id=safeparse) - safeParseの公式ドキュメント
 
 ---
@@ -635,7 +653,7 @@ function BadComments() {
 
 **参照ドキュメント**:
 
-- `[BEST_PRACTICES.md](./BEST_PRACTICES.md)` - React 19 + Next.js 16の型安全性
+- `[BEST_PRACTICES.md](../development/BEST_PRACTICES.md)` - React 19 + Next.js 16の型安全性
 
 ---
 
@@ -705,8 +723,8 @@ export async function createSpace(
 
 **参照ドキュメント**:
 
-- `[API.md](./API.md)` - Server Actions仕様
-- `[BEST_PRACTICES.md](./BEST_PRACTICES.md)` - Server Actionsの型安全性
+- `[API.md](../development/API.md)` - Server Actions仕様
+- `[BEST_PRACTICES.md](../development/BEST_PRACTICES.md)` - Server Actionsの型安全性
 
 ---
 
@@ -771,8 +789,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
 **参照ドキュメント**:
 
-- `[API.md](./API.md)` - Route Handlers仕様
-- `[BEST_PRACTICES.md](./BEST_PRACTICES.md)` - Route Handlersの型安全性
+- `[API.md](../development/API.md)` - Route Handlers仕様
+- `[BEST_PRACTICES.md](../development/BEST_PRACTICES.md)` - Route Handlersの型安全性
 
 ---
 
@@ -952,7 +970,7 @@ if (result.success) {
 
 **参照ドキュメント**:
 
-- `[BEST_PRACTICES.md](./BEST_PRACTICES.md)` - エラーハンドリングの型安全性
+- `[BEST_PRACTICES.md](../development/BEST_PRACTICES.md)` - エラーハンドリングの型安全性
 
 ---
 
@@ -999,7 +1017,7 @@ export function SpaceCard({ space, onSelect, className }: SpaceCardProps) {
 
 **参照ドキュメント**:
 
-- `[BEST_PRACTICES.md](./BEST_PRACTICES.md)` - コンポーネントPropsの型定義
+- `[BEST_PRACTICES.md](../development/BEST_PRACTICES.md)` - コンポーネントPropsの型定義
 - `[.cursor/rules/code-style/RULE.md](../.cursor/rules/code-style/RULE.md)` - コードスタイル標準
 
 ---
@@ -1029,7 +1047,7 @@ export function SpaceCard({ space, onSelect, className }: SpaceCardProps) {
 
 **参照ドキュメント**:
 
-- `[PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md)` - プロジェクト構造
+- `[PROJECT_STRUCTURE.md](../architecture/PROJECT_STRUCTURE.md)` - プロジェクト構造
 
 ---
 
@@ -1052,7 +1070,7 @@ export function SpaceCard({ space, onSelect, className }: SpaceCardProps) {
 
 **参照ドキュメント**:
 
-- `[BEST_PRACTICES.md](./BEST_PRACTICES.md)` - 型安全性チェックリスト
+- `[BEST_PRACTICES.md](../development/BEST_PRACTICES.md)` - 型安全性チェックリスト
 
 ---
 
@@ -1216,12 +1234,12 @@ export function SpaceCard({ space, onSelect, className }: SpaceCardProps) {
 
 - `[AGENTS.md](../AGENTS.md)` - プロジェクト全体の仕様書
 - `[ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md](./ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md)` - 型安全性の向上要件（REQ-TYPE-001, REQ-TYPE-002, REQ-TYPE-003）
-- `[BEST_PRACTICES.md](./BEST_PRACTICES.md)` - 型安全性のベストプラクティス
-- `[API.md](./API.md)` - Server ActionsとRoute Handlersの型定義
+- `[BEST_PRACTICES.md](../development/BEST_PRACTICES.md)` - 型安全性のベストプラクティス
+- `[API.md](../development/API.md)` - Server ActionsとRoute Handlersの型定義
 - `[DATABASE_DESIGN.md](./DATABASE_DESIGN.md)` - Prisma型定義
-- `[PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md)` - 型定義の配置
+- `[PROJECT_STRUCTURE.md](../architecture/PROJECT_STRUCTURE.md)` - 型定義の配置
 - `[NUQS_REQUIREMENTS.md](./NUQS_REQUIREMENTS.md)` - URLクエリパラメータの型定義
-- `[PRISMA_7_IMPORT_GUIDE.md](./PRISMA_7_IMPORT_GUIDE.md)` - Prisma 7のインポート方法
+- `[PRISMA_7.md](../development/PRISMA_7.md)` - Prisma 7のインポート方法
 
 ### 17.2 Cursor設定
 
@@ -1248,6 +1266,7 @@ export function SpaceCard({ space, onSelect, className }: SpaceCardProps) {
 
 ## 18. 更新履歴
 
+- **2026-01-08**: nuqsバージョンを2.8.5から2.8.6に更新（NUQS_REQUIREMENTS.mdとの整合性）、ドキュメント相互参照パスを修正（BEST_PRACTICES.md、PROJECT_STRUCTURE.md、API.md、SECURITY.md、PRISMA_7.mdへのパスを正しいディレクトリに変更）
 - **2026-01-06**: 公式ドキュメント確認後、最新情報を反映（Prisma 7のドライバーアダプター、React 19の`use`フックの注意事項、nuqsのネストされたServer Componentsでの使用、Zodの`safeParse`の推奨事項）
 - **2026-01-06**: 初版作成、型安全・型定義の包括的な要件定義を追加
 

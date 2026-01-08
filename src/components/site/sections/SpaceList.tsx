@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { Container, Card, CardContent, CardFooter } from '@/components/site/ui'
 import { prisma } from '@/lib/prisma'
 import type { Space } from '@/generated/prisma/client/client'
+import type { ReactElement } from 'react'
 
 const spaceListVariants = tv({
   slots: {
@@ -67,11 +68,11 @@ function truncateDescription(text: string, maxLength: number = 80): string {
   return text.slice(0, maxLength) + '...'
 }
 
-type SpaceCardProps = {
+interface SpaceCardProps {
   space: Space
 }
 
-function SpaceCard({ space }: SpaceCardProps) {
+function SpaceCard({ space }: SpaceCardProps): ReactElement {
   return (
     <Link href={`/spaces/${space.id}`}>
       <Card className="h-full overflow-hidden transition-shadow hover:shadow-lg">
@@ -97,7 +98,7 @@ function SpaceCard({ space }: SpaceCardProps) {
   )
 }
 
-export async function SpaceList() {
+export async function SpaceList(): Promise<ReactElement> {
   const spaces = await prisma.space.findMany({
     where: {
       isPublished: true,

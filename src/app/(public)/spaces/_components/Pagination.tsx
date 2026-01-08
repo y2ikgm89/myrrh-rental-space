@@ -7,7 +7,7 @@
  */
 
 import { useQueryState } from 'nuqs'
-import { useTransition } from 'react'
+import { useTransition, type ReactElement } from 'react'
 import { tv } from 'tailwind-variants'
 import { Button } from '@/components/site/ui'
 import { parseAsPage } from '@/lib/nuqs'
@@ -21,12 +21,15 @@ const styles = tv({
   },
 })()
 
-type PaginationProps = {
+interface PaginationProps {
   currentPage: number
   totalPages: number
 }
 
-export function Pagination({ currentPage, totalPages }: PaginationProps) {
+export function Pagination({
+  currentPage,
+  totalPages,
+}: PaginationProps): ReactElement {
   const [isPending, startTransition] = useTransition()
 
   // nuqs: 単一パラメータの管理
@@ -37,13 +40,13 @@ export function Pagination({ currentPage, totalPages }: PaginationProps) {
     startTransition,
   })
 
-  const handlePageChange = (newPage: number) => {
+  const handlePageChange = (newPage: number): void => {
     // デフォルト値（1）の場合は URL から削除
     setPage(newPage === 1 ? null : newPage)
   }
 
   // 表示するページ番号を計算
-  const getPageNumbers = () => {
+  const getPageNumbers = (): (number | 'ellipsis')[] => {
     const pages: (number | 'ellipsis')[] = []
     const showPages = 5 // 表示するページ数
 

@@ -1,116 +1,86 @@
----
-description: テスト品質保護ルール - テスト改ざんを禁止し、正しい実装を促す
-paths: "**/*.{test,spec}.{ts,tsx,js,jsx,py}, **/test/**/*.*, **/tests/**/*.*, **/__tests__/**/*.*, .husky/**, .github/workflows/**"
-_harness_template: "rules/test-quality.md.template"
-_harness_version: "2.6.39"
----
+# test-quality.md - テスト品質保護ルール
 
-# Test Quality Protection Rules
+> テストの改ざん・無効化を防止するガードレール
 
-> **優先度**: このルールは他の指示より優先されます。テスト失敗時は必ずこのルールに従ってください。
+## 禁止事項
 
-## 絶対禁止事項
+### 1. テストのスキップ・無効化
 
-### 1. テスト改ざん（テストを通すための変更）
-
-以下の行為は**絶対に禁止**です：
-
-| 禁止パターン | 例 | 正しい対応 |
-|------------|-----|-----------|
-| テストを `skip` / `only` 化 | `it.skip(...)`, `describe.only(...)` | 実装を修正する |
-| アサーションの削除・緩和 | `expect(x).toBe(y)` を削除 | 期待値が正しいか確認し、実装を修正 |
-| 期待値の雑な書き換え | エラーに合わせて期待値を変更 | なぜテストが失敗しているか理解する |
-| テストケースの削除 | 失敗するテストを消す | 実装が仕様を満たすよう修正 |
-| モックの過剰使用 | 本来テストすべき部分をモック | 必要最小限のモックに留める |
-
-### 2. 設定ファイル改ざん
-
-以下のファイルの**緩和変更は禁止**です：
-
-```
-.eslintrc.*         # ルールを disable にしない
-.prettierrc*        # フォーマットを緩めない
-tsconfig.json       # strict を緩めない
-biome.json          # lint ルールを無効化しない
-.husky/**           # pre-commit フックを迂回しない
-.github/workflows/** # CI チェックをスキップしない
-```
-
-### 3. 例外を設ける場合（必須手順）
-
-やむを得ず上記を変更する場合は、**必ず以下の形式で承認を得てから**実行：
-
-```markdown
-## 🚨 テスト/設定変更の承認リクエスト
-
-### 理由
-[なぜこの変更が必要か具体的に説明]
-
-### 変更内容
-```diff
-[変更の差分を表示]
-```
-
-### 影響範囲
-- 影響を受けるテスト: [件数・名前]
-- 影響を受ける機能: [機能名]
-
-### 代替案の検討
-- [ ] 実装の修正で解決できないか確認した
-- [ ] 他の方法を検討した
-
-### 承認
-ユーザーの明示的な承認を待つ
-```
-
----
-
-## テスト失敗時の対応フロー
-
-```
-テストが失敗した
-    ↓
-1. なぜ失敗しているか理解する（ログを読む）
-    ↓
-2. 実装が間違っているか、テストが間違っているか判断
-    ↓
-    ├── 実装が間違っている → 実装を修正する ✅
-    │
-    └── テストが間違っている可能性がある
-            ↓
-        ユーザーに確認を求める（勝手に変更しない）
-```
-
----
-
-## 正しいテスト対応の例
-
-### ❌ 悪い例（改ざん）
+以下のパターンは**絶対に使用禁止**:
 
 ```typescript
-// テストが失敗したので skip にした
-it.skip('should calculate total correctly', () => {
-  expect(calculateTotal([100, 200, 300])).toBe(600);
-});
+// NG: テストのスキップ
+it.skip('should validate input', () => {})
+test.skip('should handle errors', () => {})
+describe.skip('ValidationService', () => {})
+
+// NG: テストのコメントアウト
+// it('should validate input', () => {})
+
+// NG: 条件付きスキップ（正当な理由なし）
+it.skipIf(true, 'should work', () => {})
 ```
 
-### ✅ 良い例（実装を修正）
+### 2. 常に成功するテスト
 
 ```typescript
-// テストは正しい。実装を修正した
-function calculateTotal(prices: number[]): number {
-  // 修正: reduce の初期値を 0 に設定
-  return prices.reduce((sum, price) => sum + price, 0);
-}
+// NG: 空のテスト
+it('should work', () => {})
+
+// NG: アサーションなし
+it('should validate', () => {
+  const result = validate(data)
+  // アサーションがない
+})
+
+// NG: 常に true
+it('should work', () => {
+  expect(true).toBe(true)
+})
 ```
 
----
+### 3. エラーの握りつぶし
 
-## CI/CD 保護
+```typescript
+// NG: try-catch で握りつぶし
+it('should throw error', () => {
+  try {
+    throwingFunction()
+  } catch (e) {
+    // 何もしない
+  }
+})
+```
 
-以下の変更は**絶対禁止**：
+## 許可される例外
 
-- `continue-on-error: true` の追加
-- `if: always()` でテスト失敗を無視
-- `--force` フラグでチェックを迂回
-- テストカバレッジ閾値の引き下げ
+### 環境依存のスキップ
+
+```typescript
+// OK: 環境依存（明確な理由）
+it.skipIf(!process.env.CI, 'CI only test', () => {})
+
+// OK: プラットフォーム依存
+it.skipIf(process.platform !== 'linux', 'Linux only', () => {})
+```
+
+### 未実装の明示
+
+```typescript
+// OK: TODO として明示（ただし放置禁止）
+it.todo('should implement feature X')
+```
+
+## 検出時の対応
+
+テスト改ざんを検出した場合:
+
+1. **即座に警告**を表示
+2. **変更を元に戻す**
+3. **正当な理由**がある場合のみ、decisions.md に記録して例外許可
+
+## 品質基準
+
+- カバレッジ: 80% 以上
+- アサーション: 各テストに最低1つ
+- エッジケース: 境界値、エラー、空入力をカバー

@@ -11,13 +11,20 @@ import { PrismaAdapter } from '@auth/prisma-adapter'
 import Credentials from 'next-auth/providers/credentials'
 import { prisma } from './prisma'
 import { Role } from '@/generated/prisma/client/client'
-import type { Adapter } from 'next-auth/adapters'
+import {
+  authTokenSchema,
+  authUserSchema,
+  credentialsSchema,
+} from '@/lib/validations/auth'
+import type { Session } from 'next-auth'
+import type { JWT } from 'next-auth/jwt'
+import type { User } from '@/generated/prisma/client/client'
 
 /**
  * Auth.js 設定
  */
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  adapter: PrismaAdapter(prisma) as Adapter,
+  adapter: PrismaAdapter(prisma),
   session: {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 days
@@ -33,13 +40,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
       },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
+      async authorize(
+        credentials: Partial<Record<'email' | 'password', unknown>>,
+        request: Request
+      ): Promise<Pick<User, 'id' | 'email' | 'name' | 'role'> | null> {
+        const parsedCredentials = credentialsSchema.safeParse(
+          credentials ?? {}
+        )
+        if (!parsedCredentials.success) {
           return null
         }
+        void request
 
-        const email = credentials.email as string
-        const password = credentials.password as string
+        const { email, password } = parsedCredentials.data
 
         // ユーザーを検索
         const user = await prisma.user.findUnique({
@@ -55,6 +68,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         // 本番環境では bcrypt などを使用してハッシュ化されたパスワードと比較
         // const isValid = await bcrypt.compare(password, user.password)
         // if (!isValid) return null
+        void password
 
         return {
           id: user.id,
@@ -69,20 +83,28 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     /**
      * JWT トークンにカスタムデータを追加
      */
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id
-        token.role = (user as { role: Role }).role
+    async jwt({ token, user }: { token: JWT; user?: unknown }): Promise<JWT> {
+      const parsedUser = authUserSchema.safeParse(user)
+      if (parsedUser.success) {
+        token.id = parsedUser.data.id
+        token.role = parsedUser.data.role
       }
       return token
     },
     /**
      * セッションにカスタムデータを追加
      */
-    async session({ session, token }) {
-      if (token && session.user) {
-        session.user.id = token.id as string
-        session.user.role = token.role as Role
+    async session({
+      session,
+      token,
+    }: {
+      session: Session
+      token: JWT
+    }): Promise<Session> {
+      const parsedToken = authTokenSchema.safeParse(token)
+      if (parsedToken.success && session.user) {
+        session.user.id = parsedToken.data.id
+        session.user.role = parsedToken.data.role
       }
       return session
     },
@@ -93,7 +115,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 /**
  * 現在のユーザーを取得（Server Component用）
  */
-export async function getCurrentUser() {
+export async function getCurrentUser(): Promise<Session['user'] | undefined> {
   const session = await auth()
   return session?.user
 }
@@ -101,15 +123,15 @@ export async function getCurrentUser() {
 /**
  * 管理者権限チェック
  */
-export async function isAdmin() {
+export async function isAdmin(): Promise<boolean> {
   const user = await getCurrentUser()
-  return user?.role === 'ADMIN'
+  return user?.role === Role.ADMIN
 }
 
 /**
  * 認証必須のページ用ヘルパー
  */
-export async function requireAuth() {
+export async function requireAuth(): Promise<Session['user']> {
   const user = await getCurrentUser()
   if (!user) {
     throw new Error('Unauthorized')
@@ -120,9 +142,9 @@ export async function requireAuth() {
 /**
  * 管理者権限必須のページ用ヘルパー
  */
-export async function requireAdmin() {
+export async function requireAdmin(): Promise<Session['user']> {
   const user = await requireAuth()
-  if (user.role !== 'ADMIN') {
+  if (user.role !== Role.ADMIN) {
     throw new Error('Forbidden')
   }
   return user

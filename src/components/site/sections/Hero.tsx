@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { tv } from 'tailwind-variants'
 import { cn } from '@/lib/utils'
 import { buttonVariants, Container } from '@/components/site/ui'
+import type { ReactElement } from 'react'
 
 const heroVariants = tv({
   slots: {
@@ -24,7 +25,7 @@ const heroVariants = tv({
 const { section, background, pattern, content, heading, subheading, buttonGroup } =
   heroVariants()
 
-export function Hero() {
+export function Hero(): ReactElement {
   return (
     <section className={cn(section())}>
       {/* Background gradient overlay */}

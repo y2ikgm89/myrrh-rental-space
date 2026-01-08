@@ -1,6 +1,6 @@
 # Prisma 7 ガイド
 
-> **最終更新**: 2026-01-07（prisma.config.ts 公式推奨パターンに更新）
+> **最終更新**: 2026-01-08（driver adaptersの詳細な説明を追加）
 > **Prisma バージョン**: 7.2.0
 
 ## 概要
@@ -182,7 +182,88 @@ export const prisma =
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 ```
 
-**注意**: Prisma 7では、データベース接続にドライバーアダプターが必要です。PostgreSQLの場合は`@prisma/adapter-pg`を使用します。詳細は[`TYPE_SAFETY_REQUIREMENTS.md`](../requirements/TYPE_SAFETY_REQUIREMENTS.md)を参照してください。
+**重要**: Prisma 7では、データベース接続にdriver adaptersが**必須**です。PostgreSQLの場合は`@prisma/adapter-pg`を使用します。
+
+### Driver Adaptersの詳細
+
+Prisma 7では、データベース接続にdriver adaptersが必須となりました。これにより、パフォーマンスと開発者体験が向上します。
+
+#### インストール
+
+```bash
+# PostgreSQL用のdriver adapter
+bun add @prisma/adapter-pg
+
+# Node.js driver（pg）
+bun add pg
+
+# 型定義
+bun add -d @types/pg
+```
+
+#### 設定方法
+
+```typescript
+// src/lib/prisma.ts
+import { PrismaPg } from '@prisma/adapter-pg'
+import { PrismaClient } from '@/generated/prisma/client'
+import { Pool } from 'pg'
+
+// 接続プーリングの設定
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  // 接続プーリングの設定
+  max: 20, // 最大接続数
+  idleTimeoutMillis: 30000, // アイドル接続のタイムアウト（30秒）
+  connectionTimeoutMillis: 2000, // 接続タイムアウト（2秒）
+})
+
+// Driver adapterの作成
+const adapter = new PrismaPg(pool)
+
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined
+}
+
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    adapter,
+    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  })
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+```
+
+#### 接続プーリングの設定
+
+**Supabase接続プーリングURLの使用**:
+
+Supabaseでは、接続プーリングURLを使用することで、接続数を最適化できます。
+
+```typescript
+// Supabase接続プーリングURLを使用する場合
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL, // 接続プーリングURL
+  max: 20, // 最大接続数（Supabaseのプランに応じて調整）
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
+})
+```
+
+**接続プーリングの設定パラメータ**:
+
+- `max`: 最大接続数（デフォルト: 10、Supabaseのプランに応じて調整）
+- `idleTimeoutMillis`: アイドル接続のタイムアウト（デフォルト: 10000ms）
+- `connectionTimeoutMillis`: 接続タイムアウト（デフォルト: 0 = 無制限）
+
+**パフォーマンス最適化**:
+
+- **接続プーリング**: 接続を再利用することで、接続オーバーヘッドを削減
+- **適切な最大接続数**: アプリケーションの負荷に応じて調整（過剰な接続数は避ける）
+- **タイムアウト設定**: 適切なタイムアウト設定で、リソースの無駄遣いを防止
+
+詳細は[`BEST_PRACTICES.md`](./BEST_PRACTICES.md)を参照してください。
 
 ### パターン2: 型のみを使用（PrismaClientは別途インポート）
 
@@ -300,6 +381,17 @@ import type { StockStatus } from '@/generated/prisma/client'
 - [Upgrading to Prisma 7](https://www.prisma.io/docs/orm/more/upgrade-guides/upgrading-versions/upgrading-to-prisma-7) - 移行ガイド
 - [Generating Prisma Client](https://www.prisma.io/docs/orm/prisma-client/setup-and-configuration/generating-prisma-client)
 - [Prisma Schema Reference: Generator](https://www.prisma.io/docs/orm/reference/prisma-schema-reference#generator)
+
+---
+
+## 更新履歴
+
+- **2026-01-08**: Context7で取得した最新情報に基づき、driver adaptersの詳細な説明を追加
+  - driver adaptersの必須性とインストール方法
+  - 接続プーリングの詳細な設定方法（`max`、`idleTimeoutMillis`、`connectionTimeoutMillis`）
+  - Supabase接続プーリングURLの使用例
+  - パフォーマンス最適化のポイント
+- **2026-01-07**: prisma.config.ts 公式推奨パターンに更新
 
 ---
 

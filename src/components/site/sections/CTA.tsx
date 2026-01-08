@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { tv } from 'tailwind-variants'
 import { cn } from '@/lib/utils'
 import { Container, buttonVariants } from '@/components/site/ui'
+import type { ReactElement } from 'react'
 
 const ctaVariants = tv({
   slots: {
@@ -15,7 +16,7 @@ const ctaVariants = tv({
 
 const { section, wrapper, heading, subtext, buttonGroup } = ctaVariants()
 
-export function CTA() {
+export function CTA(): ReactElement {
   return (
     <section className={section()}>
       <Container size="md" className={wrapper()}>

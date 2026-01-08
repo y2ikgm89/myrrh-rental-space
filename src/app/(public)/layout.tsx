@@ -6,12 +6,13 @@
 
 import { Header } from '@/components/layouts/Header'
 import { Footer } from '@/components/layouts/Footer'
+import type { ReactElement, ReactNode } from 'react'
 
 export default function PublicLayout({
   children,
 }: {
-  children: React.ReactNode
-}) {
+  children: ReactNode
+}): ReactElement {
   return (
     <div className="flex min-h-screen flex-col">
       <Header />

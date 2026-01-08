@@ -104,6 +104,7 @@ export function ReservationForm({ spaceId }: { spaceId: string }) {
 - **Use `'use server'` directive**: Always add `'use server'` at the top of Server Action files
 - **Authentication check**: Always verify authentication and authorization in Server Actions
 - **Input validation**: Use Zod schemas for validation (both client and server)
+- **Boundary validation**: Treat inputs as `unknown` and use `safeParse` to confirm types
 - **Cache invalidation**: Use `revalidatePath()` and `revalidateTag()` after mutations
 
 ```typescript

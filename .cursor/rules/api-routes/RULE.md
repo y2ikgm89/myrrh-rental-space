@@ -117,6 +117,8 @@ if (session.user.role !== 'admin') {
 ## Input Validation
 
 - **Use Zod schemas**: Always validate inputs with Zod schemas (see `@security` for validation patterns)
+- **Use `safeParse` when accepting `unknown`**: Branch on success and return 400 on failure
+- **Avoid `as` casts**: Do not cast request inputs to match types
 - **Schema location**: Define schemas in `src/lib/validations/`
 - **Error handling**: Return validation errors with 400 status code
 

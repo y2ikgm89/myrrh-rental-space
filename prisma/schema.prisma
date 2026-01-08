@@ -120,6 +120,20 @@ model VerificationToken {
   @@map("verification_tokens")
 }
 
+model LoginToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  createdBy String
+  usedAt    DateTime?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([token])
+  @@index([expiresAt])
+  @@index([usedAt])
+  @@map("login_tokens")
+}
+
 // ==============================================
 // Business Models
 // ==============================================

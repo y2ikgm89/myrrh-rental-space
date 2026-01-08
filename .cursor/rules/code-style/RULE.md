@@ -152,6 +152,8 @@ export async function createReservation(
 - **Use `z.infer`**: Infer TypeScript types from Zod schemas for type safety (usually same as `z.output`)
 - **Use `z.input`**: For input types (before transforms)
 - **Use `z.output`**: For output types (after transforms)
+- **Use `safeParse` at boundaries**: Validate `unknown` inputs and branch on success instead of casting
+- **Avoid `as` for inputs**: Prefer schema validation to establish types
 - **Type guards**: Use Zod schemas as type guards with `safeParse()`
 
 ```typescript

@@ -621,7 +621,7 @@ async function updateSeoSettings(data: {
 - `revalidatePath('/spaces')`を実行
 - `revalidatePath('/blog')`を実行
 - `revalidatePath('/news')`を実行
-- `revalidateTag('site-settings')`を実行
+- `revalidateTag('site-settings', 'max')`を実行（stale-while-revalidate semantics）
 
 ---
 
@@ -1726,22 +1726,76 @@ revalidatePath('/blog/[slug]')
 ```typescript
 import { revalidateTag } from 'next/cache'
 
-// タグに関連するすべてのキャッシュを無効化（stale-while-revalidate semantics）
+// ✅ 推奨: タグに関連するすべてのキャッシュを無効化（stale-while-revalidate semantics）
 revalidateTag('spaces-list', 'max')
 revalidateTag('blog-posts-list', 'max')
+
+// ❌ 非推奨: レガシー動作（即座にキャッシュを無効化）
+// revalidateTag('spaces-list')
 ```
 
-### その他の無効化方法
+**重要なポイント**:
+- **`profile='max'`を指定**: stale-while-revalidate semanticsが適用され、古いコンテンツを即座に表示し、バックグラウンドで更新
+- **ユーザー体験の向上**: ローディング時間を短縮し、即座にコンテンツを表示
+- **パフォーマンスの最適化**: サーバー負荷を分散し、レスポンス時間を短縮
+
+### updateTagの使用（read-your-own-writesシナリオ）
 
 ```typescript
-import { updateTag, refresh } from 'next/cache'
+import { updateTag } from 'next/cache'
+import { redirect } from 'next/navigation'
 
-// タグのタイムスタンプを更新（より細かい制御）
-updateTag('spaces-list')
+// ✅ 良い例: read-your-own-writesシナリオ
+export async function createBlogPost(formData: FormData) {
+  const post = await prisma.blogPost.create({
+    data: {
+      title: formData.get('title') as string,
+      content: formData.get('content') as string,
+      // ...
+    },
+  })
 
-// 現在のページのキャッシュを更新
-refresh()
+  // 即座にキャッシュを無効化（stale-while-revalidateなし）
+  // 作成したばかりの投稿を即座に表示する必要があるため
+  updateTag('blog-posts-list')
+  updateTag(`blog-post-${post.id}`)
+
+  redirect(`/blog/${post.slug}`)
+}
 ```
+
+**重要なポイント**:
+- **Server Actionsでのみ使用可能**: Route Handlersでは使用できません
+- **即座にキャッシュを無効化**: stale-while-revalidate semanticsなし
+- **read-your-own-writesシナリオに最適**: データ作成後に即座にそのデータを表示する必要がある場合
+
+### refreshの使用（現在のページのキャッシュ更新）
+
+```typescript
+import { refresh } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
+
+// ✅ 良い例: 現在のページのキャッシュを更新
+export async function updateSpace(id: string, data: UpdateSpaceData) {
+  await prisma.space.update({
+    where: { id },
+    data,
+  })
+
+  // 現在のページのキャッシュを更新
+  refresh()
+  
+  // 関連するパスも無効化
+  revalidatePath('/spaces')
+  revalidatePath(`/spaces/${id}`)
+  revalidateTag('spaces-list', 'max')
+}
+```
+
+**重要なポイント**:
+- **現在のページのみ**: 現在のページのキャッシュを更新します
+- **ページリロードなし**: ページリロードなしで最新データを表示できます
+- **`revalidatePath`と組み合わせ**: 関連するパスも無効化する場合は、`revalidatePath`と組み合わせて使用します
 
 ---
 
@@ -2137,6 +2191,15 @@ BlogTag[]
 ```
 
 **認証**: 認証不要
+
+---
+
+## 更新履歴
+
+- **2026-01-08**: Context7で取得した最新情報に基づき、以下の更新を実施
+  - `revalidateTag`の`profile`パラメータ（`'max'`）の詳細な説明を追加（stale-while-revalidate semantics、推奨パターン）
+  - `updateTag`の詳細な説明を追加（read-your-own-writesシナリオ、Server Actionsでのみ使用可能）
+  - `refresh`の詳細な説明を追加（現在のページのキャッシュ更新、`revalidatePath`との組み合わせ）
 
 ---
 

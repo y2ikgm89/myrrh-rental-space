@@ -217,11 +217,12 @@
   - 引用
   - リンク
   - 画像埋め込み（Supabase Storageからアップロード）
+  - 動画埋め込み（Supabase Storageからアップロード、オプション）
   - コードブロック
   - テーブル
   - 水平線
-- サムネイル画像（必須、1枚、JPEG/PNG/WebP、最大5MB、プレビュー表示）
-- OGP画像（オプション、1枚、JPEG/PNG/WebP、最大5MB、プレビュー表示）
+- サムネイル画像（必須、1枚、JPEG/PNG/WebP/AVIF、最大5MB、プレビュー表示）
+- OGP画像（オプション、1枚、JPEG/PNG/WebP/AVIF、最大5MB、プレビュー表示）
 
 **分類セクション**:
 - カテゴリ（必須、1つ選択、ドロップダウン、新規作成リンク）
@@ -316,6 +317,7 @@
 - 引用（Blockquote）
 - リンク（内部リンク、外部リンク）
 - 画像埋め込み（Supabase Storageからアップロード）
+- 動画埋め込み（Supabase Storageからアップロード、オプション）
 - コードブロック（シンタックスハイライト）
 - テーブル（行・列の追加・削除、セル結合）
 - 水平線
@@ -358,6 +360,7 @@
 **追加拡張**:
 - `@tiptap/extension-link`: リンク機能
 - `@tiptap/extension-image`: 画像埋め込み
+- `@tiptap/extension-video`: 動画埋め込み（カスタム拡張、Supabase Storage対応）
 - `@tiptap/extension-code-block`: コードブロック（シンタックスハイライト）
 - `@tiptap/extension-table`: テーブル機能
   - `@tiptap/extension-table-row`: テーブル行
@@ -385,6 +388,7 @@
 - `ColorTextButton`: テキストカラーボタン
 - `ColorHighlightButton`: ハイライトカラーボタン
 - `ImageUploadButton`: 画像アップロードボタン
+- `VideoUploadButton`: 動画アップロードボタン（カスタム実装）
 - `BlockquoteButton`: 引用ボタン
 - `CodeBlockButton`: コードブロックボタン
 - `TextAlignButton`: テキスト配置ボタン
@@ -405,6 +409,7 @@
 - `CodeBlockNode`: コードブロックノード
 - `ListNode`: リストノード
 - `ImageNodePro`: 画像ノード（高度版、フローティングツールバー付き）
+- `VideoNode`: 動画ノード（カスタム実装、HTML5 videoタグ）
 - `TableNode`: テーブルノード
 
 **Utils Components（ユーティリティコンポーネント）**:
@@ -422,6 +427,7 @@ bun add @tiptap/extension-link @tiptap/extension-image @tiptap/extension-code-bl
 bun add @tiptap/extension-table @tiptap/extension-text-align
 bun add @tiptap/extension-color @tiptap/extension-text-style @tiptap/extension-highlight
 bun add @tiptap/extension-underline @tiptap/extension-placeholder
+# 注意: 動画拡張はカスタム実装が必要（@tiptap/extension-videoは存在しないため）
 
 # コードブロックのシンタックスハイライト（オプション）
 bun add highlight.js
@@ -436,6 +442,7 @@ npx @tiptap/cli@latest add list-button
 npx @tiptap/cli@latest add link-popover
 npx @tiptap/cli@latest add color-text-button
 npx @tiptap/cli@latest add image-upload-button
+# 注意: 動画アップロードボタンはカスタム実装が必要
 npx @tiptap/cli@latest add blockquote-button
 npx @tiptap/cli@latest add code-block-button
 npx @tiptap/cli@latest add text-align-button
@@ -456,6 +463,7 @@ npx @tiptap/cli@latest add blockquote-node
 npx @tiptap/cli@latest add code-block-node
 npx @tiptap/cli@latest add list-node
 npx @tiptap/cli@latest add image-node-pro
+# 注意: 動画ノードはカスタム実装が必要
 npx @tiptap/cli@latest add table-node
 
 # Utils Components
@@ -480,11 +488,13 @@ npx @tiptap/cli@latest add floating-element
 - Tiptapは自動的にHTMLサニタイゼーションを実行
 - 危険なHTMLタグや属性を自動的に除去
 - 画像URLの検証（Supabase Storage URLのみ許可）
+- 動画URLの検証（Supabase Storage URLのみ許可）
 
 **入力検証**:
 - サーバーサイドでHTMLコンテンツを再検証
 - 許可されたHTMLタグのみ保存
 - 画像URLの検証（Supabase Storage URLのみ許可）
+- 動画URLの検証（Supabase Storage URLのみ許可）
 
 ### パフォーマンス要件
 
@@ -536,9 +546,87 @@ npx @tiptap/cli@latest add floating-element
 
 ---
 
+## 画像・動画アップロード要件
+
+### 画像アップロード
+
+**対応フォーマット**:
+- **JPEG** (`image/jpeg`): 広くサポート、写真に適している
+- **PNG** (`image/png`): 透明度対応、ロゴ・アイコンに適している
+- **WebP** (`image/webp`): 高圧縮率、モダンブラウザでサポート
+- **AVIF** (`image/avif`): 次世代画像フォーマット、WebPよりも高圧縮率（約50%削減）、2020年以降の主要ブラウザでサポート
+
+**AVIFの採用理由**:
+- **高圧縮率**: WebPよりも約50%高い圧縮率で、ファイルサイズを大幅に削減
+- **画質**: 同じファイルサイズでWebPよりも高画質
+- **ブラウザサポート**: Chrome 85+、Firefox 93+、Safari 16+、Edge 85+で対応済み
+- **Next.js Image Component**: AVIFを自動的にサポート、フォールバック機能あり
+- **注意**: 古いブラウザではJPEG/PNG/WebPに自動フォールバック（Next.js Image Componentが自動処理）
+
+**サイズ制限（用途別）**:
+- **スペース管理** (`/admin/spaces`): 最大 **10MB**（メイン画像1枚、サブ画像複数枚）
+- **ブログ管理** (`/admin/blog`): 最大 **5MB**（サムネイル画像、OGP画像、本文埋め込み画像）
+
+**保存先**: Supabase Storage
+
+**最適化**:
+- Next.js Image Componentを使用して自動最適化
+- WebP/AVIF形式への自動変換（ブラウザサポートに応じて）
+- レスポンシブ画像の提供（`srcset`対応）
+- 遅延読み込み（Lazy Loading）
+
+### 動画アップロード
+
+**対応フォーマット**:
+- **MP4** (`video/mp4`): H.264コーデック推奨、広くサポート
+- **WebM** (`video/webm`): オープン形式、モダンブラウザでサポート
+
+**推奨コーデック**:
+- **MP4**: H.264（AVC）コーデック推奨（互換性が高い、すべての主要ブラウザでサポート）
+- **WebM**: VP8またはVP9コーデック推奨（オープン形式、モダンブラウザでサポート）
+
+**H.265（HEVC）コーデックについて**:
+- **現時点では対応しない**（推奨しない）
+- **理由**:
+  1. **ブラウザサポートの制限**: Firefoxが特許ライセンス問題でサポートしていない（2026年1月時点）
+  2. **ハードウェア依存**: 一部のPC（Dell、HPなど）でハードウェアデコーダーが無効化されている場合がある
+  3. **互換性**: H.264と比較して、すべてのユーザー環境で確実に再生できるとは限らない
+  4. **特許ライセンス**: 複雑なライセンス問題が存在
+- **将来の検討**: ブラウザサポートがより広がり、互換性が向上した場合は再検討可能
+- **代替案**: ファイルサイズを削減したい場合は、H.264で適切なビットレート設定やWebM（VP9）の使用を推奨
+
+**サイズ制限（用途別）**:
+- **スペース管理** (`/admin/spaces`): 最大 **100MB**（スペース紹介動画、1本のみ）
+- **ブログ管理** (`/admin/blog`): 最大 **50MB**（本文埋め込み動画、複数本可能）
+
+**保存先**: Supabase Storage
+
+**表示方法**:
+- HTML5 `<video>`タグを使用
+- コントロール（再生・一時停止・音量・フルスクリーン）を提供
+- レスポンシブ対応（`width="100%"`、`height="auto"`）
+- サムネイル画像の設定（オプション、動画の最初のフレームまたは手動設定）
+
+**パフォーマンス最適化**:
+- 遅延読み込み（Lazy Loading、`loading="lazy"`属性）
+- プリロード設定（`preload="metadata"`推奨、全体を読み込まずにメタデータのみ）
+- 動画の圧縮（アップロード前に推奨、ファイルサイズ削減）
+
+**アクセシビリティ**:
+- 字幕ファイル（WebVTT形式）の対応（将来的に実装可能）
+- 動画の説明文（alt属性相当）の設定
+
+**注意事項**:
+- 動画ファイルは画像よりもファイルサイズが大きいため、アップロード時間が長くなる可能性がある
+- 進捗表示（プログレスバー）の実装を推奨
+- アップロード中のキャンセル機能を推奨
+- 動画の再生には適切な帯域幅が必要（モバイル環境を考慮）
+
+---
+
 ## データベース設計
 
-詳細は [`DATABASE_DESIGN.md`](./DATABASE_DESIGN.md) を参照してください。
+詳細は [`DATABASE_DESIGN.md`](../architecture/DATABASE_DESIGN.md) を参照してください。
 
 ### BlogPosts（ブログ記事）
 
@@ -705,7 +793,7 @@ Tiptapは以下の4つのカテゴリのコンポーネントを提供してお�
 
 ## API要件
 
-詳細は [`API.md`](./API.md) を参照してください。
+詳細は [`API.md`](../development/API.md) を参照してください。
 
 ### Server Actions
 
@@ -835,10 +923,10 @@ Tiptapは以下の4つのカテゴリのコンポーネントを提供してお�
 ### プロジェクトドキュメント
 
 - [`FEATURE_REQUIREMENTS.md`](./FEATURE_REQUIREMENTS.md) - 機能要件（概要）
-- [`DATABASE_DESIGN.md`](./DATABASE_DESIGN.md) - データベース設計
-- [`API.md`](./API.md) - API仕様
-- [`PROJECT_STRUCTURE.md`](./PROJECT_STRUCTURE.md) - プロジェクト構造
-- [`ARCHITECTURE.md`](./ARCHITECTURE.md) - システムアーキテクチャ
+- [`DATABASE_DESIGN.md`](../architecture/DATABASE_DESIGN.md) - データベース設計
+- [`API.md`](../development/API.md) - API仕様
+- [`PROJECT_STRUCTURE.md`](../architecture/PROJECT_STRUCTURE.md) - プロジェクト構造
+- [`ARCHITECTURE.md`](../architecture/ARCHITECTURE.md) - システムアーキテクチャ
 - [`TEST_REQUIREMENTS.md`](./TEST_REQUIREMENTS.md) - テスト要件定義（包括的なテスト要件、Bun test、Playwright、Prisma 7のベストプラクティス）
 
 ### 外部リソース
@@ -848,3 +936,14 @@ Tiptapは以下の4つのカテゴリのコンポーネントを提供してお�
 - [Tiptap Primitives](https://tiptap.dev/docs/ui-components/primitives/)
 - [Tiptap Node Components](https://tiptap.dev/docs/ui-components/node-components/)
 - [Tiptap Utils Components](https://tiptap.dev/docs/ui-components/utils-components/)
+
+---
+
+## 更新履歴
+
+- **2026-01-08**: ドキュメント相互参照パスを修正（DATABASE_DESIGN.md、API.md、PROJECT_STRUCTURE.md、ARCHITECTURE.mdへのパスを正しいディレクトリに変更）
+- **2026-01-07**: 画像・動画アップロード要件を追加:
+  - 画像フォーマットにAVIFを追加（次世代画像フォーマット、高圧縮率）
+  - 動画アップロード機能の要件定義を追加（MP4/WebM、サイズ制限、表示方法）
+  - Tiptap拡張機能に動画埋め込み機能を追加
+  - セキュリティ要件に動画URL検証を追加

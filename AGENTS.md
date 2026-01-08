@@ -87,7 +87,7 @@ A reservation and management system for rental spaces. Provides a highly designe
 - **React**: 19.2.3, **Next.js**: 16.1.1, **TypeScript**: 5.9.3, **Bun**: 1.3.5
 - **Prisma**: 7.2.0, **Supabase**: PostgreSQL, **Zod**: 4.3.5
 - **Tailwind CSS**: 4.1.18, **GSAP** or **Motion** (formerly Framer Motion), **Three.js** (`@react-three/fiber` + `@react-three/drei`) or **Pixi.js** (`@pixi/react`)
-- **Auth.js**: 5.0.0-beta.30, **nuqs**: 2.8.5
+- **Auth.js**: 5.0.0-beta.30, **nuqs**: 2.8.6
 - **Deployment**: Google Cloud Run (Bun runtime), Supabase
 
 **For detailed version information**: See `[docs/development/TECH_STACK_VERSIONS.md](docs/development/TECH_STACK_VERSIONS.md)`
@@ -185,6 +185,7 @@ Key documents:
 
 - **Documentation index**: `[docs/README.md](docs/README.md)`
 - **Feature requirements**: `[docs/requirements/FEATURE_REQUIREMENTS.md](docs/requirements/FEATURE_REQUIREMENTS.md)`
+- **SEO requirements**: `[docs/requirements/SEO_REQUIREMENTS.md](docs/requirements/SEO_REQUIREMENTS.md)`
 - **Architecture**: `[docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md)`
 - **Database design**: `[docs/architecture/DATABASE_DESIGN.md](docs/architecture/DATABASE_DESIGN.md)`
 - **API specification**: `[docs/development/API.md](docs/development/API.md)`

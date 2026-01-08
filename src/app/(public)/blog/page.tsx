@@ -10,8 +10,12 @@ import Link from 'next/link'
 import { tv } from 'tailwind-variants'
 import { Card, CardContent, CardFooter, Container } from '@/components/site/ui'
 import { prisma } from '@/lib/prisma'
-import { loadBlogSearchParams, type SortOrder } from '@/lib/nuqs'
+import { loadBlogSearchParams } from '@/lib/nuqs'
 import { cn } from '@/lib/utils'
+import {
+  blogSearchParamsDefaults,
+  blogSearchParamsSchema,
+} from '@/lib/validations/search-params'
 import { BlogFilters } from './_components/blog-filters'
 import { BlogPagination } from './_components/blog-pagination'
 import type { Prisma } from '@/generated/prisma/client/client'
@@ -42,19 +46,23 @@ const styles = tv({
   },
 })()
 
-interface BlogPostListItem {
-  id: string
-  title: string
-  slug: string
-  excerpt: string
-  thumbnailUrl: string
-  publishedAt: Date | null
-  tags: Prisma.JsonValue
-  category: {
-    name: string
-    slug: string
+type BlogPostListItem = Prisma.BlogPostGetPayload<{
+  select: {
+    id: true
+    title: true
+    slug: true
+    excerpt: true
+    thumbnailUrl: true
+    publishedAt: true
+    tags: true
+    category: {
+      select: {
+        name: true
+        slug: true
+      }
+    }
   }
-}
+}>
 
 interface BlogCardProps {
   post: BlogPostListItem
@@ -137,32 +145,48 @@ export default async function BlogPage({
   const normalizedTags = Array.isArray(tags)
     ? tags.filter((tag) => tag.length > 0)
     : []
-  const sortOrder = sort as SortOrder
+
+  const parsedParams = blogSearchParamsSchema.safeParse({
+    q: normalizedQuery,
+    page,
+    perPage,
+    category: normalizedCategory,
+    tags: normalizedTags,
+    sort,
+  })
+  const {
+    q: safeQuery,
+    page: safePage,
+    perPage: safePerPage,
+    category: safeCategory,
+    tags: safeTags,
+    sort: safeSort,
+  } = parsedParams.success ? parsedParams.data : blogSearchParamsDefaults
 
   const where = {
     isPublished: true,
     publishedAt: { not: null },
-    ...(normalizedQuery && {
+    ...(safeQuery && {
       OR: [
-        { title: { contains: normalizedQuery, mode: 'insensitive' as const } },
-        { excerpt: { contains: normalizedQuery, mode: 'insensitive' as const } },
-        { content: { contains: normalizedQuery, mode: 'insensitive' as const } },
+        { title: { contains: safeQuery, mode: 'insensitive' as const } },
+        { excerpt: { contains: safeQuery, mode: 'insensitive' as const } },
+        { content: { contains: safeQuery, mode: 'insensitive' as const } },
       ],
     }),
-    ...(normalizedCategory && {
-      category: { slug: normalizedCategory },
+    ...(safeCategory && {
+      category: { slug: safeCategory },
     }),
-    ...(normalizedTags.length > 0 && {
-      tags: { array_contains: normalizedTags },
+    ...(safeTags.length > 0 && {
+      tags: { array_contains: safeTags },
     }),
   } satisfies Prisma.BlogPostWhereInput
 
   const [posts, totalCount, categories, tagsList] = await Promise.all([
     prisma.blogPost.findMany({
       where,
-      skip: (page - 1) * perPage,
-      take: perPage,
-      orderBy: [{ publishedAt: sortOrder }, { createdAt: sortOrder }],
+      skip: (safePage - 1) * safePerPage,
+      take: safePerPage,
+      orderBy: [{ publishedAt: safeSort }, { createdAt: safeSort }],
       select: {
         id: true,
         title: true,
@@ -184,9 +208,10 @@ export default async function BlogPage({
     prisma.blogTag.findMany({ orderBy: { name: 'asc' } }),
   ])
 
-  const totalPages = Math.ceil(totalCount / perPage)
-  const startCount = totalCount === 0 ? 0 : (page - 1) * perPage + 1
-  const endCount = totalCount === 0 ? 0 : Math.min(page * perPage, totalCount)
+  const totalPages = Math.ceil(totalCount / safePerPage)
+  const startCount = totalCount === 0 ? 0 : (safePage - 1) * safePerPage + 1
+  const endCount =
+    totalCount === 0 ? 0 : Math.min(safePage * safePerPage, totalCount)
 
   return (
     <section className={styles.section()}>
@@ -204,8 +229,8 @@ export default async function BlogPage({
 
         <p className={styles.resultCount()}>
           {totalCount}件中 {startCount}-{endCount}件を表示
-          {normalizedQuery && (
-            <span className="ml-2">（検索: &quot;{normalizedQuery}&quot;）</span>
+          {safeQuery && (
+            <span className="ml-2">（検索: &quot;{safeQuery}&quot;）</span>
           )}
         </p>
 
@@ -222,7 +247,7 @@ export default async function BlogPage({
         )}
 
         {totalPages > 1 && (
-          <BlogPagination currentPage={page} totalPages={totalPages} />
+        <BlogPagination currentPage={safePage} totalPages={totalPages} />
         )}
       </Container>
     </section>

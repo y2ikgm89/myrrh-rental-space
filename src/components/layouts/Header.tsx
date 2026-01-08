@@ -7,6 +7,8 @@
 
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
+import type { Settings } from '@/generated/prisma/client/client'
+import type { ReactElement } from 'react'
 
 type NavItem = {
   label: string
@@ -29,7 +31,7 @@ async function getNavigationItems(): Promise<NavItem[]> {
   }
 }
 
-async function getSiteSettings() {
+async function getSiteSettings(): Promise<Settings | null> {
   try {
     const settings = await prisma.settings.findFirst()
     return settings
@@ -38,7 +40,7 @@ async function getSiteSettings() {
   }
 }
 
-export async function Header() {
+export async function Header(): Promise<ReactElement> {
   const [navItems, settings] = await Promise.all([
     getNavigationItems(),
     getSiteSettings(),

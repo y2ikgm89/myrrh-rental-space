@@ -2,7 +2,7 @@
 
 > **Note**: このドキュメントには、Next.js 16、React 19、Prisma 7、Auth.js 5の最新の公式推奨に基づくベストプラクティスが記載されています。技術スタックの詳細については、[`AGENTS.md`](../AGENTS.md)を参照してください。
 
-**最終更新**: 2026-01-06
+**最終更新**: 2026-01-08
 
 ---
 
@@ -212,6 +212,112 @@ export async function getUserReservations(userId: string) {
 }
 ```
 
+#### revalidateTagのprofileパラメータ（stale-while-revalidate semantics）
+
+Next.js 16では、`revalidateTag`の第2引数に`'max'`を指定することで、stale-while-revalidate semanticsが適用されます。古いコンテンツを即座に表示し、バックグラウンドで新しいデータを取得することで、ユーザー体験とパフォーマンスの両立を実現します。
+
+```typescript
+// ✅ 推奨: stale-while-revalidate semantics（推奨）
+// src/actions/admin/spaces.ts
+'use server'
+
+import { revalidateTag } from 'next/cache'
+
+export async function updateSpace(id: string, data: UpdateSpaceData) {
+  await prisma.space.update({
+    where: { id },
+    data,
+  })
+
+  // 古いコンテンツを即座に表示し、バックグラウンドで更新
+  revalidateTag('spaces-list', 'max')
+  revalidatePath('/spaces')
+  revalidatePath(`/spaces/${id}`)
+}
+
+// ❌ 非推奨: 即座にキャッシュを無効化（レガシー動作）
+// revalidateTag('spaces-list') // 第2引数なしは非推奨
+```
+
+**動作の仕組み**:
+1. **古いコンテンツを即座に表示**: キャッシュされた古いコンテンツを即座にユーザーに表示
+2. **バックグラウンドで更新**: 同時にバックグラウンドで新しいデータを取得
+3. **次回リクエストで更新**: 次のリクエストから新しいデータを表示
+
+**利点**:
+- **ユーザー体験の向上**: ローディング時間を短縮し、即座にコンテンツを表示
+- **パフォーマンスの最適化**: サーバー負荷を分散し、レスポンス時間を短縮
+- **新鮮なデータの提供**: バックグラウンドで更新することで、常に最新のデータを提供
+
+#### updateTagの使用（read-your-own-writesシナリオ）
+
+`updateTag`は、Server Actionsでのみ使用可能で、即座にキャッシュを無効化します（stale-while-revalidateなし）。read-your-own-writesシナリオに最適です。
+
+```typescript
+// ✅ 良い例: read-your-own-writesシナリオ
+// src/actions/admin/blog.ts
+'use server'
+
+import { updateTag } from 'next/cache'
+import { redirect } from 'next/navigation'
+
+export async function createBlogPost(formData: FormData) {
+  const post = await prisma.blogPost.create({
+    data: {
+      title: formData.get('title') as string,
+      content: formData.get('content') as string,
+      // ...
+    },
+  })
+
+  // 即座にキャッシュを無効化（stale-while-revalidateなし）
+  // 作成したばかりの投稿を即座に表示する必要があるため
+  updateTag('blog-posts-list')
+  updateTag(`blog-post-${post.id}`)
+
+  redirect(`/blog/${post.slug}`)
+}
+```
+
+**使用シナリオ**:
+- データ作成後に即座にそのデータを表示する必要がある場合
+- ユーザーが作成したコンテンツを即座に確認できるようにする場合
+- stale-while-revalidateが不要な場合
+
+**注意**: `updateTag`はServer Actionsでのみ使用可能です。Route Handlersでは使用できません。
+
+#### refreshの使用（現在のページのキャッシュ更新）
+
+`refresh`は、現在のページのキャッシュを更新します。ページリロードなしで最新データを表示できます。
+
+```typescript
+// ✅ 良い例: 現在のページのキャッシュを更新
+// src/actions/admin/spaces.ts
+'use server'
+
+import { refresh } from 'next/cache'
+
+export async function updateSpace(id: string, data: UpdateSpaceData) {
+  await prisma.space.update({
+    where: { id },
+    data,
+  })
+
+  // 現在のページのキャッシュを更新
+  refresh()
+  
+  // 関連するパスも無効化
+  revalidatePath('/spaces')
+  revalidatePath(`/spaces/${id}`)
+  revalidateTag('spaces-list', 'max')
+}
+```
+
+**使用シナリオ**:
+- 現在のページのデータを更新した場合
+- ページリロードなしで最新データを表示したい場合
+- `revalidatePath`と組み合わせて使用
+
 #### fetch()のキャッシュオプション
 
 ```typescript
@@ -252,9 +358,11 @@ export async function generateStaticParams() {
   }))
 }
 
-export default async function SpacePage({ params }: { params: { id: string } }) {
+export default async function SpacePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params // Next.js 16ではparamsはPromise
+
   const space = await prisma.space.findUnique({
-    where: { id: params.id },
+    where: { id },
   })
 
   if (!space) {
@@ -279,10 +387,12 @@ export default async function SpacePage({ params }: { params: { id: string } }) 
 import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
 
-export default async function BlogPostPage({ params }: { params: { slug: string } }) {
+export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params // Next.js 16ではparamsはPromise
+
   // Server Componentでは直接awaitを使用
   const post = await prisma.blogPost.findUnique({
-    where: { slug: params.slug, isPublished: true },
+    where: { slug, isPublished: true },
     include: {
       category: true,
       tags: true,
@@ -397,10 +507,12 @@ React 19では、Server ComponentでPromiseを作成し、それを直接Client 
 import { Suspense } from 'react'
 import { prisma } from '@/lib/prisma'
 
-async function BlogPostPage({ params }: { params: { slug: string } }) {
+async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params // Next.js 16ではparamsはPromise
+
   // 重要なデータはawaitで取得
   const post = await prisma.blogPost.findUnique({
-    where: { slug: params.slug, isPublished: true },
+    where: { slug, isPublished: true },
   })
 
   if (!post) {
@@ -442,7 +554,53 @@ function Comments({ commentsPromise }: { commentsPromise: Promise<Comment[]> }) 
 **ベストプラクティス**:
 - 重要なデータは`await`で取得し、重要でないデータはPromiseとして渡す
 - Suspenseと組み合わせてローディング状態を管理
-- エラーハンドリングを適切に実装
+- エラーハンドリングを適切に実装（Error Boundaryと組み合わせる）
+
+**エラーハンドリング**:
+
+`use()`フックはPromiseがrejectされた場合にエラーをthrowしますが、`try/catch`ではキャッチできません（`use()`はsuspendするため）。代わりに、Error Boundaryと組み合わせてエラーハンドリングを行います。
+
+```typescript
+// ✅ 良い例: Error Boundaryと組み合わせたエラーハンドリング
+// src/app/blog/[slug]/page.tsx
+import { Suspense } from 'react'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
+
+async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const post = await prisma.blogPost.findUnique({ where: { slug } })
+  
+  if (!post) {
+    notFound()
+  }
+  
+  const commentsPromise = prisma.comment.findMany({ 
+    where: { postId: post.id } 
+  })
+  
+  return (
+    <article>
+      <h1>{post.title}</h1>
+      <BlogContent content={post.content} />
+      <ErrorBoundary fallback={<CommentsError />}>
+        <Suspense fallback={<CommentsLoading />}>
+          <Comments commentsPromise={commentsPromise} />
+        </Suspense>
+      </ErrorBoundary>
+    </article>
+  )
+}
+
+// ❌ 悪い例: try/catchではキャッチできない
+function Comments({ commentsPromise }: { commentsPromise: Promise<Comment[]> }) {
+  try {
+    const comments = use(commentsPromise) // エラーが発生してもcatchブロックに到達しない
+    return <div>{/* ... */}</div>
+  } catch (error) {
+    return <div>Failed to load</div> // 到達しない
+  }
+}
+```
 
 ### Client Componentsの最小化
 
@@ -611,6 +769,61 @@ export async function createSpace(
 
 ## Prisma 7 ベストプラクティス
 
+### Driver Adaptersの設定（Prisma 7必須）
+
+Prisma 7では、データベース接続にdriver adaptersが必須です。PostgreSQLの場合は`@prisma/adapter-pg`を使用し、接続プーリングはNode.js driver（`pg`）で管理します。
+
+```typescript
+// ✅ 良い例: Prisma 7のdriver adapter設定
+// src/lib/prisma.ts
+import { PrismaPg } from '@prisma/adapter-pg'
+import { PrismaClient } from '@/generated/prisma/client'
+import { Pool } from 'pg'
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  // 接続プーリングの設定
+  max: 20, // 最大接続数
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
+})
+
+const adapter = new PrismaPg(pool)
+
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined
+}
+
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    adapter,
+    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  })
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+```
+
+**重要なポイント**:
+- **Driver adaptersは必須**: Prisma 7では、データベース接続にdriver adaptersが必須です
+- **接続プーリング**: Node.js driver（`pg`）で接続プーリングを管理します
+- **パフォーマンス**: driver adaptersにより、パフォーマンスと開発者体験が向上します
+- **Supabase接続**: Supabaseの接続プーリングURLを使用する場合は、`Pool`の設定を調整します
+
+**Supabase接続プーリングURLの使用**:
+
+```typescript
+// Supabase接続プーリングURLを使用する場合
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL, // 接続プーリングURL
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
+})
+```
+
+詳細は [`PRISMA_7.md`](./PRISMA_7.md) を参照してください。
+
 ### selectで必要なフィールドのみ取得
 
 ```typescript
@@ -746,11 +959,14 @@ await prisma.$transaction(async (tx) => {
 
 ### Prisma Adapterの設定
 
+**重要**: Prisma 7では、`@/generated/prisma/client`からPrismaClientをインポートします。
+
 ```typescript
-// ✅ 良い例: Auth.js 5の設定
+// ✅ 良い例: Auth.js 5の設定（Prisma 7対応）
 // src/lib/auth.ts
 import NextAuth from 'next-auth'
 import { PrismaAdapter } from '@auth/prisma-adapter'
+import { PrismaClient } from '@/generated/prisma/client'
 import { prisma } from '@/lib/prisma'
 import authConfig from './auth.config'
 
@@ -760,6 +976,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
 })
 ```
+
+**重要なポイント**:
+- **Prisma 7対応**: `@/generated/prisma/client`からPrismaClientをインポート
+- **JWTセッション推奨**: パフォーマンス向上のため、JWTセッション戦略を推奨
+- **Prisma Adapter**: `@auth/prisma-adapter`を使用（`@next-auth/prisma-adapter`は非推奨）
 
 ### JWTセッション戦略
 
@@ -1983,6 +2204,13 @@ npx shadcn@latest add table
 
 ## 更新履歴
 
+- **2026-01-08**: Context7で取得した最新情報に基づき、以下の更新を実施
+  - Next.js 16の`revalidateTag`の`profile`パラメータ（`'max'`）の詳細な説明を追加（stale-while-revalidate semantics）
+  - `updateTag`と`refresh`の詳細な説明を追加（read-your-own-writesシナリオ、現在のページのキャッシュ更新）
+  - React 19の`use()`フックのエラーハンドリング説明を強化（Error Boundaryとの組み合わせ）
+  - Prisma 7のdriver adaptersの詳細な説明を追加（`@prisma/adapter-pg`の使用例、接続プーリング設定）
+  - Auth.js 5の最新パターンを更新（Prisma 7対応、`@/generated/prisma/client`からのインポート）
+- **2026-01-08**: Next.js 16の非同期paramsパターンに全コード例を修正（`Promise<{ id: string }>`形式、`await params`使用）
 - **2026-01-06**: TypeScript型安全性ベストプラクティスセクションを追加
   - TypeScript 5.9の新機能（`satisfies`演算子、`unknown`型の推奨）
   - React 19 + Next.js 16の型安全性（Server Components、Server Actions、Promise型）

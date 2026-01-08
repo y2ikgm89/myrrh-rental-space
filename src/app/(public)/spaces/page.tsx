@@ -11,11 +11,16 @@ import { tv } from 'tailwind-variants'
 import { cn } from '@/lib/utils'
 import { Container, Card, CardContent, CardFooter } from '@/components/site/ui'
 import { prisma } from '@/lib/prisma'
-import { loadSpaceSearchParams, type SortOrder } from '@/lib/nuqs'
+import { loadSpaceSearchParams } from '@/lib/nuqs'
+import {
+  spaceSearchParamsDefaults,
+  spaceSearchParamsSchema,
+} from '@/lib/validations/search-params'
 import { SpaceFilters } from './_components/SpaceFilters'
 import { Pagination } from './_components/Pagination'
 import type { Space } from '@/generated/prisma/client/client'
 import type { SearchParams } from 'nuqs/server'
+import type { ReactElement } from 'react'
 
 export const metadata: Metadata = {
   title: 'スペース一覧',
@@ -49,7 +54,11 @@ function formatPrice(value: unknown): string {
   return `¥${numValue.toLocaleString('ja-JP')}`
 }
 
-function SpaceCard({ space }: { space: Space }) {
+interface SpaceCardProps {
+  space: Space
+}
+
+function SpaceCard({ space }: SpaceCardProps): ReactElement {
   return (
     <Link href={`/spaces/${space.id}`}>
       <Card className="h-full overflow-hidden transition-shadow hover:shadow-lg">
@@ -81,22 +90,36 @@ function SpaceCard({ space }: { space: Space }) {
   )
 }
 
-type PageProps = {
+interface PageProps {
   searchParams: Promise<SearchParams>
 }
 
-export default async function SpacesPage({ searchParams }: PageProps) {
+export default async function SpacesPage({
+  searchParams,
+}: PageProps): Promise<ReactElement> {
   // nuqs: Server Component でのパラメータ読み込み
   const { q, page, perPage, sort } = await loadSpaceSearchParams(searchParams)
+  const parsedParams = spaceSearchParamsSchema.safeParse({
+    q,
+    page,
+    perPage,
+    sort,
+  })
+  const {
+    q: safeQuery,
+    page: safePage,
+    perPage: safePerPage,
+    sort: safeSort,
+  } = parsedParams.success ? parsedParams.data : spaceSearchParamsDefaults
 
   // 検索条件の構築
   const where = {
     isPublished: true,
     isActive: true,
-    ...(q && {
+    ...(safeQuery && {
       OR: [
-        { name: { contains: q, mode: 'insensitive' as const } },
-        { description: { contains: q, mode: 'insensitive' as const } },
+        { name: { contains: safeQuery, mode: 'insensitive' as const } },
+        { description: { contains: safeQuery, mode: 'insensitive' as const } },
       ],
     }),
   }
@@ -105,16 +128,16 @@ export default async function SpacesPage({ searchParams }: PageProps) {
   const [spaces, totalCount] = await Promise.all([
     prisma.space.findMany({
       where,
-      skip: (page - 1) * perPage,
-      take: perPage,
+      skip: (safePage - 1) * safePerPage,
+      take: safePerPage,
       orderBy: {
-        createdAt: sort as SortOrder,
+        createdAt: safeSort,
       },
     }),
     prisma.space.count({ where }),
   ])
 
-  const totalPages = Math.ceil(totalCount / perPage)
+  const totalPages = Math.ceil(totalCount / safePerPage)
 
   return (
     <section className={styles.section()}>
@@ -133,9 +156,11 @@ export default async function SpacesPage({ searchParams }: PageProps) {
 
         {/* 検索結果件数 */}
         <p className={styles.resultCount()}>
-          {totalCount}件中 {(page - 1) * perPage + 1}-
-          {Math.min(page * perPage, totalCount)}件を表示
-          {q && <span className="ml-2">（検索: &quot;{q}&quot;）</span>}
+          {totalCount}件中 {(safePage - 1) * safePerPage + 1}-
+          {Math.min(safePage * safePerPage, totalCount)}件を表示
+          {safeQuery && (
+            <span className="ml-2">（検索: &quot;{safeQuery}&quot;）</span>
+          )}
         </p>
 
         {/* スペースグリッド */}
@@ -153,7 +178,7 @@ export default async function SpacesPage({ searchParams }: PageProps) {
 
         {/* ページネーション */}
         {totalPages > 1 && (
-          <Pagination currentPage={page} totalPages={totalPages} />
+          <Pagination currentPage={safePage} totalPages={totalPages} />
         )}
       </Container>
     </section>

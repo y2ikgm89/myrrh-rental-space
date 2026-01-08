@@ -59,6 +59,12 @@
 **読者**: 開発者、QAエンジニア、プロダクトマネージャー  
 **内容**: ブログ機能の要件定義、お知らせ機能との使い分け、SEO要件、コンテンツ管理要件
 
+#### [`requirements/SEO_REQUIREMENTS.md`](./requirements/SEO_REQUIREMENTS.md)
+SEO（検索エンジン最適化）の包括的な要件定義、メタタグ、OGP、構造化データ、サイトマップ、robots.txt、Google Analytics統合を記載しています。
+
+**読者**: 全開発者、SEO担当者、マーケティング担当者  
+**内容**: メタタグ最適化、OGPタグ、構造化データ（JSON-LD）、サイトマップ、robots.txt、カノニカルURL、ページ固有のSEO要件、Google Analytics統合、Google Search Console統合、パフォーマンス最適化、モバイル最適化、アクセシビリティ、実装優先順位
+
 #### [`requirements/JWT_AUTH_REQUIREMENTS.md`](./requirements/JWT_AUTH_REQUIREMENTS.md)
 JWT認証システムの詳細な要件定義、実装要件、セキュリティ要件、テスト要件を記載しています。
 
@@ -272,6 +278,12 @@ docs/
     │   │   ├── development/API.md を参照（Server Actions仕様）
     │   │   └── EMAIL_REQUIREMENTS.md を参照（メール設定との連携）
     │   │
+    │   ├── SEO_REQUIREMENTS.md
+    │   │   ├── SETTINGS_REQUIREMENTS.md を参照（サイト全体のSEO設定）
+    │   │   ├── BLOG_REQUIREMENTS.md を参照（ブログ機能のSEO要件）
+    │   │   ├── FEATURE_REQUIREMENTS.md を参照（機能要件、SEO関連）
+    │   │   └── architecture/DATABASE_DESIGN.md を参照（SEOフィールド）
+    │   │
     │   ├── JWT_AUTH_REQUIREMENTS.md
     │   │   ├── security/SECURITY.md を参照（セキュリティポリシー）
     │   │   ├── architecture/ARCHITECTURE.md を参照（認証フロー）
@@ -414,9 +426,10 @@ docs/
 
 ## 更新履歴
 
+- **2026-01-07**: SEO_REQUIREMENTS.md追加、SEO（検索エンジン最適化）の包括的な要件定義を追加（メタタグ、OGP、構造化データ、サイトマップ、robots.txt、Google Analytics統合）
 - **2026-01-07**: NUQS_REQUIREMENTS.md 全面改訂（実装完了に伴い `createLoader` パターンに統一、ベストプラクティス更新）
 - **2026-01-06**: ドキュメント構造を整理、カテゴリ別サブディレクトリに分類
-  - `requirements/` - 要件定義ドキュメント（13ファイル）
+  - `requirements/` - 要件定義ドキュメント（14ファイル）
   - `architecture/` - アーキテクチャ・設計ドキュメント（4ファイル）
   - `development/` - 開発・技術詳細ドキュメント（6ファイル）
   - `deployment/` - デプロイメント・運用ドキュメント（3ファイル）

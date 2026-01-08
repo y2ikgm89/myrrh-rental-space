@@ -7,6 +7,8 @@
 
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
+import type { Settings } from '@/generated/prisma/client/client'
+import type { ReactElement } from 'react'
 
 type NavItem = {
   label: string
@@ -46,7 +48,7 @@ async function getSocialLinks(): Promise<SocialLinkItem[]> {
   }
 }
 
-async function getSiteSettings() {
+async function getSiteSettings(): Promise<Settings | null> {
   try {
     const settings = await prisma.settings.findFirst()
     return settings
@@ -55,7 +57,7 @@ async function getSiteSettings() {
   }
 }
 
-export async function Footer() {
+export async function Footer(): Promise<ReactElement> {
   const [navItems, socialLinks, settings] = await Promise.all([
     getFooterNavItems(),
     getSocialLinks(),
@@ -117,7 +119,11 @@ export async function Footer() {
   )
 }
 
-function SocialIcon({ platform }: { platform: string }) {
+interface SocialIconProps {
+  platform: string
+}
+
+function SocialIcon({ platform }: SocialIconProps): ReactElement {
   const iconClass = 'h-5 w-5'
 
   switch (platform.toLowerCase()) {

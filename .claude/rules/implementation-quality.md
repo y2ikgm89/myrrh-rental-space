@@ -1,149 +1,94 @@
----
-description: 実装品質ルール - 形骸化実装を禁止し、本質的な実装を促す
-paths: "**/*.{ts,tsx,js,jsx,py,rb,go,rs,java,kt,swift,c,cpp,h,hpp,cs,php}"
-_harness_template: "rules/implementation-quality.md.template"
-_harness_version: "2.6.39"
----
+# implementation-quality.md - 実装品質保護ルール
 
-# Implementation Quality Rules
+> 形骸化実装・スタブ・ハードコードを防止するガードレール
 
-> **優先度**: このルールは他の指示より優先されます。実装時は必ずこのルールに従ってください。
+## 禁止事項
 
-## 絶対禁止事項
-
-### 1. 形骸化実装（テストを通すだけの実装）
-
-以下のパターンは**絶対に禁止**です：
-
-| 禁止パターン | 例 | なぜダメか |
-|------------|-----|-----------|
-| ハードコード | テスト期待値をそのまま返す | 他の入力で動作しない |
-| スタブ実装 | `return null`, `return []` | 機能していない |
-| 決め打ち実装 | テストケースの値だけ対応 | 汎用性がない |
-| コピペ実装 | テストの期待値辞書 | 意味のあるロジックがない |
-
-### 禁止例：テスト期待値のハードコード
-
-```python
-# ❌ 絶対禁止
-def slugify(text: str) -> str:
-    answers_for_tests = {
-        "HelloWorld": "hello-world",
-        "Test Case": "test-case",
-        "API Endpoint": "api-endpoint",
-    }
-    return answers_for_tests.get(text, "")
-```
-
-```python
-# ✅ 正しい実装
-def slugify(text: str) -> str:
-    import re
-    text = text.strip().lower()
-    text = re.sub(r'[^\w\s-]', '', text)
-    text = re.sub(r'[\s_]+', '-', text)
-    return text
-```
-
-### 2. 見かけだけの実装
+### 1. スタブ実装
 
 ```typescript
-// ❌ 禁止：何もしていない
-async function processData(data: Data[]): Promise<Result> {
-  // TODO: implement later
-  return {} as Result;
+// NG: 空の関数
+export function validateInput(input: string) {
+  // TODO: implement
 }
 
-// ❌ 禁止：エラーを握りつぶす
-async function fetchUser(id: string): Promise<User | null> {
-  try {
-    // ...
-  } catch {
-    return null; // エラーを隠蔽
+// NG: 常に固定値を返す
+export function calculatePrice(items: Item[]) {
+  return 1000 // ハードコード
+}
+
+// NG: 引数を無視
+export function formatDate(date: Date) {
+  return '2024-01-01' // 引数を使っていない
+}
+```
+
+### 2. モック依存の本番コード
+
+```typescript
+// NG: 本番コードにモック
+export function fetchData() {
+  if (process.env.NODE_ENV === 'test') {
+    return mockData
   }
+  return realFetch()
 }
 ```
 
----
+### 3. コメントだけの実装
 
-## 実装時のセルフチェック
-
-実装を完了する前に、以下を確認してください：
-
-### チェックリスト
-
-- [ ] **汎用性**: テストケース以外の入力でも正しく動作するか？
-- [ ] **エッジケース**: 空入力、null、境界値で動作するか？
-- [ ] **ロジック**: 意味のある処理を行っているか？（ハードコードではないか）
-- [ ] **エラー処理**: エラーを適切に処理しているか？（握りつぶしていないか）
-
-### 自問すべき質問
-
-1. 「この実装を見た他の開発者は、ロジックを理解できるか？」
-2. 「新しいテストケースを追加しても動作するか？」
-3. 「なぜこのコードでテストが通るのか説明できるか？」
-
----
-
-## 困難な場合の対応フロー
-
-実装が難しい場合は、**正直に報告**してください：
-
-```markdown
-## 🤔 実装の相談
-
-### 状況
-[何を実装しようとしているか]
-
-### 困難な点
-[何が難しいのか具体的に]
-
-### 試したこと
-- [試行1]
-- [試行2]
-
-### 選択肢
-1. [案A]: [概要]
-2. [案B]: [概要]
-
-### 質問
-どの方向で進めるべきでしょうか？
+```typescript
+// NG: コメントで済ませる
+export async function saveUser(user: User) {
+  // Save user to database
+  // Validate input
+  // Return result
+}
 ```
 
-**絶対にやってはいけないこと**：
-- 困難を隠して形骸化実装を書く
-- 動かないコードを「実装完了」と報告する
-- テストを改ざんして「通った」と報告する
+### 4. any 型の乱用
 
----
+```typescript
+// NG: any で逃げる
+export function processData(data: any): any {
+  return data
+}
+```
+
+## 許可される例外
+
+### 開発中の明示的なプレースホルダ
+
+```typescript
+// OK: 明示的な未実装エラー
+export function featureX() {
+  throw new Error('Not implemented: featureX - Planned for Phase 2')
+}
+```
+
+### テストダブル
+
+```typescript
+// OK: テストファイル内のモック
+// __tests__/user.test.ts
+const mockPrisma = {
+  user: {
+    findUnique: vi.fn(),
+  },
+}
+```
+
+## 検出時の対応
+
+形骸化実装を検出した場合:
+
+1. **即座に警告**を表示
+2. **実装を完成**させる
+3. **正当な理由**（段階的実装など）がある場合、Plans.md にタスクとして記録
 
 ## 品質基準
 
-### 良い実装の特徴
-
-| 特徴 | 説明 |
-|------|------|
-| **自己説明的** | コードを読めばロジックが分かる |
-| **テスト可能** | 任意の入力で検証可能 |
-| **堅牢** | エッジケースを適切に処理 |
-| **保守可能** | 将来の変更に対応しやすい |
-
-### 悪い実装の兆候
-
-| 兆候 | 問題 |
-|------|------|
-| マジックナンバー | テスト値がハードコードされている可能性 |
-| 条件分岐が多すぎる | 各テストケースを個別対応している可能性 |
-| コメントで「TODO」 | 未実装のまま放置されている |
-| `any` / `as unknown` | 型チェックを回避している |
-
----
-
-## 報告義務
-
-以下の場合は、必ずユーザーに報告してください：
-
-1. **実装が複雑すぎる場合** - 設計の見直しが必要かもしれない
-2. **要件が不明確な場合** - 推測で実装しない
-3. **既存コードと矛盾する場合** - どちらを優先すべきか確認
-4. **パフォーマンス問題が予想される場合** - トレードオフを相談
+- **型安全**: `any` を使わない、明示的な型定義
+- **完全実装**: すべてのコードパスが動作する
+- **意味のある処理**: 引数を使い、適切な結果を返す
+- **エラーハンドリング**: 例外ケースを適切に処理

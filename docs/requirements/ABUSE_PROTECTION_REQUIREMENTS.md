@@ -1,6 +1,6 @@
 # 荒らし対策要件定義
 
-> **Note**: このドキュメントには荒らし対策の詳細な要件定義が記載されています。技術スタックの詳細については、[`AGENTS.md`](../AGENTS.md)を参照してください。セキュリティポリシーについては、[`SECURITY.md`](./SECURITY.md)を参照してください。DDoS対策については、[`DDOS_PROTECTION_REQUIREMENTS.md`](./DDOS_PROTECTION_REQUIREMENTS.md)を参照してください。
+> **Note**: このドキュメントには荒らし対策の詳細な要件定義が記載されています。技術スタックの詳細については、[`AGENTS.md`](../AGENTS.md)を参照してください。セキュリティポリシーについては、[`SECURITY.md`](../security/SECURITY.md)を参照してください。DDoS対策については、[`DDOS_PROTECTION_REQUIREMENTS.md`](./DDOS_PROTECTION_REQUIREMENTS.md)を参照してください。
 
 ---
 
@@ -43,7 +43,7 @@
 #### 自動IPブロック機能
 
 **検出条件**:
-- レート制限違反が一定回数以上（例: 15分間に10回以上、詳細は[`SECURITY.md`](./SECURITY.md)の「レート制限」セクションを参照）
+- レート制限違反が一定回数以上（例: 15分間に10回以上、詳細は[`SECURITY.md`](../security/SECURITY.md)の「レート制限」セクションを参照）
 - Turnstile検証失敗が一定回数以上（例: 15分間に5回以上、詳細は[`TURNSTILE_REQUIREMENTS.md`](./TURNSTILE_REQUIREMENTS.md)を参照）
 - 異常なリクエストパターン（例: 存在しないエンドポイントへの大量アクセス）
 
@@ -137,7 +137,7 @@ export async function detectAbuse(
   const reasons: string[] = []
   let severity: 'low' | 'medium' | 'high' = 'low'
   
-  // 1. レート制限違反のチェック（詳細は[`SECURITY.md`](./SECURITY.md)の「レート制限」セクションを参照）
+  // 1. レート制限違反のチェック（詳細は[`SECURITY.md`](../security/SECURITY.md)の「レート制限」セクションを参照）
   const rateLimitViolations = await getRateLimitViolations(ipAddress, '15 m')
   if (rateLimitViolations >= 10) {
     reasons.push('rate_limit_violations')
@@ -633,7 +633,7 @@ describe('IP Block', () => {
 ### プロジェクトドキュメント
 
 - [`AGENTS.md`](../AGENTS.md) - プロジェクト全体の仕様書（技術スタック詳細）
-- [`SECURITY.md`](./SECURITY.md) - セキュリティポリシーとベストプラクティス
+- [`SECURITY.md`](../security/SECURITY.md) - セキュリティポリシーとベストプラクティス
 - [`DDOS_PROTECTION_REQUIREMENTS.md`](./DDOS_PROTECTION_REQUIREMENTS.md) - DDoS対策要件定義
 - [`TURNSTILE_REQUIREMENTS.md`](./TURNSTILE_REQUIREMENTS.md) - Cloudflare Turnstile要件定義
 
@@ -646,4 +646,5 @@ describe('IP Block', () => {
 
 ## 更新履歴
 
+- **2026-01-08**: ドキュメント相互参照パスを修正（SECURITY.mdへのパスを正しいディレクトリに変更）
 - **2026-01-06**: 初版作成、商用無料プランで利用可能な荒らし対策の要件定義を完了

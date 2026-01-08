@@ -32,7 +32,7 @@
 ✅ **アーキテクチャ**: 実装可能  
 ⚠️ **注意事項**: いくつかの技術的制約あり（対策済み）
 
-詳細は[`ARCHITECTURE.md`](./ARCHITECTURE.md)の「技術検証結果」セクションを参照してください。
+詳細は[`ARCHITECTURE.md`](../architecture/ARCHITECTURE.md)の「技術検証結果」セクションを参照してください。
 
 ---
 
@@ -100,6 +100,7 @@
 - **要件**:
   - 各スペースの詳細情報
   - 写真ギャラリー
+  - スペース紹介動画（オプション、アップロードされている場合のみ表示）
   - 設備と料金情報
   - 予約へのナビゲーション
 - **データベース統合**:
@@ -186,16 +187,19 @@
     - **スペース情報**: 収容人数、面積、料金（時間単位、日単位）
     - **設備**: Wi-Fi、プロジェクター、ホワイトボードなど（チェックボックス形式）
     - **画像**: 複数画像アップロード（メイン画像1枚、サブ画像複数枚）
+    - **動画**: オプション、スペース紹介動画アップロード（最大1本、最大100MB）
     - **公開設定**: 公開/非公開の切り替え
     - **営業時間**: 曜日別営業時間（開始時間、終了時間）
   - **リアルタイム更新**: 保存後、公開ページ（`/spaces/[id]`）に即座に反映
   - **バリデーション**:
     - 必須項目チェック（名前、説明、住所、料金など）
-    - 画像サイズと形式チェック（最大10MB、JPEG/PNG/WebP形式）
+    - 画像サイズと形式チェック（最大10MB、JPEG/PNG/WebP/AVIF形式）
+    - 動画サイズと形式チェック（最大100MB、MP4（H.264）/WebM形式）
     - 料金の妥当性チェック（非負数）
     - 営業時間の妥当性チェック（開始時間 < 終了時間）
-- **技術**:
+  - **技術**:
   - 画像アップロード（Supabase Storage）
+  - 動画アップロード（Supabase Storage）
   - リッチテキストエディタ（必要に応じて）
   - Zodスキーマによるフォームバリデーション（クライアントとサーバー両方）
   - Server Actions経由でPrismaにデータ保存
@@ -228,21 +232,23 @@
   - 公開/非公開の切り替え
   - 下書き保存機能
   - SEO設定（メタディスクリプション、OGP画像など）
-- **フォーム項目**:
+  - **フォーム項目**:
   - **基本情報**: タイトル、スラッグ、概要
-  - **コンテンツ**: 本文（Tiptapリッチテキストエディタ）、サムネイル画像、OGP画像
+  - **コンテンツ**: 本文（Tiptapリッチテキストエディタ）、サムネイル画像、OGP画像、動画埋め込み
   - **分類**: カテゴリ、タグ
   - **SEO設定**: メタディスクリプション、メタキーワード、OGPタイトル、OGP説明
   - **公開設定**: 公開日時、公開フラグ、下書きフラグ
-- **リアルタイム更新**: 保存後、公開ページ（`/blog`、`/blog/[slug]`）に即座に反映
-- **バリデーション**:
-  - 必須項目チェック（タイトル、概要、本文、カテゴリなど）
-  - スラッグ形式チェック（英数字・ハイフン・アンダースコアのみ）
-  - スラッグ重複チェック
-  - 画像サイズと形式チェック（最大5MB、JPEG/PNG/WebP形式）
-- **技術**:
+  - **リアルタイム更新**: 保存後、公開ページ（`/blog`、`/blog/[slug]`）に即座に反映
+  - **バリデーション**:
+    - 必須項目チェック（タイトル、概要、本文、カテゴリなど）
+    - スラッグ形式チェック（英数字・ハイフン・アンダースコアのみ）
+    - スラッグ重複チェック
+    - 画像サイズと形式チェック（最大5MB、JPEG/PNG/WebP/AVIF形式）
+    - 動画サイズと形式チェック（最大50MB、MP4（H.264）/WebM形式、本文埋め込み用）
+  - **技術**:
   - Tiptapリッチテキストエディタ（詳細は[`BLOG_REQUIREMENTS.md`](./BLOG_REQUIREMENTS.md)を参照）
   - 画像アップロード（Supabase Storage）
+  - 動画アップロード（Supabase Storage、本文埋め込み用）
   - Zodスキーマによるフォームバリデーション（クライアントとサーバー両方）
   - Server Actions経由でPrismaにデータ保存
   - Next.js ISR（`revalidatePath('/blog')`、`revalidatePath('/blog/[slug]')`）による公開ページの自動更新
@@ -378,7 +384,7 @@
   - Zodスキーマによるフォームバリデーション（クライアントとサーバー両方）
   - Server Actions経由でPrismaにデータ保存
   - Next.js ISR（`revalidatePath('/[slug]')`、`revalidate: 300`）による公開ページの自動更新
-- **データベース**: Pagesテーブル（詳細は[`DATABASE_DESIGN.md`](./DATABASE_DESIGN.md)を参照）
+- **データベース**: Pagesテーブル（詳細は[`DATABASE_DESIGN.md`](../architecture/DATABASE_DESIGN.md)を参照）
 
 ### 顧客管理 (`/admin/customers`)
 - **要件**:
@@ -410,7 +416,7 @@
   - **Server Actions**: データ変更操作（作成、更新、削除）のみに使用、認証チェック、エラーハンドリング、キャッシュ無効化を実装
   - Zodスキーマによるフォームバリデーション（クライアントとサーバー両方）
   - Next.js ISR（`revalidatePath('/admin/customers')`、`revalidateTag('customers', 'max')`）によるキャッシュ無効化（stale-while-revalidate semantics）
-- **データベース**: Customersテーブル（詳細は[`DATABASE_DESIGN.md`](./DATABASE_DESIGN.md)を参照）
+- **データベース**: Customersテーブル（詳細は[`DATABASE_DESIGN.md`](../architecture/DATABASE_DESIGN.md)を参照）
 
 ---
 
@@ -462,8 +468,8 @@
 - **BlogCategories**: ブログカテゴリ
 - **BlogTags**: ブログタグ
 - **Settings**: サイト設定（詳細は[`SETTINGS_REQUIREMENTS.md`](./SETTINGS_REQUIREMENTS.md)を参照）
-- **Pages**: 公開ページコンテンツ（詳細は[`DATABASE_DESIGN.md`](./DATABASE_DESIGN.md)を参照）
-- **Customers**: 顧客情報（詳細は[`DATABASE_DESIGN.md`](./DATABASE_DESIGN.md)を参照）
+- **Pages**: 公開ページコンテンツ（詳細は[`DATABASE_DESIGN.md`](../architecture/DATABASE_DESIGN.md)を参照）
+- **Customers**: 顧客情報（詳細は[`DATABASE_DESIGN.md`](../architecture/DATABASE_DESIGN.md)を参照）
 - **NavigationItems**: ナビゲーションメニュー
 - **SocialLinks**: SNSアイコン
 
@@ -483,7 +489,7 @@
    - 価格は`Decimal`型を使用（精度保持）
    - 日時は`DateTime`型を使用
 
-詳細は[`DATABASE_DESIGN.md`](./DATABASE_DESIGN.md)を参照してください。
+詳細は[`DATABASE_DESIGN.md`](../architecture/DATABASE_DESIGN.md)を参照してください。
 
 ---
 
@@ -647,7 +653,7 @@
 | Supabase接続問題 | 低 | 低 | 接続プーリング設定 | ✅ 対策済み |
 | パフォーマンス問題 | 中 | 中 | 最適化実装 | ⏭️ 実装時対応 |
 
-詳細は[`ARCHITECTURE.md`](./ARCHITECTURE.md)の「リスクと対策」セクションを参照してください。
+詳細は[`ARCHITECTURE.md`](../architecture/ARCHITECTURE.md)の「リスクと対策」セクションを参照してください。
 
 ---
 
@@ -672,14 +678,101 @@
 
 ---
 
+## 画像・動画アップロード要件
+
+### 画像アップロード
+
+**対応フォーマット**:
+- **JPEG** (`image/jpeg`): 広くサポート、写真に適している
+- **PNG** (`image/png`): 透明度対応、ロゴ・アイコンに適している
+- **WebP** (`image/webp`): 高圧縮率、モダンブラウザでサポート
+- **AVIF** (`image/avif`): 次世代画像フォーマット、WebPよりも高圧縮率（約50%削減）、2020年以降の主要ブラウザでサポート
+
+**AVIFの採用理由**:
+- **高圧縮率**: WebPよりも約50%高い圧縮率で、ファイルサイズを大幅に削減
+- **画質**: 同じファイルサイズでWebPよりも高画質
+- **ブラウザサポート**: Chrome 85+、Firefox 93+、Safari 16+、Edge 85+で対応済み
+- **Next.js Image Component**: AVIFを自動的にサポート、フォールバック機能あり
+- **注意**: 古いブラウザではJPEG/PNG/WebPに自動フォールバック（Next.js Image Componentが自動処理）
+
+**サイズ制限（用途別）**:
+- **スペース管理** (`/admin/spaces`): 最大 **10MB**（メイン画像1枚、サブ画像複数枚）
+- **ブログ管理** (`/admin/blog`): 最大 **5MB**（サムネイル画像、OGP画像、本文埋め込み画像）
+- **サイト設定** (`/admin/settings`): 最大 **5MB**（ファビコン、デフォルトOGP画像、ヘッダーロゴ）
+
+**保存先**: Supabase Storage
+
+**最適化**:
+- Next.js Image Componentを使用して自動最適化
+- WebP/AVIF形式への自動変換（ブラウザサポートに応じて）
+- レスポンシブ画像の提供（`srcset`対応）
+- 遅延読み込み（Lazy Loading）
+
+### 動画アップロード
+
+**対応フォーマット**:
+- **MP4** (`video/mp4`): H.264コーデック推奨、広くサポート
+- **WebM** (`video/webm`): オープン形式、モダンブラウザでサポート
+
+**推奨コーデック**:
+- **MP4**: H.264（AVC）コーデック推奨（互換性が高い、すべての主要ブラウザでサポート）
+- **WebM**: VP8またはVP9コーデック推奨（オープン形式、モダンブラウザでサポート）
+
+**H.265（HEVC）コーデックについて**:
+- **現時点では対応しない**（推奨しない）
+- **理由**:
+  1. **ブラウザサポートの制限**: Firefoxが特許ライセンス問題でサポートしていない（2026年1月時点）
+  2. **ハードウェア依存**: 一部のPC（Dell、HPなど）でハードウェアデコーダーが無効化されている場合がある
+  3. **互換性**: H.264と比較して、すべてのユーザー環境で確実に再生できるとは限らない
+  4. **特許ライセンス**: 複雑なライセンス問題が存在
+- **将来の検討**: ブラウザサポートがより広がり、互換性が向上した場合は再検討可能
+- **代替案**: ファイルサイズを削減したい場合は、H.264で適切なビットレート設定やWebM（VP9）の使用を推奨
+
+**サイズ制限（用途別）**:
+- **スペース管理** (`/admin/spaces`): 最大 **100MB**（スペース紹介動画、1本のみ）
+- **ブログ管理** (`/admin/blog`): 最大 **50MB**（本文埋め込み動画、複数本可能）
+
+**保存先**: Supabase Storage
+
+**表示方法**:
+- HTML5 `<video>`タグを使用
+- コントロール（再生・一時停止・音量・フルスクリーン）を提供
+- レスポンシブ対応（`width="100%"`、`height="auto"`）
+- サムネイル画像の設定（オプション、動画の最初のフレームまたは手動設定）
+
+**パフォーマンス最適化**:
+- 遅延読み込み（Lazy Loading、`loading="lazy"`属性）
+- プリロード設定（`preload="metadata"`推奨、全体を読み込まずにメタデータのみ）
+- 動画の圧縮（アップロード前に推奨、ファイルサイズ削減）
+
+**アクセシビリティ**:
+- 字幕ファイル（WebVTT形式）の対応（将来的に実装可能）
+- 動画の説明文（alt属性相当）の設定
+
+**注意事項**:
+- 動画ファイルは画像よりもファイルサイズが大きいため、アップロード時間が長くなる可能性がある
+- 進捗表示（プログレスバー）の実装を推奨
+- アップロード中のキャンセル機能を推奨
+- 動画の再生には適切な帯域幅が必要（モバイル環境を考慮）
+
+**詳細**: ブログ機能の画像・動画要件については[`BLOG_REQUIREMENTS.md`](./BLOG_REQUIREMENTS.md)の「画像・動画アップロード要件」セクションを参照してください。
+
+---
+
 ## 参考資料
 
 ### プロジェクトドキュメント
 
 - [`AGENTS.md`](../AGENTS.md) - プロジェクト全体の仕様書（技術スタック詳細）
-- [`ARCHITECTURE.md`](./ARCHITECTURE.md) - システムアーキテクチャ
-- [`DATABASE_DESIGN.md`](./DATABASE_DESIGN.md) - データベース設計
-- [`API.md`](./API.md) - API仕様
-- [`PROJECT_STRUCTURE.md`](./PROJECT_STRUCTURE.md) - プロジェクト構造
-- [`SECURITY.md`](./SECURITY.md) - セキュリティポリシー
+- [`ARCHITECTURE.md`](../architecture/ARCHITECTURE.md) - システムアーキテクチャ
+- [`DATABASE_DESIGN.md`](../architecture/DATABASE_DESIGN.md) - データベース設計
+- [`API.md`](../development/API.md) - API仕様
+- [`PROJECT_STRUCTURE.md`](../architecture/PROJECT_STRUCTURE.md) - プロジェクト構造
+- [`SECURITY.md`](../security/SECURITY.md) - セキュリティポリシー
 - [`BLOG_REQUIREMENTS.md`](./BLOG_REQUIREMENTS.md) - ブログ機能詳細要件
+
+---
+
+## 更新履歴
+
+- **2026-01-08**: ドキュメント相互参照パスを修正（ARCHITECTURE.md、DATABASE_DESIGN.md、API.md、PROJECT_STRUCTURE.md、SECURITY.mdへのパスを正しいディレクトリに変更）

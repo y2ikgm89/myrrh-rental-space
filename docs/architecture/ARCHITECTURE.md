@@ -242,10 +242,14 @@ graph TB
 
 #### ⚠️ 注意が必要な点
 
-**1. PrismaとEdge Runtime**
+**1. Prisma 7とDriver Adapters**
+- Prisma 7では、データベース接続にdriver adaptersが**必須**
+- PostgreSQLの場合は`@prisma/adapter-pg`を使用
+- 接続プーリングはNode.js driver（`pg`）で管理
 - PrismaはEdge Runtimeをサポートしていない
 - Next.js API Routes/Server Actionsは`runtime = "nodejs"`を指定（またはデフォルト）
 - BunランタイムはNode.js互換性があるため、Prismaと互換
+- 詳細は[`PRISMA_7.md`](./PRISMA_7.md)と[`BEST_PRACTICES.md`](./BEST_PRACTICES.md)を参照
 
 **2. Auth.js 5とPrisma Adapter**
 - `@auth/prisma-adapter`の最新版を使用
@@ -377,6 +381,8 @@ src/
 - **SSG (Static Site Generation)**: 静的コンテンツ（プライバシーポリシーなど）
 - **ISR (Incremental Static Regeneration)**: 半静的コンテンツ（スペース詳細、お知らせ）
 - **SSR (Server-Side Rendering)**: 動的コンテンツ（予約ページ、管理画面）
+- **PPR (Partial Prerendering) / Cache Components**: 静的コンテンツと動的コンテンツを同じルート内で組み合わせ（Next.js 16の`cacheComponents`設定で有効化、`"use cache"`ディレクティブで明示的なキャッシュ制御）
+- **CSR (Client-Side Rendering)**: クライアントサイドのみでレンダリング（`'use client'`ディレクティブ + `dynamic`インポートで`ssr: false`を指定）
 
 ### データフェッチング（2026年最新パターン）
 
@@ -472,9 +478,9 @@ function ReservationForm() {
 - **ISR**: 時間ベースの再生成（`revalidate`オプション）
 - **On-demand Revalidation**: 
   - `revalidatePath`: 特定のパスのキャッシュを無効化
-  - `revalidateTag`: タグベースでキャッシュを無効化（`'max'`パラメータでstale-while-revalidate semantics）
-  - `updateTag`: タグのタイムスタンプを更新
-  - `refresh`: 現在のページのキャッシュを更新
+  - `revalidateTag`: タグベースでキャッシュを無効化（`'max'`パラメータでstale-while-revalidate semantics、**推奨**）
+  - `updateTag`: 即座にキャッシュを無効化（read-your-own-writesシナリオ、Server Actionsでのみ使用可能）
+  - `refresh`: 現在のページのキャッシュを更新（ページリロードなしで最新データを表示）
 
 #### stale-while-revalidate semantics
 
@@ -526,10 +532,12 @@ React 19では、Server ComponentでPromiseを作成し、それを直接Client 
 
 ```typescript
 // Server Component
-async function BlogPostPage({ params }: { params: { slug: string } }) {
+async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params // Next.js 16ではparamsはPromise
+
   // 重要なデータはawaitで取得
-  const post = await prisma.blogPost.findUnique({ 
-    where: { slug: params.slug } 
+  const post = await prisma.blogPost.findUnique({
+    where: { slug }
   })
   
   if (!post) {
@@ -799,3 +807,13 @@ Server Actionsでのエラーハンドリングを統一し、エラーレスポ
 - [Auth.js Documentation](https://authjs.dev)
 - [Supabase Documentation](https://supabase.com/docs)
 - [Google Cloud Run Documentation](https://cloud.google.com/run/docs)
+
+---
+
+## 更新履歴
+
+- **2026-01-08**: Context7で取得した最新情報に基づき、以下の更新を実施
+  - 最新キャッシングAPIの反映（`revalidateTag`の`profile`パラメータ、`updateTag`、`refresh`の詳細な説明）
+  - Prisma 7のdriver adaptersの説明を追加（必須性、`@prisma/adapter-pg`の使用、接続プーリング設定）
+  - React 19の`use()`フックのPromiseパターンを確認
+- **2026-01-08**: Next.js 16の非同期paramsパターンに全コード例を修正（`Promise<{ slug: string }>`形式、`await params`使用）

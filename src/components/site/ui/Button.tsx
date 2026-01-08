@@ -1,5 +1,6 @@
 import { tv, type VariantProps } from 'tailwind-variants'
 import { cn } from '@/lib/utils'
+import type { ComponentPropsWithoutRef, ReactElement } from 'react'
 
 const buttonVariants = tv({
   base: 'inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
@@ -24,10 +25,15 @@ const buttonVariants = tv({
   },
 })
 
-type ButtonProps = React.ComponentPropsWithoutRef<'button'> &
+type ButtonProps = ComponentPropsWithoutRef<'button'> &
   VariantProps<typeof buttonVariants>
 
-export function Button({ className, variant, size, ...props }: ButtonProps) {
+export function Button({
+  className,
+  variant,
+  size,
+  ...props
+}: ButtonProps): ReactElement {
   return (
     <button className={cn(buttonVariants({ variant, size }), className)} {...props} />
   )

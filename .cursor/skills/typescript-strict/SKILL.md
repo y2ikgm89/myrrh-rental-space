@@ -132,6 +132,7 @@ export function SpaceCard({ space }: SpaceCardProps) {
 - **Use Zod schemas**: For runtime validation and type inference
 - **Infer types**: Use `z.infer` for type inference from Zod schemas
 - **Use `z.input` and `z.output`**: Distinguish between input and output types when using transforms
+- **Use `safeParse` at boundaries**: Validate `unknown` inputs and branch on success instead of casting
 
 ```typescript
 // ✅ Good: Zod schema with type inference
@@ -165,6 +166,13 @@ export async function createSpace(
 function isSpace(data: unknown): data is z.infer<typeof createSpaceSchema> {
   return createSpaceSchema.safeParse(data).success
 }
+
+// ✅ Good: Boundary validation without casting
+const result = createSpaceSchema.safeParse(input)
+if (!result.success) {
+  throw new Error('Invalid input')
+}
+const validated = result.data
 ```
 
 ### Prisma 7 Types

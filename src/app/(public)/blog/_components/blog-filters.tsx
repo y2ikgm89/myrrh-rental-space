@@ -6,7 +6,7 @@
  * @description nuqs useQueryStates を使用した URL State 管理のサンプル
  */
 
-import { useTransition } from 'react'
+import { useTransition, type ChangeEvent, type ReactElement } from 'react'
 import { useQueryStates } from 'nuqs'
 import { tv } from 'tailwind-variants'
 import { Button, Input } from '@/components/site/ui'
@@ -15,10 +15,9 @@ import {
   parseAsPage,
   parseAsQuery,
   parseAsSortOrder,
-  sortOrders,
 } from '@/lib/nuqs'
 import type { BlogCategory, BlogTag } from '@/generated/prisma/client/client'
-import type { ReactElement } from 'react'
+import { sortOrderSchema } from '@/lib/validations/search-params'
 
 const styles = tv({
   slots: {
@@ -73,24 +72,20 @@ export function BlogFilters({
     normalizedTags.length > 0 ||
     sort !== 'desc'
 
-  const handleSearchChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ): void => {
+  const handleSearchChange = (event: ChangeEvent<HTMLInputElement>): void => {
     setParams({ q: event.target.value || null, page: null })
   }
 
   const handleCategoryChange = (
-    event: React.ChangeEvent<HTMLSelectElement>
+    event: ChangeEvent<HTMLSelectElement>
   ): void => {
     const value = event.target.value
     setParams({ category: value || null, page: null })
   }
 
-  const handleSortChange = (
-    event: React.ChangeEvent<HTMLSelectElement>
-  ): void => {
-    const value = event.target.value as (typeof sortOrders)[number]
-    setParams({ sort: value })
+  const handleSortChange = (event: ChangeEvent<HTMLSelectElement>): void => {
+    const parsedSortOrder = sortOrderSchema.safeParse(event.target.value)
+    setParams({ sort: parsedSortOrder.success ? parsedSortOrder.data : null })
   }
 
   const handleTagToggle = (slug: string): void => {

@@ -1,6 +1,6 @@
 # メール送信機能 要件定義
 
-> **Note**: このドキュメントにはメール送信機能の詳細な要件定義が記載されています。技術スタックの詳細については、[`AGENTS.md`](../AGENTS.md)を参照してください。API仕様については、[`API.md`](./API.md)を参照してください。機能要件の概要については、[`FEATURE_REQUIREMENTS.md`](./FEATURE_REQUIREMENTS.md)を参照してください。
+> **Note**: このドキュメントにはメール送信機能の詳細な要件定義が記載されています。技術スタックの詳細については、[`AGENTS.md`](../AGENTS.md)を参照してください。API仕様については、[`API.md`](../development/API.md)を参照してください。機能要件の概要については、[`FEATURE_REQUIREMENTS.md`](./FEATURE_REQUIREMENTS.md)を参照してください。
 
 ---
 
@@ -407,7 +407,7 @@
 #### メール送信側の対策
 
 **レート制限の実装**:
-- 既存のレート制限実装を活用（[`SECURITY.md`](./SECURITY.md)参照）
+- 既存のレート制限実装を活用（[`SECURITY.md`](../security/SECURITY.md)参照）
 - 送信頻度の監視
 - 異常な送信パターンの検出
 
@@ -427,7 +427,7 @@
 - 同一メールアドレスへの送信頻度制限
 - 同一IPアドレスからの送信頻度制限
 
-**詳細**: [`SECURITY.md`](./SECURITY.md)の「レート制限」セクションを参照してください。
+**詳細**: [`SECURITY.md`](../security/SECURITY.md)の「レート制限」セクションを参照してください。
 
 ### 機密情報の取り扱い
 
@@ -715,9 +715,9 @@ if (templateId) {
 
 - [`AGENTS.md`](../AGENTS.md) - プロジェクト全体の仕様書
 - [`FEATURE_REQUIREMENTS.md`](./FEATURE_REQUIREMENTS.md) - 機能要件
-- [`API.md`](./API.md) - API仕様
-- [`ARCHITECTURE.md`](./ARCHITECTURE.md) - システムアーキテクチャ
-- [`SECURITY.md`](./SECURITY.md) - セキュリティポリシー
+- [`API.md`](../development/API.md) - API仕様
+- [`ARCHITECTURE.md`](../architecture/ARCHITECTURE.md) - システムアーキテクチャ
+- [`SECURITY.md`](../security/SECURITY.md) - セキュリティポリシー
 
 ### 外部リソース
 
@@ -730,5 +730,6 @@ if (templateId) {
 
 ## 更新履歴
 
+- **2026-01-08**: ドキュメント相互参照パスを修正（SECURITY.md、API.md、ARCHITECTURE.mdへのパスを正しいディレクトリに変更）
 - **2026-01-06**: Resendテンプレート機能の統合方法を追加、管理画面からのテンプレート編集機能を追加
 - **2026-01-05**: 初版作成、メール送信機能の要件定義を完了

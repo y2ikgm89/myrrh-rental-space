@@ -4,33 +4,53 @@
  * ログインフォーム（Client Component）
  */
 
-import { useState } from 'react'
+import { useState, type FormEvent, type ReactElement } from 'react'
 import { signIn } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { credentialsSchema, loginTokenSchema } from '@/lib/validations/auth'
 
-export function LoginForm() {
+export function LoginForm(): ReactElement {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async (
+    event: FormEvent<HTMLFormElement>
+  ): Promise<void> => {
+    event.preventDefault()
     setError('')
+
+    const parsedCredentials = credentialsSchema.safeParse({ email, password })
+    if (!parsedCredentials.success) {
+      setError('入力内容を確認してください')
+      return
+    }
+
     setIsLoading(true)
 
     try {
+      const { email: validatedEmail, password: validatedPassword } =
+        parsedCredentials.data
       const result = await signIn('credentials', {
-        email,
-        password,
+        email: validatedEmail,
+        password: validatedPassword,
         redirect: false,
       })
 
       if (result?.error) {
         setError('メールアドレスまたはパスワードが正しくありません')
       } else {
-        router.push('/admin')
+        // ログイン成功後、URLパラメータのトークンを保持してリダイレクト
+        // これにより、proxy.tsでトークンの有効期限を延長できる
+        const token = searchParams.get('token')
+        const parsedToken = loginTokenSchema.safeParse(token)
+        const redirectUrl = parsedToken.success
+          ? `/admin?token=${parsedToken.data}`
+          : '/admin'
+        router.push(redirectUrl)
         router.refresh()
       }
     } catch {

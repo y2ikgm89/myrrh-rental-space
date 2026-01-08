@@ -1,5 +1,6 @@
 import { tv } from 'tailwind-variants'
 import { cn } from '@/lib/utils'
+import type { ComponentPropsWithoutRef, ReactElement } from 'react'
 
 const cardVariants = tv({
   slots: {
@@ -14,26 +15,44 @@ const cardVariants = tv({
 
 const { root, header, title, description, content, footer } = cardVariants()
 
-export function Card({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
+export function Card({
+  className,
+  ...props
+}: ComponentPropsWithoutRef<'div'>): ReactElement {
   return <div className={cn(root(), className)} {...props} />
 }
 
-export function CardHeader({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
+export function CardHeader({
+  className,
+  ...props
+}: ComponentPropsWithoutRef<'div'>): ReactElement {
   return <div className={cn(header(), className)} {...props} />
 }
 
-export function CardTitle({ className, ...props }: React.ComponentPropsWithoutRef<'h3'>) {
+export function CardTitle({
+  className,
+  ...props
+}: ComponentPropsWithoutRef<'h3'>): ReactElement {
   return <h3 className={cn(title(), className)} {...props} />
 }
 
-export function CardDescription({ className, ...props }: React.ComponentPropsWithoutRef<'p'>) {
+export function CardDescription({
+  className,
+  ...props
+}: ComponentPropsWithoutRef<'p'>): ReactElement {
   return <p className={cn(description(), className)} {...props} />
 }
 
-export function CardContent({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
+export function CardContent({
+  className,
+  ...props
+}: ComponentPropsWithoutRef<'div'>): ReactElement {
   return <div className={cn(content(), className)} {...props} />
 }
 
-export function CardFooter({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
+export function CardFooter({
+  className,
+  ...props
+}: ComponentPropsWithoutRef<'div'>): ReactElement {
   return <div className={cn(footer(), className)} {...props} />
 }

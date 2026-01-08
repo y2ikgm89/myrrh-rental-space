@@ -3,15 +3,22 @@
  */
 
 import type { Metadata } from 'next'
+import type { ReactElement } from 'react'
+import { LoginTokenGenerator } from './_components/LoginTokenGenerator'
 
 export const metadata: Metadata = {
   title: 'ダッシュボード',
 }
 
-export default function AdminDashboard() {
+export default function AdminDashboard(): ReactElement {
   return (
     <div>
       <h2 className="text-2xl font-bold text-gray-900 mb-6">ダッシュボード</h2>
+
+      {/* スタッフ用ログインURL生成 */}
+      <div className="mb-8">
+        <LoginTokenGenerator />
+      </div>
 
       {/* 統計カード */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -60,17 +67,19 @@ export default function AdminDashboard() {
   )
 }
 
+interface StatCardProps {
+  title: string
+  value: string
+  change: string
+  trend: 'up' | 'down' | 'neutral'
+}
+
 function StatCard({
   title,
   value,
   change,
   trend,
-}: {
-  title: string
-  value: string
-  change: string
-  trend: 'up' | 'down' | 'neutral'
-}) {
+}: StatCardProps): ReactElement {
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <p className="text-sm font-medium text-gray-600">{title}</p>

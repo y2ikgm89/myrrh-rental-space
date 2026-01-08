@@ -1,6 +1,6 @@
 # DDoS対策要件定義
 
-> **Note**: このドキュメントにはDDoS対策の詳細な要件定義が記載されています。技術スタックの詳細については、[`AGENTS.md`](../AGENTS.md)を参照してください。セキュリティポリシーについては、[`SECURITY.md`](./SECURITY.md)を参照してください。Cloudflare CDN統合については、[`CLOUDFLARE_CDN.md`](./CLOUDFLARE_CDN.md)を参照してください。
+> **Note**: このドキュメントにはDDoS対策の詳細な要件定義が記載されています。技術スタックの詳細については、[`AGENTS.md`](../AGENTS.md)を参照してください。セキュリティポリシーについては、[`SECURITY.md`](../security/SECURITY.md)を参照してください。Cloudflare CDN統合については、[`CLOUDFLARE_CDN.md`](../deployment/CLOUDFLARE_CDN.md)を参照してください。
 
 ---
 
@@ -153,14 +153,14 @@ spec:
 
 既存のレート制限実装を活用します。
 
-**詳細**: [`SECURITY.md`](./SECURITY.md)の「レート制限」セクションを参照してください。
+**詳細**: [`SECURITY.md`](../security/SECURITY.md)の「レート制限」セクションを参照してください。
 
 **グローバルレート制限**:
-- **設定値**: IPアドレスベースで15分間に100リクエスト（[`SECURITY.md`](./SECURITY.md)参照）
+- **設定値**: IPアドレスベースで15分間に100リクエスト（[`SECURITY.md`](../security/SECURITY.md)参照）
 - **目的**: DDoS攻撃の緩和
 
 **エンドポイント別レート制限**:
-- 予約フォーム、お問い合わせフォーム、ログインフォームに個別のレート制限を設定（[`SECURITY.md`](./SECURITY.md)参照）
+- 予約フォーム、お問い合わせフォーム、ログインフォームに個別のレート制限を設定（[`SECURITY.md`](../security/SECURITY.md)参照）
 
 #### リクエストサイズ制限
 
@@ -427,8 +427,8 @@ describe('DDoS Protection', () => {
 ### プロジェクトドキュメント
 
 - [`AGENTS.md`](../AGENTS.md) - プロジェクト全体の仕様書（技術スタック詳細）
-- [`SECURITY.md`](./SECURITY.md) - セキュリティポリシーとベストプラクティス
-- [`CLOUDFLARE_CDN.md`](./CLOUDFLARE_CDN.md) - Cloudflare CDN統合ガイド
+- [`SECURITY.md`](../security/SECURITY.md) - セキュリティポリシーとベストプラクティス
+- [`CLOUDFLARE_CDN.md`](../deployment/CLOUDFLARE_CDN.md) - Cloudflare CDN統合ガイド
 - [`ABUSE_PROTECTION_REQUIREMENTS.md`](./ABUSE_PROTECTION_REQUIREMENTS.md) - 荒らし対策要件定義
 
 ### 外部リソース
@@ -441,4 +441,5 @@ describe('DDoS Protection', () => {
 
 ## 更新履歴
 
+- **2026-01-08**: ドキュメント相互参照パスを修正（SECURITY.md、CLOUDFLARE_CDN.mdへのパスを正しいディレクトリに変更）
 - **2026-01-06**: 初版作成、商用無料プランで利用可能なDDoS対策の要件定義を完了

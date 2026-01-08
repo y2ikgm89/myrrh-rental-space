@@ -1,48 +1,80 @@
----
-description: 2エージェントワークフローの基本ルール
-alwaysApply: true
-_harness_template: "rules/workflow.md.template"
-_harness_version: "2.5.27"
----
+# workflow.md - 2-Agent ワークフロールール
 
-# 2-Agent Workflow Rules
+> Cursor (PM) と Claude Code (Impl) の役割分担と連携ルール
 
-このプロジェクトは **PM ↔ Impl** の2ロールワークフローを採用しています。
-PMは **Cursor** でも **PM Claude** でもOKです（ソロ運用では PM Claude を推奨）。
+## 役割定義
 
-## 役割分担
+### Cursor (PM: Project Manager)
 
-| エージェント | 責務 |
-|-------------|------|
-| **PM（Cursor / PM Claude）** | 計画・レビュー・意思決定・（必要なら）本番デプロイ |
-| **Impl（Claude Code / Impl Claude）** | 実装・テスト・コミット・（必要なら）staging |
+- **責務**: 要件定義、計画策定、レビュー、承認
+- **操作**: Plans.md への依頼追加、完了確認
+- **マーカー**: `pm:依頼中`, `pm:確認済`
 
-## タスク管理
+### Claude Code (Impl: Implementer)
 
-- タスクは `Plans.md` で一元管理
-- マーカーでステータスを追跡:
-  - `pm:依頼中` → PM から依頼（互換: `cursor:依頼中`）
-  - `cc:WIP` → Claude Code 作業中
-  - `cc:完了` → Claude Code 完了
-  - `pm:確認済` → PM レビュー完了（互換: `cursor:確認済`）
+- **責務**: 実装、テスト、ビルド検証
+- **操作**: Plans.md のタスク実行、完了報告
+- **マーカー**: `cc:TODO`, `cc:WIP`, `cc:完了`
 
-## ハンドオフプロトコル
+## ワークフロー
 
-### PM → Impl
-1. Plans.md にタスクを記載し `pm:依頼中` マーカー（互換: `cursor:依頼中`）
-2. **PM Claude の場合**: `/handoff-to-impl-claude` で依頼文を生成
-3. **Cursor の場合**: `/handoff-to-claude`（Cursor側コマンド）で依頼文を生成
-4. Impl Claude（Claude Code）へ貼り付け
+### 1. タスク依頼（PM → Impl）
 
-### Impl → PM
-1. 作業完了後 `cc:完了` マーカーを付与
-2. **PM Claude の場合**: `/handoff-to-pm-claude` で完了報告を生成
-3. **Cursor の場合**: `/handoff-to-cursor` で完了報告を生成
-4. PMへ貼り付けてレビュー依頼（レビュー後に `pm:確認済`）
+```markdown
+## Plans.md
+
+- [ ] `pm:依頼中` ユーザー登録機能を実装
+  - 要件: メール + パスワード認証
+  - 優先度: 高
+```
+
+### 2. タスク着手（Impl）
+
+```markdown
+- [ ] `cc:WIP` ユーザー登録機能を実装
+  - 着手: 2026-01-08
+```
+
+### 3. タスク完了報告（Impl → PM）
+
+```markdown
+- [x] `cc:完了` ユーザー登録機能を実装
+  - 完了: 2026-01-08
+  - 変更: src/app/auth/register/, src/actions/auth.ts
+```
+
+### 4. レビュー・承認（PM）
+
+```markdown
+- [x] `pm:確認済` ユーザー登録機能を実装
+  - 確認: 2026-01-08
+```
+
+## ハンドオフルール
+
+### PM → Impl ハンドオフ時
+
+1. Plans.md に `pm:依頼中` マーカーでタスク追加
+2. 要件・優先度・期待する成果を明記
+3. `/handoff-to-claude` コマンドで引き継ぎ
+
+### Impl → PM ハンドオフ時
+
+1. Plans.md のマーカーを `cc:完了` に更新
+2. 変更内容・影響範囲を記載
+3. `/handoff-to-cursor` コマンドで報告
 
 ## 禁止事項
 
-- ❌ 開発用ファイルの外部公開（CLAUDE.md, AGENTS.md, Plans.md）
-- ❌ 明示的な依頼なしの大規模リファクタリング
-- ❌ テストなしの機能追加
-- ❌ 本番環境への直接デプロイ（PM の承認必須）
+- PM の承認なしに要件変更
+- 完了報告なしのタスク放置
+- マーカーの不整合（WIP のまま別タスク着手）
+
+## 品質ゲート
+
+タスク完了前に必ず:
+
+1. `bun run lint` パス
+2. `bun run type-check` パス
+3. `bun run test` パス（関連テスト）
+4. 変更内容のセルフレビュー

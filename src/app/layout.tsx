@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import type { ReactElement, ReactNode } from 'react'
 import { Noto_Sans_JP } from 'next/font/google'
 import { NuqsAdapter } from 'nuqs/adapters/next/app'
 import './globals.css'
@@ -20,8 +21,8 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
-}>) {
+  children: ReactNode
+}>): ReactElement {
   return (
     <html lang="ja">
       <body className={`${notoSansJP.variable} font-sans antialiased`}>

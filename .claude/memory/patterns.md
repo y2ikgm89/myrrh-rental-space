@@ -1,147 +1,103 @@
-# 再利用パターン (Patterns)
+# patterns.md - 再利用パターン
 
-> プロジェクトで確立された再利用可能なパターンを記録します。
+> プロジェクトで確立された再利用可能なパターンを記録
+
+## 形式
+
+```markdown
+## パターン名
+
+**用途**: いつ使うか
+**パターン**: 具体的な実装パターン
+**例**: コード例
+**注意**: 使用時の注意点
+```
 
 ---
 
-## Server Actions パターン
+## Server Components でのデータ取得
 
-### フォーム送信の基本パターン
+**用途**: ページやレイアウトでのデータ取得
+**パターン**:
+```tsx
+// src/app/spaces/page.tsx
+import { prisma } from '@/lib/prisma'
 
-```typescript
+export default async function SpacesPage() {
+  const spaces = await prisma.space.findMany({
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      images: true,
+    },
+    orderBy: { createdAt: 'desc' },
+  })
+
+  return <SpaceList spaces={spaces} />
+}
+```
+**注意**:
+- `use client` を使わない
+- Prisma クエリは Server Component 内で直接実行
+- 必要なフィールドのみ `select` で取得
+
+---
+
+## Server Actions でのフォーム処理
+
+**用途**: フォーム送信、データ変更
+**パターン**:
+```tsx
 // src/actions/create-reservation.ts
 'use server'
 
 import { z } from 'zod'
-import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
+import { revalidatePath } from 'next/cache'
 
 const schema = z.object({
   spaceId: z.string().uuid(),
-  startTime: z.string().datetime(),
-  endTime: z.string().datetime(),
-  guestName: z.string().min(1),
-  guestEmail: z.string().email(),
+  date: z.string().date(),
+  // ...
 })
 
 export async function createReservation(formData: FormData) {
-  const validated = schema.safeParse({
-    spaceId: formData.get('spaceId'),
-    startTime: formData.get('startTime'),
-    endTime: formData.get('endTime'),
-    guestName: formData.get('guestName'),
-    guestEmail: formData.get('guestEmail'),
+  const validated = schema.parse(Object.fromEntries(formData))
+
+  await prisma.reservation.create({
+    data: validated,
   })
 
-  if (!validated.success) {
-    return { error: validated.error.flatten() }
+  revalidatePath('/reservations')
+}
+```
+**注意**:
+- `'use server'` ディレクティブ必須
+- Zod でバリデーション
+- `revalidatePath` でキャッシュ更新
+
+---
+
+## 認証チェック
+
+**用途**: 認証が必要なページ・アクション
+**パターン**:
+```tsx
+// src/app/admin/layout.tsx
+import { auth } from '@/lib/auth'
+import { redirect } from 'next/navigation'
+
+export default async function AdminLayout({ children }) {
+  const session = await auth()
+
+  if (!session?.user) {
+    redirect('/admin/login')
   }
 
-  try {
-    const reservation = await prisma.reservation.create({
-      data: validated.data,
-    })
-
-    revalidatePath('/admin/reservations')
-    return { success: true, data: reservation }
-  } catch (error) {
-    return { error: 'Failed to create reservation' }
-  }
+  return <>{children}</>
 }
 ```
-
----
-
-## データ取得パターン
-
-### Server Component でのデータ取得
-
-```typescript
-// src/app/spaces/[id]/page.tsx
-import { notFound } from 'next/navigation'
-import { prisma } from '@/lib/prisma'
-
-type Props = {
-  params: Promise<{ id: string }>
-}
-
-export default async function SpacePage({ params }: Props) {
-  const { id } = await params
-
-  const space = await prisma.space.findUnique({
-    where: { id, isPublished: true },
-    include: { images: true },
-  })
-
-  if (!space) {
-    notFound()
-  }
-
-  return <SpaceDetail space={space} />
-}
-```
-
----
-
-## バリデーションパターン
-
-### Zod スキーマの共有
-
-```typescript
-// src/lib/schemas/reservation.ts
-import { z } from 'zod'
-
-export const reservationSchema = z.object({
-  spaceId: z.string().uuid(),
-  startTime: z.coerce.date(),
-  endTime: z.coerce.date(),
-  guestName: z.string().min(1, '名前を入力してください'),
-  guestEmail: z.string().email('有効なメールアドレスを入力してください'),
-  guestPhone: z.string().optional(),
-})
-
-export type ReservationInput = z.infer<typeof reservationSchema>
-```
-
----
-
-## コンポーネントパターン
-
-### クライアントコンポーネントの最小化
-
-```typescript
-// src/components/ui/SpaceCard.tsx (Server Component)
-import type { Space } from '@/generated/prisma/client'
-import { SpaceCardActions } from './SpaceCardActions'
-
-type Props = {
-  space: Space
-}
-
-export function SpaceCard({ space }: Props) {
-  return (
-    <div className="rounded-lg border p-4">
-      <h3>{space.name}</h3>
-      <p>{space.description}</p>
-      {/* クライアントインタラクションのみ Client Component */}
-      <SpaceCardActions spaceId={space.id} />
-    </div>
-  )
-}
-
-// src/components/ui/SpaceCardActions.tsx (Client Component)
-'use client'
-
-import { useState } from 'react'
-
-export function SpaceCardActions({ spaceId }: { spaceId: string }) {
-  const [isBookmarked, setIsBookmarked] = useState(false)
-  // インタラクティブな処理
-}
-```
-
----
-
-## 追記欄
-
-<!-- 新しいパターンはここに追加 -->
+**注意**:
+- `auth()` は Server Component で使用
+- 未認証時は `redirect()` でリダイレクト

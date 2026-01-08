@@ -176,6 +176,8 @@ export async function createReservation(data: ReservationData & { turnstileToken
 ## Input Validation
 
 - **Use Zod schemas**: Always validate inputs with Zod schemas (see `@security` for validation patterns)
+- **Use `safeParse` for `unknown` inputs**: Treat action inputs as untrusted and validate before use
+- **Avoid `as` casts**: Do not cast inputs to satisfy types
 - **Schema location**: Define schemas in `src/lib/validations/`
 - **Type inference**: Use `z.infer<typeof schema>` for type safety
 

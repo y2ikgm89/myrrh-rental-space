@@ -371,11 +371,12 @@ myrrh-rental-space/
   - スペース更新: `revalidatePath('/spaces/[id]')`, `revalidatePath('/spaces')`
   - ナビゲーション更新: `revalidatePath('/')`
   - お知らせ更新: `revalidatePath('/news')`
-- **タグベース**: `revalidateTag()`でタグに関連するすべてのキャッシュを無効化（stale-while-revalidate semantics）
-  - 例: `revalidateTag('spaces-list', 'max')`
+- **タグベース**: `revalidateTag()`でタグに関連するすべてのキャッシュを無効化（stale-while-revalidate semantics、**推奨**）
+  - 例: `revalidateTag('spaces-list', 'max')`（第2引数に`'max'`を指定）
+  - 古いコンテンツを即座に表示し、バックグラウンドで新しいデータを取得
 - **その他**: 
-  - `updateTag()`: タグのタイムスタンプを更新
-  - `refresh()`: 現在のページのキャッシュを更新
+  - `updateTag()`: 即座にキャッシュを無効化（read-your-own-writesシナリオ、Server Actionsでのみ使用可能）
+  - `refresh()`: 現在のページのキャッシュを更新（ページリロードなしで最新データを表示）
 
 ---
 
@@ -422,6 +423,20 @@ myrrh-rental-space/
 - **セキュリティ**: 機密情報をクライアントに送信しない
 - **データベースアクセス**: 直接データベースにアクセス可能（API経由不要）
 
+### レンダリング戦略の選択ガイド
+
+各レンダリング戦略の選択基準：
+
+| レンダリング戦略 | 用途 | 実装方法 |
+|----------------|------|----------|
+| **SSG** | 変更頻度が極めて低い静的コンテンツ（プライバシーポリシー、利用規約など） | `export const revalidate = false` または `cache: 'force-cache'` |
+| **ISR** | 定期的に更新される半静的コンテンツ（ブログ記事、お知らせ、スペース詳細など） | `export const revalidate = <seconds>` |
+| **SSR** | 常に最新データが必要な動的コンテンツ（予約ページ、管理画面など） | `unstable_noStore()` または `cache: 'no-store'` |
+| **PPR / Cache Components** | 静的コンテンツと動的コンテンツを同じルート内で組み合わせたい場合 | `cacheComponents: true` + `"use cache"`ディレクティブ |
+| **CSR** | ブラウザAPIへのアクセス、完全にクライアントサイドのみで実行する必要がある場合 | `'use client'` + `dynamic`インポートで`ssr: false` |
+
+詳細は [`CACHING_STRATEGY.md`](./CACHING_STRATEGY.md) を参照してください。
+
 ---
 
 ## 追加ディレクトリ構造
@@ -463,6 +478,16 @@ import { formatDate } from './utils'
 // 5. 型のみのインポート
 import type { Reservation } from '@/types/reservation'
 ```
+
+---
+
+## 更新履歴
+
+- **2026-01-08**: Context7で取得した最新情報に基づき、キャッシング戦略の最新APIを反映
+  - `revalidateTag`の`profile`パラメータ（`'max'`）の説明を追加（stale-while-revalidate semantics、推奨）
+  - `updateTag`の説明を更新（read-your-own-writesシナリオ、Server Actionsでのみ使用可能）
+  - `refresh`の説明を更新（現在のページのキャッシュ更新、ページリロードなしで最新データを表示）
+- Next.js 16の非同期paramsパターンは、他のドキュメント（`BEST_PRACTICES.md`、`ARCHITECTURE.md`）で既に説明されているため、本ドキュメントでは確認のみ
 
 ---
 

@@ -31,6 +31,8 @@ This rule enforces security standards across the project.
 ## Input Validation
 
 - **Zod schemas**: Validate all user inputs with Zod schemas (both client and server)
+- **`safeParse` for boundary inputs**: Treat incoming data as `unknown` and only use validated outputs
+- **No input casting**: Avoid `as` on request bodies, query params, or form data
 - **File uploads**: Implement file upload validation (size, format, malware scanning)
 - **SQL injection**: Use Prisma ORM to prevent SQL injection attacks
 - **Sanitization**: Sanitize user inputs before database operations

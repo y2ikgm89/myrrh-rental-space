@@ -6,12 +6,13 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { LoginForm } from './login-form'
+import type { ReactElement } from 'react'
 
 export const metadata: Metadata = {
   title: 'ログイン',
 }
 
-export default async function LoginPage() {
+export default async function LoginPage(): Promise<ReactElement> {
   const session = await auth()
 
   // 既にログイン済みならダッシュボードへ

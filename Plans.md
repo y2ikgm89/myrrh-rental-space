@@ -153,41 +153,57 @@ src/
   - `layouts/Header.tsx` → `site/layouts/Header.tsx`
   - `layouts/Footer.tsx` → `site/layouts/Footer.tsx`
 
-### 1.6.4 nuqs 導入（URL State 管理） `cc:完了` (2026-01-07)
+### 1.6.4 nuqs 導入（URL State 管理） `pm:確認済` (2026-01-07)
 
 > **方針**: 公式ドキュメント準拠のベストプラクティス、後方互換なしのクリーン実装
 
-- パッケージインストール（`nuqs`）
-- App Router 設定
-  - `NuqsAdapter` をルートレイアウトに配置
-  - Server Components 対応設定
-- 型安全な Parser 定義
-  - `src/lib/nuqs/parsers.ts` - カスタムパーサー
-  - `src/lib/nuqs/searchParams.ts` - 検索パラメータ定義
-- 基本フック作成
-  - `useQueryState` 単一パラメータ用
-  - `useQueryStates` 複数パラメータ用
-- 使用例実装（動作確認用）
-  - ブログ一覧のフィルタ/ページネーション
-  - スペース一覧のソート/検索
+#### 実装内容
+
+- ✅ パッケージインストール（`nuqs@^2.8.6`）
+- ✅ App Router 設定
+  - `NuqsAdapter` をルートレイアウト（`src/app/layout.tsx`）に配置
+  - Server Components 対応設定完了
+- ✅ 型安全な Parser 定義
+  - `src/lib/nuqs/parsers.ts` - カスタムパーサー（ページネーション、ソート、フィルター、日付、ブール値）
+  - `src/lib/nuqs/search-params.ts` - 検索パラメータ定義（ブログ、スペース、お知らせ）
+  - `src/lib/nuqs/index.ts` - エクスポート集約
+- ✅ 基本フック実装
+  - `useQueryState` - 単一パラメータ用（ページネーションで使用）
+  - `useQueryStates` - 複数パラメータ用（フィルターで使用）
+- ✅ 使用例実装（動作確認済み）
+  - ブログ一覧（`src/app/(public)/blog/page.tsx`）
+    - フィルター: `BlogFilters` コンポーネント（検索、カテゴリ、タグ、ソート）
+    - ページネーション: `BlogPagination` コンポーネント
+  - スペース一覧（`src/app/(public)/spaces/page.tsx`）
+    - フィルター: `SpaceFilters` コンポーネント（検索、ソート）
+    - ページネーション: `Pagination` コンポーネント
+
+#### 技術詳細
+
+- **Server Components**: `loadBlogSearchParams`, `loadSpaceSearchParams` で検索パラメータを読み込み
+- **Client Components**: `useQueryState`, `useQueryStates` で URL State を管理
+- **型安全性**: Zod スキーマ（`src/lib/validations/search-params.ts`）でバリデーション
+- **パフォーマンス**: `useTransition` で非同期更新、`shallow: false` で Server Component 再レンダリング
 
 ---
 
 ## フェーズ2: 公開ページ `WIP`
 
-### 2.1 ホームページ `cc:完了` (2026-01-07)
+### 2.1 ホームページ `pm:確認済` (2026-01-07)
 
 - 基本レイアウト（page.tsx 統合）
 - ヒーローセクション（Hero.tsx）
 - スペース一覧表示（SpaceList.tsx - Prisma 連携）
 - CTA セクション（CTA.tsx）
 
-### 2.2 スペース詳細ページ `TODO`
+### 2.2 スペース詳細ページ `cc:完了` (2026-01-08)
 
-- 動的ルーティング設定
-- スペース情報表示
-- 画像ギャラリー
-- 予約ボタン
+- ✅ 動的ルーティング設定（`/spaces/[id]`）
+- ✅ スペース情報表示（SpaceInfo.tsx）
+- ✅ 画像ギャラリー（ImageGallery.tsx - モーダル + キーボードナビゲーション）
+- ✅ 予約ボタン（ReservationCTA.tsx - sticky サイドバー）
+- ✅ generateMetadata で SEO 最適化
+- ✅ generateStaticParams で静的生成対応
 
 ### 2.3 予約ページ `TODO`
 
@@ -198,18 +214,20 @@ src/
 - Turnstile 統合
 - 確認メール送信
 
-### 2.4 お問い合わせページ `TODO`
+### 2.4 お問い合わせページ `cc:完了` (2026-01-08)
 
-- フォーム実装
-- バリデーション
-- Turnstile 統合
-- メール送信
+- ✅ フォーム実装（ContactForm.tsx - Zod + クライアント/サーバーバリデーション）
+- ✅ Server Action（`src/actions/contact.ts` - 送信処理）
+- ✅ バリデーションスキーマ（`src/lib/validations/contact.ts`）
+- ⏳ Turnstile 統合（後で追加予定）
+- ⏳ Resend メール送信（後で追加予定）
 
-### 2.5 お知らせページ `TODO`
+### 2.5 お知らせページ `cc:完了` (2026-01-08)
 
-- 一覧表示
-- 詳細表示
-- ページネーション
+- ✅ 一覧表示（`/news` - nuqs でページネーション）
+- ✅ 詳細表示（`/news/[id]` - DOMPurify でサニタイズ）
+- ✅ ページネーション（NewsPagination.tsx）
+- ✅ SEO 最適化（generateMetadata）
 
 ### 2.6 ブログページ `TODO`
 
@@ -219,10 +237,10 @@ src/
 - 検索機能
 - SEO 最適化
 
-### 2.7 その他ページ `TODO`
+### 2.7 その他ページ `cc:完了` (2026-01-08)
 
-- プライバシーポリシー
-- 利用規約
+- ✅ プライバシーポリシー（`/privacy` - 全11条の日本語テンプレート）
+- ✅ 利用規約（`/terms` - 全16条の日本語テンプレート）
 
 ---
 
@@ -336,11 +354,11 @@ src/
 
 ## 次のアクション
 
-**現在のフォーカス**: フェーズ2.1 - ホームページ
+**現在のフォーカス**: フェーズ2.3 - 予約ページ
 
-1. 「Docker を起動してマイグレーションして」→ DB 構築
-2. 「ホームページを作って」→ ヒーロー/スペース一覧/CTA
-3. 「スペース詳細を作って」→ スペース詳細ページ
+1. 「予約ページを作って」→ カレンダー/時間枠/フォーム
+2. 「ブログ詳細を作って」→ ブログ詳細ページ + カテゴリ/タグ
+3. 「管理画面を始めて」→ フェーズ3 着手
 
 ---
 
@@ -353,3 +371,11 @@ src/
 - **2026-01-07**: フェーズ1.6 追加（UI 基盤整備: 管理画面/公開ページ完全分離構成）
 - **2026-01-07**: UI ライブラリ構成を訂正（管理画面: shadcn/ui + CVA、公開ページ: tailwind-variants）
 - **2026-01-07**: 1.6.4 nuqs 導入タスク追加（URL State 管理 - 公式ベストプラクティス準拠）
+- **2026-01-07**: 1.6.4 nuqs 導入完了（実装済み、ブログ/スペース一覧で動作確認済み）
+- **2026-01-07**: 1.6.4 nuqs 導入レビュー承認済み（`cc:完了` → `pm:確認済`）
+- **2026-01-07**: 2.1 ホームページレビュー承認済み（`cc:完了` → `pm:確認済`）
+- **2026-01-08**: 2.2 スペース詳細ページ完了（動的ルート、画像ギャラリー、予約CTA）
+- **2026-01-08**: 2.4 お問い合わせページ完了（フォーム、バリデーション、Server Action）
+- **2026-01-08**: 2.5 お知らせページ完了（一覧、詳細、ページネーション）
+- **2026-01-08**: 2.7 その他ページ完了（プライバシーポリシー、利用規約）
+

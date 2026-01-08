@@ -7,10 +7,11 @@
  */
 
 import { useQueryStates } from 'nuqs'
-import { useTransition } from 'react'
+import { useTransition, type ChangeEvent, type ReactElement } from 'react'
 import { tv } from 'tailwind-variants'
 import { Input, Button } from '@/components/site/ui'
-import { parseAsQuery, parseAsSortOrder, sortOrders } from '@/lib/nuqs'
+import { parseAsQuery, parseAsSortOrder } from '@/lib/nuqs'
+import { sortOrderSchema } from '@/lib/validations/search-params'
 
 const styles = tv({
   slots: {
@@ -27,7 +28,7 @@ const styles = tv({
   },
 })()
 
-export function SpaceFilters() {
+export function SpaceFilters(): ReactElement {
   const [isPending, startTransition] = useTransition()
 
   // nuqs: 複数パラメータを同時に管理
@@ -46,16 +47,16 @@ export function SpaceFilters() {
     }
   )
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setParams({ q: e.target.value || null })
+  const handleSearchChange = (event: ChangeEvent<HTMLInputElement>): void => {
+    setParams({ q: event.target.value || null })
   }
 
-  const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value as (typeof sortOrders)[number]
-    setParams({ sort: value })
+  const handleSortChange = (event: ChangeEvent<HTMLSelectElement>): void => {
+    const parsedSortOrder = sortOrderSchema.safeParse(event.target.value)
+    setParams({ sort: parsedSortOrder.success ? parsedSortOrder.data : null })
   }
 
-  const handleClear = () => {
+  const handleClear = (): void => {
     setParams({ q: null, sort: null })
   }
 

@@ -8,6 +8,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { auth } from '@/lib/auth'
+import type { ReactElement, ReactNode } from 'react'
 
 export const metadata: Metadata = {
   title: {
@@ -34,8 +35,8 @@ const sidebarItems = [
 export default async function AdminLayout({
   children,
 }: {
-  children: React.ReactNode
-}) {
+  children: ReactNode
+}): Promise<ReactElement> {
   const session = await auth()
 
   return (
@@ -119,7 +120,11 @@ export default async function AdminLayout({
   )
 }
 
-function SidebarIcon({ icon }: { icon: string }) {
+interface SidebarIconProps {
+  icon: string
+}
+
+function SidebarIcon({ icon }: SidebarIconProps): ReactElement | null {
   const className = 'h-5 w-5'
 
   switch (icon) {
