@@ -6,14 +6,22 @@
  */
 
 import { PrismaPg } from '@prisma/adapter-pg'
-import { PrismaClient } from '@/generated/prisma/client/client'
+import { PrismaClient, Prisma } from '@/generated/prisma/client/client'
 import { Pool } from 'pg'
 
-export { Role } from '@/generated/prisma/client/client'
+export { Role, Prisma } from '@/generated/prisma/client/client'
 
 // PostgreSQL 接続プール
+// Prisma 7 では pg driver のデフォルト設定を使用するため、明示的にタイムアウトを設定
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
+  // 接続タイムアウト（デフォルト: 0=無限 → 10秒に設定）
+  connectionTimeoutMillis: 10000,
+  // アイドル接続のタイムアウト（デフォルト: 10秒）
+  idleTimeoutMillis: 10000,
+  // 最大接続数（Cloud Run/サーバーレス環境では低めに設定）
+  // 例: 20インスタンス × 5接続 = 100接続（Supabase制限内）
+  max: 5,
 })
 
 // Prisma アダプター
