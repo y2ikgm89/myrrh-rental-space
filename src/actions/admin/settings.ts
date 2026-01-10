@@ -120,6 +120,12 @@ export type SettingsData = {
   stripeCurrency: string
   stripeLastTestedAt: Date | null
   stripeConnectionStatus: string | null
+  // Cookie Consent Settings
+  cookieConsentEnabled: boolean
+  cookieConsentMessage: string | null
+  cookieConsentAcceptText: string | null
+  cookieConsentRejectText: string | null
+  cookieConsentPolicyUrl: string | null
   createdAt: Date
   updatedAt: Date
 }
@@ -231,6 +237,14 @@ const termsAgreementSettingsSchema = z.object({
   requirePrivacyAgreement: z.boolean(),
 })
 
+const cookieConsentSettingsSchema = z.object({
+  cookieConsentEnabled: z.boolean(),
+  cookieConsentMessage: z.string().max(1000).nullable(),
+  cookieConsentAcceptText: z.string().max(50).nullable(),
+  cookieConsentRejectText: z.string().max(50).nullable(),
+  cookieConsentPolicyUrl: z.string().max(200).nullable(),
+})
+
 export type BasicInfoInput = z.infer<typeof basicInfoSchema>
 export type BusinessInfoInput = z.infer<typeof businessInfoSchema>
 export type ContactInfoInput = z.infer<typeof contactInfoSchema>
@@ -241,6 +255,7 @@ export type ReservationSettingsInput = z.infer<typeof reservationSettingsSchema>
 export type NotificationSettingsInput = z.infer<typeof notificationSettingsSchema>
 export type MaintenanceSettingsInput = z.infer<typeof maintenanceSettingsSchema>
 export type TermsAgreementSettingsInput = z.infer<typeof termsAgreementSettingsSchema>
+export type CookieConsentSettingsInput = z.infer<typeof cookieConsentSettingsSchema>
 
 // =============================================================================
 // Actions
@@ -751,5 +766,33 @@ export async function updateTermsAgreementSettings(
   } catch (error) {
     console.error('Failed to update terms agreement settings:', error)
     return createFailure('規約同意設定の更新に失敗しました')
+  }
+}
+
+/**
+ * Cookie同意設定を更新
+ */
+export async function updateCookieConsentSettings(
+  data: CookieConsentSettingsInput
+): Promise<ActionResult<void>> {
+  try {
+    const parsed = cookieConsentSettingsSchema.safeParse(data)
+    if (!parsed.success) {
+      return createFailure(parsed.error.issues[0].message)
+    }
+
+    await prisma.settings.upsert({
+      where: { id: 'singleton' },
+      create: { id: 'singleton', ...parsed.data },
+      update: parsed.data,
+    })
+
+    revalidatePath('/admin/settings')
+    revalidatePath('/')
+
+    return createSuccess('Cookie同意設定を更新しました')
+  } catch (error) {
+    console.error('Failed to update cookie consent settings:', error)
+    return createFailure('Cookie同意設定の更新に失敗しました')
   }
 }

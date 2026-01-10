@@ -546,5 +546,12 @@ model Settings {
   stripeLastTestedAt     DateTime?
   stripeConnectionStatus String?
 
+  // Cookie Consent Settings
+  cookieConsentEnabled    Boolean  @default(false)
+  cookieConsentMessage    String?  @db.Text
+  cookieConsentAcceptText String?
+  cookieConsentRejectText String?
+  cookieConsentPolicyUrl  String?
+
   @@map("settings")
 }
