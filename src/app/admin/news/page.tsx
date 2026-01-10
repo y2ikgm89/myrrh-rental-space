@@ -3,8 +3,7 @@ import Link from 'next/link'
 import { getNewsList } from '@/actions/admin/news'
 import { NewsFilters } from './_components/NewsFilters'
 import { NewsTable } from './_components/NewsTable'
-import { Pagination } from './_components/Pagination'
-import { Button } from '@/components/admin/ui'
+import { Button, Pagination } from '@/components/admin/ui'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {

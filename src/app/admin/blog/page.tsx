@@ -3,8 +3,7 @@ import Link from 'next/link'
 import { getBlogPosts, getBlogCategories } from '@/actions/admin/blog'
 import { BlogFilters } from './_components/BlogFilters'
 import { BlogTable } from './_components/BlogTable'
-import { Pagination } from './_components/Pagination'
-import { Button } from '@/components/admin/ui'
+import { Button, Pagination } from '@/components/admin/ui'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {

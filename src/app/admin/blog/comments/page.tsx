@@ -13,7 +13,7 @@ import {
 import { CommentFilters } from './_components/CommentFilters'
 import { CommentTable } from './_components/CommentTable'
 import { CommentStats } from './_components/CommentStats'
-import { Pagination } from '../_components/Pagination'
+import { Pagination } from '@/components/admin/ui'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {

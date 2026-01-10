@@ -2,7 +2,7 @@ import { Suspense } from 'react'
 import { getCustomers } from '@/actions/admin/customer'
 import { CustomerFilters } from './_components/CustomerFilters'
 import { CustomerTable } from './_components/CustomerTable'
-import { Pagination } from './_components/Pagination'
+import { Pagination } from '@/components/admin/ui'
 import type { CustomerStatus } from '@/generated/prisma/client/enums'
 import type { Metadata } from 'next'
 

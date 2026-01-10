@@ -2,7 +2,7 @@ import { Suspense } from 'react'
 import { getReservations } from '@/actions/admin/reservation'
 import { ReservationFilters } from './_components/ReservationFilters'
 import { ReservationTable } from './_components/ReservationTable'
-import { Pagination } from './_components/Pagination'
+import { Pagination } from '@/components/admin/ui'
 import type { ReservationStatus } from '@/generated/prisma/client/enums'
 import type { Metadata } from 'next'
 

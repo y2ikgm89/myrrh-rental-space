@@ -25,7 +25,7 @@ import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { Role } from '@/generated/prisma/client/enums'
 import { UserActions } from './_components/user-actions'
-import { Pagination } from './_components/pagination'
+import { Pagination } from '@/components/admin/ui'
 
 export const metadata = {
   title: 'ユーザー管理 | 管理画面',
@@ -171,7 +171,7 @@ export default async function UsersPage({ searchParams }: Props) {
           {result.totalPages > 1 && (
             <div className="mt-4">
               <Pagination
-                page={result.page}
+                currentPage={result.page}
                 totalPages={result.totalPages}
                 total={result.total}
               />

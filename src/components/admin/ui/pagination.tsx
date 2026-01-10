@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useTransition } from 'react'
 import { Button } from '@/components/admin/ui'
 
@@ -13,6 +13,7 @@ type PaginationProps = {
 export function Pagination({ currentPage, totalPages, total }: PaginationProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const pathname = usePathname()
   const [isPending, startTransition] = useTransition()
 
   const goToPage = (page: number) => {
@@ -24,7 +25,7 @@ export function Pagination({ currentPage, totalPages, total }: PaginationProps) 
     }
 
     startTransition(() => {
-      router.push(`/admin/inquiries?${params.toString()}`)
+      router.push(`${pathname}?${params.toString()}`)
     })
   }
 

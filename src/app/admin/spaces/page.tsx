@@ -3,8 +3,7 @@ import Link from 'next/link'
 import { getSpaces } from '@/actions/admin/space'
 import { SpaceFilters } from './_components/SpaceFilters'
 import { SpaceTable } from './_components/SpaceTable'
-import { Pagination } from './_components/Pagination'
-import { Button } from '@/components/admin/ui'
+import { Button, Pagination } from '@/components/admin/ui'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {

@@ -2,7 +2,7 @@ import { Suspense } from 'react'
 import { getInquiries } from '@/actions/admin/inquiry'
 import { InquiryFilters } from './_components/InquiryFilters'
 import { InquiryTable } from './_components/InquiryTable'
-import { Pagination } from './_components/Pagination'
+import { Pagination } from '@/components/admin/ui'
 import type { InquiryStatus } from '@/generated/prisma/client/enums'
 import type { Metadata } from 'next'
 
