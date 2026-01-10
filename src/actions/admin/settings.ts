@@ -95,6 +95,11 @@ export type SettingsData = {
   notifyReservationCancel: boolean
   notifyNewInquiry: boolean
   notificationEmailAddresses: string | null
+  // Terms Agreement Settings
+  termsAgreementEnabled: boolean
+  termsAgreementText: string | null
+  requireTermsAgreement: boolean
+  requirePrivacyAgreement: boolean
   // Other Settings
   timezone: string | null
   language: string | null
@@ -214,6 +219,13 @@ const maintenanceSettingsSchema = z.object({
   maintenanceMessage: z.string().max(1000).nullable(),
 })
 
+const termsAgreementSettingsSchema = z.object({
+  termsAgreementEnabled: z.boolean(),
+  termsAgreementText: z.string().max(500).nullable(),
+  requireTermsAgreement: z.boolean(),
+  requirePrivacyAgreement: z.boolean(),
+})
+
 export type BasicInfoInput = z.infer<typeof basicInfoSchema>
 export type BusinessInfoInput = z.infer<typeof businessInfoSchema>
 export type ContactInfoInput = z.infer<typeof contactInfoSchema>
@@ -223,6 +235,7 @@ export type EmailSettingsInput = z.infer<typeof emailSettingsSchema>
 export type ReservationSettingsInput = z.infer<typeof reservationSettingsSchema>
 export type NotificationSettingsInput = z.infer<typeof notificationSettingsSchema>
 export type MaintenanceSettingsInput = z.infer<typeof maintenanceSettingsSchema>
+export type TermsAgreementSettingsInput = z.infer<typeof termsAgreementSettingsSchema>
 
 // =============================================================================
 // Actions
@@ -666,5 +679,73 @@ export async function clearStripeKeys(): Promise<{ success: boolean; error?: str
   } catch (error) {
     console.error('Failed to clear Stripe keys:', error)
     return { success: false, error: 'Stripeキーのクリアに失敗しました' }
+  }
+}
+
+// =============================================================================
+// Terms Agreement Actions
+// =============================================================================
+
+/**
+ * 規約同意設定を取得（公開サイト用）
+ */
+export async function getTermsAgreementSettings(): Promise<{
+  enabled: boolean
+  text: string | null
+  requireTerms: boolean
+  requirePrivacy: boolean
+}> {
+  const settings = await prisma.settings.findUnique({
+    where: { id: 'singleton' },
+    select: {
+      termsAgreementEnabled: true,
+      termsAgreementText: true,
+      requireTermsAgreement: true,
+      requirePrivacyAgreement: true,
+    },
+  })
+
+  if (!settings) {
+    return {
+      enabled: true,
+      text: null,
+      requireTerms: true,
+      requirePrivacy: true,
+    }
+  }
+
+  return {
+    enabled: settings.termsAgreementEnabled,
+    text: settings.termsAgreementText,
+    requireTerms: settings.requireTermsAgreement,
+    requirePrivacy: settings.requirePrivacyAgreement,
+  }
+}
+
+/**
+ * 規約同意設定を更新（管理画面用）
+ */
+export async function updateTermsAgreementSettings(
+  data: TermsAgreementSettingsInput
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const parsed = termsAgreementSettingsSchema.safeParse(data)
+    if (!parsed.success) {
+      return { success: false, error: parsed.error.issues[0].message }
+    }
+
+    await prisma.settings.upsert({
+      where: { id: 'singleton' },
+      create: { id: 'singleton', ...parsed.data },
+      update: parsed.data,
+    })
+
+    revalidatePath('/admin/settings')
+    revalidatePath('/reservation')
+
+    return { success: true }
+  } catch (error) {
+    console.error('Failed to update terms agreement settings:', error)
+    return { success: false, error: '規約同意設定の更新に失敗しました' }
   }
 }

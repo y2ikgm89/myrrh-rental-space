@@ -169,17 +169,18 @@ model Space {
 }
 
 model Reservation {
-  id         String            @id @default(uuid())
-  spaceId    String
-  userId     String?
-  customerId String
-  startTime  DateTime
-  endTime    DateTime
-  status     ReservationStatus @default(PENDING)
-  totalPrice Decimal?          @db.Decimal(10, 2)
-  notes      String?           @db.Text
-  createdAt  DateTime          @default(now())
-  updatedAt  DateTime          @updatedAt
+  id            String            @id @default(uuid())
+  spaceId       String
+  userId        String?
+  customerId    String
+  startTime     DateTime
+  endTime       DateTime
+  status        ReservationStatus @default(PENDING)
+  totalPrice    Decimal?          @db.Decimal(10, 2)
+  notes         String?           @db.Text
+  termsAgreedAt DateTime?         // 規約同意日時
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
 
   // Relations
   space    Space    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
@@ -514,6 +515,12 @@ model Settings {
   cancellationPolicy              String?  @db.Text
   sendReservationConfirmationEmail Boolean @default(true)
   sendAdminNotificationEmail       Boolean @default(true)
+
+  // Terms Agreement Settings
+  termsAgreementEnabled     Boolean @default(true)  // 規約同意チェック有効
+  termsAgreementText        String? // カスタム同意文言（null=デフォルト）
+  requireTermsAgreement     Boolean @default(true)  // 利用規約への同意必須
+  requirePrivacyAgreement   Boolean @default(true)  // プライバシーポリシーへの同意必須
 
   // Notification Settings
   notifyNewReservation       Boolean @default(true)

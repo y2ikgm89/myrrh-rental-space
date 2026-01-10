@@ -6,8 +6,10 @@ import {
   type ReactElement,
   type FormEvent,
 } from 'react'
+import Link from 'next/link'
 import { tv } from 'tailwind-variants'
 import { Button } from '@/components/site/ui/Button'
+import { Checkbox } from '@/components/site/ui/Checkbox'
 import { Input } from '@/components/site/ui/Input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/site/ui/Card'
 import { Calendar } from './Calendar'
@@ -15,7 +17,9 @@ import { TimeSlotPicker } from './TimeSlotPicker'
 import { createReservation } from '@/actions/reservation'
 import {
   reservationSchema,
+  reservationWithTermsSchema,
   type ReservationInput,
+  type ReservationWithTermsInput,
   type ReservationActionResult,
 } from '@/lib/validations/reservation'
 import { cn } from '@/lib/utils'
@@ -57,10 +61,63 @@ const formStyles = tv({
 
 const styles = formStyles()
 
+const linkClasses = 'text-primary hover:underline'
+
+function renderTermsLabel(settings: TermsSettings): React.ReactNode {
+  const { requireTerms, requirePrivacy } = settings
+
+  if (requireTerms && requirePrivacy) {
+    return (
+      <>
+        <Link href="/terms" target="_blank" className={linkClasses}>
+          利用規約
+        </Link>
+        と
+        <Link href="/privacy" target="_blank" className={linkClasses}>
+          プライバシーポリシー
+        </Link>
+        に同意します
+      </>
+    )
+  }
+
+  if (requireTerms) {
+    return (
+      <>
+        <Link href="/terms" target="_blank" className={linkClasses}>
+          利用規約
+        </Link>
+        に同意します
+      </>
+    )
+  }
+
+  if (requirePrivacy) {
+    return (
+      <>
+        <Link href="/privacy" target="_blank" className={linkClasses}>
+          プライバシーポリシー
+        </Link>
+        に同意します
+      </>
+    )
+  }
+
+  return '規約に同意します'
+}
+
+interface TermsSettings {
+  enabled: boolean
+  text: string | null
+  requireTerms: boolean
+  requirePrivacy: boolean
+}
+
 interface ReservationFormProps {
   spaceId: string
   spaceName: string
   hourlyPrice: number
+  termsSettings: TermsSettings
 }
 
 type FormStep = 'datetime' | 'info' | 'confirm'
@@ -71,6 +128,7 @@ interface FormState {
   email: string
   phoneNumber: string
   notes: string
+  agreedToTerms: boolean
 }
 
 const initialFormState: FormState = {
@@ -79,12 +137,14 @@ const initialFormState: FormState = {
   email: '',
   phoneNumber: '',
   notes: '',
+  agreedToTerms: false,
 }
 
 export function ReservationForm({
   spaceId,
   spaceName,
   hourlyPrice,
+  termsSettings,
 }: ReservationFormProps): ReactElement {
   // 日時選択状態
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
@@ -150,7 +210,8 @@ export function ReservationForm({
 
     const dateStr = selectedDate.toISOString().split('T')[0]
 
-    const input: ReservationInput = {
+    // 規約同意が必要な場合は agreedToTerms を含める
+    const baseInput = {
       spaceId,
       date: dateStr,
       startTime,
@@ -162,8 +223,13 @@ export function ReservationForm({
       notes: formState.notes || undefined,
     }
 
-    // クライアントサイドバリデーション
-    const clientValidation = reservationSchema.safeParse(input)
+    const input: ReservationInput | ReservationWithTermsInput = termsSettings.enabled
+      ? { ...baseInput, agreedToTerms: formState.agreedToTerms }
+      : baseInput
+
+    // クライアントサイドバリデーション（設定に応じてスキーマを選択）
+    const schema = termsSettings.enabled ? reservationWithTermsSchema : reservationSchema
+    const clientValidation = schema.safeParse(input)
 
     if (!clientValidation.success) {
       const errors: Record<string, string[]> = {}
@@ -486,6 +552,39 @@ export function ReservationForm({
                   </p>
                 )}
               </div>
+
+              {/* 規約同意チェックボックス */}
+              {termsSettings.enabled && (
+                <div className={styles.fieldGroup()}>
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      id="agreedToTerms"
+                      checked={formState.agreedToTerms}
+                      onCheckedChange={(checked) =>
+                        setFormState((prev) => ({ ...prev, agreedToTerms: checked }))
+                      }
+                      disabled={isPending}
+                      aria-invalid={!!fieldErrors.agreedToTerms}
+                      aria-describedby={
+                        fieldErrors.agreedToTerms ? 'agreedToTerms-error' : undefined
+                      }
+                      className="mt-0.5"
+                    />
+                    <label
+                      htmlFor="agreedToTerms"
+                      className="text-sm text-foreground cursor-pointer leading-relaxed"
+                    >
+                      {termsSettings.text || renderTermsLabel(termsSettings)}
+                      <span className={styles.required()}>*</span>
+                    </label>
+                  </div>
+                  {fieldErrors.agreedToTerms && (
+                    <p id="agreedToTerms-error" className={styles.errorText()}>
+                      {fieldErrors.agreedToTerms[0]}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* ボタン */}
               <div className="flex gap-4">

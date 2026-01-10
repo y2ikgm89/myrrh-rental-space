@@ -3,20 +3,52 @@
 import { prisma } from '@/lib/prisma'
 import {
   reservationSchema,
+  reservationWithTermsSchema,
   type ReservationInput,
+  type ReservationWithTermsInput,
   type ReservationActionResult,
   type TimeSlot,
 } from '@/lib/validations/reservation'
 import { ReservationStatus } from '@/generated/prisma/client/enums'
+import {
+  sendReservationConfirmationEmail,
+  sendReservationAdminNotification,
+} from '@/lib/email-service'
+import { verifyTurnstileToken, isTurnstileEnabled } from '@/lib/turnstile'
+import { getTermsAgreementSettings } from '@/actions/admin/settings'
 
 /**
  * 予約を作成する Server Action
  */
 export async function createReservation(
-  input: ReservationInput
+  input: ReservationInput | ReservationWithTermsInput,
+  turnstileToken?: string
 ): Promise<ReservationActionResult> {
-  // バリデーション
-  const validation = reservationSchema.safeParse(input)
+  // Turnstile検証（有効な場合のみ）
+  if (isTurnstileEnabled()) {
+    if (!turnstileToken) {
+      return {
+        success: false,
+        error: 'セキュリティ検証が必要です。ページを再読み込みしてください。',
+      }
+    }
+
+    const isValid = await verifyTurnstileToken(turnstileToken)
+    if (!isValid) {
+      return {
+        success: false,
+        error: 'セキュリティ検証に失敗しました。しばらく経ってから再度お試しください。',
+      }
+    }
+  }
+
+  // 規約同意設定を取得
+  const termsSettings = await getTermsAgreementSettings()
+  const requireTermsAgreement = termsSettings.enabled
+
+  // バリデーション（設定に応じてスキーマを選択）
+  const schema = requireTermsAgreement ? reservationWithTermsSchema : reservationSchema
+  const validation = schema.safeParse(input)
 
   if (!validation.success) {
     const fieldErrors: Record<string, string[]> = {}
@@ -138,6 +170,11 @@ export async function createReservation(
           totalPrice,
           notes,
           status: 'PENDING',
+          // 規約同意が有効で、実際にユーザーが同意している場合のみ日時を記録
+          termsAgreedAt:
+            requireTermsAgreement && 'agreedToTerms' in input && input.agreedToTerms
+              ? new Date()
+              : null,
         },
       })
 
@@ -154,12 +191,29 @@ export async function createReservation(
       return reservation
     })
 
-    // TODO: 確認メール送信（Resend統合後）
-    // await sendReservationConfirmationEmail(email, result, space)
+    // 予約確認メールを送信
+    const emailData = {
+      reservationId: result.id,
+      customerEmail: email,
+      customerName: `${lastName} ${firstName}`,
+      spaceName: space.name,
+      startTime: startDateTime,
+      endTime: endDateTime,
+      totalPrice,
+      notes: notes || undefined,
+    }
+
+    // メール送信（バックグラウンドで実行、失敗してもエラーにしない）
+    Promise.all([
+      sendReservationConfirmationEmail(emailData),
+      sendReservationAdminNotification(emailData, 'new'),
+    ]).catch((err) => {
+      console.error('Failed to send reservation emails:', err)
+    })
 
     return {
       success: true,
-      message: `予約を受け付けました。確認メールをお送りしますので、ご確認ください。`,
+      message: `予約を受け付けました。確認メールをお送りしましたので、ご確認ください。`,
       reservationId: result.id,
     }
   } catch (error) {

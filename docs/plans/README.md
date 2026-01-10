@@ -2,6 +2,31 @@
 
 ## 完了した計画
 
+### 003-reservation-terms-agreement.md (2026-01-10)
+
+予約フォーム規約同意機能
+
+**実装内容**:
+- 予約フォームに規約同意チェックボックスを追加
+- 同意日時（termsAgreedAt）をDBに記録
+- 管理画面から有効/無効・文言・対象規約を設定可能
+
+**新規ファイル**:
+- `src/components/site/ui/Checkbox.tsx`
+- `src/app/admin/settings/_components/sections/TermsAgreementSection.tsx`
+
+**変更ファイル**:
+- `prisma/schema.prisma` - Reservation/Settings にフィールド追加
+- `src/actions/admin/settings.ts` - 設定取得/更新関数追加
+- `src/lib/validations/reservation.ts` - 規約同意スキーマ追加
+- `src/actions/reservation.ts` - 規約同意対応
+- `src/app/(public)/reservation/page.tsx` - 設定取得
+- `src/app/(public)/reservation/_components/ReservationForm.tsx` - UI追加
+
+**デプロイ時**: `bunx prisma migrate dev --name add_terms_agreement` が必要
+
+---
+
 ### 002-stripe-payment-settings.md (2026-01-10)
 
 Stripe決済設定 + 画像アップロード統合

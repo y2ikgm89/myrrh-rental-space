@@ -13,6 +13,7 @@ import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { Container } from '@/components/site/ui'
 import { ReservationForm } from './_components'
+import { getTermsAgreementSettings } from '@/actions/admin/settings'
 import type { ReactElement } from 'react'
 
 interface PageProps {
@@ -72,6 +73,9 @@ export default async function ReservationPage({
     notFound()
   }
 
+  // 規約同意設定を取得
+  const termsSettings = await getTermsAgreementSettings()
+
   return (
     <section className="py-16 bg-background min-h-screen">
       <Container>
@@ -90,6 +94,7 @@ export default async function ReservationPage({
           spaceId={space.id}
           spaceName={space.name}
           hourlyPrice={Number(space.hourlyPrice)}
+          termsSettings={termsSettings}
         />
       </Container>
     </section>

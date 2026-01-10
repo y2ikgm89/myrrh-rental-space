@@ -84,9 +84,9 @@ export const reservationDateTimeSchema = z
   )
 
 /**
- * 予約リクエストスキーマ（完全版）
+ * 予約リクエストスキーマ（基本フィールド）
  */
-export const reservationSchema = z.object({
+export const baseReservationSchema = z.object({
   spaceId: z.string().uuid('スペースIDが無効です'),
   date: dateStringSchema,
   startTime: timeStringSchema,
@@ -114,8 +114,30 @@ export const reservationSchema = z.object({
     .optional(),
 })
 
+/**
+ * 規約同意スキーマ
+ */
+export const termsAgreementSchema = z.object({
+  agreedToTerms: z
+    .boolean()
+    .refine((val) => val === true, {
+      message: '利用規約とプライバシーポリシーに同意してください',
+    }),
+})
+
+/**
+ * 予約リクエストスキーマ（完全版 - 規約同意なし、後方互換性のため維持）
+ */
+export const reservationSchema = baseReservationSchema
+
+/**
+ * 予約リクエストスキーマ（規約同意あり）
+ */
+export const reservationWithTermsSchema = baseReservationSchema.merge(termsAgreementSchema)
+
 export type ReservationInput = z.input<typeof reservationSchema>
 export type ReservationData = z.output<typeof reservationSchema>
+export type ReservationWithTermsInput = z.input<typeof reservationWithTermsSchema>
 export type CustomerInfoInput = z.input<typeof customerInfoSchema>
 
 /**

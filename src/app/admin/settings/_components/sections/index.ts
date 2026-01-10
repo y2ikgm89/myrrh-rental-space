@@ -8,6 +8,7 @@ export { SeoSection } from './SeoSection'
 export { EmailSection } from './EmailSection'
 export { NotificationSection } from './NotificationSection'
 export { ReservationSection } from './ReservationSection'
+export { TermsAgreementSection } from './TermsAgreementSection'
 export { MaintenanceSection } from './MaintenanceSection'
 export { StripeSection } from './StripeSection'
 
