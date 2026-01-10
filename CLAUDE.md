@@ -10,10 +10,12 @@
 - セッション継続時も必ずこのファイルを再確認
 - 初期設定時: `docs/{requirements,architecture,plans}/`作成
 
-0. **Triage**: タスク受領時に判断
+0. **Triage**: タスク受領時に判断（Normal mode で実行）
    - 複数ファイル＋設計判断＋自律実行OK → `/feature-dev`（以下スキップ）
-   - 複数ファイル＋ユーザー承認必要 → `EnterPlanMode`（手動ワークフロー）
+   - 複数ファイル＋事前分析必要 → Plan mode → 分析後 Normal mode で実装
    - 軽微な修正 → 直接実行
+
+   **注意**: Plan mode は読み取り専用。Skills（/feature-dev等）は Normal mode でのみ使用可能
 1. **Explore**: コードベースを読む（コードは書かない）
 2. **Design**: 新規作成・アーキテクチャ影響がある → `code-architect`（設計変更時: `docs/architecture/`更新）
 3. **Plan**: `TodoWrite`でタスク化（機能追加・変更時: `docs/requirements/`更新）→ `docs/plans/NNN-title.md`作成
