@@ -90,9 +90,14 @@ export default function SettingsPage() {
           <h1 className="text-2xl font-bold">サイト設定</h1>
           <p className="text-muted-foreground">サイト全体の設定を管理します</p>
         </div>
-        <Button asChild variant="outline">
-          <Link href="/admin/settings/navigation">ナビゲーション管理</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline">
+            <Link href="/admin/settings/announcement-bar">お知らせバー</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/admin/settings/navigation">ナビゲーション管理</Link>
+          </Button>
+        </div>
       </div>
 
       {/* タブコンテンツ */}
