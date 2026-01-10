@@ -582,5 +582,29 @@ model Settings {
   announcementBarShowIndicator Boolean @default(true)
   announcementBarDesignStyle   String  @default("solid") // solid, gradient, outlined, glass, minimal
 
+  // ==============================================
+  // External Service API Keys
+  // ==============================================
+
+  // Resend Email Service
+  resendApiKey           String?   @db.Text // Encrypted
+  resendLastTestedAt     DateTime?
+  resendConnectionStatus String?            // 'connected' | 'error'
+
+  // Cloudflare Turnstile (Bot Protection)
+  turnstileSiteKey           String?          // Public key (not encrypted)
+  turnstileSecretKey         String?   @db.Text // Encrypted
+  turnstileLastTestedAt      DateTime?
+  turnstileConnectionStatus  String?
+
+  // Google Maps API
+  googleMapsApiKey           String?   @db.Text // Encrypted
+  googleMapsLastTestedAt     DateTime?
+  googleMapsConnectionStatus String?
+
+  // Custom API Keys (Generic key-value storage)
+  // Format: { "id": { "name": "...", "key": "encrypted", "value": "encrypted", ... } }
+  customApiKeys Json? @default("{}")
+
   @@map("settings")
 }

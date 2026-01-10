@@ -2,6 +2,38 @@
 
 ## 完了した計画
 
+### 008-api-keys-management.md (2026-01-11)
+
+外部サービスAPIキー管理機能
+
+**実装内容**:
+- 管理画面からResend/Turnstile/Google MapsのAPIキー設定
+- AES-256-GCM暗号化による安全な保存
+- マスク表示（例: `re_1234...7890`）
+- 各サービスの接続テスト機能
+- 汎用APIキー管理（任意のサービス用JSON形式）
+- 設定画面に「APIキー」タブ追加
+
+**新規ファイル**:
+- `src/types/api-keys.ts` - 型定義
+- `src/lib/validations/api-keys.ts` - Zodスキーマ
+- `src/lib/api-keys/` - サービスヘルパー（helpers/resend/turnstile/google-maps）
+- `src/actions/admin/api-keys.ts` - Server Actions（認証付き）
+- `src/app/admin/settings/_components/sections/ResendSection.tsx`
+- `src/app/admin/settings/_components/sections/TurnstileSection.tsx`
+- `src/app/admin/settings/_components/sections/GoogleMapsSection.tsx`
+- `src/app/admin/settings/_components/sections/CustomApiKeysSection.tsx`
+- `src/app/admin/settings/_components/tabs/ApiKeysTab.tsx`
+- `src/app/admin/settings/_components/shared/StatusBanner.tsx`
+
+**変更ファイル**:
+- `prisma/schema.prisma` - APIキー関連フィールド追加
+- `src/app/admin/settings/_components/SettingsTabs.tsx` - APIキータブ追加
+
+**デプロイ時**: `bunx prisma migrate dev --name add_api_keys_management` が必要
+
+---
+
 ### 007-announcement-bar-design-styles.md (2026-01-11)
 
 お知らせバー デザインスタイルプリセット機能

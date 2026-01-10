@@ -16,6 +16,7 @@ import {
   EmailTab,
   BookingTab,
   PaymentTab,
+  ApiKeysTab,
   SystemTab,
 } from './tabs'
 
@@ -30,6 +31,7 @@ export const SETTINGS_TABS = [
   'email',
   'booking',
   'payment',
+  'apikeys',
   'system',
 ] as const
 
@@ -48,6 +50,7 @@ export const TAB_CONFIGS: TabConfig[] = [
   { id: 'email', label: 'メール', description: 'メール・通知設定' },
   { id: 'booking', label: '予約', description: '予約設定' },
   { id: 'payment', label: '決済', description: 'オンライン決済設定' },
+  { id: 'apikeys', label: 'APIキー', description: '外部サービス連携' },
   { id: 'system', label: 'システム', description: 'メンテナンス' },
 ]
 
@@ -104,6 +107,10 @@ export function SettingsTabs({
 
       <TabsContent value="payment">
         <PaymentTab settings={settings} onUpdate={onSettingsUpdate} />
+      </TabsContent>
+
+      <TabsContent value="apikeys">
+        <ApiKeysTab onUpdate={onSettingsUpdate} />
       </TabsContent>
 
       <TabsContent value="system">
