@@ -1,23 +1,38 @@
 /**
  * 暗号化/復号化ユーティリティ
  *
- * AES-256-GCM を使用してセンシティブなデータを暗号化
+ * AES-256-GCM + HKDF鍵導出を使用してセンシティブなデータを暗号化
  * 環境変数 ENCRYPTION_KEY が必要（32バイト = 64文字の16進数）
+ *
+ * セキュリティ機能:
+ * - HKDF: マスターキーから目的別の派生鍵を自動生成
+ * - AAD: 暗号化コンテキストの認証（改ざん検知強化）
  *
  * キー生成: openssl rand -hex 32
  */
 
-import { createCipheriv, createDecipheriv, randomBytes } from 'crypto'
+import {
+  createCipheriv,
+  createDecipheriv,
+  randomBytes,
+  createHmac,
+} from 'crypto'
 
 const ALGORITHM = 'aes-256-gcm'
 const IV_LENGTH = 12
 const AUTH_TAG_LENGTH = 16
-const ENCODING = 'base64'
+const ENCODING = 'base64' as const
+const VERSION = 1
+const DEFAULT_PURPOSE = 'generic'
+
+interface EncryptOptions {
+  purpose?: string
+}
 
 /**
- * 暗号化キーを取得
+ * マスター暗号化キーを取得
  */
-function getEncryptionKey(): Buffer {
+function getMasterKey(): Buffer {
   const key = process.env.ENCRYPTION_KEY
   if (!key) {
     throw new Error(
@@ -31,65 +46,74 @@ function getEncryptionKey(): Buffer {
 }
 
 /**
- * 平文を暗号化
- * @param plaintext - 暗号化する文字列
- * @returns 暗号化された文字列（Base64エンコード: iv:authTag:ciphertext）
+ * HKDF で派生鍵を生成
  */
-export function encrypt(plaintext: string): string {
-  const key = getEncryptionKey()
-  const iv = randomBytes(IV_LENGTH)
+function deriveKey(masterKey: Buffer, purpose: string): Buffer {
+  const salt = Buffer.from(`myrrh-rental-space:${purpose}`, 'utf8')
+  const prk = createHmac('sha256', salt).update(masterKey).digest()
 
-  const cipher = createCipheriv(ALGORITHM, key, iv)
+  const info = Buffer.from(`encryption:${purpose}:v${VERSION}`, 'utf8')
+  return createHmac('sha256', prk)
+    .update(Buffer.concat([info, Buffer.from([0x01])]))
+    .digest()
+}
+
+/**
+ * 平文を暗号化
+ */
+export function encrypt(plaintext: string, options?: EncryptOptions): string {
+  const purpose = options?.purpose || DEFAULT_PURPOSE
+  const derivedKey = deriveKey(getMasterKey(), purpose)
+  const iv = randomBytes(IV_LENGTH)
+  const aad = Buffer.from(`v${VERSION}:${purpose}`, 'utf8')
+
+  const cipher = createCipheriv(ALGORITHM, derivedKey, iv)
+  cipher.setAAD(aad)
+
   let encrypted = cipher.update(plaintext, 'utf8', ENCODING)
   encrypted += cipher.final(ENCODING)
 
-  const authTag = cipher.getAuthTag()
-
-  // フォーマット: iv:authTag:ciphertext (すべてBase64)
-  return `${iv.toString(ENCODING)}:${authTag.toString(ENCODING)}:${encrypted}`
+  return `v${VERSION}:${purpose}:${iv.toString(ENCODING)}:${cipher.getAuthTag().toString(ENCODING)}:${encrypted}`
 }
 
 /**
  * 暗号文を復号化
- * @param ciphertext - 暗号化された文字列（iv:authTag:ciphertext形式）
- * @returns 復号化された文字列
  */
 export function decrypt(ciphertext: string): string {
-  const key = getEncryptionKey()
-
   const parts = ciphertext.split(':')
-  if (parts.length !== 3) {
+  if (parts.length !== 5 || parts[0] !== `v${VERSION}`) {
     throw new Error('Invalid ciphertext format')
   }
 
-  const [ivBase64, authTagBase64, encryptedBase64] = parts
-  const iv = Buffer.from(ivBase64, ENCODING)
-  const authTag = Buffer.from(authTagBase64, ENCODING)
-  const encrypted = Buffer.from(encryptedBase64, ENCODING)
+  const [, purpose, ivBase64, authTagBase64, encryptedBase64] = parts
+  const derivedKey = deriveKey(getMasterKey(), purpose)
+  const aad = Buffer.from(`v${VERSION}:${purpose}`, 'utf8')
 
-  const decipher = createDecipheriv(ALGORITHM, key, iv)
-  decipher.setAuthTag(authTag)
+  const decipher = createDecipheriv(
+    ALGORITHM,
+    derivedKey,
+    Buffer.from(ivBase64, ENCODING)
+  )
+  decipher.setAAD(aad)
+  decipher.setAuthTag(Buffer.from(authTagBase64, ENCODING))
 
-  let decrypted = decipher.update(encrypted)
+  let decrypted = decipher.update(Buffer.from(encryptedBase64, ENCODING))
   decrypted = Buffer.concat([decrypted, decipher.final()])
 
   return decrypted.toString('utf8')
 }
 
 /**
- * 文字列が暗号化されたフォーマットかどうかを確認
- * @param value - チェックする文字列
- * @returns 暗号化フォーマットの場合true
+ * 暗号化フォーマットかどうかを確認
  */
 export function isEncrypted(value: string): boolean {
   if (!value) return false
   const parts = value.split(':')
-  if (parts.length !== 3) return false
+  if (parts.length !== 5 || parts[0] !== `v${VERSION}`) return false
 
-  // Base64形式のIVとAuthTagの長さをチェック
   try {
-    const iv = Buffer.from(parts[0], ENCODING)
-    const authTag = Buffer.from(parts[1], ENCODING)
+    const iv = Buffer.from(parts[2], ENCODING)
+    const authTag = Buffer.from(parts[3], ENCODING)
     return iv.length === IV_LENGTH && authTag.length === AUTH_TAG_LENGTH
   } catch {
     return false
@@ -97,11 +121,14 @@ export function isEncrypted(value: string): boolean {
 }
 
 /**
- * 安全に暗号化（キーがない場合はnullを返す）
+ * 安全に暗号化
  */
-export function safeEncrypt(plaintext: string): string | null {
+export function safeEncrypt(
+  plaintext: string,
+  options?: EncryptOptions
+): string | null {
   try {
-    return encrypt(plaintext)
+    return encrypt(plaintext, options)
   } catch {
     console.warn('Encryption failed: ENCRYPTION_KEY may not be set')
     return null
@@ -109,7 +136,7 @@ export function safeEncrypt(plaintext: string): string | null {
 }
 
 /**
- * 安全に復号化（失敗した場合はnullを返す）
+ * 安全に復号化
  */
 export function safeDecrypt(ciphertext: string): string | null {
   try {
@@ -118,4 +145,18 @@ export function safeDecrypt(ciphertext: string): string | null {
     console.warn('Decryption failed')
     return null
   }
+}
+
+/**
+ * APIキー用の暗号化
+ */
+export function encryptApiKey(plaintext: string): string {
+  return encrypt(plaintext, { purpose: 'api-key' })
+}
+
+/**
+ * Stripe関連データ用の暗号化
+ */
+export function encryptStripeData(plaintext: string): string {
+  return encrypt(plaintext, { purpose: 'stripe' })
 }
