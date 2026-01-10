@@ -19,9 +19,71 @@
 6. **Review**: `code-reviewer`
 7. **Commit**: git commit → PR作成 → `docs/plans/README.md`に完了記録
 
-**YOU MUST**: 新規ロジック・複数ファイル変更時、TodoWriteに「Code: code-simplifier」「Verify」「Review: code-reviewer」「Commit: docs/plans/README.md更新」を含める
+**YOU MUST**: 新規ロジック・複数ファイル変更時、TodoWriteに以下を**必ず**含める:
+```
+- Code: code-simplifier
+- Verify: type-check/lint
+- Review: code-reviewer
+- Docs: docs/plans/NNN-title.md作成
+- Docs: docs/requirements/更新（該当時）
+- Docs: docs/architecture/更新（該当時）
+- Commit: git commit
+- Docs: docs/plans/README.md更新
+```
 
 **SKIP code-simplifier**: 設定ファイル変更、コメント修正、定数変更のみの場合
+
+## ベストプラクティス
+
+### セッション継続時の必須チェック
+
+セッション継続（context compaction後）時は、**実装開始前**に以下を確認:
+
+1. **このファイル（CLAUDE.md）を再読**
+2. **現在のワークフロー位置を特定** - どのステップまで完了しているか
+3. **docs/plans/README.md を確認** - 進行中・未着手の計画を把握
+4. **TodoWriteを再初期化** - 残タスクを明示的にリスト化
+
+### ドキュメント構造の区別
+
+| パス | 用途 | コミット |
+|------|------|---------|
+| `.claude/plans/` | Claude Code内部の一時計画 | ❌ .gitignore |
+| `docs/plans/` | プロジェクト永続化用 | ✅ 必須 |
+
+**重要**: `.claude/plans/`の計画は**必ず**`docs/plans/NNN-title.md`にコピー・整理してコミット
+
+### 実装完了チェックリスト
+
+実装完了時、以下を**順番に**実行:
+
+```
+□ type-check/lint 通過
+□ code-simplifier 実行済み
+□ code-reviewer 実行済み
+□ docs/plans/NNN-title.md 作成・更新
+□ docs/requirements/ 更新（新機能時）
+□ docs/architecture/ 更新（設計変更時）
+□ git add && git commit
+□ docs/plans/README.md に完了記録
+□ git add && git commit --amend（README更新を含める）
+```
+
+### TodoWrite初期化テンプレート
+
+複数ファイル変更タスク開始時の標準テンプレート:
+
+```
+1. Explore: 関連コード調査
+2. Design: 設計検討（必要時）
+3. Plan: docs/plans/NNN-title.md作成
+4. Code: [具体的な実装タスク...]
+5. Code: code-simplifier
+6. Verify: type-check/lint
+7. Review: code-reviewer
+8. Docs: requirements/architecture更新
+9. Commit: git commit + docs/plans/README.md更新
+```
 
 ## タスク委託
 
