@@ -72,13 +72,13 @@ export async function getAnnouncementBars(): Promise<GetAnnouncementBarsResult> 
 }
 
 /**
- * 有効なお知らせバーを取得（フロントエンド用）
+ * 有効なお知らせバーを複数取得（フロントエンド用）
  * 優先度順、表示期間内のもののみ
  */
-export async function getActiveAnnouncementBar(): Promise<AnnouncementBarData | null> {
+export async function getActiveAnnouncementBars(): Promise<AnnouncementBarData[]> {
   const now = new Date()
 
-  const bar = await prisma.announcementBar.findFirst({
+  const bars = await prisma.announcementBar.findMany({
     where: {
       isActive: true,
       OR: [
@@ -98,7 +98,7 @@ export async function getActiveAnnouncementBar(): Promise<AnnouncementBarData | 
     ],
   })
 
-  return bar
+  return bars
 }
 
 /**

@@ -1,29 +1,53 @@
 /**
  * お知らせバーラッパー（Server Component）
  *
- * DBから有効なお知らせバーを取得して表示
+ * DBから有効なお知らせバーとカルーセル設定を取得して表示
  */
 
-import { getActiveAnnouncementBar } from '@/actions/admin/announcement-bar'
-import { AnnouncementBar } from './AnnouncementBar'
+import { getActiveAnnouncementBars } from '@/actions/admin/announcement-bar'
+import { getAnnouncementBarCarouselSettings } from '@/actions/admin/settings'
+import { AnnouncementBarCarousel } from './AnnouncementBarCarousel'
+import type { CarouselSettings } from './AnnouncementBarCarousel'
 import type { ReactElement } from 'react'
 
 export async function AnnouncementBarWrapper(): Promise<ReactElement | null> {
-  const bar = await getActiveAnnouncementBar()
+  const [bars, dbSettings] = await Promise.all([
+    getActiveAnnouncementBars(),
+    getAnnouncementBarCarouselSettings(),
+  ])
 
-  if (!bar) {
+  if (bars.length === 0) {
     return null
   }
 
+  // DB設定をCarouselSettings形式に変換
+  // 不正な値の場合はデフォルト値'fade'にフォールバック
+  const validAnimations = ['fade', 'slideX', 'slideY'] as const
+  const animation = validAnimations.includes(dbSettings.announcementBarAnimation as typeof validAnimations[number])
+    ? (dbSettings.announcementBarAnimation as 'fade' | 'slideX' | 'slideY')
+    : 'fade'
+
+  const settings: CarouselSettings = {
+    animation,
+    duration: dbSettings.announcementBarDuration,
+    autoPlay: dbSettings.announcementBarAutoPlay,
+    pauseOnHover: dbSettings.announcementBarPauseOnHover,
+    showArrows: dbSettings.announcementBarShowArrows,
+    showIndicator: dbSettings.announcementBarShowIndicator,
+  }
+
   return (
-    <AnnouncementBar
-      id={bar.id}
-      message={bar.message}
-      type={bar.type}
-      linkUrl={bar.linkUrl}
-      linkText={bar.linkText}
-      bgColor={bar.bgColor}
-      textColor={bar.textColor}
+    <AnnouncementBarCarousel
+      bars={bars.map((bar) => ({
+        id: bar.id,
+        message: bar.message,
+        type: bar.type,
+        linkUrl: bar.linkUrl,
+        linkText: bar.linkText,
+        bgColor: bar.bgColor,
+        textColor: bar.textColor,
+      }))}
+      settings={settings}
     />
   )
 }

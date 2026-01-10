@@ -126,6 +126,13 @@ export type SettingsData = {
   cookieConsentAcceptText: string | null
   cookieConsentRejectText: string | null
   cookieConsentPolicyUrl: string | null
+  // Announcement Bar Carousel Settings
+  announcementBarAnimation: string
+  announcementBarDuration: number
+  announcementBarAutoPlay: boolean
+  announcementBarPauseOnHover: boolean
+  announcementBarShowArrows: boolean
+  announcementBarShowIndicator: boolean
   createdAt: Date
   updatedAt: Date
 }
@@ -794,5 +801,74 @@ export async function updateCookieConsentSettings(
   } catch (error) {
     console.error('Failed to update cookie consent settings:', error)
     return createFailure('Cookie同意設定の更新に失敗しました')
+  }
+}
+
+// =============================================================================
+// Announcement Bar Carousel Settings
+// =============================================================================
+
+const announcementBarCarouselSettingsSchema = z.object({
+  announcementBarAnimation: z.enum(['fade', 'slideX', 'slideY']),
+  announcementBarDuration: z.number().int().min(1000).max(30000),
+  announcementBarAutoPlay: z.boolean(),
+  announcementBarPauseOnHover: z.boolean(),
+  announcementBarShowArrows: z.boolean(),
+  announcementBarShowIndicator: z.boolean(),
+})
+
+export type AnnouncementBarCarouselSettingsInput = z.infer<typeof announcementBarCarouselSettingsSchema>
+
+/**
+ * お知らせバーカルーセル設定を取得（フロントエンド用）
+ */
+export async function getAnnouncementBarCarouselSettings(): Promise<AnnouncementBarCarouselSettingsInput> {
+  const settings = await prisma.settings.findUnique({
+    where: { id: 'singleton' },
+    select: {
+      announcementBarAnimation: true,
+      announcementBarDuration: true,
+      announcementBarAutoPlay: true,
+      announcementBarPauseOnHover: true,
+      announcementBarShowArrows: true,
+      announcementBarShowIndicator: true,
+    },
+  })
+
+  return {
+    announcementBarAnimation: (settings?.announcementBarAnimation ?? 'fade') as 'fade' | 'slideX' | 'slideY',
+    announcementBarDuration: settings?.announcementBarDuration ?? 5000,
+    announcementBarAutoPlay: settings?.announcementBarAutoPlay ?? true,
+    announcementBarPauseOnHover: settings?.announcementBarPauseOnHover ?? true,
+    announcementBarShowArrows: settings?.announcementBarShowArrows ?? true,
+    announcementBarShowIndicator: settings?.announcementBarShowIndicator ?? true,
+  }
+}
+
+/**
+ * お知らせバーカルーセル設定を更新
+ */
+export async function updateAnnouncementBarCarouselSettings(
+  data: AnnouncementBarCarouselSettingsInput
+): Promise<ActionResult<void>> {
+  try {
+    const parsed = announcementBarCarouselSettingsSchema.safeParse(data)
+    if (!parsed.success) {
+      return createFailure(parsed.error.issues[0].message)
+    }
+
+    await prisma.settings.upsert({
+      where: { id: 'singleton' },
+      create: { id: 'singleton', ...parsed.data },
+      update: parsed.data,
+    })
+
+    revalidatePath('/admin/settings')
+    revalidatePath('/', 'layout')
+
+    return createSuccess('お知らせバーカルーセル設定を更新しました')
+  } catch (error) {
+    console.error('Failed to update announcement bar carousel settings:', error)
+    return createFailure('お知らせバーカルーセル設定の更新に失敗しました')
   }
 }

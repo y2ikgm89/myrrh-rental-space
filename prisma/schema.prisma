@@ -573,5 +573,13 @@ model Settings {
   cookieConsentRejectText String?
   cookieConsentPolicyUrl  String?
 
+  // Announcement Bar Carousel Settings
+  announcementBarAnimation     String  @default("fade") // fade, slideX, slideY
+  announcementBarDuration      Int     @default(5000)   // ミリ秒
+  announcementBarAutoPlay      Boolean @default(true)
+  announcementBarPauseOnHover  Boolean @default(true)
+  announcementBarShowArrows    Boolean @default(true)
+  announcementBarShowIndicator Boolean @default(true)
+
   @@map("settings")
 }
