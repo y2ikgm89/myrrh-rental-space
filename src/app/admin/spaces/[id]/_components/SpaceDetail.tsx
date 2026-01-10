@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
+import { toast } from 'sonner'
 import {
   Card,
   CardContent,
@@ -54,7 +55,7 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
       if (result.success) {
         router.refresh()
       } else {
-        alert(result.error || 'エラーが発生しました')
+        toast.error(result.error || 'エラーが発生しました')
       }
     })
   }
@@ -65,7 +66,7 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
       if (result.success) {
         router.push('/admin/spaces')
       } else {
-        alert(result.error || 'エラーが発生しました')
+        toast.error(result.error || 'エラーが発生しました')
       }
     })
   }

@@ -7,6 +7,7 @@
  */
 
 import { useState, useTransition } from 'react'
+import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -48,7 +49,7 @@ export function EmailSection({ settings, onUpdate }: EmailSectionProps) {
         notificationEmailAddresses: formData.notificationEmailAddresses || null,
       })
       if (!result.success) {
-        alert(result.error)
+        toast.error(result.error)
       } else {
         onUpdate()
       }

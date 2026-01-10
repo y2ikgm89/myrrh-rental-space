@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
+import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -41,7 +42,7 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
     startTransition(async () => {
       const result = await updateInquiryStatus(inquiry.id, status)
       if (!result.success) {
-        alert(result.error)
+        toast.error(result.error)
       }
     })
   }
@@ -52,7 +53,7 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
       if (result.success) {
         router.push('/admin/inquiries')
       } else {
-        alert(result.error)
+        toast.error(result.error)
       }
     })
   }

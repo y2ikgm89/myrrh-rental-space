@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { Button } from '@/components/admin/ui/button'
 import {
   DropdownMenu,
@@ -41,7 +42,7 @@ export function UserActions({ user }: Props) {
         setDeleteDialogOpen(false)
         router.refresh()
       } else {
-        alert(result.error)
+        toast.error(result.error)
       }
     } finally {
       setIsDeleting(false)
@@ -56,7 +57,7 @@ export function UserActions({ user }: Props) {
         setRoleDialogOpen(false)
         router.refresh()
       } else {
-        alert(result.error)
+        toast.error(result.error)
       }
     } finally {
       setIsUpdatingRole(false)

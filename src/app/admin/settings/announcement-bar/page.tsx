@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { format } from 'date-fns'
+import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -226,7 +227,7 @@ export default function AnnouncementBarPage() {
           setIsDialogOpen(false)
           loadBars()
         } else {
-          alert(result.error)
+          toast.error(result.error)
         }
       } else {
         const result = await createAnnouncementBar(input)
@@ -234,7 +235,7 @@ export default function AnnouncementBarPage() {
           setIsDialogOpen(false)
           loadBars()
         } else {
-          alert(result.error)
+          toast.error(result.error)
         }
       }
     })
@@ -247,7 +248,7 @@ export default function AnnouncementBarPage() {
       if (result.success) {
         loadBars()
       } else {
-        alert(result.error)
+        toast.error(result.error)
       }
     })
   }
@@ -263,7 +264,7 @@ export default function AnnouncementBarPage() {
         setDeletingId(null)
         loadBars()
       } else {
-        alert(result.error)
+        toast.error(result.error)
       }
     })
   }

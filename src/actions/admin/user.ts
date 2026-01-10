@@ -192,7 +192,7 @@ export async function createUser(
     }
 
     // パスワードをハッシュ化
-    const hashedPassword = await bcrypt.hash(parsed.data.password, 12)
+    const hashedPassword = await bcrypt.hash(parsed.data.password, 13)
 
     const user = await prisma.user.create({
       data: {
@@ -260,7 +260,7 @@ export async function updateUser(
 
     // パスワードが入力された場合のみ更新
     if (parsed.data.password && parsed.data.password.length >= 8) {
-      updateData.password = await bcrypt.hash(parsed.data.password, 12)
+      updateData.password = await bcrypt.hash(parsed.data.password, 13)
     }
 
     await prisma.user.update({

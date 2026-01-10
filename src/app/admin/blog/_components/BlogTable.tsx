@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useTransition } from 'react'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
+import { toast } from 'sonner'
 import {
   Table,
   TableBody,
@@ -30,7 +31,7 @@ export function BlogTable({ posts }: BlogTableProps) {
     startTransition(async () => {
       const result = await toggleBlogPostPublish(id)
       if (!result.success) {
-        alert(result.error)
+        toast.error(result.error)
       }
     })
   }

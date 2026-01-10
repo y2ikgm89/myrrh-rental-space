@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -37,16 +38,31 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
+  DndContext,
+  closestCenter,
+  useSensor,
+  useSensors,
+  PointerSensor,
+  KeyboardSensor,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+  CSS,
+  type DragEndEvent,
 } from '@/components/admin/ui'
 import {
   getNavigationItems,
   createNavigationItem,
   updateNavigationItem,
   deleteNavigationItem,
+  updateNavigationOrder,
   getSocialLinks,
   createSocialLink,
   updateSocialLink,
   deleteSocialLink,
+  updateSocialLinkOrder,
 } from '@/actions/admin/navigation'
 import type {
   NavigationItemData,
@@ -55,6 +71,7 @@ import type {
   SocialLinkInput,
 } from '@/actions/admin/navigation'
 import type { NavigationType, SocialPlatform } from '@/generated/prisma/client/enums'
+import { cn } from '@/lib/utils'
 
 // =============================================================================
 // Navigation Form Schema
@@ -119,6 +136,265 @@ const platformLabels: Record<SocialPlatform, string> = {
 }
 
 // =============================================================================
+// Drag Handle Component
+// =============================================================================
+
+function DragHandle({ className }: { className?: string }) {
+  return (
+    <div
+      className={cn(
+        'flex h-8 w-8 cursor-grab items-center justify-center rounded text-muted-foreground transition-colors',
+        'hover:bg-muted hover:text-foreground',
+        'active:cursor-grabbing',
+        className
+      )}
+      aria-label="ドラッグして並び替え"
+    >
+      <svg
+        className="h-4 w-4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        viewBox="0 0 24 24"
+      >
+        <path d="M4 8h16M4 16h16" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </div>
+  )
+}
+
+// =============================================================================
+// Sortable Navigation Row
+// =============================================================================
+
+type SortableNavRowProps = {
+  item: NavigationItemData
+  onEdit: (item: NavigationItemData) => void
+  onDelete: (id: string) => void
+  isPending: boolean
+  isChild?: boolean
+}
+
+function SortableNavRow({ item, onEdit, onDelete, isPending, isChild }: SortableNavRowProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+
+  return (
+    <TableRow
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        isDragging && 'z-50 bg-muted/80 shadow-lg',
+        isChild && 'bg-muted/30'
+      )}
+    >
+      <TableCell className="w-12">
+        <div {...attributes} {...listeners}>
+          <DragHandle />
+        </div>
+      </TableCell>
+      <TableCell className={cn('font-medium', isChild && 'pl-8')}>
+        {isChild && <span className="mr-2 text-muted-foreground">└</span>}
+        {item.label}
+      </TableCell>
+      <TableCell className="text-muted-foreground">{item.url}</TableCell>
+      <TableCell>
+        {item.isExternal && <Badge variant="outline">外部</Badge>}
+      </TableCell>
+      <TableCell>
+        <Badge variant={item.isActive ? 'default' : 'secondary'}>
+          {item.isActive ? '有効' : '無効'}
+        </Badge>
+      </TableCell>
+      <TableCell>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onEdit(item)}
+            disabled={isPending}
+          >
+            編集
+          </Button>
+          <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="destructive" size="sm" disabled={isPending}>
+                削除
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>メニューを削除しますか？</DialogTitle>
+                <DialogDescription>
+                  この操作は取り消せません。
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setDeleteDialogOpen(false)}
+                  disabled={isPending}
+                >
+                  キャンセル
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    onDelete(item.id)
+                    setDeleteDialogOpen(false)
+                  }}
+                  disabled={isPending}
+                >
+                  削除する
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </TableCell>
+    </TableRow>
+  )
+}
+
+// =============================================================================
+// Sortable Social Row
+// =============================================================================
+
+type SortableSocialRowProps = {
+  link: SocialLinkData
+  onEdit: (link: SocialLinkData) => void
+  onDelete: (id: string) => void
+  isPending: boolean
+}
+
+function SortableSocialRow({ link, onEdit, onDelete, isPending }: SortableSocialRowProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: link.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+
+  return (
+    <TableRow
+      ref={setNodeRef}
+      style={style}
+      className={cn(isDragging && 'z-50 bg-muted/80 shadow-lg')}
+    >
+      <TableCell className="w-12">
+        <div {...attributes} {...listeners}>
+          <DragHandle />
+        </div>
+      </TableCell>
+      <TableCell className="font-medium">
+        {platformLabels[link.platform]}
+      </TableCell>
+      <TableCell className="text-muted-foreground truncate max-w-xs">
+        {link.url}
+      </TableCell>
+      <TableCell>
+        <Badge variant={link.showOnDesktop ? 'default' : 'secondary'}>
+          {link.showOnDesktop ? '表示' : '非表示'}
+        </Badge>
+      </TableCell>
+      <TableCell>
+        <Badge variant={link.showOnMobile ? 'default' : 'secondary'}>
+          {link.showOnMobile ? '表示' : '非表示'}
+        </Badge>
+      </TableCell>
+      <TableCell>
+        <Badge variant={link.isActive ? 'default' : 'secondary'}>
+          {link.isActive ? '有効' : '無効'}
+        </Badge>
+      </TableCell>
+      <TableCell>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onEdit(link)}
+            disabled={isPending}
+          >
+            編集
+          </Button>
+          <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="destructive" size="sm" disabled={isPending}>
+                削除
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>SNSリンクを削除しますか？</DialogTitle>
+                <DialogDescription>
+                  この操作は取り消せません。
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setDeleteDialogOpen(false)}
+                  disabled={isPending}
+                >
+                  キャンセル
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    onDelete(link.id)
+                    setDeleteDialogOpen(false)
+                  }}
+                  disabled={isPending}
+                >
+                  削除する
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </TableCell>
+    </TableRow>
+  )
+}
+
+// =============================================================================
+// Flatten items for D&D (parent + children in order)
+// =============================================================================
+
+function flattenNavItems(items: NavigationItemData[]): (NavigationItemData & { isChild: boolean })[] {
+  const result: (NavigationItemData & { isChild: boolean })[] = []
+  for (const item of items) {
+    result.push({ ...item, isChild: false })
+    for (const child of item.children) {
+      result.push({ ...child, isChild: true })
+    }
+  }
+  return result
+}
+
+// =============================================================================
 // Component
 // =============================================================================
 
@@ -132,13 +408,23 @@ export default function NavigationSettingsPage() {
   const [footerItems, setFooterItems] = useState<NavigationItemData[]>([])
   const [isNavDialogOpen, setIsNavDialogOpen] = useState(false)
   const [editingNavItem, setEditingNavItem] = useState<NavigationItemData | null>(null)
-  const [deleteNavTargetId, setDeleteNavTargetId] = useState<string | null>(null)
 
   // Social Links State
   const [socialLinks, setSocialLinks] = useState<SocialLinkData[]>([])
   const [isSocialDialogOpen, setIsSocialDialogOpen] = useState(false)
   const [editingSocialLink, setEditingSocialLink] = useState<SocialLinkData | null>(null)
-  const [deleteSocialTargetId, setDeleteSocialTargetId] = useState<string | null>(null)
+
+  // D&D Sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
 
   // Navigation Form
   const navForm = useForm<NavFormData>({
@@ -171,6 +457,8 @@ export default function NavigationSettingsPage() {
   // Navigation form watched values
   const navIsExternal = useWatch({ control: navForm.control, name: 'isExternal' })
   const navIsActive = useWatch({ control: navForm.control, name: 'isActive' })
+  const navType = useWatch({ control: navForm.control, name: 'type' })
+  const navParentId = useWatch({ control: navForm.control, name: 'parentId' })
 
   // Social form watched values
   const socialPlatform = useWatch({ control: socialForm.control, name: 'platform' })
@@ -211,16 +499,22 @@ export default function NavigationSettingsPage() {
     }
   }
 
+  const getParentOptions = (type: NavigationType): NavigationItemData[] => {
+    // 親の選択肢は現在のtypeのトップレベルアイテムのみ
+    return getItemsByType(type).filter(item => !item.parentId)
+  }
+
   const openNavCreateDialog = (type: NavigationType) => {
     setEditingNavItem(null)
     const items = getItemsByType(type)
+    const flatItems = flattenNavItems(items)
     navForm.reset({
       type,
       parentId: null,
       label: '',
       url: '',
       isExternal: false,
-      order: items.length,
+      order: flatItems.length,
       isActive: true,
     })
     setIsNavDialogOpen(true)
@@ -253,7 +547,7 @@ export default function NavigationSettingsPage() {
           setIsNavDialogOpen(false)
           loadData()
         } else {
-          alert(result.error)
+          toast.error(result.error)
         }
       } else {
         const result = await createNavigationItem(payload)
@@ -261,7 +555,7 @@ export default function NavigationSettingsPage() {
           setIsNavDialogOpen(false)
           loadData()
         } else {
-          alert(result.error)
+          toast.error(result.error)
         }
       }
     })
@@ -271,10 +565,41 @@ export default function NavigationSettingsPage() {
     startTransition(async () => {
       const result = await deleteNavigationItem(id)
       if (result.success) {
-        setDeleteNavTargetId(null)
         loadData()
       } else {
-        alert(result.error)
+        toast.error(result.error)
+      }
+    })
+  }
+
+  // Navigation D&D Handler
+  const handleNavDragEnd = (type: NavigationType) => (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const items = getItemsByType(type)
+    const flatItems = flattenNavItems(items)
+
+    const oldIndex = flatItems.findIndex((item) => item.id === active.id)
+    const newIndex = flatItems.findIndex((item) => item.id === over.id)
+
+    if (oldIndex === -1 || newIndex === -1) return
+
+    const reordered = arrayMove(flatItems, oldIndex, newIndex)
+
+    // 新しい順序をサーバーに送信
+    const updates = reordered.map((item, index) => ({
+      id: item.id,
+      order: index,
+      // 親子関係は維持（D&Dでの階層変更は今回の実装では順序のみ）
+    }))
+
+    startTransition(async () => {
+      const result = await updateNavigationOrder(updates)
+      if (result.success) {
+        loadData()
+      } else {
+        toast.error(result.error)
       }
     })
   }
@@ -318,7 +643,7 @@ export default function NavigationSettingsPage() {
           setIsSocialDialogOpen(false)
           loadData()
         } else {
-          alert(result.error)
+          toast.error(result.error)
         }
       } else {
         const result = await createSocialLink(payload)
@@ -326,7 +651,7 @@ export default function NavigationSettingsPage() {
           setIsSocialDialogOpen(false)
           loadData()
         } else {
-          alert(result.error)
+          toast.error(result.error)
         }
       }
     })
@@ -336,112 +661,105 @@ export default function NavigationSettingsPage() {
     startTransition(async () => {
       const result = await deleteSocialLink(id)
       if (result.success) {
-        setDeleteSocialTargetId(null)
         loadData()
       } else {
-        alert(result.error)
+        toast.error(result.error)
       }
     })
   }
 
-  // Render navigation table
-  const renderNavTable = (items: NavigationItemData[], type: NavigationType, emptyMessage: string) => (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>
-          {type === 'HEADER_DESKTOP' && 'デスクトップメニュー'}
-          {type === 'HEADER_MOBILE' && 'モバイルメニュー'}
-          {type === 'FOOTER' && 'フッターメニュー'}
-        </CardTitle>
-        <Button size="sm" onClick={() => openNavCreateDialog(type)}>
-          追加
-        </Button>
-      </CardHeader>
-      <CardContent>
-        {items.length === 0 ? (
-          <p className="py-4 text-center text-muted-foreground">{emptyMessage}</p>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-16">順序</TableHead>
-                <TableHead>ラベル</TableHead>
-                <TableHead>URL</TableHead>
-                <TableHead className="w-24">外部</TableHead>
-                <TableHead className="w-24">有効</TableHead>
-                <TableHead className="w-32">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>{item.order}</TableCell>
-                  <TableCell className="font-medium">{item.label}</TableCell>
-                  <TableCell className="text-muted-foreground">{item.url}</TableCell>
-                  <TableCell>
-                    {item.isExternal && <Badge variant="outline">外部</Badge>}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={item.isActive ? 'default' : 'secondary'}>
-                      {item.isActive ? '有効' : '無効'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openNavEditDialog(item)}
-                        disabled={isPending}
-                      >
-                        編集
-                      </Button>
-                      <Dialog
-                        open={deleteNavTargetId === item.id}
-                        onOpenChange={(open) =>
-                          setDeleteNavTargetId(open ? item.id : null)
-                        }
-                      >
-                        <DialogTrigger asChild>
-                          <Button variant="destructive" size="sm" disabled={isPending}>
-                            削除
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>メニューを削除しますか？</DialogTitle>
-                            <DialogDescription>
-                              この操作は取り消せません。
-                            </DialogDescription>
-                          </DialogHeader>
-                          <DialogFooter>
-                            <Button
-                              variant="outline"
-                              onClick={() => setDeleteNavTargetId(null)}
-                              disabled={isPending}
-                            >
-                              キャンセル
-                            </Button>
-                            <Button
-                              variant="destructive"
-                              onClick={() => handleNavDelete(item.id)}
-                              disabled={isPending}
-                            >
-                              削除する
-                            </Button>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </CardContent>
-    </Card>
-  )
+  // Social D&D Handler
+  const handleSocialDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const oldIndex = socialLinks.findIndex((link) => link.id === active.id)
+    const newIndex = socialLinks.findIndex((link) => link.id === over.id)
+
+    if (oldIndex === -1 || newIndex === -1) return
+
+    const reordered = arrayMove(socialLinks, oldIndex, newIndex)
+    setSocialLinks(reordered)
+
+    const updates = reordered.map((link, index) => ({
+      id: link.id,
+      order: index,
+    }))
+
+    startTransition(async () => {
+      const result = await updateSocialLinkOrder(updates)
+      if (!result.success) {
+        toast.error(result.error)
+        loadData() // エラー時は再読み込み
+      }
+    })
+  }
+
+  // Render navigation table with D&D
+  const renderNavTable = (items: NavigationItemData[], type: NavigationType, emptyMessage: string) => {
+    const flatItems = flattenNavItems(items)
+
+    return (
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>
+            {type === 'HEADER_DESKTOP' && 'デスクトップメニュー'}
+            {type === 'HEADER_MOBILE' && 'モバイルメニュー'}
+            {type === 'FOOTER' && 'フッターメニュー'}
+          </CardTitle>
+          <Button size="sm" onClick={() => openNavCreateDialog(type)}>
+            追加
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {flatItems.length === 0 ? (
+            <p className="py-4 text-center text-muted-foreground">{emptyMessage}</p>
+          ) : (
+            <>
+              <p className="mb-4 text-sm text-muted-foreground">
+                ドラッグ&ドロップで順序を変更できます
+              </p>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleNavDragEnd(type)}
+              >
+                <SortableContext
+                  items={flatItems.map((item) => item.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12"></TableHead>
+                        <TableHead>ラベル</TableHead>
+                        <TableHead>URL</TableHead>
+                        <TableHead className="w-24">外部</TableHead>
+                        <TableHead className="w-24">有効</TableHead>
+                        <TableHead className="w-32">操作</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {flatItems.map((item) => (
+                        <SortableNavRow
+                          key={item.id}
+                          item={item}
+                          onEdit={openNavEditDialog}
+                          onDelete={handleNavDelete}
+                          isPending={isPending}
+                          isChild={item.isChild}
+                        />
+                      ))}
+                    </TableBody>
+                  </Table>
+                </SortableContext>
+              </DndContext>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -500,95 +818,46 @@ export default function NavigationSettingsPage() {
                   SNSリンクがありません
                 </p>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-16">順序</TableHead>
-                      <TableHead className="w-32">プラットフォーム</TableHead>
-                      <TableHead>URL</TableHead>
-                      <TableHead className="w-24">PC</TableHead>
-                      <TableHead className="w-24">モバイル</TableHead>
-                      <TableHead className="w-24">有効</TableHead>
-                      <TableHead className="w-32">操作</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {socialLinks.map((link) => (
-                      <TableRow key={link.id}>
-                        <TableCell>{link.order}</TableCell>
-                        <TableCell className="font-medium">
-                          {platformLabels[link.platform]}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground truncate max-w-xs">
-                          {link.url}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={link.showOnDesktop ? 'default' : 'secondary'}>
-                            {link.showOnDesktop ? '表示' : '非表示'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={link.showOnMobile ? 'default' : 'secondary'}>
-                            {link.showOnMobile ? '表示' : '非表示'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={link.isActive ? 'default' : 'secondary'}>
-                            {link.isActive ? '有効' : '無効'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openSocialEditDialog(link)}
-                              disabled={isPending}
-                            >
-                              編集
-                            </Button>
-                            <Dialog
-                              open={deleteSocialTargetId === link.id}
-                              onOpenChange={(open) =>
-                                setDeleteSocialTargetId(open ? link.id : null)
-                              }
-                            >
-                              <DialogTrigger asChild>
-                                <Button variant="destructive" size="sm" disabled={isPending}>
-                                  削除
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>SNSリンクを削除しますか？</DialogTitle>
-                                  <DialogDescription>
-                                    この操作は取り消せません。
-                                  </DialogDescription>
-                                </DialogHeader>
-                                <DialogFooter>
-                                  <Button
-                                    variant="outline"
-                                    onClick={() => setDeleteSocialTargetId(null)}
-                                    disabled={isPending}
-                                  >
-                                    キャンセル
-                                  </Button>
-                                  <Button
-                                    variant="destructive"
-                                    onClick={() => handleSocialDelete(link.id)}
-                                    disabled={isPending}
-                                  >
-                                    削除する
-                                  </Button>
-                                </DialogFooter>
-                              </DialogContent>
-                            </Dialog>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <>
+                  <p className="mb-4 text-sm text-muted-foreground">
+                    ドラッグ&ドロップで順序を変更できます
+                  </p>
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleSocialDragEnd}
+                  >
+                    <SortableContext
+                      items={socialLinks.map((link) => link.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-12"></TableHead>
+                            <TableHead className="w-32">プラットフォーム</TableHead>
+                            <TableHead>URL</TableHead>
+                            <TableHead className="w-24">PC</TableHead>
+                            <TableHead className="w-24">モバイル</TableHead>
+                            <TableHead className="w-24">有効</TableHead>
+                            <TableHead className="w-32">操作</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {socialLinks.map((link) => (
+                            <SortableSocialRow
+                              key={link.id}
+                              link={link}
+                              onEdit={openSocialEditDialog}
+                              onDelete={handleSocialDelete}
+                              isPending={isPending}
+                            />
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </SortableContext>
+                  </DndContext>
+                </>
               )}
             </CardContent>
           </Card>
@@ -636,13 +905,29 @@ export default function NavigationSettingsPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="nav-order">表示順</Label>
-                <Input
-                  id="nav-order"
-                  type="number"
-                  {...navForm.register('order', { valueAsNumber: true })}
+                <Label htmlFor="nav-parentId">親メニュー（サブメニューの場合）</Label>
+                <Select
+                  value={navParentId || 'none'}
+                  onValueChange={(value) =>
+                    navForm.setValue('parentId', value === 'none' ? null : value)
+                  }
                   disabled={isPending}
-                />
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="なし（トップレベル）" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">なし（トップレベル）</SelectItem>
+                    {getParentOptions(navType).map((parent) => (
+                      <SelectItem key={parent.id} value={parent.id}>
+                        {parent.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  サブメニューにする場合は親メニューを選択してください
+                </p>
               </div>
 
               <div className="flex items-center justify-between">
@@ -727,16 +1012,6 @@ export default function NavigationSettingsPage() {
                     {socialForm.formState.errors.url.message}
                   </p>
                 )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="social-order">表示順</Label>
-                <Input
-                  id="social-order"
-                  type="number"
-                  {...socialForm.register('order', { valueAsNumber: true })}
-                  disabled={isPending}
-                />
               </div>
 
               <div className="flex items-center justify-between">

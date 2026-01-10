@@ -7,6 +7,7 @@
  */
 
 import { useState, useTransition } from 'react'
+import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -98,7 +99,7 @@ export function StripeSection({ settings, onUpdate }: StripeSectionProps) {
         stripeCurrency: formData.stripeCurrency,
       })
       if (!result.success) {
-        alert(result.error)
+        toast.error(result.error)
       } else {
         // 入力フィールドをリセット
         setFormData((prev) => ({
@@ -156,7 +157,7 @@ export function StripeSection({ settings, onUpdate }: StripeSectionProps) {
     startTransition(async () => {
       const result = await clearStripeKeys()
       if (!result.success) {
-        alert(result.error)
+        toast.error(result.error)
       } else {
         setFormData((prev) => ({
           ...prev,

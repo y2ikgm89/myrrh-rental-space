@@ -7,6 +7,7 @@
  */
 
 import { useState, useTransition } from 'react'
+import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -54,7 +55,7 @@ export function ContactInfoSection({ settings, onUpdate }: ContactInfoSectionPro
         buildingName: formData.buildingName || null,
       })
       if (!result.success) {
-        alert(result.error)
+        toast.error(result.error)
       } else {
         onUpdate()
       }

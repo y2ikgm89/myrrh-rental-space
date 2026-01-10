@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -15,6 +16,19 @@ import {
   Textarea,
   Label,
   Switch,
+  DndContext,
+  closestCenter,
+  useSensor,
+  useSensors,
+  PointerSensor,
+  KeyboardSensor,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+  CSS,
+  type DragEndEvent,
 } from '@/components/admin/ui'
 import {
   spaceFormSchema,
@@ -23,11 +37,104 @@ import {
   type SpaceWithStats,
 } from '@/lib/validations/space'
 import { createSpace, updateSpace } from '@/actions/admin/space'
+import { cn } from '@/lib/utils'
 
 type SpaceFormProps = {
   space?: SpaceWithStats
   mode: 'create' | 'edit'
 }
+
+// =============================================================================
+// Drag Handle
+// =============================================================================
+
+function DragHandle({ className }: { className?: string }) {
+  return (
+    <div
+      className={cn(
+        'flex h-8 w-8 cursor-grab items-center justify-center rounded text-muted-foreground transition-colors',
+        'hover:bg-muted hover:text-foreground',
+        'active:cursor-grabbing',
+        className
+      )}
+      aria-label="ドラッグして並び替え"
+    >
+      <svg
+        className="h-4 w-4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        viewBox="0 0 24 24"
+      >
+        <path d="M4 8h16M4 16h16" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </div>
+  )
+}
+
+// =============================================================================
+// Sortable Image Item
+// =============================================================================
+
+type SortableImageItemProps = {
+  id: string
+  url: string
+  index: number
+  onRemove: (index: number) => void
+  disabled?: boolean
+}
+
+function SortableImageItem({ id, url, index, onRemove, disabled }: SortableImageItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id, disabled })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        'flex items-center gap-2 rounded border p-2',
+        isDragging && 'z-50 bg-muted/80 shadow-lg'
+      )}
+    >
+      <div {...attributes} {...listeners}>
+        <DragHandle />
+      </div>
+      <Image
+        src={url}
+        alt={`画像${index + 1}`}
+        width={40}
+        height={40}
+        className="rounded object-cover"
+      />
+      <span className="flex-1 truncate text-sm">{url}</span>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => onRemove(index)}
+        disabled={disabled}
+      >
+        削除
+      </Button>
+    </div>
+  )
+}
+
+// =============================================================================
+// Main Component
+// =============================================================================
 
 export function SpaceForm({ space, mode }: SpaceFormProps) {
   const router = useRouter()
@@ -36,6 +143,18 @@ export function SpaceForm({ space, mode }: SpaceFormProps) {
   const [facilities, setFacilities] = useState<string[]>(space?.facilities || [])
   const [newImageUrl, setNewImageUrl] = useState('')
   const [newFacility, setNewFacility] = useState('')
+
+  // D&D Sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
 
   const {
     register,
@@ -88,14 +207,14 @@ export function SpaceForm({ space, mode }: SpaceFormProps) {
         if (result.success) {
           router.push(`/admin/spaces/${result.data.id}`)
         } else {
-          alert(result.error)
+          toast.error(result.error)
         }
       } else if (space) {
         const result = await updateSpace(space.id, submitData)
         if (result.success) {
           router.push('/admin/spaces')
         } else {
-          alert(result.error)
+          toast.error(result.error)
         }
       }
     })
@@ -108,13 +227,26 @@ export function SpaceForm({ space, mode }: SpaceFormProps) {
         setImageUrls([...imageUrls, newImageUrl])
         setNewImageUrl('')
       } catch {
-        alert('有効なURLを入力してください')
+        toast.error('有効なURLを入力してください')
       }
     }
   }
 
   const removeImageUrl = (index: number) => {
     setImageUrls(imageUrls.filter((_, i) => i !== index))
+  }
+
+  // Image D&D Handler
+  const handleImageDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const oldIndex = imageUrls.findIndex((_, i) => `image-${i}` === active.id)
+    const newIndex = imageUrls.findIndex((_, i) => `image-${i}` === over.id)
+
+    if (oldIndex === -1 || newIndex === -1) return
+
+    setImageUrls(arrayMove(imageUrls, oldIndex, newIndex))
   }
 
   const addFacility = () => {
@@ -318,32 +450,34 @@ export function SpaceForm({ space, mode }: SpaceFormProps) {
               </Button>
             </div>
             {imageUrls.length > 0 && (
-              <div className="mt-2 space-y-2">
-                {imageUrls.map((url, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-2 rounded border p-2"
+              <>
+                <p className="text-sm text-muted-foreground">
+                  ドラッグ&ドロップで順序を変更できます
+                </p>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleImageDragEnd}
+                >
+                  <SortableContext
+                    items={imageUrls.map((_, i) => `image-${i}`)}
+                    strategy={verticalListSortingStrategy}
                   >
-                    <Image
-                      src={url}
-                      alt={`画像${index + 1}`}
-                      width={40}
-                      height={40}
-                      className="rounded object-cover"
-                    />
-                    <span className="flex-1 truncate text-sm">{url}</span>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => removeImageUrl(index)}
-                      disabled={isPending}
-                    >
-                      削除
-                    </Button>
-                  </div>
-                ))}
-              </div>
+                    <div className="mt-2 space-y-2">
+                      {imageUrls.map((url, index) => (
+                        <SortableImageItem
+                          key={`image-${index}`}
+                          id={`image-${index}`}
+                          url={url}
+                          index={index}
+                          onRemove={removeImageUrl}
+                          disabled={isPending}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              </>
             )}
           </div>
         </CardContent>

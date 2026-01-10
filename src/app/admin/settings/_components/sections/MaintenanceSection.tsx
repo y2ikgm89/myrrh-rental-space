@@ -7,6 +7,7 @@
  */
 
 import { useState, useTransition } from 'react'
+import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -40,7 +41,7 @@ export function MaintenanceSection({ settings, onUpdate }: MaintenanceSectionPro
         maintenanceMessage: formData.maintenanceMessage || null,
       })
       if (!result.success) {
-        alert(result.error)
+        toast.error(result.error)
       } else {
         onUpdate()
       }

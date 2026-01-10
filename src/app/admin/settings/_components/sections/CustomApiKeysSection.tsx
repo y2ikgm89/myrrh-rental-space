@@ -7,6 +7,7 @@
  */
 
 import { useState, useTransition } from 'react'
+import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -64,7 +65,7 @@ export function CustomApiKeysSection({
     startTransition(async () => {
       const result = await addCustomApiKey(formData)
       if (!result.success) {
-        alert(result.error)
+        toast.error(result.error)
       } else {
         setFormData({ name: '', keyName: '', keyValue: '', description: '' })
         setIsDialogOpen(false)
@@ -79,7 +80,7 @@ export function CustomApiKeysSection({
     startTransition(async () => {
       const result = await deleteCustomApiKey(id)
       if (!result.success) {
-        alert(result.error)
+        toast.error(result.error)
       } else {
         onUpdate()
       }

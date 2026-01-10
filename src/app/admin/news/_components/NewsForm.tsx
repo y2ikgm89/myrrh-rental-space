@@ -6,6 +6,7 @@ import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { format } from 'date-fns'
+import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -79,14 +80,14 @@ export function NewsForm({ news, mode }: NewsFormProps) {
         if (result.success) {
           router.push(`/admin/news/${result.data.id}`)
         } else {
-          alert(result.error)
+          toast.error(result.error)
         }
       } else if (news) {
         const result = await updateNews(news.id, payload)
         if (result.success) {
           router.refresh()
         } else {
-          alert(result.error)
+          toast.error(result.error)
         }
       }
     })
@@ -100,7 +101,7 @@ export function NewsForm({ news, mode }: NewsFormProps) {
       if (result.success) {
         router.push('/admin/news')
       } else {
-        alert(result.error)
+        toast.error(result.error)
       }
     })
   }

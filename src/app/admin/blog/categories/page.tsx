@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -27,14 +28,29 @@ import {
   DialogTitle,
   DialogTrigger,
   Textarea,
+  DndContext,
+  closestCenter,
+  useSensor,
+  useSensors,
+  PointerSensor,
+  KeyboardSensor,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+  CSS,
+  type DragEndEvent,
 } from '@/components/admin/ui'
 import {
   getBlogCategories,
   createBlogCategory,
   updateBlogCategory,
   deleteBlogCategory,
+  updateBlogCategoryOrder,
 } from '@/actions/admin/blog'
 import type { BlogCategoryData, BlogCategoryInput } from '@/actions/admin/blog'
+import { cn } from '@/lib/utils'
 
 type FormData = {
   name: string
@@ -50,19 +66,159 @@ const formSchema = z.object({
   order: z.number().int().min(0),
 }) satisfies z.ZodType<FormData>
 
+// =============================================================================
+// Drag Handle
+// =============================================================================
+
+function DragHandle({ className }: { className?: string }) {
+  return (
+    <div
+      className={cn(
+        'flex h-8 w-8 cursor-grab items-center justify-center rounded text-muted-foreground transition-colors',
+        'hover:bg-muted hover:text-foreground',
+        'active:cursor-grabbing',
+        className
+      )}
+      aria-label="ドラッグして並び替え"
+    >
+      <svg
+        className="h-4 w-4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        viewBox="0 0 24 24"
+      >
+        <path d="M4 8h16M4 16h16" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </div>
+  )
+}
+
+// =============================================================================
+// Sortable Category Row
+// =============================================================================
+
+type SortableCategoryRowProps = {
+  category: BlogCategoryData
+  onEdit: (category: BlogCategoryData) => void
+  onDelete: (id: string) => void
+  isPending: boolean
+}
+
+function SortableCategoryRow({ category, onEdit, onDelete, isPending }: SortableCategoryRowProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: category.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+
+  return (
+    <TableRow
+      ref={setNodeRef}
+      style={style}
+      className={cn(isDragging && 'z-50 bg-muted/80 shadow-lg')}
+    >
+      <TableCell className="w-12">
+        <div {...attributes} {...listeners}>
+          <DragHandle />
+        </div>
+      </TableCell>
+      <TableCell className="font-medium">{category.name}</TableCell>
+      <TableCell className="text-muted-foreground">{category.slug}</TableCell>
+      <TableCell>{category._count.posts}</TableCell>
+      <TableCell>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onEdit(category)}
+            disabled={isPending}
+          >
+            編集
+          </Button>
+          <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <DialogTrigger asChild>
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={isPending || category._count.posts > 0}
+              >
+                削除
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>カテゴリを削除しますか？</DialogTitle>
+                <DialogDescription>
+                  この操作は取り消せません。本当に削除してもよろしいですか？
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setDeleteDialogOpen(false)}
+                  disabled={isPending}
+                >
+                  キャンセル
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    onDelete(category.id)
+                    setDeleteDialogOpen(false)
+                  }}
+                  disabled={isPending}
+                >
+                  {isPending ? '削除中...' : '削除する'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </TableCell>
+    </TableRow>
+  )
+}
+
+// =============================================================================
+// Main Component
+// =============================================================================
+
 export default function BlogCategoriesPage() {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [categories, setCategories] = useState<BlogCategoryData[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingCategory, setEditingCategory] = useState<BlogCategoryData | null>(null)
-  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
+
+  // D&D Sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
 
   const {
     register,
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -129,7 +285,7 @@ export default function BlogCategoriesPage() {
           setIsDialogOpen(false)
           loadCategories()
         } else {
-          alert(result.error)
+          toast.error(result.error)
         }
       } else {
         const result = await createBlogCategory(payload)
@@ -137,7 +293,7 @@ export default function BlogCategoriesPage() {
           setIsDialogOpen(false)
           loadCategories()
         } else {
-          alert(result.error)
+          toast.error(result.error)
         }
       }
     })
@@ -147,17 +303,43 @@ export default function BlogCategoriesPage() {
     startTransition(async () => {
       const result = await deleteBlogCategory(id)
       if (result.success) {
-        setDeleteTargetId(null)
         loadCategories()
       } else {
-        alert(result.error)
+        toast.error(result.error)
+      }
+    })
+  }
+
+  // D&D Handler
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const oldIndex = categories.findIndex((cat) => cat.id === active.id)
+    const newIndex = categories.findIndex((cat) => cat.id === over.id)
+
+    if (oldIndex === -1 || newIndex === -1) return
+
+    const reordered = arrayMove(categories, oldIndex, newIndex)
+    setCategories(reordered)
+
+    const updates = reordered.map((cat, index) => ({
+      id: cat.id,
+      order: index,
+    }))
+
+    startTransition(async () => {
+      const result = await updateBlogCategoryOrder(updates)
+      if (!result.success) {
+        toast.error(result.error)
+        loadCategories() // エラー時は再読み込み
       }
     })
   }
 
   // 名前からスラッグを生成
   const generateSlug = () => {
-    const name = document.querySelector<HTMLInputElement>('#name')?.value
+    const name = watch('name')
     if (name) {
       const slug = name
         .toLowerCase()
@@ -198,81 +380,44 @@ export default function BlogCategoriesPage() {
               カテゴリがありません
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-16">順序</TableHead>
-                  <TableHead>カテゴリ名</TableHead>
-                  <TableHead className="w-40">スラッグ</TableHead>
-                  <TableHead className="w-24">記事数</TableHead>
-                  <TableHead className="w-32">操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {categories.map((category) => (
-                  <TableRow key={category.id}>
-                    <TableCell>{category.order}</TableCell>
-                    <TableCell className="font-medium">{category.name}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {category.slug}
-                    </TableCell>
-                    <TableCell>{category._count.posts}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openEditDialog(category)}
-                          disabled={isPending}
-                        >
-                          編集
-                        </Button>
-                        <Dialog
-                          open={deleteTargetId === category.id}
-                          onOpenChange={(open) =>
-                            setDeleteTargetId(open ? category.id : null)
-                          }
-                        >
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              disabled={isPending || category._count.posts > 0}
-                            >
-                              削除
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>カテゴリを削除しますか？</DialogTitle>
-                              <DialogDescription>
-                                この操作は取り消せません。本当に削除してもよろしいですか？
-                              </DialogDescription>
-                            </DialogHeader>
-                            <DialogFooter>
-                              <Button
-                                variant="outline"
-                                onClick={() => setDeleteTargetId(null)}
-                                disabled={isPending}
-                              >
-                                キャンセル
-                              </Button>
-                              <Button
-                                variant="destructive"
-                                onClick={() => handleDelete(category.id)}
-                                disabled={isPending}
-                              >
-                                {isPending ? '削除中...' : '削除する'}
-                              </Button>
-                            </DialogFooter>
-                          </DialogContent>
-                        </Dialog>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <>
+              <p className="mb-4 text-sm text-muted-foreground">
+                ドラッグ&ドロップで順序を変更できます
+              </p>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={categories.map((cat) => cat.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12"></TableHead>
+                        <TableHead>カテゴリ名</TableHead>
+                        <TableHead className="w-40">スラッグ</TableHead>
+                        <TableHead className="w-24">記事数</TableHead>
+                        <TableHead className="w-32">操作</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {categories.map((category) => (
+                        <SortableCategoryRow
+                          key={category.id}
+                          category={category}
+                          onEdit={openEditDialog}
+                          onDelete={handleDelete}
+                          isPending={isPending}
+                        />
+                      ))}
+                    </TableBody>
+                  </Table>
+                </SortableContext>
+              </DndContext>
+            </>
           )}
         </CardContent>
       </Card>
@@ -331,16 +476,6 @@ export default function BlogCategoriesPage() {
                   {...register('description')}
                   placeholder="カテゴリの説明"
                   rows={2}
-                  disabled={isPending}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="order">表示順</Label>
-                <Input
-                  id="order"
-                  type="number"
-                  {...register('order', { valueAsNumber: true })}
                   disabled={isPending}
                 />
               </div>

@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
+import { toast } from 'sonner'
 import {
   Card,
   CardContent,
@@ -68,7 +69,7 @@ export function ReservationDetail({ reservation }: ReservationDetailProps) {
       if (result.success) {
         router.refresh()
       } else {
-        alert(result.error || 'エラーが発生しました')
+        toast.error(result.error || 'エラーが発生しました')
       }
     })
   }
@@ -79,7 +80,7 @@ export function ReservationDetail({ reservation }: ReservationDetailProps) {
       if (result.success) {
         router.refresh()
       } else {
-        alert(result.error || 'エラーが発生しました')
+        toast.error(result.error || 'エラーが発生しました')
       }
     })
   }
@@ -90,7 +91,7 @@ export function ReservationDetail({ reservation }: ReservationDetailProps) {
       if (result.success) {
         router.push('/admin/reservations')
       } else {
-        alert(result.error || 'エラーが発生しました')
+        toast.error(result.error || 'エラーが発生しました')
       }
     })
   }

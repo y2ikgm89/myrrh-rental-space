@@ -7,6 +7,7 @@
  */
 
 import { useState, useTransition } from 'react'
+import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -61,7 +62,7 @@ export function TurnstileSection({ config, onUpdate }: TurnstileSectionProps) {
         turnstileSecretKey: formData.turnstileSecretKey || null,
       })
       if (!result.success) {
-        alert(result.error)
+        toast.error(result.error)
       } else {
         setFormData((prev) => ({
           ...prev,
@@ -119,7 +120,7 @@ export function TurnstileSection({ config, onUpdate }: TurnstileSectionProps) {
     startTransition(async () => {
       const result = await clearTurnstileKeys()
       if (!result.success) {
-        alert(result.error)
+        toast.error(result.error)
       } else {
         setFormData({ turnstileSiteKey: '', turnstileSecretKey: '' })
         setTestResult(null)

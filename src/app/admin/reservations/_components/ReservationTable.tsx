@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useTransition } from 'react'
+import { toast } from 'sonner'
 import {
   Table,
   TableBody,
@@ -68,7 +69,7 @@ function StatusSelect({
       if (result.success) {
         router.refresh()
       } else {
-        alert(result.error || 'エラーが発生しました')
+        toast.error(result.error || 'エラーが発生しました')
       }
     })
   }

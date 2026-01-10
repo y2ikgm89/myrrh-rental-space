@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
+import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -55,7 +56,7 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
     startTransition(async () => {
       const result = await updateCustomerStatus(customer.id, status)
       if (!result.success) {
-        alert(result.error)
+        toast.error(result.error)
       }
     })
   }
@@ -64,7 +65,7 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
     startTransition(async () => {
       const result = await updateCustomerNotes(customer.id, notes || null)
       if (!result.success) {
-        alert(result.error)
+        toast.error(result.error)
       }
     })
   }
@@ -73,7 +74,7 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
     startTransition(async () => {
       const result = await toggleCustomerActive(customer.id)
       if (!result.success) {
-        alert(result.error)
+        toast.error(result.error)
       }
     })
   }

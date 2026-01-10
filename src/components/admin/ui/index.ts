@@ -109,3 +109,6 @@ export type {
 
 // Pagination
 export { Pagination } from './pagination'
+
+// Toast
+export { Toaster } from './toaster'

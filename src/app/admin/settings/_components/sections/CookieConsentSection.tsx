@@ -7,6 +7,7 @@
  */
 
 import { useState, useTransition } from 'react'
+import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -57,7 +58,7 @@ export function CookieConsentSection({
         cookieConsentPolicyUrl: formData.cookieConsentPolicyUrl || null,
       })
       if (!result.success) {
-        alert(result.error)
+        toast.error(result.error)
       } else {
         onUpdate()
       }

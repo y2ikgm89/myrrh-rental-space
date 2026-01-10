@@ -7,6 +7,7 @@
  */
 
 import { useState, useTransition } from 'react'
+import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -61,7 +62,7 @@ export function SeoSection({ settings, onUpdate }: SeoSectionProps) {
         bingWebmasterToolsId: formData.bingWebmasterToolsId || null,
       })
       if (!result.success) {
-        alert(result.error)
+        toast.error(result.error)
       } else {
         onUpdate()
       }

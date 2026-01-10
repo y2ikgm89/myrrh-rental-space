@@ -10,6 +10,7 @@ import { useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -83,9 +84,9 @@ export function HomepageHeroForm({ hero }: HomepageHeroFormProps) {
 
       if (result.success) {
         router.refresh()
-        alert('ヒーローセクションを更新しました')
+        toast.success('ヒーローセクションを更新しました')
       } else {
-        alert(result.error)
+        toast.error(result.error)
       }
     })
   }

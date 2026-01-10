@@ -7,6 +7,7 @@
  */
 
 import { useState, useTransition } from 'react'
+import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -58,7 +59,7 @@ export function ResendSection({ config, onUpdate }: ResendSectionProps) {
         resendApiKey: formData.resendApiKey || null,
       })
       if (!result.success) {
-        alert(result.error)
+        toast.error(result.error)
       } else {
         setFormData({ resendApiKey: '' })
         setShowKeyInput(false)
@@ -109,7 +110,7 @@ export function ResendSection({ config, onUpdate }: ResendSectionProps) {
     startTransition(async () => {
       const result = await clearResendKeys()
       if (!result.success) {
-        alert(result.error)
+        toast.error(result.error)
       } else {
         setFormData({ resendApiKey: '' })
         setTestResult(null)

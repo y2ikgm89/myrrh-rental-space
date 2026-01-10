@@ -7,6 +7,7 @@
  */
 
 import { useState, useTransition } from 'react'
+import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -44,7 +45,7 @@ export function ReservationSection({ settings, onUpdate }: ReservationSectionPro
         cancellationPolicy: formData.cancellationPolicy || null,
       })
       if (!result.success) {
-        alert(result.error)
+        toast.error(result.error)
       } else {
         onUpdate()
       }

@@ -12,6 +12,7 @@ import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { format } from 'date-fns'
+import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -92,9 +93,9 @@ export function PageForm({ page }: PageFormProps) {
 
       if (result.success) {
         router.refresh()
-        alert('ページを更新しました')
+        toast.success('ページを更新しました')
       } else {
-        alert(result.error)
+        toast.error(result.error)
       }
     })
   }

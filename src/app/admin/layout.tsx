@@ -10,6 +10,7 @@ import Link from 'next/link'
 import { headers } from 'next/headers'
 import { auth } from '@/lib/auth'
 import { LogoutButton } from './_components/LogoutButton'
+import { Toaster } from '@/components/admin/ui'
 import type { ReactElement, ReactNode } from 'react'
 
 // 動的レンダリングを強制（ビルド時のDB接続不要）
@@ -125,6 +126,7 @@ export default async function AdminLayout({
         {/* コンテンツ */}
         <div className="p-6">{children}</div>
       </main>
+      <Toaster />
     </div>
   )
 }

@@ -7,6 +7,7 @@
  */
 
 import { useState, useTransition } from 'react'
+import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -58,7 +59,7 @@ export function GoogleMapsSection({ config, onUpdate }: GoogleMapsSectionProps) 
         googleMapsApiKey: formData.googleMapsApiKey || null,
       })
       if (!result.success) {
-        alert(result.error)
+        toast.error(result.error)
       } else {
         setFormData({ googleMapsApiKey: '' })
         setShowKeyInput(false)
@@ -111,7 +112,7 @@ export function GoogleMapsSection({ config, onUpdate }: GoogleMapsSectionProps) 
     startTransition(async () => {
       const result = await clearGoogleMapsKeys()
       if (!result.success) {
-        alert(result.error)
+        toast.error(result.error)
       } else {
         setFormData({ googleMapsApiKey: '' })
         setTestResult(null)

@@ -7,6 +7,7 @@
  */
 
 import { useState, useTransition } from 'react'
+import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -38,7 +39,7 @@ export function NotificationSection({ settings, onUpdate }: NotificationSectionP
     startTransition(async () => {
       const result = await updateNotificationSettings(formData)
       if (!result.success) {
-        alert(result.error)
+        toast.error(result.error)
       } else {
         onUpdate()
       }
