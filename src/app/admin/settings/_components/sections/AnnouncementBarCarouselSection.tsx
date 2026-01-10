@@ -25,12 +25,32 @@ import {
 } from '@/components/admin/ui'
 import { updateAnnouncementBarCarouselSettings } from '@/actions/admin/settings'
 import type { SettingsData } from '@/actions/admin/settings'
+import { cn } from '@/lib/utils'
 
 const ANIMATION_OPTIONS = [
   { value: 'fade', label: 'フェード', description: '透明度でふわっと切り替え' },
   { value: 'slideX', label: '横スライド', description: '左右にスライドして切り替え' },
   { value: 'slideY', label: '縦スライド', description: '上下にスライドして切り替え' },
 ] as const
+
+const DESIGN_STYLE_OPTIONS = [
+  { value: 'solid', label: 'ソリッド', description: 'シンプルなベタ塗り' },
+  { value: 'gradient', label: 'グラデーション', description: 'モダンなグラデーション背景' },
+  { value: 'outlined', label: 'アウトライン', description: '枠線スタイルですっきり' },
+  { value: 'glass', label: 'グラス', description: '半透明のグラスモーフィズム' },
+  { value: 'minimal', label: 'ミニマル', description: '細い帯のミニマルスタイル' },
+] as const
+
+type DesignStyleValue = typeof DESIGN_STYLE_OPTIONS[number]['value']
+
+// プレビュー用スタイル（実際のAnnouncementBarCarouselと一致させる）
+const PREVIEW_STYLES: Record<DesignStyleValue, string> = {
+  solid: 'bg-blue-600 text-white',
+  gradient: 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white',
+  outlined: 'bg-transparent border-y border-gray-400 text-gray-800',
+  glass: 'backdrop-blur-md bg-white/10 border-y border-white/20 text-white',
+  minimal: 'bg-transparent border-b border-gray-300 text-gray-800',
+}
 
 interface AnnouncementBarCarouselSectionProps {
   settings: SettingsData
@@ -49,6 +69,7 @@ export function AnnouncementBarCarouselSection({
     announcementBarPauseOnHover: settings.announcementBarPauseOnHover,
     announcementBarShowArrows: settings.announcementBarShowArrows,
     announcementBarShowIndicator: settings.announcementBarShowIndicator,
+    announcementBarDesignStyle: settings.announcementBarDesignStyle as DesignStyleValue,
   })
 
   const handleSave = () => {
@@ -60,6 +81,7 @@ export function AnnouncementBarCarouselSection({
         announcementBarPauseOnHover: formData.announcementBarPauseOnHover,
         announcementBarShowArrows: formData.announcementBarShowArrows,
         announcementBarShowIndicator: formData.announcementBarShowIndicator,
+        announcementBarDesignStyle: formData.announcementBarDesignStyle,
       })
       if (!result.success) {
         alert(result.error)
@@ -81,6 +103,48 @@ export function AnnouncementBarCarouselSection({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* デザインスタイル */}
+        <div className="space-y-2">
+          <Label htmlFor="announcementBarDesignStyle">デザインスタイル</Label>
+          <Select
+            value={formData.announcementBarDesignStyle}
+            onValueChange={(value: DesignStyleValue) =>
+              setFormData({ ...formData, announcementBarDesignStyle: value })
+            }
+            disabled={isPending}
+          >
+            <SelectTrigger id="announcementBarDesignStyle">
+              <SelectValue placeholder="デザインスタイルを選択" />
+            </SelectTrigger>
+            <SelectContent>
+              {DESIGN_STYLE_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            {DESIGN_STYLE_OPTIONS.find((o) => o.value === formData.announcementBarDesignStyle)?.description}
+          </p>
+        </div>
+
+        {/* プレビュー */}
+        <div className="space-y-2">
+          <Label>プレビュー</Label>
+          <div className="rounded-lg border bg-gradient-to-br from-gray-100 to-gray-200 p-4">
+            <div
+              className={cn(
+                'flex items-center justify-center px-4 py-2 text-sm',
+                PREVIEW_STYLES[formData.announcementBarDesignStyle]
+              )}
+            >
+              <span>サンプルお知らせメッセージ</span>
+              <span className="ml-2 underline underline-offset-2">詳細はこちら</span>
+            </div>
+          </div>
+        </div>
+
         {/* アニメーション種類 */}
         <div className="space-y-2">
           <Label htmlFor="announcementBarAnimation">アニメーション種類</Label>

@@ -580,6 +580,7 @@ model Settings {
   announcementBarPauseOnHover  Boolean @default(true)
   announcementBarShowArrows    Boolean @default(true)
   announcementBarShowIndicator Boolean @default(true)
+  announcementBarDesignStyle   String  @default("solid") // solid, gradient, outlined, glass, minimal
 
   @@map("settings")
 }

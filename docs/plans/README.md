@@ -2,6 +2,27 @@
 
 ## 完了した計画
 
+### 007-announcement-bar-design-styles.md (2026-01-11)
+
+お知らせバー デザインスタイルプリセット機能
+
+**実装内容**:
+- 5種類のデザインスタイル追加（solid/gradient/outlined/glass/minimal）
+- サイト全体で統一されたスタイル設定
+- 管理画面にリアルタイムプレビュー機能
+- 無効値のフォールバック処理
+
+**変更ファイル**:
+- `prisma/schema.prisma` - announcementBarDesignStyleフィールド追加
+- `src/actions/admin/settings.ts` - デザインスタイル設定の取得・更新
+- `src/app/admin/settings/_components/sections/AnnouncementBarCarouselSection.tsx` - UI追加
+- `src/components/site/AnnouncementBarCarousel.tsx` - スタイルクラス実装
+- `src/components/site/AnnouncementBarWrapper.tsx` - バリデーション追加
+
+**デプロイ時**: `bunx prisma migrate dev --name add_announcement_bar_design_style` が必要
+
+---
+
 ### 006-announcement-bar-and-news-editor.md (2026-01-11)
 
 お知らせバー機能 + お知らせ管理tiptap統合

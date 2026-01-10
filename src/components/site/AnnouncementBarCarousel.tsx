@@ -33,6 +33,8 @@ export interface AnnouncementBarItem {
   textColor?: string | null
 }
 
+export type DesignStyle = 'solid' | 'gradient' | 'outlined' | 'glass' | 'minimal'
+
 export interface CarouselSettings {
   animation: 'fade' | 'slideX' | 'slideY'
   duration: number // ミリ秒
@@ -40,6 +42,7 @@ export interface CarouselSettings {
   pauseOnHover: boolean
   showArrows: boolean
   showIndicator: boolean
+  designStyle: DesignStyle
 }
 
 export interface AnnouncementBarCarouselProps {
@@ -53,22 +56,55 @@ export interface AnnouncementBarCarouselProps {
 
 const STORAGE_KEY = 'dismissed-announcement-bars'
 
-// タイプ別デフォルトスタイル
-const TYPE_STYLES: Record<string, { bg: string; text: string; hover: string }> = {
+// タイプ別デフォルトスタイル（solid用）
+const TYPE_STYLES: Record<string, { bg: string; text: string; hover: string; gradient: string }> = {
   info: {
     bg: 'bg-blue-600',
     text: 'text-white',
     hover: 'hover:text-blue-100',
+    gradient: 'from-blue-600 to-indigo-600',
   },
   warning: {
     bg: 'bg-amber-500',
     text: 'text-black',
     hover: 'hover:text-amber-900',
+    gradient: 'from-amber-500 to-orange-500',
   },
   promo: {
     bg: 'bg-green-600',
     text: 'text-white',
     hover: 'hover:text-green-100',
+    gradient: 'from-green-600 to-emerald-500',
+  },
+}
+
+// デザインスタイル別クラス
+const DESIGN_STYLE_CLASSES: Record<DesignStyle, {
+  container: string
+  containerWithBg: (type: string) => string
+  border?: string
+}> = {
+  solid: {
+    container: '',
+    containerWithBg: (type) => TYPE_STYLES[type]?.bg || TYPE_STYLES.info.bg,
+  },
+  gradient: {
+    container: 'bg-gradient-to-r',
+    containerWithBg: (type) => TYPE_STYLES[type]?.gradient || TYPE_STYLES.info.gradient,
+  },
+  outlined: {
+    container: 'bg-transparent border-y',
+    containerWithBg: () => '',
+    border: 'border-current',
+  },
+  glass: {
+    container: 'backdrop-blur-md bg-white/10 border-y border-white/20',
+    containerWithBg: () => '',
+  },
+  minimal: {
+    container: 'bg-transparent border-b',
+    containerWithBg: () => '',
+    border: 'border-current/30',
   },
 }
 
@@ -200,6 +236,11 @@ export function AnnouncementBarCarousel({ bars, settings }: AnnouncementBarCarou
   if (currentBar.bgColor) customStyles.backgroundColor = currentBar.bgColor
   if (currentBar.textColor) customStyles.color = currentBar.textColor
 
+  // デザインスタイル
+  const designStyle = settings.designStyle || 'solid'
+  const styleConfig = DESIGN_STYLE_CLASSES[designStyle]
+  const needsDefaultText = !hasCustomText && (designStyle === 'solid' || designStyle === 'gradient')
+
   // アニメーションバリアント
   const variants = ANIMATION_VARIANTS[settings.animation]
 
@@ -207,8 +248,13 @@ export function AnnouncementBarCarousel({ bars, settings }: AnnouncementBarCarou
     <div
       className={cn(
         'relative z-50 flex items-center justify-center px-4 py-2 text-sm',
-        !hasCustomBg && defaultStyle.bg,
-        !hasCustomText && defaultStyle.text
+        styleConfig.container,
+        !hasCustomBg && styleConfig.containerWithBg(currentBar.type),
+        styleConfig.border,
+        needsDefaultText && defaultStyle.text,
+        // outlined/glass/minimalではテキスト色をタイプカラーに
+        !hasCustomText && (designStyle === 'outlined' || designStyle === 'minimal') && 'text-gray-800',
+        !hasCustomText && designStyle === 'glass' && 'text-white'
       )}
       style={customStyles}
       role="alert"

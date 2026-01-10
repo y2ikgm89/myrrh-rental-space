@@ -133,6 +133,7 @@ export type SettingsData = {
   announcementBarPauseOnHover: boolean
   announcementBarShowArrows: boolean
   announcementBarShowIndicator: boolean
+  announcementBarDesignStyle: string
   createdAt: Date
   updatedAt: Date
 }
@@ -815,6 +816,7 @@ const announcementBarCarouselSettingsSchema = z.object({
   announcementBarPauseOnHover: z.boolean(),
   announcementBarShowArrows: z.boolean(),
   announcementBarShowIndicator: z.boolean(),
+  announcementBarDesignStyle: z.enum(['solid', 'gradient', 'outlined', 'glass', 'minimal']),
 })
 
 export type AnnouncementBarCarouselSettingsInput = z.infer<typeof announcementBarCarouselSettingsSchema>
@@ -832,6 +834,7 @@ export async function getAnnouncementBarCarouselSettings(): Promise<Announcement
       announcementBarPauseOnHover: true,
       announcementBarShowArrows: true,
       announcementBarShowIndicator: true,
+      announcementBarDesignStyle: true,
     },
   })
 
@@ -842,6 +845,7 @@ export async function getAnnouncementBarCarouselSettings(): Promise<Announcement
     announcementBarPauseOnHover: settings?.announcementBarPauseOnHover ?? true,
     announcementBarShowArrows: settings?.announcementBarShowArrows ?? true,
     announcementBarShowIndicator: settings?.announcementBarShowIndicator ?? true,
+    announcementBarDesignStyle: (settings?.announcementBarDesignStyle ?? 'solid') as 'solid' | 'gradient' | 'outlined' | 'glass' | 'minimal',
   }
 }
 
