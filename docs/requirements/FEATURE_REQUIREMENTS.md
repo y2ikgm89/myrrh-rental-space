@@ -1,6 +1,6 @@
 # 機能要件
 
-> **Note**: このドキュメントには詳細な機能要件、要件精査結果、実装優先順位が記載されています。技術スタックの詳細については、[`AGENTS.md`](../AGENTS.md)を参照してください。
+> **Note**: このドキュメントには詳細な機能要件、要件精査結果、実装優先順位が記載されています。技術スタックの詳細については、[`CLAUDE.md`](../CLAUDE.md)を参照してください。
 
 ## 実装方針
 
@@ -763,7 +763,7 @@
 
 ### プロジェクトドキュメント
 
-- [`AGENTS.md`](../AGENTS.md) - プロジェクト全体の仕様書（技術スタック詳細）
+- [`CLAUDE.md`](../CLAUDE.md) - プロジェクト全体の仕様書（技術スタック詳細）
 - [`ARCHITECTURE.md`](../architecture/ARCHITECTURE.md) - システムアーキテクチャ
 - [`DATABASE_DESIGN.md`](../architecture/DATABASE_DESIGN.md) - データベース設計
 - [`API.md`](../development/API.md) - API仕様

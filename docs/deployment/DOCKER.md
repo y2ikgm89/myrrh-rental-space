@@ -1,6 +1,6 @@
 # Docker設定ガイド
 
-> **Note**: このドキュメントには、Next.js 16.1.1 + Bun 1.3.5 + Prisma 7.2.0プロジェクト用のDocker設定の設計と実装詳細が記載されています。技術スタックの詳細については、[`AGENTS.md`](../AGENTS.md)を参照してください。デプロイメント手順については、[`DEPLOYMENT.md`](./DEPLOYMENT.md)を参照してください。
+> **Note**: このドキュメントには、Next.js 16.1.1 + Bun 1.3.5 + Prisma 7.2.0プロジェクト用のDocker設定の設計と実装詳細が記載されています。技術スタックの詳細については、[`CLAUDE.md`](../CLAUDE.md)を参照してください。デプロイメント手順については、[`DEPLOYMENT.md`](./DEPLOYMENT.md)を参照してください。
 
 ---
 
@@ -617,6 +617,6 @@ ports:
   - `prisma.config.ts` の `datasource.url` 設定方法を追記
   - マイグレーションコマンドに `--config` フラグを追加
 - **2026-01-05**: ドキュメント整理・統合
-  - `AGENTS.md`への参照を追加
+  - `CLAUDE.md`への参照を追加
   - `DEPLOYMENT.md`との役割を明確化
   - 重複情報を削除

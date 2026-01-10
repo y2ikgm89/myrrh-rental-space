@@ -1,6 +1,6 @@
 # Cloudflare CDN統合ガイド
 
-> **Note**: このドキュメントには、Next.js 16.1.1 + Cloud Run + Cloudflare CDNの統合について、各技術スタックの公式ベストプラクティスに基づいた実装ガイドが記載されています。技術スタックの詳細については、[`AGENTS.md`](../AGENTS.md)を参照してください。
+> **Note**: このドキュメントには、Next.js 16.1.1 + Cloud Run + Cloudflare CDNの統合について、各技術スタックの公式ベストプラクティスに基づいた実装ガイドが記載されています。技術スタックの詳細については、[`CLAUDE.md`](../CLAUDE.md)を参照してください。
 
 ---
 
@@ -625,7 +625,7 @@ Cloudflareは、Next.jsが新しいコンテンツを返すと自動的に再検
 
 ### プロジェクトドキュメント
 
-- [`AGENTS.md`](../AGENTS.md) - プロジェクト全体の仕様書
+- [`CLAUDE.md`](../CLAUDE.md) - プロジェクト全体の仕様書
 - [`DEPLOYMENT.md`](./DEPLOYMENT.md) - デプロイメント手順
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md) - システムアーキテクチャ
 - [`SECURITY.md`](./SECURITY.md) - セキュリティポリシー

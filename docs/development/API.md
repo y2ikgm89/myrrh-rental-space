@@ -1,6 +1,6 @@
 # API仕様書
 
-> **Note**: このドキュメントにはServer ActionsとRoute HandlersのAPI仕様が記載されています。技術スタックの詳細については、`[AGENTS.md](../AGENTS.md)`を参照してください。データベース設計については、`[DATABASE_DESIGN.md](./DATABASE_DESIGN.md)`を参照してください。セキュリティポリシーについては、`[SECURITY.md](./SECURITY.md)`を参照してください。キャッシュ戦略の詳細については、`[CACHING_STRATEGY.md](./CACHING_STRATEGY.md)`を参照してください。URLクエリパラメータ管理については、`[NUQS_REQUIREMENTS.md](./NUQS_REQUIREMENTS.md)`を参照してください。
+> **Note**: このドキュメントにはServer ActionsとRoute HandlersのAPI仕様が記載されています。技術スタックの詳細については、`[CLAUDE.md](../CLAUDE.md)`を参照してください。データベース設計については、`[DATABASE_DESIGN.md](./DATABASE_DESIGN.md)`を参照してください。セキュリティポリシーについては、`[SECURITY.md](./SECURITY.md)`を参照してください。キャッシュ戦略の詳細については、`[CACHING_STRATEGY.md](./CACHING_STRATEGY.md)`を参照してください。URLクエリパラメータ管理については、`[NUQS_REQUIREMENTS.md](./NUQS_REQUIREMENTS.md)`を参照してください。
 
 ## 実装方針
 
@@ -2207,7 +2207,7 @@ BlogTag[]
 
 ### プロジェクトドキュメント
 
-- `[AGENTS.md](../AGENTS.md)` - プロジェクト全体の仕様書
+- `[CLAUDE.md](../CLAUDE.md)` - プロジェクト全体の仕様書
 - `[DATABASE_DESIGN.md](./DATABASE_DESIGN.md)` - データベース設計
 - `[SECURITY.md](./SECURITY.md)` - セキュリティポリシー
 - `[ARCHITECTURE.md](./ARCHITECTURE.md)` - システムアーキテクチャ

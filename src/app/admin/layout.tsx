@@ -7,8 +7,15 @@
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { headers } from 'next/headers'
 import { auth } from '@/lib/auth'
+import { LogoutButton } from './_components/LogoutButton'
 import type { ReactElement, ReactNode } from 'react'
+
+// 動的レンダリングを強制（ビルド時のDB接続不要）
+export const dynamic = 'force-dynamic'
+
+const ADMIN_LOGIN_TOKEN = process.env.ADMIN_LOGIN_TOKEN || ''
 
 export const metadata: Metadata = {
   title: {
@@ -28,6 +35,7 @@ const sidebarItems = [
   { label: 'お問い合わせ', href: '/admin/inquiries', icon: 'mail' },
   { label: 'お知らせ', href: '/admin/news', icon: 'news' },
   { label: 'ブログ', href: '/admin/blog', icon: 'blog' },
+  { label: 'ページ管理', href: '/admin/pages', icon: 'page' },
   { label: '顧客管理', href: '/admin/customers', icon: 'users' },
   { label: '設定', href: '/admin/settings', icon: 'settings' },
 ]
@@ -37,6 +45,14 @@ export default async function AdminLayout({
 }: {
   children: ReactNode
 }): Promise<ReactElement> {
+  const headersList = await headers()
+  const pathname = headersList.get('x-pathname') || headersList.get('x-invoke-path') || ''
+
+  // ログインページの場合はサイドバーなしで表示
+  if (pathname.includes('/admin/login')) {
+    return <>{children}</>
+  }
+
   const session = await auth()
 
   return (
@@ -102,14 +118,7 @@ export default async function AdminLayout({
             >
               サイトを表示
             </Link>
-            <form action="/api/auth/signout" method="POST">
-              <button
-                type="submit"
-                className="text-sm text-gray-600 hover:text-gray-900"
-              >
-                ログアウト
-              </button>
-            </form>
+            <LogoutButton token={ADMIN_LOGIN_TOKEN} />
           </div>
         </header>
 
@@ -162,6 +171,12 @@ function SidebarIcon({ icon }: SidebarIconProps): ReactElement | null {
       return (
         <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+      )
+    case 'page':
+      return (
+        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
       )
     case 'users':

@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useState, useRef } from 'react'
 import { Button } from '@/components/admin/ui/button'
 import { Input } from '@/components/admin/ui/input'
@@ -88,11 +89,13 @@ export function ImageUpload({
     <div className={className}>
       {previewUrl ? (
         <div className="space-y-2">
-          <div className="relative inline-block">
-            <img
+          <div className="relative inline-block max-w-xs h-48">
+            <Image
               src={previewUrl}
               alt="Preview"
-              className="max-w-xs max-h-48 rounded-lg border object-cover"
+              fill
+              className="rounded-lg border object-cover"
+              sizes="320px"
             />
           </div>
           <div className="flex gap-2">
@@ -244,11 +247,13 @@ export function MultiImageUpload({
       {urls.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
           {urls.map((url, index) => (
-            <div key={url} className="relative group">
-              <img
+            <div key={url} className="relative group h-32">
+              <Image
                 src={url}
                 alt={`Image ${index + 1}`}
-                className="w-full h-32 object-cover rounded-lg border"
+                fill
+                className="object-cover rounded-lg border"
+                sizes="(max-width: 768px) 50vw, 25vw"
               />
               {onDelete && (
                 <Button

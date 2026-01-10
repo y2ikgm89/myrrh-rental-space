@@ -1468,7 +1468,7 @@ export async function createSpace(data: CreateSpaceInput) {
 
 ### 8.1 プロジェクトドキュメント
 
-- [`AGENTS.md`](../AGENTS.md) - プロジェクト全体の仕様書
+- [`CLAUDE.md`](../CLAUDE.md) - プロジェクト全体の仕様書
 - [`ARCHITECTURE.md`](../architecture/ARCHITECTURE.md) - 現状のアーキテクチャ
 - [`BEST_PRACTICES.md`](../development/BEST_PRACTICES.md) - ベストプラクティス
 - [`CACHING_STRATEGY.md`](../development/CACHING_STRATEGY.md) - キャッシング戦略

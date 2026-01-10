@@ -8,6 +8,7 @@
  * - Supabase Storageへの動画アップロード
  */
 
+import Image from 'next/image'
 import { useState, useRef } from 'react'
 import type { Editor } from '@tiptap/react'
 import {
@@ -51,6 +52,7 @@ export function VideoDialog({ editor, open, onOpenChange }: VideoDialogProps) {
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
+  const [failedThumbnailUrl, setFailedThumbnailUrl] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // リセット
@@ -59,6 +61,7 @@ export function VideoDialog({ editor, open, onOpenChange }: VideoDialogProps) {
     setFile(null)
     setPreview(null)
     setError(null)
+    setFailedThumbnailUrl(null)
     setIsUploading(false)
     setUploadProgress(0)
     setActiveTab('youtube')
@@ -224,15 +227,15 @@ export function VideoDialog({ editor, open, onOpenChange }: VideoDialogProps) {
             </div>
 
             {/* YouTubeサムネイルプレビュー */}
-            {youtubeThumbnail && (
-              <div className="border rounded-md overflow-hidden">
-                <img
+            {youtubeThumbnail && youtubeThumbnail !== failedThumbnailUrl && (
+              <div className="relative border rounded-md overflow-hidden aspect-video">
+                <Image
                   src={youtubeThumbnail}
                   alt="YouTube サムネイル"
-                  className="w-full h-auto"
-                  onError={(e) => {
-                    ;(e.target as HTMLImageElement).style.display = 'none'
-                  }}
+                  fill
+                  className="object-cover"
+                  sizes="480px"
+                  onError={() => setFailedThumbnailUrl(youtubeThumbnail)}
                 />
               </div>
             )}

@@ -8,25 +8,36 @@
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import type { Settings } from '@/generated/prisma/client/client'
-import type { ReactElement } from 'react'
+import { MobileMenu, type NavItem } from './MobileMenu'
 
-type NavItem = {
-  label: string
-  url: string
-}
-
-async function getNavigationItems(): Promise<NavItem[]> {
+async function getDesktopNavigationItems(): Promise<NavItem[]> {
   try {
     const items = await prisma.navigationItem.findMany({
       where: {
-        type: 'HEADER',
+        type: 'HEADER_DESKTOP',
         isActive: true,
       },
       orderBy: { order: 'asc' },
     })
     return items
   } catch {
-    // DB未接続時はデフォルトナビゲーションを返す
+    // DB未接続時は空配列を返す
+    return []
+  }
+}
+
+async function getMobileNavigationItems(): Promise<NavItem[]> {
+  try {
+    const items = await prisma.navigationItem.findMany({
+      where: {
+        type: 'HEADER_MOBILE',
+        isActive: true,
+      },
+      orderBy: { order: 'asc' },
+    })
+    return items
+  } catch {
+    // DB未接続時は空配列を返す
     return []
   }
 }
@@ -40,23 +51,27 @@ async function getSiteSettings(): Promise<Settings | null> {
   }
 }
 
-export async function Header(): Promise<ReactElement> {
-  const [navItems, settings] = await Promise.all([
-    getNavigationItems(),
+export async function Header(): Promise<React.ReactElement> {
+  const [desktopNavItems, mobileNavItems, settings] = await Promise.all([
+    getDesktopNavigationItems(),
+    getMobileNavigationItems(),
     getSiteSettings(),
   ])
 
   const siteName = settings?.siteName ?? 'Myrrh Rental Space'
 
   // デフォルトナビゲーション（DB未設定時）
-  const defaultNavItems = [
+  const defaultNavItems: NavItem[] = [
     { label: 'ホーム', url: '/' },
     { label: 'スペース', url: '/spaces' },
     { label: '料金', url: '/pricing' },
     { label: 'お問い合わせ', url: '/contact' },
   ]
 
-  const displayItems: NavItem[] = navItems.length > 0 ? navItems : defaultNavItems
+  // デスクトップ用アイテム
+  const desktopItems: NavItem[] = desktopNavItems.length > 0 ? desktopNavItems : defaultNavItems
+  // モバイル用アイテム（モバイル用が未設定の場合はデスクトップと同じ）
+  const mobileItems: NavItem[] = mobileNavItems.length > 0 ? mobileNavItems : desktopItems
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
@@ -68,7 +83,7 @@ export async function Header(): Promise<ReactElement> {
 
         {/* デスクトップナビゲーション */}
         <nav className="hidden md:flex items-center space-x-6">
-          {displayItems.map((item, index) => (
+          {desktopItems.map((item, index) => (
             <Link
               key={item.url || index}
               href={item.url}
@@ -79,26 +94,8 @@ export async function Header(): Promise<ReactElement> {
           ))}
         </nav>
 
-        {/* モバイルメニューボタン（後で実装） */}
-        <button
-          type="button"
-          className="md:hidden p-2 text-gray-600 hover:text-gray-900"
-          aria-label="メニューを開く"
-        >
-          <svg
-            className="h-6 w-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 6h16M4 12h16M4 18h16"
-            />
-          </svg>
-        </button>
+        {/* モバイルメニュー（モバイル用アイテムを渡す） */}
+        <MobileMenu items={mobileItems} />
       </div>
     </header>
   )

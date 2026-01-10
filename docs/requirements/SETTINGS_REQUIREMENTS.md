@@ -1,6 +1,6 @@
 # サイト設定画面要件定義
 
-> **Note**: このドキュメントには、管理画面の設定画面（`/admin/settings`）の詳細な要件定義が記載されています。技術スタックの詳細については、[`AGENTS.md`](../AGENTS.md)を参照してください。データベース設計については、[`DATABASE_DESIGN.md`](./DATABASE_DESIGN.md)を参照してください。API仕様については、[`API.md`](./API.md)を参照してください。
+> **Note**: このドキュメントには、管理画面の設定画面（`/admin/settings`）の詳細な要件定義が記載されています。技術スタックの詳細については、[`CLAUDE.md`](../CLAUDE.md)を参照してください。データベース設計については、[`DATABASE_DESIGN.md`](./DATABASE_DESIGN.md)を参照してください。API仕様については、[`API.md`](./API.md)を参照してください。
 
 **最終更新**: 2026-01-06
 
@@ -761,7 +761,7 @@ revalidatePath('/')
 
 ### プロジェクトドキュメント
 
-- [`AGENTS.md`](../AGENTS.md) - プロジェクト全体の仕様書
+- [`CLAUDE.md`](../CLAUDE.md) - プロジェクト全体の仕様書
 - [`FEATURE_REQUIREMENTS.md`](./FEATURE_REQUIREMENTS.md) - 機能要件
 - [`DATABASE_DESIGN.md`](./DATABASE_DESIGN.md) - データベース設計
 - [`API.md`](./API.md) - API仕様

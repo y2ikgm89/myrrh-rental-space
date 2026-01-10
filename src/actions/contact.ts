@@ -1,19 +1,41 @@
 'use server'
 
+import { prisma } from '@/lib/prisma'
 import {
   contactSchema,
   type ContactInput,
   type ContactActionResult,
 } from '@/lib/validations/contact'
+import {
+  sendContactConfirmationEmail,
+  sendContactAdminNotification,
+} from '@/lib/email-service'
+import { verifyTurnstileToken, isTurnstileEnabled } from '@/lib/turnstile'
 
 /**
  * お問い合わせフォーム送信 Server Action
- *
- * バリデーション後、メール送信（現時点では console.log でモック）
  */
 export async function submitContact(
-  formData: ContactInput
+  formData: ContactInput,
+  turnstileToken?: string
 ): Promise<ContactActionResult> {
+  // Turnstile検証（有効な場合のみ）
+  if (isTurnstileEnabled()) {
+    if (!turnstileToken) {
+      return {
+        success: false,
+        error: 'セキュリティ検証が必要です。ページを再読み込みしてください。',
+      }
+    }
+
+    const isValid = await verifyTurnstileToken(turnstileToken)
+    if (!isValid) {
+      return {
+        success: false,
+        error: 'セキュリティ検証に失敗しました。しばらく経ってから再度お試しください。',
+      }
+    }
+  }
   // サーバーサイドバリデーション
   const validationResult = contactSchema.safeParse(formData)
 
@@ -40,21 +62,37 @@ export async function submitContact(
   const data = validationResult.data
 
   try {
-    // TODO: Resend でメール送信（現時点では console.log でモック）
-    console.log('=== お問い合わせ受信 ===')
-    console.log('お名前:', data.name)
-    console.log('メールアドレス:', data.email)
-    console.log('電話番号:', data.phone ?? '(未入力)')
-    console.log('件名:', data.subject)
-    console.log('本文:', data.message)
-    console.log('========================')
+    // データベースに保存
+    const inquiry = await prisma.inquiry.create({
+      data: {
+        name: data.name,
+        email: data.email,
+        subject: data.subject,
+        message: data.message,
+        status: 'NEW',
+      },
+    })
 
-    // 模擬的な遅延（実際のメール送信時間をシミュレート）
-    await new Promise((resolve) => setTimeout(resolve, 500))
+    // メール送信データ
+    const emailData = {
+      inquiryId: inquiry.id,
+      name: data.name,
+      email: data.email,
+      subject: data.subject,
+      message: data.message,
+    }
+
+    // メール送信（バックグラウンドで実行、失敗してもエラーにしない）
+    Promise.all([
+      sendContactConfirmationEmail(emailData),
+      sendContactAdminNotification(emailData),
+    ]).catch((err) => {
+      console.error('Failed to send contact emails:', err)
+    })
 
     return {
       success: true,
-      message: 'お問い合わせを受け付けました。ありがとうございます。',
+      message: 'お問い合わせを受け付けました。確認メールをお送りしましたので、ご確認ください。',
     }
   } catch (error) {
     console.error('お問い合わせ送信エラー:', error)

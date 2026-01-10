@@ -1,6 +1,6 @@
 # JWT認証要件定義
 
-> **Note**: このドキュメントにはJWT認証システムの詳細な要件定義が記載されています。技術スタックの詳細については、[`AGENTS.md`](../AGENTS.md)を参照してください。セキュリティポリシーについては、[`SECURITY.md`](./SECURITY.md)を参照してください。
+> **Note**: このドキュメントにはJWT認証システムの詳細な要件定義が記載されています。技術スタックの詳細については、[`CLAUDE.md`](../CLAUDE.md)を参照してください。セキュリティポリシーについては、[`SECURITY.md`](./SECURITY.md)を参照してください。
 
 ---
 
@@ -1066,7 +1066,7 @@ describe('Security', () => {
 
 ### プロジェクトドキュメント
 
-- [`AGENTS.md`](../AGENTS.md) - プロジェクト全体の仕様書（技術スタック詳細）
+- [`CLAUDE.md`](../CLAUDE.md) - プロジェクト全体の仕様書（技術スタック詳細）
 - [`SECURITY.md`](./SECURITY.md) - セキュリティポリシーとベストプラクティス
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md) - システムアーキテクチャ
 - [`FEATURE_REQUIREMENTS.md`](./FEATURE_REQUIREMENTS.md) - 機能要件

@@ -18,6 +18,7 @@ import {
 } from '@/lib/validations/search-params'
 import { BlogFilters } from './_components/blog-filters'
 import { BlogPagination } from './_components/blog-pagination'
+import { parseStringArray } from '@/lib/json-validators'
 import type { Prisma } from '@/generated/prisma/client/client'
 import type { SearchParams } from 'nuqs/server'
 import type { ReactElement } from 'react'
@@ -79,19 +80,8 @@ function formatPublishedDate(value: Date | null): string {
   return value.toLocaleDateString('ja-JP')
 }
 
-/**
- * JSON 形式のタグ配列から文字列配列を抽出する
- *
- * @param value - tags の JSON 値
- * @returns タグ文字列の配列
- */
-function getTags(value: Prisma.JsonValue): string[] {
-  if (!Array.isArray(value)) return []
-  return value.filter((tag): tag is string => typeof tag === 'string')
-}
-
 function BlogCard({ post }: BlogCardProps): ReactElement {
-  const tags = getTags(post.tags)
+  const tags = parseStringArray(post.tags)
 
   return (
     <Link href={`/blog/${post.slug}`} aria-label={post.title}>

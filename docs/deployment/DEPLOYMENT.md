@@ -1,6 +1,6 @@
 # デプロイメント手順
 
-> **Note**: このドキュメントには詳細なデプロイメント手順が記載されています。技術スタックの詳細については、[`AGENTS.md`](../AGENTS.md)を参照してください。Docker固有の設定については、[`DOCKER.md`](./DOCKER.md)を参照してください。
+> **Note**: このドキュメントには詳細なデプロイメント手順が記載されています。技術スタックの詳細については、[`CLAUDE.md`](../CLAUDE.md)を参照してください。Docker固有の設定については、[`DOCKER.md`](./DOCKER.md)を参照してください。
 
 ---
 
@@ -574,7 +574,7 @@ Cloudflare CDNを導入することで、Cloud Runの帯域幅コストを70-90%
 
 ### プロジェクトドキュメント
 
-- [`AGENTS.md`](../AGENTS.md) - プロジェクト全体の仕様書
+- [`CLAUDE.md`](../CLAUDE.md) - プロジェクト全体の仕様書
 - [`DOCKER.md`](./DOCKER.md) - Docker設定ガイド
 - [`../architecture/ARCHITECTURE.md`](../architecture/ARCHITECTURE.md) - システムアーキテクチャ
 - [`../architecture/DATABASE_DESIGN.md`](../architecture/DATABASE_DESIGN.md) - データベース設計

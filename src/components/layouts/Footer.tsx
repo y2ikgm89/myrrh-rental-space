@@ -19,6 +19,24 @@ type SocialLinkItem = {
   id: string
   platform: string
   url: string
+  showOnDesktop: boolean
+  showOnMobile: boolean
+}
+
+/**
+ * デバイス別表示のCSSクラスを取得
+ */
+function getVisibilityClass(showOnDesktop: boolean, showOnMobile: boolean): string {
+  if (showOnDesktop && showOnMobile) {
+    return '' // 両方表示
+  }
+  if (showOnDesktop && !showOnMobile) {
+    return 'hidden md:inline-flex' // デスクトップのみ
+  }
+  if (!showOnDesktop && showOnMobile) {
+    return 'md:hidden' // モバイルのみ
+  }
+  return 'hidden' // 両方非表示
 }
 
 async function getFooterNavItems(): Promise<NavItem[]> {
@@ -40,6 +58,13 @@ async function getSocialLinks(): Promise<SocialLinkItem[]> {
   try {
     const links = await prisma.socialLink.findMany({
       where: { isActive: true },
+      select: {
+        id: true,
+        platform: true,
+        url: true,
+        showOnDesktop: true,
+        showOnMobile: true,
+      },
       orderBy: { order: 'asc' },
     })
     return links
@@ -65,7 +90,19 @@ export async function Footer(): Promise<ReactElement> {
   ])
 
   const siteName = settings?.siteName ?? 'Myrrh Rental Space'
+  const businessName = settings?.businessName
   const currentYear = new Date().getFullYear()
+  const copyrightText = settings?.footerCopyright ?? `© ${currentYear} ${siteName}. All rights reserved.`
+
+  // 住所の組み立て
+  const addressParts = [
+    settings?.postalCode ? `〒${settings.postalCode}` : null,
+    settings?.prefecture,
+    settings?.city,
+    settings?.streetAddress,
+    settings?.buildingName,
+  ].filter(Boolean)
+  const fullAddress = addressParts.length > 0 ? addressParts.join(' ') : settings?.address
 
   // デフォルトフッターナビ
   const defaultNavItems = [
@@ -79,6 +116,40 @@ export async function Footer(): Promise<ReactElement> {
   return (
     <footer className="border-t bg-gray-50">
       <div className="container mx-auto px-4 py-8">
+        {/* 事業者情報 */}
+        {(businessName || fullAddress || settings?.phoneNumber || settings?.email) && (
+          <div className="mb-8 text-center">
+            {businessName && (
+              <p className="text-lg font-semibold text-gray-900 mb-2">{businessName}</p>
+            )}
+            <div className="space-y-1 text-sm text-gray-600">
+              {fullAddress && <p>{fullAddress}</p>}
+              {settings?.phoneNumber && (
+                <p>
+                  <span className="mr-2">TEL:</span>
+                  <a href={`tel:${settings.phoneNumber}`} className="hover:text-gray-900">
+                    {settings.phoneNumber}
+                  </a>
+                  {settings?.faxNumber && (
+                    <span className="ml-4">
+                      <span className="mr-2">FAX:</span>
+                      {settings.faxNumber}
+                    </span>
+                  )}
+                </p>
+              )}
+              {settings?.email && (
+                <p>
+                  <span className="mr-2">Email:</span>
+                  <a href={`mailto:${settings.email}`} className="hover:text-gray-900">
+                    {settings.email}
+                  </a>
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* フッターナビゲーション */}
         <nav className="flex flex-wrap justify-center gap-6 mb-6">
           {displayItems.map((item, index) => (
@@ -95,24 +166,30 @@ export async function Footer(): Promise<ReactElement> {
         {/* SNSリンク */}
         {socialLinks.length > 0 && (
           <div className="flex justify-center gap-4 mb-6">
-            {socialLinks.map((link: SocialLinkItem) => (
-              <a
-                key={link.id}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-500 hover:text-gray-700 transition-colors"
-                aria-label={link.platform}
-              >
-                <SocialIcon platform={link.platform} />
-              </a>
-            ))}
+            {socialLinks.map((link: SocialLinkItem) => {
+              // デバイス別の表示クラスを決定
+              const visibilityClass = getVisibilityClass(link.showOnDesktop, link.showOnMobile)
+              // 両方非表示の場合はスキップ
+              if (!link.showOnDesktop && !link.showOnMobile) return null
+              return (
+                <a
+                  key={link.id}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`text-gray-500 hover:text-gray-700 transition-colors ${visibilityClass}`}
+                  aria-label={link.platform}
+                >
+                  <SocialIcon platform={link.platform} />
+                </a>
+              )
+            })}
           </div>
         )}
 
         {/* コピーライト */}
         <p className="text-center text-sm text-gray-500">
-          &copy; {currentYear} {siteName}. All rights reserved.
+          {copyrightText}
         </p>
       </div>
     </footer>

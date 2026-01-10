@@ -1,6 +1,6 @@
 # 荒らし対策要件定義
 
-> **Note**: このドキュメントには荒らし対策の詳細な要件定義が記載されています。技術スタックの詳細については、[`AGENTS.md`](../AGENTS.md)を参照してください。セキュリティポリシーについては、[`SECURITY.md`](../security/SECURITY.md)を参照してください。DDoS対策については、[`DDOS_PROTECTION_REQUIREMENTS.md`](./DDOS_PROTECTION_REQUIREMENTS.md)を参照してください。
+> **Note**: このドキュメントには荒らし対策の詳細な要件定義が記載されています。技術スタックの詳細については、[`CLAUDE.md`](../CLAUDE.md)を参照してください。セキュリティポリシーについては、[`SECURITY.md`](../security/SECURITY.md)を参照してください。DDoS対策については、[`DDOS_PROTECTION_REQUIREMENTS.md`](./DDOS_PROTECTION_REQUIREMENTS.md)を参照してください。
 
 ---
 
@@ -632,7 +632,7 @@ describe('IP Block', () => {
 
 ### プロジェクトドキュメント
 
-- [`AGENTS.md`](../AGENTS.md) - プロジェクト全体の仕様書（技術スタック詳細）
+- [`CLAUDE.md`](../CLAUDE.md) - プロジェクト全体の仕様書（技術スタック詳細）
 - [`SECURITY.md`](../security/SECURITY.md) - セキュリティポリシーとベストプラクティス
 - [`DDOS_PROTECTION_REQUIREMENTS.md`](./DDOS_PROTECTION_REQUIREMENTS.md) - DDoS対策要件定義
 - [`TURNSTILE_REQUIREMENTS.md`](./TURNSTILE_REQUIREMENTS.md) - Cloudflare Turnstile要件定義

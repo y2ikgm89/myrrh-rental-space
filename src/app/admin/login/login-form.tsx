@@ -4,18 +4,30 @@
  * ログインフォーム（Client Component）
  */
 
-import { useState, type FormEvent, type ReactElement } from 'react'
+import { useState, useEffect, type FormEvent, type ReactElement } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { credentialsSchema, loginTokenSchema } from '@/lib/validations/auth'
+
+const STORAGE_KEY = 'myrrh_admin_email'
 
 export function LoginForm(): ReactElement {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+
+  // 保存されたメールアドレスを読み込み
+  useEffect(() => {
+    const savedEmail = localStorage.getItem(STORAGE_KEY)
+    if (savedEmail) {
+      setEmail(savedEmail)
+      setRememberMe(true)
+    }
+  }, [])
 
   const handleSubmit = async (
     event: FormEvent<HTMLFormElement>
@@ -43,6 +55,13 @@ export function LoginForm(): ReactElement {
       if (result?.error) {
         setError('メールアドレスまたはパスワードが正しくありません')
       } else {
+        // メールアドレスを保存/削除
+        if (rememberMe) {
+          localStorage.setItem(STORAGE_KEY, validatedEmail)
+        } else {
+          localStorage.removeItem(STORAGE_KEY)
+        }
+
         // ログイン成功後、URLパラメータのトークンを保持してリダイレクト
         // これにより、proxy.tsでトークンの有効期限を延長できる
         const token = searchParams.get('token')
@@ -104,6 +123,22 @@ export function LoginForm(): ReactElement {
           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
           placeholder="••••••••"
         />
+      </div>
+
+      <div className="flex items-center">
+        <input
+          id="remember-me"
+          type="checkbox"
+          checked={rememberMe}
+          onChange={(e) => setRememberMe(e.target.checked)}
+          className="h-4 w-4 text-gray-900 focus:ring-gray-900 border-gray-300 rounded cursor-pointer"
+        />
+        <label
+          htmlFor="remember-me"
+          className="ml-2 block text-sm text-gray-700 cursor-pointer select-none"
+        >
+          メールアドレスを保存する
+        </label>
       </div>
 
       <button

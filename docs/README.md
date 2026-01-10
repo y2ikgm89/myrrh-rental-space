@@ -1,6 +1,6 @@
 # ドキュメントインデックス
 
-> **Note**: このディレクトリには、レンタルスペース管理システムの詳細な技術ドキュメントが含まれています。プロジェクト全体の概要とセットアップ手順については、[`AGENTS.md`](../AGENTS.md)を参照してください。
+> **Note**: このディレクトリには、レンタルスペース管理システムの詳細な技術ドキュメントが含まれています。プロジェクト全体の概要とセットアップ手順については、[`CLAUDE.md`](../CLAUDE.md)を参照してください。最終更新: **2026-01-10**
 
 ## 実装方針
 
@@ -212,7 +212,7 @@ Docker設定の詳細、Dockerfile設計、docker-compose.yml設定、ベスト�
 
 ### 新規開発者
 
-1. [`AGENTS.md`](../AGENTS.md) - プロジェクト全体の概要とセットアップ
+1. [`CLAUDE.md`](../CLAUDE.md) - プロジェクト全体の概要とセットアップ
 2. [`architecture/PROJECT_STRUCTURE.md`](./architecture/PROJECT_STRUCTURE.md) - プロジェクト構造の理解
 3. [`architecture/ARCHITECTURE.md`](./architecture/ARCHITECTURE.md) - システムアーキテクチャの理解
 4. [`development/API.md`](./development/API.md) - API仕様の理解
@@ -220,7 +220,7 @@ Docker設定の詳細、Dockerfile設計、docker-compose.yml設定、ベスト�
 
 ### フロントエンド開発者
 
-1. [`AGENTS.md`](../AGENTS.md) - プロジェクト概要
+1. [`CLAUDE.md`](../CLAUDE.md) - プロジェクト概要
 2. [`architecture/PROJECT_STRUCTURE.md`](./architecture/PROJECT_STRUCTURE.md) - プロジェクト構造
 3. [`requirements/FEATURE_REQUIREMENTS.md`](./requirements/FEATURE_REQUIREMENTS.md) - 機能要件
 4. [`development/API.md`](./development/API.md) - API仕様
@@ -228,7 +228,7 @@ Docker設定の詳細、Dockerfile設計、docker-compose.yml設定、ベスト�
 
 ### バックエンド開発者
 
-1. [`AGENTS.md`](../AGENTS.md) - プロジェクト概要
+1. [`CLAUDE.md`](../CLAUDE.md) - プロジェクト概要
 2. [`architecture/ARCHITECTURE.md`](./architecture/ARCHITECTURE.md) - システムアーキテクチャ
 3. [`architecture/DATABASE_DESIGN.md`](./architecture/DATABASE_DESIGN.md) - データベース設計
 4. [`development/API.md`](./development/API.md) - API仕様
@@ -239,7 +239,7 @@ Docker設定の詳細、Dockerfile設計、docker-compose.yml設定、ベスト�
 
 ### DevOpsエンジニア
 
-1. [`AGENTS.md`](../AGENTS.md) - プロジェクト概要
+1. [`CLAUDE.md`](../CLAUDE.md) - プロジェクト概要
 2. [`deployment/DEPLOYMENT.md`](./deployment/DEPLOYMENT.md) - デプロイメント手順
 3. [`deployment/DOCKER.md`](./deployment/DOCKER.md) - Docker設定
 4. [`deployment/CLOUDFLARE_CDN.md`](./deployment/CLOUDFLARE_CDN.md) - Cloudflare CDN統合
@@ -248,7 +248,7 @@ Docker設定の詳細、Dockerfile設計、docker-compose.yml設定、ベスト�
 
 ### プロダクトマネージャー
 
-1. [`AGENTS.md`](../AGENTS.md) - プロジェクト概要
+1. [`CLAUDE.md`](../CLAUDE.md) - プロジェクト概要
 2. [`requirements/FEATURE_REQUIREMENTS.md`](./requirements/FEATURE_REQUIREMENTS.md) - 機能要件
 3. [`architecture/ARCHITECTURE.md`](./architecture/ARCHITECTURE.md) - システムアーキテクチャ（概要）
 
@@ -257,7 +257,7 @@ Docker設定の詳細、Dockerfile設計、docker-compose.yml設定、ベスト�
 ## ドキュメント間の参照関係
 
 ```
-AGENTS.md (プロジェクト全体の仕様書)
+CLAUDE.md (プロジェクト全体の仕様書)
     ├── 技術スタック情報の主要な情報源
     ├── セットアップ手順
     └── コーディング規約
@@ -265,7 +265,7 @@ AGENTS.md (プロジェクト全体の仕様書)
 docs/
     ├── requirements/
     │   ├── FEATURE_REQUIREMENTS.md
-    │   │   ├── AGENTS.md を参照（技術スタック）
+    │   │   ├── CLAUDE.md を参照（技術スタック）
     │   │   └── 要件精査結果を含む
     │   │
     │   ├── EMAIL_REQUIREMENTS.md
@@ -290,7 +290,7 @@ docs/
     │   │   └── FEATURE_REQUIREMENTS.md を参照（認証要件）
     │   │
     │   ├── TEST_REQUIREMENTS.md
-    │   │   ├── AGENTS.md を参照（テスト手順）
+    │   │   ├── CLAUDE.md を参照（テスト手順）
     │   │   ├── BLOG_REQUIREMENTS.md を参照（ブログ機能のテスト要件）
     │   │   ├── JWT_AUTH_REQUIREMENTS.md を参照（JWT認証のテスト要件）
     │   │   ├── development/BUN_RUNTIME.md を参照（Bun test設定）
@@ -323,11 +323,11 @@ docs/
     │
     ├── architecture/
     │   ├── ARCHITECTURE.md
-    │   │   ├── AGENTS.md を参照（技術スタック）
+    │   │   ├── CLAUDE.md を参照（技術スタック）
     │   │   └── 技術検証結果を含む
     │   │
     │   ├── DATABASE_DESIGN.md
-    │   │   └── AGENTS.md を参照（Prisma設定）
+    │   │   └── CLAUDE.md を参照（Prisma設定）
     │   │
     │   └── PROJECT_STRUCTURE.md
     │       └── プロジェクト構造の詳細
@@ -338,7 +338,7 @@ docs/
     │   │   └── security/SECURITY.md を参照（認証・認可）
     │   │
     │   ├── BEST_PRACTICES.md
-    │   │   ├── AGENTS.md を参照（技術スタック）
+    │   │   ├── CLAUDE.md を参照（技術スタック）
     │   │   └── 最新の公式推奨に基づく実装ガイドライン
     │   │
     │   ├── CACHING_STRATEGY.md
@@ -346,19 +346,19 @@ docs/
     │   │   └── architecture/ARCHITECTURE.md を参照（アーキテクチャ）
     │   │
     │   ├── BUN_RUNTIME.md
-    │   │   └── AGENTS.md を参照（Bun設定）
+    │   │   └── CLAUDE.md を参照（Bun設定）
     │   │
     │   ├── PRISMA_7.md
     │   │   └── Prisma 7のインポート方法と移行手順
     │   │
     │   └── TECH_STACK_VERSIONS.md
-    │       └── AGENTS.md を参照（技術スタックバージョン）
+    │       └── CLAUDE.md を参照（技術スタックバージョン）
     │
     ├── deployment/
     │   ├── DEPLOYMENT.md
     │   │   ├── DOCKER.md を参照（Docker設定）
     │   │   ├── CLOUDFLARE_CDN.md を参照（CDN統合）
-    │   │   └── AGENTS.md を参照（環境変数）
+    │   │   └── CLAUDE.md を参照（環境変数）
     │   │
     │   ├── DOCKER.md
     │   │   └── DEPLOYMENT.md を参照（デプロイ手順）
@@ -369,7 +369,7 @@ docs/
     │
     └── security/
         └── SECURITY.md
-            └── AGENTS.md を参照（セキュリティベストプラクティス）
+            └── CLAUDE.md を参照（セキュリティベストプラクティス）
 ```
 
 ---
@@ -377,8 +377,8 @@ docs/
 ## 重要な注意事項
 
 ### 技術スタック情報
-- **主要な情報源**: [`AGENTS.md`](../AGENTS.md)の「Technical stack」セクション
-- 各ドキュメントでバージョンや制約に触れる場合は`AGENTS.md`と一致させる
+- **主要な情報源**: [`CLAUDE.md`](../CLAUDE.md)の「Technical stack」セクション
+- 各ドキュメントでバージョンや制約に触れる場合は`CLAUDE.md`と一致させる
 
 ### セキュリティ情報
 - **主要な情報源**: [`security/SECURITY.md`](./security/SECURITY.md)
@@ -386,8 +386,8 @@ docs/
 
 ### バージョン情報
 - **詳細なバージョン情報**: [`development/TECH_STACK_VERSIONS.md`](./development/TECH_STACK_VERSIONS.md)を参照
-- すべてのバージョン情報は`AGENTS.md`と一致させる
-- 更新時は`AGENTS.md`を先に更新し、その後関連ドキュメントを更新
+- すべてのバージョン情報は`CLAUDE.md`と一致させる
+- 更新時は`CLAUDE.md`を先に更新し、その後関連ドキュメントを更新
 
 ### 日付形式
 - すべての日付は`yyyy-MM-dd`形式で統一
@@ -398,7 +398,7 @@ docs/
 
 ### 更新時のチェックリスト
 
-- [ ] `AGENTS.md`の技術スタック情報と一致しているか
+- [ ] `CLAUDE.md`の技術スタック情報と一致しているか
 - [ ] 関連ドキュメントへの参照リンクが有効か
 - [ ] コード例が最新のベストプラクティスに準拠しているか
 - [ ] 用語が統一されているか（例: "Server Actions" vs "API Routes"）
@@ -407,7 +407,7 @@ docs/
 ### 新規ドキュメント追加時
 
 1. この`README.md`に追加
-2. `AGENTS.md`の「Additional documentation」セクションに追加
+2. `CLAUDE.md`の「Additional documentation」セクションに追加
 3. 関連ドキュメントへの参照を追加
 4. 適切なサブディレクトリに配置
 
@@ -415,7 +415,7 @@ docs/
 
 ## 参考資料
 
-- [AGENTS.md](../AGENTS.md) - プロジェクト全体の仕様書
+- [CLAUDE.md](../CLAUDE.md) - プロジェクト全体の仕様書
 - [Next.js 16 Documentation](https://nextjs.org/docs)
 - [Prisma Documentation](https://www.prisma.io/docs)
 - [Auth.js Documentation](https://authjs.dev)
@@ -426,6 +426,11 @@ docs/
 
 ## 更新履歴
 
+- **2026-01-10**: 全ドキュメントを実際のプロジェクト構造と照合して更新
+  - 旧AGENTS.md → CLAUDE.md への参照を全ドキュメントで統一
+  - TECH_STACK_VERSIONS.md: package.jsonのバージョンと照合・更新
+  - PROJECT_STRUCTURE.md: 実際のディレクトリ構造に全面改訂
+  - 各ドキュメントの相互参照を修正
 - **2026-01-07**: SEO_REQUIREMENTS.md追加、SEO（検索エンジン最適化）の包括的な要件定義を追加（メタタグ、OGP、構造化データ、サイトマップ、robots.txt、Google Analytics統合）
 - **2026-01-07**: NUQS_REQUIREMENTS.md 全面改訂（実装完了に伴い `createLoader` パターンに統一、ベストプラクティス更新）
 - **2026-01-06**: ドキュメント構造を整理、カテゴリ別サブディレクトリに分類

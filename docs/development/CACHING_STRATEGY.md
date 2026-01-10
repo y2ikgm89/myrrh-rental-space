@@ -1,6 +1,6 @@
 # キャッシング戦略ガイド
 
-> **Note**: このドキュメントには、Next.js 16 App Routerの最新のキャッシングAPIに基づく詳細なキャッシング戦略が記載されています。技術スタックの詳細については、[`AGENTS.md`](../AGENTS.md)を参照してください。
+> **Note**: このドキュメントには、Next.js 16 App Routerの最新のキャッシングAPIに基づく詳細なキャッシング戦略が記載されています。技術スタックの詳細については、[`CLAUDE.md`](../CLAUDE.md)を参照してください。
 
 **最終更新**: 2026-01-08
 
@@ -1303,7 +1303,7 @@ const spaces = await prisma.space.findMany({
 
 ### プロジェクトドキュメント
 
-- [`AGENTS.md`](../AGENTS.md) - プロジェクト全体の仕様書
+- [`CLAUDE.md`](../CLAUDE.md) - プロジェクト全体の仕様書
 - [`BEST_PRACTICES.md`](./BEST_PRACTICES.md) - ベストプラクティスガイド
 - [`SECURITY.md`](./SECURITY.md) - セキュリティポリシー
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md) - システムアーキテクチャ

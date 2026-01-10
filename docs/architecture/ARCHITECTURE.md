@@ -1,6 +1,6 @@
 # システムアーキテクチャ
 
-> **Note**: このドキュメントにはシステム全体のアーキテクチャ設計と技術検証結果が記載されています。技術スタックの詳細については、[`AGENTS.md`](../AGENTS.md)を参照してください。
+> **Note**: このドキュメントにはシステム全体のアーキテクチャ設計と技術検証結果が記載されています。技術スタックの詳細については、[`CLAUDE.md`](../CLAUDE.md)を参照してください。
 
 ## 実装方針
 
@@ -178,7 +178,7 @@ graph TB
 
 ## 技術スタック
 
-> **Note**: 技術スタックの詳細なバージョン情報とセットアップ手順については、[`AGENTS.md`](../AGENTS.md)の「Technical stack」セクションを参照してください。
+> **Note**: 技術スタックの詳細なバージョン情報とセットアップ手順については、[`CLAUDE.md`](../CLAUDE.md)の「Technical stack」セクションを参照してください。
 
 ### フロントエンド
 
@@ -818,7 +818,7 @@ Server Actionsでのエラーハンドリングを統一し、エラーレスポ
 
 ### プロジェクトドキュメント
 
-- [`AGENTS.md`](../AGENTS.md) - プロジェクト全体の仕様書（技術スタック詳細）
+- [`CLAUDE.md`](../CLAUDE.md) - プロジェクト全体の仕様書（技術スタック詳細）
 - [`FEATURE_REQUIREMENTS.md`](./FEATURE_REQUIREMENTS.md) - 機能要件
 - [`DATABASE_DESIGN.md`](./DATABASE_DESIGN.md) - データベース設計
 - [`API.md`](./API.md) - API仕様
@@ -845,6 +845,7 @@ Server Actionsでのエラーハンドリングを統一し、エラーレスポ
 
 ## 更新履歴
 
+- **2026-01-10**: 旧AGENTS.md → CLAUDE.md への参照変更
 - **2026-01-08**: Context7で取得した最新情報に基づき、以下の更新を実施
   - 最新キャッシングAPIの反映（`revalidateTag`の`profile`パラメータ、`updateTag`、`refresh`の詳細な説明）
   - Prisma 7のdriver adaptersの説明を追加（必須性、`@prisma/adapter-pg`の使用、接続プーリング設定）

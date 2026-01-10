@@ -1,6 +1,6 @@
 # 型安全・型定義要件定義
 
-> **Note**: このドキュメントには、レンタルスペース管理システムにおける型安全・型定義の包括的な要件定義が記載されています。技術スタックの詳細については、`[AGENTS.md](../AGENTS.md)`を参照してください。実装ベストプラクティスについては、`[BEST_PRACTICES.md](../development/BEST_PRACTICES.md)`を参照してください。
+> **Note**: このドキュメントには、レンタルスペース管理システムにおける型安全・型定義の包括的な要件定義が記載されています。技術スタックの詳細については、`[CLAUDE.md](../CLAUDE.md)`を参照してください。実装ベストプラクティスについては、`[BEST_PRACTICES.md](../development/BEST_PRACTICES.md)`を参照してください。
 
 **最終更新**: 2026-01-08
 
@@ -1232,7 +1232,7 @@ export function SpaceCard({ space, onSelect, className }: SpaceCardProps) {
 
 ### 17.1 プロジェクトドキュメント
 
-- `[AGENTS.md](../AGENTS.md)` - プロジェクト全体の仕様書
+- `[CLAUDE.md](../CLAUDE.md)` - プロジェクト全体の仕様書
 - `[ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md](./ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md)` - 型安全性の向上要件（REQ-TYPE-001, REQ-TYPE-002, REQ-TYPE-003）
 - `[BEST_PRACTICES.md](../development/BEST_PRACTICES.md)` - 型安全性のベストプラクティス
 - `[API.md](../development/API.md)` - Server ActionsとRoute Handlersの型定義

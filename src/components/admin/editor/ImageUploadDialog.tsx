@@ -177,9 +177,10 @@ export function ImageUploadDialog({ editor, open, onOpenChange }: ImageUploadDia
               />
             </div>
 
-            {/* URLプレビュー */}
+            {/* URLプレビュー - ユーザー入力の任意URLのため<img>を使用 */}
             {url && (
               <div className="border rounded-md p-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={url}
                   alt="プレビュー"
@@ -210,8 +211,10 @@ export function ImageUploadDialog({ editor, open, onOpenChange }: ImageUploadDia
                 className="hidden"
               />
 
+              {/* FileReaderのdata URLはNext.js Image非対応のため<img>を使用 */}
               {preview ? (
                 <div className="space-y-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={preview}
                     alt="プレビュー"

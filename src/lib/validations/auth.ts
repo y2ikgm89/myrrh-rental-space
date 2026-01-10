@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { Role } from '@/generated/prisma/client/client'
+import { Role } from '@/generated/prisma/client/enums'
 
 /**
  * 認証用入力スキーマ（クライアント/サーバー共通）

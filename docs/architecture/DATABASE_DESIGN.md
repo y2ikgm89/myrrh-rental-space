@@ -1,6 +1,6 @@
 # データベース設計
 
-> **Note**: このドキュメントには詳細なデータベーススキーマが記載されています。概要については [AGENTS.md](../AGENTS.md) を参照してください。
+> **Note**: このドキュメントには詳細なデータベーススキーマが記載されています。概要については [CLAUDE.md](../CLAUDE.md) を参照してください。
 
 ---
 
@@ -731,7 +731,7 @@ try {
 
 ### プロジェクトドキュメント
 
-- [`AGENTS.md`](../AGENTS.md) - プロジェクト全体の仕様書（Prisma設定）
+- [`CLAUDE.md`](../CLAUDE.md) - プロジェクト全体の仕様書（Prisma設定）
 - [`API.md`](./API.md) - API仕様
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md) - システムアーキテクチャ
 - [`FEATURE_REQUIREMENTS.md`](./FEATURE_REQUIREMENTS.md) - 機能要件

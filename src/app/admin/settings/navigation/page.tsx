@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import {
@@ -168,9 +168,15 @@ export default function NavigationSettingsPage() {
     },
   })
 
-  useEffect(() => {
-    loadData()
-  }, [])
+  // Navigation form watched values
+  const navIsExternal = useWatch({ control: navForm.control, name: 'isExternal' })
+  const navIsActive = useWatch({ control: navForm.control, name: 'isActive' })
+
+  // Social form watched values
+  const socialPlatform = useWatch({ control: socialForm.control, name: 'platform' })
+  const socialIsActive = useWatch({ control: socialForm.control, name: 'isActive' })
+  const socialShowOnDesktop = useWatch({ control: socialForm.control, name: 'showOnDesktop' })
+  const socialShowOnMobile = useWatch({ control: socialForm.control, name: 'showOnMobile' })
 
   const loadData = async () => {
     const [desktop, mobile, footer, social] = await Promise.all([
@@ -184,6 +190,12 @@ export default function NavigationSettingsPage() {
     setFooterItems(footer)
     setSocialLinks(social)
   }
+
+  useEffect(() => {
+    startTransition(() => {
+      loadData()
+    })
+  }, [])
 
   // Navigation Item Handlers
   const getItemsByType = (type: NavigationType): NavigationItemData[] => {
@@ -637,7 +649,7 @@ export default function NavigationSettingsPage() {
                 <Label htmlFor="nav-isExternal">外部リンク</Label>
                 <Switch
                   id="nav-isExternal"
-                  checked={navForm.watch('isExternal')}
+                  checked={navIsExternal}
                   onCheckedChange={(checked) => navForm.setValue('isExternal', checked)}
                   disabled={isPending}
                 />
@@ -647,7 +659,7 @@ export default function NavigationSettingsPage() {
                 <Label htmlFor="nav-isActive">有効</Label>
                 <Switch
                   id="nav-isActive"
-                  checked={navForm.watch('isActive')}
+                  checked={navIsActive}
                   onCheckedChange={(checked) => navForm.setValue('isActive', checked)}
                   disabled={isPending}
                 />
@@ -683,7 +695,7 @@ export default function NavigationSettingsPage() {
               <div className="space-y-2">
                 <Label htmlFor="social-platform">プラットフォーム</Label>
                 <Select
-                  value={socialForm.watch('platform')}
+                  value={socialPlatform}
                   onValueChange={(value) =>
                     socialForm.setValue('platform', value as SocialPlatform)
                   }
@@ -731,7 +743,7 @@ export default function NavigationSettingsPage() {
                 <Label htmlFor="social-isActive">有効</Label>
                 <Switch
                   id="social-isActive"
-                  checked={socialForm.watch('isActive')}
+                  checked={socialIsActive}
                   onCheckedChange={(checked) => socialForm.setValue('isActive', checked)}
                   disabled={isPending}
                 />
@@ -743,7 +755,7 @@ export default function NavigationSettingsPage() {
                   <Label htmlFor="social-showOnDesktop">デスクトップで表示</Label>
                   <Switch
                     id="social-showOnDesktop"
-                    checked={socialForm.watch('showOnDesktop')}
+                    checked={socialShowOnDesktop}
                     onCheckedChange={(checked) => socialForm.setValue('showOnDesktop', checked)}
                     disabled={isPending}
                   />
@@ -752,7 +764,7 @@ export default function NavigationSettingsPage() {
                   <Label htmlFor="social-showOnMobile">モバイルで表示</Label>
                   <Switch
                     id="social-showOnMobile"
-                    checked={socialForm.watch('showOnMobile')}
+                    checked={socialShowOnMobile}
                     onCheckedChange={(checked) => socialForm.setValue('showOnMobile', checked)}
                     disabled={isPending}
                   />

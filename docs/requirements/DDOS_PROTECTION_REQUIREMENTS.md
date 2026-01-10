@@ -1,6 +1,6 @@
 # DDoS対策要件定義
 
-> **Note**: このドキュメントにはDDoS対策の詳細な要件定義が記載されています。技術スタックの詳細については、[`AGENTS.md`](../AGENTS.md)を参照してください。セキュリティポリシーについては、[`SECURITY.md`](../security/SECURITY.md)を参照してください。Cloudflare CDN統合については、[`CLOUDFLARE_CDN.md`](../deployment/CLOUDFLARE_CDN.md)を参照してください。
+> **Note**: このドキュメントにはDDoS対策の詳細な要件定義が記載されています。技術スタックの詳細については、[`CLAUDE.md`](../CLAUDE.md)を参照してください。セキュリティポリシーについては、[`SECURITY.md`](../security/SECURITY.md)を参照してください。Cloudflare CDN統合については、[`CLOUDFLARE_CDN.md`](../deployment/CLOUDFLARE_CDN.md)を参照してください。
 
 ---
 
@@ -426,7 +426,7 @@ describe('DDoS Protection', () => {
 
 ### プロジェクトドキュメント
 
-- [`AGENTS.md`](../AGENTS.md) - プロジェクト全体の仕様書（技術スタック詳細）
+- [`CLAUDE.md`](../CLAUDE.md) - プロジェクト全体の仕様書（技術スタック詳細）
 - [`SECURITY.md`](../security/SECURITY.md) - セキュリティポリシーとベストプラクティス
 - [`CLOUDFLARE_CDN.md`](../deployment/CLOUDFLARE_CDN.md) - Cloudflare CDN統合ガイド
 - [`ABUSE_PROTECTION_REQUIREMENTS.md`](./ABUSE_PROTECTION_REQUIREMENTS.md) - 荒らし対策要件定義

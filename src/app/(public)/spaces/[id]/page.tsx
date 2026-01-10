@@ -8,10 +8,17 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { Container } from '@/components/site/ui'
+import { ProductJsonLd, BreadcrumbJsonLd } from '@/components/seo/JsonLd'
 import { SpaceInfo } from './_components/SpaceInfo'
 import { ImageGallery } from './_components/ImageGallery'
 import { ReservationCTA } from './_components/ReservationCTA'
+import { parseStringArray } from '@/lib/json-validators'
 import type { ReactElement } from 'react'
+
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://example.com'
+
+// 動的レンダリングを強制（ビルド時のDB接続不要）
+export const dynamic = 'force-dynamic'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -49,19 +56,6 @@ export async function generateMetadata({
   }
 }
 
-/**
- * 静的パラメータ生成（ビルド時の最適化）
- */
-export async function generateStaticParams(): Promise<{ id: string }[]> {
-  const spaces = await prisma.space.findMany({
-    where: { isPublished: true, isActive: true },
-    select: { id: true },
-    take: 100, // 最大100件まで事前生成
-  })
-
-  return spaces.map((space) => ({ id: space.id }))
-}
-
 export default async function SpaceDetailPage({
   params,
 }: PageProps): Promise<ReactElement> {
@@ -80,50 +74,67 @@ export default async function SpaceDetailPage({
   }
 
   // imageUrls を配列として取得
-  const imageUrls = Array.isArray(space.imageUrls)
-    ? (space.imageUrls as string[])
-    : []
+  const imageUrls = parseStringArray(space.imageUrls)
 
   // facilities を配列として取得
-  const facilities = Array.isArray(space.facilities)
-    ? (space.facilities as string[])
-    : []
+  const facilities = parseStringArray(space.facilities)
 
   return (
-    <section className="py-16 bg-background min-h-screen">
-      <Container>
-        {/* 画像ギャラリー */}
-        <ImageGallery
-          mainImageUrl={space.mainImageUrl}
-          imageUrls={imageUrls}
-          spaceName={space.name}
-        />
+    <>
+      {/* JSON-LD構造化データ */}
+      <ProductJsonLd
+        name={space.name}
+        description={space.description}
+        image={space.mainImageUrl}
+        url={`${BASE_URL}/spaces/${space.id}`}
+        offers={{
+          price: Number(space.hourlyPrice),
+          priceCurrency: 'JPY',
+        }}
+      />
+      <BreadcrumbJsonLd
+        items={[
+          { name: 'ホーム', url: '/' },
+          { name: 'スペース一覧', url: '/spaces' },
+          { name: space.name, url: `/spaces/${space.id}` },
+        ]}
+      />
 
-        <div className="mt-8 grid gap-8 lg:grid-cols-3">
-          {/* スペース情報（2カラム） */}
-          <div className="lg:col-span-2">
-            <SpaceInfo
-              name={space.name}
-              description={space.description}
-              address={space.address}
-              access={space.access}
-              capacity={space.capacity}
-              area={space.area ? Number(space.area) : null}
-              facilities={facilities}
-            />
-          </div>
+      <section className="py-16 bg-background min-h-screen">
+        <Container>
+          {/* 画像ギャラリー */}
+          <ImageGallery
+            mainImageUrl={space.mainImageUrl}
+            imageUrls={imageUrls}
+            spaceName={space.name}
+          />
 
-          {/* 予約CTA（1カラム） */}
-          <div className="lg:col-span-1">
-            <ReservationCTA
-              spaceId={space.id}
-              spaceName={space.name}
-              hourlyPrice={Number(space.hourlyPrice)}
-              dailyPrice={space.dailyPrice ? Number(space.dailyPrice) : null}
-            />
+          <div className="mt-8 grid gap-8 lg:grid-cols-3">
+            {/* スペース情報（2カラム） */}
+            <div className="lg:col-span-2">
+              <SpaceInfo
+                name={space.name}
+                description={space.description}
+                address={space.address}
+                access={space.access}
+                capacity={space.capacity}
+                area={space.area ? Number(space.area) : null}
+                facilities={facilities}
+              />
+            </div>
+
+            {/* 予約CTA（1カラム） */}
+            <div className="lg:col-span-1">
+              <ReservationCTA
+                spaceId={space.id}
+                spaceName={space.name}
+                hourlyPrice={Number(space.hourlyPrice)}
+                dailyPrice={space.dailyPrice ? Number(space.dailyPrice) : null}
+              />
+            </div>
           </div>
-        </div>
-      </Container>
-    </section>
+        </Container>
+      </section>
+    </>
   )
 }

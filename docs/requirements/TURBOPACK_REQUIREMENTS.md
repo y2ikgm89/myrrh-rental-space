@@ -1,6 +1,6 @@
 # Turbopack要件定義
 
-> **Note**: このドキュメントにはNext.js 16でのTurbopack採用に関する要件定義が記載されています。技術スタックの詳細については、[`AGENTS.md`](../AGENTS.md)を参照してください。技術検証結果については、[`ARCHITECTURE.md`](./ARCHITECTURE.md)の「技術検証結果」セクションを参照してください。
+> **Note**: このドキュメントにはNext.js 16でのTurbopack採用に関する要件定義が記載されています。技術スタックの詳細については、[`CLAUDE.md`](../CLAUDE.md)を参照してください。技術検証結果については、[`ARCHITECTURE.md`](./ARCHITECTURE.md)の「技術検証結果」セクションを参照してください。
 
 ---
 

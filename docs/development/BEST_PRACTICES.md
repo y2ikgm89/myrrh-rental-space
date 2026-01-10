@@ -1,6 +1,6 @@
 # ベストプラクティスガイド
 
-> **Note**: このドキュメントには、Next.js 16、React 19、Prisma 7、Auth.js 5の最新の公式推奨に基づくベストプラクティスが記載されています。技術スタックの詳細については、[`AGENTS.md`](../AGENTS.md)を参照してください。
+> **Note**: このドキュメントには、Next.js 16、React 19、Prisma 7、Auth.js 5の最新の公式推奨に基づくベストプラクティスが記載されています。技術スタックの詳細については、[`CLAUDE.md`](../CLAUDE.md)を参照してください。
 
 **最終更新**: 2026-01-08
 
@@ -2186,7 +2186,7 @@ npx shadcn@latest add table
 
 ### プロジェクトドキュメント
 
-- [`AGENTS.md`](../AGENTS.md) - プロジェクト全体の仕様書
+- [`CLAUDE.md`](../CLAUDE.md) - プロジェクト全体の仕様書
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md) - システムアーキテクチャ
 - [`CACHING_STRATEGY.md`](./CACHING_STRATEGY.md) - キャッシング戦略
 - [`API.md`](./API.md) - API仕様

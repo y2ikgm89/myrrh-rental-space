@@ -1,6 +1,6 @@
 # Cloudflare Turnstile 要件定義
 
-> **Note**: このドキュメントにはCloudflare Turnstileの詳細な要件定義が記載されています。技術スタックの詳細については、[`AGENTS.md`](../AGENTS.md)を参照してください。セキュリティポリシーについては、[`SECURITY.md`](./SECURITY.md)を参照してください。API仕様については、[`API.md`](./API.md)を参照してください。
+> **Note**: このドキュメントにはCloudflare Turnstileの詳細な要件定義が記載されています。技術スタックの詳細については、[`CLAUDE.md`](../CLAUDE.md)を参照してください。セキュリティポリシーについては、[`SECURITY.md`](./SECURITY.md)を参照してください。API仕様については、[`API.md`](./API.md)を参照してください。
 
 ---
 
@@ -939,7 +939,7 @@ export async function verifyTurnstileToken(token: string) {
 
 ### プロジェクトドキュメント
 
-- [`AGENTS.md`](../AGENTS.md) - プロジェクト全体の仕様書（技術スタック詳細）
+- [`CLAUDE.md`](../CLAUDE.md) - プロジェクト全体の仕様書（技術スタック詳細）
 - [`SECURITY.md`](./SECURITY.md) - セキュリティポリシーとベストプラクティス
 - [`API.md`](./API.md) - API仕様（Server Actions、Route Handlers）
 - [`BEST_PRACTICES.md`](./BEST_PRACTICES.md) - ベストプラクティスガイド

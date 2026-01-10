@@ -1,6 +1,6 @@
 # テスト要件定義
 
-> **Note**: このドキュメントには、レンタルスペース管理システムの包括的なテスト要件定義が記載されています。技術スタックの詳細については、[`AGENTS.md`](../AGENTS.md)を参照してください。
+> **Note**: このドキュメントには、レンタルスペース管理システムの包括的なテスト要件定義が記載されています。技術スタックの詳細については、[`CLAUDE.md`](../CLAUDE.md)を参照してください。
 
 ## 実装方針
 
@@ -1428,7 +1428,7 @@ describe('createReservation', () => {
 
 ### プロジェクトドキュメント
 
-- [`AGENTS.md`](../AGENTS.md) - プロジェクト全体の仕様書（テスト手順）
+- [`CLAUDE.md`](../CLAUDE.md) - プロジェクト全体の仕様書（テスト手順）
 - [`BLOG_REQUIREMENTS.md`](./BLOG_REQUIREMENTS.md) - ブログ機能のテスト要件（このドキュメントを参照）
 - [`JWT_AUTH_REQUIREMENTS.md`](./JWT_AUTH_REQUIREMENTS.md) - JWT認証のテスト要件（このドキュメントを参照）
 - [`BUN_RUNTIME.md`](./BUN_RUNTIME.md) - Bunランタイムガイド（テストランナー、このドキュメントを参照）

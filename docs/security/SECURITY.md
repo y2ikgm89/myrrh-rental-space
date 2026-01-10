@@ -1,6 +1,6 @@
 # セキュリティポリシーとベストプラクティス
 
-> **Note**: このドキュメントにはセキュリティポリシーとベストプラクティスが記載されています。技術スタックの詳細については、[`AGENTS.md`](../AGENTS.md)を参照してください。
+> **Note**: このドキュメントにはセキュリティポリシーとベストプラクティスが記載されています。技術スタックの詳細については、[`CLAUDE.md`](../CLAUDE.md)を参照してください。
 
 ## 実装方針
 
@@ -1037,7 +1037,7 @@ export function logSecurityEvent(
 
 ### プロジェクトドキュメント
 
-- [`AGENTS.md`](../AGENTS.md) - プロジェクト全体の仕様書
+- [`CLAUDE.md`](../CLAUDE.md) - プロジェクト全体の仕様書
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md) - システムアーキテクチャ
 - [`ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md`](./ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md) - アーキテクチャ改善要件定義
 - [`BEST_PRACTICES.md`](./BEST_PRACTICES.md) - ベストプラクティスガイド
@@ -1051,7 +1051,7 @@ export function logSecurityEvent(
 
 ### プロジェクトドキュメント
 
-- [`AGENTS.md`](../AGENTS.md) - プロジェクト全体の仕様書（セキュリティベストプラクティス）
+- [`CLAUDE.md`](../CLAUDE.md) - プロジェクト全体の仕様書（セキュリティベストプラクティス）
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md) - システムアーキテクチャ（セキュリティアーキテクチャ）
 - [`ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md`](./ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md) - アーキテクチャ改善要件定義（セキュリティ強化）
 - [`API.md`](./API.md) - API仕様（認証・認可）

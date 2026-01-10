@@ -6,7 +6,7 @@
  */
 
 import { PrismaPg } from '@prisma/adapter-pg'
-import { PrismaClient, Prisma } from '@/generated/prisma/client/client'
+import { PrismaClient } from '@/generated/prisma/client/client'
 import { Pool } from 'pg'
 
 export { Role, Prisma } from '@/generated/prisma/client/client'

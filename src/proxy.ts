@@ -30,6 +30,13 @@ export const proxy = auth(
   const { pathname, searchParams } = req.nextUrl
   const session = req.auth
 
+  // ヘッダーにパス名を設定（Server Componentで使用）
+  const createResponse = () => {
+    const response = NextResponse.next()
+    response.headers.set('x-pathname', pathname)
+    return response
+  }
+
   // 管理画面の保護
   if (pathname.startsWith('/admin')) {
     // ログインページへのアクセス制限（シークレットトークンまたはワンタイムトークン必須）
@@ -42,7 +49,7 @@ export const proxy = auth(
 
       // 環境変数のトークンと一致するかチェック
       if (token === ADMIN_LOGIN_TOKEN) {
-        return NextResponse.next()
+        return createResponse()
       }
 
       const parsedToken = loginTokenSchema.safeParse(token)
@@ -58,7 +65,7 @@ export const proxy = auth(
 
         // トークンが存在し、有効期限が切れていない場合
         if (loginToken && loginToken.expiresAt > new Date()) {
-          return NextResponse.next()
+          return createResponse()
         }
       } catch (error: unknown) {
         // データベースエラーの場合は環境変数のトークンでフォールバック
@@ -88,7 +95,7 @@ export const proxy = auth(
     if (token && token !== ADMIN_LOGIN_TOKEN) {
       const parsedToken = loginTokenSchema.safeParse(token)
       if (!parsedToken.success) {
-        return NextResponse.next()
+        return createResponse()
       }
       try {
         const loginToken = await prisma.loginToken.findUnique({
@@ -117,7 +124,7 @@ export const proxy = auth(
     }
   }
 
-  return NextResponse.next()
+  return createResponse()
   }
 )
 

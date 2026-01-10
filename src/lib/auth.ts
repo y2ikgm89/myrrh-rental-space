@@ -9,8 +9,9 @@
 import NextAuth from 'next-auth'
 import { PrismaAdapter } from '@auth/prisma-adapter'
 import Credentials from 'next-auth/providers/credentials'
+import bcrypt from 'bcrypt'
 import { prisma } from './prisma'
-import { Role } from '@/generated/prisma/client/client'
+import { Role } from '@/generated/prisma/client/enums'
 import {
   authTokenSchema,
   authUserSchema,
@@ -63,12 +64,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null
         }
 
-        // TODO: パスワードハッシュの検証を実装
-        // 現時点では開発用に簡易的な検証
-        // 本番環境では bcrypt などを使用してハッシュ化されたパスワードと比較
-        // const isValid = await bcrypt.compare(password, user.password)
-        // if (!isValid) return null
-        void password
+        // パスワードが設定されていない場合は認証失敗
+        if (!user.password) {
+          return null
+        }
+
+        // bcryptでパスワードを検証
+        const isValid = await bcrypt.compare(password, user.password)
+        if (!isValid) {
+          return null
+        }
 
         return {
           id: user.id,

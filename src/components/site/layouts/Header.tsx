@@ -15,18 +15,18 @@ type NavItem = {
   url: string
 }
 
-async function getNavigationItems(): Promise<NavItem[]> {
+async function getDesktopNavigationItems(): Promise<NavItem[]> {
   try {
     const items = await prisma.navigationItem.findMany({
       where: {
-        type: 'HEADER',
+        type: 'HEADER_DESKTOP',
         isActive: true,
       },
       orderBy: { order: 'asc' },
     })
     return items
   } catch {
-    // DB未接続時はデフォルトナビゲーションを返す
+    // DB未接続時は空配列を返す
     return []
   }
 }
@@ -42,7 +42,7 @@ async function getSiteSettings(): Promise<Settings | null> {
 
 export async function Header(): Promise<ReactElement> {
   const [navItems, settings] = await Promise.all([
-    getNavigationItems(),
+    getDesktopNavigationItems(),
     getSiteSettings(),
   ])
 

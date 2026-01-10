@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Write",
+      "Edit",
+      "Glob",
+      "Grep",
+      "LS",
+      "WebSearch",
+      "WebFetch",
+      "Task",
+      "TodoWrite",
+      "NotebookEdit",
+      "Bash",
+      "mcp__*",
+      "mcp__context7__resolve-library-id",
+      "mcp__plugin_serena_serena__get_current_config",
+      "mcp__plugin_serena_serena__activate_project",
+      "mcp__plugin_serena_serena__check_onboarding_performed",
+      "mcp__plugin_serena_serena__read_file",
+      "mcp__plugin_serena_serena__list_dir",
+      "mcp__plugin_serena_serena__initial_instructions",
+      "mcp__plugin_serena_serena__find_file",
+      "mcp__plugin_serena_serena__think_about_collected_information",
+      "mcp__plugin_serena_serena__think_about_whether_you_are_done"
+    ],
+    "deny": [
+      "Bash(rm:*)",
+      "Bash(sudo:*)",
+      "Bash(chmod:*)",
+      "Bash(format:*)",
+      "Bash(del:*)",
+      "Bash(rd:*)",
+      "Bash(rmdir:*)",
+      "Read(./.env)",
+      "Read(./.env.*)"
+    ]
+  },
+  "enableAllProjectMcpServers": true
+}

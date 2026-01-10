@@ -1,6 +1,6 @@
 # メール送信機能 要件定義
 
-> **Note**: このドキュメントにはメール送信機能の詳細な要件定義が記載されています。技術スタックの詳細については、[`AGENTS.md`](../AGENTS.md)を参照してください。API仕様については、[`API.md`](../development/API.md)を参照してください。機能要件の概要については、[`FEATURE_REQUIREMENTS.md`](./FEATURE_REQUIREMENTS.md)を参照してください。
+> **Note**: このドキュメントにはメール送信機能の詳細な要件定義が記載されています。技術スタックの詳細については、[`CLAUDE.md`](../CLAUDE.md)を参照してください。API仕様については、[`API.md`](../development/API.md)を参照してください。機能要件の概要については、[`FEATURE_REQUIREMENTS.md`](./FEATURE_REQUIREMENTS.md)を参照してください。
 
 ---
 
@@ -713,7 +713,7 @@ if (templateId) {
 
 ### プロジェクトドキュメント
 
-- [`AGENTS.md`](../AGENTS.md) - プロジェクト全体の仕様書
+- [`CLAUDE.md`](../CLAUDE.md) - プロジェクト全体の仕様書
 - [`FEATURE_REQUIREMENTS.md`](./FEATURE_REQUIREMENTS.md) - 機能要件
 - [`API.md`](../development/API.md) - API仕様
 - [`ARCHITECTURE.md`](../architecture/ARCHITECTURE.md) - システムアーキテクチャ

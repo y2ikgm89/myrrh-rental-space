@@ -1,0 +1,64 @@
+# ==============================================
+# Myrrh Rental Space - Docker Ignore
+# ==============================================
+
+# Dependencies
+node_modules
+
+# Build outputs
+.next
+out
+build
+dist
+
+# Development files
+.env
+.env.local
+.env.*.local
+*.log
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Documentation
+README.md
+CLAUDE.md
+AGENTS.md
+Plans.md
+docs/
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.docker
+
+# Testing
+coverage
+.nyc_output
+*.test.ts
+*.spec.ts
+__tests__
+__mocks__
+
+# CI/CD
+.github
+.gitlab-ci.yml
+cloudbuild.yaml
+
+# Misc
+.DS_Store
+Thumbs.db
+*.md
+!package.json
+!prisma/**
+
+# Local development
+.claude/
+nul
