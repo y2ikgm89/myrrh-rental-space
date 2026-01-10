@@ -3,7 +3,12 @@
 import { prisma, Prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
+import { type ActionResult, createSuccess, createFailure } from '@/types'
 import { encrypt, safeDecrypt } from '@/lib/crypto'
+import {
+  parseBusinessHours,
+  parseStringArrayOrNull,
+} from '@/lib/json-validators'
 import {
   maskSecretKey,
   testStripeConnection as testStripeConnectionLib,
@@ -65,7 +70,7 @@ export type SettingsData = {
   regularHolidays: string[] | null
   specialHolidays: string[] | null
   holidayNotice: string | null
-  defaultBusinessHours: unknown | null
+  defaultBusinessHours: BusinessHours | null
   // Email Settings
   senderEmail: string | null
   senderName: string | null
@@ -263,12 +268,13 @@ export async function getSettings(): Promise<SettingsData> {
     ? maskSecretKey(safeDecrypt(settings.stripeWebhookSecret) || '****')
     : null
 
-  // Prisma JsonValueを適切な型にキャスト + Stripeキーはマスク済みで返す
+  // Prisma JsonValueをZodバリデーション関数で安全に変換 + Stripeキーはマスク済みで返す
   return {
     ...settings,
-    businessHours: settings.businessHours as BusinessHours | null,
-    regularHolidays: settings.regularHolidays as string[] | null,
-    specialHolidays: settings.specialHolidays as string[] | null,
+    businessHours: parseBusinessHours(settings.businessHours),
+    regularHolidays: parseStringArrayOrNull(settings.regularHolidays),
+    specialHolidays: parseStringArrayOrNull(settings.specialHolidays),
+    defaultBusinessHours: parseBusinessHours(settings.defaultBusinessHours),
     stripeSecretKeyMasked,
     stripeWebhookSecretMasked,
   }
@@ -279,11 +285,11 @@ export async function getSettings(): Promise<SettingsData> {
  */
 export async function updateBasicInfo(
   data: BasicInfoInput
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ActionResult<void>> {
   try {
     const parsed = basicInfoSchema.safeParse(data)
     if (!parsed.success) {
-      return { success: false, error: parsed.error.issues[0].message }
+      return createFailure(parsed.error.issues[0].message)
     }
 
     await prisma.settings.upsert({
@@ -295,10 +301,10 @@ export async function updateBasicInfo(
     revalidatePath('/admin/settings')
     revalidatePath('/')
 
-    return { success: true }
+    return createSuccess('基本情報を更新しました')
   } catch (error) {
     console.error('Failed to update basic info:', error)
-    return { success: false, error: '基本情報の更新に失敗しました' }
+    return createFailure('基本情報の更新に失敗しました')
   }
 }
 
@@ -307,11 +313,11 @@ export async function updateBasicInfo(
  */
 export async function updateBusinessInfo(
   data: BusinessInfoInput
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ActionResult<void>> {
   try {
     const parsed = businessInfoSchema.safeParse(data)
     if (!parsed.success) {
-      return { success: false, error: parsed.error.issues[0].message }
+      return createFailure(parsed.error.issues[0].message)
     }
 
     const updateData = {
@@ -330,10 +336,10 @@ export async function updateBusinessInfo(
     revalidatePath('/admin/settings')
     revalidatePath('/')
 
-    return { success: true }
+    return createSuccess('事業者情報を更新しました')
   } catch (error) {
     console.error('Failed to update business info:', error)
-    return { success: false, error: '事業者情報の更新に失敗しました' }
+    return createFailure('事業者情報の更新に失敗しました')
   }
 }
 
@@ -342,11 +348,11 @@ export async function updateBusinessInfo(
  */
 export async function updateBusinessHoursSettings(
   data: BusinessHoursSettingsInput
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ActionResult<void>> {
   try {
     const parsed = businessHoursSettingsSchema.safeParse(data)
     if (!parsed.success) {
-      return { success: false, error: parsed.error.issues[0].message }
+      return createFailure(parsed.error.issues[0].message)
     }
 
     // Prisma JSON null の適切な変換
@@ -367,10 +373,10 @@ export async function updateBusinessHoursSettings(
     revalidatePath('/')
     revalidatePath('/reservation')
 
-    return { success: true }
+    return createSuccess('営業時間設定を更新しました')
   } catch (error) {
     console.error('Failed to update business hours settings:', error)
-    return { success: false, error: '営業時間設定の更新に失敗しました' }
+    return createFailure('営業時間設定の更新に失敗しました')
   }
 }
 
@@ -379,11 +385,11 @@ export async function updateBusinessHoursSettings(
  */
 export async function updateContactInfo(
   data: ContactInfoInput
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ActionResult<void>> {
   try {
     const parsed = contactInfoSchema.safeParse(data)
     if (!parsed.success) {
-      return { success: false, error: parsed.error.issues[0].message }
+      return createFailure(parsed.error.issues[0].message)
     }
 
     const updateData = {
@@ -400,10 +406,10 @@ export async function updateContactInfo(
     revalidatePath('/admin/settings')
     revalidatePath('/')
 
-    return { success: true }
+    return createSuccess('連絡先情報を更新しました')
   } catch (error) {
     console.error('Failed to update contact info:', error)
-    return { success: false, error: '連絡先情報の更新に失敗しました' }
+    return createFailure('連絡先情報の更新に失敗しました')
   }
 }
 
@@ -412,11 +418,11 @@ export async function updateContactInfo(
  */
 export async function updateSeoSettings(
   data: SeoSettingsInput
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ActionResult<void>> {
   try {
     const parsed = seoSettingsSchema.safeParse(data)
     if (!parsed.success) {
-      return { success: false, error: parsed.error.issues[0].message }
+      return createFailure(parsed.error.issues[0].message)
     }
 
     await prisma.settings.upsert({
@@ -428,10 +434,10 @@ export async function updateSeoSettings(
     revalidatePath('/admin/settings')
     revalidatePath('/')
 
-    return { success: true }
+    return createSuccess('SEO設定を更新しました')
   } catch (error) {
     console.error('Failed to update SEO settings:', error)
-    return { success: false, error: 'SEO設定の更新に失敗しました' }
+    return createFailure('SEO設定の更新に失敗しました')
   }
 }
 
@@ -440,11 +446,11 @@ export async function updateSeoSettings(
  */
 export async function updateEmailSettings(
   data: EmailSettingsInput
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ActionResult<void>> {
   try {
     const parsed = emailSettingsSchema.safeParse(data)
     if (!parsed.success) {
-      return { success: false, error: parsed.error.issues[0].message }
+      return createFailure(parsed.error.issues[0].message)
     }
 
     const updateData = {
@@ -461,10 +467,10 @@ export async function updateEmailSettings(
 
     revalidatePath('/admin/settings')
 
-    return { success: true }
+    return createSuccess('メール設定を更新しました')
   } catch (error) {
     console.error('Failed to update email settings:', error)
-    return { success: false, error: 'メール設定の更新に失敗しました' }
+    return createFailure('メール設定の更新に失敗しました')
   }
 }
 
@@ -473,11 +479,11 @@ export async function updateEmailSettings(
  */
 export async function updateReservationSettings(
   data: ReservationSettingsInput
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ActionResult<void>> {
   try {
     const parsed = reservationSettingsSchema.safeParse(data)
     if (!parsed.success) {
-      return { success: false, error: parsed.error.issues[0].message }
+      return createFailure(parsed.error.issues[0].message)
     }
 
     await prisma.settings.upsert({
@@ -488,10 +494,10 @@ export async function updateReservationSettings(
 
     revalidatePath('/admin/settings')
 
-    return { success: true }
+    return createSuccess('予約設定を更新しました')
   } catch (error) {
     console.error('Failed to update reservation settings:', error)
-    return { success: false, error: '予約設定の更新に失敗しました' }
+    return createFailure('予約設定の更新に失敗しました')
   }
 }
 
@@ -500,11 +506,11 @@ export async function updateReservationSettings(
  */
 export async function updateNotificationSettings(
   data: NotificationSettingsInput
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ActionResult<void>> {
   try {
     const parsed = notificationSettingsSchema.safeParse(data)
     if (!parsed.success) {
-      return { success: false, error: parsed.error.issues[0].message }
+      return createFailure(parsed.error.issues[0].message)
     }
 
     await prisma.settings.upsert({
@@ -515,10 +521,10 @@ export async function updateNotificationSettings(
 
     revalidatePath('/admin/settings')
 
-    return { success: true }
+    return createSuccess('通知設定を更新しました')
   } catch (error) {
     console.error('Failed to update notification settings:', error)
-    return { success: false, error: '通知設定の更新に失敗しました' }
+    return createFailure('通知設定の更新に失敗しました')
   }
 }
 
@@ -527,11 +533,11 @@ export async function updateNotificationSettings(
  */
 export async function updateMaintenanceSettings(
   data: MaintenanceSettingsInput
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ActionResult<void>> {
   try {
     const parsed = maintenanceSettingsSchema.safeParse(data)
     if (!parsed.success) {
-      return { success: false, error: parsed.error.issues[0].message }
+      return createFailure(parsed.error.issues[0].message)
     }
 
     await prisma.settings.upsert({
@@ -543,10 +549,10 @@ export async function updateMaintenanceSettings(
     revalidatePath('/admin/settings')
     revalidatePath('/')
 
-    return { success: true }
+    return createSuccess('メンテナンス設定を更新しました')
   } catch (error) {
     console.error('Failed to update maintenance settings:', error)
-    return { success: false, error: 'メンテナンス設定の更新に失敗しました' }
+    return createFailure('メンテナンス設定の更新に失敗しました')
   }
 }
 
@@ -561,11 +567,11 @@ export { type StripeSettingsInput }
  */
 export async function updateStripeSettings(
   data: StripeSettingsInput
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ActionResult<void>> {
   try {
     const parsed = stripeSettingsSchema.safeParse(data)
     if (!parsed.success) {
-      return { success: false, error: parsed.error.issues[0].message }
+      return createFailure(parsed.error.issues[0].message)
     }
 
     // シークレットキーを暗号化
@@ -581,10 +587,9 @@ export async function updateStripeSettings(
       try {
         updateData.stripeSecretKey = encrypt(parsed.data.stripeSecretKey)
       } catch {
-        return {
-          success: false,
-          error: 'シークレットキーの暗号化に失敗しました。ENCRYPTION_KEYが設定されていることを確認してください。',
-        }
+        return createFailure(
+          'シークレットキーの暗号化に失敗しました。ENCRYPTION_KEYが設定されていることを確認してください。'
+        )
       }
     }
 
@@ -593,10 +598,9 @@ export async function updateStripeSettings(
       try {
         updateData.stripeWebhookSecret = encrypt(parsed.data.stripeWebhookSecret)
       } catch {
-        return {
-          success: false,
-          error: 'Webhookシークレットの暗号化に失敗しました。ENCRYPTION_KEYが設定されていることを確認してください。',
-        }
+        return createFailure(
+          'Webhookシークレットの暗号化に失敗しました。ENCRYPTION_KEYが設定されていることを確認してください。'
+        )
       }
     }
 
@@ -608,10 +612,10 @@ export async function updateStripeSettings(
 
     revalidatePath('/admin/settings')
 
-    return { success: true }
+    return createSuccess('Stripe設定を更新しました')
   } catch (error) {
     console.error('Failed to update Stripe settings:', error)
-    return { success: false, error: 'Stripe設定の更新に失敗しました' }
+    return createFailure('Stripe設定の更新に失敗しました')
   }
 }
 
@@ -659,7 +663,7 @@ export async function testStripeConnectionAction(
 /**
  * Stripeキーをクリア
  */
-export async function clearStripeKeys(): Promise<{ success: boolean; error?: string }> {
+export async function clearStripeKeys(): Promise<ActionResult<void>> {
   try {
     await prisma.settings.update({
       where: { id: 'singleton' },
@@ -675,10 +679,10 @@ export async function clearStripeKeys(): Promise<{ success: boolean; error?: str
 
     revalidatePath('/admin/settings')
 
-    return { success: true }
+    return createSuccess('Stripeキーをクリアしました')
   } catch (error) {
     console.error('Failed to clear Stripe keys:', error)
-    return { success: false, error: 'Stripeキーのクリアに失敗しました' }
+    return createFailure('Stripeキーのクリアに失敗しました')
   }
 }
 
@@ -727,11 +731,11 @@ export async function getTermsAgreementSettings(): Promise<{
  */
 export async function updateTermsAgreementSettings(
   data: TermsAgreementSettingsInput
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ActionResult<void>> {
   try {
     const parsed = termsAgreementSettingsSchema.safeParse(data)
     if (!parsed.success) {
-      return { success: false, error: parsed.error.issues[0].message }
+      return createFailure(parsed.error.issues[0].message)
     }
 
     await prisma.settings.upsert({
@@ -743,9 +747,9 @@ export async function updateTermsAgreementSettings(
     revalidatePath('/admin/settings')
     revalidatePath('/reservation')
 
-    return { success: true }
+    return createSuccess('規約同意設定を更新しました')
   } catch (error) {
     console.error('Failed to update terms agreement settings:', error)
-    return { success: false, error: '規約同意設定の更新に失敗しました' }
+    return createFailure('規約同意設定の更新に失敗しました')
   }
 }

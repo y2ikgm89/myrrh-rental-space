@@ -2,6 +2,52 @@
 
 ## 完了した計画
 
+### 005-actionresult-complete-migration.md (2026-01-10)
+
+ActionResult完全移行 - 全Server Actions統一
+
+**実装内容**:
+- BusinessHoursSection.tsx の unsafe cast（`as string[]`、`as BusinessHours`）を`??`に置換
+- 全管理画面Server Actions（11ファイル）をActionResult<T>型に統一
+- `defaultBusinessHours: unknown | null` → `BusinessHours | null`型修正
+- フォームコンポーネント（SpaceForm, BlogForm, NewsForm）の戻り値アクセス修正
+
+**変更ファイル（14ファイル）**:
+- `src/actions/admin/user.ts` - ActionResult移行
+- `src/actions/admin/navigation.ts` - ActionResult移行
+- `src/actions/admin/space.ts` - ActionResult移行
+- `src/actions/admin/reservation.ts` - ActionResult移行
+- `src/actions/admin/blog.ts` - ActionResult移行
+- `src/actions/admin/customer.ts` - ActionResult移行
+- `src/actions/admin/inquiry.ts` - ActionResult移行
+- `src/actions/admin/news.ts` - ActionResult移行
+- `src/actions/admin/settings.ts` - ActionResult移行 + defaultBusinessHours型修正
+- `src/app/admin/settings/_components/BusinessHoursSection.tsx` - unsafe cast排除
+- `src/app/admin/spaces/_components/SpaceForm.tsx` - result.data.id参照
+- `src/app/admin/blog/_components/BlogForm.tsx` - result.data.id参照
+- `src/app/admin/news/_components/NewsForm.tsx` - result.data.id参照
+
+---
+
+### 004-type-safety-improvement.md (2026-01-10)
+
+型安全性向上 - ベストプラクティス準拠
+
+**実装内容**:
+- JSONフィールドのZodバリデーション関数（`as`キャスト排除）
+- Prisma WhereInput型エイリアス（`Record<string, unknown>`排除）
+- 共通Server Actions型（ActionResult<T>）
+
+**新規ファイル**:
+- `src/types/server-actions.ts` - 共通ActionResult型
+- `src/types/prisma.ts` - WhereInput型エイリアス
+- `src/types/index.ts` - 集約re-export
+- `src/lib/json-validators.ts` - Zodバリデーション関数
+
+**変更ファイル**: 11ファイル（actions, pages）
+
+---
+
 ### 003-reservation-terms-agreement.md (2026-01-10)
 
 予約フォーム規約同意機能

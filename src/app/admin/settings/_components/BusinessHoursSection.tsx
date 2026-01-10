@@ -50,9 +50,9 @@ const DEFAULT_BUSINESS_HOURS: BusinessHours = {
 export function BusinessHoursSection({ settings, onUpdate }: BusinessHoursSectionProps) {
   const [isPending, startTransition] = useTransition()
 
-  const initialBusinessHours = (settings.businessHours as BusinessHours) || DEFAULT_BUSINESS_HOURS
-  const initialRegularHolidays = (settings.regularHolidays as string[]) || []
-  const initialSpecialHolidays = (settings.specialHolidays as string[]) || []
+  const initialBusinessHours = settings.businessHours ?? DEFAULT_BUSINESS_HOURS
+  const initialRegularHolidays = settings.regularHolidays ?? []
+  const initialSpecialHolidays = settings.specialHolidays ?? []
 
   // 定休日設定を営業時間に反映（DBに保存されたregularHolidaysから初期化）
   const businessHoursWithHolidays = (() => {
