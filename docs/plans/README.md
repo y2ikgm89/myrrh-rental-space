@@ -2,6 +2,33 @@
 
 ## 完了した計画
 
+### 006-announcement-bar-and-news-editor.md (2026-01-11)
+
+お知らせバー機能 + お知らせ管理tiptap統合
+
+**実装内容**:
+- お知らせ管理にtiptapリッチテキストエディター導入（画像・YouTube対応）
+- AnnouncementBar機能の新規実装（サイト上部バナー）
+- 3種類のタイプ（info/warning/promo）、カスタム色、表示期間指定
+- セキュリティ: Server Actions認証、XSS対策（DOMPurify）
+
+**新規ファイル**:
+- `src/actions/admin/announcement-bar.ts` - Server Actions
+- `src/app/admin/settings/announcement-bar/page.tsx` - 管理画面
+- `src/components/site/AnnouncementBar.tsx` - 表示コンポーネント
+- `src/components/site/AnnouncementBarWrapper.tsx` - Server Component ラッパー
+- `docs/requirements/ANNOUNCEMENT_BAR_REQUIREMENTS.md` - 要件定義
+
+**変更ファイル**:
+- `prisma/schema.prisma` - AnnouncementBarモデル追加
+- `src/app/admin/news/_components/NewsForm.tsx` - tiptap統合
+- `src/app/(public)/news/[id]/_components/NewsContent.tsx` - iframe対応
+- `src/app/(public)/layout.tsx` - AnnouncementBarWrapper追加
+
+**デプロイ時**: `bunx prisma migrate dev --name add_announcement_bar` が必要
+
+---
+
 ### 005-actionresult-complete-migration.md (2026-01-10)
 
 ActionResult完全移行 - 全Server Actions統一

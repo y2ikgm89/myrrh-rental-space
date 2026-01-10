@@ -15,7 +15,6 @@ import {
   Input,
   Label,
   Switch,
-  Textarea,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -24,6 +23,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/admin/ui'
+import { RichTextEditor } from '@/components/admin/editor'
 import { createNews, updateNews, deleteNews } from '@/actions/admin/news'
 import type { NewsData } from '@/actions/admin/news'
 
@@ -65,6 +65,7 @@ export function NewsForm({ news, mode }: NewsFormProps) {
   })
 
   const isPublished = useWatch({ control, name: 'isPublished' })
+  const content = useWatch({ control, name: 'content' })
 
   const onSubmit = (data: FormData) => {
     startTransition(async () => {
@@ -186,13 +187,13 @@ export function NewsForm({ news, mode }: NewsFormProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="content">本文</Label>
-                <Textarea
-                  id="content"
-                  {...register('content')}
+                <Label>本文</Label>
+                <RichTextEditor
+                  content={content}
+                  onChange={(html) => setValue('content', html, { shouldValidate: true })}
                   placeholder="お知らせの本文を入力..."
-                  rows={15}
                   disabled={isPending}
+                  minHeight="400px"
                 />
                 {errors.content && (
                   <p className="text-sm text-destructive">{errors.content.message}</p>

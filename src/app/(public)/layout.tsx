@@ -1,7 +1,7 @@
 /**
  * 公開ページ用レイアウト
  *
- * ヘッダー・フッター・Analytics・Cookie同意バナーを含むレイアウト
+ * ヘッダー・フッター・Analytics・Cookie同意バナー・お知らせバーを含むレイアウト
  * GDPR対応: Cookie同意後のみAnalyticsを有効化
  */
 
@@ -9,6 +9,7 @@ import { Header } from '@/components/layouts/Header'
 import { Footer } from '@/components/layouts/Footer'
 import { AnalyticsProvider } from '@/components/analytics'
 import { CookieConsentBanner } from '@/components/site/CookieConsentBanner'
+import { AnnouncementBarWrapper } from '@/components/site/AnnouncementBarWrapper'
 import { prisma } from '@/lib/prisma'
 import { getAnalyticsConfig } from '@/lib/analytics/config'
 import type { ReactElement, ReactNode } from 'react'
@@ -46,6 +47,7 @@ export default async function PublicLayout({
 
   return (
     <div className="flex min-h-screen flex-col">
+      <AnnouncementBarWrapper />
       <Header />
       <main className="flex-1">{children}</main>
       <Footer />
