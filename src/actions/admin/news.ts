@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { type ActionResult, createSuccess, createFailure, type NewsWhereInput } from '@/types'
+import { determinePublishedAt } from '@/lib/utils'
 
 // =============================================================================
 // Types
@@ -138,7 +139,7 @@ export async function createNews(
         title,
         content,
         isPublished,
-        publishedAt: publishedAt ? new Date(publishedAt) : isPublished ? new Date() : null,
+        publishedAt: determinePublishedAt(publishedAt, isPublished),
       },
     })
 
@@ -181,11 +182,7 @@ export async function updateNews(
         title,
         content,
         isPublished,
-        publishedAt: publishedAt
-          ? new Date(publishedAt)
-          : isPublished && !existingNews.publishedAt
-            ? new Date()
-            : existingNews.publishedAt,
+        publishedAt: determinePublishedAt(publishedAt, isPublished, existingNews.publishedAt),
       },
     })
 

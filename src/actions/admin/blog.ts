@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { auth } from '@/lib/auth'
 import { type ActionResult, createSuccess, createFailure, type BlogPostWhereInput } from '@/types'
 import { parseStringArray } from '@/lib/json-validators'
+import { determinePublishedAt } from '@/lib/utils'
 
 // =============================================================================
 // Types
@@ -257,7 +258,7 @@ export async function createBlogPost(
         ...rest,
         isPublished,
         isDraft: !isPublished,
-        publishedAt: publishedAt ? new Date(publishedAt) : isPublished ? new Date() : null,
+        publishedAt: determinePublishedAt(publishedAt, isPublished),
         authorId: session.user.id,
       },
     })
@@ -312,11 +313,7 @@ export async function updateBlogPost(
         ...rest,
         isPublished,
         isDraft: !isPublished,
-        publishedAt: publishedAt
-          ? new Date(publishedAt)
-          : isPublished && !existingPost.publishedAt
-            ? new Date()
-            : existingPost.publishedAt,
+        publishedAt: determinePublishedAt(publishedAt, isPublished, existingPost.publishedAt),
       },
     })
 
