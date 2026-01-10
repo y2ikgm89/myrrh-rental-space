@@ -1,4 +1,4 @@
-import { supabase, STORAGE_BUCKETS, type StorageBucket } from './supabase'
+import { supabase, isSupabaseConfigured, STORAGE_BUCKETS, type StorageBucket } from './supabase'
 import { v4 as uuid } from 'uuid'
 
 // =============================================================================
@@ -30,6 +30,8 @@ const IMAGE_VALIDATION: FileValidation = {
   maxSize: 10 * 1024 * 1024, // 10MB
   allowedTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
 }
+
+const SUPABASE_NOT_CONFIGURED_ERROR = 'ファイルアップロード機能が設定されていません'
 
 // =============================================================================
 // Helper Functions
@@ -75,6 +77,10 @@ export async function uploadFile(
     validation?: FileValidation
   }
 ): Promise<UploadResult> {
+  if (!isSupabaseConfigured() || !supabase) {
+    return { success: false, error: SUPABASE_NOT_CONFIGURED_ERROR }
+  }
+
   const validation = options?.validation || DEFAULT_VALIDATION
 
   // バリデーション
@@ -125,6 +131,10 @@ export async function uploadFiles(
     validation?: FileValidation
   }
 ): Promise<{ success: boolean; results: UploadResult[]; error?: string }> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, results: [], error: SUPABASE_NOT_CONFIGURED_ERROR }
+  }
+
   const results: UploadResult[] = []
 
   for (const file of files) {
@@ -150,6 +160,10 @@ export async function deleteFile(
   path: string,
   bucket: StorageBucket
 ): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseConfigured() || !supabase) {
+    return { success: false, error: SUPABASE_NOT_CONFIGURED_ERROR }
+  }
+
   try {
     const { error } = await supabase.storage
       .from(bucket)
@@ -174,6 +188,10 @@ export async function deleteFiles(
   paths: string[],
   bucket: StorageBucket
 ): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseConfigured() || !supabase) {
+    return { success: false, error: SUPABASE_NOT_CONFIGURED_ERROR }
+  }
+
   try {
     const { error } = await supabase.storage
       .from(bucket)
@@ -255,7 +273,10 @@ export function extractPathFromUrl(url: string, bucket: StorageBucket): string |
 /**
  * パスからSupabase Storage URLを生成
  */
-export function getPublicUrl(path: string, bucket: StorageBucket): string {
+export function getPublicUrl(path: string, bucket: StorageBucket): string | null {
+  if (!isSupabaseConfigured() || !supabase) {
+    return null
+  }
   const { data } = supabase.storage.from(bucket).getPublicUrl(path)
   return data.publicUrl
 }
