@@ -8,7 +8,7 @@
  * - Supabase Storageへの動画アップロード
  */
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef } from 'react'
 import type { Editor } from '@tiptap/react'
 import {
   Dialog,
@@ -54,7 +54,7 @@ export function VideoDialog({ editor, open, onOpenChange }: VideoDialogProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // リセット
-  const reset = useCallback(() => {
+  const reset = () => {
     setYoutubeUrl('')
     setFile(null)
     setPreview(null)
@@ -62,16 +62,16 @@ export function VideoDialog({ editor, open, onOpenChange }: VideoDialogProps) {
     setIsUploading(false)
     setUploadProgress(0)
     setActiveTab('youtube')
-  }, [])
+  }
 
   // ダイアログを閉じる
-  const handleClose = useCallback(() => {
+  const handleClose = () => {
     reset()
     onOpenChange(false)
-  }, [reset, onOpenChange])
+  }
 
   // ファイル選択
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
     if (!selectedFile) return
 
@@ -94,10 +94,10 @@ export function VideoDialog({ editor, open, onOpenChange }: VideoDialogProps) {
     // プレビュー用URL生成
     const objectUrl = URL.createObjectURL(selectedFile)
     setPreview(objectUrl)
-  }, [])
+  }
 
   // ドラッグ&ドロップ
-  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
     const droppedFile = e.dataTransfer.files[0]
     if (droppedFile && droppedFile.type.startsWith('video/')) {
@@ -106,14 +106,14 @@ export function VideoDialog({ editor, open, onOpenChange }: VideoDialogProps) {
       } as unknown as React.ChangeEvent<HTMLInputElement>
       handleFileSelect(event)
     }
-  }, [handleFileSelect])
+  }
 
-  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
-  }, [])
+  }
 
   // 動画挿入
-  const handleInsert = useCallback(async () => {
+  const handleInsert = async () => {
     setError(null)
 
     if (activeTab === 'youtube') {
@@ -181,7 +181,7 @@ export function VideoDialog({ editor, open, onOpenChange }: VideoDialogProps) {
         setIsUploading(false)
       }
     }
-  }, [activeTab, youtubeUrl, file, editor, handleClose])
+  }
 
   // YouTubeサムネイル取得
   const youtubeThumbnail = youtubeUrl

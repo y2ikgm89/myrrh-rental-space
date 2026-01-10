@@ -9,7 +9,7 @@
  * - alt属性の設定
  */
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef } from 'react'
 import type { Editor } from '@tiptap/react'
 import {
   Dialog,
@@ -39,7 +39,7 @@ export function ImageUploadDialog({ editor, open, onOpenChange }: ImageUploadDia
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // リセット
-  const reset = useCallback(() => {
+  const reset = () => {
     setUrl('')
     setAlt('')
     setFile(null)
@@ -47,16 +47,16 @@ export function ImageUploadDialog({ editor, open, onOpenChange }: ImageUploadDia
     setError(null)
     setIsUploading(false)
     setActiveTab('url')
-  }, [])
+  }
 
   // ダイアログを閉じる
-  const handleClose = useCallback(() => {
+  const handleClose = () => {
     reset()
     onOpenChange(false)
-  }, [reset, onOpenChange])
+  }
 
   // ファイル選択
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
     if (!selectedFile) return
 
@@ -82,10 +82,10 @@ export function ImageUploadDialog({ editor, open, onOpenChange }: ImageUploadDia
       setPreview(event.target?.result as string)
     }
     reader.readAsDataURL(selectedFile)
-  }, [])
+  }
 
   // ドラッグ&ドロップ
-  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
     const droppedFile = e.dataTransfer.files[0]
     if (droppedFile && droppedFile.type.startsWith('image/')) {
@@ -94,14 +94,14 @@ export function ImageUploadDialog({ editor, open, onOpenChange }: ImageUploadDia
       } as unknown as React.ChangeEvent<HTMLInputElement>
       handleFileSelect(event)
     }
-  }, [handleFileSelect])
+  }
 
-  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
-  }, [])
+  }
 
   // 画像挿入
-  const handleInsert = useCallback(async () => {
+  const handleInsert = async () => {
     setError(null)
 
     if (activeTab === 'url') {
@@ -146,7 +146,7 @@ export function ImageUploadDialog({ editor, open, onOpenChange }: ImageUploadDia
         setIsUploading(false)
       }
     }
-  }, [activeTab, url, alt, file, editor, handleClose])
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>

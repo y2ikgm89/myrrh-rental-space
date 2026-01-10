@@ -9,7 +9,7 @@
  * @see docs/plans/settings-tab-refactoring.md
  */
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useQueryState, parseAsStringEnum } from 'nuqs'
 import { Button } from '@/components/admin/ui'
@@ -57,7 +57,7 @@ export default function SettingsPage() {
   const [isLoading, setIsLoading] = useState(true)
 
   // 設定を読み込み
-  const loadSettings = useCallback(async () => {
+  const loadSettings = async () => {
     try {
       const data = await getSettings()
       setSettings(data)
@@ -66,19 +66,16 @@ export default function SettingsPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }
 
   useEffect(() => {
     loadSettings()
-  }, [loadSettings])
+  }, [])
 
   // タブ変更ハンドラ
-  const handleTabChange = useCallback(
-    (tab: SettingsTabId) => {
-      setActiveTab(tab)
-    },
-    [setActiveTab]
-  )
+  const handleTabChange = (tab: SettingsTabId) => {
+    setActiveTab(tab)
+  }
 
   // ローディング中
   if (isLoading || !settings) {

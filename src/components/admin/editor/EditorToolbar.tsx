@@ -7,7 +7,7 @@
  * 全機能のボタンを提供
  */
 
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import type { Editor } from '@tiptap/react'
 import { Button, Input } from '@/components/admin/ui'
 import {
@@ -83,7 +83,7 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
   const [linkUrl, setLinkUrl] = useState('')
   const [youtubeUrl, setYoutubeUrl] = useState('')
 
-  const setLink = useCallback(() => {
+  const setLink = () => {
     if (!editor) return
     if (linkUrl === '') {
       editor.chain().focus().extendMarkRange('link').unsetLink().run()
@@ -97,14 +97,14 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
     }
     setLinkUrl('')
     setIsLinkDialogOpen(false)
-  }, [editor, linkUrl])
+  }
 
-  const addYoutube = useCallback(() => {
+  const addYoutube = () => {
     if (!editor || !youtubeUrl) return
     editor.chain().focus().setYoutubeVideo({ src: youtubeUrl }).run()
     setYoutubeUrl('')
     setIsYoutubeDialogOpen(false)
-  }, [editor, youtubeUrl])
+  }
 
   if (!editor) {
     return null

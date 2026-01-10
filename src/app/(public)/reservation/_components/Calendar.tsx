@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback, type ReactElement } from 'react'
+import { useState, type ReactElement } from 'react'
 import { tv } from 'tailwind-variants'
 import { cn } from '@/lib/utils'
 
@@ -59,24 +59,21 @@ export function Calendar({
     return new Date(now.getFullYear(), now.getMonth(), 1)
   })
 
-  const today = useMemo(() => {
+  const today = (() => {
     const d = new Date()
     d.setHours(0, 0, 0, 0)
     return d
-  }, [])
+  })()
 
-  const minDateNormalized = useMemo(() => {
+  const minDateNormalized = (() => {
     const d = new Date(minDate)
     d.setHours(0, 0, 0, 0)
     return d
-  }, [minDate])
+  })()
 
-  const disabledDateSet = useMemo(
-    () => new Set(disabledDates),
-    [disabledDates]
-  )
+  const disabledDateSet = new Set(disabledDates)
 
-  const calendarDays = useMemo(() => {
+  const calendarDays = (() => {
     const year = currentMonth.getFullYear()
     const month = currentMonth.getMonth()
 
@@ -102,64 +99,52 @@ export function Calendar({
     }
 
     return days
-  }, [currentMonth])
+  })()
 
-  const handlePrevMonth = useCallback(() => {
+  const handlePrevMonth = () => {
     setCurrentMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))
-  }, [])
+  }
 
-  const handleNextMonth = useCallback(() => {
+  const handleNextMonth = () => {
     setCurrentMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
-  }, [])
+  }
 
-  const isDateDisabled = useCallback(
-    (date: Date): boolean => {
-      const normalized = new Date(date)
-      normalized.setHours(0, 0, 0, 0)
+  const isDateDisabled = (date: Date): boolean => {
+    const normalized = new Date(date)
+    normalized.setHours(0, 0, 0, 0)
 
-      // 過去の日付は無効
-      if (normalized < minDateNormalized) {
-        return true
-      }
+    // 過去の日付は無効
+    if (normalized < minDateNormalized) {
+      return true
+    }
 
-      // 明示的に無効化された日付
-      const dateStr = normalized.toISOString().split('T')[0]
-      if (disabledDateSet.has(dateStr)) {
-        return true
-      }
+    // 明示的に無効化された日付
+    const dateStr = normalized.toISOString().split('T')[0]
+    if (disabledDateSet.has(dateStr)) {
+      return true
+    }
 
-      return false
-    },
-    [minDateNormalized, disabledDateSet]
-  )
+    return false
+  }
 
-  const isCurrentMonth = useCallback(
-    (date: Date): boolean => {
-      return date.getMonth() === currentMonth.getMonth()
-    },
-    [currentMonth]
-  )
+  const isCurrentMonth = (date: Date): boolean => {
+    return date.getMonth() === currentMonth.getMonth()
+  }
 
-  const isToday = useCallback(
-    (date: Date): boolean => {
-      return date.getTime() === today.getTime()
-    },
-    [today]
-  )
+  const isToday = (date: Date): boolean => {
+    return date.getTime() === today.getTime()
+  }
 
-  const isSelected = useCallback(
-    (date: Date): boolean => {
-      if (!selectedDate) return false
-      const normalizedSelected = new Date(selectedDate)
-      normalizedSelected.setHours(0, 0, 0, 0)
-      const normalizedDate = new Date(date)
-      normalizedDate.setHours(0, 0, 0, 0)
-      return normalizedSelected.getTime() === normalizedDate.getTime()
-    },
-    [selectedDate]
-  )
+  const isSelected = (date: Date): boolean => {
+    if (!selectedDate) return false
+    const normalizedSelected = new Date(selectedDate)
+    normalizedSelected.setHours(0, 0, 0, 0)
+    const normalizedDate = new Date(date)
+    normalizedDate.setHours(0, 0, 0, 0)
+    return normalizedSelected.getTime() === normalizedDate.getTime()
+  }
 
-  const canGoPrev = useMemo(() => {
+  const canGoPrev = (() => {
     const prevMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1)
     const lastDayOfPrevMonth = new Date(
       prevMonth.getFullYear(),
@@ -167,7 +152,7 @@ export function Calendar({
       0
     )
     return lastDayOfPrevMonth >= minDateNormalized
-  }, [currentMonth, minDateNormalized])
+  })()
 
   const formatMonthYear = (date: Date): string => {
     return `${date.getFullYear()}年${date.getMonth() + 1}月`
