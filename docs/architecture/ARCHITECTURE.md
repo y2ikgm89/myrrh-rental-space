@@ -213,6 +213,39 @@ graph TB
 - **Supabase Storage**: 画像・ファイル保存
 - **Supabase CDN**: 画像配信（Supabase Storage内蔵）
 
+### 決済
+
+- **Stripe**: オンライン決済プラットフォーム
+- **暗号化**: AES-256-GCM でシークレットキーを暗号化してDB保存
+- **環境変数優先**: `STRIPE_SECRET_KEY` 設定時はDB設定より優先
+
+```mermaid
+graph LR
+    subgraph Admin["管理画面"]
+        Settings["設定画面"]
+    end
+
+    subgraph Backend["バックエンド"]
+        Actions["Server Actions"]
+        Crypto["crypto.ts<br/>AES-256-GCM"]
+    end
+
+    subgraph External["外部サービス"]
+        StripeAPI["Stripe API"]
+    end
+
+    subgraph Storage["データ保存"]
+        EnvVar["環境変数<br/>STRIPE_SECRET_KEY"]
+        DB["Database<br/>暗号化キー"]
+    end
+
+    Settings -->|設定更新| Actions
+    Actions -->|暗号化| Crypto
+    Crypto -->|保存| DB
+    Actions -->|接続テスト| StripeAPI
+    EnvVar -.->|優先| Actions
+```
+
 ### デプロイメント
 
 - **Cloudflare CDN**: グローバルCDN、DDoS保護、キャッシュ最適化（推奨）

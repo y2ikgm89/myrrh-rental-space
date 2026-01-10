@@ -43,8 +43,9 @@ enum CustomerStatus {
 }
 
 enum NavigationType {
-  HEADER
-  FOOTER
+  HEADER_DESKTOP // デスクトップ用ヘッダーメニュー
+  HEADER_MOBILE  // モバイル用ヘッダーメニュー
+  FOOTER         // フッターメニュー
 }
 
 enum SocialPlatform {
@@ -64,6 +65,7 @@ enum SocialPlatform {
 model User {
   id            String    @id @default(uuid())
   email         String    @unique
+  password      String?   // bcrypt hashed password
   name          String?
   emailVerified DateTime?
   image         String?
@@ -76,6 +78,7 @@ model User {
   sessions     Session[]
   reservations Reservation[]
   blogPosts    BlogPost[]
+  blogComments BlogComment[]
 
   @@map("users")
 }
@@ -278,6 +281,7 @@ model BlogPost {
   // Relations
   category BlogCategory @relation(fields: [categoryId], references: [id])
   author   User         @relation(fields: [authorId], references: [id])
+  comments BlogComment[]
 
   @@index([isPublished, publishedAt])
   @@index([categoryId, isPublished, publishedAt])
@@ -311,6 +315,50 @@ model BlogTag {
   @@map("blog_tags")
 }
 
+model BlogComment {
+  id              String    @id @default(uuid())
+  postId          String
+  parentCommentId String?   // Self-reference for nested comments
+
+  // Content
+  content         String    @db.Text
+
+  // Author info (either userId OR guest info)
+  userId          String?   // For logged-in users
+  guestName       String?   // For guest comments
+  guestEmail      String?   // For guest comments
+
+  // Spam prevention metadata
+  ipAddress       String?   // For rate limiting (hashed)
+  contentHash     String?   // For duplicate detection
+
+  // Status
+  isDeleted       Boolean   @default(false)
+  deletedAt       DateTime?
+  deletedBy       String?   // userId of admin who deleted
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  post          BlogPost      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user          User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  parentComment BlogComment?  @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: Cascade)
+  replies       BlogComment[] @relation("CommentReplies")
+
+  // Indexes
+  @@index([postId, createdAt])
+  @@index([parentCommentId])
+  @@index([userId])
+  @@index([ipAddress, createdAt])
+  @@index([guestEmail, createdAt])
+  @@index([contentHash])
+  @@index([isDeleted])
+  @@index([isDeleted, createdAt(sort: Desc)]) // Admin search optimization
+  @@map("blog_comments")
+}
+
 // ==============================================
 // CMS Models
 // ==============================================
@@ -336,6 +384,22 @@ model Page {
   @@map("pages")
 }
 
+model HomepageHero {
+  id                 String   @id @default("singleton")
+  title              String   @default("理想のスペースを、あなたに。")
+  subtitle           String?  @db.Text
+  ctaPrimaryText     String   @default("スペースを探す")
+  ctaPrimaryUrl      String   @default("/spaces")
+  ctaSecondaryText   String?  @default("お問い合わせ")
+  ctaSecondaryUrl    String?  @default("/contact")
+  backgroundImageUrl String?
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("homepage_hero")
+}
+
 model NavigationItem {
   id         String         @id @default(uuid())
   type       NavigationType
@@ -357,14 +421,16 @@ model NavigationItem {
 }
 
 model SocialLink {
-  id        String         @id @default(uuid())
-  platform  SocialPlatform
-  url       String
-  iconUrl   String?
-  order     Int
-  isActive  Boolean        @default(true)
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+  id            String         @id @default(uuid())
+  platform      SocialPlatform
+  url           String
+  iconUrl       String?
+  order         Int
+  isActive      Boolean        @default(true)
+  showOnDesktop Boolean        @default(true) // デスクトップで表示
+  showOnMobile  Boolean        @default(true) // モバイルで表示
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
   @@index([order])
   @@map("social_links")
@@ -387,10 +453,35 @@ model Settings {
   headerLogoUrl      String?
   footerCopyright    String?
 
+  // Business Info (事業者情報)
+  businessName         String?           // 会社名・屋号
+  businessNameKana     String?           // 会社名・屋号（カナ）
+  representativeName   String?           // 代表者名
+  businessType         String?           // 事業形態（個人事業主/法人）
+  industryType         String?           // 業種
+  establishedDate      DateTime?         // 設立日
+  registrationNumber   String?           // 法人番号/登録番号
+  invoiceNumber        String?           // インボイス登録番号
+  businessDescription  String? @db.Text  // 事業概要
+
   // Contact Info
   phoneNumber          String?
+  faxNumber            String?
   email                String?
   address              String? @db.Text
+  postalCode           String?           // 郵便番号
+  prefecture           String?           // 都道府県
+  city                 String?           // 市区町村
+  streetAddress        String?           // 番地以降
+  buildingName         String?           // 建物名
+
+  // Business Hours (営業時間)
+  businessHours        Json?             // 曜日ごとの営業時間
+  regularHolidays      Json?             // 定休日（曜日）
+  specialHolidays      Json?             // 特別休業日（日付リスト）
+  holidayNotice        String? @db.Text  // 休業日のお知らせ
+
+  // Legacy field - keeping for backwards compatibility
   defaultBusinessHours Json?
 
   // Email Settings
@@ -407,8 +498,14 @@ model Settings {
   defaultMetaKeywords     String?
   defaultOgpTitle         String?
   defaultOgpDescription   String?
-  googleAnalyticsId       String?
-  googleSearchConsoleId   String?
+
+  // Analytics Settings
+  analyticsType           String?   // "ga4" | "gtm" | null
+  googleAnalyticsId       String?   // GA4 Measurement ID (G-XXXXXXXXXX)
+  googleTagManagerId      String?   // GTM Container ID (GTM-XXXXXXX)
+  googleSearchConsoleId   String?   // GSC verification meta tag
+  bingWebmasterToolsId    String?   // Bing verification meta tag
+  gaPropertyId            String?   // GA4 Property ID for Data API
 
   // Reservation Settings
   defaultTimeSlot                 Int?     @default(60)
@@ -430,6 +527,17 @@ model Settings {
   language           String?  @default("ja")
   maintenanceMode    Boolean  @default(false)
   maintenanceMessage String?  @db.Text
+
+  // Stripe Payment Settings
+  stripeEnabled          Boolean  @default(false)
+  stripeTestMode         Boolean  @default(true)
+  stripePublishableKey   String?
+  stripeSecretKey        String?  @db.Text  // 暗号化して保存
+  stripeWebhookSecret    String?  @db.Text  // 暗号化して保存
+  stripeAccountId        String?
+  stripeCurrency         String   @default("jpy")
+  stripeLastTestedAt     DateTime?
+  stripeConnectionStatus String?
 
   @@map("settings")
 }
