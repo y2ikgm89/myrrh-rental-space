@@ -54,7 +54,21 @@ export function BusinessHoursSection({ settings, onUpdate }: BusinessHoursSectio
   const initialRegularHolidays = (settings.regularHolidays as string[]) || []
   const initialSpecialHolidays = (settings.specialHolidays as string[]) || []
 
-  const [businessHours, setBusinessHours] = useState<BusinessHours>(initialBusinessHours)
+  // 定休日設定を営業時間に反映（DBに保存されたregularHolidaysから初期化）
+  const businessHoursWithHolidays = (() => {
+    const hours = { ...initialBusinessHours }
+    for (const day of initialRegularHolidays) {
+      if (day in hours) {
+        hours[day as keyof BusinessHours] = {
+          ...hours[day as keyof BusinessHours],
+          isOpen: false,
+        }
+      }
+    }
+    return hours
+  })()
+
+  const [businessHours, setBusinessHours] = useState<BusinessHours>(businessHoursWithHolidays)
   const [specialHolidaysText, setSpecialHolidaysText] = useState(
     initialSpecialHolidays.join('\n')
   )
