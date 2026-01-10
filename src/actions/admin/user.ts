@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { Role } from '@/generated/prisma/client/enums'
 import { z } from 'zod'
 import bcrypt from 'bcrypt'
-import { type ActionResult, createSuccess, createFailure } from '@/types'
+import { createSuccess, createFailure, withAuth } from '@/types'
 import { requireAdmin } from '@/lib/auth'
 
 // =============================================================================
@@ -171,12 +171,8 @@ export async function getUser(id: string): Promise<UserData | null> {
 /**
  * ユーザーを作成
  */
-export async function createUser(
-  data: CreateUserInput
-): Promise<ActionResult<{ id: string }>> {
-  try {
-    await requireAdmin()
-
+export const createUser = withAuth(
+  async (_user, data: CreateUserInput) => {
     const parsed = createUserSchema.safeParse(data)
     if (!parsed.success) {
       return createFailure(parsed.error.issues[0].message)
@@ -206,22 +202,14 @@ export async function createUser(
     revalidatePath('/admin/users')
 
     return createSuccess('ユーザーを作成しました', { id: user.id })
-  } catch (error) {
-    console.error('Failed to create user:', error)
-    return createFailure('ユーザーの作成に失敗しました')
   }
-}
+)
 
 /**
  * ユーザーを更新
  */
-export async function updateUser(
-  id: string,
-  data: UpdateUserInput
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
-
+export const updateUser = withAuth(
+  async (_user, id: string, data: UpdateUserInput) => {
     const parsed = updateUserSchema.safeParse(data)
     if (!parsed.success) {
       return createFailure(parsed.error.issues[0].message)
@@ -272,22 +260,20 @@ export async function updateUser(
     revalidatePath(`/admin/users/${id}`)
 
     return createSuccess('ユーザーを更新しました')
-  } catch (error) {
-    console.error('Failed to update user:', error)
-    return createFailure('ユーザーの更新に失敗しました')
   }
-}
+)
 
 /**
  * ユーザーを削除
  */
-export async function deleteUser(
-  id: string
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
+export const deleteUser = withAuth(
+  async (user, id: string) => {
+    // 自分自身は削除できない
+    if (user.id === id) {
+      return createFailure('自分自身を削除することはできません')
+    }
 
-    const user = await prisma.user.findUnique({
+    const targetUser = await prisma.user.findUnique({
       where: { id },
       include: {
         _count: {
@@ -299,14 +285,14 @@ export async function deleteUser(
       },
     })
 
-    if (!user) {
+    if (!targetUser) {
       return createFailure('ユーザーが見つかりません')
     }
 
     // 関連データがある場合は警告
-    if (user._count.reservations > 0 || user._count.blogPosts > 0) {
+    if (targetUser._count.reservations > 0 || targetUser._count.blogPosts > 0) {
       return createFailure(
-        `このユーザーには予約${user._count.reservations}件、ブログ記事${user._count.blogPosts}件が関連付けられています。先に関連データを削除してください`
+        `このユーザーには予約${targetUser._count.reservations}件、ブログ記事${targetUser._count.blogPosts}件が関連付けられています。先に関連データを削除してください`
       )
     }
 
@@ -317,27 +303,19 @@ export async function deleteUser(
     revalidatePath('/admin/users')
 
     return createSuccess('ユーザーを削除しました')
-  } catch (error) {
-    console.error('Failed to delete user:', error)
-    return createFailure('ユーザーの削除に失敗しました')
   }
-}
+)
 
 /**
  * ユーザーのロールを変更
  */
-export async function updateUserRole(
-  id: string,
-  role: Role
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
-
-    const user = await prisma.user.findUnique({
+export const updateUserRole = withAuth(
+  async (_user, id: string, role: Role) => {
+    const targetUser = await prisma.user.findUnique({
       where: { id },
     })
 
-    if (!user) {
+    if (!targetUser) {
       return createFailure('ユーザーが見つかりません')
     }
 
@@ -350,11 +328,8 @@ export async function updateUserRole(
     revalidatePath(`/admin/users/${id}`)
 
     return createSuccess('ロールを更新しました')
-  } catch (error) {
-    console.error('Failed to update user role:', error)
-    return createFailure('ロールの更新に失敗しました')
   }
-}
+)
 
 /**
  * ユーザー統計を取得

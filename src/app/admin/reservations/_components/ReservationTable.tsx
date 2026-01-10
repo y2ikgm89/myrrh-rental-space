@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/admin/ui'
-import { StatusBadge } from './StatusBadge'
+import { ReservationStatusBadge } from '@/components/admin/status-badges'
 import { updateReservationStatus } from '@/actions/admin/reservation'
 import type { ReservationWithRelations } from '@/actions/admin/reservation'
 import type { ReservationStatus } from '@/generated/prisma/client/enums'
@@ -137,7 +137,7 @@ export function ReservationTable({ reservations }: ReservationTableProps) {
               </TableCell>
               <TableCell>{formatPrice(reservation.totalPrice)}</TableCell>
               <TableCell>
-                <StatusBadge status={reservation.status} />
+                <ReservationStatusBadge status={reservation.status} />
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-2">

@@ -3,7 +3,7 @@
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
-import { type ActionResult, createSuccess, createFailure, type NewsWhereInput } from '@/types'
+import { createSuccess, createFailure, type NewsWhereInput, withAuth } from '@/types'
 import { determinePublishedAt } from '@/lib/utils'
 import { requireAdmin } from '@/lib/auth'
 
@@ -128,150 +128,113 @@ export async function getNewsById(id: string): Promise<NewsData | null> {
 /**
  * お知らせを作成
  */
-export async function createNews(
-  data: NewsInput
-): Promise<ActionResult<{ id: string }>> {
-  try {
-    await requireAdmin()
-
-    const parsed = newsSchema.safeParse(data)
-    if (!parsed.success) {
-      return createFailure(parsed.error.issues[0].message)
-    }
-
-    const { title, content, isPublished, publishedAt } = parsed.data
-
-    const news = await prisma.news.create({
-      data: {
-        title,
-        content,
-        isPublished,
-        publishedAt: determinePublishedAt(publishedAt, isPublished),
-      },
-    })
-
-    revalidatePath('/admin/news')
-    revalidatePath('/news')
-
-    return createSuccess('お知らせを作成しました', { id: news.id })
-  } catch (error) {
-    console.error('Failed to create news:', error)
-    return createFailure('お知らせの作成に失敗しました')
+export const createNews = withAuth(async (_user, data: NewsInput) => {
+  const parsed = newsSchema.safeParse(data)
+  if (!parsed.success) {
+    return createFailure(parsed.error.issues[0].message)
   }
-}
+
+  const { title, content, isPublished, publishedAt } = parsed.data
+
+  const news = await prisma.news.create({
+    data: {
+      title,
+      content,
+      isPublished,
+      publishedAt: determinePublishedAt(publishedAt, isPublished),
+    },
+  })
+
+  revalidatePath('/admin/news')
+  revalidatePath('/news')
+
+  return createSuccess('お知らせを作成しました', { id: news.id })
+})
 
 /**
  * お知らせを更新
  */
-export async function updateNews(
-  id: string,
-  data: NewsInput
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
-
-    const parsed = newsSchema.safeParse(data)
-    if (!parsed.success) {
-      return createFailure(parsed.error.issues[0].message)
-    }
-
-    const existingNews = await prisma.news.findUnique({
-      where: { id },
-    })
-
-    if (!existingNews) {
-      return createFailure('お知らせが見つかりません')
-    }
-
-    const { title, content, isPublished, publishedAt } = parsed.data
-
-    await prisma.news.update({
-      where: { id },
-      data: {
-        title,
-        content,
-        isPublished,
-        publishedAt: determinePublishedAt(publishedAt, isPublished, existingNews.publishedAt),
-      },
-    })
-
-    revalidatePath('/admin/news')
-    revalidatePath(`/admin/news/${id}`)
-    revalidatePath('/news')
-    revalidatePath(`/news/${id}`)
-
-    return createSuccess('お知らせを更新しました')
-  } catch (error) {
-    console.error('Failed to update news:', error)
-    return createFailure('お知らせの更新に失敗しました')
+export const updateNews = withAuth(async (_user, id: string, data: NewsInput) => {
+  const parsed = newsSchema.safeParse(data)
+  if (!parsed.success) {
+    return createFailure(parsed.error.issues[0].message)
   }
-}
+
+  const existingNews = await prisma.news.findUnique({
+    where: { id },
+  })
+
+  if (!existingNews) {
+    return createFailure('お知らせが見つかりません')
+  }
+
+  const { title, content, isPublished, publishedAt } = parsed.data
+
+  await prisma.news.update({
+    where: { id },
+    data: {
+      title,
+      content,
+      isPublished,
+      publishedAt: determinePublishedAt(publishedAt, isPublished, existingNews.publishedAt),
+    },
+  })
+
+  revalidatePath('/admin/news')
+  revalidatePath(`/admin/news/${id}`)
+  revalidatePath('/news')
+  revalidatePath(`/news/${id}`)
+
+  return createSuccess('お知らせを更新しました')
+})
 
 /**
  * お知らせを削除
  */
-export async function deleteNews(
-  id: string
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
+export const deleteNews = withAuth(async (_user, id: string) => {
+  const news = await prisma.news.findUnique({
+    where: { id },
+  })
 
-    const news = await prisma.news.findUnique({
-      where: { id },
-    })
-
-    if (!news) {
-      return createFailure('お知らせが見つかりません')
-    }
-
-    await prisma.news.delete({
-      where: { id },
-    })
-
-    revalidatePath('/admin/news')
-    revalidatePath('/news')
-
-    return createSuccess('お知らせを削除しました')
-  } catch (error) {
-    console.error('Failed to delete news:', error)
-    return createFailure('お知らせの削除に失敗しました')
+  if (!news) {
+    return createFailure('お知らせが見つかりません')
   }
-}
+
+  await prisma.news.delete({
+    where: { id },
+  })
+
+  revalidatePath('/admin/news')
+  revalidatePath('/news')
+
+  return createSuccess('お知らせを削除しました')
+})
 
 /**
  * 公開状態を切り替え
  */
-export async function toggleNewsPublish(
-  id: string
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
+export const toggleNewsPublish = withAuth(async (_user, id: string) => {
+  const news = await prisma.news.findUnique({
+    where: { id },
+  })
 
-    const news = await prisma.news.findUnique({
-      where: { id },
-    })
-
-    if (!news) {
-      return createFailure('お知らせが見つかりません')
-    }
-
-    const newIsPublished = !news.isPublished
-
-    await prisma.news.update({
-      where: { id },
-      data: {
-        isPublished: newIsPublished,
-        publishedAt: newIsPublished && !news.publishedAt ? new Date() : news.publishedAt,
-      },
-    })
-
-    revalidatePath('/admin/news')
-    revalidatePath(`/admin/news/${id}`)
-    revalidatePath('/news')
-
-    return createSuccess('公開状態を変更しました')
-  } catch (error) {
-    console.error('Failed to toggle news publish status:', error)
-    return createFailure('公開状態の変更に失敗しました')
+  if (!news) {
+    return createFailure('お知らせが見つかりません')
   }
-}
+
+  const newIsPublished = !news.isPublished
+
+  await prisma.news.update({
+    where: { id },
+    data: {
+      isPublished: newIsPublished,
+      publishedAt: newIsPublished && !news.publishedAt ? new Date() : news.publishedAt,
+    },
+  })
+
+  revalidatePath('/admin/news')
+  revalidatePath(`/admin/news/${id}`)
+  revalidatePath('/news')
+
+  return createSuccess('公開状態を変更しました')
+})

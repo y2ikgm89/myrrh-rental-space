@@ -24,27 +24,20 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  Badge,
   Switch,
   Label,
 } from '@/components/admin/ui'
-import { StatusBadge } from '../../_components/StatusBadge'
+import { CustomerStatusBadge, ReservationStatusBadge } from '@/components/admin/status-badges'
 import {
   updateCustomerStatus,
   updateCustomerNotes,
   toggleCustomerActive,
 } from '@/actions/admin/customer'
 import type { CustomerWithReservations } from '@/actions/admin/customer'
-import type { CustomerStatus } from '@/generated/prisma/client/enums'
+import type { CustomerStatus, ReservationStatus } from '@/generated/prisma/client/enums'
 
 type CustomerDetailProps = {
   customer: CustomerWithReservations
-}
-
-const reservationStatusLabels: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  PENDING: { label: '保留中', variant: 'outline' },
-  CONFIRMED: { label: '確認済み', variant: 'default' },
-  CANCELLED: { label: 'キャンセル', variant: 'destructive' },
 }
 
 export function CustomerDetail({ customer }: CustomerDetailProps) {
@@ -207,14 +200,7 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
                             : '-'}
                         </TableCell>
                         <TableCell>
-                          <Badge
-                            variant={
-                              reservationStatusLabels[reservation.status]?.variant || 'outline'
-                            }
-                          >
-                            {reservationStatusLabels[reservation.status]?.label ||
-                              reservation.status}
-                          </Badge>
+                          <ReservationStatusBadge status={reservation.status as ReservationStatus} />
                         </TableCell>
                         <TableCell>
                           <Button asChild variant="outline" size="sm">
@@ -242,7 +228,7 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
             <CardContent className="space-y-4">
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">現在:</span>
-                <StatusBadge status={customer.status} />
+                <CustomerStatusBadge status={customer.status} />
               </div>
               <Select
                 value={customer.status}

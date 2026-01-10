@@ -23,7 +23,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/admin/ui'
-import { StatusBadge } from '../../_components/StatusBadge'
+import { ReservationStatusBadge } from '@/components/admin/status-badges'
 import {
   updateReservationStatus,
   updateReservationNotes,
@@ -105,7 +105,7 @@ export function ReservationDetail({ reservation }: ReservationDetailProps) {
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-4">
-            <StatusBadge status={reservation.status} />
+            <ReservationStatusBadge status={reservation.status} />
             <Select
               value={reservation.status}
               onValueChange={(value) =>

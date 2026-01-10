@@ -3,8 +3,7 @@
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
-import { type ActionResult, createSuccess, createFailure } from '@/types'
-import { auth } from '@/lib/auth'
+import { createSuccess, createFailure, withAuth } from '@/types'
 
 // =============================================================================
 // Types
@@ -113,190 +112,141 @@ export async function getAnnouncementBarById(id: string): Promise<AnnouncementBa
 /**
  * お知らせバーを作成
  */
-export async function createAnnouncementBar(
-  data: AnnouncementBarInput
-): Promise<ActionResult<{ id: string }>> {
-  try {
-    const session = await auth()
-    if (!session?.user?.id) {
-      return createFailure('認証が必要です')
-    }
+export const createAnnouncementBar = withAuth(async (_user, data: AnnouncementBarInput) => {
+  const parsed = announcementBarSchema.safeParse(data)
+  if (!parsed.success) {
+    return createFailure(parsed.error.issues[0].message)
+  }
 
-    const parsed = announcementBarSchema.safeParse(data)
-    if (!parsed.success) {
-      return createFailure(parsed.error.issues[0].message)
-    }
+  const {
+    message,
+    type,
+    linkUrl,
+    linkText,
+    bgColor,
+    textColor,
+    isActive,
+    priority,
+    startAt,
+    endAt,
+  } = parsed.data
 
-    const {
+  const bar = await prisma.announcementBar.create({
+    data: {
       message,
       type,
-      linkUrl,
-      linkText,
-      bgColor,
-      textColor,
+      linkUrl: linkUrl || null,
+      linkText: linkText || null,
+      bgColor: bgColor || null,
+      textColor: textColor || null,
       isActive,
       priority,
-      startAt,
-      endAt,
-    } = parsed.data
+      startAt: startAt ? new Date(startAt) : null,
+      endAt: endAt ? new Date(endAt) : null,
+    },
+  })
 
-    const bar = await prisma.announcementBar.create({
-      data: {
-        message,
-        type,
-        linkUrl: linkUrl || null,
-        linkText: linkText || null,
-        bgColor: bgColor || null,
-        textColor: textColor || null,
-        isActive,
-        priority,
-        startAt: startAt ? new Date(startAt) : null,
-        endAt: endAt ? new Date(endAt) : null,
-      },
-    })
+  revalidatePath('/admin/settings/announcement-bar')
+  revalidatePath('/', 'layout')
 
-    revalidatePath('/admin/settings/announcement-bar')
-    revalidatePath('/', 'layout')
-
-    return createSuccess('お知らせバーを作成しました', { id: bar.id })
-  } catch (error) {
-    console.error('Failed to create announcement bar:', error)
-    return createFailure('お知らせバーの作成に失敗しました')
-  }
-}
+  return createSuccess('お知らせバーを作成しました', { id: bar.id })
+})
 
 /**
  * お知らせバーを更新
  */
-export async function updateAnnouncementBar(
-  id: string,
-  data: AnnouncementBarInput
-): Promise<ActionResult<void>> {
-  try {
-    const session = await auth()
-    if (!session?.user?.id) {
-      return createFailure('認証が必要です')
-    }
+export const updateAnnouncementBar = withAuth(async (_user, id: string, data: AnnouncementBarInput) => {
+  const parsed = announcementBarSchema.safeParse(data)
+  if (!parsed.success) {
+    return createFailure(parsed.error.issues[0].message)
+  }
 
-    const parsed = announcementBarSchema.safeParse(data)
-    if (!parsed.success) {
-      return createFailure(parsed.error.issues[0].message)
-    }
+  const existing = await prisma.announcementBar.findUnique({
+    where: { id },
+  })
 
-    const existing = await prisma.announcementBar.findUnique({
-      where: { id },
-    })
+  if (!existing) {
+    return createFailure('お知らせバーが見つかりません')
+  }
 
-    if (!existing) {
-      return createFailure('お知らせバーが見つかりません')
-    }
+  const {
+    message,
+    type,
+    linkUrl,
+    linkText,
+    bgColor,
+    textColor,
+    isActive,
+    priority,
+    startAt,
+    endAt,
+  } = parsed.data
 
-    const {
+  await prisma.announcementBar.update({
+    where: { id },
+    data: {
       message,
       type,
-      linkUrl,
-      linkText,
-      bgColor,
-      textColor,
+      linkUrl: linkUrl || null,
+      linkText: linkText || null,
+      bgColor: bgColor || null,
+      textColor: textColor || null,
       isActive,
       priority,
-      startAt,
-      endAt,
-    } = parsed.data
+      startAt: startAt ? new Date(startAt) : null,
+      endAt: endAt ? new Date(endAt) : null,
+    },
+  })
 
-    await prisma.announcementBar.update({
-      where: { id },
-      data: {
-        message,
-        type,
-        linkUrl: linkUrl || null,
-        linkText: linkText || null,
-        bgColor: bgColor || null,
-        textColor: textColor || null,
-        isActive,
-        priority,
-        startAt: startAt ? new Date(startAt) : null,
-        endAt: endAt ? new Date(endAt) : null,
-      },
-    })
+  revalidatePath('/admin/settings/announcement-bar')
+  revalidatePath('/', 'layout')
 
-    revalidatePath('/admin/settings/announcement-bar')
-    revalidatePath('/', 'layout')
-
-    return createSuccess('お知らせバーを更新しました')
-  } catch (error) {
-    console.error('Failed to update announcement bar:', error)
-    return createFailure('お知らせバーの更新に失敗しました')
-  }
-}
+  return createSuccess('お知らせバーを更新しました')
+})
 
 /**
  * お知らせバーを削除
  */
-export async function deleteAnnouncementBar(
-  id: string
-): Promise<ActionResult<void>> {
-  try {
-    const session = await auth()
-    if (!session?.user?.id) {
-      return createFailure('認証が必要です')
-    }
+export const deleteAnnouncementBar = withAuth(async (_user, id: string) => {
+  const bar = await prisma.announcementBar.findUnique({
+    where: { id },
+  })
 
-    const bar = await prisma.announcementBar.findUnique({
-      where: { id },
-    })
-
-    if (!bar) {
-      return createFailure('お知らせバーが見つかりません')
-    }
-
-    await prisma.announcementBar.delete({
-      where: { id },
-    })
-
-    revalidatePath('/admin/settings/announcement-bar')
-    revalidatePath('/', 'layout')
-
-    return createSuccess('お知らせバーを削除しました')
-  } catch (error) {
-    console.error('Failed to delete announcement bar:', error)
-    return createFailure('お知らせバーの削除に失敗しました')
+  if (!bar) {
+    return createFailure('お知らせバーが見つかりません')
   }
-}
+
+  await prisma.announcementBar.delete({
+    where: { id },
+  })
+
+  revalidatePath('/admin/settings/announcement-bar')
+  revalidatePath('/', 'layout')
+
+  return createSuccess('お知らせバーを削除しました')
+})
 
 /**
  * 有効/無効を切り替え
  */
-export async function toggleAnnouncementBarActive(
-  id: string
-): Promise<ActionResult<void>> {
-  try {
-    const session = await auth()
-    if (!session?.user?.id) {
-      return createFailure('認証が必要です')
-    }
+export const toggleAnnouncementBarActive = withAuth(async (_user, id: string) => {
+  const bar = await prisma.announcementBar.findUnique({
+    where: { id },
+  })
 
-    const bar = await prisma.announcementBar.findUnique({
-      where: { id },
-    })
-
-    if (!bar) {
-      return createFailure('お知らせバーが見つかりません')
-    }
-
-    await prisma.announcementBar.update({
-      where: { id },
-      data: {
-        isActive: !bar.isActive,
-      },
-    })
-
-    revalidatePath('/admin/settings/announcement-bar')
-    revalidatePath('/', 'layout')
-
-    return createSuccess('状態を変更しました')
-  } catch (error) {
-    console.error('Failed to toggle announcement bar status:', error)
-    return createFailure('状態の変更に失敗しました')
+  if (!bar) {
+    return createFailure('お知らせバーが見つかりません')
   }
-}
+
+  await prisma.announcementBar.update({
+    where: { id },
+    data: {
+      isActive: !bar.isActive,
+    },
+  })
+
+  revalidatePath('/admin/settings/announcement-bar')
+  revalidatePath('/', 'layout')
+
+  return createSuccess('状態を変更しました')
+})

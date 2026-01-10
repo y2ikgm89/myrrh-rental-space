@@ -16,7 +16,7 @@ import {
   Switch,
   Badge,
 } from '@/components/admin/ui'
-import { StatusBadge } from './StatusBadge'
+import { PublishStatusBadge } from '@/components/admin/status-badges'
 import { toggleBlogPostPublish } from '@/actions/admin/blog'
 import type { BlogPostData } from '@/actions/admin/blog'
 
@@ -69,7 +69,7 @@ export function BlogTable({ posts }: BlogTableProps) {
                 />
               </TableCell>
               <TableCell>
-                <StatusBadge isPublished={post.isPublished} />
+                <PublishStatusBadge isPublished={post.isPublished} />
               </TableCell>
               <TableCell>
                 <div className="max-w-xs truncate font-medium">

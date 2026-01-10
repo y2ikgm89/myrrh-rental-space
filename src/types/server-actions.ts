@@ -4,6 +4,13 @@
  * 全てのServer ActionはActionResult<T>を返す
  */
 
+import { requireAdmin as authRequireAdmin } from '@/lib/auth'
+import type { Session } from 'next-auth'
+
+// =============================================================================
+// Types
+// =============================================================================
+
 /**
  * Server Actionsの成功レスポンス
  */
@@ -41,6 +48,10 @@ export type ActionFailure = {
  * ActionResult<{ items: Space[]; total: number }>
  */
 export type ActionResult<TData = void> = ActionSuccess<TData> | ActionFailure
+
+// =============================================================================
+// Helpers
+// =============================================================================
 
 /**
  * 成功レスポンスを生成
@@ -94,4 +105,52 @@ export function isActionFailure<T>(
   result: ActionResult<T>
 ): result is ActionFailure {
   return result.success === false
+}
+
+// =============================================================================
+// withAuth Higher Order Function
+// =============================================================================
+
+/**
+ * 管理者認証が必要なServer Actionをラップする高階関数
+ *
+ * - 認証エラー時は自動的にActionFailureを返す
+ * - 成功時はコールバック関数にuserを渡して実行
+ * - try-catch不要で認証処理を統一
+ *
+ * @example
+ * // 書き込み操作
+ * export const updateUser = withAuth(async (user, id: string, data: UserInput) => {
+ *   // userは認証済み管理者
+ *   await prisma.user.update({ where: { id }, data })
+ *   return createSuccess('更新しました')
+ * })
+ *
+ * @example
+ * // データ付き成功レスポンス
+ * export const createUser = withAuth(async (user, data: UserInput) => {
+ *   const newUser = await prisma.user.create({ data })
+ *   return createSuccess('作成しました', { id: newUser.id })
+ * })
+ */
+export function withAuth<TArgs extends unknown[], TData = void>(
+  fn: (user: Session['user'], ...args: TArgs) => Promise<ActionResult<TData>>
+): (...args: TArgs) => Promise<ActionResult<TData>> {
+  return async (...args: TArgs): Promise<ActionResult<TData>> => {
+    try {
+      const user = await authRequireAdmin()
+      return await fn(user, ...args)
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message === 'Unauthorized') {
+          return createFailure('ログインが必要です')
+        }
+        if (error.message === 'Forbidden') {
+          return createFailure('管理者権限が必要です')
+        }
+      }
+      console.error('withAuth error:', error)
+      return createFailure('認証エラーが発生しました')
+    }
+  }
 }

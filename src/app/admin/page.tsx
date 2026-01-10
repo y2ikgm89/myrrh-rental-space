@@ -14,8 +14,11 @@ import {
   getTodayReservations,
 } from '@/actions/admin/dashboard'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/admin/ui/card'
-import { Badge } from '@/components/admin/ui/badge'
 import { Button } from '@/components/admin/ui/button'
+import {
+  ReservationStatusBadge,
+  InquiryStatusBadge,
+} from '@/components/admin/status-badges'
 import {
   Table,
   TableBody,
@@ -26,7 +29,7 @@ import {
 } from '@/components/admin/ui/table'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { ReservationStatus, InquiryStatus } from '@/generated/prisma/client/enums'
+import type { ReservationStatus, InquiryStatus } from '@/generated/prisma/client/enums'
 
 export const metadata: Metadata = {
   title: 'ダッシュボード | 管理画面',
@@ -261,32 +264,4 @@ function formatCurrency(value: number): string {
     style: 'currency',
     currency: 'JPY',
   }).format(value)
-}
-
-function ReservationStatusBadge({ status }: { status: ReservationStatus }) {
-  switch (status) {
-    case 'PENDING':
-      return <Badge variant="secondary">保留中</Badge>
-    case 'CONFIRMED':
-      return <Badge variant="default">確定</Badge>
-    case 'CANCELLED':
-      return <Badge variant="destructive">キャンセル</Badge>
-    default:
-      return <Badge variant="outline">{status}</Badge>
-  }
-}
-
-function InquiryStatusBadge({ status }: { status: InquiryStatus }) {
-  switch (status) {
-    case 'NEW':
-      return <Badge variant="default">新規</Badge>
-    case 'IN_PROGRESS':
-      return <Badge variant="secondary">対応中</Badge>
-    case 'RESOLVED':
-      return <Badge variant="outline">解決済み</Badge>
-    case 'CLOSED':
-      return <Badge variant="outline">クローズ</Badge>
-    default:
-      return <Badge variant="outline">{status}</Badge>
-  }
 }

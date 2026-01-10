@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { CustomerStatus } from '@/generated/prisma/client/enums'
 import { z } from 'zod'
-import { type ActionResult, createSuccess, createFailure, type CustomerWhereInput } from '@/types'
+import { createSuccess, createFailure, type CustomerWhereInput, withAuth } from '@/types'
 import { requireAdmin } from '@/lib/auth'
 
 // =============================================================================
@@ -193,13 +193,8 @@ export async function getCustomerById(id: string): Promise<CustomerWithReservati
 /**
  * 顧客ステータスを更新
  */
-export async function updateCustomerStatus(
-  id: string,
-  status: CustomerStatus
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
-
+export const updateCustomerStatus = withAuth(
+  async (_user, id: string, status: CustomerStatus) => {
     const parsed = updateStatusSchema.safeParse({ id, status })
     if (!parsed.success) {
       return createFailure('入力が不正です')
@@ -222,22 +217,14 @@ export async function updateCustomerStatus(
     revalidatePath(`/admin/customers/${id}`)
 
     return createSuccess('ステータスを更新しました')
-  } catch (error) {
-    console.error('Failed to update customer status:', error)
-    return createFailure('ステータスの更新に失敗しました')
   }
-}
+)
 
 /**
  * 顧客メモを更新
  */
-export async function updateCustomerNotes(
-  id: string,
-  notes: string | null
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
-
+export const updateCustomerNotes = withAuth(
+  async (_user, id: string, notes: string | null) => {
     const parsed = updateNotesSchema.safeParse({ id, notes })
     if (!parsed.success) {
       return createFailure('入力が不正です')
@@ -260,43 +247,31 @@ export async function updateCustomerNotes(
     revalidatePath(`/admin/customers/${id}`)
 
     return createSuccess('メモを更新しました')
-  } catch (error) {
-    console.error('Failed to update customer notes:', error)
-    return createFailure('メモの更新に失敗しました')
   }
-}
+)
 
 /**
  * 顧客のアクティブ状態を切り替え
  */
-export async function toggleCustomerActive(
-  id: string
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
+export const toggleCustomerActive = withAuth(async (_user, id: string) => {
+  const customer = await prisma.customer.findUnique({
+    where: { id },
+  })
 
-    const customer = await prisma.customer.findUnique({
-      where: { id },
-    })
-
-    if (!customer) {
-      return createFailure('顧客が見つかりません')
-    }
-
-    await prisma.customer.update({
-      where: { id },
-      data: { isActive: !customer.isActive },
-    })
-
-    revalidatePath('/admin/customers')
-    revalidatePath(`/admin/customers/${id}`)
-
-    return createSuccess('アクティブ状態を変更しました')
-  } catch (error) {
-    console.error('Failed to toggle customer active status:', error)
-    return createFailure('アクティブ状態の変更に失敗しました')
+  if (!customer) {
+    return createFailure('顧客が見つかりません')
   }
-}
+
+  await prisma.customer.update({
+    where: { id },
+    data: { isActive: !customer.isActive },
+  })
+
+  revalidatePath('/admin/customers')
+  revalidatePath(`/admin/customers/${id}`)
+
+  return createSuccess('アクティブ状態を変更しました')
+})
 
 /**
  * 顧客統計情報を取得

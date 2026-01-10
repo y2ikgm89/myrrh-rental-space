@@ -12,7 +12,7 @@ import {
   TableRow,
   Button,
 } from '@/components/admin/ui'
-import { StatusBadge } from './StatusBadge'
+import { InquiryStatusBadge } from '@/components/admin/status-badges'
 import type { InquiryData } from '@/actions/admin/inquiry'
 
 type InquiryTableProps = {
@@ -45,7 +45,7 @@ export function InquiryTable({ inquiries }: InquiryTableProps) {
           {inquiries.map((inquiry) => (
             <TableRow key={inquiry.id}>
               <TableCell>
-                <StatusBadge status={inquiry.status} />
+                <InquiryStatusBadge status={inquiry.status} />
               </TableCell>
               <TableCell>
                 <div className="max-w-xs truncate font-medium">

@@ -2,6 +2,73 @@
 
 ## 完了した計画
 
+### 011-server-client-separation.md (2026-01-11)
+
+D&DページのServer/Client Component分離
+
+**実装内容**:
+- Next.js公式ベストプラクティスに準拠したServer/Client分離
+- blog/categories: page.tsx(506行)をServer Component(8行)+Client Component(379行)に分離
+- settings/navigation: page.tsx(1068行)をServer Component(23行)+Client Component(780行)に分離
+- 共通DragHandleコンポーネント活用（重複削除）
+
+**新規ファイル**:
+- `src/app/admin/blog/categories/_components/CategoryManager.tsx`
+- `src/app/admin/settings/navigation/_components/NavigationManager.tsx`
+
+**変更ファイル**:
+- `src/app/admin/blog/categories/page.tsx` - Server Component化
+- `src/app/admin/settings/navigation/page.tsx` - Server Component化
+
+---
+
+### 010-withauth-badge-improvements.md (2026-01-11)
+
+withAuth HOF完全移行 + Badge variant意味的整合
+
+**実装内容**:
+- 全Server Actions mutation関数（69関数）をwithAuth HOFに移行
+- Badge variantの意味的整合（Inquiry/Customer/Publishステータス色修正）
+- CustomerDetail.tsxの重複コード削除
+- announcement-bar.tsの認証パターン統一（auth()→withAuth）
+
+**変更ファイル**:
+- 11個のServer Actionsファイル（blog, settings, api-keys, navigation, space, user, news, customer, reservation, inquiry, announcement-bar）
+- `src/components/admin/status-badges.tsx` - variant修正
+- `src/app/admin/customers/[id]/_components/CustomerDetail.tsx` - 重複削除
+
+---
+
+### 009-delayed-improvements.md (2026-01-11)
+
+延期されていたコード改善タスクの実装
+
+**実装内容**:
+- StatusBadge共通化: 5つの重複コンポーネントを `status-badges.tsx` に統一
+- withAuth HOF: Server Actions用の認証ラッパー関数を追加
+- 命名規則統一: 5ファイルをkebab-caseからPascalCaseにリネーム
+- 重複コード削除: Turnstile.tsxの重複verifyTurnstileToken関数削除
+
+**新規ファイル**:
+- `src/components/admin/status-badges.tsx`
+
+**変更ファイル**:
+- `src/types/server-actions.ts` - withAuth HOF追加
+- 各テーブル/詳細コンポーネント - StatusBadgeインポート更新
+- 各ページ - リネームファイルのインポート更新
+
+**削除ファイル**:
+- 5つの重複StatusBadge.tsx
+
+**リネームファイル**:
+- `login-form.tsx` → `LoginForm.tsx`
+- `user-form.tsx` → `UserForm.tsx`
+- `user-actions.tsx` → `UserActions.tsx`
+- `image-upload.tsx` → `ImageUpload.tsx`
+- `turnstile.tsx` → `Turnstile.tsx`
+
+---
+
 ### 008-api-keys-management.md (2026-01-11)
 
 外部サービスAPIキー管理機能

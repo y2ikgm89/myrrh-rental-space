@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { InquiryStatus } from '@/generated/prisma/client/enums'
 import { z } from 'zod'
-import { type ActionResult, createSuccess, createFailure, type InquiryWhereInput } from '@/types'
+import { createSuccess, createFailure, type InquiryWhereInput, withAuth } from '@/types'
 import { requireAdmin } from '@/lib/auth'
 
 // =============================================================================
@@ -125,13 +125,8 @@ export async function getInquiryById(id: string): Promise<InquiryData | null> {
 /**
  * お問い合わせステータスを更新
  */
-export async function updateInquiryStatus(
-  id: string,
-  status: InquiryStatus
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
-
+export const updateInquiryStatus = withAuth(
+  async (_user, id: string, status: InquiryStatus) => {
     const parsed = updateStatusSchema.safeParse({ id, status })
     if (!parsed.success) {
       return createFailure('入力が不正です')
@@ -154,41 +149,29 @@ export async function updateInquiryStatus(
     revalidatePath(`/admin/inquiries/${id}`)
 
     return createSuccess('ステータスを更新しました')
-  } catch (error) {
-    console.error('Failed to update inquiry status:', error)
-    return createFailure('ステータスの更新に失敗しました')
   }
-}
+)
 
 /**
  * お問い合わせを削除
  */
-export async function deleteInquiry(
-  id: string
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
+export const deleteInquiry = withAuth(async (_user, id: string) => {
+  const inquiry = await prisma.inquiry.findUnique({
+    where: { id },
+  })
 
-    const inquiry = await prisma.inquiry.findUnique({
-      where: { id },
-    })
-
-    if (!inquiry) {
-      return createFailure('お問い合わせが見つかりません')
-    }
-
-    await prisma.inquiry.delete({
-      where: { id },
-    })
-
-    revalidatePath('/admin/inquiries')
-
-    return createSuccess('お問い合わせを削除しました')
-  } catch (error) {
-    console.error('Failed to delete inquiry:', error)
-    return createFailure('お問い合わせの削除に失敗しました')
+  if (!inquiry) {
+    return createFailure('お問い合わせが見つかりません')
   }
-}
+
+  await prisma.inquiry.delete({
+    where: { id },
+  })
+
+  revalidatePath('/admin/inquiries')
+
+  return createSuccess('お問い合わせを削除しました')
+})
 
 /**
  * 統計情報を取得（ダッシュボード用）

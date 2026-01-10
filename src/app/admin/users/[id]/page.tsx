@@ -7,7 +7,7 @@ import { Badge } from '@/components/admin/ui/badge'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { Role } from '@/generated/prisma/client/enums'
-import { UserActions } from '../_components/user-actions'
+import { UserActions } from '../_components/UserActions'
 
 export const metadata = {
   title: 'ユーザー詳細 | 管理画面',

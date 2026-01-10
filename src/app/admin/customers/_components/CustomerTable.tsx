@@ -12,7 +12,7 @@ import {
   TableRow,
   Button,
 } from '@/components/admin/ui'
-import { StatusBadge } from './StatusBadge'
+import { CustomerStatusBadge } from '@/components/admin/status-badges'
 import type { CustomerData } from '@/actions/admin/customer'
 
 type CustomerTableProps = {
@@ -46,7 +46,7 @@ export function CustomerTable({ customers }: CustomerTableProps) {
           {customers.map((customer) => (
             <TableRow key={customer.id} className={!customer.isActive ? 'opacity-50' : ''}>
               <TableCell>
-                <StatusBadge status={customer.status} />
+                <CustomerStatusBadge status={customer.status} />
               </TableCell>
               <TableCell className="font-medium">
                 {customer.lastName} {customer.firstName}

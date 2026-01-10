@@ -24,7 +24,7 @@ import Link from 'next/link'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { Role } from '@/generated/prisma/client/enums'
-import { UserActions } from './_components/user-actions'
+import { UserActions } from './_components/UserActions'
 import { Pagination } from '@/components/admin/ui'
 
 export const metadata = {

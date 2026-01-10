@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { NavigationType, SocialPlatform } from '@/generated/prisma/client/enums'
 import { z } from 'zod'
-import { type ActionResult, createSuccess, createFailure } from '@/types'
+import { createSuccess, createFailure, withAuth } from '@/types'
 import { requireAdmin } from '@/lib/auth'
 
 // =============================================================================
@@ -97,116 +97,84 @@ export async function getNavigationItems(type?: NavigationType): Promise<Navigat
 /**
  * ナビゲーションアイテムを作成
  */
-export async function createNavigationItem(
-  data: NavigationItemInput
-): Promise<ActionResult<{ id: string }>> {
-  try {
-    await requireAdmin()
-
-    const parsed = navigationItemSchema.safeParse(data)
-    if (!parsed.success) {
-      return createFailure(parsed.error.issues[0].message)
-    }
-
-    const item = await prisma.navigationItem.create({
-      data: parsed.data,
-    })
-
-    revalidatePath('/admin/settings/navigation')
-    revalidatePath('/')
-
-    return createSuccess('ナビゲーションを作成しました', { id: item.id })
-  } catch (error) {
-    console.error('Failed to create navigation item:', error)
-    return createFailure('ナビゲーションの作成に失敗しました')
+export const createNavigationItem = withAuth(async (_user, data: NavigationItemInput) => {
+  const parsed = navigationItemSchema.safeParse(data)
+  if (!parsed.success) {
+    return createFailure(parsed.error.issues[0].message)
   }
-}
+
+  const item = await prisma.navigationItem.create({
+    data: parsed.data,
+  })
+
+  revalidatePath('/admin/settings/navigation')
+  revalidatePath('/')
+
+  return createSuccess('ナビゲーションを作成しました', { id: item.id })
+})
 
 /**
  * ナビゲーションアイテムを更新
  */
-export async function updateNavigationItem(
-  id: string,
-  data: NavigationItemInput
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
-
-    const parsed = navigationItemSchema.safeParse(data)
-    if (!parsed.success) {
-      return createFailure(parsed.error.issues[0].message)
-    }
-
-    const existing = await prisma.navigationItem.findUnique({
-      where: { id },
-    })
-
-    if (!existing) {
-      return createFailure('ナビゲーションが見つかりません')
-    }
-
-    await prisma.navigationItem.update({
-      where: { id },
-      data: parsed.data,
-    })
-
-    revalidatePath('/admin/settings/navigation')
-    revalidatePath('/')
-
-    return createSuccess('ナビゲーションを更新しました')
-  } catch (error) {
-    console.error('Failed to update navigation item:', error)
-    return createFailure('ナビゲーションの更新に失敗しました')
+export const updateNavigationItem = withAuth(async (_user, id: string, data: NavigationItemInput) => {
+  const parsed = navigationItemSchema.safeParse(data)
+  if (!parsed.success) {
+    return createFailure(parsed.error.issues[0].message)
   }
-}
+
+  const existing = await prisma.navigationItem.findUnique({
+    where: { id },
+  })
+
+  if (!existing) {
+    return createFailure('ナビゲーションが見つかりません')
+  }
+
+  await prisma.navigationItem.update({
+    where: { id },
+    data: parsed.data,
+  })
+
+  revalidatePath('/admin/settings/navigation')
+  revalidatePath('/')
+
+  return createSuccess('ナビゲーションを更新しました')
+})
 
 /**
  * ナビゲーションアイテムを削除
  */
-export async function deleteNavigationItem(
-  id: string
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
+export const deleteNavigationItem = withAuth(async (_user, id: string) => {
+  const item = await prisma.navigationItem.findUnique({
+    where: { id },
+    include: {
+      children: true,
+    },
+  })
 
-    const item = await prisma.navigationItem.findUnique({
-      where: { id },
-      include: {
-        children: true,
-      },
-    })
-
-    if (!item) {
-      return createFailure('ナビゲーションが見つかりません')
-    }
-
-    if (item.children.length > 0) {
-      return createFailure('サブメニューがあるため削除できません')
-    }
-
-    await prisma.navigationItem.delete({
-      where: { id },
-    })
-
-    revalidatePath('/admin/settings/navigation')
-    revalidatePath('/')
-
-    return createSuccess('ナビゲーションを削除しました')
-  } catch (error) {
-    console.error('Failed to delete navigation item:', error)
-    return createFailure('ナビゲーションの削除に失敗しました')
+  if (!item) {
+    return createFailure('ナビゲーションが見つかりません')
   }
-}
+
+  if (item.children.length > 0) {
+    return createFailure('サブメニューがあるため削除できません')
+  }
+
+  await prisma.navigationItem.delete({
+    where: { id },
+  })
+
+  revalidatePath('/admin/settings/navigation')
+  revalidatePath('/')
+
+  return createSuccess('ナビゲーションを削除しました')
+})
 
 /**
  * ナビゲーションの順序を更新
  */
-export async function updateNavigationOrder(
-  items: { id: string; order: number; parentId?: string | null }[]
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
-
+export const updateNavigationOrder = withAuth(
+  async (_user, items: { id: string; order: number; parentId?: string | null }[]) => {
     await prisma.$transaction(
       items.map((item) =>
         prisma.navigationItem.update({
@@ -223,21 +191,14 @@ export async function updateNavigationOrder(
     revalidatePath('/')
 
     return createSuccess('順序を更新しました')
-  } catch (error) {
-    console.error('Failed to update navigation order:', error)
-    return createFailure('順序の更新に失敗しました')
   }
-}
+)
 
 /**
  * SNSリンクの順序を更新
  */
-export async function updateSocialLinkOrder(
-  items: { id: string; order: number }[]
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
-
+export const updateSocialLinkOrder = withAuth(
+  async (_user, items: { id: string; order: number }[]) => {
     await prisma.$transaction(
       items.map((item) =>
         prisma.socialLink.update({
@@ -251,11 +212,8 @@ export async function updateSocialLinkOrder(
     revalidatePath('/')
 
     return createSuccess('順序を更新しました')
-  } catch (error) {
-    console.error('Failed to update social link order:', error)
-    return createFailure('順序の更新に失敗しました')
   }
-}
+)
 
 // =============================================================================
 // Social Link Actions
@@ -294,96 +252,68 @@ export async function getSocialLinks(options: GetSocialLinksOptions = {}): Promi
 /**
  * SNSリンクを作成
  */
-export async function createSocialLink(
-  data: SocialLinkInput
-): Promise<ActionResult<{ id: string }>> {
-  try {
-    await requireAdmin()
-
-    const parsed = socialLinkSchema.safeParse(data)
-    if (!parsed.success) {
-      return createFailure(parsed.error.issues[0].message)
-    }
-
-    const link = await prisma.socialLink.create({
-      data: parsed.data,
-    })
-
-    revalidatePath('/admin/settings/navigation')
-    revalidatePath('/')
-
-    return createSuccess('SNSリンクを作成しました', { id: link.id })
-  } catch (error) {
-    console.error('Failed to create social link:', error)
-    return createFailure('SNSリンクの作成に失敗しました')
+export const createSocialLink = withAuth(async (_user, data: SocialLinkInput) => {
+  const parsed = socialLinkSchema.safeParse(data)
+  if (!parsed.success) {
+    return createFailure(parsed.error.issues[0].message)
   }
-}
+
+  const link = await prisma.socialLink.create({
+    data: parsed.data,
+  })
+
+  revalidatePath('/admin/settings/navigation')
+  revalidatePath('/')
+
+  return createSuccess('SNSリンクを作成しました', { id: link.id })
+})
 
 /**
  * SNSリンクを更新
  */
-export async function updateSocialLink(
-  id: string,
-  data: SocialLinkInput
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
-
-    const parsed = socialLinkSchema.safeParse(data)
-    if (!parsed.success) {
-      return createFailure(parsed.error.issues[0].message)
-    }
-
-    const existing = await prisma.socialLink.findUnique({
-      where: { id },
-    })
-
-    if (!existing) {
-      return createFailure('SNSリンクが見つかりません')
-    }
-
-    await prisma.socialLink.update({
-      where: { id },
-      data: parsed.data,
-    })
-
-    revalidatePath('/admin/settings/navigation')
-    revalidatePath('/')
-
-    return createSuccess('SNSリンクを更新しました')
-  } catch (error) {
-    console.error('Failed to update social link:', error)
-    return createFailure('SNSリンクの更新に失敗しました')
+export const updateSocialLink = withAuth(async (_user, id: string, data: SocialLinkInput) => {
+  const parsed = socialLinkSchema.safeParse(data)
+  if (!parsed.success) {
+    return createFailure(parsed.error.issues[0].message)
   }
-}
+
+  const existing = await prisma.socialLink.findUnique({
+    where: { id },
+  })
+
+  if (!existing) {
+    return createFailure('SNSリンクが見つかりません')
+  }
+
+  await prisma.socialLink.update({
+    where: { id },
+    data: parsed.data,
+  })
+
+  revalidatePath('/admin/settings/navigation')
+  revalidatePath('/')
+
+  return createSuccess('SNSリンクを更新しました')
+})
 
 /**
  * SNSリンクを削除
  */
-export async function deleteSocialLink(
-  id: string
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
+export const deleteSocialLink = withAuth(async (_user, id: string) => {
+  const link = await prisma.socialLink.findUnique({
+    where: { id },
+  })
 
-    const link = await prisma.socialLink.findUnique({
-      where: { id },
-    })
-
-    if (!link) {
-      return createFailure('SNSリンクが見つかりません')
-    }
-
-    await prisma.socialLink.delete({
-      where: { id },
-    })
-
-    revalidatePath('/admin/settings/navigation')
-    revalidatePath('/')
-
-    return createSuccess('SNSリンクを削除しました')
-  } catch (error) {
-    console.error('Failed to delete social link:', error)
-    return createFailure('SNSリンクの削除に失敗しました')
+  if (!link) {
+    return createFailure('SNSリンクが見つかりません')
   }
-}
+
+  await prisma.socialLink.delete({
+    where: { id },
+  })
+
+  revalidatePath('/admin/settings/navigation')
+  revalidatePath('/')
+
+  return createSuccess('SNSリンクを削除しました')
+})

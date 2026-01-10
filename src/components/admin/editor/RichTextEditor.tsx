@@ -14,8 +14,10 @@
  * - 画像・動画埋め込み、リンク
  * - 文字色・背景色
  * - BubbleMenu、FloatingMenu
+ * - フルスクリーンモード（集中執筆）
  */
 
+import { useState, useEffect } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import { BubbleMenu, FloatingMenu } from '@tiptap/react/menus'
 import StarterKit from '@tiptap/starter-kit'
@@ -74,6 +76,10 @@ export interface RichTextEditorProps {
   showBubbleMenu?: boolean
   /** FloatingMenuを表示するか（デフォルト: true） */
   showFloatingMenu?: boolean
+  /** フルスクリーンモードを有効化（デフォルト: true） */
+  allowFullscreen?: boolean
+  /** 最小高さ（デフォルト: 500px） */
+  minHeight?: string
 }
 
 // =============================================================================
@@ -81,6 +87,47 @@ export interface RichTextEditorProps {
 // =============================================================================
 
 const lowlight = createLowlight(common)
+
+// =============================================================================
+// Fullscreen Toggle Button
+// =============================================================================
+
+interface FullscreenButtonProps {
+  isFullscreen: boolean
+  onToggle: () => void
+}
+
+function FullscreenButton({ isFullscreen, onToggle }: FullscreenButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      title={isFullscreen ? '標準表示に戻る (Esc)' : 'フルスクリーン (F11)'}
+      className={cn(
+        'inline-flex h-8 items-center gap-1.5 rounded px-2 text-xs font-medium transition-colors',
+        'hover:bg-muted hover:text-foreground',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        isFullscreen && 'bg-primary text-primary-foreground hover:bg-primary/90'
+      )}
+    >
+      {isFullscreen ? (
+        <>
+          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
+          </svg>
+          <span className="hidden sm:inline">標準表示</span>
+        </>
+      ) : (
+        <>
+          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+          </svg>
+          <span className="hidden sm:inline">全画面</span>
+        </>
+      )}
+    </button>
+  )
+}
 
 // =============================================================================
 // Main Component
@@ -95,7 +142,38 @@ export function RichTextEditor({
   characterLimit = 50000,
   showBubbleMenu = true,
   showFloatingMenu = true,
+  allowFullscreen = true,
+  minHeight = '500px',
 }: RichTextEditorProps) {
+  const [isFullscreen, setIsFullscreen] = useState(false)
+
+  // キーボードショートカット（Esc: フルスクリーン解除, F11: トグル）
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false)
+      }
+      if (e.key === 'F11') {
+        e.preventDefault()
+        setIsFullscreen((prev) => !prev)
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isFullscreen])
+
+  // フルスクリーン時にbodyスクロールを無効化
+  useEffect(() => {
+    if (isFullscreen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [isFullscreen])
+
   const editor = useEditor({
     extensions: [
       // 基本機能（StarterKit）
@@ -224,7 +302,8 @@ export function RichTextEditor({
           // タスクリストスタイル
           '[&_ul[data-type="taskList"]]:list-none [&_ul[data-type="taskList"]]:pl-0',
           '[&_li[data-type="taskItem"]]:flex [&_li[data-type="taskItem"]]:items-start [&_li[data-type="taskItem"]]:gap-2',
-          'min-h-[400px] p-4 focus:outline-none'
+          // 視認性向上: 広い編集領域
+          'p-6 focus:outline-none'
         ),
       },
     },
@@ -235,17 +314,36 @@ export function RichTextEditor({
   // 文字数取得
   const characterCount = editor?.storage.characterCount?.characters() ?? 0
 
+  // フルスクリーントグルハンドラ
+  const toggleFullscreen = () => {
+    setIsFullscreen((prev) => !prev)
+  }
+
   return (
     <div
       className={cn(
         'overflow-hidden rounded-lg border bg-background',
         'focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2',
         disabled && 'opacity-50 cursor-not-allowed',
+        // フルスクリーンモード
+        isFullscreen && 'fixed inset-0 z-50 rounded-none border-0 focus-within:ring-0',
         className
       )}
     >
-      {/* メインツールバー */}
-      <EditorToolbar editor={editor} />
+      {/* ツールバーエリア */}
+      <div className={cn(
+        'flex items-center justify-between border-b bg-muted/30',
+        isFullscreen && 'sticky top-0 z-10'
+      )}>
+        <div className="flex-1 overflow-x-auto">
+          <EditorToolbar editor={editor} />
+        </div>
+        {allowFullscreen && (
+          <div className="flex items-center gap-1 border-l px-2">
+            <FullscreenButton isFullscreen={isFullscreen} onToggle={toggleFullscreen} />
+          </div>
+        )}
+      </div>
 
       {/* BubbleMenu（テキスト選択時） */}
       {editor && showBubbleMenu && (
@@ -268,10 +366,28 @@ export function RichTextEditor({
       )}
 
       {/* エディタ本体 */}
-      <EditorContent editor={editor} />
+      <div
+        className={cn(
+          'overflow-y-auto',
+          isFullscreen ? 'h-[calc(100vh-100px)]' : ''
+        )}
+        style={!isFullscreen ? { minHeight } : undefined}
+      >
+        <EditorContent editor={editor} />
+      </div>
 
-      {/* 文字数カウント */}
-      <div className="flex items-center justify-end border-t bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground">
+      {/* フッター: 文字数カウント + ヒント */}
+      <div className={cn(
+        'flex items-center justify-between border-t bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground',
+        isFullscreen && 'sticky bottom-0'
+      )}>
+        <div className="hidden sm:flex items-center gap-4">
+          {isFullscreen && (
+            <span className="text-muted-foreground/60">
+              Escで終了 • F11で切替
+            </span>
+          )}
+        </div>
         <span>
           {characterCount.toLocaleString()} / {characterLimit.toLocaleString()} 文字
         </span>

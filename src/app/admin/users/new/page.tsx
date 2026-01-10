@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/admin/ui/card'
 import Link from 'next/link'
 import { Button } from '@/components/admin/ui/button'
-import { UserForm } from '../_components/user-form'
+import { UserForm } from '../_components/UserForm'
 
 export const metadata = {
   title: '新規ユーザー | 管理画面',

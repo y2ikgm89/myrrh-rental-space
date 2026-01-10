@@ -10,7 +10,7 @@
 import { useState, useTransition, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { Send, Loader2 } from 'lucide-react'
-import { Turnstile } from '@/components/turnstile'
+import { Turnstile } from '@/components/Turnstile'
 import { createComment } from '@/actions/blog-comment'
 import { cn } from '@/lib/utils'
 

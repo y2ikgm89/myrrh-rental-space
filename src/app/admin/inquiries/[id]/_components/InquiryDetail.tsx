@@ -24,7 +24,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/admin/ui'
-import { StatusBadge } from '../../_components/StatusBadge'
+import { InquiryStatusBadge } from '@/components/admin/status-badges'
 import { updateInquiryStatus, deleteInquiry } from '@/actions/admin/inquiry'
 import type { InquiryData } from '@/actions/admin/inquiry'
 import type { InquiryStatus } from '@/generated/prisma/client/enums'
@@ -143,7 +143,7 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
             <CardContent className="space-y-4">
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">現在:</span>
-                <StatusBadge status={inquiry.status} />
+                <InquiryStatusBadge status={inquiry.status} />
               </div>
               <Select
                 value={inquiry.status}

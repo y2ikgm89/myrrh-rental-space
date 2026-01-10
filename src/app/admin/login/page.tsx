@@ -5,7 +5,7 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
-import { LoginForm } from './login-form'
+import { LoginForm } from './LoginForm'
 import type { ReactElement } from 'react'
 
 export const metadata: Metadata = {

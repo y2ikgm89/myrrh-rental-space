@@ -10,7 +10,7 @@ import {
   type SpaceFilters,
   type SpacePagination,
 } from '@/lib/validations/space'
-import { type ActionResult, createSuccess, createFailure, type SpaceWhereInput } from '@/types'
+import { createSuccess, createFailure, type SpaceWhereInput, withAuth } from '@/types'
 import { parseStringArray, parseBusinessHours } from '@/lib/json-validators'
 import { requireAdmin } from '@/lib/auth'
 
@@ -127,204 +127,166 @@ export async function getSpaceById(id: string): Promise<SpaceWithStats | null> {
 /**
  * スペースを作成
  */
-export async function createSpace(
-  input: SpaceFormData
-): Promise<ActionResult<{ id: string }>> {
-  try {
-    await requireAdmin()
-
-    const parsed = spaceFormSchema.safeParse(input)
-    if (!parsed.success) {
-      return createFailure(parsed.error.issues[0]?.message || '入力が不正です')
-    }
-
-    const data = parsed.data
-
-    const space = await prisma.space.create({
-      data: {
-        name: data.name,
-        description: data.description,
-        address: data.address,
-        access: data.access || null,
-        capacity: data.capacity,
-        area: data.area || null,
-        hourlyPrice: data.hourlyPrice,
-        dailyPrice: data.dailyPrice || null,
-        mainImageUrl: data.mainImageUrl,
-        imageUrls: data.imageUrls,
-        facilities: data.facilities,
-        isPublished: data.isPublished,
-        publishedAt: data.isPublished ? new Date() : null,
-      },
-    })
-
-    revalidatePath('/admin/spaces')
-    revalidatePath('/spaces')
-    revalidatePath('/')
-
-    return createSuccess('スペースを作成しました', { id: space.id })
-  } catch (error) {
-    console.error('Failed to create space:', error)
-    return createFailure('スペースの作成に失敗しました')
+export const createSpace = withAuth(async (_user, input: SpaceFormData) => {
+  const parsed = spaceFormSchema.safeParse(input)
+  if (!parsed.success) {
+    return createFailure(parsed.error.issues[0]?.message || '入力が不正です')
   }
-}
+
+  const data = parsed.data
+
+  const space = await prisma.space.create({
+    data: {
+      name: data.name,
+      description: data.description,
+      address: data.address,
+      access: data.access || null,
+      capacity: data.capacity,
+      area: data.area || null,
+      hourlyPrice: data.hourlyPrice,
+      dailyPrice: data.dailyPrice || null,
+      mainImageUrl: data.mainImageUrl,
+      imageUrls: data.imageUrls,
+      facilities: data.facilities,
+      isPublished: data.isPublished,
+      publishedAt: data.isPublished ? new Date() : null,
+    },
+  })
+
+  revalidatePath('/admin/spaces')
+  revalidatePath('/spaces')
+  revalidatePath('/')
+
+  return createSuccess('スペースを作成しました', { id: space.id })
+})
 
 /**
  * スペースを更新
  */
-export async function updateSpace(
-  id: string,
-  input: SpaceFormData
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
-
-    const parsed = spaceFormSchema.safeParse(input)
-    if (!parsed.success) {
-      return createFailure(parsed.error.issues[0]?.message || '入力が不正です')
-    }
-
-    const existingSpace = await prisma.space.findUnique({
-      where: { id },
-    })
-
-    if (!existingSpace) {
-      return createFailure('スペースが見つかりません')
-    }
-
-    const data = parsed.data
-
-    // 公開状態が変わった場合はpublishedAtを更新
-    let publishedAt = existingSpace.publishedAt
-    if (data.isPublished && !existingSpace.isPublished) {
-      publishedAt = new Date()
-    } else if (!data.isPublished) {
-      publishedAt = null
-    }
-
-    await prisma.space.update({
-      where: { id },
-      data: {
-        name: data.name,
-        description: data.description,
-        address: data.address,
-        access: data.access || null,
-        capacity: data.capacity,
-        area: data.area || null,
-        hourlyPrice: data.hourlyPrice,
-        dailyPrice: data.dailyPrice || null,
-        mainImageUrl: data.mainImageUrl,
-        imageUrls: data.imageUrls,
-        facilities: data.facilities,
-        isPublished: data.isPublished,
-        publishedAt,
-      },
-    })
-
-    revalidatePath('/admin/spaces')
-    revalidatePath(`/admin/spaces/${id}`)
-    revalidatePath('/spaces')
-    revalidatePath(`/spaces/${id}`)
-    revalidatePath('/')
-
-    return createSuccess('スペースを更新しました')
-  } catch (error) {
-    console.error('Failed to update space:', error)
-    return createFailure('スペースの更新に失敗しました')
+export const updateSpace = withAuth(async (_user, id: string, input: SpaceFormData) => {
+  const parsed = spaceFormSchema.safeParse(input)
+  if (!parsed.success) {
+    return createFailure(parsed.error.issues[0]?.message || '入力が不正です')
   }
-}
+
+  const existingSpace = await prisma.space.findUnique({
+    where: { id },
+  })
+
+  if (!existingSpace) {
+    return createFailure('スペースが見つかりません')
+  }
+
+  const data = parsed.data
+
+  // 公開状態が変わった場合はpublishedAtを更新
+  let publishedAt = existingSpace.publishedAt
+  if (data.isPublished && !existingSpace.isPublished) {
+    publishedAt = new Date()
+  } else if (!data.isPublished) {
+    publishedAt = null
+  }
+
+  await prisma.space.update({
+    where: { id },
+    data: {
+      name: data.name,
+      description: data.description,
+      address: data.address,
+      access: data.access || null,
+      capacity: data.capacity,
+      area: data.area || null,
+      hourlyPrice: data.hourlyPrice,
+      dailyPrice: data.dailyPrice || null,
+      mainImageUrl: data.mainImageUrl,
+      imageUrls: data.imageUrls,
+      facilities: data.facilities,
+      isPublished: data.isPublished,
+      publishedAt,
+    },
+  })
+
+  revalidatePath('/admin/spaces')
+  revalidatePath(`/admin/spaces/${id}`)
+  revalidatePath('/spaces')
+  revalidatePath(`/spaces/${id}`)
+  revalidatePath('/')
+
+  return createSuccess('スペースを更新しました')
+})
 
 /**
  * スペースの公開状態を更新
  */
-export async function updateSpacePublish(
-  id: string,
-  isPublished: boolean
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
+export const updateSpacePublish = withAuth(async (_user, id: string, isPublished: boolean) => {
+  const space = await prisma.space.findUnique({
+    where: { id },
+  })
 
-    const space = await prisma.space.findUnique({
-      where: { id },
-    })
-
-    if (!space) {
-      return createFailure('スペースが見つかりません')
-    }
-
-    await prisma.space.update({
-      where: { id },
-      data: {
-        isPublished,
-        publishedAt: isPublished ? new Date() : null,
-      },
-    })
-
-    revalidatePath('/admin/spaces')
-    revalidatePath(`/admin/spaces/${id}`)
-    revalidatePath('/spaces')
-    revalidatePath(`/spaces/${id}`)
-    revalidatePath('/')
-
-    return createSuccess('公開状態を更新しました')
-  } catch (error) {
-    console.error('Failed to update space publish status:', error)
-    return createFailure('公開状態の更新に失敗しました')
+  if (!space) {
+    return createFailure('スペースが見つかりません')
   }
-}
+
+  await prisma.space.update({
+    where: { id },
+    data: {
+      isPublished,
+      publishedAt: isPublished ? new Date() : null,
+    },
+  })
+
+  revalidatePath('/admin/spaces')
+  revalidatePath(`/admin/spaces/${id}`)
+  revalidatePath('/spaces')
+  revalidatePath(`/spaces/${id}`)
+  revalidatePath('/')
+
+  return createSuccess('公開状態を更新しました')
+})
 
 /**
  * スペースを削除（論理削除）
  */
-export async function deleteSpace(
-  id: string
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
-
-    const space = await prisma.space.findUnique({
-      where: { id },
-      include: {
-        _count: {
-          select: {
-            reservations: {
-              where: {
-                status: { in: ['PENDING', 'CONFIRMED'] },
-              },
+export const deleteSpace = withAuth(async (_user, id: string) => {
+  const space = await prisma.space.findUnique({
+    where: { id },
+    include: {
+      _count: {
+        select: {
+          reservations: {
+            where: {
+              status: { in: ['PENDING', 'CONFIRMED'] },
             },
           },
         },
       },
-    })
+    },
+  })
 
-    if (!space) {
-      return createFailure('スペースが見つかりません')
-    }
-
-    // 有効な予約がある場合は削除不可
-    if (space._count.reservations > 0) {
-      return createFailure('有効な予約があるため削除できません')
-    }
-
-    // 論理削除
-    await prisma.space.update({
-      where: { id },
-      data: {
-        isActive: false,
-        isPublished: false,
-      },
-    })
-
-    revalidatePath('/admin/spaces')
-    revalidatePath('/spaces')
-    revalidatePath('/')
-
-    return createSuccess('スペースを削除しました')
-  } catch (error) {
-    console.error('Failed to delete space:', error)
-    return createFailure('スペースの削除に失敗しました')
+  if (!space) {
+    return createFailure('スペースが見つかりません')
   }
-}
+
+  // 有効な予約がある場合は削除不可
+  if (space._count.reservations > 0) {
+    return createFailure('有効な予約があるため削除できません')
+  }
+
+  // 論理削除
+  await prisma.space.update({
+    where: { id },
+    data: {
+      isActive: false,
+      isPublished: false,
+    },
+  })
+
+  revalidatePath('/admin/spaces')
+  revalidatePath('/spaces')
+  revalidatePath('/')
+
+  return createSuccess('スペースを削除しました')
+})
 
 /**
  * 統計情報を取得（ダッシュボード用）

@@ -10,6 +10,7 @@ export {
   createFailure,
   isActionSuccess,
   isActionFailure,
+  withAuth,
 } from './server-actions'
 
 export {

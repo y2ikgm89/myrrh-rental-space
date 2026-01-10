@@ -15,7 +15,7 @@ import {
   Button,
   Switch,
 } from '@/components/admin/ui'
-import { StatusBadge } from './StatusBadge'
+import { PublishStatusBadge } from '@/components/admin/status-badges'
 import { toggleNewsPublish } from '@/actions/admin/news'
 import type { NewsData } from '@/actions/admin/news'
 
@@ -67,7 +67,7 @@ export function NewsTable({ news }: NewsTableProps) {
                 />
               </TableCell>
               <TableCell>
-                <StatusBadge isPublished={item.isPublished} />
+                <PublishStatusBadge isPublished={item.isPublished} />
               </TableCell>
               <TableCell>
                 <div className="max-w-xs truncate font-medium">

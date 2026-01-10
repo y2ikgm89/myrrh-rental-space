@@ -8,7 +8,7 @@
 
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
-import { type ActionResult, createSuccess, createFailure } from '@/types'
+import { createSuccess, createFailure, withAuth } from '@/types'
 import { encrypt, safeDecrypt } from '@/lib/crypto'
 import { requireAdmin } from '@/lib/auth'
 import {
@@ -156,12 +156,8 @@ export async function getCustomApiKeys(): Promise<CustomApiKeyData[]> {
 /**
  * Resend設定を更新
  */
-export async function updateResendSettings(
-  data: ResendSettingsInput
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
-
+export const updateResendSettings = withAuth(
+  async (_user, data: ResendSettingsInput) => {
     const parsed = resendSettingsSchema.safeParse(data)
     if (!parsed.success) {
       return createFailure(parsed.error.issues[0].message)
@@ -185,83 +181,71 @@ export async function updateResendSettings(
 
     revalidatePath('/admin/settings')
     return createSuccess('Resend設定を更新しました')
-  } catch (error) {
-    console.error('Failed to update Resend settings:', error)
-    return createFailure('Resend設定の更新に失敗しました')
   }
-}
+)
 
 /**
  * Resend接続テスト
  */
-export async function testResendConnectionAction(
-  apiKey: string
-): Promise<ActionResult<{ message: string }>> {
-  await requireAdmin()
+export const testResendConnectionAction = withAuth(
+  async (_user, apiKey: string) => {
+    const result = await testResendConnection(apiKey)
 
-  const result = await testResendConnection(apiKey)
+    if (result.success) {
+      await prisma.settings.upsert({
+        where: { id: 'singleton' },
+        create: {
+          id: 'singleton',
+          resendLastTestedAt: new Date(),
+          resendConnectionStatus: 'connected',
+        },
+        update: {
+          resendLastTestedAt: new Date(),
+          resendConnectionStatus: 'connected',
+        },
+      })
 
-  if (result.success) {
+      revalidatePath('/admin/settings')
+      return createSuccess(result.message || '接続に成功しました', {
+        message: result.message || '',
+      })
+    }
+
+    // エラー時もステータス更新
     await prisma.settings.upsert({
       where: { id: 'singleton' },
       create: {
         id: 'singleton',
         resendLastTestedAt: new Date(),
-        resendConnectionStatus: 'connected',
+        resendConnectionStatus: 'error',
       },
       update: {
         resendLastTestedAt: new Date(),
-        resendConnectionStatus: 'connected',
+        resendConnectionStatus: 'error',
       },
     })
 
     revalidatePath('/admin/settings')
-    return createSuccess(result.message || '接続に成功しました', {
-      message: result.message || '',
-    })
+    return createFailure(result.error || '接続テストに失敗しました')
   }
-
-  // エラー時もステータス更新
-  await prisma.settings.upsert({
-    where: { id: 'singleton' },
-    create: {
-      id: 'singleton',
-      resendLastTestedAt: new Date(),
-      resendConnectionStatus: 'error',
-    },
-    update: {
-      resendLastTestedAt: new Date(),
-      resendConnectionStatus: 'error',
-    },
-  })
-
-  revalidatePath('/admin/settings')
-  return createFailure(result.error || '接続テストに失敗しました')
-}
+)
 
 /**
  * Resendキーをクリア
  */
-export async function clearResendKeys(): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
+export const clearResendKeys = withAuth(async (_user) => {
+  await prisma.settings.update({
+    where: { id: 'singleton' },
+    data: {
+      resendApiKey: null,
+      resendLastTestedAt: null,
+      resendConnectionStatus: null,
+    },
+  })
 
-    await prisma.settings.update({
-      where: { id: 'singleton' },
-      data: {
-        resendApiKey: null,
-        resendLastTestedAt: null,
-        resendConnectionStatus: null,
-      },
-    })
-
-    revalidatePath('/admin/settings')
-    return createSuccess('Resendキーをクリアしました')
-  } catch (error) {
-    console.error('Failed to clear Resend keys:', error)
-    return createFailure('Resendキーのクリアに失敗しました')
-  }
-}
+  revalidatePath('/admin/settings')
+  return createSuccess('Resendキーをクリアしました')
+})
 
 // =============================================================================
 // UPDATE Actions - Turnstile
@@ -270,12 +254,8 @@ export async function clearResendKeys(): Promise<ActionResult<void>> {
 /**
  * Turnstile設定を更新
  */
-export async function updateTurnstileSettings(
-  data: TurnstileSettingsInput
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
-
+export const updateTurnstileSettings = withAuth(
+  async (_user, data: TurnstileSettingsInput) => {
     const parsed = turnstileSettingsSchema.safeParse(data)
     if (!parsed.success) {
       return createFailure(parsed.error.issues[0].message)
@@ -303,86 +283,73 @@ export async function updateTurnstileSettings(
 
     revalidatePath('/admin/settings')
     return createSuccess('Turnstile設定を更新しました')
-  } catch (error) {
-    console.error('Failed to update Turnstile settings:', error)
-    return createFailure('Turnstile設定の更新に失敗しました')
   }
-}
+)
 
 /**
  * Turnstile接続テスト
  */
-export async function testTurnstileConnectionAction(
-  siteKey: string,
-  secretKey: string
-): Promise<ActionResult<{ message: string; note?: string }>> {
-  await requireAdmin()
+export const testTurnstileConnectionAction = withAuth(
+  async (_user, siteKey: string, secretKey: string) => {
+    const result = await testTurnstileConnection(siteKey, secretKey)
 
-  const result = await testTurnstileConnection(siteKey, secretKey)
+    if (result.success) {
+      await prisma.settings.upsert({
+        where: { id: 'singleton' },
+        create: {
+          id: 'singleton',
+          turnstileLastTestedAt: new Date(),
+          turnstileConnectionStatus: 'connected',
+        },
+        update: {
+          turnstileLastTestedAt: new Date(),
+          turnstileConnectionStatus: 'connected',
+        },
+      })
 
-  if (result.success) {
+      revalidatePath('/admin/settings')
+      return createSuccess(result.message || '検証に成功しました', {
+        message: result.message || '',
+        note: result.metadata?.note as string | undefined,
+      })
+    }
+
+    // エラー時もステータス更新
     await prisma.settings.upsert({
       where: { id: 'singleton' },
       create: {
         id: 'singleton',
         turnstileLastTestedAt: new Date(),
-        turnstileConnectionStatus: 'connected',
+        turnstileConnectionStatus: 'error',
       },
       update: {
         turnstileLastTestedAt: new Date(),
-        turnstileConnectionStatus: 'connected',
+        turnstileConnectionStatus: 'error',
       },
     })
 
     revalidatePath('/admin/settings')
-    return createSuccess(result.message || '検証に成功しました', {
-      message: result.message || '',
-      note: result.metadata?.note as string | undefined,
-    })
+    return createFailure(result.error || '接続テストに失敗しました')
   }
-
-  // エラー時もステータス更新
-  await prisma.settings.upsert({
-    where: { id: 'singleton' },
-    create: {
-      id: 'singleton',
-      turnstileLastTestedAt: new Date(),
-      turnstileConnectionStatus: 'error',
-    },
-    update: {
-      turnstileLastTestedAt: new Date(),
-      turnstileConnectionStatus: 'error',
-    },
-  })
-
-  revalidatePath('/admin/settings')
-  return createFailure(result.error || '接続テストに失敗しました')
-}
+)
 
 /**
  * Turnstileキーをクリア
  */
-export async function clearTurnstileKeys(): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
+export const clearTurnstileKeys = withAuth(async (_user) => {
+  await prisma.settings.update({
+    where: { id: 'singleton' },
+    data: {
+      turnstileSiteKey: null,
+      turnstileSecretKey: null,
+      turnstileLastTestedAt: null,
+      turnstileConnectionStatus: null,
+    },
+  })
 
-    await prisma.settings.update({
-      where: { id: 'singleton' },
-      data: {
-        turnstileSiteKey: null,
-        turnstileSecretKey: null,
-        turnstileLastTestedAt: null,
-        turnstileConnectionStatus: null,
-      },
-    })
-
-    revalidatePath('/admin/settings')
-    return createSuccess('Turnstileキーをクリアしました')
-  } catch (error) {
-    console.error('Failed to clear Turnstile keys:', error)
-    return createFailure('Turnstileキーのクリアに失敗しました')
-  }
-}
+  revalidatePath('/admin/settings')
+  return createSuccess('Turnstileキーをクリアしました')
+})
 
 // =============================================================================
 // UPDATE Actions - Google Maps
@@ -391,12 +358,8 @@ export async function clearTurnstileKeys(): Promise<ActionResult<void>> {
 /**
  * Google Maps設定を更新
  */
-export async function updateGoogleMapsSettings(
-  data: GoogleMapsSettingsInput
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
-
+export const updateGoogleMapsSettings = withAuth(
+  async (_user, data: GoogleMapsSettingsInput) => {
     const parsed = googleMapsSettingsSchema.safeParse(data)
     if (!parsed.success) {
       return createFailure(parsed.error.issues[0].message)
@@ -420,83 +383,71 @@ export async function updateGoogleMapsSettings(
 
     revalidatePath('/admin/settings')
     return createSuccess('Google Maps設定を更新しました')
-  } catch (error) {
-    console.error('Failed to update Google Maps settings:', error)
-    return createFailure('Google Maps設定の更新に失敗しました')
   }
-}
+)
 
 /**
  * Google Maps接続テスト
  */
-export async function testGoogleMapsConnectionAction(
-  apiKey: string
-): Promise<ActionResult<{ message: string }>> {
-  await requireAdmin()
+export const testGoogleMapsConnectionAction = withAuth(
+  async (_user, apiKey: string) => {
+    const result = await testGoogleMapsConnection(apiKey)
 
-  const result = await testGoogleMapsConnection(apiKey)
+    if (result.success) {
+      await prisma.settings.upsert({
+        where: { id: 'singleton' },
+        create: {
+          id: 'singleton',
+          googleMapsLastTestedAt: new Date(),
+          googleMapsConnectionStatus: 'connected',
+        },
+        update: {
+          googleMapsLastTestedAt: new Date(),
+          googleMapsConnectionStatus: 'connected',
+        },
+      })
 
-  if (result.success) {
+      revalidatePath('/admin/settings')
+      return createSuccess(result.message || '接続に成功しました', {
+        message: result.message || '',
+      })
+    }
+
+    // エラー時もステータス更新
     await prisma.settings.upsert({
       where: { id: 'singleton' },
       create: {
         id: 'singleton',
         googleMapsLastTestedAt: new Date(),
-        googleMapsConnectionStatus: 'connected',
+        googleMapsConnectionStatus: 'error',
       },
       update: {
         googleMapsLastTestedAt: new Date(),
-        googleMapsConnectionStatus: 'connected',
+        googleMapsConnectionStatus: 'error',
       },
     })
 
     revalidatePath('/admin/settings')
-    return createSuccess(result.message || '接続に成功しました', {
-      message: result.message || '',
-    })
+    return createFailure(result.error || '接続テストに失敗しました')
   }
-
-  // エラー時もステータス更新
-  await prisma.settings.upsert({
-    where: { id: 'singleton' },
-    create: {
-      id: 'singleton',
-      googleMapsLastTestedAt: new Date(),
-      googleMapsConnectionStatus: 'error',
-    },
-    update: {
-      googleMapsLastTestedAt: new Date(),
-      googleMapsConnectionStatus: 'error',
-    },
-  })
-
-  revalidatePath('/admin/settings')
-  return createFailure(result.error || '接続テストに失敗しました')
-}
+)
 
 /**
  * Google Mapsキーをクリア
  */
-export async function clearGoogleMapsKeys(): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
+export const clearGoogleMapsKeys = withAuth(async (_user) => {
+  await prisma.settings.update({
+    where: { id: 'singleton' },
+    data: {
+      googleMapsApiKey: null,
+      googleMapsLastTestedAt: null,
+      googleMapsConnectionStatus: null,
+    },
+  })
 
-    await prisma.settings.update({
-      where: { id: 'singleton' },
-      data: {
-        googleMapsApiKey: null,
-        googleMapsLastTestedAt: null,
-        googleMapsConnectionStatus: null,
-      },
-    })
-
-    revalidatePath('/admin/settings')
-    return createSuccess('Google Mapsキーをクリアしました')
-  } catch (error) {
-    console.error('Failed to clear Google Maps keys:', error)
-    return createFailure('Google Mapsキーのクリアに失敗しました')
-  }
-}
+  revalidatePath('/admin/settings')
+  return createSuccess('Google Mapsキーをクリアしました')
+})
 
 // =============================================================================
 // UPDATE Actions - Custom API Keys
@@ -505,90 +456,74 @@ export async function clearGoogleMapsKeys(): Promise<ActionResult<void>> {
 /**
  * カスタムAPIキーを追加
  */
-export async function addCustomApiKey(
-  data: CustomApiKeyInput
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
-
-    const parsed = customApiKeySchema.safeParse(data)
-    if (!parsed.success) {
-      return createFailure(parsed.error.issues[0].message)
-    }
-
-    const settings = await prisma.settings.findUnique({
-      where: { id: 'singleton' },
-      select: { customApiKeys: true },
-    })
-
-    const existing = (settings?.customApiKeys as CustomApiKeysMap) || {}
-    const id = crypto.randomUUID()
-    const now = new Date().toISOString()
-
-    let encryptedKeyValue: string
-    try {
-      encryptedKeyValue = encrypt(parsed.data.keyValue)
-    } catch {
-      return createFailure('APIキーの暗号化に失敗しました')
-    }
-
-    const newKey = {
-      name: parsed.data.name,
-      keyName: parsed.data.keyName,
-      keyValue: encryptedKeyValue,
-      description: parsed.data.description,
-      createdAt: now,
-      updatedAt: now,
-    }
-
-    const updated = { ...existing, [id]: newKey }
-
-    await prisma.settings.upsert({
-      where: { id: 'singleton' },
-      create: { id: 'singleton', customApiKeys: updated },
-      update: { customApiKeys: updated },
-    })
-
-    revalidatePath('/admin/settings')
-    return createSuccess('APIキーを追加しました')
-  } catch (error) {
-    console.error('Failed to add custom API key:', error)
-    return createFailure('APIキーの追加に失敗しました')
+export const addCustomApiKey = withAuth(async (_user, data: CustomApiKeyInput) => {
+  const parsed = customApiKeySchema.safeParse(data)
+  if (!parsed.success) {
+    return createFailure(parsed.error.issues[0].message)
   }
-}
+
+  const settings = await prisma.settings.findUnique({
+    where: { id: 'singleton' },
+    select: { customApiKeys: true },
+  })
+
+  const existing = (settings?.customApiKeys as CustomApiKeysMap) || {}
+  const id = crypto.randomUUID()
+  const now = new Date().toISOString()
+
+  let encryptedKeyValue: string
+  try {
+    encryptedKeyValue = encrypt(parsed.data.keyValue)
+  } catch {
+    return createFailure('APIキーの暗号化に失敗しました')
+  }
+
+  const newKey = {
+    name: parsed.data.name,
+    keyName: parsed.data.keyName,
+    keyValue: encryptedKeyValue,
+    description: parsed.data.description,
+    createdAt: now,
+    updatedAt: now,
+  }
+
+  const updated = { ...existing, [id]: newKey }
+
+  await prisma.settings.upsert({
+    where: { id: 'singleton' },
+    create: { id: 'singleton', customApiKeys: updated },
+    update: { customApiKeys: updated },
+  })
+
+  revalidatePath('/admin/settings')
+  return createSuccess('APIキーを追加しました')
+})
 
 /**
  * カスタムAPIキーを削除
  */
-export async function deleteCustomApiKey(id: string): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
+export const deleteCustomApiKey = withAuth(async (_user, id: string) => {
+  const settings = await prisma.settings.findUnique({
+    where: { id: 'singleton' },
+    select: { customApiKeys: true },
+  })
 
-    const settings = await prisma.settings.findUnique({
-      where: { id: 'singleton' },
-      select: { customApiKeys: true },
-    })
+  const existing = (settings?.customApiKeys as CustomApiKeysMap) || {}
 
-    const existing = (settings?.customApiKeys as CustomApiKeysMap) || {}
-
-    if (!existing[id]) {
-      return createFailure('指定されたAPIキーが見つかりません')
-    }
-
-    delete existing[id]
-
-    await prisma.settings.update({
-      where: { id: 'singleton' },
-      data: { customApiKeys: existing },
-    })
-
-    revalidatePath('/admin/settings')
-    return createSuccess('APIキーを削除しました')
-  } catch (error) {
-    console.error('Failed to delete custom API key:', error)
-    return createFailure('APIキーの削除に失敗しました')
+  if (!existing[id]) {
+    return createFailure('指定されたAPIキーが見つかりません')
   }
-}
+
+  delete existing[id]
+
+  await prisma.settings.update({
+    where: { id: 'singleton' },
+    data: { customApiKeys: existing },
+  })
+
+  revalidatePath('/admin/settings')
+  return createSuccess('APIキーを削除しました')
+})
 
 /**
  * カスタムAPIキーの復号化された値を取得（内部使用のみ）

@@ -3,7 +3,7 @@
 import { prisma, Prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
-import { type ActionResult, createSuccess, createFailure } from '@/types'
+import { createSuccess, createFailure, withAuth } from '@/types'
 import { encrypt, safeDecrypt } from '@/lib/crypto'
 import {
   parseBusinessHours,
@@ -14,7 +14,7 @@ import {
   testStripeConnection as testStripeConnectionLib,
 } from '@/lib/stripe'
 import { stripeSettingsSchema, type StripeSettingsInput } from '@/lib/validations/stripe'
-import { requireAdmin } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth' // For query functions only
 
 // =============================================================================
 // Types
@@ -309,296 +309,215 @@ export async function getSettings(): Promise<SettingsData> {
 /**
  * 基本情報を更新
  */
-export async function updateBasicInfo(
-  data: BasicInfoInput
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
-
-    const parsed = basicInfoSchema.safeParse(data)
-    if (!parsed.success) {
-      return createFailure(parsed.error.issues[0].message)
-    }
-
-    await prisma.settings.upsert({
-      where: { id: 'singleton' },
-      create: { id: 'singleton', ...parsed.data },
-      update: parsed.data,
-    })
-
-    revalidatePath('/admin/settings')
-    revalidatePath('/')
-
-    return createSuccess('基本情報を更新しました')
-  } catch (error) {
-    console.error('Failed to update basic info:', error)
-    return createFailure('基本情報の更新に失敗しました')
+export const updateBasicInfo = withAuth(async (_user, data: BasicInfoInput) => {
+  const parsed = basicInfoSchema.safeParse(data)
+  if (!parsed.success) {
+    return createFailure(parsed.error.issues[0].message)
   }
-}
+
+  await prisma.settings.upsert({
+    where: { id: 'singleton' },
+    create: { id: 'singleton', ...parsed.data },
+    update: parsed.data,
+  })
+
+  revalidatePath('/admin/settings')
+  revalidatePath('/')
+
+  return createSuccess('基本情報を更新しました')
+})
 
 /**
  * 事業者情報を更新
  */
-export async function updateBusinessInfo(
-  data: BusinessInfoInput
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
-
-    const parsed = businessInfoSchema.safeParse(data)
-    if (!parsed.success) {
-      return createFailure(parsed.error.issues[0].message)
-    }
-
-    const updateData = {
-      ...parsed.data,
-      establishedDate: parsed.data.establishedDate
-        ? new Date(parsed.data.establishedDate)
-        : null,
-    }
-
-    await prisma.settings.upsert({
-      where: { id: 'singleton' },
-      create: { id: 'singleton', ...updateData },
-      update: updateData,
-    })
-
-    revalidatePath('/admin/settings')
-    revalidatePath('/')
-
-    return createSuccess('事業者情報を更新しました')
-  } catch (error) {
-    console.error('Failed to update business info:', error)
-    return createFailure('事業者情報の更新に失敗しました')
+export const updateBusinessInfo = withAuth(async (_user, data: BusinessInfoInput) => {
+  const parsed = businessInfoSchema.safeParse(data)
+  if (!parsed.success) {
+    return createFailure(parsed.error.issues[0].message)
   }
-}
+
+  const updateData = {
+    ...parsed.data,
+    establishedDate: parsed.data.establishedDate
+      ? new Date(parsed.data.establishedDate)
+      : null,
+  }
+
+  await prisma.settings.upsert({
+    where: { id: 'singleton' },
+    create: { id: 'singleton', ...updateData },
+    update: updateData,
+  })
+
+  revalidatePath('/admin/settings')
+  revalidatePath('/')
+
+  return createSuccess('事業者情報を更新しました')
+})
 
 /**
  * 営業時間設定を更新
  */
-export async function updateBusinessHoursSettings(
-  data: BusinessHoursSettingsInput
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
-
-    const parsed = businessHoursSettingsSchema.safeParse(data)
-    if (!parsed.success) {
-      return createFailure(parsed.error.issues[0].message)
-    }
-
-    // Prisma JSON null の適切な変換
-    const updateData = {
-      businessHours: parsed.data.businessHours,
-      regularHolidays: parsed.data.regularHolidays ?? Prisma.JsonNull,
-      specialHolidays: parsed.data.specialHolidays ?? Prisma.JsonNull,
-      holidayNotice: parsed.data.holidayNotice,
-    }
-
-    await prisma.settings.upsert({
-      where: { id: 'singleton' },
-      create: { id: 'singleton', ...updateData },
-      update: updateData,
-    })
-
-    revalidatePath('/admin/settings')
-    revalidatePath('/')
-    revalidatePath('/reservation')
-
-    return createSuccess('営業時間設定を更新しました')
-  } catch (error) {
-    console.error('Failed to update business hours settings:', error)
-    return createFailure('営業時間設定の更新に失敗しました')
+export const updateBusinessHoursSettings = withAuth(async (_user, data: BusinessHoursSettingsInput) => {
+  const parsed = businessHoursSettingsSchema.safeParse(data)
+  if (!parsed.success) {
+    return createFailure(parsed.error.issues[0].message)
   }
-}
+
+  // Prisma JSON null の適切な変換
+  const updateData = {
+    businessHours: parsed.data.businessHours,
+    regularHolidays: parsed.data.regularHolidays ?? Prisma.JsonNull,
+    specialHolidays: parsed.data.specialHolidays ?? Prisma.JsonNull,
+    holidayNotice: parsed.data.holidayNotice,
+  }
+
+  await prisma.settings.upsert({
+    where: { id: 'singleton' },
+    create: { id: 'singleton', ...updateData },
+    update: updateData,
+  })
+
+  revalidatePath('/admin/settings')
+  revalidatePath('/')
+  revalidatePath('/reservation')
+
+  return createSuccess('営業時間設定を更新しました')
+})
 
 /**
  * 連絡先情報を更新
  */
-export async function updateContactInfo(
-  data: ContactInfoInput
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
-
-    const parsed = contactInfoSchema.safeParse(data)
-    if (!parsed.success) {
-      return createFailure(parsed.error.issues[0].message)
-    }
-
-    const updateData = {
-      ...parsed.data,
-      email: parsed.data.email || null,
-    }
-
-    await prisma.settings.upsert({
-      where: { id: 'singleton' },
-      create: { id: 'singleton', ...updateData },
-      update: updateData,
-    })
-
-    revalidatePath('/admin/settings')
-    revalidatePath('/')
-
-    return createSuccess('連絡先情報を更新しました')
-  } catch (error) {
-    console.error('Failed to update contact info:', error)
-    return createFailure('連絡先情報の更新に失敗しました')
+export const updateContactInfo = withAuth(async (_user, data: ContactInfoInput) => {
+  const parsed = contactInfoSchema.safeParse(data)
+  if (!parsed.success) {
+    return createFailure(parsed.error.issues[0].message)
   }
-}
+
+  const updateData = {
+    ...parsed.data,
+    email: parsed.data.email || null,
+  }
+
+  await prisma.settings.upsert({
+    where: { id: 'singleton' },
+    create: { id: 'singleton', ...updateData },
+    update: updateData,
+  })
+
+  revalidatePath('/admin/settings')
+  revalidatePath('/')
+
+  return createSuccess('連絡先情報を更新しました')
+})
 
 /**
  * SEO設定を更新
  */
-export async function updateSeoSettings(
-  data: SeoSettingsInput
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
-
-    const parsed = seoSettingsSchema.safeParse(data)
-    if (!parsed.success) {
-      return createFailure(parsed.error.issues[0].message)
-    }
-
-    await prisma.settings.upsert({
-      where: { id: 'singleton' },
-      create: { id: 'singleton', ...parsed.data },
-      update: parsed.data,
-    })
-
-    revalidatePath('/admin/settings')
-    revalidatePath('/')
-
-    return createSuccess('SEO設定を更新しました')
-  } catch (error) {
-    console.error('Failed to update SEO settings:', error)
-    return createFailure('SEO設定の更新に失敗しました')
+export const updateSeoSettings = withAuth(async (_user, data: SeoSettingsInput) => {
+  const parsed = seoSettingsSchema.safeParse(data)
+  if (!parsed.success) {
+    return createFailure(parsed.error.issues[0].message)
   }
-}
+
+  await prisma.settings.upsert({
+    where: { id: 'singleton' },
+    create: { id: 'singleton', ...parsed.data },
+    update: parsed.data,
+  })
+
+  revalidatePath('/admin/settings')
+  revalidatePath('/')
+
+  return createSuccess('SEO設定を更新しました')
+})
 
 /**
  * メール設定を更新
  */
-export async function updateEmailSettings(
-  data: EmailSettingsInput
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
-
-    const parsed = emailSettingsSchema.safeParse(data)
-    if (!parsed.success) {
-      return createFailure(parsed.error.issues[0].message)
-    }
-
-    const updateData = {
-      ...parsed.data,
-      senderEmail: parsed.data.senderEmail || null,
-      replyToEmail: parsed.data.replyToEmail || null,
-    }
-
-    await prisma.settings.upsert({
-      where: { id: 'singleton' },
-      create: { id: 'singleton', ...updateData },
-      update: updateData,
-    })
-
-    revalidatePath('/admin/settings')
-
-    return createSuccess('メール設定を更新しました')
-  } catch (error) {
-    console.error('Failed to update email settings:', error)
-    return createFailure('メール設定の更新に失敗しました')
+export const updateEmailSettings = withAuth(async (_user, data: EmailSettingsInput) => {
+  const parsed = emailSettingsSchema.safeParse(data)
+  if (!parsed.success) {
+    return createFailure(parsed.error.issues[0].message)
   }
-}
+
+  const updateData = {
+    ...parsed.data,
+    senderEmail: parsed.data.senderEmail || null,
+    replyToEmail: parsed.data.replyToEmail || null,
+  }
+
+  await prisma.settings.upsert({
+    where: { id: 'singleton' },
+    create: { id: 'singleton', ...updateData },
+    update: updateData,
+  })
+
+  revalidatePath('/admin/settings')
+
+  return createSuccess('メール設定を更新しました')
+})
 
 /**
  * 予約設定を更新
  */
-export async function updateReservationSettings(
-  data: ReservationSettingsInput
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
-
-    const parsed = reservationSettingsSchema.safeParse(data)
-    if (!parsed.success) {
-      return createFailure(parsed.error.issues[0].message)
-    }
-
-    await prisma.settings.upsert({
-      where: { id: 'singleton' },
-      create: { id: 'singleton', ...parsed.data },
-      update: parsed.data,
-    })
-
-    revalidatePath('/admin/settings')
-
-    return createSuccess('予約設定を更新しました')
-  } catch (error) {
-    console.error('Failed to update reservation settings:', error)
-    return createFailure('予約設定の更新に失敗しました')
+export const updateReservationSettings = withAuth(async (_user, data: ReservationSettingsInput) => {
+  const parsed = reservationSettingsSchema.safeParse(data)
+  if (!parsed.success) {
+    return createFailure(parsed.error.issues[0].message)
   }
-}
+
+  await prisma.settings.upsert({
+    where: { id: 'singleton' },
+    create: { id: 'singleton', ...parsed.data },
+    update: parsed.data,
+  })
+
+  revalidatePath('/admin/settings')
+
+  return createSuccess('予約設定を更新しました')
+})
 
 /**
  * 通知設定を更新
  */
-export async function updateNotificationSettings(
-  data: NotificationSettingsInput
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
-
-    const parsed = notificationSettingsSchema.safeParse(data)
-    if (!parsed.success) {
-      return createFailure(parsed.error.issues[0].message)
-    }
-
-    await prisma.settings.upsert({
-      where: { id: 'singleton' },
-      create: { id: 'singleton', ...parsed.data },
-      update: parsed.data,
-    })
-
-    revalidatePath('/admin/settings')
-
-    return createSuccess('通知設定を更新しました')
-  } catch (error) {
-    console.error('Failed to update notification settings:', error)
-    return createFailure('通知設定の更新に失敗しました')
+export const updateNotificationSettings = withAuth(async (_user, data: NotificationSettingsInput) => {
+  const parsed = notificationSettingsSchema.safeParse(data)
+  if (!parsed.success) {
+    return createFailure(parsed.error.issues[0].message)
   }
-}
+
+  await prisma.settings.upsert({
+    where: { id: 'singleton' },
+    create: { id: 'singleton', ...parsed.data },
+    update: parsed.data,
+  })
+
+  revalidatePath('/admin/settings')
+
+  return createSuccess('通知設定を更新しました')
+})
 
 /**
  * メンテナンス設定を更新
  */
-export async function updateMaintenanceSettings(
-  data: MaintenanceSettingsInput
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
-
-    const parsed = maintenanceSettingsSchema.safeParse(data)
-    if (!parsed.success) {
-      return createFailure(parsed.error.issues[0].message)
-    }
-
-    await prisma.settings.upsert({
-      where: { id: 'singleton' },
-      create: { id: 'singleton', ...parsed.data },
-      update: parsed.data,
-    })
-
-    revalidatePath('/admin/settings')
-    revalidatePath('/')
-
-    return createSuccess('メンテナンス設定を更新しました')
-  } catch (error) {
-    console.error('Failed to update maintenance settings:', error)
-    return createFailure('メンテナンス設定の更新に失敗しました')
+export const updateMaintenanceSettings = withAuth(async (_user, data: MaintenanceSettingsInput) => {
+  const parsed = maintenanceSettingsSchema.safeParse(data)
+  if (!parsed.success) {
+    return createFailure(parsed.error.issues[0].message)
   }
-}
+
+  await prisma.settings.upsert({
+    where: { id: 'singleton' },
+    create: { id: 'singleton', ...parsed.data },
+    update: parsed.data,
+  })
+
+  revalidatePath('/admin/settings')
+  revalidatePath('/')
+
+  return createSuccess('メンテナンス設定を更新しました')
+})
 
 // =============================================================================
 // Stripe Actions
@@ -609,61 +528,52 @@ export { type StripeSettingsInput }
 /**
  * Stripe設定を更新
  */
-export async function updateStripeSettings(
-  data: StripeSettingsInput
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
-
-    const parsed = stripeSettingsSchema.safeParse(data)
-    if (!parsed.success) {
-      return createFailure(parsed.error.issues[0].message)
-    }
-
-    // シークレットキーを暗号化
-    const updateData: Record<string, unknown> = {
-      stripeEnabled: parsed.data.stripeEnabled,
-      stripeTestMode: parsed.data.stripeTestMode,
-      stripePublishableKey: parsed.data.stripePublishableKey || null,
-      stripeCurrency: parsed.data.stripeCurrency,
-    }
-
-    // シークレットキーが入力された場合のみ更新（暗号化して保存）
-    if (parsed.data.stripeSecretKey) {
-      try {
-        updateData.stripeSecretKey = encrypt(parsed.data.stripeSecretKey)
-      } catch {
-        return createFailure(
-          'シークレットキーの暗号化に失敗しました。ENCRYPTION_KEYが設定されていることを確認してください。'
-        )
-      }
-    }
-
-    // Webhookシークレットが入力された場合のみ更新（暗号化して保存）
-    if (parsed.data.stripeWebhookSecret) {
-      try {
-        updateData.stripeWebhookSecret = encrypt(parsed.data.stripeWebhookSecret)
-      } catch {
-        return createFailure(
-          'Webhookシークレットの暗号化に失敗しました。ENCRYPTION_KEYが設定されていることを確認してください。'
-        )
-      }
-    }
-
-    await prisma.settings.upsert({
-      where: { id: 'singleton' },
-      create: { id: 'singleton', ...updateData },
-      update: updateData,
-    })
-
-    revalidatePath('/admin/settings')
-
-    return createSuccess('Stripe設定を更新しました')
-  } catch (error) {
-    console.error('Failed to update Stripe settings:', error)
-    return createFailure('Stripe設定の更新に失敗しました')
+export const updateStripeSettings = withAuth(async (_user, data: StripeSettingsInput) => {
+  const parsed = stripeSettingsSchema.safeParse(data)
+  if (!parsed.success) {
+    return createFailure(parsed.error.issues[0].message)
   }
-}
+
+  // シークレットキーを暗号化
+  const updateData: Record<string, unknown> = {
+    stripeEnabled: parsed.data.stripeEnabled,
+    stripeTestMode: parsed.data.stripeTestMode,
+    stripePublishableKey: parsed.data.stripePublishableKey || null,
+    stripeCurrency: parsed.data.stripeCurrency,
+  }
+
+  // シークレットキーが入力された場合のみ更新（暗号化して保存）
+  if (parsed.data.stripeSecretKey) {
+    try {
+      updateData.stripeSecretKey = encrypt(parsed.data.stripeSecretKey)
+    } catch {
+      return createFailure(
+        'シークレットキーの暗号化に失敗しました。ENCRYPTION_KEYが設定されていることを確認してください。'
+      )
+    }
+  }
+
+  // Webhookシークレットが入力された場合のみ更新（暗号化して保存）
+  if (parsed.data.stripeWebhookSecret) {
+    try {
+      updateData.stripeWebhookSecret = encrypt(parsed.data.stripeWebhookSecret)
+    } catch {
+      return createFailure(
+        'Webhookシークレットの暗号化に失敗しました。ENCRYPTION_KEYが設定されていることを確認してください。'
+      )
+    }
+  }
+
+  await prisma.settings.upsert({
+    where: { id: 'singleton' },
+    create: { id: 'singleton', ...updateData },
+    update: updateData,
+  })
+
+  revalidatePath('/admin/settings')
+
+  return createSuccess('Stripe設定を更新しました')
+})
 
 /**
  * Stripe接続テスト
@@ -711,30 +621,23 @@ export async function testStripeConnectionAction(
 /**
  * Stripeキーをクリア
  */
-export async function clearStripeKeys(): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
+export const clearStripeKeys = withAuth(async () => {
+  await prisma.settings.update({
+    where: { id: 'singleton' },
+    data: {
+      stripeSecretKey: null,
+      stripeWebhookSecret: null,
+      stripePublishableKey: null,
+      stripeAccountId: null,
+      stripeConnectionStatus: null,
+      stripeLastTestedAt: null,
+    },
+  })
 
-    await prisma.settings.update({
-      where: { id: 'singleton' },
-      data: {
-        stripeSecretKey: null,
-        stripeWebhookSecret: null,
-        stripePublishableKey: null,
-        stripeAccountId: null,
-        stripeConnectionStatus: null,
-        stripeLastTestedAt: null,
-      },
-    })
+  revalidatePath('/admin/settings')
 
-    revalidatePath('/admin/settings')
-
-    return createSuccess('Stripeキーをクリアしました')
-  } catch (error) {
-    console.error('Failed to clear Stripe keys:', error)
-    return createFailure('Stripeキーのクリアに失敗しました')
-  }
-}
+  return createSuccess('Stripeキーをクリアしました')
+})
 
 // =============================================================================
 // Terms Agreement Actions
@@ -779,62 +682,44 @@ export async function getTermsAgreementSettings(): Promise<{
 /**
  * 規約同意設定を更新（管理画面用）
  */
-export async function updateTermsAgreementSettings(
-  data: TermsAgreementSettingsInput
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
-
-    const parsed = termsAgreementSettingsSchema.safeParse(data)
-    if (!parsed.success) {
-      return createFailure(parsed.error.issues[0].message)
-    }
-
-    await prisma.settings.upsert({
-      where: { id: 'singleton' },
-      create: { id: 'singleton', ...parsed.data },
-      update: parsed.data,
-    })
-
-    revalidatePath('/admin/settings')
-    revalidatePath('/reservation')
-
-    return createSuccess('規約同意設定を更新しました')
-  } catch (error) {
-    console.error('Failed to update terms agreement settings:', error)
-    return createFailure('規約同意設定の更新に失敗しました')
+export const updateTermsAgreementSettings = withAuth(async (_user, data: TermsAgreementSettingsInput) => {
+  const parsed = termsAgreementSettingsSchema.safeParse(data)
+  if (!parsed.success) {
+    return createFailure(parsed.error.issues[0].message)
   }
-}
+
+  await prisma.settings.upsert({
+    where: { id: 'singleton' },
+    create: { id: 'singleton', ...parsed.data },
+    update: parsed.data,
+  })
+
+  revalidatePath('/admin/settings')
+  revalidatePath('/reservation')
+
+  return createSuccess('規約同意設定を更新しました')
+})
 
 /**
  * Cookie同意設定を更新
  */
-export async function updateCookieConsentSettings(
-  data: CookieConsentSettingsInput
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
-
-    const parsed = cookieConsentSettingsSchema.safeParse(data)
-    if (!parsed.success) {
-      return createFailure(parsed.error.issues[0].message)
-    }
-
-    await prisma.settings.upsert({
-      where: { id: 'singleton' },
-      create: { id: 'singleton', ...parsed.data },
-      update: parsed.data,
-    })
-
-    revalidatePath('/admin/settings')
-    revalidatePath('/')
-
-    return createSuccess('Cookie同意設定を更新しました')
-  } catch (error) {
-    console.error('Failed to update cookie consent settings:', error)
-    return createFailure('Cookie同意設定の更新に失敗しました')
+export const updateCookieConsentSettings = withAuth(async (_user, data: CookieConsentSettingsInput) => {
+  const parsed = cookieConsentSettingsSchema.safeParse(data)
+  if (!parsed.success) {
+    return createFailure(parsed.error.issues[0].message)
   }
-}
+
+  await prisma.settings.upsert({
+    where: { id: 'singleton' },
+    create: { id: 'singleton', ...parsed.data },
+    update: parsed.data,
+  })
+
+  revalidatePath('/admin/settings')
+  revalidatePath('/')
+
+  return createSuccess('Cookie同意設定を更新しました')
+})
 
 // =============================================================================
 // Announcement Bar Carousel Settings
@@ -883,29 +768,20 @@ export async function getAnnouncementBarCarouselSettings(): Promise<Announcement
 /**
  * お知らせバーカルーセル設定を更新
  */
-export async function updateAnnouncementBarCarouselSettings(
-  data: AnnouncementBarCarouselSettingsInput
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
-
-    const parsed = announcementBarCarouselSettingsSchema.safeParse(data)
-    if (!parsed.success) {
-      return createFailure(parsed.error.issues[0].message)
-    }
-
-    await prisma.settings.upsert({
-      where: { id: 'singleton' },
-      create: { id: 'singleton', ...parsed.data },
-      update: parsed.data,
-    })
-
-    revalidatePath('/admin/settings')
-    revalidatePath('/', 'layout')
-
-    return createSuccess('お知らせバーカルーセル設定を更新しました')
-  } catch (error) {
-    console.error('Failed to update announcement bar carousel settings:', error)
-    return createFailure('お知らせバーカルーセル設定の更新に失敗しました')
+export const updateAnnouncementBarCarouselSettings = withAuth(async (_user, data: AnnouncementBarCarouselSettingsInput) => {
+  const parsed = announcementBarCarouselSettingsSchema.safeParse(data)
+  if (!parsed.success) {
+    return createFailure(parsed.error.issues[0].message)
   }
-}
+
+  await prisma.settings.upsert({
+    where: { id: 'singleton' },
+    create: { id: 'singleton', ...parsed.data },
+    update: parsed.data,
+  })
+
+  revalidatePath('/admin/settings')
+  revalidatePath('/', 'layout')
+
+  return createSuccess('お知らせバーカルーセル設定を更新しました')
+})

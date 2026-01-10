@@ -9,7 +9,7 @@ import {
   sendReservationCancelledEmail,
   sendReservationAdminNotification,
 } from '@/lib/email-service'
-import { type ActionResult, createSuccess, createFailure, type ReservationWhereInput } from '@/types'
+import { createSuccess, createFailure, type ReservationWhereInput, withAuth } from '@/types'
 import { requireAdmin } from '@/lib/auth'
 
 // =============================================================================
@@ -229,138 +229,117 @@ export async function getReservationById(
 /**
  * 予約ステータスを更新
  */
-export async function updateReservationStatus(
+export const updateReservationStatus = withAuth(async (
+  _user,
   id: string,
   status: ReservationStatus
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
-
-    const parsed = updateStatusSchema.safeParse({ id, status })
-    if (!parsed.success) {
-      return createFailure('入力が不正です')
-    }
-
-    const reservation = await prisma.reservation.findUnique({
-      where: { id },
-      include: {
-        space: { select: { name: true } },
-        customer: { select: { firstName: true, lastName: true, email: true } },
-      },
-    })
-
-    if (!reservation) {
-      return createFailure('予約が見つかりません')
-    }
-
-    const previousStatus = reservation.status
-
-    await prisma.reservation.update({
-      where: { id },
-      data: { status },
-    })
-
-    // ステータス変更時にメール送信
-    const emailData = {
-      reservationId: id,
-      customerEmail: reservation.customer.email,
-      customerName: `${reservation.customer.lastName} ${reservation.customer.firstName}`,
-      spaceName: reservation.space.name,
-      startTime: reservation.startTime,
-      endTime: reservation.endTime,
-      totalPrice: reservation.totalPrice ? Number(reservation.totalPrice) : null,
-      notes: reservation.notes || undefined,
-    }
-
-    // 確定時: 確認メール送信
-    if (status === 'CONFIRMED' && previousStatus !== 'CONFIRMED') {
-      await sendReservationConfirmationEmail(emailData)
-      await sendReservationAdminNotification(emailData, previousStatus === 'PENDING' ? 'new' : 'update')
-    }
-
-    // キャンセル時: キャンセルメール送信
-    if (status === 'CANCELLED' && previousStatus !== 'CANCELLED') {
-      await sendReservationCancelledEmail(emailData)
-      await sendReservationAdminNotification(emailData, 'cancel')
-    }
-
-    revalidatePath('/admin/reservations')
-    revalidatePath(`/admin/reservations/${id}`)
-
-    return createSuccess('ステータスを更新しました')
-  } catch (error) {
-    console.error('Failed to update reservation status:', error)
-    return createFailure('ステータスの更新に失敗しました')
+) => {
+  const parsed = updateStatusSchema.safeParse({ id, status })
+  if (!parsed.success) {
+    return createFailure('入力が不正です')
   }
-}
+
+  const reservation = await prisma.reservation.findUnique({
+    where: { id },
+    include: {
+      space: { select: { name: true } },
+      customer: { select: { firstName: true, lastName: true, email: true } },
+    },
+  })
+
+  if (!reservation) {
+    return createFailure('予約が見つかりません')
+  }
+
+  const previousStatus = reservation.status
+
+  await prisma.reservation.update({
+    where: { id },
+    data: { status },
+  })
+
+  // ステータス変更時にメール送信
+  const emailData = {
+    reservationId: id,
+    customerEmail: reservation.customer.email,
+    customerName: `${reservation.customer.lastName} ${reservation.customer.firstName}`,
+    spaceName: reservation.space.name,
+    startTime: reservation.startTime,
+    endTime: reservation.endTime,
+    totalPrice: reservation.totalPrice ? Number(reservation.totalPrice) : null,
+    notes: reservation.notes || undefined,
+  }
+
+  // 確定時: 確認メール送信
+  if (status === 'CONFIRMED' && previousStatus !== 'CONFIRMED') {
+    await sendReservationConfirmationEmail(emailData)
+    await sendReservationAdminNotification(emailData, previousStatus === 'PENDING' ? 'new' : 'update')
+  }
+
+  // キャンセル時: キャンセルメール送信
+  if (status === 'CANCELLED' && previousStatus !== 'CANCELLED') {
+    await sendReservationCancelledEmail(emailData)
+    await sendReservationAdminNotification(emailData, 'cancel')
+  }
+
+  revalidatePath('/admin/reservations')
+  revalidatePath(`/admin/reservations/${id}`)
+
+  return createSuccess('ステータスを更新しました')
+})
 
 /**
  * 予約メモを更新
  */
-export async function updateReservationNotes(
+export const updateReservationNotes = withAuth(async (
+  _user,
   id: string,
   notes: string | null
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
-
-    const parsed = updateNotesSchema.safeParse({ id, notes })
-    if (!parsed.success) {
-      return createFailure('入力が不正です')
-    }
-
-    const reservation = await prisma.reservation.findUnique({
-      where: { id },
-    })
-
-    if (!reservation) {
-      return createFailure('予約が見つかりません')
-    }
-
-    await prisma.reservation.update({
-      where: { id },
-      data: { notes },
-    })
-
-    revalidatePath('/admin/reservations')
-    revalidatePath(`/admin/reservations/${id}`)
-
-    return createSuccess('メモを更新しました')
-  } catch (error) {
-    console.error('Failed to update reservation notes:', error)
-    return createFailure('メモの更新に失敗しました')
+) => {
+  const parsed = updateNotesSchema.safeParse({ id, notes })
+  if (!parsed.success) {
+    return createFailure('入力が不正です')
   }
-}
+
+  const reservation = await prisma.reservation.findUnique({
+    where: { id },
+  })
+
+  if (!reservation) {
+    return createFailure('予約が見つかりません')
+  }
+
+  await prisma.reservation.update({
+    where: { id },
+    data: { notes },
+  })
+
+  revalidatePath('/admin/reservations')
+  revalidatePath(`/admin/reservations/${id}`)
+
+  return createSuccess('メモを更新しました')
+})
 
 /**
  * 予約を削除
  */
-export async function deleteReservation(
-  id: string
-): Promise<ActionResult<void>> {
-  try {
-    await requireAdmin()
+export const deleteReservation = withAuth(async (_user, id: string) => {
+  const reservation = await prisma.reservation.findUnique({
+    where: { id },
+  })
 
-    const reservation = await prisma.reservation.findUnique({
-      where: { id },
-    })
-
-    if (!reservation) {
-      return createFailure('予約が見つかりません')
-    }
-
-    await prisma.reservation.delete({
-      where: { id },
-    })
-
-    revalidatePath('/admin/reservations')
-
-    return createSuccess('予約を削除しました')
-  } catch (error) {
-    console.error('Failed to delete reservation:', error)
-    return createFailure('予約の削除に失敗しました')
+  if (!reservation) {
+    return createFailure('予約が見つかりません')
   }
-}
+
+  await prisma.reservation.delete({
+    where: { id },
+  })
+
+  revalidatePath('/admin/reservations')
+
+  return createSuccess('予約を削除しました')
+})
 
 /**
  * 統計情報を取得（ダッシュボード用）

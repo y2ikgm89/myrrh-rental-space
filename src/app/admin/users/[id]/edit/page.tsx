@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { getUser } from '@/actions/admin/user'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/admin/ui/card'
 import { Button } from '@/components/admin/ui/button'
-import { UserForm } from '../../_components/user-form'
+import { UserForm } from '../../_components/UserForm'
 
 export const metadata = {
   title: 'ユーザー編集 | 管理画面',
