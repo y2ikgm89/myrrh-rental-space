@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { NavigationType, SocialPlatform } from '@/generated/prisma/client/enums'
 import { z } from 'zod'
 import { type ActionResult, createSuccess, createFailure } from '@/types'
+import { requireAdmin } from '@/lib/auth'
 
 // =============================================================================
 // Types
@@ -72,6 +73,8 @@ export type SocialLinkInput = z.infer<typeof socialLinkSchema>
  * ナビゲーションアイテム一覧を取得
  */
 export async function getNavigationItems(type?: NavigationType): Promise<NavigationItemData[]> {
+  await requireAdmin()
+
   const items = await prisma.navigationItem.findMany({
     where: type ? { type, parentId: null } : { parentId: null },
     include: {
@@ -98,6 +101,8 @@ export async function createNavigationItem(
   data: NavigationItemInput
 ): Promise<ActionResult<{ id: string }>> {
   try {
+    await requireAdmin()
+
     const parsed = navigationItemSchema.safeParse(data)
     if (!parsed.success) {
       return createFailure(parsed.error.issues[0].message)
@@ -125,6 +130,8 @@ export async function updateNavigationItem(
   data: NavigationItemInput
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const parsed = navigationItemSchema.safeParse(data)
     if (!parsed.success) {
       return createFailure(parsed.error.issues[0].message)
@@ -160,6 +167,8 @@ export async function deleteNavigationItem(
   id: string
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const item = await prisma.navigationItem.findUnique({
       where: { id },
       include: {
@@ -193,12 +202,45 @@ export async function deleteNavigationItem(
  * ナビゲーションの順序を更新
  */
 export async function updateNavigationOrder(
-  items: { id: string; order: number }[]
+  items: { id: string; order: number; parentId?: string | null }[]
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     await prisma.$transaction(
       items.map((item) =>
         prisma.navigationItem.update({
+          where: { id: item.id },
+          data: {
+            order: item.order,
+            ...(item.parentId !== undefined && { parentId: item.parentId }),
+          },
+        })
+      )
+    )
+
+    revalidatePath('/admin/settings/navigation')
+    revalidatePath('/')
+
+    return createSuccess('順序を更新しました')
+  } catch (error) {
+    console.error('Failed to update navigation order:', error)
+    return createFailure('順序の更新に失敗しました')
+  }
+}
+
+/**
+ * SNSリンクの順序を更新
+ */
+export async function updateSocialLinkOrder(
+  items: { id: string; order: number }[]
+): Promise<ActionResult<void>> {
+  try {
+    await requireAdmin()
+
+    await prisma.$transaction(
+      items.map((item) =>
+        prisma.socialLink.update({
           where: { id: item.id },
           data: { order: item.order },
         })
@@ -210,7 +252,7 @@ export async function updateNavigationOrder(
 
     return createSuccess('順序を更新しました')
   } catch (error) {
-    console.error('Failed to update navigation order:', error)
+    console.error('Failed to update social link order:', error)
     return createFailure('順序の更新に失敗しました')
   }
 }
@@ -235,6 +277,8 @@ export type GetSocialLinksOptions = {
  * SNSリンク一覧を取得
  */
 export async function getSocialLinks(options: GetSocialLinksOptions = {}): Promise<SocialLinkData[]> {
+  await requireAdmin()
+
   const { showOnDesktop, showOnMobile, activeOnly = false } = options
 
   return prisma.socialLink.findMany({
@@ -254,6 +298,8 @@ export async function createSocialLink(
   data: SocialLinkInput
 ): Promise<ActionResult<{ id: string }>> {
   try {
+    await requireAdmin()
+
     const parsed = socialLinkSchema.safeParse(data)
     if (!parsed.success) {
       return createFailure(parsed.error.issues[0].message)
@@ -281,6 +327,8 @@ export async function updateSocialLink(
   data: SocialLinkInput
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const parsed = socialLinkSchema.safeParse(data)
     if (!parsed.success) {
       return createFailure(parsed.error.issues[0].message)
@@ -316,6 +364,8 @@ export async function deleteSocialLink(
   id: string
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const link = await prisma.socialLink.findUnique({
       where: { id },
     })

@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { CustomerStatus } from '@/generated/prisma/client/enums'
 import { z } from 'zod'
 import { type ActionResult, createSuccess, createFailure, type CustomerWhereInput } from '@/types'
+import { requireAdmin } from '@/lib/auth'
 
 // =============================================================================
 // Types
@@ -88,6 +89,8 @@ export async function getCustomers(
   filters: CustomerFilters = {},
   pagination: CustomerPagination = {}
 ): Promise<GetCustomersResult> {
+  await requireAdmin()
+
   const { status, search, isActive } = filters
 
   const {
@@ -149,6 +152,8 @@ export async function getCustomers(
  * 顧客詳細を取得（予約履歴付き）
  */
 export async function getCustomerById(id: string): Promise<CustomerWithReservations | null> {
+  await requireAdmin()
+
   const customer = await prisma.customer.findUnique({
     where: { id },
     include: {
@@ -193,6 +198,8 @@ export async function updateCustomerStatus(
   status: CustomerStatus
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const parsed = updateStatusSchema.safeParse({ id, status })
     if (!parsed.success) {
       return createFailure('入力が不正です')
@@ -229,6 +236,8 @@ export async function updateCustomerNotes(
   notes: string | null
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const parsed = updateNotesSchema.safeParse({ id, notes })
     if (!parsed.success) {
       return createFailure('入力が不正です')
@@ -264,6 +273,8 @@ export async function toggleCustomerActive(
   id: string
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const customer = await prisma.customer.findUnique({
       where: { id },
     })
@@ -298,6 +309,8 @@ export async function getCustomerStats(): Promise<{
   inactive: number
   blacklist: number
 }> {
+  await requireAdmin()
+
   const [total, newCount, regular, vip, inactive, blacklist] = await Promise.all([
     prisma.customer.count(),
     prisma.customer.count({ where: { status: 'NEW' } }),

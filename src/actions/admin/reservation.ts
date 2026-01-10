@@ -10,6 +10,7 @@ import {
   sendReservationAdminNotification,
 } from '@/lib/email-service'
 import { type ActionResult, createSuccess, createFailure, type ReservationWhereInput } from '@/types'
+import { requireAdmin } from '@/lib/auth'
 
 // =============================================================================
 // Types
@@ -87,6 +88,8 @@ export async function getReservations(
   filters: ReservationFilters = {},
   pagination: ReservationPagination = {}
 ): Promise<GetReservationsResult> {
+  await requireAdmin()
+
   const {
     status,
     search,
@@ -190,6 +193,8 @@ export async function getReservations(
 export async function getReservationById(
   id: string
 ): Promise<ReservationWithRelations | null> {
+  await requireAdmin()
+
   const reservation = await prisma.reservation.findUnique({
     where: { id },
     include: {
@@ -229,6 +234,8 @@ export async function updateReservationStatus(
   status: ReservationStatus
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const parsed = updateStatusSchema.safeParse({ id, status })
     if (!parsed.success) {
       return createFailure('入力が不正です')
@@ -295,6 +302,8 @@ export async function updateReservationNotes(
   notes: string | null
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const parsed = updateNotesSchema.safeParse({ id, notes })
     if (!parsed.success) {
       return createFailure('入力が不正です')
@@ -330,6 +339,8 @@ export async function deleteReservation(
   id: string
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const reservation = await prisma.reservation.findUnique({
       where: { id },
     })
@@ -362,6 +373,8 @@ export async function getReservationStats(): Promise<{
   todayCount: number
   thisWeekCount: number
 }> {
+  await requireAdmin()
+
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 

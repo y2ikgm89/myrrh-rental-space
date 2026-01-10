@@ -6,6 +6,7 @@ import { Role } from '@/generated/prisma/client/enums'
 import { z } from 'zod'
 import bcrypt from 'bcrypt'
 import { type ActionResult, createSuccess, createFailure } from '@/types'
+import { requireAdmin } from '@/lib/auth'
 
 // =============================================================================
 // Types
@@ -72,6 +73,8 @@ export type UpdateUserInput = z.infer<typeof updateUserSchema>
  * ユーザー一覧を取得
  */
 export async function getUsers(params: UserListParams = {}): Promise<UserListResult> {
+  await requireAdmin()
+
   const {
     page = 1,
     perPage = 20,
@@ -136,6 +139,8 @@ export async function getUsers(params: UserListParams = {}): Promise<UserListRes
  * ユーザー詳細を取得
  */
 export async function getUser(id: string): Promise<UserData | null> {
+  await requireAdmin()
+
   const user = await prisma.user.findUnique({
     where: { id },
     include: {
@@ -170,6 +175,8 @@ export async function createUser(
   data: CreateUserInput
 ): Promise<ActionResult<{ id: string }>> {
   try {
+    await requireAdmin()
+
     const parsed = createUserSchema.safeParse(data)
     if (!parsed.success) {
       return createFailure(parsed.error.issues[0].message)
@@ -213,6 +220,8 @@ export async function updateUser(
   data: UpdateUserInput
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const parsed = updateUserSchema.safeParse(data)
     if (!parsed.success) {
       return createFailure(parsed.error.issues[0].message)
@@ -276,6 +285,8 @@ export async function deleteUser(
   id: string
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const user = await prisma.user.findUnique({
       where: { id },
       include: {
@@ -320,6 +331,8 @@ export async function updateUserRole(
   role: Role
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const user = await prisma.user.findUnique({
       where: { id },
     })
@@ -352,6 +365,8 @@ export async function getUserStats(): Promise<{
   users: number
   recentUsers: number
 }> {
+  await requireAdmin()
+
   const [total, admins, users, recentUsers] = await Promise.all([
     prisma.user.count(),
     prisma.user.count({ where: { role: 'ADMIN' } }),

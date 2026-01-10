@@ -7,7 +7,7 @@
  */
 
 import { prisma } from '@/lib/prisma'
-import { auth } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth'
 import type {
   ReservationWhereInput,
   CustomerWhereInput,
@@ -108,14 +108,6 @@ const inquiryStatusLabels: Record<string, string> = {
   CLOSED: 'クローズ',
 }
 
-/**
- * 認証チェック
- */
-async function checkAuth(): Promise<boolean> {
-  const session = await auth()
-  return !!session?.user
-}
-
 // =============================================================================
 // Export Functions
 // =============================================================================
@@ -126,8 +118,9 @@ async function checkAuth(): Promise<boolean> {
 export async function exportReservations(
   options: ExportOptions = {}
 ): Promise<ExportResult> {
-  const isAuthenticated = await checkAuth()
-  if (!isAuthenticated) {
+  try {
+    await requireAdmin()
+  } catch {
     return { success: false, error: '認証が必要です' }
   }
 
@@ -211,8 +204,9 @@ export async function exportReservations(
 export async function exportCustomers(
   options: ExportOptions = {}
 ): Promise<ExportResult> {
-  const isAuthenticated = await checkAuth()
-  if (!isAuthenticated) {
+  try {
+    await requireAdmin()
+  } catch {
     return { success: false, error: '認証が必要です' }
   }
 
@@ -287,8 +281,9 @@ export async function exportCustomers(
 export async function exportInquiries(
   options: ExportOptions = {}
 ): Promise<ExportResult> {
-  const isAuthenticated = await checkAuth()
-  if (!isAuthenticated) {
+  try {
+    await requireAdmin()
+  } catch {
     return { success: false, error: '認証が必要です' }
   }
 

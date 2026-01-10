@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { InquiryStatus } from '@/generated/prisma/client/enums'
 import { z } from 'zod'
 import { type ActionResult, createSuccess, createFailure, type InquiryWhereInput } from '@/types'
+import { requireAdmin } from '@/lib/auth'
 
 // =============================================================================
 // Types
@@ -61,6 +62,8 @@ export async function getInquiries(
   filters: InquiryFilters = {},
   pagination: InquiryPagination = {}
 ): Promise<GetInquiriesResult> {
+  await requireAdmin()
+
   const { status, search } = filters
 
   const {
@@ -112,6 +115,8 @@ export async function getInquiries(
  * お問い合わせ詳細を取得
  */
 export async function getInquiryById(id: string): Promise<InquiryData | null> {
+  await requireAdmin()
+
   return prisma.inquiry.findUnique({
     where: { id },
   })
@@ -125,6 +130,8 @@ export async function updateInquiryStatus(
   status: InquiryStatus
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const parsed = updateStatusSchema.safeParse({ id, status })
     if (!parsed.success) {
       return createFailure('入力が不正です')
@@ -160,6 +167,8 @@ export async function deleteInquiry(
   id: string
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const inquiry = await prisma.inquiry.findUnique({
       where: { id },
     })
@@ -191,6 +200,8 @@ export async function getInquiryStats(): Promise<{
   resolved: number
   closed: number
 }> {
+  await requireAdmin()
+
   const [total, newCount, inProgress, resolved, closed] = await Promise.all([
     prisma.inquiry.count(),
     prisma.inquiry.count({ where: { status: 'NEW' } }),

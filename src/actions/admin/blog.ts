@@ -3,7 +3,7 @@
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
-import { auth } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth'
 import { type ActionResult, createSuccess, createFailure, type BlogPostWhereInput } from '@/types'
 import { parseStringArray } from '@/lib/json-validators'
 import { determinePublishedAt } from '@/lib/utils'
@@ -120,6 +120,8 @@ export async function getBlogPosts(
   filters: BlogPostFilters = {},
   pagination: BlogPostPagination = {}
 ): Promise<GetBlogPostsResult> {
+  await requireAdmin()
+
   const { status, categoryId, search } = filters
 
   const {
@@ -198,6 +200,8 @@ export async function getBlogPosts(
  * ブログ記事詳細を取得
  */
 export async function getBlogPostById(id: string): Promise<BlogPostData | null> {
+  await requireAdmin()
+
   const post = await prisma.blogPost.findUnique({
     where: { id },
     include: {
@@ -233,10 +237,7 @@ export async function createBlogPost(
   data: BlogPostInput
 ): Promise<ActionResult<{ id: string }>> {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
-      return createFailure('認証が必要です')
-    }
+    const user = await requireAdmin()
 
     const parsed = blogPostSchema.safeParse(data)
     if (!parsed.success) {
@@ -259,7 +260,7 @@ export async function createBlogPost(
         isPublished,
         isDraft: !isPublished,
         publishedAt: determinePublishedAt(publishedAt, isPublished),
-        authorId: session.user.id,
+        authorId: user.id,
       },
     })
 
@@ -281,6 +282,8 @@ export async function updateBlogPost(
   data: BlogPostInput
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const parsed = blogPostSchema.safeParse(data)
     if (!parsed.success) {
       return createFailure(parsed.error.issues[0].message)
@@ -336,6 +339,8 @@ export async function deleteBlogPost(
   id: string
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const post = await prisma.blogPost.findUnique({
       where: { id },
     })
@@ -365,6 +370,8 @@ export async function toggleBlogPostPublish(
   id: string
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const post = await prisma.blogPost.findUnique({
       where: { id },
     })
@@ -403,6 +410,8 @@ export async function toggleBlogPostPublish(
  * カテゴリ一覧を取得
  */
 export async function getBlogCategories(): Promise<BlogCategoryData[]> {
+  await requireAdmin()
+
   const categories = await prisma.blogCategory.findMany({
     include: {
       _count: {
@@ -419,6 +428,8 @@ export async function getBlogCategories(): Promise<BlogCategoryData[]> {
  * カテゴリ詳細を取得
  */
 export async function getBlogCategoryById(id: string): Promise<BlogCategoryData | null> {
+  await requireAdmin()
+
   const category = await prisma.blogCategory.findUnique({
     where: { id },
     include: {
@@ -438,6 +449,8 @@ export async function createBlogCategory(
   data: BlogCategoryInput
 ): Promise<ActionResult<{ id: string }>> {
   try {
+    await requireAdmin()
+
     const parsed = blogCategorySchema.safeParse(data)
     if (!parsed.success) {
       return createFailure(parsed.error.issues[0].message)
@@ -473,6 +486,8 @@ export async function updateBlogCategory(
   data: BlogCategoryInput
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const parsed = blogCategorySchema.safeParse(data)
     if (!parsed.success) {
       return createFailure(parsed.error.issues[0].message)
@@ -519,6 +534,8 @@ export async function deleteBlogCategory(
   id: string
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const category = await prisma.blogCategory.findUnique({
       where: { id },
       include: {
@@ -547,5 +564,34 @@ export async function deleteBlogCategory(
   } catch (error) {
     console.error('Failed to delete blog category:', error)
     return createFailure('カテゴリの削除に失敗しました')
+  }
+}
+
+/**
+ * ブログカテゴリの順序を更新
+ */
+export async function updateBlogCategoryOrder(
+  items: { id: string; order: number }[]
+): Promise<ActionResult<void>> {
+  try {
+    await requireAdmin()
+
+    await prisma.$transaction(
+      items.map((item) =>
+        prisma.blogCategory.update({
+          where: { id: item.id },
+          data: { order: item.order },
+        })
+      )
+    )
+
+    revalidatePath('/admin/blog/categories')
+    revalidatePath('/admin/blog')
+    revalidatePath('/')
+
+    return createSuccess('順序を更新しました')
+  } catch (error) {
+    console.error('Failed to update blog category order:', error)
+    return createFailure('順序の更新に失敗しました')
   }
 }

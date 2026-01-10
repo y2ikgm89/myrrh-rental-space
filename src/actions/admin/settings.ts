@@ -14,6 +14,7 @@ import {
   testStripeConnection as testStripeConnectionLib,
 } from '@/lib/stripe'
 import { stripeSettingsSchema, type StripeSettingsInput } from '@/lib/validations/stripe'
+import { requireAdmin } from '@/lib/auth'
 
 // =============================================================================
 // Types
@@ -273,6 +274,8 @@ export type CookieConsentSettingsInput = z.infer<typeof cookieConsentSettingsSch
  * 設定を取得
  */
 export async function getSettings(): Promise<SettingsData> {
+  await requireAdmin()
+
   let settings = await prisma.settings.findUnique({
     where: { id: 'singleton' },
   })
@@ -310,6 +313,8 @@ export async function updateBasicInfo(
   data: BasicInfoInput
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const parsed = basicInfoSchema.safeParse(data)
     if (!parsed.success) {
       return createFailure(parsed.error.issues[0].message)
@@ -338,6 +343,8 @@ export async function updateBusinessInfo(
   data: BusinessInfoInput
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const parsed = businessInfoSchema.safeParse(data)
     if (!parsed.success) {
       return createFailure(parsed.error.issues[0].message)
@@ -373,6 +380,8 @@ export async function updateBusinessHoursSettings(
   data: BusinessHoursSettingsInput
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const parsed = businessHoursSettingsSchema.safeParse(data)
     if (!parsed.success) {
       return createFailure(parsed.error.issues[0].message)
@@ -410,6 +419,8 @@ export async function updateContactInfo(
   data: ContactInfoInput
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const parsed = contactInfoSchema.safeParse(data)
     if (!parsed.success) {
       return createFailure(parsed.error.issues[0].message)
@@ -443,6 +454,8 @@ export async function updateSeoSettings(
   data: SeoSettingsInput
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const parsed = seoSettingsSchema.safeParse(data)
     if (!parsed.success) {
       return createFailure(parsed.error.issues[0].message)
@@ -471,6 +484,8 @@ export async function updateEmailSettings(
   data: EmailSettingsInput
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const parsed = emailSettingsSchema.safeParse(data)
     if (!parsed.success) {
       return createFailure(parsed.error.issues[0].message)
@@ -504,6 +519,8 @@ export async function updateReservationSettings(
   data: ReservationSettingsInput
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const parsed = reservationSettingsSchema.safeParse(data)
     if (!parsed.success) {
       return createFailure(parsed.error.issues[0].message)
@@ -531,6 +548,8 @@ export async function updateNotificationSettings(
   data: NotificationSettingsInput
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const parsed = notificationSettingsSchema.safeParse(data)
     if (!parsed.success) {
       return createFailure(parsed.error.issues[0].message)
@@ -558,6 +577,8 @@ export async function updateMaintenanceSettings(
   data: MaintenanceSettingsInput
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const parsed = maintenanceSettingsSchema.safeParse(data)
     if (!parsed.success) {
       return createFailure(parsed.error.issues[0].message)
@@ -592,6 +613,8 @@ export async function updateStripeSettings(
   data: StripeSettingsInput
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const parsed = stripeSettingsSchema.safeParse(data)
     if (!parsed.success) {
       return createFailure(parsed.error.issues[0].message)
@@ -654,6 +677,8 @@ export async function testStripeConnectionAction(
   mode?: 'test' | 'live'
 }> {
   try {
+    await requireAdmin()
+
     const result = await testStripeConnectionLib(secretKey)
 
     if (result.success) {
@@ -688,6 +713,8 @@ export async function testStripeConnectionAction(
  */
 export async function clearStripeKeys(): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     await prisma.settings.update({
       where: { id: 'singleton' },
       data: {
@@ -756,6 +783,8 @@ export async function updateTermsAgreementSettings(
   data: TermsAgreementSettingsInput
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const parsed = termsAgreementSettingsSchema.safeParse(data)
     if (!parsed.success) {
       return createFailure(parsed.error.issues[0].message)
@@ -784,6 +813,8 @@ export async function updateCookieConsentSettings(
   data: CookieConsentSettingsInput
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const parsed = cookieConsentSettingsSchema.safeParse(data)
     if (!parsed.success) {
       return createFailure(parsed.error.issues[0].message)
@@ -856,6 +887,8 @@ export async function updateAnnouncementBarCarouselSettings(
   data: AnnouncementBarCarouselSettingsInput
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const parsed = announcementBarCarouselSettingsSchema.safeParse(data)
     if (!parsed.success) {
       return createFailure(parsed.error.issues[0].message)

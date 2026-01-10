@@ -12,6 +12,7 @@ import {
 } from '@/lib/validations/space'
 import { type ActionResult, createSuccess, createFailure, type SpaceWhereInput } from '@/types'
 import { parseStringArray, parseBusinessHours } from '@/lib/json-validators'
+import { requireAdmin } from '@/lib/auth'
 
 // =============================================================================
 // Actions
@@ -24,6 +25,8 @@ export async function getSpaces(
   filters: SpaceFilters = {},
   pagination: SpacePagination = {}
 ): Promise<GetSpacesResult> {
+  await requireAdmin()
+
   const { isPublished, search } = filters
   const {
     page = 1,
@@ -93,6 +96,8 @@ export async function getSpaces(
  * スペース詳細を取得
  */
 export async function getSpaceById(id: string): Promise<SpaceWithStats | null> {
+  await requireAdmin()
+
   const space = await prisma.space.findUnique({
     where: { id },
     include: {
@@ -126,6 +131,8 @@ export async function createSpace(
   input: SpaceFormData
 ): Promise<ActionResult<{ id: string }>> {
   try {
+    await requireAdmin()
+
     const parsed = spaceFormSchema.safeParse(input)
     if (!parsed.success) {
       return createFailure(parsed.error.issues[0]?.message || '入力が不正です')
@@ -170,6 +177,8 @@ export async function updateSpace(
   input: SpaceFormData
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const parsed = spaceFormSchema.safeParse(input)
     if (!parsed.success) {
       return createFailure(parsed.error.issues[0]?.message || '入力が不正です')
@@ -233,6 +242,8 @@ export async function updateSpacePublish(
   isPublished: boolean
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const space = await prisma.space.findUnique({
       where: { id },
     })
@@ -269,6 +280,8 @@ export async function deleteSpace(
   id: string
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const space = await prisma.space.findUnique({
       where: { id },
       include: {
@@ -322,6 +335,8 @@ export async function getSpaceStats(): Promise<{
   unpublished: number
   totalCapacity: number
 }> {
+  await requireAdmin()
+
   const [total, published, spaces] = await Promise.all([
     prisma.space.count({ where: { isActive: true } }),
     prisma.space.count({ where: { isActive: true, isPublished: true } }),

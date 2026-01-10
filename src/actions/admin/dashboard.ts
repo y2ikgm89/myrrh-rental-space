@@ -1,6 +1,7 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
+import { requireAdmin } from '@/lib/auth'
 
 // =============================================================================
 // Types
@@ -54,6 +55,8 @@ export type RecentInquiry = {
  * ダッシュボード統計を取得
  */
 export async function getDashboardStats(): Promise<DashboardStats> {
+  await requireAdmin()
+
   const now = new Date()
   const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
   const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
@@ -152,6 +155,8 @@ export async function getDashboardStats(): Promise<DashboardStats> {
  * 最近の予約を取得
  */
 export async function getRecentReservations(limit = 5): Promise<RecentReservation[]> {
+  await requireAdmin()
+
   const reservations = await prisma.reservation.findMany({
     take: limit,
     orderBy: { createdAt: 'desc' },
@@ -176,6 +181,8 @@ export async function getRecentReservations(limit = 5): Promise<RecentReservatio
  * 最近のお問い合わせを取得
  */
 export async function getRecentInquiries(limit = 5): Promise<RecentInquiry[]> {
+  await requireAdmin()
+
   const inquiries = await prisma.inquiry.findMany({
     take: limit,
     orderBy: { createdAt: 'desc' },
@@ -195,6 +202,8 @@ export async function getRecentInquiries(limit = 5): Promise<RecentInquiry[]> {
  * 今日の予約を取得
  */
 export async function getTodayReservations(): Promise<RecentReservation[]> {
+  await requireAdmin()
+
   const today = new Date()
   const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate())
   const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999)

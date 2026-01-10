@@ -8,7 +8,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
-import { auth } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth'
 import {
   updatePageSchema,
   type UpdatePageInput,
@@ -21,10 +21,7 @@ import {
  * @throws {Error} 認証が必要な場合
  */
 export async function getPagesList(): Promise<PageData[]> {
-  const session = await auth()
-  if (!session?.user?.id) {
-    throw new Error('認証が必要です')
-  }
+  await requireAdmin()
 
   const pages = await prisma.page.findMany({
     where: { isActive: true },
@@ -39,10 +36,7 @@ export async function getPagesList(): Promise<PageData[]> {
  * @throws {Error} 認証が必要な場合
  */
 export async function getPageBySlug(slug: string): Promise<PageData | null> {
-  const session = await auth()
-  if (!session?.user?.id) {
-    throw new Error('認証が必要です')
-  }
+  await requireAdmin()
 
   const page = await prisma.page.findUnique({
     where: { slug },
@@ -73,8 +67,9 @@ export async function updatePage(
   slug: string,
   input: UpdatePageInput
 ): Promise<PageActionResult> {
-  const session = await auth()
-  if (!session?.user?.id) {
+  try {
+    await requireAdmin()
+  } catch {
     return { success: false, error: 'ログインが必要です' }
   }
 
@@ -143,8 +138,9 @@ export async function createPageIfNotExists(
   title: string,
   content: string
 ): Promise<PageData | null> {
-  const session = await auth()
-  if (!session?.user?.id) {
+  try {
+    await requireAdmin()
+  } catch {
     return null
   }
 

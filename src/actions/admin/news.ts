@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { type ActionResult, createSuccess, createFailure, type NewsWhereInput } from '@/types'
 import { determinePublishedAt } from '@/lib/utils'
+import { requireAdmin } from '@/lib/auth'
 
 // =============================================================================
 // Types
@@ -64,6 +65,8 @@ export async function getNewsList(
   filters: NewsFilters = {},
   pagination: NewsPagination = {}
 ): Promise<GetNewsListResult> {
+  await requireAdmin()
+
   const { status, search } = filters
 
   const {
@@ -115,6 +118,8 @@ export async function getNewsList(
  * お知らせ詳細を取得
  */
 export async function getNewsById(id: string): Promise<NewsData | null> {
+  await requireAdmin()
+
   return prisma.news.findUnique({
     where: { id },
   })
@@ -127,6 +132,8 @@ export async function createNews(
   data: NewsInput
 ): Promise<ActionResult<{ id: string }>> {
   try {
+    await requireAdmin()
+
     const parsed = newsSchema.safeParse(data)
     if (!parsed.success) {
       return createFailure(parsed.error.issues[0].message)
@@ -161,6 +168,8 @@ export async function updateNews(
   data: NewsInput
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const parsed = newsSchema.safeParse(data)
     if (!parsed.success) {
       return createFailure(parsed.error.issues[0].message)
@@ -205,6 +214,8 @@ export async function deleteNews(
   id: string
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const news = await prisma.news.findUnique({
       where: { id },
     })
@@ -234,6 +245,8 @@ export async function toggleNewsPublish(
   id: string
 ): Promise<ActionResult<void>> {
   try {
+    await requireAdmin()
+
     const news = await prisma.news.findUnique({
       where: { id },
     })
