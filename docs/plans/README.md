@@ -2,6 +2,35 @@
 
 ## 完了した計画
 
+### 013-google-calendar-integration.md (2026-01-11)
+
+Google Calendar連携機能（Phase 1）
+
+**実装内容**:
+- サービスアカウント連携: 共有カレンダーへの予約自動登録
+- OAuth連携（オプション）: 管理者個人カレンダーへの登録
+- iCal生成: RFC 5545準拠の.icsファイル
+- Add to Calendarリンク: Google/Outlook/Apple対応
+- 予約作成時の自動同期、キャンセル時のイベント削除
+
+**新規ファイル**:
+- `src/lib/google-calendar.ts` - Google Calendar APIクライアント
+- `src/lib/calendar-sync.ts` - 予約同期サービス
+- `src/lib/ical.ts` - iCal生成・Add to Calendarリンク
+- `src/app/(admin)/admin/settings/_components/sections/GoogleCalendarSection.tsx` - 設定UI
+
+**変更ファイル**:
+- `prisma/schema.prisma` - Reservation/Settingsにカレンダー関連フィールド追加
+- `src/lib/auth.ts` - Googleプロバイダー追加
+- `src/actions/admin/settings.ts` - Google Calendar設定Server Actions
+- `src/actions/reservation.ts` - カレンダー同期呼び出し追加
+- `src/lib/email-service.ts` - iCal添付・カレンダーリンク追加
+- `src/emails/reservation-confirmation.tsx` - カレンダーリンクセクション追加
+
+**デプロイ時**: `bunx prisma migrate dev --name add_google_calendar_integration` が必要
+
+---
+
 ### 012-nextjs-best-practices.md (2026-01-11)
 
 Next.js公式ベストプラクティス準拠改善

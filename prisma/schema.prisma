@@ -182,6 +182,12 @@ model Reservation {
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
+  // Google Calendar Sync
+  googleCalendarEventId      String?   // 共有カレンダーのイベントID
+  googleCalendarOAuthEventId String?   // OAuth連携（管理者個人）のイベントID
+  calendarSyncedAt           DateTime? // 最終同期日時
+  calendarSyncError          String?   @db.Text // 同期エラーメッセージ
+
   // Relations
   space    Space    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
   user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -605,6 +611,25 @@ model Settings {
   // Custom API Keys (Generic key-value storage)
   // Format: { "id": { "name": "...", "key": "encrypted", "value": "encrypted", ... } }
   customApiKeys Json? @default("{}")
+
+  // ==============================================
+  // Google Calendar Integration
+  // ==============================================
+
+  // サービスアカウント連携（共有カレンダー用）
+  googleCalendarEnabled            Boolean   @default(false)
+  googleCalendarServiceAccountJson String?   @db.Text  // 暗号化されたJSON認証情報
+  googleCalendarId                 String?             // 共有カレンダーID
+  googleCalendarLastTestedAt       DateTime?
+  googleCalendarConnectionStatus   String?             // 'connected' | 'error'
+
+  // OAuth連携（管理者個人カレンダー用）
+  googleCalendarOAuthEnabled       Boolean   @default(false)
+  // ※ access_token/refresh_tokenはAccountテーブルに保存
+
+  // 予約者向けiCal設定
+  icalAttachmentEnabled            Boolean   @default(true)  // メールにiCal添付
+  addToCalendarLinksEnabled        Boolean   @default(true)  // Add to Calendarリンク表示
 
   @@map("settings")
 }

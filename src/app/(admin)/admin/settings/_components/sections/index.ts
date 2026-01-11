@@ -16,6 +16,7 @@ export { StripeSection } from './StripeSection'
 export { ResendSection } from './ResendSection'
 export { TurnstileSection } from './TurnstileSection'
 export { GoogleMapsSection } from './GoogleMapsSection'
+export { GoogleCalendarSection } from './GoogleCalendarSection'
 export { CustomApiKeysSection } from './CustomApiKeysSection'
 
 // 既存コンポーネント（親ディレクトリから再エクスポート）

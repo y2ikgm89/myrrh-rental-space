@@ -3,11 +3,15 @@
 /**
  * 予約タブ
  *
- * 予約設定と規約同意設定を含む
+ * 予約設定・規約同意設定・Google Calendar連携を含む
  */
 
 import type { SettingsData } from '@/actions/admin/settings'
-import { ReservationSection, TermsAgreementSection } from '../sections'
+import {
+  ReservationSection,
+  TermsAgreementSection,
+  GoogleCalendarSection,
+} from '../sections'
 
 interface BookingTabProps {
   settings: SettingsData
@@ -19,6 +23,7 @@ export function BookingTab({ settings, onUpdate }: BookingTabProps) {
     <div className="space-y-6">
       <ReservationSection settings={settings} onUpdate={onUpdate} />
       <TermsAgreementSection settings={settings} onUpdate={onUpdate} />
+      <GoogleCalendarSection settings={settings} onUpdate={onUpdate} />
     </div>
   )
 }

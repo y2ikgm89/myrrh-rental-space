@@ -13,6 +13,14 @@ import {
   maskSecretKey,
   testStripeConnection as testStripeConnectionLib,
 } from '@/lib/stripe'
+import {
+  testServiceAccountConnection,
+  testOAuthConnection,
+  encryptServiceAccountJson,
+  extractServiceAccountEmail,
+  isValidCalendarId,
+  getGoogleCalendarSettings,
+} from '@/lib/google-calendar'
 import { stripeSettingsSchema, type StripeSettingsInput } from '@/lib/validations/stripe'
 import { requireAdmin } from '@/lib/auth' // For query functions only
 
@@ -135,6 +143,15 @@ export type SettingsData = {
   announcementBarShowArrows: boolean
   announcementBarShowIndicator: boolean
   announcementBarDesignStyle: string
+  // Google Calendar Integration
+  googleCalendarEnabled: boolean
+  googleCalendarId: string | null
+  googleCalendarServiceAccountEmailMasked: string | null
+  googleCalendarLastTestedAt: Date | null
+  googleCalendarConnectionStatus: string | null
+  googleCalendarOAuthEnabled: boolean
+  icalAttachmentEnabled: boolean
+  addToCalendarLinksEnabled: boolean
   createdAt: Date
   updatedAt: Date
 }
@@ -294,6 +311,21 @@ export async function getSettings(): Promise<SettingsData> {
     ? maskSecretKey(safeDecrypt(settings.stripeWebhookSecret) || '****')
     : null
 
+  // Google Calendarサービスアカウントのメールをマスク表示用に抽出
+  let googleCalendarServiceAccountEmailMasked: string | null = null
+  if (settings.googleCalendarServiceAccountJson) {
+    const decrypted = safeDecrypt(settings.googleCalendarServiceAccountJson)
+    if (decrypted) {
+      const email = extractServiceAccountEmail(decrypted)
+      if (email) {
+        // メールアドレスをマスク（例: ser****@project.iam.gserviceaccount.com）
+        const [localPart, domain] = email.split('@')
+        googleCalendarServiceAccountEmailMasked =
+          localPart.slice(0, 3) + '****@' + domain
+      }
+    }
+  }
+
   // Prisma JsonValueをZodバリデーション関数で安全に変換 + Stripeキーはマスク済みで返す
   return {
     ...settings,
@@ -303,6 +335,7 @@ export async function getSettings(): Promise<SettingsData> {
     defaultBusinessHours: parseBusinessHours(settings.defaultBusinessHours),
     stripeSecretKeyMasked,
     stripeWebhookSecretMasked,
+    googleCalendarServiceAccountEmailMasked,
   }
 }
 
@@ -785,3 +818,206 @@ export const updateAnnouncementBarCarouselSettings = withAuth(async (_user, data
 
   return createSuccess('お知らせバーカルーセル設定を更新しました')
 })
+
+// =============================================================================
+// Google Calendar Actions
+// =============================================================================
+
+const googleCalendarSettingsSchema = z.object({
+  googleCalendarEnabled: z.boolean(),
+  googleCalendarId: z.string().max(200).nullable(),
+  serviceAccountJson: z.string().nullable(), // 新規入力時のみ
+  icalAttachmentEnabled: z.boolean(),
+  addToCalendarLinksEnabled: z.boolean(),
+})
+
+export type GoogleCalendarSettingsInput = z.infer<typeof googleCalendarSettingsSchema>
+
+/**
+ * Google Calendar設定を更新
+ */
+export const updateGoogleCalendarSettings = withAuth(async (_user, data: GoogleCalendarSettingsInput) => {
+  const parsed = googleCalendarSettingsSchema.safeParse(data)
+  if (!parsed.success) {
+    return createFailure(parsed.error.issues[0].message)
+  }
+
+  // カレンダーIDのバリデーション
+  if (parsed.data.googleCalendarId && !isValidCalendarId(parsed.data.googleCalendarId)) {
+    return createFailure('カレンダーIDの形式が無効です')
+  }
+
+  const updateData: Record<string, unknown> = {
+    googleCalendarEnabled: parsed.data.googleCalendarEnabled,
+    googleCalendarId: parsed.data.googleCalendarId || null,
+    icalAttachmentEnabled: parsed.data.icalAttachmentEnabled,
+    addToCalendarLinksEnabled: parsed.data.addToCalendarLinksEnabled,
+  }
+
+  // サービスアカウントJSONが入力された場合のみ更新（暗号化して保存）
+  if (parsed.data.serviceAccountJson) {
+    try {
+      // JSONとして有効か確認
+      JSON.parse(parsed.data.serviceAccountJson)
+      updateData.googleCalendarServiceAccountJson = encryptServiceAccountJson(
+        parsed.data.serviceAccountJson
+      )
+    } catch {
+      return createFailure('サービスアカウントJSONの形式が無効です')
+    }
+  }
+
+  await prisma.settings.upsert({
+    where: { id: 'singleton' },
+    create: { id: 'singleton', ...updateData },
+    update: updateData,
+  })
+
+  revalidatePath('/admin/settings')
+
+  return createSuccess('Google Calendar設定を更新しました')
+})
+
+/**
+ * サービスアカウント接続テスト
+ */
+export async function testGoogleCalendarConnectionAction(params: {
+  serviceAccountJson: string
+  calendarId: string
+}): Promise<{
+  success: boolean
+  error?: string
+  calendarName?: string
+  accountEmail?: string
+}> {
+  try {
+    await requireAdmin()
+
+    if (!isValidCalendarId(params.calendarId)) {
+      return { success: false, error: 'カレンダーIDの形式が無効です' }
+    }
+
+    const result = await testServiceAccountConnection({
+      serviceAccountJson: params.serviceAccountJson,
+      calendarId: params.calendarId,
+    })
+
+    if (result.success) {
+      // 接続成功時、ステータスを更新
+      await prisma.settings.upsert({
+        where: { id: 'singleton' },
+        create: {
+          id: 'singleton',
+          googleCalendarLastTestedAt: new Date(),
+          googleCalendarConnectionStatus: 'connected',
+        },
+        update: {
+          googleCalendarLastTestedAt: new Date(),
+          googleCalendarConnectionStatus: 'connected',
+        },
+      })
+
+      revalidatePath('/admin/settings')
+    } else {
+      // 接続失敗時もステータスを更新
+      await prisma.settings.update({
+        where: { id: 'singleton' },
+        data: {
+          googleCalendarConnectionStatus: 'error',
+        },
+      })
+    }
+
+    return result
+  } catch (error) {
+    console.error('Failed to test Google Calendar connection:', error)
+    return { success: false, error: '接続テストに失敗しました' }
+  }
+}
+
+/**
+ * OAuth接続テスト（管理者の個人カレンダー）
+ */
+export async function testGoogleCalendarOAuthAction(): Promise<{
+  success: boolean
+  error?: string
+  calendarName?: string
+}> {
+  try {
+    const user = await requireAdmin()
+    if (!user.id) {
+      return { success: false, error: 'ユーザーIDが見つかりません' }
+    }
+
+    const result = await testOAuthConnection(user.id)
+
+    if (result.success) {
+      // 接続成功時、OAuth有効フラグを更新
+      await prisma.settings.upsert({
+        where: { id: 'singleton' },
+        create: {
+          id: 'singleton',
+          googleCalendarOAuthEnabled: true,
+        },
+        update: {
+          googleCalendarOAuthEnabled: true,
+        },
+      })
+
+      revalidatePath('/admin/settings')
+    }
+
+    return result
+  } catch (error) {
+    console.error('Failed to test OAuth connection:', error)
+    return { success: false, error: 'OAuth接続テストに失敗しました' }
+  }
+}
+
+/**
+ * Google Calendarサービスアカウント認証情報をクリア
+ */
+export const clearGoogleCalendarServiceAccount = withAuth(async () => {
+  await prisma.settings.update({
+    where: { id: 'singleton' },
+    data: {
+      googleCalendarServiceAccountJson: null,
+      googleCalendarConnectionStatus: null,
+      googleCalendarLastTestedAt: null,
+    },
+  })
+
+  revalidatePath('/admin/settings')
+
+  return createSuccess('サービスアカウント認証情報をクリアしました')
+})
+
+/**
+ * Google Calendar OAuth連携を解除
+ */
+export const disconnectGoogleCalendarOAuth = withAuth(async (user) => {
+  // Accountテーブルからトークンを削除
+  await prisma.account.deleteMany({
+    where: {
+      userId: user.id,
+      provider: 'google',
+    },
+  })
+
+  // OAuth有効フラグをオフ
+  await prisma.settings.update({
+    where: { id: 'singleton' },
+    data: {
+      googleCalendarOAuthEnabled: false,
+    },
+  })
+
+  revalidatePath('/admin/settings')
+
+  return createSuccess('Google Calendar OAuth連携を解除しました')
+})
+
+/**
+ * Google Calendar設定を取得（公開用）
+ */
+export { getGoogleCalendarSettings }

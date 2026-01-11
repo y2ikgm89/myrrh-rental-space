@@ -11,6 +11,7 @@ import { redirect } from 'next/navigation'
 import NextAuth from 'next-auth'
 import { PrismaAdapter } from '@auth/prisma-adapter'
 import Credentials from 'next-auth/providers/credentials'
+import Google from 'next-auth/providers/google'
 import bcrypt from 'bcrypt'
 import { prisma } from './prisma'
 import { Role } from '@/generated/prisma/client/enums'
@@ -83,6 +84,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           name: user.name,
           role: user.role,
         }
+      },
+    }),
+    // Google OAuth（管理者のカレンダー連携用）
+    Google({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      authorization: {
+        params: {
+          scope:
+            'openid email profile https://www.googleapis.com/auth/calendar.events',
+          access_type: 'offline',
+          prompt: 'consent',
+        },
       },
     }),
   ],

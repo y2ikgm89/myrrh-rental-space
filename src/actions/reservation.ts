@@ -14,6 +14,7 @@ import {
   sendReservationConfirmationEmail,
   sendReservationAdminNotification,
 } from '@/lib/email-service'
+import { syncReservationToCalendar } from '@/lib/calendar-sync'
 import { verifyTurnstileToken, isTurnstileEnabled } from '@/lib/turnstile'
 import { getTermsAgreementSettings } from '@/actions/admin/settings'
 
@@ -79,7 +80,7 @@ export async function createReservation(
     // スペースの存在確認
     const space = await prisma.space.findUnique({
       where: { id: spaceId, isPublished: true, isActive: true },
-      select: { id: true, hourlyPrice: true, name: true },
+      select: { id: true, hourlyPrice: true, name: true, address: true },
     })
 
     if (!space) {
@@ -201,14 +202,29 @@ export async function createReservation(
       endTime: endDateTime,
       totalPrice,
       notes: notes || undefined,
+      location: space.address ?? undefined,
     }
 
-    // メール送信（バックグラウンドで実行、失敗してもエラーにしない）
+    // カレンダー同期用データ
+    const calendarData = {
+      reservationId: result.id,
+      spaceName: space.name,
+      customerName: `${lastName} ${firstName}`,
+      customerEmail: email,
+      startTime: startDateTime,
+      endTime: endDateTime,
+      location: space.address ?? undefined,
+      notes: notes || undefined,
+      totalPrice,
+    }
+
+    // メール送信 + カレンダー同期（バックグラウンドで実行、失敗してもエラーにしない）
     Promise.all([
       sendReservationConfirmationEmail(emailData),
       sendReservationAdminNotification(emailData, 'new'),
+      syncReservationToCalendar(calendarData),
     ]).catch((err) => {
-      console.error('Failed to send reservation emails:', err)
+      console.error('Failed to send reservation emails or sync calendar:', err)
     })
 
     return {

@@ -5,10 +5,18 @@ import {
   Heading,
   Hr,
   Html,
+  Link,
   Preview,
   Section,
   Text,
 } from '@react-email/components'
+
+type AddToCalendarLinks = {
+  google: string
+  outlook: string
+  outlookWeb: string
+  apple: string
+}
 
 type Props = {
   customerName: string
@@ -19,6 +27,7 @@ type Props = {
   totalPrice: string
   reservationId: string
   notes?: string
+  addToCalendarLinks?: AddToCalendarLinks
 }
 
 export function ReservationConfirmationEmail({
@@ -30,6 +39,7 @@ export function ReservationConfirmationEmail({
   totalPrice,
   reservationId,
   notes,
+  addToCalendarLinks,
 }: Props) {
   return (
     <Html>
@@ -72,6 +82,28 @@ export function ReservationConfirmationEmail({
               </Text>
             )}
           </Section>
+
+          {addToCalendarLinks && (
+            <Section style={calendarSection}>
+              <Text style={calendarHeading}>カレンダーに追加</Text>
+              <Text style={calendarDescription}>
+                この予約をカレンダーに追加できます:
+              </Text>
+              <Text style={calendarLinks}>
+                <Link href={addToCalendarLinks.google} style={calendarLink}>
+                  Google Calendar
+                </Link>
+                {' | '}
+                <Link href={addToCalendarLinks.outlookWeb} style={calendarLink}>
+                  Outlook
+                </Link>
+                {' | '}
+                <Link href={addToCalendarLinks.apple} style={calendarLink}>
+                  Apple Calendar
+                </Link>
+              </Text>
+            </Section>
+          )}
 
           <Hr style={hr} />
 
@@ -143,6 +175,36 @@ const footer = {
   fontSize: '12px',
   color: '#8898aa',
   marginTop: '32px',
+}
+
+const calendarSection = {
+  backgroundColor: '#e8f4fd',
+  borderRadius: '8px',
+  padding: '16px 20px',
+  margin: '24px 0',
+}
+
+const calendarHeading = {
+  fontSize: '16px',
+  fontWeight: '600',
+  color: '#1a1a1a',
+  marginBottom: '8px',
+}
+
+const calendarDescription = {
+  fontSize: '14px',
+  color: '#484848',
+  marginBottom: '12px',
+}
+
+const calendarLinks = {
+  fontSize: '14px',
+  lineHeight: '24px',
+}
+
+const calendarLink = {
+  color: '#0066cc',
+  textDecoration: 'underline',
 }
 
 export default ReservationConfirmationEmail

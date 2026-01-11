@@ -6,6 +6,11 @@ import { AdminNotificationEmail } from '@/emails/admin-notification'
 import { prisma } from './prisma'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
+import {
+  createReservationEvent,
+  generateAddToCalendarLinks,
+  generateICalContent,
+} from './ical'
 
 // =============================================================================
 // Types
@@ -20,6 +25,7 @@ type ReservationEmailData = {
   endTime: Date
   totalPrice: number | null
   notes?: string
+  location?: string
 }
 
 type ContactEmailData = {
@@ -66,6 +72,27 @@ function getAdminUrl(path: string): string {
 // =============================================================================
 
 /**
+ * カレンダー設定を取得
+ */
+async function getCalendarEmailSettings(): Promise<{
+  icalAttachmentEnabled: boolean
+  addToCalendarLinksEnabled: boolean
+}> {
+  const settings = await prisma.settings.findUnique({
+    where: { id: 'singleton' },
+    select: {
+      icalAttachmentEnabled: true,
+      addToCalendarLinksEnabled: true,
+    },
+  })
+
+  return {
+    icalAttachmentEnabled: settings?.icalAttachmentEnabled ?? true,
+    addToCalendarLinksEnabled: settings?.addToCalendarLinksEnabled ?? true,
+  }
+}
+
+/**
  * 予約確認メールを送信
  */
 export async function sendReservationConfirmationEmail(
@@ -86,6 +113,41 @@ export async function sendReservationConfirmationEmail(
     const startTime = format(data.startTime, 'HH:mm', { locale: ja })
     const endTime = format(data.endTime, 'HH:mm', { locale: ja })
 
+    // カレンダー設定を取得
+    const calendarSettings = await getCalendarEmailSettings()
+
+    // カレンダーイベントを生成
+    const calendarEvent = createReservationEvent({
+      reservationId: data.reservationId,
+      spaceName: data.spaceName,
+      customerName: data.customerName,
+      startTime: data.startTime,
+      endTime: data.endTime,
+      location: data.location,
+      notes: data.notes,
+    })
+
+    // Add to Calendarリンクを生成
+    const addToCalendarLinks = calendarSettings.addToCalendarLinksEnabled
+      ? generateAddToCalendarLinks(calendarEvent)
+      : undefined
+
+    // iCalファイルを生成（添付用）
+    let attachments: { filename: string; content: Buffer }[] | undefined
+    if (calendarSettings.icalAttachmentEnabled) {
+      try {
+        attachments = [
+          {
+            filename: `reservation-${data.reservationId.slice(0, 8)}.ics`,
+            content: Buffer.from(generateICalContent(calendarEvent), 'utf-8'),
+          },
+        ]
+      } catch (icalError) {
+        console.error('Failed to generate iCal attachment:', icalError)
+        // 添付なしで続行
+      }
+    }
+
     await resend.emails.send({
       from: getFromAddress(),
       to: data.customerEmail,
@@ -99,7 +161,9 @@ export async function sendReservationConfirmationEmail(
         totalPrice: formatPrice(data.totalPrice),
         reservationId: data.reservationId.slice(0, 8).toUpperCase(),
         notes: data.notes,
+        addToCalendarLinks,
       }),
+      attachments,
     })
 
     return { success: true }
