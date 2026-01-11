@@ -56,8 +56,39 @@ iCalフィードURL公開（外部カレンダー購読用）
 - `src/app/(admin)/admin/settings/_components/sections/ICalFeedSection.tsx` - 管理UI
 - `prisma/schema.prisma` - ICalTokenモデル追加
 
-### Phase 4（将来実装）
-- カレンダーからの予約更新検出（双方向同期）
+### Phase 4（実装済み）
+
+双方向同期（カレンダー → 予約システム）
+
+**実装内容**:
+- ポーリング方式: 設定した間隔（1〜60分）でカレンダー変更をチェック
+- Webhook方式: Google Calendar Push Notificationsで即時通知
+- 両方使用可能（推奨）
+- 手動同期ボタン
+
+**検出する変更**:
+- カレンダーでイベント削除 → 予約キャンセル
+- カレンダーでイベント時間変更 → 予約時間更新
+
+**新規ファイル**:
+- `src/app/api/cron/calendar-sync/route.ts` - Cron用ポーリングAPI
+- `src/app/api/webhooks/google-calendar/route.ts` - Webhook受信API
+- `src/app/(admin)/admin/settings/_components/sections/TwoWaySyncSection.tsx` - 管理UI
+
+**変更ファイル**:
+- `prisma/schema.prisma` - 双方向同期設定フィールド追加
+- `src/lib/google-calendar.ts` - fetchCalendarChanges, Webhook関連関数追加
+- `src/lib/calendar-sync.ts` - syncFromCalendar, processCalendarChange追加
+- `src/actions/admin/settings.ts` - 双方向同期設定Server Actions追加
+
+**セキュリティ**:
+- Cron API: CRON_SECRET環境変数による認証（本番必須）
+- Webhook: channelId/resourceIdによる検証
+- 同期処理の競合防止（メモリロック）
+
+**既知の制限**:
+- 時間変更時の重複チェックは未実装（将来対応予定）
+- Webhookは最大7日間有効（自動更新なし）
 
 ## 新規ファイル
 
@@ -67,6 +98,12 @@ iCalフィードURL公開（外部カレンダー購読用）
 | `src/lib/calendar-sync.ts` | 予約同期サービス |
 | `src/lib/ical.ts` | iCal生成・Add to Calendarリンク |
 | `src/app/(admin)/admin/settings/_components/sections/GoogleCalendarSection.tsx` | 管理画面設定UI |
+| `src/app/(admin)/admin/settings/_components/sections/ICalFeedSection.tsx` | iCalフィード管理UI |
+| `src/app/(admin)/admin/settings/_components/sections/TwoWaySyncSection.tsx` | 双方向同期設定UI |
+| `src/app/api/ical/[token]/route.ts` | iCalフィード配信API |
+| `src/app/api/cron/calendar-sync/route.ts` | ポーリング用Cron API |
+| `src/app/api/webhooks/google-calendar/route.ts` | Webhook受信API |
+| `src/actions/admin/ical-tokens.ts` | iCalトークン管理Actions |
 
 ## 変更ファイル
 
@@ -88,6 +125,10 @@ GOOGLE_CLIENT_SECRET=xxx
 
 # 暗号化キー（既存）
 ENCRYPTION_KEY=xxx  # サービスアカウントJSON暗号化用
+
+# 双方向同期（Phase 4）
+CRON_SECRET=xxx  # ポーリングAPIの認証（本番必須）
+NEXT_PUBLIC_APP_URL=https://example.com  # Webhook URL生成用
 ```
 
 ## 設定項目（管理画面）
@@ -122,6 +163,29 @@ ENCRYPTION_KEY=xxx  # サービスアカウントJSON暗号化用
 4. 接続テスト実行
 5. 同期有効化
 
+### 4. 双方向同期設定（Phase 4）
+
+1. Vercel環境変数設定
+   - `CRON_SECRET`: ランダムな文字列（例: `openssl rand -hex 32`）
+   - `NEXT_PUBLIC_APP_URL`: デプロイ先URL
+
+2. Vercel Cron設定（`vercel.json`）
+```json
+{
+  "crons": [
+    {
+      "path": "/api/cron/calendar-sync",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}
+```
+
+3. 管理画面 → 設定 → 予約タブ → 双方向同期
+   - 双方向同期を有効化
+   - 同期方式選択（ポーリング/Webhook/両方）
+   - Webhook設定（必要時）
+
 ## テクニカルノート
 
 ### RFC 5545 iCal準拠
@@ -141,6 +205,7 @@ ENCRYPTION_KEY=xxx  # サービスアカウントJSON暗号化用
 
 ## Status
 
+### Phase 1-3
 - [x] Prismaスキーマ更新
 - [x] googleapisインストール
 - [x] Google Calendar APIクライアント
@@ -152,6 +217,18 @@ ENCRYPTION_KEY=xxx  # サービスアカウントJSON暗号化用
 - [x] メールにiCal添付・リンク追加
 - [x] 予約作成時のカレンダー同期
 - [x] 予約キャンセル時のイベント削除
+- [x] 予約更新時のカレンダー同期（Phase 2）
+- [x] iCalフィードURL公開（Phase 3）
 - [x] type-check / lint / build
 - [x] code-simplifier / code-reviewer
 - [x] ドキュメント作成
+
+### Phase 4（双方向同期）
+- [x] Prismaスキーマ更新（双方向同期フィールド）
+- [x] カレンダー変更検出ロジック
+- [x] ポーリング用Cron APIエンドポイント
+- [x] Webhook用APIエンドポイント
+- [x] 設定画面UI（TwoWaySyncSection）
+- [x] Server Actions（設定・Webhook管理・手動同期）
+- [x] type-check / lint / build
+- [x] code-reviewer

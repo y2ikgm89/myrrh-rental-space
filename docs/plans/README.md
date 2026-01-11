@@ -4,20 +4,41 @@
 
 ### 013-google-calendar-integration.md (2026-01-11)
 
-Google Calendar連携機能（Phase 1）
+Google Calendar連携機能（Phase 1-4 全完了）
 
-**実装内容**:
+**Phase 1: 基本連携**:
 - サービスアカウント連携: 共有カレンダーへの予約自動登録
 - OAuth連携（オプション）: 管理者個人カレンダーへの登録
 - iCal生成: RFC 5545準拠の.icsファイル
 - Add to Calendarリンク: Google/Outlook/Apple対応
 - 予約作成時の自動同期、キャンセル時のイベント削除
 
+**Phase 2: ステータス変更同期**:
+- CONFIRMED時にカレンダーイベント更新（または新規作成）
+- CANCELLED時にカレンダーイベント削除
+
+**Phase 3: iCalフィード**:
+- トークンベースiCalフィード配信API
+- 外部カレンダー（TimeTree等）からの購読
+
+**Phase 4: 双方向同期**:
+- ポーリング方式: 1〜60分間隔で変更チェック
+- Webhook方式: Google Calendar Push Notifications
+- 両方使用可能（推奨）
+- 手動同期ボタン
+- イベント削除→予約キャンセル、時間変更→予約更新
+
 **新規ファイル**:
 - `src/lib/google-calendar.ts` - Google Calendar APIクライアント
 - `src/lib/calendar-sync.ts` - 予約同期サービス
 - `src/lib/ical.ts` - iCal生成・Add to Calendarリンク
 - `src/app/(admin)/admin/settings/_components/sections/GoogleCalendarSection.tsx` - 設定UI
+- `src/app/(admin)/admin/settings/_components/sections/ICalFeedSection.tsx` - iCalフィードUI
+- `src/app/(admin)/admin/settings/_components/sections/TwoWaySyncSection.tsx` - 双方向同期UI
+- `src/app/api/cron/calendar-sync/route.ts` - ポーリングCron API
+- `src/app/api/webhooks/google-calendar/route.ts` - Webhook受信API
+- `src/app/api/ical/[token]/route.ts` - iCalフィード配信API
+- `vercel.json` - Vercel Cron設定
 
 **変更ファイル**:
 - `prisma/schema.prisma` - Reservation/Settingsにカレンダー関連フィールド追加
@@ -26,6 +47,11 @@ Google Calendar連携機能（Phase 1）
 - `src/actions/reservation.ts` - カレンダー同期呼び出し追加
 - `src/lib/email-service.ts` - iCal添付・カレンダーリンク追加
 - `src/emails/reservation-confirmation.tsx` - カレンダーリンクセクション追加
+
+**環境変数**:
+- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` - OAuth用
+- `CRON_SECRET` - ポーリングAPI認証（本番必須）
+- `NEXT_PUBLIC_APP_URL` - Webhook URL生成用
 
 **デプロイ時**: `bunx prisma migrate dev --name add_google_calendar_integration` が必要
 

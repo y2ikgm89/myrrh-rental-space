@@ -20,7 +20,10 @@ import {
   extractServiceAccountEmail,
   isValidCalendarId,
   getGoogleCalendarSettings,
+  setupWebhookWatch,
+  stopWebhookWatch,
 } from '@/lib/google-calendar'
+import { syncFromCalendar } from '@/lib/calendar-sync'
 import { stripeSettingsSchema, type StripeSettingsInput } from '@/lib/validations/stripe'
 import { requireAdmin } from '@/lib/auth' // For query functions only
 
@@ -152,6 +155,13 @@ export type SettingsData = {
   googleCalendarOAuthEnabled: boolean
   icalAttachmentEnabled: boolean
   addToCalendarLinksEnabled: boolean
+  // Two-Way Sync Settings
+  googleCalendarTwoWaySyncEnabled: boolean
+  googleCalendarSyncMethod: string
+  googleCalendarPollingIntervalMin: number
+  googleCalendarLastSyncedAt: Date | null
+  googleCalendarWebhookActive: boolean
+  googleCalendarWebhookExpiration: Date | null
   createdAt: Date
   updatedAt: Date
 }
@@ -336,6 +346,13 @@ export async function getSettings(): Promise<SettingsData> {
     stripeSecretKeyMasked,
     stripeWebhookSecretMasked,
     googleCalendarServiceAccountEmailMasked,
+    // Two-Way Sync Settings
+    googleCalendarTwoWaySyncEnabled: settings.googleCalendarTwoWaySyncEnabled,
+    googleCalendarSyncMethod: settings.googleCalendarSyncMethod,
+    googleCalendarPollingIntervalMin: settings.googleCalendarPollingIntervalMin,
+    googleCalendarLastSyncedAt: settings.googleCalendarLastSyncedAt,
+    googleCalendarWebhookActive: !!settings.googleCalendarWebhookChannelId,
+    googleCalendarWebhookExpiration: settings.googleCalendarWebhookExpiration,
   }
 }
 
@@ -1021,3 +1038,165 @@ export const disconnectGoogleCalendarOAuth = withAuth(async (user) => {
  * Google Calendar設定を取得（公開用）
  */
 export { getGoogleCalendarSettings }
+
+// =============================================================================
+// Two-Way Sync Actions (Phase 4)
+// =============================================================================
+
+const twoWaySyncSettingsSchema = z.object({
+  enabled: z.boolean(),
+  syncMethod: z.enum(['polling', 'webhook', 'both']),
+  pollingIntervalMin: z.number().int().min(1).max(60),
+})
+
+export type TwoWaySyncSettingsInput = z.infer<typeof twoWaySyncSettingsSchema>
+
+/**
+ * 双方向同期設定を更新
+ */
+export const updateTwoWaySyncSettings = withAuth(async (_user, data: TwoWaySyncSettingsInput) => {
+  const parsed = twoWaySyncSettingsSchema.safeParse(data)
+  if (!parsed.success) {
+    return createFailure(parsed.error.issues[0].message)
+  }
+
+  await prisma.settings.upsert({
+    where: { id: 'singleton' },
+    create: {
+      id: 'singleton',
+      googleCalendarTwoWaySyncEnabled: parsed.data.enabled,
+      googleCalendarSyncMethod: parsed.data.syncMethod,
+      googleCalendarPollingIntervalMin: parsed.data.pollingIntervalMin,
+    },
+    update: {
+      googleCalendarTwoWaySyncEnabled: parsed.data.enabled,
+      googleCalendarSyncMethod: parsed.data.syncMethod,
+      googleCalendarPollingIntervalMin: parsed.data.pollingIntervalMin,
+    },
+  })
+
+  revalidatePath('/admin/settings')
+
+  return createSuccess('双方向同期設定を更新しました')
+})
+
+/**
+ * Webhookを設定
+ */
+export async function setupCalendarWebhook(): Promise<{
+  success: boolean
+  error?: string
+  expiration?: Date
+}> {
+  try {
+    await requireAdmin()
+
+    // ベースURLを取得（環境変数から）
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL
+    if (!baseUrl) {
+      return { success: false, error: 'APP_URLが設定されていません' }
+    }
+
+    const webhookUrl = `${baseUrl.startsWith('http') ? baseUrl : `https://${baseUrl}`}/api/webhooks/google-calendar`
+
+    const result = await setupWebhookWatch(webhookUrl)
+
+    if (result.success && result.channelId && result.resourceId) {
+      await prisma.settings.update({
+        where: { id: 'singleton' },
+        data: {
+          googleCalendarWebhookChannelId: result.channelId,
+          googleCalendarWebhookResourceId: result.resourceId,
+          googleCalendarWebhookExpiration: result.expiration,
+        },
+      })
+
+      revalidatePath('/admin/settings')
+
+      return { success: true, expiration: result.expiration }
+    }
+
+    return { success: false, error: result.error }
+  } catch (error) {
+    console.error('Failed to setup webhook:', error)
+    return { success: false, error: 'Webhook設定に失敗しました' }
+  }
+}
+
+/**
+ * Webhookを停止
+ */
+export async function stopCalendarWebhook(): Promise<{
+  success: boolean
+  error?: string
+}> {
+  try {
+    await requireAdmin()
+
+    const settings = await prisma.settings.findUnique({
+      where: { id: 'singleton' },
+      select: {
+        googleCalendarWebhookChannelId: true,
+        googleCalendarWebhookResourceId: true,
+      },
+    })
+
+    if (!settings?.googleCalendarWebhookChannelId || !settings?.googleCalendarWebhookResourceId) {
+      return { success: false, error: 'Webhookが設定されていません' }
+    }
+
+    const result = await stopWebhookWatch(
+      settings.googleCalendarWebhookChannelId,
+      settings.googleCalendarWebhookResourceId
+    )
+
+    if (result.success) {
+      await prisma.settings.update({
+        where: { id: 'singleton' },
+        data: {
+          googleCalendarWebhookChannelId: null,
+          googleCalendarWebhookResourceId: null,
+          googleCalendarWebhookExpiration: null,
+        },
+      })
+
+      revalidatePath('/admin/settings')
+    }
+
+    return result
+  } catch (error) {
+    console.error('Failed to stop webhook:', error)
+    return { success: false, error: 'Webhook停止に失敗しました' }
+  }
+}
+
+/**
+ * 手動で同期を実行
+ */
+export async function triggerManualSync(): Promise<{
+  success: boolean
+  processed?: number
+  deleted?: number
+  updated?: number
+  errors?: string[]
+}> {
+  try {
+    await requireAdmin()
+
+    const result = await syncFromCalendar()
+
+    revalidatePath('/admin/settings')
+    revalidatePath('/admin/reservations')
+
+    return {
+      success: result.success,
+      processed: result.processed,
+      deleted: result.deleted,
+      updated: result.updated,
+      errors: result.errors.length > 0 ? result.errors : undefined,
+    }
+  } catch (error) {
+    console.error('Manual sync failed:', error)
+    return { success: false, errors: ['同期に失敗しました'] }
+  }
+}

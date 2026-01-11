@@ -11,6 +11,7 @@ import {
   ReservationSection,
   TermsAgreementSection,
   GoogleCalendarSection,
+  TwoWaySyncSection,
   ICalFeedSection,
 } from '../sections'
 
@@ -25,6 +26,7 @@ export function BookingTab({ settings, onUpdate }: BookingTabProps) {
       <ReservationSection settings={settings} onUpdate={onUpdate} />
       <TermsAgreementSection settings={settings} onUpdate={onUpdate} />
       <GoogleCalendarSection settings={settings} onUpdate={onUpdate} />
+      <TwoWaySyncSection settings={settings} onUpdate={onUpdate} />
       <ICalFeedSection onUpdate={onUpdate} />
     </div>
   )

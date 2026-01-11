@@ -1,0 +1,336 @@
+'use client'
+
+/**
+ * 双方向同期設定セクション（Phase 4）
+ *
+ * Google Calendarからの変更を予約システムに反映する設定
+ * - ポーリング（定期的なチェック）
+ * - Webhook（プッシュ通知）
+ */
+
+import { useState, useTransition } from 'react'
+import { toast } from 'sonner'
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Label,
+} from '@/components/admin/ui'
+import { Switch } from '@/components/admin/ui/switch'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/admin/ui/select'
+import {
+  updateTwoWaySyncSettings,
+  setupCalendarWebhook,
+  stopCalendarWebhook,
+  triggerManualSync,
+  type SettingsData,
+} from '@/actions/admin/settings'
+import { RefreshCw, Clock, Webhook, AlertCircle, CheckCircle2 } from 'lucide-react'
+
+// =============================================================================
+// Types
+// =============================================================================
+
+interface TwoWaySyncSectionProps {
+  settings: SettingsData
+  onUpdate: () => void
+}
+
+// =============================================================================
+// Main Component
+// =============================================================================
+
+export function TwoWaySyncSection({ settings, onUpdate }: TwoWaySyncSectionProps) {
+  const [isPending, startTransition] = useTransition()
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [syncResult, setSyncResult] = useState<{
+    success: boolean
+    message: string
+  } | null>(null)
+
+  const [formData, setFormData] = useState({
+    enabled: settings.googleCalendarTwoWaySyncEnabled,
+    syncMethod: settings.googleCalendarSyncMethod as 'polling' | 'webhook' | 'both',
+    pollingIntervalMin: settings.googleCalendarPollingIntervalMin,
+  })
+
+  // Google Calendarが有効でない場合は表示しない
+  if (!settings.googleCalendarEnabled || settings.googleCalendarConnectionStatus !== 'connected') {
+    return null
+  }
+
+  const handleSave = () => {
+    startTransition(async () => {
+      const result = await updateTwoWaySyncSettings(formData)
+      if (!result.success) {
+        toast.error(result.error)
+      } else {
+        toast.success('双方向同期設定を更新しました')
+        onUpdate()
+      }
+    })
+  }
+
+  const handleSetupWebhook = () => {
+    startTransition(async () => {
+      const result = await setupCalendarWebhook()
+      if (!result.success) {
+        toast.error(result.error || 'Webhook設定に失敗しました')
+      } else {
+        toast.success('Webhookを設定しました')
+        onUpdate()
+      }
+    })
+  }
+
+  const handleStopWebhook = () => {
+    if (!confirm('Webhookを停止しますか？')) return
+
+    startTransition(async () => {
+      const result = await stopCalendarWebhook()
+      if (!result.success) {
+        toast.error(result.error || 'Webhook停止に失敗しました')
+      } else {
+        toast.success('Webhookを停止しました')
+        onUpdate()
+      }
+    })
+  }
+
+  const handleManualSync = async () => {
+    setIsSyncing(true)
+    setSyncResult(null)
+
+    try {
+      const result = await triggerManualSync()
+      if (result.success) {
+        setSyncResult({
+          success: true,
+          message: `同期完了: ${result.processed}件処理 (更新: ${result.updated}件, 削除: ${result.deleted}件)`,
+        })
+        toast.success('同期が完了しました')
+        onUpdate()
+      } else {
+        setSyncResult({
+          success: false,
+          message: result.errors?.join(', ') || '同期に失敗しました',
+        })
+        toast.error('同期に失敗しました')
+      }
+    } catch {
+      setSyncResult({
+        success: false,
+        message: '同期中にエラーが発生しました',
+      })
+      toast.error('同期中にエラーが発生しました')
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
+  const formatDate = (date: Date | null) => {
+    if (!date) return '-'
+    return new Date(date).toLocaleString('ja-JP')
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <RefreshCw className="h-5 w-5" />
+          双方向同期（カレンダー → 予約システム）
+        </CardTitle>
+        <CardDescription>
+          Google Calendarでの変更（時間変更、削除など）を予約システムに自動反映します
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* 有効化トグル */}
+        <div className="flex items-center justify-between rounded-lg border p-4">
+          <div className="space-y-0.5">
+            <Label htmlFor="twoWaySyncEnabled">双方向同期を有効化</Label>
+            <p className="text-sm text-muted-foreground">
+              カレンダーの変更を予約システムに反映
+            </p>
+          </div>
+          <Switch
+            id="twoWaySyncEnabled"
+            checked={formData.enabled}
+            onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, enabled: checked }))}
+            disabled={isPending}
+          />
+        </div>
+
+        {formData.enabled && (
+          <>
+            {/* 同期方式設定 */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>同期方式</Label>
+                <Select
+                  value={formData.syncMethod}
+                  onValueChange={(value: 'polling' | 'webhook' | 'both') =>
+                    setFormData((prev) => ({ ...prev, syncMethod: value }))
+                  }
+                  disabled={isPending}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="polling">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4" />
+                        ポーリングのみ
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="webhook">
+                      <div className="flex items-center gap-2">
+                        <Webhook className="h-4 w-4" />
+                        Webhookのみ
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="both">
+                      <div className="flex items-center gap-2">
+                        <RefreshCw className="h-4 w-4" />
+                        両方使用（推奨）
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  {formData.syncMethod === 'polling' &&
+                    'ポーリング: 定期的にカレンダーをチェック（5分ごと推奨）'}
+                  {formData.syncMethod === 'webhook' &&
+                    'Webhook: カレンダー変更時に即座に通知を受信'}
+                  {formData.syncMethod === 'both' &&
+                    'Webhookで即時同期 + ポーリングでバックアップ'}
+                </p>
+              </div>
+
+              {/* ポーリング間隔 */}
+              {(formData.syncMethod === 'polling' || formData.syncMethod === 'both') && (
+                <div className="space-y-2">
+                  <Label>ポーリング間隔</Label>
+                  <Select
+                    value={String(formData.pollingIntervalMin)}
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({ ...prev, pollingIntervalMin: Number(value) }))
+                    }
+                    disabled={isPending}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1分</SelectItem>
+                      <SelectItem value="5">5分（推奨）</SelectItem>
+                      <SelectItem value="10">10分</SelectItem>
+                      <SelectItem value="15">15分</SelectItem>
+                      <SelectItem value="30">30分</SelectItem>
+                      <SelectItem value="60">60分</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+
+            {/* Webhook設定 */}
+            {(formData.syncMethod === 'webhook' || formData.syncMethod === 'both') && (
+              <div className="rounded-lg border p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="flex items-center gap-2">
+                      <Webhook className="h-4 w-4" />
+                      Webhook状態
+                    </Label>
+                    {settings.googleCalendarWebhookActive ? (
+                      <p className="text-sm text-green-600 flex items-center gap-1">
+                        <CheckCircle2 className="h-4 w-4" />
+                        有効（有効期限: {formatDate(settings.googleCalendarWebhookExpiration)}）
+                      </p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground flex items-center gap-1">
+                        <AlertCircle className="h-4 w-4" />
+                        未設定
+                      </p>
+                    )}
+                  </div>
+                  {settings.googleCalendarWebhookActive ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleStopWebhook}
+                      disabled={isPending}
+                    >
+                      停止
+                    </Button>
+                  ) : (
+                    <Button size="sm" onClick={handleSetupWebhook} disabled={isPending}>
+                      設定
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Webhookは最大7日間有効です。期限切れ時は自動的にポーリングにフォールバックします。
+                </p>
+              </div>
+            )}
+
+            {/* 同期ステータス */}
+            <div className="rounded-lg border p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>最終同期</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {formatDate(settings.googleCalendarLastSyncedAt)}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleManualSync}
+                  disabled={isSyncing || isPending}
+                >
+                  <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                  {isSyncing ? '同期中...' : '手動同期'}
+                </Button>
+              </div>
+              {syncResult && (
+                <div
+                  className={`rounded p-2 text-sm ${
+                    syncResult.success
+                      ? 'bg-green-50 text-green-700'
+                      : 'bg-red-50 text-red-700'
+                  }`}
+                >
+                  {syncResult.message}
+                </div>
+              )}
+            </div>
+
+            {/* 保存ボタン */}
+            <Button onClick={handleSave} disabled={isPending}>
+              設定を保存
+            </Button>
+          </>
+        )}
+
+        {!formData.enabled && (
+          <Button onClick={handleSave} disabled={isPending}>
+            設定を保存
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  )
+}

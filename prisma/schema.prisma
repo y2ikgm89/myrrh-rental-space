@@ -637,6 +637,24 @@ model Settings {
   icalFeedEnabled                  Boolean   @default(false) // iCalフィード公開
   icalFeedIncludeCustomerInfo      Boolean   @default(false) // 顧客情報を含む
 
+  // ==============================================
+  // Google Calendar 双方向同期（Phase 4）
+  // ==============================================
+
+  // 同期方式設定
+  googleCalendarTwoWaySyncEnabled  Boolean   @default(false) // 双方向同期有効
+  googleCalendarSyncMethod         String    @default("polling") // "polling" | "webhook" | "both"
+  googleCalendarPollingIntervalMin Int       @default(5)     // ポーリング間隔（分）
+
+  // 同期状態
+  googleCalendarSyncToken          String?   @db.Text        // 増分同期用トークン
+  googleCalendarLastSyncedAt       DateTime?                 // 最終同期日時
+
+  // Webhook設定（Push Notifications）
+  googleCalendarWebhookChannelId   String?                   // Webhook チャンネルID
+  googleCalendarWebhookResourceId  String?                   // Webhook リソースID
+  googleCalendarWebhookExpiration  DateTime?                 // Webhook 有効期限
+
   @@map("settings")
 }
 

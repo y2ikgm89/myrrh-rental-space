@@ -13,7 +13,10 @@ import {
   deleteCalendarEvent,
   createOAuthCalendarEvent,
   isGoogleCalendarEnabled,
+  isTwoWaySyncEnabled,
+  fetchCalendarChanges,
   type CalendarEventParams,
+  type CalendarChange,
 } from './google-calendar'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
@@ -273,11 +276,11 @@ export async function syncToAdminCalendar(
 }
 
 // =============================================================================
-// Batch Operations (将来のPhase 2用)
+// Batch Operations
 // =============================================================================
 
 /**
- * 未同期の予約を一括同期（将来のリトライ機能用）
+ * 未同期の予約を一括同期（リトライ機能）
  */
 export async function retryFailedSyncs(): Promise<{
   total: number
@@ -325,5 +328,220 @@ export async function retryFailedSyncs(): Promise<{
     total: failedReservations.length,
     succeeded,
     failed,
+  }
+}
+
+// =============================================================================
+// Two-Way Sync (Phase 4)
+// =============================================================================
+
+export interface TwoWaySyncResult {
+  success: boolean
+  processed: number
+  deleted: number
+  updated: number
+  errors: string[]
+}
+
+// 同期中フラグ（メモリ内ロック）
+let isSyncing = false
+
+/**
+ * カレンダーからの変更を予約システムに同期
+ *
+ * ポーリングまたはWebhook受信時に呼び出される
+ * 競合防止のため、同時に1つの同期のみ実行
+ */
+export async function syncFromCalendar(): Promise<TwoWaySyncResult> {
+  const result: TwoWaySyncResult = {
+    success: true,
+    processed: 0,
+    deleted: 0,
+    updated: 0,
+    errors: [],
+  }
+
+  // 既に同期中の場合はスキップ（競合防止）
+  if (isSyncing) {
+    console.log('Sync already in progress, skipping')
+    return { ...result, success: true }
+  }
+
+  isSyncing = true
+
+  try {
+    // 双方向同期が有効か確認
+    const enabled = await isTwoWaySyncEnabled()
+    if (!enabled) {
+      isSyncing = false
+      return { ...result, success: true }
+    }
+
+    // 現在の同期トークンを取得
+    const settings = await prisma.settings.findUnique({
+      where: { id: 'singleton' },
+      select: { googleCalendarSyncToken: true },
+    })
+
+    // カレンダーの変更を取得
+    const changesResult = await fetchCalendarChanges(settings?.googleCalendarSyncToken)
+    if (!changesResult.success) {
+      return {
+        ...result,
+        success: false,
+        errors: [changesResult.error || 'Failed to fetch changes'],
+      }
+    }
+
+    // 変更を処理
+    for (const change of changesResult.changes) {
+      try {
+        const processResult = await processCalendarChange(change)
+        result.processed++
+        if (processResult.action === 'deleted') {
+          result.deleted++
+        } else if (processResult.action === 'updated') {
+          result.updated++
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        result.errors.push(`Event ${change.eventId}: ${errorMessage}`)
+      }
+    }
+
+    // 同期トークンを保存
+    if (changesResult.newSyncToken) {
+      await prisma.settings.update({
+        where: { id: 'singleton' },
+        data: {
+          googleCalendarSyncToken: changesResult.newSyncToken,
+          googleCalendarLastSyncedAt: new Date(),
+        },
+      })
+    }
+
+    result.success = result.errors.length === 0
+
+    return result
+  } catch (error) {
+    console.error('Two-way sync error:', error)
+    return {
+      ...result,
+      success: false,
+      errors: [error instanceof Error ? error.message : 'Unknown error'],
+    }
+  } finally {
+    isSyncing = false
+  }
+}
+
+interface ProcessResult {
+  action: 'deleted' | 'updated' | 'skipped' | 'not_found'
+  reservationId?: string
+}
+
+/**
+ * 個々のカレンダー変更を処理
+ */
+async function processCalendarChange(change: CalendarChange): Promise<ProcessResult> {
+  // イベントIDから予約を検索
+  const reservation = await prisma.reservation.findFirst({
+    where: {
+      googleCalendarEventId: change.eventId,
+    },
+    select: {
+      id: true,
+      status: true,
+      startTime: true,
+      endTime: true,
+      calendarSyncedAt: true,
+    },
+  })
+
+  if (!reservation) {
+    // 予約が見つからない場合はスキップ
+    return { action: 'not_found' }
+  }
+
+  // カレンダーで削除された場合
+  if (change.deleted) {
+    // 予約をキャンセル状態に更新
+    if (reservation.status !== 'CANCELLED') {
+      // 現在のnotesを取得してから更新
+      const currentReservation = await prisma.reservation.findUnique({
+        where: { id: reservation.id },
+        select: { notes: true },
+      })
+
+      const syncNote = `[Google Calendarで削除] ${new Date().toLocaleString('ja-JP')}`
+      const newNotes = currentReservation?.notes
+        ? `${currentReservation.notes}\n${syncNote}`
+        : syncNote
+
+      await prisma.reservation.update({
+        where: { id: reservation.id },
+        data: {
+          status: 'CANCELLED',
+          googleCalendarEventId: null,
+          calendarSyncedAt: new Date(),
+          notes: newNotes,
+        },
+      })
+
+      return { action: 'deleted', reservationId: reservation.id }
+    }
+    return { action: 'skipped', reservationId: reservation.id }
+  }
+
+  // 時間変更の検出
+  if (change.startTime && change.endTime) {
+    const startChanged = change.startTime.getTime() !== reservation.startTime.getTime()
+    const endChanged = change.endTime.getTime() !== reservation.endTime.getTime()
+
+    if (startChanged || endChanged) {
+      // 時間が変更された場合は予約を更新
+      await prisma.reservation.update({
+        where: { id: reservation.id },
+        data: {
+          startTime: change.startTime,
+          endTime: change.endTime,
+          calendarSyncedAt: new Date(),
+        },
+      })
+
+      return { action: 'updated', reservationId: reservation.id }
+    }
+  }
+
+  return { action: 'skipped', reservationId: reservation.id }
+}
+
+/**
+ * 同期ステータスを取得
+ */
+export async function getSyncStatus(): Promise<{
+  enabled: boolean
+  lastSyncedAt: Date | null
+  syncMethod: string
+  webhookActive: boolean
+  webhookExpiration: Date | null
+}> {
+  const settings = await prisma.settings.findUnique({
+    where: { id: 'singleton' },
+    select: {
+      googleCalendarTwoWaySyncEnabled: true,
+      googleCalendarSyncMethod: true,
+      googleCalendarLastSyncedAt: true,
+      googleCalendarWebhookChannelId: true,
+      googleCalendarWebhookExpiration: true,
+    },
+  })
+
+  return {
+    enabled: settings?.googleCalendarTwoWaySyncEnabled ?? false,
+    lastSyncedAt: settings?.googleCalendarLastSyncedAt ?? null,
+    syncMethod: settings?.googleCalendarSyncMethod ?? 'polling',
+    webhookActive: !!settings?.googleCalendarWebhookChannelId,
+    webhookExpiration: settings?.googleCalendarWebhookExpiration ?? null,
   }
 }
