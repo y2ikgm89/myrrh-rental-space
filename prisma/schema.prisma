@@ -79,6 +79,7 @@ model User {
   reservations Reservation[]
   blogPosts    BlogPost[]
   blogComments BlogComment[]
+  icalTokens   ICalToken[]
 
   @@map("users")
 }
@@ -163,6 +164,7 @@ model Space {
 
   // Relations
   reservations Reservation[]
+  icalTokens   ICalToken[]
 
   @@index([isPublished, isActive])
   @@map("spaces")
@@ -631,5 +633,33 @@ model Settings {
   icalAttachmentEnabled            Boolean   @default(true)  // メールにiCal添付
   addToCalendarLinksEnabled        Boolean   @default(true)  // Add to Calendarリンク表示
 
+  // iCalフィード設定（外部カレンダー購読用）
+  icalFeedEnabled                  Boolean   @default(false) // iCalフィード公開
+  icalFeedIncludeCustomerInfo      Boolean   @default(false) // 顧客情報を含む
+
   @@map("settings")
+}
+
+// =============================================================================
+// iCal Feed Token
+// =============================================================================
+
+/// iCalフィード公開用トークン
+model ICalToken {
+  id          String    @id @default(uuid())
+  token       String    @unique             // 公開URL用トークン（32バイトBase64URL）
+  name        String                        // トークン名（識別用）
+  spaceId     String?                       // null = 全予約、指定時 = 特定スペースのみ
+  createdBy   String                        // 作成した管理者ID
+  expiresAt   DateTime?                     // null = 無期限
+  createdAt   DateTime  @default(now())
+  lastUsedAt  DateTime?                     // 最終アクセス日時
+
+  space       Space?    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([spaceId])
+  @@index([createdBy])
+  @@map("ical_tokens")
 }

@@ -40,9 +40,24 @@
 **変更ファイル**:
 - `src/actions/admin/reservation.ts` - updateReservationStatus, deleteReservationにカレンダー同期追加
 
-### Phase 3（将来実装）
+### Phase 3（実装済み）
+
+iCalフィードURL公開（外部カレンダー購読用）
+
+**実装内容**:
+- トークンベース認証によるiCalフィード配信API
+- トークン管理（作成・削除・有効期限）
+- スペース単位またはすべての予約対象
+- 管理画面からの設定・トークン管理UI
+
+**新規ファイル**:
+- `src/app/api/ical/[token]/route.ts` - iCalフィード配信API
+- `src/actions/admin/ical-tokens.ts` - トークン管理Server Actions
+- `src/app/(admin)/admin/settings/_components/sections/ICalFeedSection.tsx` - 管理UI
+- `prisma/schema.prisma` - ICalTokenモデル追加
+
+### Phase 4（将来実装）
 - カレンダーからの予約更新検出（双方向同期）
-- iCal URL公開（TimeTree等での購読用）
 
 ## 新規ファイル
 

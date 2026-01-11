@@ -136,6 +136,74 @@ function foldLine(line: string): string {
 }
 
 // =============================================================================
+// iCal Feed Generation (Multiple Events)
+// =============================================================================
+
+/**
+ * 複数イベントのiCalフィードを生成（外部カレンダー購読用）
+ */
+export function generateICalFeed(
+  events: CalendarEvent[],
+  calendarName: string = '予約カレンダー'
+): string {
+  const lines: string[] = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Myrrh Rental Space//Reservation System//JP',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    `X-WR-CALNAME:${escapeICalText(calendarName)}`,
+    'X-WR-TIMEZONE:Asia/Tokyo',
+  ]
+
+  for (const event of events) {
+    lines.push(...generateVEventLines(event))
+  }
+
+  lines.push('END:VCALENDAR')
+  return lines.map(foldLine).join('\r\n') + '\r\n'
+}
+
+/**
+ * 単一イベントのVEVENTセクションを生成（内部使用）
+ */
+function generateVEventLines(event: CalendarEvent & { uid?: string }): string[] {
+  // UIDは予約IDベースで生成（一意性を保証）
+  const uid = event.uid || `${Date.now()}-${Math.random().toString(36).slice(2)}@myrrh-rental-space`
+  const dtstamp = formatICalDate(new Date())
+  const dtstart = formatICalDate(event.startTime)
+  const dtend = formatICalDate(event.endTime)
+
+  const escapedDescription = escapeICalText(event.description)
+  const escapedTitle = escapeICalText(event.title)
+  const escapedLocation = event.location ? escapeICalText(event.location) : ''
+
+  const lines: string[] = [
+    'BEGIN:VEVENT',
+    `UID:${uid}`,
+    `DTSTAMP:${dtstamp}`,
+    `DTSTART:${dtstart}`,
+    `DTEND:${dtend}`,
+    `SUMMARY:${escapedTitle}`,
+  ]
+
+  if (escapedDescription) {
+    lines.push(`DESCRIPTION:${escapedDescription}`)
+  }
+
+  if (escapedLocation) {
+    lines.push(`LOCATION:${escapedLocation}`)
+  }
+
+  if (event.url) {
+    lines.push(`URL:${event.url}`)
+  }
+
+  lines.push('END:VEVENT')
+  return lines
+}
+
+// =============================================================================
 // Add to Calendar Links
 // =============================================================================
 

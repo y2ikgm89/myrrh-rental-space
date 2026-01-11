@@ -3,7 +3,7 @@
 /**
  * 予約タブ
  *
- * 予約設定・規約同意設定・Google Calendar連携を含む
+ * 予約設定・規約同意設定・Google Calendar連携・iCalフィードを含む
  */
 
 import type { SettingsData } from '@/actions/admin/settings'
@@ -11,6 +11,7 @@ import {
   ReservationSection,
   TermsAgreementSection,
   GoogleCalendarSection,
+  ICalFeedSection,
 } from '../sections'
 
 interface BookingTabProps {
@@ -24,6 +25,7 @@ export function BookingTab({ settings, onUpdate }: BookingTabProps) {
       <ReservationSection settings={settings} onUpdate={onUpdate} />
       <TermsAgreementSection settings={settings} onUpdate={onUpdate} />
       <GoogleCalendarSection settings={settings} onUpdate={onUpdate} />
+      <ICalFeedSection onUpdate={onUpdate} />
     </div>
   )
 }
