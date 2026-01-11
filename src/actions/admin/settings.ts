@@ -146,6 +146,12 @@ export type SettingsData = {
   announcementBarShowArrows: boolean
   announcementBarShowIndicator: boolean
   announcementBarDesignStyle: string
+  // Announcement Bar Common Color Settings
+  announcementBarBgColor: string | null
+  announcementBarTextColor: string | null
+  // Striped Design Settings
+  announcementBarStripeColor: string | null
+  announcementBarStripeAnimation: boolean
   // Google Calendar Integration
   googleCalendarEnabled: boolean
   googleCalendarId: string | null
@@ -782,7 +788,13 @@ const announcementBarCarouselSettingsSchema = z.object({
   announcementBarPauseOnHover: z.boolean(),
   announcementBarShowArrows: z.boolean(),
   announcementBarShowIndicator: z.boolean(),
-  announcementBarDesignStyle: z.enum(['solid', 'gradient', 'outlined', 'glass', 'minimal']),
+  announcementBarDesignStyle: z.enum(['solid', 'gradient', 'outlined', 'glass', 'minimal', 'striped']),
+  // Common Color Settings
+  announcementBarBgColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).nullable(),
+  announcementBarTextColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).nullable(),
+  // Striped Design Settings
+  announcementBarStripeColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).nullable(),
+  announcementBarStripeAnimation: z.boolean(),
 })
 
 export type AnnouncementBarCarouselSettingsInput = z.infer<typeof announcementBarCarouselSettingsSchema>
@@ -801,6 +813,10 @@ export async function getAnnouncementBarCarouselSettings(): Promise<Announcement
       announcementBarShowArrows: true,
       announcementBarShowIndicator: true,
       announcementBarDesignStyle: true,
+      announcementBarBgColor: true,
+      announcementBarTextColor: true,
+      announcementBarStripeColor: true,
+      announcementBarStripeAnimation: true,
     },
   })
 
@@ -811,7 +827,11 @@ export async function getAnnouncementBarCarouselSettings(): Promise<Announcement
     announcementBarPauseOnHover: settings?.announcementBarPauseOnHover ?? true,
     announcementBarShowArrows: settings?.announcementBarShowArrows ?? true,
     announcementBarShowIndicator: settings?.announcementBarShowIndicator ?? true,
-    announcementBarDesignStyle: (settings?.announcementBarDesignStyle ?? 'solid') as 'solid' | 'gradient' | 'outlined' | 'glass' | 'minimal',
+    announcementBarDesignStyle: (settings?.announcementBarDesignStyle ?? 'solid') as 'solid' | 'gradient' | 'outlined' | 'glass' | 'minimal' | 'striped',
+    announcementBarBgColor: settings?.announcementBarBgColor ?? null,
+    announcementBarTextColor: settings?.announcementBarTextColor ?? null,
+    announcementBarStripeColor: settings?.announcementBarStripeColor ?? null,
+    announcementBarStripeAnimation: settings?.announcementBarStripeAnimation ?? false,
   }
 }
 

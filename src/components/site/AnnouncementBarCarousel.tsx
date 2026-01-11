@@ -13,11 +13,20 @@
  * - 閉じるボタンでセッション中は非表示
  */
 
-import { useState, useEffect, useCallback, useSyncExternalStore } from 'react'
+import { useState, useEffect, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { AnimatePresence, motion } from 'motion/react'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import {
+  TYPE_STYLES,
+  DESIGN_STYLE_CLASSES,
+  ANIMATION_VARIANTS,
+  getStripedStyle,
+  getTypeHexColor,
+  type DesignStyle,
+  type AnimationType,
+} from '@/lib/announcement-bar-utils'
 
 // =============================================================================
 // Types
@@ -33,16 +42,22 @@ export interface AnnouncementBarItem {
   textColor?: string | null
 }
 
-export type DesignStyle = 'solid' | 'gradient' | 'outlined' | 'glass' | 'minimal'
+export type { DesignStyle, AnimationType }
 
 export interface CarouselSettings {
-  animation: 'fade' | 'slideX' | 'slideY'
+  animation: AnimationType
   duration: number // ミリ秒
   autoPlay: boolean
   pauseOnHover: boolean
   showArrows: boolean
   showIndicator: boolean
   designStyle: DesignStyle
+  // Common Color Settings
+  bgColor: string | null
+  textColor: string | null
+  // Striped Design Settings
+  stripeColor: string | null
+  stripeAnimation: boolean
 }
 
 export interface AnnouncementBarCarouselProps {
@@ -55,77 +70,6 @@ export interface AnnouncementBarCarouselProps {
 // =============================================================================
 
 const STORAGE_KEY = 'dismissed-announcement-bars'
-
-// タイプ別デフォルトスタイル（solid用）
-const TYPE_STYLES: Record<string, { bg: string; text: string; hover: string; gradient: string }> = {
-  info: {
-    bg: 'bg-blue-600',
-    text: 'text-white',
-    hover: 'hover:text-blue-100',
-    gradient: 'from-blue-600 to-indigo-600',
-  },
-  warning: {
-    bg: 'bg-amber-500',
-    text: 'text-black',
-    hover: 'hover:text-amber-900',
-    gradient: 'from-amber-500 to-orange-500',
-  },
-  promo: {
-    bg: 'bg-green-600',
-    text: 'text-white',
-    hover: 'hover:text-green-100',
-    gradient: 'from-green-600 to-emerald-500',
-  },
-}
-
-// デザインスタイル別クラス
-const DESIGN_STYLE_CLASSES: Record<DesignStyle, {
-  container: string
-  containerWithBg: (type: string) => string
-  border?: string
-}> = {
-  solid: {
-    container: '',
-    containerWithBg: (type) => TYPE_STYLES[type]?.bg || TYPE_STYLES.info.bg,
-  },
-  gradient: {
-    container: 'bg-gradient-to-r',
-    containerWithBg: (type) => TYPE_STYLES[type]?.gradient || TYPE_STYLES.info.gradient,
-  },
-  outlined: {
-    container: 'bg-transparent border-y',
-    containerWithBg: () => '',
-    border: 'border-current',
-  },
-  glass: {
-    container: 'backdrop-blur-md bg-white/10 border-y border-white/20',
-    containerWithBg: () => '',
-  },
-  minimal: {
-    container: 'bg-transparent border-b',
-    containerWithBg: () => '',
-    border: 'border-current/30',
-  },
-}
-
-// アニメーションバリアント
-const ANIMATION_VARIANTS = {
-  fade: {
-    initial: { opacity: 0 },
-    animate: { opacity: 1 },
-    exit: { opacity: 0 },
-  },
-  slideX: {
-    initial: { opacity: 0, x: 50 },
-    animate: { opacity: 1, x: 0 },
-    exit: { opacity: 0, x: -50 },
-  },
-  slideY: {
-    initial: { opacity: 0, y: -20 },
-    animate: { opacity: 1, y: 0 },
-    exit: { opacity: 0, y: 20 },
-  },
-}
 
 // =============================================================================
 // Session Storage Utilities
@@ -161,6 +105,16 @@ function getServerSnapshot(): string[] {
   return []
 }
 
+// useSyncExternalStore用のsubscribe関数（コンポーネント外で定義して参照を安定させる）
+function subscribeToStorage(callback: () => void): () => void {
+  window.addEventListener('storage', callback)
+  window.addEventListener(SESSION_STORAGE_CHANGE_EVENT, callback)
+  return () => {
+    window.removeEventListener('storage', callback)
+    window.removeEventListener(SESSION_STORAGE_CHANGE_EVENT, callback)
+  }
+}
+
 // =============================================================================
 // Component
 // =============================================================================
@@ -172,14 +126,7 @@ export function AnnouncementBarCarousel({ bars, settings }: AnnouncementBarCarou
   // useSyncExternalStoreでセッションストレージを購読
   // storageイベント（他タブ）とカスタムイベント（同一タブ）の両方を監視
   const dismissedIds = useSyncExternalStore(
-    useCallback((callback) => {
-      window.addEventListener('storage', callback)
-      window.addEventListener(SESSION_STORAGE_CHANGE_EVENT, callback)
-      return () => {
-        window.removeEventListener('storage', callback)
-        window.removeEventListener(SESSION_STORAGE_CHANGE_EVENT, callback)
-      }
-    }, []),
+    subscribeToStorage,
     getDismissedIds,
     getServerSnapshot
   )
@@ -192,25 +139,25 @@ export function AnnouncementBarCarousel({ bars, settings }: AnnouncementBarCarou
   const currentBar = visibleBars[safeIndex]
 
   // 次へ
-  const goNext = useCallback(() => {
+  const goNext = () => {
     if (visibleBars.length === 0) return
     setCurrentIndex((prev) => (prev + 1) % visibleBars.length)
-  }, [visibleBars.length])
+  }
 
   // 前へ
-  const goPrev = useCallback(() => {
+  const goPrev = () => {
     if (visibleBars.length === 0) return
     setCurrentIndex((prev) => (prev - 1 + visibleBars.length) % visibleBars.length)
-  }, [visibleBars.length])
+  }
 
   // 閉じる（現在のバーを非表示）
   // useSyncExternalStoreがカスタムイベントで変更を検知するため、localDismissed不要
-  const handleDismiss = useCallback(() => {
+  const handleDismiss = () => {
     if (!currentBar) return
     addDismissedId(currentBar.id)
     // visibleBarsの更新後にsafeIndexで自動的に範囲外補正されるため、
     // ここでのsetCurrentIndexは不要
-  }, [currentBar])
+  }
 
   // 自動切り替え
   useEffect(() => {
@@ -218,9 +165,11 @@ export function AnnouncementBarCarousel({ bars, settings }: AnnouncementBarCarou
       return
     }
 
-    const timer = setInterval(goNext, settings.duration)
+    const timer = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % visibleBars.length)
+    }, settings.duration)
     return () => clearInterval(timer)
-  }, [settings.autoPlay, settings.duration, isPaused, goNext, visibleBars.length])
+  }, [settings.autoPlay, settings.duration, isPaused, visibleBars.length])
 
   // バーがなくなったら非表示（すべてのHooksの後に配置）
   // 注: currentIndexの範囲外補正はsafeIndexで行っているため、useEffectでのsetStateは不要
@@ -228,39 +177,59 @@ export function AnnouncementBarCarousel({ bars, settings }: AnnouncementBarCarou
     return null
   }
 
-  // スタイル計算
-  const defaultStyle = TYPE_STYLES[currentBar.type] || TYPE_STYLES.info
-  const hasCustomBg = !!currentBar.bgColor
-  const hasCustomText = !!currentBar.textColor
+  // スタイル計算（共通カラー設定を優先）
+  const defaultStyle = TYPE_STYLES[currentBar.type] ?? TYPE_STYLES.info
+  // 共通カラー設定があればそれを使用
+  const bgColor = settings.bgColor || null
+  const textColor = settings.textColor || null
+  const hasCustomBg = !!bgColor
+  const hasCustomText = !!textColor
   const customStyles: React.CSSProperties = {}
-  if (currentBar.bgColor) customStyles.backgroundColor = currentBar.bgColor
-  if (currentBar.textColor) customStyles.color = currentBar.textColor
+  if (bgColor) customStyles.backgroundColor = bgColor
+  if (textColor) customStyles.color = textColor
 
   // デザインスタイル
   const designStyle = settings.designStyle || 'solid'
   const styleConfig = DESIGN_STYLE_CLASSES[designStyle]
-  const needsDefaultText = !hasCustomText && (designStyle === 'solid' || designStyle === 'gradient')
+  const needsDefaultText = !hasCustomText && (designStyle === 'solid' || designStyle === 'gradient' || designStyle === 'striped')
+
+  // Stripedスタイルの場合、ストライプ背景を追加
+  if (designStyle === 'striped') {
+    const baseHexColor = bgColor || getTypeHexColor(currentBar.type)
+    const stripedStyles = getStripedStyle(baseHexColor, settings.stripeColor, settings.stripeAnimation)
+    Object.assign(customStyles, stripedStyles)
+  }
 
   // アニメーションバリアント
   const variants = ANIMATION_VARIANTS[settings.animation]
 
   return (
-    <div
-      className={cn(
-        'relative z-50 flex items-center justify-center px-4 py-2 text-sm',
-        styleConfig.container,
-        !hasCustomBg && styleConfig.containerWithBg(currentBar.type),
-        styleConfig.border,
-        needsDefaultText && defaultStyle.text,
-        // outlined/glass/minimalではテキスト色をタイプカラーに
-        !hasCustomText && (designStyle === 'outlined' || designStyle === 'minimal') && 'text-gray-800',
-        !hasCustomText && designStyle === 'glass' && 'text-white'
+    <>
+      {/* ストライプアニメーション用のスタイル */}
+      {designStyle === 'striped' && settings.stripeAnimation && (
+        <style>{`
+          @keyframes stripe-slide {
+            from { background-position: 0 0; }
+            to { background-position: 28.28px 0; }
+          }
+        `}</style>
       )}
-      style={customStyles}
-      role="alert"
-      onMouseEnter={() => settings.pauseOnHover && setIsPaused(true)}
-      onMouseLeave={() => settings.pauseOnHover && setIsPaused(false)}
-    >
+      <div
+        className={cn(
+          'relative z-50 flex items-center justify-center px-4 py-2 text-sm',
+          styleConfig.container,
+          !hasCustomBg && styleConfig.containerWithBg(currentBar.type),
+          styleConfig.border,
+          needsDefaultText && defaultStyle.text,
+          // outlined/glass/minimalではテキスト色をタイプカラーに
+          !hasCustomText && (designStyle === 'outlined' || designStyle === 'minimal') && 'text-gray-800',
+          !hasCustomText && designStyle === 'glass' && 'text-white'
+        )}
+        style={customStyles}
+        role="alert"
+        onMouseEnter={() => settings.pauseOnHover && setIsPaused(true)}
+        onMouseLeave={() => settings.pauseOnHover && setIsPaused(false)}
+      >
       {/* 左矢印 */}
       {settings.showArrows && visibleBars.length > 1 && (
         <button
@@ -337,6 +306,7 @@ export function AnnouncementBarCarousel({ bars, settings }: AnnouncementBarCarou
       >
         <X className="h-4 w-4" />
       </button>
-    </div>
+      </div>
+    </>
   )
 }

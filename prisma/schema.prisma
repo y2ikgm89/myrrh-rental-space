@@ -582,13 +582,19 @@ model Settings {
   cookieConsentPolicyUrl  String?
 
   // Announcement Bar Carousel Settings
-  announcementBarAnimation     String  @default("fade") // fade, slideX, slideY
-  announcementBarDuration      Int     @default(5000)   // ミリ秒
-  announcementBarAutoPlay      Boolean @default(true)
-  announcementBarPauseOnHover  Boolean @default(true)
-  announcementBarShowArrows    Boolean @default(true)
-  announcementBarShowIndicator Boolean @default(true)
-  announcementBarDesignStyle   String  @default("solid") // solid, gradient, outlined, glass, minimal
+  announcementBarAnimation        String  @default("fade") // fade, slideX, slideY
+  announcementBarDuration         Int     @default(5000)   // ミリ秒
+  announcementBarAutoPlay         Boolean @default(true)
+  announcementBarPauseOnHover     Boolean @default(true)
+  announcementBarShowArrows       Boolean @default(true)
+  announcementBarShowIndicator    Boolean @default(true)
+  announcementBarDesignStyle      String  @default("solid") // solid, gradient, outlined, glass, minimal, striped
+  // Announcement Bar Common Color Settings
+  announcementBarBgColor          String? // 共通背景色（カスタム）
+  announcementBarTextColor        String? // 共通文字色（カスタム）
+  // Striped Design Settings
+  announcementBarStripeColor      String? // ストライプ色（カスタム）
+  announcementBarStripeAnimation  Boolean @default(false) // ストライプアニメーション
 
   // ==============================================
   // External Service API Keys
