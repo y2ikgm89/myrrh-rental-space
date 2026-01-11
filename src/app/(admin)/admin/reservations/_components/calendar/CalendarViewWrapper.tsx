@@ -18,13 +18,18 @@ export function CalendarViewWrapper({
   const state = useCalendarState({ events: initialEvents, spaces })
   const {
     isPending,
+    optimisticEvents,
     selectedEvent,
     handleEventClick,
     handleCloseDialog,
     handleStatusChange,
-  } = useEventActions()
+  } = useEventActions({ events: state.events })
 
-  const { view, currentDate, dateRange, events, goToDate } = state
+  const { view, currentDate, dateRange, goToDate } = state
+
+  // 楽観的更新されたイベントをフィルタリング（useCalendarStateのフィルター条件を適用済み）
+  // state.eventsはすでにフィルター済みなので、optimisticEventsも同じイベントIDでフィルタリング
+  const filteredOptimisticEvents = optimisticEvents
 
   return (
     <div className="flex h-full flex-col space-y-4">
@@ -35,7 +40,7 @@ export function CalendarViewWrapper({
           <MonthView
             dateRange={dateRange}
             currentDate={currentDate}
-            events={events}
+            events={filteredOptimisticEvents}
             onEventClick={handleEventClick}
             onDayClick={goToDate}
           />
@@ -43,14 +48,14 @@ export function CalendarViewWrapper({
         {view === 'week' && (
           <WeekView
             dateRange={dateRange}
-            events={events}
+            events={filteredOptimisticEvents}
             onEventClick={handleEventClick}
           />
         )}
         {view === 'day' && (
           <DayView
             date={currentDate}
-            events={events}
+            events={filteredOptimisticEvents}
             onEventClick={handleEventClick}
           />
         )}

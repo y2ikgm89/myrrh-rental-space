@@ -1,7 +1,7 @@
 'use server'
 
 import { prisma, Prisma } from '@/lib/prisma'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { z } from 'zod'
 import { createSuccess, createFailure, withAuth } from '@/types'
 import { encrypt, safeDecrypt } from '@/lib/crypto'
@@ -486,6 +486,8 @@ export const updateSeoSettings = withAuth(async (_user, data: SeoSettingsInput) 
     update: parsed.data,
   })
 
+  // Analytics設定キャッシュを無効化
+  revalidateTag('analytics-config', { expire: 0 })
   revalidatePath('/admin/settings')
   revalidatePath('/')
 

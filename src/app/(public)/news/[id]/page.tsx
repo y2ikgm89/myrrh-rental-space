@@ -18,6 +18,24 @@ interface PageProps {
   params: Promise<{ id: string }>
 }
 
+/**
+ * 静的パラメータ生成
+ * 公開中のお知らせをビルド時に事前生成
+ */
+export async function generateStaticParams() {
+  const news = await prisma.news.findMany({
+    where: {
+      isPublished: true,
+      publishedAt: { not: null },
+    },
+    select: { id: true },
+  })
+
+  return news.map((item) => ({
+    id: item.id,
+  }))
+}
+
 const styles = tv({
   slots: {
     section: 'py-16 bg-background min-h-screen',

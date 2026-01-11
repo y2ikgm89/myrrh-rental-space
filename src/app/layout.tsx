@@ -19,11 +19,8 @@ export const metadata: Metadata = {
   description: 'レンタルスペースの予約・管理サービス',
 }
 
-// 動的レンダリングを強制
-// - ビルド時のDB接続を回避（getAnalyticsConfig()がDBから設定を取得）
-// - Next.js 16 では動的レンダリングがデフォルトだが、明示的に指定して意図を明確化
-// 注: Cache Components (cacheComponents: true) を使用する場合、この設定の見直しが必要
-export const dynamic = 'force-dynamic'
+// Analytics設定はunstable_cacheでキャッシュされるため、静的レンダリングが可能
+// 設定変更時はrevalidateTag('analytics-config')で無効化される
 
 export default async function RootLayout({
   children,

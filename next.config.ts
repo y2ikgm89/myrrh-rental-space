@@ -33,6 +33,9 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
 
+  // Note: cacheComponents (PPR) は route segment config (dynamic, runtime) と互換性がないため無効
+  // 将来的にAPI Routes等の設計を見直した際に有効化を検討
+
   // Experimental features
   experimental: {
     // Optimize package imports
@@ -46,6 +49,7 @@ const nextConfig: NextConfig = {
       '@radix-ui/react-label',
       'gsap',
       'three',
+      'motion',
     ],
   },
 

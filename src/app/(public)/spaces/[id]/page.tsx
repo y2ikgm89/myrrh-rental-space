@@ -17,11 +17,26 @@ import type { ReactElement } from 'react'
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://example.com'
 
-// 動的レンダリングを強制（ビルド時のDB接続不要）
-export const dynamic = 'force-dynamic'
-
 interface PageProps {
   params: Promise<{ id: string }>
+}
+
+/**
+ * 静的パラメータ生成
+ * 公開中のスペースをビルド時に事前生成
+ */
+export async function generateStaticParams() {
+  const spaces = await prisma.space.findMany({
+    where: {
+      isPublished: true,
+      isActive: true,
+    },
+    select: { id: true },
+  })
+
+  return spaces.map((space) => ({
+    id: space.id,
+  }))
 }
 
 /**
