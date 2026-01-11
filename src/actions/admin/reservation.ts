@@ -381,6 +381,96 @@ export const deleteReservation = withAuth(async (_user, id: string) => {
 })
 
 /**
+ * カレンダー表示用予約データ取得
+ */
+export async function getReservationsForCalendar(
+  startDate: Date,
+  endDate: Date,
+  spaceId?: string,
+  status?: ReservationStatus | 'ALL'
+): Promise<{
+  id: string
+  title: string
+  spaceId: string
+  spaceName: string
+  startTime: Date
+  endTime: Date
+  status: ReservationStatus
+  totalPrice: number | null
+  notes: string | null
+  customerName: string
+  customerEmail: string
+  customerPhone: string | null
+}[]> {
+  await requireAdmin()
+
+  // 期間と重複する予約を取得
+  // 重複条件: reservation.startTime < endDate AND reservation.endTime > startDate
+  const where: ReservationWhereInput = {
+    AND: [
+      { startTime: { lt: endDate } },
+      { endTime: { gt: startDate } },
+    ],
+  }
+
+  if (spaceId) {
+    where.spaceId = spaceId
+  }
+
+  if (status && status !== 'ALL') {
+    where.status = status
+  }
+
+  const reservations = await prisma.reservation.findMany({
+    where,
+    include: {
+      space: { select: { id: true, name: true } },
+      customer: {
+        select: {
+          firstName: true,
+          lastName: true,
+          email: true,
+          phoneNumber: true,
+        },
+      },
+    },
+    orderBy: { startTime: 'asc' },
+  })
+
+  return reservations.map((r) => ({
+    id: r.id,
+    title: `${r.customer.lastName} ${r.customer.firstName}`,
+    spaceId: r.space.id,
+    spaceName: r.space.name,
+    startTime: r.startTime,
+    endTime: r.endTime,
+    status: r.status,
+    totalPrice: r.totalPrice ? Number(r.totalPrice) : null,
+    notes: r.notes,
+    customerName: `${r.customer.lastName} ${r.customer.firstName}`,
+    customerEmail: r.customer.email,
+    customerPhone: r.customer.phoneNumber,
+  }))
+}
+
+/**
+ * カレンダー用スペース一覧取得
+ */
+export async function getSpacesForCalendar(): Promise<
+  { id: string; name: string }[]
+> {
+  await requireAdmin()
+
+  const spaces = await prisma.space.findMany({
+    where: { isActive: true },
+    select: { id: true, name: true },
+    orderBy: { name: 'asc' },
+  })
+
+  return spaces
+}
+
+/**
  * 統計情報を取得（ダッシュボード用）
  */
 export async function getReservationStats(): Promise<{

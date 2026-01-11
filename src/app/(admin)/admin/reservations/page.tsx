@@ -1,8 +1,10 @@
 import { Suspense } from 'react'
+import Link from 'next/link'
+import { Calendar } from 'lucide-react'
 import { getReservations } from '@/actions/admin/reservation'
 import { ReservationFilters } from './_components/ReservationFilters'
 import { ReservationTable } from './_components/ReservationTable'
-import { Pagination } from '@/components/admin/ui'
+import { Pagination, Button } from '@/components/admin/ui'
 import type { ReservationStatus } from '@/generated/prisma/client/enums'
 import type { Metadata } from 'next'
 
@@ -54,6 +56,12 @@ export default async function ReservationsPage({ searchParams }: PageProps) {
             予約の確認・ステータス変更・キャンセル処理を行います
           </p>
         </div>
+        <Button variant="outline" asChild>
+          <Link href="/admin/reservations/calendar">
+            <Calendar className="mr-2 h-4 w-4" />
+            カレンダー表示
+          </Link>
+        </Button>
       </div>
 
       {/* フィルター */}

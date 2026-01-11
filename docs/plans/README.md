@@ -2,6 +2,32 @@
 
 ## 完了した計画
 
+### 014-reservation-calendar.md (2026-01-11)
+
+予約管理カレンダービュー機能
+
+**実装内容**:
+- 月/週/日の3ビュー切り替え
+- ステータス変更（カレンダー上でクリック→ダイアログ）
+- スペース表示モード（統一表示・フィルター・分割）
+- ステータスフィルター
+- URL状態管理（view/date/space/status）
+- Clean Architecture: Domain Layer分離
+
+**新規ファイル**:
+- `src/lib/calendar/calendar-types.ts` - 型定義
+- `src/lib/calendar/calendar-domain.ts` - ドメインロジック
+- `src/app/(admin)/admin/reservations/_components/calendar/` - カレンダーコンポーネント一式
+- `src/app/(admin)/admin/reservations/calendar/page.tsx` - カレンダーページ
+
+**変更ファイル**:
+- `src/actions/admin/reservation.ts` - `getReservationsForCalendar()`, `getSpacesForCalendar()` 追加
+- `src/app/(admin)/admin/reservations/page.tsx` - カレンダー表示リンク追加
+
+**マイグレーション**: 不要（スキーマ変更なし）
+
+---
+
 ### 013-google-calendar-integration.md (2026-01-11)
 
 Google Calendar連携機能（Phase 1-4 全完了）
