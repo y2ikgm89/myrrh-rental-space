@@ -6,6 +6,8 @@
  * - Credentials Provider（メール/パスワード認証）
  */
 
+import { cache } from 'react'
+import { redirect } from 'next/navigation'
 import NextAuth from 'next-auth'
 import { PrismaAdapter } from '@auth/prisma-adapter'
 import Credentials from 'next-auth/providers/credentials'
@@ -118,39 +120,61 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 })
 
 /**
- * 現在のユーザーを取得（Server Component用）
+ * セッション検証（cache()でリクエスト単位でメモ化）
+ *
+ * Next.js公式ベストプラクティス: Data Access Layer (DAL) パターン
+ * - 同一リクエスト内で複数回呼び出されても1回のみ実行
+ * - 未認証時は自動的にログインページへリダイレクト
  */
-export async function getCurrentUser(): Promise<Session['user'] | undefined> {
+export const verifySession = cache(async (): Promise<Session['user']> => {
   const session = await auth()
-  return session?.user
-}
+  if (!session?.user) {
+    redirect('/admin/login')
+  }
+  return session.user
+})
 
 /**
- * 管理者権限チェック
+ * 管理者セッション検証（cache()でリクエスト単位でメモ化）
+ *
+ * - verifySession()を内部で呼び出し（キャッシュ済み）
+ * - 非管理者は自動的にログインページへリダイレクト
  */
-export async function isAdmin(): Promise<boolean> {
+export const verifyAdminSession = cache(async (): Promise<Session['user']> => {
+  const user = await verifySession()
+  if (user.role !== Role.ADMIN) {
+    redirect('/admin/login')
+  }
+  return user
+})
+
+/**
+ * 現在のユーザーを取得（cache()でメモ化）
+ *
+ * - リダイレクトなし版（オプショナル認証用）
+ * - 未認証の場合はundefinedを返す
+ */
+export const getCurrentUser = cache(
+  async (): Promise<Session['user'] | undefined> => {
+    const session = await auth()
+    return session?.user
+  }
+)
+
+/**
+ * 管理者権限チェック（cache()でメモ化）
+ */
+export const isAdmin = cache(async (): Promise<boolean> => {
   const user = await getCurrentUser()
   return user?.role === Role.ADMIN
-}
+})
 
 /**
- * 認証必須のページ用ヘルパー
+ * @deprecated verifySession()を使用してください
  */
-export async function requireAuth(): Promise<Session['user']> {
-  const user = await getCurrentUser()
-  if (!user) {
-    throw new Error('Unauthorized')
-  }
-  return user
-}
+export const requireAuth = verifySession
 
 /**
- * 管理者権限必須のページ用ヘルパー
+ * @deprecated verifyAdminSession()を使用してください
  */
-export async function requireAdmin(): Promise<Session['user']> {
-  const user = await requireAuth()
-  if (user.role !== Role.ADMIN) {
-    throw new Error('Forbidden')
-  }
-  return user
-}
+export const requireAdmin = verifyAdminSession

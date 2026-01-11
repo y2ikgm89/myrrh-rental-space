@@ -2,6 +2,22 @@
 
 ## 完了した計画
 
+### 012-nextjs-best-practices.md (2026-01-11)
+
+Next.js公式ベストプラクティス準拠改善
+
+**実装内容**:
+- adminをRoute Group `(admin)/admin/` に変更（URLは `/admin/...` のまま）
+- cache() APIでverifySession/verifyAdminSessionをメモ化（DALパターン）
+- withAuth HOFを直接auth()呼び出しに変更（Server Actions用）
+
+**変更ファイル**:
+- `src/app/(admin)/admin/` - 新しいRoute Group（移動）
+- `src/lib/auth.ts` - verifySession, verifyAdminSession追加
+- `src/types/server-actions.ts` - withAuth HOF改善
+
+---
+
 ### 011-server-client-separation.md (2026-01-11)
 
 D&DページのServer/Client Component分離

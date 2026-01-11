@@ -4,7 +4,8 @@
  * 全てのServer ActionはActionResult<T>を返す
  */
 
-import { requireAdmin as authRequireAdmin } from '@/lib/auth'
+import { auth } from '@/lib/auth'
+import { Role } from '@/generated/prisma/client/enums'
 import type { Session } from 'next-auth'
 
 // =============================================================================
@@ -137,20 +138,16 @@ export function withAuth<TArgs extends unknown[], TData = void>(
   fn: (user: Session['user'], ...args: TArgs) => Promise<ActionResult<TData>>
 ): (...args: TArgs) => Promise<ActionResult<TData>> {
   return async (...args: TArgs): Promise<ActionResult<TData>> => {
-    try {
-      const user = await authRequireAdmin()
-      return await fn(user, ...args)
-    } catch (error) {
-      if (error instanceof Error) {
-        if (error.message === 'Unauthorized') {
-          return createFailure('ログインが必要です')
-        }
-        if (error.message === 'Forbidden') {
-          return createFailure('管理者権限が必要です')
-        }
-      }
-      console.error('withAuth error:', error)
-      return createFailure('認証エラーが発生しました')
+    const session = await auth()
+
+    if (!session?.user) {
+      return createFailure('ログインが必要です')
     }
+
+    if (session.user.role !== Role.ADMIN) {
+      return createFailure('管理者権限が必要です')
+    }
+
+    return await fn(session.user, ...args)
   }
 }
