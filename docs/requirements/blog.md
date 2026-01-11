@@ -1,6 +1,6 @@
 # ブログ機能要件定義
 
-> **Note**: このドキュメントにはブログ機能の詳細な要件定義が記載されています。概要については [`FEATURE_REQUIREMENTS.md`](./FEATURE_REQUIREMENTS.md) を参照してください。
+> **Note**: このドキュメントにはブログ機能の詳細な要件定義が記載されています。概要については [`README.md`](./README.md) を参照してください。
 
 ---
 
@@ -71,20 +71,20 @@
 - カテゴリフィルタ: サイドバーまたは上部にカテゴリ一覧を表示、クリックでフィルタ
 - タグフィルタ: タグクラウド形式で表示、クリックでフィルタ
 - 複数フィルタの組み合わせ対応
-- URLクエリパラメータ管理: [`NUQS_REQUIREMENTS.md`](./NUQS_REQUIREMENTS.md)を参照
+- URLクエリパラメータ管理: [`nuqs.md`](./nuqs.md)を参照
 
 **検索機能**:
 - タイトル、概要、本文から全文検索
 - 検索結果のハイライト表示
 - 検索結果件数の表示
-- URLクエリパラメータ管理: [`NUQS_REQUIREMENTS.md`](./NUQS_REQUIREMENTS.md)を参照
+- URLクエリパラメータ管理: [`nuqs.md`](./nuqs.md)を参照
 
 **ページネーション**:
 - ページ番号表示（最大10ページまで）
 - 前へ/次へボタン
 - 現在のページ番号をハイライト
 - URLパラメータでページ状態を保持（`/blog?page=2&category=event`）
-- URLクエリパラメータ管理: [`NUQS_REQUIREMENTS.md`](./NUQS_REQUIREMENTS.md)を参照
+- URLクエリパラメータ管理: [`nuqs.md`](./nuqs.md)を参照
 
 **サイドバー**:
 - 人気記事（閲覧数順、最大5件）
@@ -188,7 +188,7 @@
 - カテゴリ
 - 著者
 - 公開日時範囲
-- URLクエリパラメータ管理: [`NUQS_REQUIREMENTS.md`](./NUQS_REQUIREMENTS.md)を参照
+- URLクエリパラメータ管理: [`nuqs.md`](./nuqs.md)を参照
 
 **ソート機能**:
 - 公開日時（昇順/降順）
@@ -196,7 +196,7 @@
 - 更新日時（昇順/降順）
 - 閲覧数（昇順/降順）
 - タイトル（昇順/降順）
-- URLクエリパラメータ管理: [`NUQS_REQUIREMENTS.md`](./NUQS_REQUIREMENTS.md)を参照
+- URLクエリパラメータ管理: [`nuqs.md`](./nuqs.md)を参照
 
 **検索機能**:
 - タイトル、概要、本文から全文検索
@@ -793,7 +793,7 @@ Tiptapは以下の4つのカテゴリのコンポーネントを提供してお�
 
 ## API要件
 
-詳細は [`API.md`](../development/API.md) を参照してください。
+詳細は [`API.md`](../guides/coding-standards.md) を参照してください。
 
 ### Server Actions
 
@@ -821,7 +821,7 @@ Tiptapは以下の4つのカテゴリのコンポーネントを提供してお�
 
 ## テスト要件
 
-> **Note**: 包括的なテスト要件定義については、[`TEST_REQUIREMENTS.md`](./TEST_REQUIREMENTS.md)を参照してください。このセクションでは、ブログ機能に特化したテスト要件を記載します。
+> **Note**: 包括的なテスト要件定義については、[`testing.md`](./testing.md)を参照してください。このセクションでは、ブログ機能に特化したテスト要件を記載します。
 
 ### 単体テスト
 
@@ -829,7 +829,7 @@ Tiptapは以下の4つのカテゴリのコンポーネントを提供してお�
 - Server Actions（`createBlogPost`, `updateBlogPost`, `deleteBlogPost`等）
 - ユーティリティ関数
 
-**テストフレームワーク**: Bun test（`bun:test`）を使用。詳細は[`TEST_REQUIREMENTS.md`](./TEST_REQUIREMENTS.md)を参照。
+**テストフレームワーク**: Bun test（`bun:test`）を使用。詳細は[`testing.md`](./testing.md)を参照。
 
 ### 統合テスト
 
@@ -837,7 +837,7 @@ Tiptapは以下の4つのカテゴリのコンポーネントを提供してお�
 - データベース操作（Prisma経由、トランザクションを使用したテスト分離）
 - 画像アップロード（Supabase Storage）
 
-**テスト環境**: テスト用データベースを使用。詳細は[`TEST_REQUIREMENTS.md`](./TEST_REQUIREMENTS.md)を参照。
+**テスト環境**: テスト用データベースを使用。詳細は[`testing.md`](./testing.md)を参照。
 
 ### E2Eテスト
 
@@ -845,9 +845,9 @@ Tiptapは以下の4つのカテゴリのコンポーネントを提供してお�
 - ブログ記事表示フロー（公開ページ、Server Components）
 - カテゴリ・タグ管理フロー
 
-**テストフレームワーク**: Playwrightを使用。詳細は[`TEST_REQUIREMENTS.md`](./TEST_REQUIREMENTS.md)を参照。
+**テストフレームワーク**: Playwrightを使用。詳細は[`testing.md`](./testing.md)を参照。
 
-**注意**: Next.js 16のServer Components（ブログ記事表示ページ等）は、E2Eテストでテストすることを公式推奨。詳細は[`TEST_REQUIREMENTS.md`](./TEST_REQUIREMENTS.md)の「Next.js 16 App Router特有のテスト要件」セクションを参照。
+**注意**: Next.js 16のServer Components（ブログ記事表示ページ等）は、E2Eテストでテストすることを公式推奨。詳細は[`testing.md`](./testing.md)の「Next.js 16 App Router特有のテスト要件」セクションを参照。
 
 ---
 
@@ -922,12 +922,12 @@ Tiptapは以下の4つのカテゴリのコンポーネントを提供してお�
 
 ### プロジェクトドキュメント
 
-- [`FEATURE_REQUIREMENTS.md`](./FEATURE_REQUIREMENTS.md) - 機能要件（概要）
+- [`README.md`](./README.md) - 機能要件（概要）
 - [`DATABASE_DESIGN.md`](../architecture/DATABASE_DESIGN.md) - データベース設計
-- [`API.md`](../development/API.md) - API仕様
+- [`API.md`](../guides/coding-standards.md) - API仕様
 - [`PROJECT_STRUCTURE.md`](../architecture/PROJECT_STRUCTURE.md) - プロジェクト構造
 - [`ARCHITECTURE.md`](../architecture/ARCHITECTURE.md) - システムアーキテクチャ
-- [`TEST_REQUIREMENTS.md`](./TEST_REQUIREMENTS.md) - テスト要件定義（包括的なテスト要件、Bun test、Playwright、Prisma 7のベストプラクティス）
+- [`testing.md`](./testing.md) - テスト要件定義（包括的なテスト要件、Bun test、Playwright、Prisma 7のベストプラクティス）
 
 ### 外部リソース
 

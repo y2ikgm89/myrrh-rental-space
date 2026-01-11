@@ -83,7 +83,7 @@
 - **送信元メールアドレス**（必須、メール形式、Resend設定と連携）
   - 用途: すべてのメール送信の送信元
   - 制約: Resendで認証済みのドメインである必要がある
-  - 参照: [`EMAIL_REQUIREMENTS.md`](./EMAIL_REQUIREMENTS.md)
+  - 参照: [`email.md`](./email.md)
 
 - **送信者名**（必須、1-100文字）
   - 用途: メール送信時の送信者名
@@ -148,11 +148,11 @@
 
 - **予約確認メール送信フラグ**（Boolean、デフォルト: true）
   - 用途: 予約作成時にゲストに確認メールを送信するかどうか
-  - 参照: [`EMAIL_REQUIREMENTS.md`](./EMAIL_REQUIREMENTS.md)
+  - 参照: [`email.md`](./email.md)
 
 - **管理者通知メール送信フラグ**（Boolean、デフォルト: true）
   - 用途: 新規予約時に管理者に通知メールを送信するかどうか
-  - 参照: [`EMAIL_REQUIREMENTS.md`](./EMAIL_REQUIREMENTS.md)
+  - 参照: [`email.md`](./email.md)
 
 ### 6. 通知設定
 
@@ -734,7 +734,7 @@ revalidatePath('/')
 
 ## セキュリティ考慮事項
 
-詳細は [`SECURITY.md`](./SECURITY.md) を参照してください。
+詳細は [`../security/README.md`](../security/README.md) を参照してください。
 
 ### 認証・認可
 
@@ -762,12 +762,12 @@ revalidatePath('/')
 ### プロジェクトドキュメント
 
 - [`CLAUDE.md`](../CLAUDE.md) - プロジェクト全体の仕様書
-- [`FEATURE_REQUIREMENTS.md`](./FEATURE_REQUIREMENTS.md) - 機能要件
+- [`README.md`](./README.md) - 機能要件
 - [`DATABASE_DESIGN.md`](./DATABASE_DESIGN.md) - データベース設計
 - [`API.md`](./API.md) - API仕様
 - [`PROJECT_STRUCTURE.md`](./PROJECT_STRUCTURE.md) - プロジェクト構造
-- [`EMAIL_REQUIREMENTS.md`](./EMAIL_REQUIREMENTS.md) - メール送信機能要件
-- [`SECURITY.md`](./SECURITY.md) - セキュリティポリシー
+- [`email.md`](./email.md) - メール送信機能要件
+- [`../security/README.md`](../security/README.md) - セキュリティポリシー
 - [`CACHING_STRATEGY.md`](./CACHING_STRATEGY.md) - キャッシング戦略
 
 ### 外部リソース

@@ -301,20 +301,20 @@ Prisma 7では、カスタム出力パスの指定が必須となり、`@prisma/
 1. ✅ **`docs/architecture/DATABASE_DESIGN.md`**
    - `import { PrismaClient } from '@prisma/client'` → `import { PrismaClient } from '@/generated/prisma/client'`
 
-2. ✅ **`docs/development/BEST_PRACTICES.md`** (2箇所)
+2. ✅ **`docs/guides/coding-standards.md`** (2箇所)
    - `import { Prisma } from '@prisma/client'` → `import type { Prisma } from '@/generated/prisma/client'`
 
 3. ✅ **`docs/architecture/PROJECT_STRUCTURE.md`**
    - `import { PrismaClient } from '@prisma/client'` → `import { PrismaClient } from '@/generated/prisma/client'`
 
-4. ✅ **`docs/development/BUN_RUNTIME.md`**
+4. ✅ **`docs/operations/bun.md`**
    - `import { PrismaClient } from '@prisma/client'` → `import { PrismaClient } from '@/generated/prisma/client'`
 
 5. ✅ **`docs/architecture/DATABASE_DESIGN.md`** (Customersセクション)
    - `import type { Prisma } from '@prisma/client'` → `import type { Prisma } from '@/generated/prisma/client'`
    - 注: `CUSTOMER_NAME_DESIGN.md`の内容は`DATABASE_DESIGN.md`のCustomersセクションに統合されました
 
-6. ✅ **`docs/deployment/DOCKER.md`**
+6. ✅ **`docs/operations/docker.md`**
    - Prismaクライアントのコピーコマンドを更新
    - `node_modules/.prisma`と`node_modules/@prisma`のコピーを削除
    - `generated/prisma/client`のコピーを追加

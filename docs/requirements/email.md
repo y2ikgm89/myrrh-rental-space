@@ -1,6 +1,6 @@
 # メール送信機能 要件定義
 
-> **Note**: このドキュメントにはメール送信機能の詳細な要件定義が記載されています。技術スタックの詳細については、[`CLAUDE.md`](../CLAUDE.md)を参照してください。API仕様については、[`API.md`](../development/API.md)を参照してください。機能要件の概要については、[`FEATURE_REQUIREMENTS.md`](./FEATURE_REQUIREMENTS.md)を参照してください。
+> **Note**: このドキュメントにはメール送信機能の詳細な要件定義が記載されています。技術スタックの詳細については、[`CLAUDE.md`](../CLAUDE.md)を参照してください。API仕様については、[`API.md`](../guides/coding-standards.md)を参照してください。機能要件の概要については、[`README.md`](./README.md)を参照してください。
 
 ---
 
@@ -402,16 +402,16 @@
 - フォーム送信時にスパム検出を実行
 - スパムと判定された場合は送信を拒否し、IPアドレスをブロック（オプション）
 
-**詳細**: [`ABUSE_PROTECTION_REQUIREMENTS.md`](./ABUSE_PROTECTION_REQUIREMENTS.md)の「スパム対策」セクションを参照してください。
+**詳細**: [`../security/protection.md`](./../security/protection.md)の「スパム対策」セクションを参照してください。
 
 #### メール送信側の対策
 
 **レート制限の実装**:
-- 既存のレート制限実装を活用（[`SECURITY.md`](../security/SECURITY.md)参照）
+- 既存のレート制限実装を活用（[`SECURITY.md`](../security/README.md)参照）
 - 送信頻度の監視
 - 異常な送信パターンの検出
 
-**詳細**: [`ABUSE_PROTECTION_REQUIREMENTS.md`](./ABUSE_PROTECTION_REQUIREMENTS.md)を参照してください。
+**詳細**: [`../security/protection.md`](./../security/protection.md)を参照してください。
 
 ### レート制限
 
@@ -427,7 +427,7 @@
 - 同一メールアドレスへの送信頻度制限
 - 同一IPアドレスからの送信頻度制限
 
-**詳細**: [`SECURITY.md`](../security/SECURITY.md)の「レート制限」セクションを参照してください。
+**詳細**: [`SECURITY.md`](../security/README.md)の「レート制限」セクションを参照してください。
 
 ### 機密情報の取り扱い
 
@@ -673,7 +673,7 @@ if (templateId) {
 
 ### 管理画面からのテンプレート編集
 
-詳細は [`SETTINGS_REQUIREMENTS.md`](./SETTINGS_REQUIREMENTS.md) の「メール設定 - メールテンプレート管理」セクションを参照してください。
+詳細は [`settings.md`](./settings.md) の「メール設定 - メールテンプレート管理」セクションを参照してください。
 
 ---
 
@@ -714,10 +714,10 @@ if (templateId) {
 ### プロジェクトドキュメント
 
 - [`CLAUDE.md`](../CLAUDE.md) - プロジェクト全体の仕様書
-- [`FEATURE_REQUIREMENTS.md`](./FEATURE_REQUIREMENTS.md) - 機能要件
-- [`API.md`](../development/API.md) - API仕様
+- [`README.md`](./README.md) - 機能要件
+- [`API.md`](../guides/coding-standards.md) - API仕様
 - [`ARCHITECTURE.md`](../architecture/ARCHITECTURE.md) - システムアーキテクチャ
-- [`SECURITY.md`](../security/SECURITY.md) - セキュリティポリシー
+- [`SECURITY.md`](../security/README.md) - セキュリティポリシー
 
 ### 外部リソース
 

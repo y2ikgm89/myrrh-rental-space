@@ -1,6 +1,6 @@
 # SEO要件定義
 
-> **Note**: このドキュメントには、レンタルスペース管理システムのSEO（検索エンジン最適化）に関する包括的な要件定義が記載されています。サイト全体のSEO設定については[`SETTINGS_REQUIREMENTS.md`](./SETTINGS_REQUIREMENTS.md)を、ブログ機能のSEO要件については[`BLOG_REQUIREMENTS.md`](./BLOG_REQUIREMENTS.md)を参照してください。
+> **Note**: このドキュメントには、レンタルスペース管理システムのSEO（検索エンジン最適化）に関する包括的な要件定義が記載されています。サイト全体のSEO設定については[`settings.md`](./settings.md)を、ブログ機能のSEO要件については[`blog.md`](./blog.md)を参照してください。
 
 **最終更新**: 2026-01-08
 
@@ -309,7 +309,7 @@
 - 説明: ブログの概要
 - 画像: デフォルトOGP画像
 
-**詳細**: [`BLOG_REQUIREMENTS.md`](./BLOG_REQUIREMENTS.md)の「SEO最適化」セクションを参照
+**詳細**: [`blog.md`](./blog.md)の「SEO最適化」セクションを参照
 
 #### ブログ記事詳細ページ（`/blog/[slug]`）
 
@@ -328,7 +328,7 @@
 - 画像: OGP画像（`ogpImageUrl`があれば優先、なければ`thumbnailUrl`）
 - タイプ: `article`
 
-**詳細**: [`BLOG_REQUIREMENTS.md`](./BLOG_REQUIREMENTS.md)の「SEO最適化」セクションを参照
+**詳細**: [`blog.md`](./blog.md)の「SEO最適化」セクションを参照
 
 #### お知らせページ（`/news`、`/news/[id]`）
 
@@ -361,7 +361,7 @@
 - Google Analytics ID（G-XXXXXXXXXX形式）
 - Google Search Console ID
 
-**詳細**: [`SETTINGS_REQUIREMENTS.md`](./SETTINGS_REQUIREMENTS.md)の「SEO設定」セクションを参照
+**詳細**: [`settings.md`](./settings.md)の「SEO設定」セクションを参照
 
 ---
 
@@ -713,7 +713,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 **要件**:
 - 適切なセキュリティヘッダーの設定
-- 詳細は[`SECURITY.md`](../security/SECURITY.md)を参照
+- 詳細は[`SECURITY.md`](../security/README.md)を参照
 
 ---
 
@@ -924,9 +924,9 @@ export const metadata: Metadata = {
 
 ### プロジェクトドキュメント
 
-- [`SETTINGS_REQUIREMENTS.md`](./SETTINGS_REQUIREMENTS.md) - サイト設定画面のSEO設定
-- [`BLOG_REQUIREMENTS.md`](./BLOG_REQUIREMENTS.md) - ブログ機能のSEO要件
-- [`FEATURE_REQUIREMENTS.md`](./FEATURE_REQUIREMENTS.md) - 機能要件（SEO関連）
+- [`settings.md`](./settings.md) - サイト設定画面のSEO設定
+- [`blog.md`](./blog.md) - ブログ機能のSEO要件
+- [`README.md`](./README.md) - 機能要件（SEO関連）
 - [`DATABASE_DESIGN.md`](../architecture/DATABASE_DESIGN.md) - データベース設計（SEOフィールド）
 - [`ARCHITECTURE.md`](../architecture/ARCHITECTURE.md) - システムアーキテクチャ
 

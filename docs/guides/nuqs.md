@@ -378,8 +378,8 @@ const handleCategoryChange = (category: string | null) => {
 ### プロジェクトドキュメント
 
 - [`Plans.md`](../../Plans.md) - 実装計画
-- [`docs/development/BEST_PRACTICES.md`](../development/BEST_PRACTICES.md) - ベストプラクティス
-- [`docs/requirements/TYPE_SAFETY_REQUIREMENTS.md`](./TYPE_SAFETY_REQUIREMENTS.md) - 型安全性要件
+- [`coding-standards.md`](coding-standards.md) - コーディング規約
+- [`docs/requirements/type-safety.md`](./type-safety.md) - 型安全性要件
 
 ### 外部リソース
 

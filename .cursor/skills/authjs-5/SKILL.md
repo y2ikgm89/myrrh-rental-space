@@ -235,4 +235,4 @@ export async function deleteSpace(spaceId: string) {
 
 - [Auth.js Documentation](https://authjs.dev)
 - [Auth.js Security Best Practices](https://authjs.dev/getting-started/security)
-- Project documentation: `docs/JWT_AUTH_REQUIREMENTS.md`, `docs/SECURITY.md`, `docs/BEST_PRACTICES.md`
+- Project documentation: `docs/security/authentication.md`, `docs/security/README.md`, `docs/guides/coding-standards.md`

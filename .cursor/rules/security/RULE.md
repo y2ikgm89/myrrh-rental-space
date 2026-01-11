@@ -103,6 +103,6 @@ Configure security headers in `next.config.js`:
 
 **Related Documentation**:
 - [`docs/SECURITY.md`](../../docs/SECURITY.md) - Detailed security configuration
-- [`docs/TURNSTILE_REQUIREMENTS.md`](../../docs/TURNSTILE_REQUIREMENTS.md) - Turnstile integration requirements
-- [`docs/DDOS_PROTECTION_REQUIREMENTS.md`](../../docs/DDOS_PROTECTION_REQUIREMENTS.md) - DDoS protection requirements
-- [`docs/ABUSE_PROTECTION_REQUIREMENTS.md`](../../docs/ABUSE_PROTECTION_REQUIREMENTS.md) - Abuse protection requirements
+- [`docs/security/protection.md`](../../docs/security/protection.md) - Turnstile integration requirements
+- [`docs/security/protection.md`](../../docs/security/protection.md) - DDoS protection requirements
+- [`docs/security/protection.md`](../../docs/security/protection.md) - Abuse protection requirements

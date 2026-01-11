@@ -187,7 +187,7 @@
 
 ### `next.config.js` への追加設定
 
-既存のセキュリティヘッダー設定（`docs/SECURITY.md`参照）に加えて、キャッシュヘッダーを追加します。
+既存のセキュリティヘッダー設定（`docs/security/README.md`参照）に加えて、キャッシュヘッダーを追加します。
 
 ```javascript
 // next.config.js
@@ -390,7 +390,7 @@ Cloudflareダッシュボードで「Caching」→「Configuration」→「Cache
 2. 「Security」→「DDoS」に移動
 3. 保護状況を確認（自動有効になっていることを確認）
 
-**詳細**: [`../requirements/DDOS_PROTECTION_REQUIREMENTS.md`](../requirements/DDOS_PROTECTION_REQUIREMENTS.md)を参照してください。
+**詳細**: [`../requirements/../security/protection.md`](../requirements/../security/protection.md)を参照してください。
 
 #### Bot Fight Mode（無料プラン）
 
@@ -408,7 +408,7 @@ Cloudflareダッシュボードで「Caching」→「Configuration」→「Cache
 
 **注意**: 無料プランでは高度なカスタマイズは不可（有料プランのBot Managementが必要）
 
-**詳細**: [`../requirements/TURNSTILE_REQUIREMENTS.md`](../requirements/TURNSTILE_REQUIREMENTS.md)を参照してください。
+**詳細**: [`../requirements/../security/protection.md`](../requirements/../security/protection.md)を参照してください。
 
 #### WAF（Web Application Firewall）
 
@@ -416,7 +416,7 @@ Cloudflareダッシュボードで「Caching」→「Configuration」→「Cache
 
 **注意**: このプロジェクトでは商用無料プランでの実現を優先するため、WAFは使用しません。代わりに、アプリケーション側のレート制限とIPブロック機能を活用します。
 
-**詳細**: [`../requirements/ABUSE_PROTECTION_REQUIREMENTS.md`](../requirements/ABUSE_PROTECTION_REQUIREMENTS.md)を参照してください。
+**詳細**: [`../requirements/../security/protection.md`](../requirements/../security/protection.md)を参照してください。
 
 ---
 
@@ -424,11 +424,11 @@ Cloudflareダッシュボードで「Caching」→「Configuration」→「Cache
 
 ### 既存設定の維持
 
-`docs/SECURITY.md` に記載されているセキュリティヘッダー設定は、Cloudflare経由でも正しく設定されます。
+`docs/security/README.md` に記載されているセキュリティヘッダー設定は、Cloudflare経由でも正しく設定されます。
 
 ### CSP（Content Security Policy）の調整
 
-既存のCSP設定（`docs/SECURITY.md`参照）は、Cloudflare CDN経由のリソースも許可するように設定されています：
+既存のCSP設定（`docs/security/README.md`参照）は、Cloudflare CDN経由のリソースも許可するように設定されています：
 
 ```javascript
 "img-src 'self' data: https:",
@@ -628,7 +628,7 @@ Cloudflareは、Next.jsが新しいコンテンツを返すと自動的に再検
 - [`CLAUDE.md`](../CLAUDE.md) - プロジェクト全体の仕様書
 - [`DEPLOYMENT.md`](./DEPLOYMENT.md) - デプロイメント手順
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md) - システムアーキテクチャ
-- [`SECURITY.md`](./SECURITY.md) - セキュリティポリシー
+- [`../security/README.md`](../security/README.md) - セキュリティポリシー
 - [`PROJECT_STRUCTURE.md`](./PROJECT_STRUCTURE.md) - プロジェクト構造
 
 ### 外部リソース

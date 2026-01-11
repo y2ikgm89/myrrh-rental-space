@@ -578,7 +578,7 @@ Cloudflare CDNを導入することで、Cloud Runの帯域幅コストを70-90%
 - [`DOCKER.md`](./DOCKER.md) - Docker設定ガイド
 - [`../architecture/ARCHITECTURE.md`](../architecture/ARCHITECTURE.md) - システムアーキテクチャ
 - [`../architecture/DATABASE_DESIGN.md`](../architecture/DATABASE_DESIGN.md) - データベース設計
-- [`../security/SECURITY.md`](../security/SECURITY.md) - セキュリティポリシー
+- [`../security/README.md`](../security/README.md) - セキュリティポリシー
 - [`CLOUDFLARE_CDN.md`](./CLOUDFLARE_CDN.md) - Cloudflare CDN統合ガイド
 
 ### 外部リソース

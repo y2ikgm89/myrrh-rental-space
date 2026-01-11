@@ -148,5 +148,5 @@ The agent will automatically run relevant programmatic checks and fix failures b
 - Test execution (`bun run test`)
 
 **Related Documentation**:
-- [`docs/TEST_REQUIREMENTS.md`](../../docs/TEST_REQUIREMENTS.md) - Detailed testing requirements
+- [`docs/guides/testing.md`](../../docs/guides/testing.md) - Detailed testing requirements
 - [`docs/BEST_PRACTICES.md`](../../docs/BEST_PRACTICES.md) - Testing best practices

@@ -1429,11 +1429,11 @@ describe('createReservation', () => {
 ### プロジェクトドキュメント
 
 - [`CLAUDE.md`](../CLAUDE.md) - プロジェクト全体の仕様書（テスト手順）
-- [`BLOG_REQUIREMENTS.md`](./BLOG_REQUIREMENTS.md) - ブログ機能のテスト要件（このドキュメントを参照）
-- [`JWT_AUTH_REQUIREMENTS.md`](./JWT_AUTH_REQUIREMENTS.md) - JWT認証のテスト要件（このドキュメントを参照）
+- [`BLOG_REQUIREMENTS.md`](../requirements/blog.md) - ブログ機能のテスト要件（このドキュメントを参照）
+- [`../security/authentication.md`](./../security/authentication.md) - JWT認証のテスト要件（このドキュメントを参照）
 - [`BUN_RUNTIME.md`](./BUN_RUNTIME.md) - Bunランタイムガイド（テストランナー、このドキュメントを参照）
 - [`DEPLOYMENT.md`](./DEPLOYMENT.md) - デプロイメント手順（CI/CDでのテスト実行、このドキュメントを参照）
-- [`FEATURE_REQUIREMENTS.md`](./FEATURE_REQUIREMENTS.md) - 機能要件（セキュリティテストの参照、このドキュメントを参照）
+- [`FEATURE_REQUIREMENTS.md`](../requirements/README.md) - 機能要件（セキュリティテストの参照、このドキュメントを参照）
 
 ### 外部リソース
 

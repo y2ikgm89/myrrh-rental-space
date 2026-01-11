@@ -74,7 +74,7 @@ bun run test         # テスト実行
 bun run test:watch   # ウォッチモード
 bun run test:coverage # カバレッジレポート
 
-# 詳細なテスト要件については、[`TEST_REQUIREMENTS.md`](./TEST_REQUIREMENTS.md)を参照
+# 詳細なテスト要件については、[`testing.md`](./testing.md)を参照
 
 # リント・型チェック
 bun run lint         # ESLint実行
@@ -163,7 +163,7 @@ export const prisma =
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 ```
 
-**注意**: Prisma 7では、データベース接続にドライバーアダプターが必要です。Bunランタイムでも、Node.js互換性により`pg`パッケージと`@prisma/adapter-pg`が動作します。詳細は[`TYPE_SAFETY_REQUIREMENTS.md`](./TYPE_SAFETY_REQUIREMENTS.md)を参照してください。
+**注意**: Prisma 7では、データベース接続にドライバーアダプターが必要です。Bunランタイムでも、Node.js互換性により`pg`パッケージと`@prisma/adapter-pg`が動作します。詳細は[`type-safety.md`](./type-safety.md)を参照してください。
 
 **マイグレーション**:
 ```bash
@@ -375,7 +375,7 @@ bunx npm-check-updates
 
 ### プロジェクトドキュメント
 
-- [`TEST_REQUIREMENTS.md`](./TEST_REQUIREMENTS.md) - テスト要件定義（Bun test、Playwright、テスト環境設定）
+- [`testing.md`](./testing.md) - テスト要件定義（Bun test、Playwright、テスト環境設定）
 
 ### 外部リソース
 

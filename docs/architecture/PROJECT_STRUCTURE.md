@@ -255,8 +255,8 @@ myrrh-rental-space/
 └── docs/                    # ドキュメント
     ├── README.md
     ├── architecture/
-    ├── development/
-    ├── deployment/
+    ├── guides/
+    ├── operations/
     ├── requirements/
     ├── security/
     ├── plans/
@@ -322,7 +322,7 @@ myrrh-rental-space/
 
 ## キャッシュ戦略
 
-詳細は [`CACHING_STRATEGY.md`](../development/CACHING_STRATEGY.md) を参照してください。
+詳細は [`CACHING_STRATEGY.md`](CACHING.md) を参照してください。
 
 ### キャッシュ階層
 

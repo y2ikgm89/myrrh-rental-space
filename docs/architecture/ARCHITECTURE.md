@@ -308,7 +308,7 @@ graph LR
   - Next.js 16.0.7以上にアップグレード（最新安定版: 16.1.1）
 - **詳細**: React Server Componentsの脆弱性により、サーバー上でリモートコード実行が可能
 
-詳細は[`SECURITY.md`](./SECURITY.md)を参照してください。
+詳細は[`README.md`](./README.md)を参照してください。
 
 ### デプロイ検証
 
@@ -523,7 +523,7 @@ function ReservationForm() {
 
 ## セキュリティアーキテクチャ
 
-> **Note**: セキュリティの詳細なポリシーとベストプラクティスについては、[`SECURITY.md`](./SECURITY.md)を参照してください。
+> **Note**: セキュリティの詳細なポリシーとベストプラクティスについては、[`README.md`](./README.md)を参照してください。
 
 ### 認証・認可
 
@@ -549,7 +549,7 @@ function ReservationForm() {
 
 ## React 19の最新機能活用
 
-> **Note**: React 19の最新機能の詳細な実装ガイドラインについては、[`BEST_PRACTICES.md`](./BEST_PRACTICES.md)と[`ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md`](./ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md)を参照してください。
+> **Note**: React 19の最新機能の詳細な実装ガイドラインについては、[`BEST_PRACTICES.md`](./BEST_PRACTICES.md)と[`../plans/001-architecture-improvements.md`](./../plans/001-architecture-improvements.md)を参照してください。
 
 ### Promiseを直接Client Componentに渡すパターン
 
@@ -617,7 +617,7 @@ Server Componentsでは`await`を直接使用してデータを取得します�
 
 ## Suspense境界の最適化
 
-> **Note**: Suspense境界の最適化の詳細な実装ガイドラインについては、[`BEST_PRACTICES.md`](./BEST_PRACTICES.md)と[`ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md`](./ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md)を参照してください。
+> **Note**: Suspense境界の最適化の詳細な実装ガイドラインについては、[`BEST_PRACTICES.md`](./BEST_PRACTICES.md)と[`../plans/001-architecture-improvements.md`](./../plans/001-architecture-improvements.md)を参照してください。
 
 ### 粒度の細かいSuspense境界
 
@@ -658,7 +658,7 @@ export default async function DashboardPage() {
 
 ## エラーバウンダリの体系化
 
-> **Note**: エラーバウンダリの詳細な実装ガイドラインについては、[`BEST_PRACTICES.md`](./BEST_PRACTICES.md)と[`ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md`](./ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md)を参照してください。
+> **Note**: エラーバウンダリの詳細な実装ガイドラインについては、[`BEST_PRACTICES.md`](./BEST_PRACTICES.md)と[`../plans/001-architecture-improvements.md`](./../plans/001-architecture-improvements.md)を参照してください。
 
 ### 階層的なエラーバウンダリ
 
@@ -732,7 +732,7 @@ Server Actionsでのエラーハンドリングを統一し、エラーレスポ
 - 動的インポート（Three.js、Pixi.js）
 - ルートベースのコード分割
 - Tree-shaking
-- **Turbopack**: Next.js 16ではTurbopackがデフォルトのバンドラーとして使用され、ビルド時間が2-5倍短縮され、バンドルサイズも最適化される。詳細は [`TURBOPACK_REQUIREMENTS.md`](./TURBOPACK_REQUIREMENTS.md) を参照
+- **Turbopack**: Next.js 16ではTurbopackがデフォルトのバンドラーとして使用され、ビルド時間が2-5倍短縮され、バンドルサイズも最適化される。詳細は [`TURBOPACK_REQUIREMENTS.md`](../guides/turbopack.md) を参照
 
 ### 画像最適化
 
@@ -753,7 +753,7 @@ Server Actionsでのエラーハンドリングを統一し、エラーレスポ
 
 ### モニタリングとオブザーバビリティ
 
-> **Note**: モニタリングとオブザーバビリティの詳細な実装ガイドラインについては、[`ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md`](./ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md)を参照してください。
+> **Note**: モニタリングとオブザーバビリティの詳細な実装ガイドラインについては、[`../plans/001-architecture-improvements.md`](./../plans/001-architecture-improvements.md)を参照してください。
 
 #### エラートラッキング
 
@@ -810,7 +810,7 @@ Server Actionsでのエラーハンドリングを統一し、エラーレスポ
    - パフォーマンス最適化
    - セキュリティ監査
 
-詳細は[`FEATURE_REQUIREMENTS.md`](./FEATURE_REQUIREMENTS.md)を参照してください。
+詳細は[`FEATURE_REQUIREMENTS.md`](../requirements/README.md)を参照してください。
 
 ---
 
@@ -819,19 +819,19 @@ Server Actionsでのエラーハンドリングを統一し、エラーレスポ
 ### プロジェクトドキュメント
 
 - [`CLAUDE.md`](../CLAUDE.md) - プロジェクト全体の仕様書（技術スタック詳細）
-- [`FEATURE_REQUIREMENTS.md`](./FEATURE_REQUIREMENTS.md) - 機能要件
+- [`FEATURE_REQUIREMENTS.md`](../requirements/README.md) - 機能要件
 - [`DATABASE_DESIGN.md`](./DATABASE_DESIGN.md) - データベース設計
 - [`API.md`](./API.md) - API仕様
 - [`PROJECT_STRUCTURE.md`](./PROJECT_STRUCTURE.md) - プロジェクト構造
 - [`DEPLOYMENT.md`](./DEPLOYMENT.md) - デプロイメント手順
 - [`DOCKER.md`](./DOCKER.md) - Docker設定ガイド
-- [`SECURITY.md`](./SECURITY.md) - セキュリティポリシー
+- [`README.md`](./README.md) - セキュリティポリシー
 - [`BUN_RUNTIME.md`](./BUN_RUNTIME.md) - Bunランタイムガイド
-- [`TURBOPACK_REQUIREMENTS.md`](./TURBOPACK_REQUIREMENTS.md) - Turbopack要件定義
+- [`TURBOPACK_REQUIREMENTS.md`](../guides/turbopack.md) - Turbopack要件定義
 - [`CLOUDFLARE_CDN.md`](./CLOUDFLARE_CDN.md) - Cloudflare CDN統合ガイド
 - [`BEST_PRACTICES.md`](./BEST_PRACTICES.md) - ベストプラクティスガイド
 - [`CACHING_STRATEGY.md`](./CACHING_STRATEGY.md) - キャッシング戦略ガイド
-- [`ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md`](./ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md) - アーキテクチャ改善要件定義
+- [`../plans/001-architecture-improvements.md`](./../plans/001-architecture-improvements.md) - アーキテクチャ改善要件定義
 
 ### 外部リソース
 

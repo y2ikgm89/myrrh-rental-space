@@ -57,7 +57,7 @@ A reservation and management system for rental spaces. Provides a highly designe
 - E2E tests: `bun run test:e2e` (Playwright)
 - Coverage report: `bun run test:coverage`
 
-**For detailed testing requirements**: See `[docs/requirements/TEST_REQUIREMENTS.md](docs/requirements/TEST_REQUIREMENTS.md)`
+**For detailed testing requirements**: See `[docs/guides/testing.md](docs/guides/testing.md)`
 
 ## Dev environment tips
 
@@ -90,7 +90,7 @@ A reservation and management system for rental spaces. Provides a highly designe
 - **Auth.js**: 5.0.0-beta.30, **nuqs**: 2.8.6
 - **Deployment**: Google Cloud Run (Bun runtime), Supabase
 
-**For detailed version information**: See `[docs/development/TECH_STACK_VERSIONS.md](docs/development/TECH_STACK_VERSIONS.md)`
+**For detailed version information**: See `[docs/architecture/TECH_STACK.md](docs/architecture/TECH_STACK.md)`
 
 ## Important technical constraints
 
@@ -99,7 +99,7 @@ A reservation and management system for rental spaces. Provides a highly designe
 - **Auth.js 5**: Use `@auth/prisma-adapter` 2.11.1, verify compatibility before version updates
 - **Security**: React 19.2.3 and Next.js 16.1.1 required (CVE-2025-55182 fix). Always validate inputs with Zod schemas (client and server)
 
-**For detailed constraints**: See `[docs/development/BUN_RUNTIME.md](docs/development/BUN_RUNTIME.md)` and `[docs/security/SECURITY.md](docs/security/SECURITY.md)`
+**For detailed constraints**: See `[docs/operations/bun.md](docs/operations/bun.md)` and `[docs/security/README.md](docs/security/README.md)`
 
 ## Project Rules
 
@@ -125,7 +125,7 @@ Project Rules provide more granular, context-aware guidance than `AGENTS.md`. Th
 - Database security: Supabase RLS policies, parameterized queries
 - Caching security: Never cache sensitive data, use `unstable_noStore()` for authenticated data
 
-**For detailed security configuration**: See `[docs/security/SECURITY.md](docs/security/SECURITY.md)` and `[docs/requirements/TURNSTILE_REQUIREMENTS.md](docs/requirements/TURNSTILE_REQUIREMENTS.md)`
+**For detailed security configuration**: See `[docs/security/README.md](docs/security/README.md)` and `[docs/security/protection.md](docs/security/protection.md)`
 
 ## Performance optimization
 
@@ -137,7 +137,7 @@ Project Rules provide more granular, context-aware guidance than `AGENTS.md`. Th
 - Fetch only necessary fields with Prisma `select`, use `include` to avoid N+1 queries
 - **Turbopack**: Next.js 16 uses Turbopack by default (2-5× faster builds). This project uses Turbopack only. Webpack is not used.
 
-**For detailed optimization strategies**: See `[docs/development/CACHING_STRATEGY.md](docs/development/CACHING_STRATEGY.md)` and `[docs/development/BEST_PRACTICES.md](docs/development/BEST_PRACTICES.md)`
+**For detailed optimization strategies**: See `[docs/architecture/CACHING.md](docs/architecture/CACHING.md)` and `[docs/guides/coding-standards.md](docs/guides/coding-standards.md)`
 
 ## Authentication & authorization
 
@@ -147,7 +147,7 @@ Project Rules provide more granular, context-aware guidance than `AGENTS.md`. Th
 - **Roles**: `admin`, `user`
 - **Protection**: Next.js Middleware for routes, permission checks in Server Actions
 - **Supabase RLS**: Database-level security
-- **Bot protection**: Cloudflare Turnstile integrated for login form (see `[docs/requirements/TURNSTILE_REQUIREMENTS.md](docs/requirements/TURNSTILE_REQUIREMENTS.md)`)
+- **Bot protection**: Cloudflare Turnstile integrated for login form (see `[docs/security/protection.md](docs/security/protection.md)`)
 
 ## Deployment
 
@@ -184,14 +184,12 @@ For detailed information, see `[docs/README.md](docs/README.md)` for the documen
 Key documents:
 
 - **Documentation index**: `[docs/README.md](docs/README.md)`
-- **Feature requirements**: `[docs/requirements/FEATURE_REQUIREMENTS.md](docs/requirements/FEATURE_REQUIREMENTS.md)`
-- **SEO requirements**: `[docs/requirements/SEO_REQUIREMENTS.md](docs/requirements/SEO_REQUIREMENTS.md)`
+- **Requirements**: `[docs/requirements/README.md](docs/requirements/README.md)`
 - **Architecture**: `[docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md)`
 - **Database design**: `[docs/architecture/DATABASE_DESIGN.md](docs/architecture/DATABASE_DESIGN.md)`
-- **API specification**: `[docs/development/API.md](docs/development/API.md)`
-- **Security policy**: `[docs/security/SECURITY.md](docs/security/SECURITY.md)`
-- **Best practices**: `[docs/development/BEST_PRACTICES.md](docs/development/BEST_PRACTICES.md)`
-- **Caching strategy**: `[docs/development/CACHING_STRATEGY.md](docs/development/CACHING_STRATEGY.md)`
+- **Security**: `[docs/security/README.md](docs/security/README.md)`
+- **Coding standards**: `[docs/guides/coding-standards.md](docs/guides/coding-standards.md)`
+- **Caching strategy**: `[docs/architecture/CACHING.md](docs/architecture/CACHING.md)`
 
 ## Documentation and external resources
 

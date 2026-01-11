@@ -208,7 +208,7 @@ withAuth HOF完全移行 + Badge variant意味的整合
 - `src/app/admin/settings/announcement-bar/page.tsx` - 管理画面
 - `src/components/site/AnnouncementBar.tsx` - 表示コンポーネント
 - `src/components/site/AnnouncementBarWrapper.tsx` - Server Component ラッパー
-- `docs/requirements/ANNOUNCEMENT_BAR_REQUIREMENTS.md` - 要件定義
+- `docs/requirements/announcement.md` - 要件定義
 
 **変更ファイル**:
 - `prisma/schema.prisma` - AnnouncementBarモデル追加

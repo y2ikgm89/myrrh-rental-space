@@ -1,6 +1,6 @@
 # 型安全・型定義要件定義
 
-> **Note**: このドキュメントには、レンタルスペース管理システムにおける型安全・型定義の包括的な要件定義が記載されています。技術スタックの詳細については、`[CLAUDE.md](../CLAUDE.md)`を参照してください。実装ベストプラクティスについては、`[BEST_PRACTICES.md](../development/BEST_PRACTICES.md)`を参照してください。
+> **Note**: このドキュメントには、レンタルスペース管理システムにおける型安全・型定義の包括的な要件定義が記載されています。技術スタックの詳細については、`[CLAUDE.md](../CLAUDE.md)`を参照してください。実装ベストプラクティスについては、`[BEST_PRACTICES.md](coding-standards.md)`を参照してください。
 
 **最終更新**: 2026-01-08
 
@@ -88,8 +88,8 @@
 
 **参照ドキュメント**:
 
-- `[ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md](./ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md)` - REQ-TYPE-001
-- `[BEST_PRACTICES.md](../development/BEST_PRACTICES.md)` - 型安全性の基本原則
+- `[../plans/001-architecture-improvements.md](./../plans/001-architecture-improvements.md)` - REQ-TYPE-001
+- `[BEST_PRACTICES.md](coding-standards.md)` - 型安全性の基本原則
 - `[.cursor/skills/typescript-strict/SKILL.md](../.cursor/skills/typescript-strict/SKILL.md)` - TypeScript strict modeガイド
 
 ---
@@ -195,8 +195,8 @@ export async function createSpace(
 
 **参照ドキュメント**:
 
-- `[ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md](./ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md)` - REQ-TYPE-002
-- `[BEST_PRACTICES.md](../development/BEST_PRACTICES.md)` - 型の再利用とDRY原則
+- `[../plans/001-architecture-improvements.md](./../plans/001-architecture-improvements.md)` - REQ-TYPE-002
+- `[BEST_PRACTICES.md](coding-standards.md)` - 型の再利用とDRY原則
 - `[PROJECT_STRUCTURE.md](../architecture/PROJECT_STRUCTURE.md)` - 型定義の配置（`src/types/`）
 
 ---
@@ -326,9 +326,9 @@ export function ReservationForm() {
 
 **参照ドキュメント**:
 
-- `[ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md](./ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md)` - REQ-TYPE-003
-- `[API.md](../development/API.md)` - Server Actionsのバリデーション
-- `[SECURITY.md](../security/SECURITY.md)` - 入力検証
+- `[../plans/001-architecture-improvements.md](./../plans/001-architecture-improvements.md)` - REQ-TYPE-003
+- `[API.md](../guides/coding-standards.md)` - Server Actionsのバリデーション
+- `[README.md](../security/README.md)` - 入力検証
 
 ---
 
@@ -419,9 +419,9 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
 **参照ドキュメント**:
 
-- `[PRISMA_7.md](../development/PRISMA_7.md)` - Prisma 7のインポート方法
+- `[PRISMA_7.md](../guides/prisma.md)` - Prisma 7のインポート方法
 - `[DATABASE_DESIGN.md](./DATABASE_DESIGN.md)` - Prismaスキーマ設計
-- `[BEST_PRACTICES.md](../development/BEST_PRACTICES.md)` - Prisma 7の型安全性
+- `[BEST_PRACTICES.md](coding-standards.md)` - Prisma 7の型安全性
 
 ---
 
@@ -522,7 +522,7 @@ if (result.success) {
 
 **参照ドキュメント**:
 
-- `[BEST_PRACTICES.md](../development/BEST_PRACTICES.md)` - Zod 4.3.5の型安全性
+- `[BEST_PRACTICES.md](coding-standards.md)` - Zod 4.3.5の型安全性
 - [Zod Documentation - safeParse](https://zod.dev/?id=safeparse) - safeParseの公式ドキュメント
 
 ---
@@ -653,7 +653,7 @@ function BadComments() {
 
 **参照ドキュメント**:
 
-- `[BEST_PRACTICES.md](../development/BEST_PRACTICES.md)` - React 19 + Next.js 16の型安全性
+- `[BEST_PRACTICES.md](coding-standards.md)` - React 19 + Next.js 16の型安全性
 
 ---
 
@@ -723,8 +723,8 @@ export async function createSpace(
 
 **参照ドキュメント**:
 
-- `[API.md](../development/API.md)` - Server Actions仕様
-- `[BEST_PRACTICES.md](../development/BEST_PRACTICES.md)` - Server Actionsの型安全性
+- `[API.md](../guides/coding-standards.md)` - Server Actions仕様
+- `[BEST_PRACTICES.md](coding-standards.md)` - Server Actionsの型安全性
 
 ---
 
@@ -789,8 +789,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
 **参照ドキュメント**:
 
-- `[API.md](../development/API.md)` - Route Handlers仕様
-- `[BEST_PRACTICES.md](../development/BEST_PRACTICES.md)` - Route Handlersの型安全性
+- `[API.md](../guides/coding-standards.md)` - Route Handlers仕様
+- `[BEST_PRACTICES.md](coding-standards.md)` - Route Handlersの型安全性
 
 ---
 
@@ -892,7 +892,7 @@ export function BlogResults() {
 
 **参照ドキュメント**:
 
-- [`NUQS_REQUIREMENTS.md`](./NUQS_REQUIREMENTS.md) - nuqs要件定義
+- [`nuqs.md`](./nuqs.md) - nuqs要件定義
 - [nuqs Documentation - Server-side](https://nuqs.dev/docs/server-side) - nuqsのサーバーサイド使用法の公式ドキュメント
 
 ---
@@ -970,7 +970,7 @@ if (result.success) {
 
 **参照ドキュメント**:
 
-- `[BEST_PRACTICES.md](../development/BEST_PRACTICES.md)` - エラーハンドリングの型安全性
+- `[BEST_PRACTICES.md](coding-standards.md)` - エラーハンドリングの型安全性
 
 ---
 
@@ -1017,7 +1017,7 @@ export function SpaceCard({ space, onSelect, className }: SpaceCardProps) {
 
 **参照ドキュメント**:
 
-- `[BEST_PRACTICES.md](../development/BEST_PRACTICES.md)` - コンポーネントPropsの型定義
+- `[BEST_PRACTICES.md](coding-standards.md)` - コンポーネントPropsの型定義
 - `[.cursor/rules/code-style/RULE.md](../.cursor/rules/code-style/RULE.md)` - コードスタイル標準
 
 ---
@@ -1070,7 +1070,7 @@ export function SpaceCard({ space, onSelect, className }: SpaceCardProps) {
 
 **参照ドキュメント**:
 
-- `[BEST_PRACTICES.md](../development/BEST_PRACTICES.md)` - 型安全性チェックリスト
+- `[BEST_PRACTICES.md](coding-standards.md)` - 型安全性チェックリスト
 
 ---
 
@@ -1233,13 +1233,13 @@ export function SpaceCard({ space, onSelect, className }: SpaceCardProps) {
 ### 17.1 プロジェクトドキュメント
 
 - `[CLAUDE.md](../CLAUDE.md)` - プロジェクト全体の仕様書
-- `[ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md](./ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md)` - 型安全性の向上要件（REQ-TYPE-001, REQ-TYPE-002, REQ-TYPE-003）
-- `[BEST_PRACTICES.md](../development/BEST_PRACTICES.md)` - 型安全性のベストプラクティス
-- `[API.md](../development/API.md)` - Server ActionsとRoute Handlersの型定義
+- `[../plans/001-architecture-improvements.md](./../plans/001-architecture-improvements.md)` - 型安全性の向上要件（REQ-TYPE-001, REQ-TYPE-002, REQ-TYPE-003）
+- `[BEST_PRACTICES.md](coding-standards.md)` - 型安全性のベストプラクティス
+- `[API.md](../guides/coding-standards.md)` - Server ActionsとRoute Handlersの型定義
 - `[DATABASE_DESIGN.md](./DATABASE_DESIGN.md)` - Prisma型定義
 - `[PROJECT_STRUCTURE.md](../architecture/PROJECT_STRUCTURE.md)` - 型定義の配置
-- `[NUQS_REQUIREMENTS.md](./NUQS_REQUIREMENTS.md)` - URLクエリパラメータの型定義
-- `[PRISMA_7.md](../development/PRISMA_7.md)` - Prisma 7のインポート方法
+- `[nuqs.md](./nuqs.md)` - URLクエリパラメータの型定義
+- `[PRISMA_7.md](../guides/prisma.md)` - Prisma 7のインポート方法
 
 ### 17.2 Cursor設定
 
@@ -1266,7 +1266,7 @@ export function SpaceCard({ space, onSelect, className }: SpaceCardProps) {
 
 ## 18. 更新履歴
 
-- **2026-01-08**: nuqsバージョンを2.8.5から2.8.6に更新（NUQS_REQUIREMENTS.mdとの整合性）、ドキュメント相互参照パスを修正（BEST_PRACTICES.md、PROJECT_STRUCTURE.md、API.md、SECURITY.md、PRISMA_7.mdへのパスを正しいディレクトリに変更）
+- **2026-01-08**: nuqsバージョンを2.8.5から2.8.6に更新（nuqs.mdとの整合性）、ドキュメント相互参照パスを修正（BEST_PRACTICES.md、PROJECT_STRUCTURE.md、API.md、README.md、PRISMA_7.mdへのパスを正しいディレクトリに変更）
 - **2026-01-06**: 公式ドキュメント確認後、最新情報を反映（Prisma 7のドライバーアダプター、React 19の`use`フックの注意事項、nuqsのネストされたServer Componentsでの使用、Zodの`safeParse`の推奨事項）
 - **2026-01-06**: 初版作成、型安全・型定義の包括的な要件定義を追加
 

@@ -208,7 +208,7 @@ export async function updateSpace(id: string, data: UpdateSpaceData) {
 
 ## キャッシュ階層の定義
 
-> **Note**: キャッシュ階層の詳細な要件定義については、[`ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md`](./ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md)を参照してください。
+> **Note**: キャッシュ階層の詳細な要件定義については、[`../plans/001-architecture-improvements.md`](./../plans/001-architecture-improvements.md)を参照してください。
 
 キャッシュ戦略を4つの階層に分類します：
 
@@ -323,7 +323,7 @@ export default async function ReservationPage() {
 
 ## stale-while-revalidate semantics
 
-> **Note**: stale-while-revalidate semanticsの詳細な要件定義については、[`ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md`](./ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md)を参照してください。
+> **Note**: stale-while-revalidate semanticsの詳細な要件定義については、[`../plans/001-architecture-improvements.md`](./../plans/001-architecture-improvements.md)を参照してください。
 
 `revalidateTag`の第2引数に`'max'`を指定することで、stale-while-revalidate semanticsが適用されます。
 
@@ -998,7 +998,7 @@ const getBlogPosts = unstable_cache(
 
 ## セキュリティ考慮事項
 
-> **Note**: セキュリティの詳細なポリシーとベストプラクティスについては、[`SECURITY.md`](./SECURITY.md)を参照してください。
+> **Note**: セキュリティの詳細なポリシーとベストプラクティスについては、[`README.md`](./README.md)を参照してください。
 
 ### 機密情報のキャッシュ回避
 
@@ -1305,9 +1305,9 @@ const spaces = await prisma.space.findMany({
 
 - [`CLAUDE.md`](../CLAUDE.md) - プロジェクト全体の仕様書
 - [`BEST_PRACTICES.md`](./BEST_PRACTICES.md) - ベストプラクティスガイド
-- [`SECURITY.md`](./SECURITY.md) - セキュリティポリシー
+- [`README.md`](./README.md) - セキュリティポリシー
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md) - システムアーキテクチャ
-- [`ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md`](./ARCHITECTURE_IMPROVEMENT_REQUIREMENTS.md) - アーキテクチャ改善要件定義
+- [`../plans/001-architecture-improvements.md`](./../plans/001-architecture-improvements.md) - アーキテクチャ改善要件定義
 
 ### 外部リソース
 

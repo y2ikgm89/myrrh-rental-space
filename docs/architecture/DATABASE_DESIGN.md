@@ -182,7 +182,7 @@
 - **設計方針**:
   - **シングルトン**: Settingsテーブルは1レコードのみ存在（ID固定または`findFirst`で取得）
   - **型安全性**: 専用フィールドを使用して型安全性を確保
-- **詳細**: [`SETTINGS_REQUIREMENTS.md`](./SETTINGS_REQUIREMENTS.md) を参照してください
+- **詳細**: [`SETTINGS_REQUIREMENTS.md`](../requirements/settings.md) を参照してください
 
 ### Pages（公開ページコンテンツ）
 - **基本フィールド**:
@@ -549,7 +549,7 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
 **注意**: 
 - Prisma 7では、カスタム出力パス（`output`）の指定が必須です。詳細は[`PRISMA_7_IMPORT_GUIDE.md`](./PRISMA_7_IMPORT_GUIDE.md)を参照してください。
-- Prisma 7では、データベース接続にドライバーアダプターが必要です。PostgreSQLの場合は`@prisma/adapter-pg`を使用します。詳細は[`TYPE_SAFETY_REQUIREMENTS.md`](./TYPE_SAFETY_REQUIREMENTS.md)を参照してください。
+- Prisma 7では、データベース接続にドライバーアダプターが必要です。PostgreSQLの場合は`@prisma/adapter-pg`を使用します。詳細は[`TYPE_SAFETY_REQUIREMENTS.md`](../guides/type-safety.md)を参照してください。
 
 ### クエリ最適化
 
@@ -734,7 +734,7 @@ try {
 - [`CLAUDE.md`](../CLAUDE.md) - プロジェクト全体の仕様書（Prisma設定）
 - [`API.md`](./API.md) - API仕様
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md) - システムアーキテクチャ
-- [`FEATURE_REQUIREMENTS.md`](./FEATURE_REQUIREMENTS.md) - 機能要件
+- [`FEATURE_REQUIREMENTS.md`](../requirements/README.md) - 機能要件
 
 ### 外部リソース
 

@@ -359,7 +359,7 @@ Turbopackは、Rustで書かれた次世代のJavaScript/TypeScriptバンドラ�
 
 #### テスト環境での検証
 
-**注意**: テスト要件の詳細については、[`TEST_REQUIREMENTS.md`](./TEST_REQUIREMENTS.md)を参照してください。
+**注意**: テスト要件の詳細については、[`testing.md`](./testing.md)を参照してください。
 
 - **ローカルテスト**: 開発環境でTurbopackを使用したビルドをテスト
 - **CI/CDテスト**: GitHub Actions/Cloud BuildでTurbopackを使用したビルドをテスト
@@ -464,7 +464,7 @@ Turbopackは、Rustで書かれた次世代のJavaScript/TypeScriptバンドラ�
 
 - **基準**: 既存のテストスイートがすべて通過する
 - **確認方法**: `bun run test`を実行してすべてのテストが通過することを確認
-- **詳細**: テスト要件については[`TEST_REQUIREMENTS.md`](./TEST_REQUIREMENTS.md)を参照
+- **詳細**: テスト要件については[`testing.md`](./testing.md)を参照
 
 #### 機能動作確認
 
