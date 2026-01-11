@@ -152,6 +152,10 @@ export type SettingsData = {
   // Striped Design Settings
   announcementBarStripeColor: string | null
   announcementBarStripeAnimation: boolean
+  // Gradient Design Settings
+  announcementBarGradientAnimation: boolean
+  // Glass Design Settings
+  announcementBarGlassAnimation: boolean
   // Google Calendar Integration
   googleCalendarEnabled: boolean
   googleCalendarId: string | null
@@ -795,6 +799,10 @@ const announcementBarCarouselSettingsSchema = z.object({
   // Striped Design Settings
   announcementBarStripeColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).nullable(),
   announcementBarStripeAnimation: z.boolean(),
+  // Gradient Design Settings
+  announcementBarGradientAnimation: z.boolean(),
+  // Glass Design Settings
+  announcementBarGlassAnimation: z.boolean(),
 })
 
 export type AnnouncementBarCarouselSettingsInput = z.infer<typeof announcementBarCarouselSettingsSchema>
@@ -817,6 +825,8 @@ export async function getAnnouncementBarCarouselSettings(): Promise<Announcement
       announcementBarTextColor: true,
       announcementBarStripeColor: true,
       announcementBarStripeAnimation: true,
+      announcementBarGradientAnimation: true,
+      announcementBarGlassAnimation: true,
     },
   })
 
@@ -832,6 +842,8 @@ export async function getAnnouncementBarCarouselSettings(): Promise<Announcement
     announcementBarTextColor: settings?.announcementBarTextColor ?? null,
     announcementBarStripeColor: settings?.announcementBarStripeColor ?? null,
     announcementBarStripeAnimation: settings?.announcementBarStripeAnimation ?? false,
+    announcementBarGradientAnimation: settings?.announcementBarGradientAnimation ?? false,
+    announcementBarGlassAnimation: settings?.announcementBarGlassAnimation ?? false,
   }
 }
 

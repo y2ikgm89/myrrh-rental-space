@@ -36,6 +36,10 @@ export async function AnnouncementBarWrapper(): Promise<ReactElement | null> {
     // Striped Design Settings
     stripeColor: dbSettings.announcementBarStripeColor,
     stripeAnimation: dbSettings.announcementBarStripeAnimation,
+    // Gradient Design Settings
+    gradientAnimation: dbSettings.announcementBarGradientAnimation,
+    // Glass Design Settings
+    glassAnimation: dbSettings.announcementBarGlassAnimation,
   }
 
   return (

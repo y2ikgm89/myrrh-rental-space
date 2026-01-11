@@ -142,6 +142,8 @@ function BarPreview({
   textColor,
   stripeColor,
   stripeAnimation,
+  gradientAnimation,
+  glassAnimation,
 }: {
   message: string
   linkText?: string
@@ -150,6 +152,8 @@ function BarPreview({
   textColor: string | null
   stripeColor: string | null
   stripeAnimation: boolean
+  gradientAnimation: boolean
+  glassAnimation: boolean
 }): React.ReactElement {
   const defaultColors = TYPE_STYLES.info
 
@@ -163,6 +167,18 @@ function BarPreview({
     const baseColor = bgColor || defaultColors.hex
     const stripedStyles = getStripedStyle(baseColor, stripeColor, stripeAnimation)
     Object.assign(customStyles, stripedStyles)
+  }
+
+  // グラデーションアニメーション
+  if (designStyle === 'gradient' && gradientAnimation) {
+    customStyles.backgroundSize = '200% 100%'
+    customStyles.animation = 'gradient-flow 3s ease infinite'
+  }
+
+  // グラスアニメーション用
+  if (designStyle === 'glass' && glassAnimation) {
+    customStyles.position = 'relative'
+    customStyles.overflow = 'hidden'
   }
 
   // デザインスタイル別のクラス
@@ -207,6 +223,23 @@ function BarPreview({
           }
         `}</style>
       )}
+      {designStyle === 'gradient' && gradientAnimation && (
+        <style>{`
+          @keyframes gradient-flow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+          }
+        `}</style>
+      )}
+      {designStyle === 'glass' && glassAnimation && (
+        <style>{`
+          @keyframes glass-shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+          }
+        `}</style>
+      )}
       <div
         className={cn(
           'flex items-center justify-center gap-2 px-4 py-2 text-sm',
@@ -215,6 +248,18 @@ function BarPreview({
         )}
         style={customStyles}
       >
+        {/* グラスシマーオーバーレイ */}
+        {designStyle === 'glass' && glassAnimation && (
+          <div
+            className="pointer-events-none absolute inset-0 overflow-hidden"
+            aria-hidden="true"
+          >
+            <div
+              className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent"
+              style={{ animation: 'glass-shimmer 3s ease-in-out infinite' }}
+            />
+          </div>
+        )}
         <span>{message || 'サンプルお知らせメッセージ'}</span>
         {linkText && (
           <span className="underline underline-offset-2">{linkText}</span>
@@ -262,6 +307,8 @@ export function AnnouncementBarManager({
     announcementBarTextColor: initialCarouselSettings.announcementBarTextColor || '',
     announcementBarStripeColor: initialCarouselSettings.announcementBarStripeColor || '',
     announcementBarStripeAnimation: initialCarouselSettings.announcementBarStripeAnimation,
+    announcementBarGradientAnimation: initialCarouselSettings.announcementBarGradientAnimation,
+    announcementBarGlassAnimation: initialCarouselSettings.announcementBarGlassAnimation,
   })
 
   const {
@@ -417,6 +464,8 @@ export function AnnouncementBarManager({
         announcementBarTextColor: carouselSettings.announcementBarTextColor || null,
         announcementBarStripeColor: carouselSettings.announcementBarStripeColor || null,
         announcementBarStripeAnimation: carouselSettings.announcementBarStripeAnimation,
+        announcementBarGradientAnimation: carouselSettings.announcementBarGradientAnimation,
+        announcementBarGlassAnimation: carouselSettings.announcementBarGlassAnimation,
       })
       if (result.success) {
         toast.success('デザイン・カルーセル設定を保存しました')
@@ -587,6 +636,8 @@ export function AnnouncementBarManager({
                     textColor={carouselSettings.announcementBarTextColor || null}
                     stripeColor={carouselSettings.announcementBarStripeColor || null}
                     stripeAnimation={carouselSettings.announcementBarStripeAnimation}
+                    gradientAnimation={carouselSettings.announcementBarGradientAnimation}
+                    glassAnimation={carouselSettings.announcementBarGlassAnimation}
                   />
                 </div>
               </div>
@@ -676,6 +727,58 @@ export function AnnouncementBarManager({
                       checked={carouselSettings.announcementBarStripeAnimation}
                       onCheckedChange={(checked) =>
                         setCarouselSettings({ ...carouselSettings, announcementBarStripeAnimation: checked })
+                      }
+                      disabled={isPending}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* グラデーション設定（gradientスタイル選択時のみ） */}
+              {carouselSettings.announcementBarDesignStyle === 'gradient' && (
+                <div className="rounded-lg border p-4 space-y-4">
+                  <h4 className="font-medium">グラデーション設定</h4>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="gradientAnimation" className="font-medium">
+                        グラデーションアニメーション
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        グラデーションが左右に流れるアニメーションを有効にします
+                      </p>
+                    </div>
+                    <Switch
+                      id="gradientAnimation"
+                      checked={carouselSettings.announcementBarGradientAnimation}
+                      onCheckedChange={(checked) =>
+                        setCarouselSettings({ ...carouselSettings, announcementBarGradientAnimation: checked })
+                      }
+                      disabled={isPending}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* グラス設定（glassスタイル選択時のみ） */}
+              {carouselSettings.announcementBarDesignStyle === 'glass' && (
+                <div className="rounded-lg border p-4 space-y-4">
+                  <h4 className="font-medium">グラス設定</h4>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="glassAnimation" className="font-medium">
+                        シマーアニメーション
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        光の反射が流れるようなシマー効果を有効にします
+                      </p>
+                    </div>
+                    <Switch
+                      id="glassAnimation"
+                      checked={carouselSettings.announcementBarGlassAnimation}
+                      onCheckedChange={(checked) =>
+                        setCarouselSettings({ ...carouselSettings, announcementBarGlassAnimation: checked })
                       }
                       disabled={isPending}
                     />

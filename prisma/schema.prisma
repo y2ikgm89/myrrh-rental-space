@@ -595,6 +595,10 @@ model Settings {
   // Striped Design Settings
   announcementBarStripeColor      String? // ストライプ色（カスタム）
   announcementBarStripeAnimation  Boolean @default(false) // ストライプアニメーション
+  // Gradient Design Settings
+  announcementBarGradientAnimation Boolean @default(false) // グラデーションアニメーション
+  // Glass Design Settings
+  announcementBarGlassAnimation    Boolean @default(false) // グラス（シマー）アニメーション
 
   // ==============================================
   // External Service API Keys

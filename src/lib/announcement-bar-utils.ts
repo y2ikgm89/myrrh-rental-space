@@ -166,6 +166,34 @@ export function getTypeHexColor(type: string): string {
   return TYPE_STYLES[type]?.hex || TYPE_STYLES.info.hex
 }
 
+/**
+ * グラデーションアニメーション用のスタイルを生成する
+ *
+ * @param animate - アニメーションを有効にするか
+ * @returns CSSProperties
+ */
+export function getGradientAnimationStyle(animate: boolean): CSSProperties {
+  if (!animate) return {}
+  return {
+    backgroundSize: '200% 100%',
+    animation: 'gradient-flow 3s ease infinite',
+  }
+}
+
+/**
+ * グラス（シマー）アニメーション用のスタイルを生成する
+ *
+ * @param animate - アニメーションを有効にするか
+ * @returns CSSProperties
+ */
+export function getGlassShimmerStyle(animate: boolean): CSSProperties {
+  if (!animate) return {}
+  return {
+    position: 'relative' as const,
+    overflow: 'hidden',
+  }
+}
+
 // =============================================================================
 // Validation Helpers
 // =============================================================================

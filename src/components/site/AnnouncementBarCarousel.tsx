@@ -24,6 +24,8 @@ import {
   ANIMATION_VARIANTS,
   getStripedStyle,
   getTypeHexColor,
+  getGradientAnimationStyle,
+  getGlassShimmerStyle,
   type DesignStyle,
   type AnimationType,
 } from '@/lib/announcement-bar-utils'
@@ -58,6 +60,10 @@ export interface CarouselSettings {
   // Striped Design Settings
   stripeColor: string | null
   stripeAnimation: boolean
+  // Gradient Design Settings
+  gradientAnimation: boolean
+  // Glass Design Settings
+  glassAnimation: boolean
 }
 
 export interface AnnouncementBarCarouselProps {
@@ -200,6 +206,16 @@ export function AnnouncementBarCarousel({ bars, settings }: AnnouncementBarCarou
     Object.assign(customStyles, stripedStyles)
   }
 
+  // Gradientスタイルのアニメーション
+  if (designStyle === 'gradient' && settings.gradientAnimation) {
+    Object.assign(customStyles, getGradientAnimationStyle(true))
+  }
+
+  // Glassスタイルのアニメーション
+  if (designStyle === 'glass' && settings.glassAnimation) {
+    Object.assign(customStyles, getGlassShimmerStyle(true))
+  }
+
   // アニメーションバリアント
   const variants = ANIMATION_VARIANTS[settings.animation]
 
@@ -211,6 +227,25 @@ export function AnnouncementBarCarousel({ bars, settings }: AnnouncementBarCarou
           @keyframes stripe-slide {
             from { background-position: 0 0; }
             to { background-position: 28.28px 0; }
+          }
+        `}</style>
+      )}
+      {/* グラデーションアニメーション用のスタイル */}
+      {designStyle === 'gradient' && settings.gradientAnimation && (
+        <style>{`
+          @keyframes gradient-flow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+          }
+        `}</style>
+      )}
+      {/* グラスシマーアニメーション用のスタイル */}
+      {designStyle === 'glass' && settings.glassAnimation && (
+        <style>{`
+          @keyframes glass-shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
           }
         `}</style>
       )}
@@ -230,6 +265,19 @@ export function AnnouncementBarCarousel({ bars, settings }: AnnouncementBarCarou
         onMouseEnter={() => settings.pauseOnHover && setIsPaused(true)}
         onMouseLeave={() => settings.pauseOnHover && setIsPaused(false)}
       >
+      {/* グラスシマーオーバーレイ */}
+      {designStyle === 'glass' && settings.glassAnimation && (
+        <div
+          className="pointer-events-none absolute inset-0 overflow-hidden"
+          aria-hidden="true"
+        >
+          <div
+            className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent"
+            style={{ animation: 'glass-shimmer 3s ease-in-out infinite' }}
+          />
+        </div>
+      )}
+
       {/* 左矢印 */}
       {settings.showArrows && visibleBars.length > 1 && (
         <button
