@@ -3,52 +3,69 @@
  *
  * - DB からナビゲーションアイテムを取得
  * - レスポンシブ対応（モバイルメニュー）
+ *
+ * Next.js 16 PPR対応:
+ * - use cache ディレクティブでナビゲーションと設定をキャッシュ
  */
 
 import Link from 'next/link'
+import { cacheLife, cacheTag } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import type { Settings } from '@/generated/prisma/client/client'
 import { MobileMenu, type NavItem } from './MobileMenu'
+import { safeFetch, ErrorCategory, ErrorSeverity } from '@/lib/errors'
 
 async function getDesktopNavigationItems(): Promise<NavItem[]> {
-  try {
-    const items = await prisma.navigationItem.findMany({
-      where: {
-        type: 'HEADER_DESKTOP',
-        isActive: true,
-      },
-      orderBy: { order: 'asc' },
-    })
-    return items
-  } catch {
-    // DB未接続時は空配列を返す
-    return []
-  }
+  'use cache'
+  cacheLife('hours')
+  cacheTag('navigation')
+
+  return safeFetch({
+    fetch: () =>
+      prisma.navigationItem.findMany({
+        where: { type: 'HEADER_DESKTOP', isActive: true },
+        orderBy: { order: 'asc' },
+      }),
+    fallback: [],
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.MEDIUM,
+    operationName: 'getDesktopNavigationItems',
+    context: { component: 'Header', type: 'HEADER_DESKTOP' },
+  })
 }
 
 async function getMobileNavigationItems(): Promise<NavItem[]> {
-  try {
-    const items = await prisma.navigationItem.findMany({
-      where: {
-        type: 'HEADER_MOBILE',
-        isActive: true,
-      },
-      orderBy: { order: 'asc' },
-    })
-    return items
-  } catch {
-    // DB未接続時は空配列を返す
-    return []
-  }
+  'use cache'
+  cacheLife('hours')
+  cacheTag('navigation')
+
+  return safeFetch({
+    fetch: () =>
+      prisma.navigationItem.findMany({
+        where: { type: 'HEADER_MOBILE', isActive: true },
+        orderBy: { order: 'asc' },
+      }),
+    fallback: [],
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.MEDIUM,
+    operationName: 'getMobileNavigationItems',
+    context: { component: 'Header', type: 'HEADER_MOBILE' },
+  })
 }
 
-async function getSiteSettings(): Promise<Settings | null> {
-  try {
-    const settings = await prisma.settings.findFirst()
-    return settings
-  } catch {
-    return null
-  }
+async function getSiteSettings(): Promise<Pick<Settings, 'siteName'> | null> {
+  'use cache'
+  cacheLife('hours')
+  cacheTag('settings')
+
+  return safeFetch({
+    fetch: () => prisma.settings.findFirst({ select: { siteName: true } }),
+    fallback: null,
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: 'getSiteSettings',
+    context: { component: 'Header' },
+  })
 }
 
 export async function Header(): Promise<React.ReactElement> {

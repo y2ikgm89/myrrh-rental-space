@@ -1,5 +1,6 @@
 'use server'
 
+import { connection } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/auth'
 
@@ -56,6 +57,7 @@ export type RecentInquiry = {
  */
 export async function getDashboardStats(): Promise<DashboardStats> {
   await requireAdmin()
+  await connection()
 
   const now = new Date()
   const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -203,6 +205,7 @@ export async function getRecentInquiries(limit = 5): Promise<RecentInquiry[]> {
  */
 export async function getTodayReservations(): Promise<RecentReservation[]> {
   await requireAdmin()
+  await connection()
 
   const today = new Date()
   const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate())

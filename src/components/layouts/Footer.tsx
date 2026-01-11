@@ -3,12 +3,17 @@
  *
  * - DB からフッターナビ・SNSリンクを取得
  * - コピーライト表示
+ *
+ * Next.js 16 PPR対応:
+ * - use cache ディレクティブでデータ取得をキャッシュ
  */
 
 import Link from 'next/link'
+import { cacheLife, cacheTag } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import type { Settings } from '@/generated/prisma/client/client'
 import type { ReactElement } from 'react'
+import { safeFetch, ErrorCategory, ErrorSeverity } from '@/lib/errors'
 
 type NavItem = {
   label: string
@@ -40,59 +45,108 @@ function getVisibilityClass(showOnDesktop: boolean, showOnMobile: boolean): stri
 }
 
 async function getFooterNavItems(): Promise<NavItem[]> {
-  try {
-    const items = await prisma.navigationItem.findMany({
-      where: {
-        type: 'FOOTER',
-        isActive: true,
-      },
-      orderBy: { order: 'asc' },
-    })
-    return items
-  } catch {
-    return []
-  }
+  'use cache'
+  cacheLife('hours')
+  cacheTag('navigation')
+
+  return safeFetch({
+    fetch: () =>
+      prisma.navigationItem.findMany({
+        where: { type: 'FOOTER', isActive: true },
+        orderBy: { order: 'asc' },
+      }),
+    fallback: [],
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.MEDIUM,
+    operationName: 'getFooterNavItems',
+    context: { component: 'Footer' },
+  })
 }
 
 async function getSocialLinks(): Promise<SocialLinkItem[]> {
-  try {
-    const links = await prisma.socialLink.findMany({
-      where: { isActive: true },
-      select: {
-        id: true,
-        platform: true,
-        url: true,
-        showOnDesktop: true,
-        showOnMobile: true,
-      },
-      orderBy: { order: 'asc' },
-    })
-    return links
-  } catch {
-    return []
-  }
+  'use cache'
+  cacheLife('hours')
+  cacheTag('social-links')
+
+  return safeFetch({
+    fetch: () =>
+      prisma.socialLink.findMany({
+        where: { isActive: true },
+        select: {
+          id: true,
+          platform: true,
+          url: true,
+          showOnDesktop: true,
+          showOnMobile: true,
+        },
+        orderBy: { order: 'asc' },
+      }),
+    fallback: [],
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: 'getSocialLinks',
+    context: { component: 'Footer' },
+  })
 }
 
-async function getSiteSettings(): Promise<Settings | null> {
-  try {
-    const settings = await prisma.settings.findFirst()
-    return settings
-  } catch {
-    return null
-  }
+type FooterSettings = Pick<
+  Settings,
+  | 'siteName'
+  | 'businessName'
+  | 'postalCode'
+  | 'prefecture'
+  | 'city'
+  | 'streetAddress'
+  | 'buildingName'
+  | 'address'
+  | 'phoneNumber'
+  | 'faxNumber'
+  | 'email'
+  | 'footerCopyright'
+>
+
+async function getFooterSettings(): Promise<FooterSettings | null> {
+  'use cache'
+  cacheLife('hours')
+  cacheTag('settings')
+
+  return safeFetch({
+    fetch: () =>
+      prisma.settings.findFirst({
+        select: {
+          siteName: true,
+          businessName: true,
+          postalCode: true,
+          prefecture: true,
+          city: true,
+          streetAddress: true,
+          buildingName: true,
+          address: true,
+          phoneNumber: true,
+          faxNumber: true,
+          email: true,
+          footerCopyright: true,
+        },
+      }),
+    fallback: null,
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: 'getFooterSettings',
+    context: { component: 'Footer' },
+  })
 }
 
 export async function Footer(): Promise<ReactElement> {
   const [navItems, socialLinks, settings] = await Promise.all([
     getFooterNavItems(),
     getSocialLinks(),
-    getSiteSettings(),
+    getFooterSettings(),
   ])
 
   const siteName = settings?.siteName ?? 'Myrrh Rental Space'
   const businessName = settings?.businessName
-  const currentYear = new Date().getFullYear()
-  const copyrightText = settings?.footerCopyright ?? `© ${currentYear} ${siteName}. All rights reserved.`
+  // Note: コピーライトは設定から取得、年はビルド時に固定される
+  const copyrightText = settings?.footerCopyright ?? `© ${siteName}. All rights reserved.`
 
   // 住所の組み立て
   const addressParts = [
