@@ -11,6 +11,7 @@ import {
 } from '@/lib/email-service'
 import { createSuccess, createFailure, type ReservationWhereInput, withAuth } from '@/types'
 import { requireAdmin } from '@/lib/auth'
+import { syncReservationToCalendar, updateCalendarSync, deleteCalendarSync, type ReservationSyncData } from '@/lib/calendar-sync'
 
 // =============================================================================
 // Types
@@ -242,7 +243,7 @@ export const updateReservationStatus = withAuth(async (
   const reservation = await prisma.reservation.findUnique({
     where: { id },
     include: {
-      space: { select: { name: true } },
+      space: { select: { name: true, address: true } },
       customer: { select: { firstName: true, lastName: true, email: true } },
     },
   })
@@ -270,14 +271,45 @@ export const updateReservationStatus = withAuth(async (
     notes: reservation.notes || undefined,
   }
 
-  // 確定時: 確認メール送信
+  // カレンダー同期用データ
+  const calendarData: ReservationSyncData = {
+    reservationId: id,
+    spaceName: reservation.space.name,
+    customerName: `${reservation.customer.lastName} ${reservation.customer.firstName}`,
+    customerEmail: reservation.customer.email,
+    startTime: reservation.startTime,
+    endTime: reservation.endTime,
+    location: reservation.space.address ?? undefined,
+    notes: reservation.notes ?? undefined,
+    totalPrice: reservation.totalPrice ? Number(reservation.totalPrice) : null,
+  }
+
+  // 確定時: 確認メール送信 + カレンダー同期
   if (status === 'CONFIRMED' && previousStatus !== 'CONFIRMED') {
+    // カレンダーイベント更新 or 新規作成（バックグラウンド）
+    if (reservation.googleCalendarEventId) {
+      // 既存イベントを更新
+      updateCalendarSync(calendarData, reservation.googleCalendarEventId).catch((err) => {
+        console.error('Calendar update failed:', err)
+      })
+    } else {
+      // イベントがない場合は新規作成（初回同期失敗時のフォールバック）
+      syncReservationToCalendar(calendarData).catch((err) => {
+        console.error('Calendar create failed:', err)
+      })
+    }
     await sendReservationConfirmationEmail(emailData)
     await sendReservationAdminNotification(emailData, previousStatus === 'PENDING' ? 'new' : 'update')
   }
 
-  // キャンセル時: キャンセルメール送信
+  // キャンセル時: キャンセルメール送信 + カレンダー削除
   if (status === 'CANCELLED' && previousStatus !== 'CANCELLED') {
+    // カレンダーイベント削除（バックグラウンド）
+    if (reservation.googleCalendarEventId) {
+      deleteCalendarSync(id, reservation.googleCalendarEventId).catch((err) => {
+        console.error('Calendar delete failed:', err)
+      })
+    }
     await sendReservationCancelledEmail(emailData)
     await sendReservationAdminNotification(emailData, 'cancel')
   }
@@ -330,6 +362,13 @@ export const deleteReservation = withAuth(async (_user, id: string) => {
 
   if (!reservation) {
     return createFailure('予約が見つかりません')
+  }
+
+  // カレンダーからイベントを削除（バックグラウンド、DB削除前に開始）
+  if (reservation.googleCalendarEventId) {
+    deleteCalendarSync(id, reservation.googleCalendarEventId).catch((err) => {
+      console.error('Calendar delete failed on reservation delete:', err)
+    })
   }
 
   await prisma.reservation.delete({

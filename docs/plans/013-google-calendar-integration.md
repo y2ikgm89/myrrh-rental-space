@@ -28,9 +28,20 @@
   - Outlook Web
   - Apple Calendar
 
-### Phase 2（将来実装）
+### Phase 2（実装済み）
+
+予約変更時のカレンダー同期
+
+**実装内容**:
+- ステータス→CONFIRMED: カレンダーイベント更新（または新規作成）
+- ステータス→CANCELLED: カレンダーイベント削除
+- 予約削除: カレンダーイベント削除
+
+**変更ファイル**:
+- `src/actions/admin/reservation.ts` - updateReservationStatus, deleteReservationにカレンダー同期追加
+
+### Phase 3（将来実装）
 - カレンダーからの予約更新検出（双方向同期）
-- 予約変更時のイベント更新
 - iCal URL公開（TimeTree等での購読用）
 
 ## 新規ファイル
