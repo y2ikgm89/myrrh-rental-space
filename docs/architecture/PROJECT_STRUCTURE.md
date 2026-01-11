@@ -322,23 +322,23 @@ myrrh-rental-space/
 
 ## キャッシュ戦略
 
-詳細は [`CACHING_STRATEGY.md`](CACHING.md) を参照してください。
+詳細は [`CACHING.md`](./CACHING.md) を参照してください。
 
 ### キャッシュ階層
 
 | レベル | 用途 | API |
 |--------|------|-----|
 | L1: 静的 | プライバシーポリシー等 | `revalidate: false` |
-| L2: ISR | ブログ、お知らせ | `revalidate: <seconds>` |
-| L3: タグベース | 一覧データ | `unstable_cache` + `revalidateTag` |
-| L4: 動的 | 予約、管理画面 | `unstable_noStore()` |
+| L2: ISR | ブログ、お知らせ | `'use cache'` + `cacheLife('hours')` |
+| L3: タグベース | 一覧データ | `'use cache'` + `cacheLife` + `cacheTag` |
+| L4: 動的 | 予約、管理画面 | `<Suspense>` |
+| L5: 非決定的 | Date.now(), Math.random() | `connection()` |
 
 ### キャッシュ無効化
 
 - **パスベース**: `revalidatePath()`
-- **タグベース**: `revalidateTag('tag', 'max')`（stale-while-revalidate推奨）
-- **即時更新**: `updateTag()`（Server Actionsのみ）
-- **ページ更新**: `refresh()`
+- **タグベース**: `revalidateTag('tag', { expire: 0 })`（即時無効化）
+- **stale-while-revalidate**: `revalidateTag('tag', 'max')`
 
 ---
 

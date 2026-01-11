@@ -123,14 +123,14 @@ Project Rules provide more granular, context-aware guidance than `AGENTS.md`. Th
 - Authentication & authorization: Rate limiting, secure sessions, RBAC
 - Bot protection: Cloudflare Turnstile for forms
 - Database security: Supabase RLS policies, parameterized queries
-- Caching security: Never cache sensitive data, use `unstable_noStore()` for authenticated data
+- Caching security: Never cache sensitive data, use `<Suspense>` or `connection()` for authenticated data
 
 **For detailed security configuration**: See `[docs/security/README.md](docs/security/README.md)` and `[docs/security/protection.md](docs/security/protection.md)`
 
 ## Performance optimization
 
 - Use Server Components by default (reduces client-side JavaScript)
-- Leverage Next.js 16 Cache API (`unstable_cache`, `unstable_noStore`, `revalidatePath`, `revalidateTag`)
+- Leverage Next.js 16 Cache API (`'use cache'` directive, `cacheLife`, `cacheTag`, `connection()`, `revalidatePath`, `revalidateTag`)
 - Always use Next.js `Image` component with Supabase Storage
 - Use dynamic imports for large libraries (`@react-three/fiber`, `@pixi/react`, Three.js, Pixi.js)
 - Fetch data in Server Components when possible, use `Promise.all` for parallel fetching

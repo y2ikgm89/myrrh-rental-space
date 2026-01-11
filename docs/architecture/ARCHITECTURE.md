@@ -483,37 +483,40 @@ function ReservationForm() {
 
 ### キャッシュ戦略
 
-詳細は [`CACHING_STRATEGY.md`](./CACHING_STRATEGY.md) を参照してください。
+詳細は [`CACHING.md`](./CACHING.md) を参照してください。
 
 #### キャッシュ階層
 
-キャッシュ戦略を4つの階層に分類します：
+キャッシュ戦略を5つの階層に分類します：
 
 - **L1: 静的コンテンツ** (`revalidate: false`)
   - プライバシーポリシー、利用規約など
   - ビルド時に生成、手動無効化まで有効
-- **L2: ISR** (`revalidate: <seconds>`)
+- **L2: ISR** (`'use cache'` + `cacheLife('hours')`)
   - ブログ記事、お知らせ、スペース詳細
   - 時間ベースの再生成
-- **L3: タグベースキャッシュ** (`unstable_cache` + `revalidateTag`)
+- **L3: タグベースキャッシュ** (`'use cache'` + `cacheLife` + `cacheTag`)
   - スペース一覧、ブログ一覧
   - タグベースの無効化に対応
-- **L4: 動的コンテンツ** (`unstable_noStore()`)
+- **L4: 動的コンテンツ** (`<Suspense>`)
   - 予約ページ、管理画面
-  - キャッシュしない、毎回最新データを取得
+  - ストリーミングで動的データを表示
+- **L5: 非決定的操作** (`connection()`)
+  - Date.now()、Math.random() 等
+  - リクエスト時レンダリングをシグナル
 
-#### キャッシングAPI
+#### キャッシングAPI（Next.js 16）
 
-- **Next.js Cache API**: 自動キャッシュ（Server Components）
-- **`unstable_cache`**: 関数結果のキャッシュ（タグベースの無効化に対応）
-- **`unstable_noStore`**: 動的データのキャッシュ無効化
-- **`fetch()`のキャッシュオプション**: `force-cache`（デフォルト）、`no-store`、`revalidate`
-- **ISR**: 時間ベースの再生成（`revalidate`オプション）
-- **On-demand Revalidation**: 
+- **`'use cache'` ディレクティブ**: 明示的キャッシュ制御（**推奨**）
+- **`cacheLife()`**: キャッシュ期間の指定（`'seconds'`, `'minutes'`, `'hours'`, `'days'`, `'weeks'`, `'max'`）
+- **`cacheTag()`**: 無効化用タグの設定
+- **`connection()`**: 非決定的操作のシグナル（リクエスト時レンダリング）
+- **`<Suspense>`**: 動的コンテンツのストリーミング
+- **On-demand Revalidation**:
   - `revalidatePath`: 特定のパスのキャッシュを無効化
-  - `revalidateTag`: タグベースでキャッシュを無効化（`'max'`パラメータでstale-while-revalidate semantics、**推奨**）
-  - `updateTag`: 即座にキャッシュを無効化（read-your-own-writesシナリオ、Server Actionsでのみ使用可能）
-  - `refresh`: 現在のページのキャッシュを更新（ページリロードなしで最新データを表示）
+  - `revalidateTag`: タグベースでキャッシュを無効化
+
+> **Note**: `unstable_cache` と `unstable_noStore` は非推奨です。`'use cache'` と `connection()` を使用してください。
 
 #### stale-while-revalidate semantics
 
@@ -830,7 +833,7 @@ Server Actionsでのエラーハンドリングを統一し、エラーレスポ
 - [`TURBOPACK_REQUIREMENTS.md`](../guides/turbopack.md) - Turbopack要件定義
 - [`CLOUDFLARE_CDN.md`](./CLOUDFLARE_CDN.md) - Cloudflare CDN統合ガイド
 - [`BEST_PRACTICES.md`](./BEST_PRACTICES.md) - ベストプラクティスガイド
-- [`CACHING_STRATEGY.md`](./CACHING_STRATEGY.md) - キャッシング戦略ガイド
+- [`CACHING.md`](./CACHING.md) - キャッシング戦略ガイド
 - [`../plans/001-architecture-improvements.md`](./../plans/001-architecture-improvements.md) - アーキテクチャ改善要件定義
 
 ### 外部リソース
@@ -845,6 +848,11 @@ Server Actionsでのエラーハンドリングを統一し、エラーレスポ
 
 ## 更新履歴
 
+- **2026-01-12**: Next.js 16 cacheComponents対応
+  - キャッシュ階層を5階層に拡張（L5: 非決定的操作を追加）
+  - `'use cache'` ディレクティブを推奨パターンとして追加
+  - `connection()` の使用方法を追加
+  - `unstable_cache` と `unstable_noStore` を非推奨として明記
 - **2026-01-10**: 旧AGENTS.md → CLAUDE.md への参照変更
 - **2026-01-08**: Context7で取得した最新情報に基づき、以下の更新を実施
   - 最新キャッシングAPIの反映（`revalidateTag`の`profile`パラメータ、`updateTag`、`refresh`の詳細な説明）

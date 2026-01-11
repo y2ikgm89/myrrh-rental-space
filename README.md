@@ -124,7 +124,8 @@ src/
 
 ## ドキュメント
 
-- [AGENTS.md](./AGENTS.md) - プロジェクト仕様書
+- [AGENTS.md](./AGENTS.md) - プロジェクト仕様書（Cursor/一般エージェント用）
+- [CLAUDE.md](./CLAUDE.md) - Claude Code 専用ワークフロー
 - [docs/README.md](./docs/README.md) - ドキュメントインデックス
 
 ## ライセンス

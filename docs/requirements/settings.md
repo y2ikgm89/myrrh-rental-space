@@ -601,7 +601,7 @@ revalidateTag('site-settings', 'max') // stale-while-revalidate semantics
 revalidatePath('/')
 ```
 
-詳細は [`CACHING_STRATEGY.md`](./CACHING_STRATEGY.md) を参照してください。
+詳細は [`CACHING.md`](../architecture/CACHING.md) を参照してください。
 
 ---
 
@@ -768,7 +768,7 @@ revalidatePath('/')
 - [`PROJECT_STRUCTURE.md`](./PROJECT_STRUCTURE.md) - プロジェクト構造
 - [`email.md`](./email.md) - メール送信機能要件
 - [`../security/README.md`](../security/README.md) - セキュリティポリシー
-- [`CACHING_STRATEGY.md`](./CACHING_STRATEGY.md) - キャッシング戦略
+- [`CACHING.md`](../architecture/CACHING.md) - キャッシング戦略
 
 ### 外部リソース
 
