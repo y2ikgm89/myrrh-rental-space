@@ -15,7 +15,8 @@ import {
   sendReservationAdminNotification,
 } from '@/lib/email-service'
 import { syncReservationToCalendar } from '@/lib/calendar-sync'
-import { verifyTurnstileToken, isTurnstileEnabled } from '@/lib/turnstile'
+import { checkReservationOverlap } from '@/lib/reservation-utils'
+import { validateTurnstile, extractFieldErrors } from '@/lib/action-helpers'
 import { getTermsAgreementSettings } from '@/actions/admin/settings'
 
 /**
@@ -25,22 +26,10 @@ export async function createReservation(
   input: ReservationInput | ReservationWithTermsInput,
   turnstileToken?: string
 ): Promise<ReservationActionResult> {
-  // Turnstile検証（有効な場合のみ）
-  if (isTurnstileEnabled()) {
-    if (!turnstileToken) {
-      return {
-        success: false,
-        error: 'セキュリティ検証が必要です。ページを再読み込みしてください。',
-      }
-    }
-
-    const isValid = await verifyTurnstileToken(turnstileToken)
-    if (!isValid) {
-      return {
-        success: false,
-        error: 'セキュリティ検証に失敗しました。しばらく経ってから再度お試しください。',
-      }
-    }
+  // Turnstile検証
+  const turnstileResult = await validateTurnstile(turnstileToken)
+  if (!turnstileResult.success) {
+    return { success: false, error: turnstileResult.error }
   }
 
   // 規約同意設定を取得
@@ -52,20 +41,10 @@ export async function createReservation(
   const validation = schema.safeParse(input)
 
   if (!validation.success) {
-    const fieldErrors: Record<string, string[]> = {}
-    for (const issue of validation.error.issues) {
-      const field = issue.path[0]
-      if (typeof field === 'string') {
-        if (!fieldErrors[field]) {
-          fieldErrors[field] = []
-        }
-        fieldErrors[field].push(issue.message)
-      }
-    }
     return {
       success: false,
       error: '入力内容に誤りがあります',
-      fieldErrors,
+      fieldErrors: extractFieldErrors(validation.error),
     }
   }
 
@@ -90,38 +69,14 @@ export async function createReservation(
       }
     }
 
-    // 予約重複チェック
-    const existingReservation = await prisma.reservation.findFirst({
-      where: {
-        spaceId,
-        status: { not: 'CANCELLED' as ReservationStatus },
-        OR: [
-          {
-            // 既存予約の開始時間が新規予約の時間内にある
-            startTime: {
-              gte: startDateTime,
-              lt: endDateTime,
-            },
-          },
-          {
-            // 既存予約の終了時間が新規予約の時間内にある
-            endTime: {
-              gt: startDateTime,
-              lte: endDateTime,
-            },
-          },
-          {
-            // 既存予約が新規予約を完全に含む
-            AND: [
-              { startTime: { lte: startDateTime } },
-              { endTime: { gte: endDateTime } },
-            ],
-          },
-        ],
-      },
+    // 予約重複チェック（共通ユーティリティ使用）
+    const overlapCheck = await checkReservationOverlap({
+      spaceId,
+      startTime: startDateTime,
+      endTime: endDateTime,
     })
 
-    if (existingReservation) {
+    if (overlapCheck.hasOverlap) {
       return {
         success: false,
         error: '選択された時間帯は既に予約されています。別の時間帯をお選びください。',

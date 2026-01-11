@@ -5,7 +5,8 @@ import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
-import { verifyTurnstileToken, isTurnstileEnabled } from '@/lib/turnstile'
+import { isTurnstileEnabled } from '@/lib/turnstile'
+import { validateTurnstile, extractFieldErrors } from '@/lib/action-helpers'
 import {
   createCommentSchema,
   toCommentAuthor,
@@ -148,40 +149,19 @@ export async function createComment(input: {
 
   // ゲストの場合はTurnstile検証必須
   if (!isLoggedIn && isTurnstileEnabled()) {
-    if (!input.turnstileToken) {
-      return {
-        success: false,
-        error: 'セキュリティ検証が必要です。ページを再読み込みしてください。',
-      }
-    }
-
-    const isValid = await verifyTurnstileToken(input.turnstileToken)
-    if (!isValid) {
-      return {
-        success: false,
-        error:
-          'セキュリティ検証に失敗しました。しばらく経ってから再度お試しください。',
-      }
+    const turnstileResult = await validateTurnstile(input.turnstileToken)
+    if (!turnstileResult.success) {
+      return { success: false, error: turnstileResult.error }
     }
   }
 
   // バリデーション
   const validationResult = createCommentSchema.safeParse(input)
   if (!validationResult.success) {
-    const fieldErrors: Record<string, string[]> = {}
-    for (const issue of validationResult.error.issues) {
-      const field = issue.path[0]
-      if (typeof field === 'string') {
-        if (!fieldErrors[field]) {
-          fieldErrors[field] = []
-        }
-        fieldErrors[field].push(issue.message)
-      }
-    }
     return {
       success: false,
       error: 'バリデーションエラーが発生しました',
-      fieldErrors,
+      fieldErrors: extractFieldErrors(validationResult.error),
     }
   }
 

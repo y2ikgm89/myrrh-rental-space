@@ -2,6 +2,34 @@
 
 ## 完了した計画
 
+### 015-code-quality-refactoring.md (2026-01-12)
+
+コード品質リファクタリング
+
+**実装内容**:
+- Server Actionヘルパー統一（Turnstile検証、Zodエラー抽出）
+- React 19フック作成（useFormSubmission、useFormPending）
+- Admin UI CVA→TV統一（button、badge、label、dropdown-menu）
+- Server Actionsリファクタリング（contact、reservation、blog-comment）
+- class-variance-authorityパッケージ削除
+
+**新規ファイル**:
+- `src/lib/action-helpers.ts` - Server Actionヘルパー関数
+- `src/hooks/use-form-submission.ts` - React 19フォームフック
+
+**変更ファイル**:
+- `src/components/admin/ui/button.tsx` - CVA→TV
+- `src/components/admin/ui/badge.tsx` - CVA→TV
+- `src/components/admin/ui/label.tsx` - 簡略化
+- `src/components/admin/ui/dropdown-menu.tsx` - CVA→TV
+- `src/actions/contact.ts` - ヘルパー使用
+- `src/actions/reservation.ts` - ヘルパー使用
+- `src/actions/blog-comment.ts` - ヘルパー使用
+
+**マイグレーション**: 不要
+
+---
+
 ### 014-reservation-calendar.md (2026-01-11)
 
 予約管理カレンダービュー機能
