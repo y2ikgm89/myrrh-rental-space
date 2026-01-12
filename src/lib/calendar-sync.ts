@@ -13,11 +13,11 @@ import {
   deleteCalendarEvent,
   createOAuthCalendarEvent,
   isGoogleCalendarEnabled,
-  isTwoWaySyncEnabled,
   fetchCalendarChanges,
   type CalendarEventParams,
   type CalendarChange,
 } from './google-calendar'
+import { sendCalendarSyncRejectionEmail } from './email-service'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 
@@ -343,14 +343,14 @@ export interface TwoWaySyncResult {
   errors: string[]
 }
 
-// 同期中フラグ（メモリ内ロック）
-let isSyncing = false
+// 同期の最小間隔（秒）- 連続呼び出しを防ぐ
+const SYNC_MIN_INTERVAL_SECONDS = 10
 
 /**
  * カレンダーからの変更を予約システムに同期
  *
  * ポーリングまたはWebhook受信時に呼び出される
- * 競合防止のため、同時に1つの同期のみ実行
+ * 楽観的ロック: 最終同期時刻をチェックして連続実行を防止
  */
 export async function syncFromCalendar(): Promise<TwoWaySyncResult> {
   const result: TwoWaySyncResult = {
@@ -361,26 +361,35 @@ export async function syncFromCalendar(): Promise<TwoWaySyncResult> {
     errors: [],
   }
 
-  // 既に同期中の場合はスキップ（競合防止）
-  if (isSyncing) {
-    console.log('Sync already in progress, skipping')
-    return { ...result, success: true }
-  }
-
-  isSyncing = true
-
   try {
+    // 楽観的ロック: 最近同期された場合はスキップ
+    const settings = await prisma.settings.findUnique({
+      where: { id: 'singleton' },
+      select: {
+        googleCalendarLastSyncedAt: true,
+        googleCalendarSyncToken: true,
+        googleCalendarTwoWaySyncEnabled: true,
+      },
+    })
+
+    if (settings?.googleCalendarLastSyncedAt) {
+      const lastSyncedAt = settings.googleCalendarLastSyncedAt.getTime()
+      const now = Date.now()
+      if (now - lastSyncedAt < SYNC_MIN_INTERVAL_SECONDS * 1000) {
+        console.log('Sync skipped: too recent (last sync < 10 seconds ago)')
+        return { ...result, success: true }
+      }
+    }
+
     // 双方向同期が有効か確認
-    const enabled = await isTwoWaySyncEnabled()
-    if (!enabled) {
-      isSyncing = false
+    if (!settings?.googleCalendarTwoWaySyncEnabled) {
       return { ...result, success: true }
     }
 
-    // 現在の同期トークンを取得
-    const settings = await prisma.settings.findUnique({
+    // 同期開始を記録（楽観的ロック）
+    await prisma.settings.update({
       where: { id: 'singleton' },
-      select: { googleCalendarSyncToken: true },
+      data: { googleCalendarLastSyncedAt: new Date() },
     })
 
     // カレンダーの変更を取得
@@ -415,13 +424,11 @@ export async function syncFromCalendar(): Promise<TwoWaySyncResult> {
         where: { id: 'singleton' },
         data: {
           googleCalendarSyncToken: changesResult.newSyncToken,
-          googleCalendarLastSyncedAt: new Date(),
         },
       })
     }
 
     result.success = result.errors.length === 0
-
     return result
   } catch (error) {
     console.error('Two-way sync error:', error)
@@ -430,8 +437,6 @@ export async function syncFromCalendar(): Promise<TwoWaySyncResult> {
       success: false,
       errors: [error instanceof Error ? error.message : 'Unknown error'],
     }
-  } finally {
-    isSyncing = false
   }
 }
 
@@ -444,7 +449,7 @@ interface ProcessResult {
  * 個々のカレンダー変更を処理
  */
 async function processCalendarChange(change: CalendarChange): Promise<ProcessResult> {
-  // イベントIDから予約を検索
+  // イベントIDから予約を検索（spaceId, space, customerも取得）
   const reservation = await prisma.reservation.findFirst({
     where: {
       googleCalendarEventId: change.eventId,
@@ -455,6 +460,16 @@ async function processCalendarChange(change: CalendarChange): Promise<ProcessRes
       startTime: true,
       endTime: true,
       calendarSyncedAt: true,
+      spaceId: true,
+      notes: true,
+      space: { select: { name: true } },
+      customer: {
+        select: {
+          lastName: true,
+          firstName: true,
+          email: true,
+        },
+      },
     },
   })
 
@@ -467,16 +482,8 @@ async function processCalendarChange(change: CalendarChange): Promise<ProcessRes
   if (change.deleted) {
     // 予約をキャンセル状態に更新
     if (reservation.status !== 'CANCELLED') {
-      // 現在のnotesを取得してから更新
-      const currentReservation = await prisma.reservation.findUnique({
-        where: { id: reservation.id },
-        select: { notes: true },
-      })
-
       const syncNote = `[Google Calendarで削除] ${new Date().toLocaleString('ja-JP')}`
-      const newNotes = currentReservation?.notes
-        ? `${currentReservation.notes}\n${syncNote}`
-        : syncNote
+      const newNotes = reservation.notes ? `${reservation.notes}\n${syncNote}` : syncNote
 
       await prisma.reservation.update({
         where: { id: reservation.id },
@@ -499,15 +506,91 @@ async function processCalendarChange(change: CalendarChange): Promise<ProcessRes
     const endChanged = change.endTime.getTime() !== reservation.endTime.getTime()
 
     if (startChanged || endChanged) {
-      // 時間が変更された場合は予約を更新
-      await prisma.reservation.update({
-        where: { id: reservation.id },
-        data: {
-          startTime: change.startTime,
-          endTime: change.endTime,
-          calendarSyncedAt: new Date(),
-        },
+      // トランザクションで重複チェックと更新を実行（競合防止）
+      const transactionResult = await prisma.$transaction(async (tx) => {
+        // 重複チェック（トランザクション内で再度実行）
+        const overlappingReservation = await tx.reservation.findFirst({
+          where: {
+            spaceId: reservation.spaceId,
+            status: { in: ['PENDING', 'CONFIRMED'] },
+            id: { not: reservation.id },
+            AND: [
+              { startTime: { lt: change.endTime } },
+              { endTime: { gt: change.startTime } },
+            ],
+          },
+          select: { id: true, startTime: true, endTime: true },
+        })
+
+        if (overlappingReservation) {
+          // 重複あり - 変更を拒否
+          const rejectionNote =
+            `[カレンダー同期エラー] ${new Date().toLocaleString('ja-JP')}\n` +
+            `時間変更が重複のため拒否されました。\n` +
+            `試行時間: ${format(change.startTime!, 'yyyy/MM/dd HH:mm')} - ${format(change.endTime!, 'HH:mm')}\n` +
+            `重複予約ID: ${overlappingReservation.id.slice(0, 8).toUpperCase()}`
+
+          const newNotes = reservation.notes
+            ? `${reservation.notes}\n\n${rejectionNote}`
+            : rejectionNote
+
+          await tx.reservation.update({
+            where: { id: reservation.id },
+            data: {
+              notes: newNotes,
+              calendarSyncError: 'Time change rejected: overlapping reservation',
+            },
+          })
+
+          return {
+            success: false,
+            overlappingReservation,
+          }
+        }
+
+        // 重複なし - 時間を更新
+        await tx.reservation.update({
+          where: { id: reservation.id },
+          data: {
+            startTime: change.startTime,
+            endTime: change.endTime,
+            calendarSyncedAt: new Date(),
+            calendarSyncError: null,
+          },
+        })
+
+        return { success: true }
       })
+
+      if (!transactionResult.success && transactionResult.overlappingReservation) {
+        console.warn(
+          `Calendar time change rejected due to overlap. Reservation: ${reservation.id}, ` +
+            `Attempted: ${change.startTime.toISOString()} - ${change.endTime.toISOString()}, ` +
+            `Conflict with: ${transactionResult.overlappingReservation.id}`
+        )
+
+        // 管理者にメール通知（非同期、トランザクション外）
+        const customerName = `${reservation.customer.lastName} ${reservation.customer.firstName}`
+        sendCalendarSyncRejectionEmail({
+          reservationId: reservation.id,
+          spaceName: reservation.space.name,
+          customerName,
+          customerEmail: reservation.customer.email,
+          attemptedStartTime: change.startTime,
+          attemptedEndTime: change.endTime,
+          currentStartTime: reservation.startTime,
+          currentEndTime: reservation.endTime,
+          conflictingReservation: {
+            id: transactionResult.overlappingReservation.id,
+            startTime: transactionResult.overlappingReservation.startTime,
+            endTime: transactionResult.overlappingReservation.endTime,
+          },
+        }).catch((err) => {
+          console.error('Failed to send calendar sync rejection email:', err)
+        })
+
+        return { action: 'skipped', reservationId: reservation.id }
+      }
 
       return { action: 'updated', reservationId: reservation.id }
     }

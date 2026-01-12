@@ -27,28 +27,23 @@ export function useCalendarState({ events, spaces }: UseCalendarStateOptions) {
   const spaceId = searchParams.get('spaceId') || undefined
   const status = (searchParams.get('status') as ReservationStatus | 'ALL') || 'ALL'
 
-  // 日付をuseMemoでラップ
+  // 日付計算（useCallbackの依存配列で安定した参照が必要なためuseMemo維持）
   const currentDate = useMemo(
     () => (dateParam ? new Date(dateParam) : new Date()),
     [dateParam]
   )
 
-  // 日付範囲計算
-  const dateRange = useMemo(
-    () => getCalendarDateRange(currentDate, view),
-    [currentDate, view]
-  )
+  // 日付範囲計算（React Compilerが自動メモ化）
+  const dateRange = getCalendarDateRange(currentDate, view)
 
-  // フィルタリング済みイベント
-  const filteredEvents = useMemo(() => {
-    return events.filter((event) => {
-      if (spaceId && event.spaceId !== spaceId) return false
-      if (status !== 'ALL' && event.status !== status) return false
-      return true
-    })
-  }, [events, spaceId, status])
+  // フィルタリング済みイベント（React Compilerが自動メモ化）
+  const filteredEvents = events.filter((event) => {
+    if (spaceId && event.spaceId !== spaceId) return false
+    if (status !== 'ALL' && event.status !== status) return false
+    return true
+  })
 
-  // URL更新ヘルパー
+  // URL更新ヘルパー（子コンポーネントに渡すためuseCallback維持）
   const updateParams = useCallback(
     (updates: Record<string, string | null>) => {
       const params = new URLSearchParams(searchParams.toString())
@@ -61,7 +56,7 @@ export function useCalendarState({ events, spaces }: UseCalendarStateOptions) {
       })
       router.push(`?${params.toString()}`, { scroll: false })
     },
-    [router, searchParams]
+    [searchParams, router]
   )
 
   // ビュー切り替え
@@ -109,11 +104,8 @@ export function useCalendarState({ events, spaces }: UseCalendarStateOptions) {
     [updateParams]
   )
 
-  // 日別イベント取得
-  const getEventsForDayMemo = useCallback(
-    (day: Date) => getEventsForDay(filteredEvents, day),
-    [filteredEvents]
-  )
+  // 日別イベント取得（内部使用のためuseCallback不要）
+  const getEventsForDayFn = (day: Date) => getEventsForDay(filteredEvents, day)
 
   return {
     // State
@@ -125,7 +117,7 @@ export function useCalendarState({ events, spaces }: UseCalendarStateOptions) {
     spaces,
     events: filteredEvents,
 
-    // Actions
+    // Actions（useCallbackで安定化）
     setView,
     goNext,
     goPrevious,
@@ -133,7 +125,7 @@ export function useCalendarState({ events, spaces }: UseCalendarStateOptions) {
     goToDate,
     setSpaceFilter,
     setStatusFilter,
-    getEventsForDay: getEventsForDayMemo,
+    getEventsForDay: getEventsForDayFn,
   }
 }
 

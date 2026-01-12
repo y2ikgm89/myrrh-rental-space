@@ -49,7 +49,6 @@ export type SortableListProps<T extends SortableItem> = {
   items: T[]
   onReorder: (items: T[]) => void
   renderItem: (item: T, index: number) => ReactNode
-  renderDragOverlay?: (item: T) => ReactNode
   disabled?: boolean
   className?: string
 }
@@ -182,7 +181,6 @@ export function SortableList<T extends SortableItem>({
   items,
   onReorder,
   renderItem,
-  renderDragOverlay: _renderDragOverlay,
   disabled,
   className,
 }: SortableListProps<T>) {

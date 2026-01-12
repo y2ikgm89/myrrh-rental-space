@@ -9,7 +9,7 @@
  * - カスタム色対応
  */
 
-import { useState, useSyncExternalStore, useCallback } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -42,6 +42,12 @@ function getServerSnapshot(): string[] {
   return []
 }
 
+// useSyncExternalStore用のsubscribe関数（コンポーネント外で定義して参照を安定させる）
+function subscribeToStorage(callback: () => void): () => void {
+  window.addEventListener('storage', callback)
+  return () => window.removeEventListener('storage', callback)
+}
+
 export function AnnouncementBar({
   id,
   message,
@@ -55,12 +61,8 @@ export function AnnouncementBar({
 
   // useSyncExternalStoreでセッションストレージを購読
   const dismissedIds = useSyncExternalStore(
-    useCallback((callback) => {
-      // ストレージイベントを購読（他タブからの変更を検知）
-      window.addEventListener('storage', callback)
-      return () => window.removeEventListener('storage', callback)
-    }, []),
-    () => getDismissedIds(),
+    subscribeToStorage,
+    getDismissedIds,
     getServerSnapshot
   )
 

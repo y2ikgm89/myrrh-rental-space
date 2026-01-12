@@ -233,7 +233,7 @@ export const testResendConnectionAction = withAuth(
 /**
  * Resendキーをクリア
  */
-export const clearResendKeys = withAuth(async (_user) => {
+export const clearResendKeys = withAuth(async () => {
   await prisma.settings.update({
     where: { id: 'singleton' },
     data: {
@@ -336,7 +336,7 @@ export const testTurnstileConnectionAction = withAuth(
 /**
  * Turnstileキーをクリア
  */
-export const clearTurnstileKeys = withAuth(async (_user) => {
+export const clearTurnstileKeys = withAuth(async () => {
   await prisma.settings.update({
     where: { id: 'singleton' },
     data: {
@@ -435,7 +435,7 @@ export const testGoogleMapsConnectionAction = withAuth(
 /**
  * Google Mapsキーをクリア
  */
-export const clearGoogleMapsKeys = withAuth(async (_user) => {
+export const clearGoogleMapsKeys = withAuth(async () => {
   await prisma.settings.update({
     where: { id: 'singleton' },
     data: {

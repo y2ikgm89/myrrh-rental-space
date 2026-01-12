@@ -2,14 +2,20 @@
  * プライバシーポリシーページ
  *
  * @description 個人情報の取り扱いに関するポリシーを表示（DBから取得）
+ *
+ * Next.js 16 PPR対応:
+ * - 静的シェル: セクション構造
+ * - 動的コンテンツ: ページデータ（Suspenseでラップ）
  */
 
+import { Suspense } from 'react'
+import { cacheLife, cacheTag } from 'next/cache'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { tv } from 'tailwind-variants'
 import { Container } from '@/components/site/ui'
-import { SafeHtml } from '@/components/site/SafeHtml'
-import { getPageForPublic } from '@/actions/admin/page'
+import { ContentRenderer } from '@/components/site/ContentRenderer'
+import { prisma } from '@/lib/prisma'
 import type { ReactElement } from 'react'
 
 const styles = tv({
@@ -21,8 +27,25 @@ const styles = tv({
   },
 })()
 
+/**
+ * ページデータを取得（キャッシュ付き）
+ */
+async function getPrivacyPage() {
+  'use cache'
+  cacheLife('hours')
+  cacheTag('pages', 'page-privacy')
+
+  return prisma.page.findUnique({
+    where: {
+      slug: 'privacy',
+      isPublished: true,
+      isActive: true,
+    },
+  })
+}
+
 export async function generateMetadata(): Promise<Metadata> {
-  const page = await getPageForPublic('privacy')
+  const page = await getPrivacyPage()
 
   if (!page) {
     return {
@@ -41,29 +64,67 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-export default async function PrivacyPolicyPage(): Promise<ReactElement> {
-  const page = await getPageForPublic('privacy')
+/**
+ * 日付をフォーマット
+ */
+function formatDate(date: Date): string {
+  return date.toLocaleDateString('ja-JP', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+}
+
+/**
+ * 動的コンテンツ: ページ内容
+ */
+async function PrivacyContent(): Promise<ReactElement> {
+  const page = await getPrivacyPage()
 
   if (!page) {
     notFound()
   }
 
   return (
+    <>
+      <header className={styles.header()}>
+        <h1 className={styles.title()}>{page.title}</h1>
+        <p className={styles.lastUpdated()}>
+          最終更新日: {formatDate(page.updatedAt)}
+        </p>
+      </header>
+
+      <ContentRenderer html={page.content} />
+    </>
+  )
+}
+
+/**
+ * ローディングUI
+ */
+function PrivacyLoading(): ReactElement {
+  return (
+    <div className="animate-pulse">
+      <div className="mb-12 text-center space-y-4">
+        <div className="h-10 bg-muted rounded w-64 mx-auto" />
+        <div className="h-4 bg-muted rounded w-48 mx-auto" />
+      </div>
+      <div className="space-y-4">
+        {[...Array(8)].map((_, i) => (
+          <div key={i} className="h-4 bg-muted rounded" />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export default function PrivacyPolicyPage(): ReactElement {
+  return (
     <section className={styles.section()}>
       <Container size="md">
-        <header className={styles.header()}>
-          <h1 className={styles.title()}>{page.title}</h1>
-          <p className={styles.lastUpdated()}>
-            最終更新日:{' '}
-            {new Date(page.updatedAt).toLocaleDateString('ja-JP', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            })}
-          </p>
-        </header>
-
-        <SafeHtml html={page.content} />
+        <Suspense fallback={<PrivacyLoading />}>
+          <PrivacyContent />
+        </Suspense>
       </Container>
     </section>
   )

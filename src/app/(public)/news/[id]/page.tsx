@@ -2,20 +2,56 @@
  * お知らせ詳細ページ
  *
  * @description 個別のお知らせ記事を表示
+ *
+ * Next.js 16 PPR対応:
+ * - use cache ディレクティブでデータ取得をキャッシュ
+ * - generateStaticParams でビルド時に事前生成
  */
 
+import { cacheLife, cacheTag } from 'next/cache'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { tv } from 'tailwind-variants'
 import { Container, buttonVariants } from '@/components/site/ui'
+import { ContentRenderer } from '@/components/site/ContentRenderer'
 import { prisma } from '@/lib/prisma'
 import { cn } from '@/lib/utils'
 import type { ReactElement } from 'react'
-import { NewsContent } from './_components/NewsContent'
 
 interface PageProps {
   params: Promise<{ id: string }>
+}
+
+/**
+ * お知らせ詳細を取得（キャッシュ付き）
+ */
+async function getNewsById(id: string) {
+  'use cache'
+  cacheLife('hours')
+  cacheTag('news', `news-${id}`)
+
+  return await prisma.news.findUnique({
+    where: {
+      id,
+      isPublished: true,
+      publishedAt: { not: null },
+    },
+  })
+}
+
+/**
+ * メタデータ用お知らせ情報を取得（キャッシュ付き）
+ */
+async function getNewsForMetadata(id: string) {
+  'use cache'
+  cacheLife('hours')
+  cacheTag('news', `news-${id}`)
+
+  return await prisma.news.findUnique({
+    where: { id },
+    select: { title: true, content: true },
+  })
 }
 
 /**
@@ -23,17 +59,30 @@ interface PageProps {
  * 公開中のお知らせをビルド時に事前生成
  */
 export async function generateStaticParams() {
-  const news = await prisma.news.findMany({
-    where: {
-      isPublished: true,
-      publishedAt: { not: null },
-    },
-    select: { id: true },
-  })
+  'use cache'
+  cacheLife('hours')
+  cacheTag('news')
 
-  return news.map((item) => ({
-    id: item.id,
-  }))
+  try {
+    const news = await prisma.news.findMany({
+      where: {
+        isPublished: true,
+        publishedAt: { not: null },
+      },
+      select: { id: true },
+      take: 100,
+    })
+
+    if (news.length === 0) {
+      return [{ id: '__placeholder__' }]
+    }
+
+    return news.map((item) => ({
+      id: item.id,
+    }))
+  } catch {
+    return [{ id: '__placeholder__' }]
+  }
 }
 
 const styles = tv({
@@ -64,10 +113,7 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
   const { id } = await params
 
-  const news = await prisma.news.findUnique({
-    where: { id },
-    select: { title: true, content: true },
-  })
+  const news = await getNewsForMetadata(id)
 
   if (!news) {
     return {
@@ -95,13 +141,12 @@ export default async function NewsDetailPage({
 }: PageProps): Promise<ReactElement> {
   const { id } = await params
 
-  const news = await prisma.news.findUnique({
-    where: {
-      id,
-      isPublished: true,
-      publishedAt: { not: null },
-    },
-  })
+  // プレースホルダーの場合は404
+  if (id === '__placeholder__') {
+    notFound()
+  }
+
+  const news = await getNewsById(id)
 
   if (!news) {
     notFound()
@@ -121,7 +166,7 @@ export default async function NewsDetailPage({
             </time>
           </header>
 
-          <NewsContent content={news.content} />
+          <ContentRenderer html={news.content} />
 
           <div className={styles.backLink()}>
             <Link

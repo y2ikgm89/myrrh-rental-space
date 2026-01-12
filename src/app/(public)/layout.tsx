@@ -3,54 +3,34 @@
  *
  * ヘッダー・フッター・Analytics・Cookie同意バナー・お知らせバーを含むレイアウト
  * GDPR対応: Cookie同意後のみAnalyticsを有効化
+ *
+ * Next.js 16 PPR対応:
+ * - 静的シェル: Header, Footer (use cache でキャッシュ)
+ * - 動的コンテンツ: CookieConsentBanner, Analytics (Suspense でラップ)
  */
 
+import { Suspense } from 'react'
 import { Header } from '@/components/layouts/Header'
 import { Footer } from '@/components/layouts/Footer'
 import { AnalyticsProvider } from '@/components/analytics'
 import { CookieConsentBanner } from '@/components/site/CookieConsentBanner'
 import { AnnouncementBarWrapper } from '@/components/site/AnnouncementBarWrapper'
-import { prisma } from '@/lib/prisma'
+import { getCookieConsentSettings } from '@/lib/settings'
 import { getAnalyticsConfig } from '@/lib/analytics/config'
 import type { ReactElement, ReactNode } from 'react'
 
-// 動的レンダリングを強制（ビルド時のDB接続不要）
-export const dynamic = 'force-dynamic'
-
-async function getCookieConsentSettings() {
-  try {
-    const settings = await prisma.settings.findUnique({
-      where: { id: 'singleton' },
-      select: {
-        cookieConsentEnabled: true,
-        cookieConsentMessage: true,
-        cookieConsentAcceptText: true,
-        cookieConsentRejectText: true,
-        cookieConsentPolicyUrl: true,
-      },
-    })
-    return settings
-  } catch {
-    return null
-  }
-}
-
-export default async function PublicLayout({
-  children,
-}: {
-  children: ReactNode
-}): Promise<ReactElement> {
+/**
+ * 動的コンテンツ: Cookie同意バナーとAnalytics
+ * リクエスト時に評価される
+ */
+async function DynamicContent(): Promise<ReactElement> {
   const [cookieSettings, analyticsConfig] = await Promise.all([
     getCookieConsentSettings(),
     getAnalyticsConfig(),
   ])
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <AnnouncementBarWrapper />
-      <Header />
-      <main className="flex-1">{children}</main>
-      <Footer />
+    <>
       <AnalyticsProvider config={analyticsConfig} />
       {cookieSettings?.cookieConsentEnabled && (
         <CookieConsentBanner
@@ -60,6 +40,29 @@ export default async function PublicLayout({
           policyUrl={cookieSettings.cookieConsentPolicyUrl}
         />
       )}
+    </>
+  )
+}
+
+export default async function PublicLayout({
+  children,
+}: {
+  children: ReactNode
+}): Promise<ReactElement> {
+  return (
+    <div className="flex min-h-screen flex-col">
+      {/* キャッシュされたコンテンツ - 静的シェルに含まれる */}
+      <AnnouncementBarWrapper />
+      <Header />
+
+      <main className="flex-1">{children}</main>
+
+      <Footer />
+
+      {/* 動的コンテンツ - リクエスト時にストリーミング */}
+      <Suspense fallback={null}>
+        <DynamicContent />
+      </Suspense>
     </div>
   )
 }

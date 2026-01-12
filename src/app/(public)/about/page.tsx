@@ -2,15 +2,16 @@
  * Aboutページ
  *
  * 企業・サービス紹介ページ
+ *
+ * Next.js 16 PPR対応:
+ * - unstable_cache でキャッシュされた公開設定を使用
  */
 
 import type { Metadata } from 'next'
 import { Container, Section, SectionTitle } from '@/components/site/ui'
 import { LocalBusinessJsonLd, BreadcrumbJsonLd } from '@/components/seo/JsonLd'
-import { getSettings } from '@/actions/admin/settings'
+import { getPublicBusinessSettings } from '@/lib/settings'
 import type { ReactElement } from 'react'
-
-export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
   title: '私たちについて',
@@ -19,23 +20,44 @@ export const metadata: Metadata = {
 }
 
 export default async function AboutPage(): Promise<ReactElement> {
-  const settings = await getSettings()
+  const settings = await getPublicBusinessSettings()
+
+  // 設定が取得できなかった場合はデフォルト値を使用
+  const safeSettings = settings ?? {
+    siteName: 'Myrrh Rental Space',
+    siteDescription: null,
+    businessName: null,
+    businessNameKana: null,
+    businessDescription: null,
+    businessType: null,
+    representativeName: null,
+    establishedDate: null,
+    registrationNumber: null,
+    invoiceNumber: null,
+    email: null,
+    phoneNumber: null,
+    address: null,
+    postalCode: null,
+    prefecture: null,
+    city: null,
+    streetAddress: null,
+  }
 
   return (
     <>
       {/* JSON-LD構造化データ */}
       <LocalBusinessJsonLd
-        name={settings.businessName || settings.siteName || 'Myrrh Rental Space'}
-        description={settings.businessDescription || settings.siteDescription || undefined}
-        telephone={settings.phoneNumber || undefined}
-        email={settings.email || undefined}
+        name={safeSettings.businessName || safeSettings.siteName || 'Myrrh Rental Space'}
+        description={safeSettings.businessDescription || safeSettings.siteDescription || undefined}
+        telephone={safeSettings.phoneNumber || undefined}
+        email={safeSettings.email || undefined}
         address={
-          settings.address
+          safeSettings.address
             ? {
-                streetAddress: settings.streetAddress || undefined,
-                addressLocality: settings.city || undefined,
-                addressRegion: settings.prefecture || undefined,
-                postalCode: settings.postalCode || undefined,
+                streetAddress: safeSettings.streetAddress || undefined,
+                addressLocality: safeSettings.city || undefined,
+                addressRegion: safeSettings.prefecture || undefined,
+                postalCode: safeSettings.postalCode || undefined,
               }
             : undefined
         }
@@ -55,7 +77,7 @@ export default async function AboutPage(): Promise<ReactElement> {
               私たちについて
             </h1>
             <p className="text-lg text-gray-600">
-              {settings.businessDescription ||
+              {safeSettings.businessDescription ||
                 'あなたの「やりたい」を実現する、理想のスペースを。'}
             </p>
           </div>
@@ -130,7 +152,7 @@ export default async function AboutPage(): Promise<ReactElement> {
       </Section>
 
       {/* Company Info Section */}
-      {(settings.businessName || settings.representativeName) && (
+      {(safeSettings.businessName || safeSettings.representativeName) && (
         <Section>
           <Container>
             <SectionTitle
@@ -140,41 +162,41 @@ export default async function AboutPage(): Promise<ReactElement> {
             />
             <div className="mx-auto mt-8 max-w-2xl">
               <dl className="divide-y divide-gray-200">
-                {settings.businessName && (
-                  <InfoRow label="会社名" value={settings.businessName} />
+                {safeSettings.businessName && (
+                  <InfoRow label="会社名" value={safeSettings.businessName} />
                 )}
-                {settings.businessNameKana && (
-                  <InfoRow label="フリガナ" value={settings.businessNameKana} />
+                {safeSettings.businessNameKana && (
+                  <InfoRow label="フリガナ" value={safeSettings.businessNameKana} />
                 )}
-                {settings.representativeName && (
-                  <InfoRow label="代表者" value={settings.representativeName} />
+                {safeSettings.representativeName && (
+                  <InfoRow label="代表者" value={safeSettings.representativeName} />
                 )}
-                {settings.businessType && (
-                  <InfoRow label="事業形態" value={settings.businessType} />
+                {safeSettings.businessType && (
+                  <InfoRow label="事業形態" value={safeSettings.businessType} />
                 )}
-                {settings.establishedDate && (
+                {safeSettings.establishedDate && (
                   <InfoRow
                     label="設立"
-                    value={new Date(settings.establishedDate).toLocaleDateString('ja-JP', {
+                    value={new Date(safeSettings.establishedDate).toLocaleDateString('ja-JP', {
                       year: 'numeric',
                       month: 'long',
                     })}
                   />
                 )}
-                {settings.address && (
-                  <InfoRow label="所在地" value={settings.address} />
+                {safeSettings.address && (
+                  <InfoRow label="所在地" value={safeSettings.address} />
                 )}
-                {settings.phoneNumber && (
-                  <InfoRow label="電話番号" value={settings.phoneNumber} />
+                {safeSettings.phoneNumber && (
+                  <InfoRow label="電話番号" value={safeSettings.phoneNumber} />
                 )}
-                {settings.email && (
-                  <InfoRow label="メールアドレス" value={settings.email} />
+                {safeSettings.email && (
+                  <InfoRow label="メールアドレス" value={safeSettings.email} />
                 )}
-                {settings.registrationNumber && (
-                  <InfoRow label="登録番号" value={settings.registrationNumber} />
+                {safeSettings.registrationNumber && (
+                  <InfoRow label="登録番号" value={safeSettings.registrationNumber} />
                 )}
-                {settings.invoiceNumber && (
-                  <InfoRow label="インボイス番号" value={settings.invoiceNumber} />
+                {safeSettings.invoiceNumber && (
+                  <InfoRow label="インボイス番号" value={safeSettings.invoiceNumber} />
                 )}
               </dl>
             </div>

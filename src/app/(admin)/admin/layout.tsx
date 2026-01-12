@@ -3,18 +3,19 @@
  *
  * - サイドバーナビゲーション
  * - 認証状態の表示
+ *
+ * Next.js 16 PPR対応:
+ * - 静的シェル: サイドバー、ヘッダー構造
+ * - 動的コンテンツ: 認証情報（Suspenseでラップ）
  */
 
+import { Suspense } from 'react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { headers } from 'next/headers'
 import { auth } from '@/lib/auth'
 import { LogoutButton } from './_components/LogoutButton'
 import { Toaster } from '@/components/admin/ui'
 import type { ReactElement, ReactNode } from 'react'
-
-// 動的レンダリングを強制（ビルド時のDB接続不要）
-export const dynamic = 'force-dynamic'
 
 const ADMIN_LOGIN_TOKEN = process.env.ADMIN_LOGIN_TOKEN || ''
 
@@ -37,25 +38,62 @@ const sidebarItems = [
   { label: 'お知らせ', href: '/admin/news', icon: 'news' },
   { label: 'ブログ', href: '/admin/blog', icon: 'blog' },
   { label: 'ページ管理', href: '/admin/pages', icon: 'page' },
+  { label: 'FAQ', href: '/admin/faq', icon: 'faq' },
   { label: '顧客管理', href: '/admin/customers', icon: 'users' },
   { label: '設定', href: '/admin/settings', icon: 'settings' },
 ]
+
+/**
+ * 動的コンテンツ: ユーザー情報
+ */
+async function UserInfo(): Promise<ReactElement | null> {
+  const session = await auth()
+
+  if (!session?.user) return null
+
+  return (
+    <div className="absolute bottom-0 left-0 right-0 border-t border-gray-800 p-4">
+      <div className="flex items-center gap-3">
+        <div className="h-8 w-8 rounded-full bg-gray-700 flex items-center justify-center">
+          <span className="text-sm font-medium">
+            {session.user.name?.[0] ?? session.user.email?.[0] ?? 'U'}
+          </span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium truncate">
+            {session.user.name ?? 'ユーザー'}
+          </p>
+          <p className="text-xs text-gray-400 truncate">
+            {session.user.email}
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * ユーザー情報ローディング
+ */
+function UserInfoLoading(): ReactElement {
+  return (
+    <div className="absolute bottom-0 left-0 right-0 border-t border-gray-800 p-4">
+      <div className="flex items-center gap-3 animate-pulse">
+        <div className="h-8 w-8 rounded-full bg-gray-700" />
+        <div className="flex-1 space-y-2">
+          <div className="h-4 bg-gray-700 rounded w-20" />
+          <div className="h-3 bg-gray-700 rounded w-32" />
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default async function AdminLayout({
   children,
 }: {
   children: ReactNode
 }): Promise<ReactElement> {
-  const headersList = await headers()
-  const pathname = headersList.get('x-pathname') || headersList.get('x-invoke-path') || ''
-
-  // ログインページの場合はサイドバーなしで表示
-  if (pathname.includes('/admin/login')) {
-    return <>{children}</>
-  }
-
-  const session = await auth()
-
   return (
     <div className="min-h-screen bg-gray-100">
       {/* サイドバー */}
@@ -84,26 +122,10 @@ export default async function AdminLayout({
           </ul>
         </nav>
 
-        {/* ユーザー情報 */}
-        {session?.user && (
-          <div className="absolute bottom-0 left-0 right-0 border-t border-gray-800 p-4">
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-gray-700 flex items-center justify-center">
-                <span className="text-sm font-medium">
-                  {session.user.name?.[0] ?? session.user.email?.[0] ?? 'U'}
-                </span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">
-                  {session.user.name ?? 'ユーザー'}
-                </p>
-                <p className="text-xs text-gray-400 truncate">
-                  {session.user.email}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* ユーザー情報（動的） */}
+        <Suspense fallback={<UserInfoLoading />}>
+          <UserInfo />
+        </Suspense>
       </aside>
 
       {/* メインコンテンツ */}
@@ -179,6 +201,12 @@ function SidebarIcon({ icon }: SidebarIconProps): ReactElement | null {
       return (
         <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      )
+    case 'faq':
+      return (
+        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       )
     case 'users':

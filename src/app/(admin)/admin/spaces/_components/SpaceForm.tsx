@@ -13,7 +13,6 @@ import {
   CardHeader,
   CardTitle,
   Input,
-  Textarea,
   Label,
   Switch,
   DndContext,
@@ -38,6 +37,7 @@ import {
 } from '@/lib/validations/space'
 import { createSpace, updateSpace } from '@/actions/admin/space'
 import { cn } from '@/lib/utils'
+import { RichTextEditor } from '@/components/admin/editor'
 
 type SpaceFormProps = {
   space?: SpaceWithStats
@@ -283,11 +283,11 @@ export function SpaceForm({ space, mode }: SpaceFormProps) {
 
           <div className="space-y-2">
             <Label htmlFor="description">説明 *</Label>
-            <Textarea
-              id="description"
-              {...register('description')}
+            <RichTextEditor
+              content={space?.description || ''}
+              onChange={(html) => setValue('description', html)}
               placeholder="スペースの説明を入力..."
-              rows={5}
+              minHeight="200px"
               disabled={isPending}
             />
             {errors.description && (

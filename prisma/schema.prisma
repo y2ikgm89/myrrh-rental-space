@@ -466,6 +466,46 @@ model SocialLink {
 }
 
 // ==============================================
+// FAQ Models
+// ==============================================
+
+model FaqCategory {
+  id          String    @id @default(uuid())
+  name        String
+  slug        String    @unique
+  description String?   @db.Text
+  order       Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  items FaqItem[]
+
+  @@index([order])
+  @@index([isActive, order])
+  @@map("faq_categories")
+}
+
+model FaqItem {
+  id         String      @id @default(uuid())
+  categoryId String
+  question   String
+  answer     String      @db.Text  // Lexical HTML (リッチテキスト)
+  order      Int         @default(0)
+  isActive   Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  // Relations
+  category FaqCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([categoryId, order])
+  @@index([isActive])
+  @@map("faq_items")
+}
+
+// ==============================================
 // Settings (Singleton)
 // ==============================================
 

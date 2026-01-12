@@ -50,3 +50,48 @@ export function determinePublishedAt(
   if (isPublished && !existingDate) return new Date()
   return existingDate ?? null
 }
+
+// =============================================================================
+// フォーマット関数
+// =============================================================================
+
+/**
+ * 日本円の通貨フォーマット
+ *
+ * @example
+ * formatCurrency(12345) // → '¥12,345'
+ */
+export function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('ja-JP', {
+    style: 'currency',
+    currency: 'JPY',
+  }).format(value)
+}
+
+/**
+ * 変化率のフォーマット（+/-記号付き）
+ *
+ * @example
+ * formatChange(15)  // → '+15%'
+ * formatChange(-5)  // → '-5%'
+ * formatChange(0)   // → '0%'
+ */
+export function formatChange(change: number): string {
+  if (change > 0) return `+${change}%`
+  if (change < 0) return `${change}%`
+  return '0%'
+}
+
+/**
+ * 変化率に応じた色クラスを取得
+ *
+ * @example
+ * getChangeColor(15)  // → 'text-green-600'
+ * getChangeColor(-5)  // → 'text-red-600'
+ * getChangeColor(0)   // → 'text-muted-foreground'
+ */
+export function getChangeColor(change: number): string {
+  if (change > 0) return 'text-green-600'
+  if (change < 0) return 'text-red-600'
+  return 'text-muted-foreground'
+}

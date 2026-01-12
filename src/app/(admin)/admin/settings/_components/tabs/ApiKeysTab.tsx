@@ -6,7 +6,7 @@
  * 外部サービスAPIキーの管理タブ
  */
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import {
   getResendConfig,
   getTurnstileConfig,
@@ -45,7 +45,7 @@ export function ApiKeysTab({ onUpdate }: ApiKeysTabProps) {
   const [googleMapsConfig, setGoogleMapsConfig] = useState<GoogleMapsConfig | null>(null)
   const [customApiKeys, setCustomApiKeys] = useState<CustomApiKeyData[]>([])
 
-  const loadConfigs = useCallback(async () => {
+  const loadConfigs = async () => {
     try {
       const [resend, turnstile, googleMaps, custom] = await Promise.all([
         getResendConfig(),
@@ -62,11 +62,11 @@ export function ApiKeysTab({ onUpdate }: ApiKeysTabProps) {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }
 
   useEffect(() => {
     loadConfigs()
-  }, [loadConfigs])
+  }, [])
 
   const handleUpdate = () => {
     loadConfigs()

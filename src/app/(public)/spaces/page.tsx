@@ -2,8 +2,13 @@
  * スペース一覧ページ
  *
  * @description nuqs を使用した URL State 管理のサンプル実装
+ *
+ * Next.js 16 PPR対応:
+ * - 静的シェル: ページヘッダー
+ * - 動的コンテンツ: 検索結果（Suspenseでラップ）
  */
 
+import { Suspense } from 'react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -90,14 +95,14 @@ function SpaceCard({ space }: SpaceCardProps): ReactElement {
   )
 }
 
-interface PageProps {
-  searchParams: Promise<SearchParams>
-}
-
-export default async function SpacesPage({
+/**
+ * 動的コンテンツ: 検索結果
+ */
+async function SpaceResults({
   searchParams,
-}: PageProps): Promise<ReactElement> {
-  // nuqs: Server Component でのパラメータ読み込み
+}: {
+  searchParams: Promise<SearchParams>
+}): Promise<ReactElement> {
   const { q, page, perPage, sort } = await loadSpaceSearchParams(searchParams)
   const parsedParams = spaceSearchParamsSchema.safeParse({
     q,
@@ -140,8 +145,64 @@ export default async function SpacesPage({
   const totalPages = Math.ceil(totalCount / safePerPage)
 
   return (
+    <>
+      {/* 検索結果件数 */}
+      <p className={styles.resultCount()}>
+        {totalCount}件中 {(safePage - 1) * safePerPage + 1}-
+        {Math.min(safePage * safePerPage, totalCount)}件を表示
+        {safeQuery && (
+          <span className="ml-2">（検索: &quot;{safeQuery}&quot;）</span>
+        )}
+      </p>
+
+      {/* スペースグリッド */}
+      {spaces.length > 0 ? (
+        <div className={styles.grid()}>
+          {spaces.map((space) => (
+            <SpaceCard key={space.id} space={space} />
+          ))}
+        </div>
+      ) : (
+        <div className={styles.emptyState()}>
+          <p>条件に一致するスペースが見つかりませんでした。</p>
+        </div>
+      )}
+
+      {/* ページネーション */}
+      {totalPages > 1 && (
+        <Pagination currentPage={safePage} totalPages={totalPages} />
+      )}
+    </>
+  )
+}
+
+/**
+ * ローディングUI
+ */
+function SpaceResultsLoading(): ReactElement {
+  return (
+    <div className="animate-pulse space-y-4">
+      <div className="h-6 bg-muted rounded w-48" />
+      <div className={styles.grid()}>
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="h-64 bg-muted rounded-lg" />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+interface PageProps {
+  searchParams: Promise<SearchParams>
+}
+
+export default async function SpacesPage({
+  searchParams,
+}: PageProps): Promise<ReactElement> {
+  return (
     <section className={styles.section()}>
       <Container>
+        {/* 静的シェル: ヘッダー */}
         <header className={styles.header()}>
           <h1 className={styles.title()}>スペース一覧</h1>
           <p className={styles.subtitle()}>
@@ -154,32 +215,10 @@ export default async function SpacesPage({
           <SpaceFilters />
         </div>
 
-        {/* 検索結果件数 */}
-        <p className={styles.resultCount()}>
-          {totalCount}件中 {(safePage - 1) * safePerPage + 1}-
-          {Math.min(safePage * safePerPage, totalCount)}件を表示
-          {safeQuery && (
-            <span className="ml-2">（検索: &quot;{safeQuery}&quot;）</span>
-          )}
-        </p>
-
-        {/* スペースグリッド */}
-        {spaces.length > 0 ? (
-          <div className={styles.grid()}>
-            {spaces.map((space) => (
-              <SpaceCard key={space.id} space={space} />
-            ))}
-          </div>
-        ) : (
-          <div className={styles.emptyState()}>
-            <p>条件に一致するスペースが見つかりませんでした。</p>
-          </div>
-        )}
-
-        {/* ページネーション */}
-        {totalPages > 1 && (
-          <Pagination currentPage={safePage} totalPages={totalPages} />
-        )}
+        {/* 動的コンテンツ: 検索結果 */}
+        <Suspense fallback={<SpaceResultsLoading />}>
+          <SpaceResults searchParams={searchParams} />
+        </Suspense>
       </Container>
     </section>
   )

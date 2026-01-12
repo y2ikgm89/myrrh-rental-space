@@ -199,7 +199,7 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
     handleSubmit,
     reset,
     setValue,
-    watch,
+    getValues,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -307,7 +307,7 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
 
   // 名前からスラッグを生成
   const generateSlug = () => {
-    const name = watch('name')
+    const name = getValues('name')
     if (name) {
       const slug = name
         .toLowerCase()

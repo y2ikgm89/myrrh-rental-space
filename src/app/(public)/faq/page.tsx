@@ -2,12 +2,19 @@
  * FAQページ
  *
  * よくある質問ページ（アコーディオンUI）
+ * DBからFAQデータを取得して表示
+ *
+ * Next.js 16 PPR対応:
+ * - use cache ディレクティブでデータ取得をキャッシュ
  */
 
+import { Suspense } from 'react'
+import { cacheLife, cacheTag } from 'next/cache'
 import type { Metadata } from 'next'
 import { Container, Section, SectionTitle } from '@/components/site/ui'
 import { FAQPageJsonLd, BreadcrumbJsonLd } from '@/components/seo/JsonLd'
 import { FAQAccordion } from './_components/FAQAccordion'
+import { prisma } from '@/lib/prisma'
 import type { ReactElement } from 'react'
 
 export const metadata: Metadata = {
@@ -16,118 +23,107 @@ export const metadata: Metadata = {
     'Myrrh Rental Spaceのよくある質問をまとめています。ご予約、ご利用方法、キャンセルポリシーなど。',
 }
 
-// FAQデータ
-const faqItems = [
-  {
-    category: 'ご予約について',
-    items: [
-      {
-        question: '予約はどのくらい前から可能ですか？',
-        answer:
-          '3ヶ月先までのご予約が可能です。人気の日時は早めにご予約いただくことをおすすめします。',
-      },
-      {
-        question: '予約の変更はできますか？',
-        answer:
-          'ご利用日の3日前までであれば、日時の変更が可能です。お問い合わせフォームまたはお電話にてご連絡ください。',
-      },
-      {
-        question: '当日予約は可能ですか？',
-        answer:
-          '空きがあれば当日予約も可能です。ただし、準備の都合上、ご利用開始の2時間前までにご予約ください。',
-      },
-    ],
-  },
-  {
-    category: 'ご利用について',
-    items: [
-      {
-        question: '利用時間には準備・片付けの時間も含まれますか？',
-        answer:
-          'はい、ご予約いただいた時間内に準備・片付けを含めてご利用ください。延長をご希望の場合は、事前にご相談ください。',
-      },
-      {
-        question: '飲食は可能ですか？',
-        answer:
-          '軽食・飲み物の持ち込みは可能です。ただし、調理を伴う飲食や、においの強い食べ物はご遠慮いただいております。ケータリングの手配も承りますので、ご相談ください。',
-      },
-      {
-        question: '設備や備品は何がありますか？',
-        answer:
-          '各スペースにより異なりますが、Wi-Fi、プロジェクター、ホワイトボード、電源タップなどの基本設備をご用意しています。詳しくは各スペースの詳細ページをご確認ください。',
-      },
-      {
-        question: '駐車場はありますか？',
-        answer:
-          'スペースにより異なります。各スペースの詳細ページにてご確認いただくか、お問い合わせください。近隣のコインパーキングをご案内することも可能です。',
-      },
-    ],
-  },
-  {
-    category: 'お支払いについて',
-    items: [
-      {
-        question: '支払い方法を教えてください',
-        answer:
-          'クレジットカード（VISA、Mastercard、JCB、American Express）、銀行振込でのお支払いが可能です。',
-      },
-      {
-        question: '請求書払いは可能ですか？',
-        answer:
-          '法人のお客様には請求書払いも承っております。事前審査がございますので、お問い合わせください。',
-      },
-      {
-        question: '領収書は発行されますか？',
-        answer:
-          'はい、ご利用後にメールにて領収書をお送りいたします。宛名のご指定がある場合は、予約時にお知らせください。',
-      },
-    ],
-  },
-  {
-    category: 'キャンセルについて',
-    items: [
-      {
-        question: 'キャンセル料はかかりますか？',
-        answer:
-          'キャンセル料は以下の通りです。\n・7日前まで：無料\n・3〜6日前：利用料金の30%\n・前日〜2日前：利用料金の50%\n・当日：利用料金の100%',
-      },
-      {
-        question: 'キャンセルの方法を教えてください',
-        answer:
-          'お問い合わせフォームまたはお電話にてご連絡ください。キャンセル確定後、確認メールをお送りいたします。',
-      },
-    ],
-  },
-  {
-    category: 'その他',
-    items: [
-      {
-        question: '下見・内覧はできますか？',
-        answer:
-          'はい、事前にご予約いただければ無料で内覧いただけます。お問い合わせフォームよりご希望日時をお知らせください。',
-      },
-      {
-        question: '定期利用・長期利用の割引はありますか？',
-        answer:
-          '月4回以上のご利用や、長期契約の場合は割引がございます。詳しくはお問い合わせください。',
-      },
-      {
-        question: '商用撮影での利用は可能ですか？',
-        answer:
-          '可能です。ただし、撮影内容により別途審査が必要な場合がございます。事前にご相談ください。',
-      },
-    ],
-  },
-]
+/**
+ * FAQデータを取得（キャッシュ付き）
+ */
+async function getFaqData() {
+  'use cache'
+  cacheLife('hours')
+  cacheTag('faq')
 
-// FAQPageJsonLd用にフラット化
-const flatFaqItems = faqItems.flatMap((category) => category.items)
+  const categories = await prisma.faqCategory.findMany({
+    where: { isActive: true },
+    include: {
+      items: {
+        where: { isActive: true },
+        orderBy: { order: 'asc' },
+      },
+    },
+    orderBy: { order: 'asc' },
+  })
 
-export default function FAQPage(): ReactElement {
+  return categories
+}
+
+/**
+ * HTMLタグを除去してプレーンテキストを取得
+ */
+function stripHtmlTags(html: string): string {
+  return html.replace(/<[^>]*>/g, '').trim()
+}
+
+/**
+ * 動的コンテンツ: FAQリスト
+ */
+async function FAQContent(): Promise<ReactElement> {
+  const categories = await getFaqData()
+
+  // FAQPageJsonLd用にフラット化（HTMLタグを除去）
+  const flatFaqItems = categories.flatMap((category) =>
+    category.items.map((item) => ({
+      question: item.question,
+      answer: stripHtmlTags(item.answer),
+    }))
+  )
+
+  // FAQが空の場合のフォールバック
+  if (categories.length === 0) {
+    return (
+      <div className="text-center py-12 text-muted-foreground">
+        <p>現在、FAQは登録されていません。</p>
+      </div>
+    )
+  }
+
   return (
     <>
       {/* JSON-LD構造化データ */}
       <FAQPageJsonLd items={flatFaqItems} />
+
+      {/* FAQ Section */}
+      <div className="mx-auto max-w-3xl">
+        {categories.map((category) => (
+          <div key={category.id} className="mb-12 last:mb-0">
+            <SectionTitle title={category.name} align="left" />
+            <div className="mt-6">
+              <FAQAccordion
+                items={category.items.map((item) => ({
+                  question: item.question,
+                  answer: item.answer,
+                }))}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  )
+}
+
+/**
+ * ローディングUI
+ */
+function FAQLoading(): ReactElement {
+  return (
+    <div className="mx-auto max-w-3xl animate-pulse">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="mb-12">
+          <div className="h-8 bg-muted rounded w-48 mb-6" />
+          <div className="space-y-2">
+            {[1, 2, 3].map((j) => (
+              <div key={j} className="h-14 bg-muted rounded" />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+export default function FAQPage(): ReactElement {
+  return (
+    <>
+      {/* JSON-LD構造化データ (パンくず) */}
       <BreadcrumbJsonLd
         items={[
           { name: 'ホーム', url: '/' },
@@ -152,16 +148,9 @@ export default function FAQPage(): ReactElement {
       {/* FAQ Section */}
       <Section>
         <Container>
-          <div className="mx-auto max-w-3xl">
-            {faqItems.map((category, index) => (
-              <div key={index} className="mb-12 last:mb-0">
-                <SectionTitle title={category.category} align="left" />
-                <div className="mt-6">
-                  <FAQAccordion items={category.items} />
-                </div>
-              </div>
-            ))}
-          </div>
+          <Suspense fallback={<FAQLoading />}>
+            <FAQContent />
+          </Suspense>
         </Container>
       </Section>
 

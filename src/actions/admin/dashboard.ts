@@ -3,6 +3,7 @@
 import { connection } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/auth'
+import type { ReservationStatus, InquiryStatus } from '@/generated/prisma/client/enums'
 
 // =============================================================================
 // Types
@@ -35,7 +36,7 @@ export type RecentReservation = {
   customerName: string
   startTime: Date
   endTime: Date
-  status: string
+  status: ReservationStatus
   totalPrice: number | null
 }
 
@@ -44,7 +45,7 @@ export type RecentInquiry = {
   name: string
   email: string
   subject: string
-  status: string
+  status: InquiryStatus
   createdAt: Date
 }
 

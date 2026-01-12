@@ -1,27 +1,26 @@
 /**
  * エディタコンポーネント エクスポート
  *
- * Tiptapベースのリッチテキストエディタと関連コンポーネント
+ * Lexicalベースのリッチテキストエディタ
  */
 
-// メインエディタ
-export { RichTextEditor } from './RichTextEditor'
-export type { RichTextEditorProps } from './RichTextEditor'
+// メインエディタ（後方互換性のためRichTextEditorとしてもエクスポート）
+export { LexicalEditor, LexicalEditor as RichTextEditor } from './lexical'
+export type { LexicalEditorProps, LexicalEditorProps as RichTextEditorProps } from './lexical'
 
-// ツールバー
-export { EditorToolbar } from './EditorToolbar'
+// ノード
+export {
+  ImageNode,
+  YouTubeNode,
+  PostListWidgetNode,
+  type PostListWidgetType,
+} from './lexical'
 
-// メニューコンポーネント
-export { EditorBubbleMenu } from './EditorBubbleMenu'
-export { EditorFloatingMenu } from './EditorFloatingMenu'
-export { TableMenu } from './TableMenu'
-export { ColorPicker } from './ColorPicker'
-
-// ダイアログコンポーネント
-export { ImageUploadDialog } from './ImageUploadDialog'
-export { VideoDialog } from './VideoDialog'
-
-// カスタム拡張
-export { PostListWidget } from './PostListWidgetExtension'
-export type { PostListWidgetAttributes, PostListWidgetType } from './PostListWidgetExtension'
-export { PostListWidgetComponent } from './PostListWidgetComponent'
+// プラグイン
+export {
+  ToolbarPlugin,
+  FloatingToolbarPlugin,
+  ImagePlugin,
+  YouTubePlugin,
+  PostListWidgetPlugin,
+} from './lexical'

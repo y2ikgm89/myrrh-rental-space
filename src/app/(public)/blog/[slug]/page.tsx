@@ -1,9 +1,14 @@
 /**
  * ブログ記事詳細ページ
  *
- * SafeHtmlコンポーネントでリッチテキストを安全に表示
+ * ContentRendererコンポーネントでリッチテキストを安全に表示
+ *
+ * Next.js 16 PPR対応:
+ * - use cache ディレクティブでデータ取得をキャッシュ
+ * - generateStaticParams でビルド時に事前生成
  */
 
+import { cacheLife, cacheTag } from 'next/cache'
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -11,7 +16,7 @@ import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { tv } from 'tailwind-variants'
 import { Container } from '@/components/site/ui'
-import { BlogContentRenderer } from '@/components/site/BlogContentRenderer'
+import { ContentRenderer } from '@/components/site/ContentRenderer'
 import { prisma } from '@/lib/prisma'
 import { parseStringArray } from '@/lib/json-validators'
 import { CommentSection } from './_components'
@@ -60,21 +65,61 @@ function formatDate(value: Date | null): string {
   })
 }
 
-
 // =============================================================================
-// Metadata
+// Data Fetching with Cache
 // =============================================================================
 
 interface PageProps {
   params: Promise<{ slug: string }>
 }
 
-export async function generateMetadata({
-  params,
-}: PageProps): Promise<Metadata> {
-  const { slug } = await params
+/**
+ * ブログ記事詳細を取得（キャッシュ付き）
+ */
+async function getBlogPostBySlug(slug: string) {
+  'use cache'
+  cacheLife('hours')
+  cacheTag('blog', `blog-${slug}`)
 
-  const post = await prisma.blogPost.findUnique({
+  return await prisma.blogPost.findUnique({
+    where: {
+      slug,
+      isPublished: true,
+    },
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      excerpt: true,
+      content: true,
+      thumbnailUrl: true,
+      ogpImageUrl: true,
+      publishedAt: true,
+      tags: true,
+      metaDescription: true,
+      metaKeywords: true,
+      ogpTitle: true,
+      ogpDescription: true,
+      categoryId: true,
+      category: {
+        select: {
+          name: true,
+          slug: true,
+        },
+      },
+    },
+  })
+}
+
+/**
+ * メタデータ用ブログ記事情報を取得（キャッシュ付き）
+ */
+async function getBlogPostForMetadata(slug: string) {
+  'use cache'
+  cacheLife('hours')
+  cacheTag('blog', `blog-${slug}`)
+
+  return await prisma.blogPost.findUnique({
     where: { slug },
     select: {
       title: true,
@@ -87,6 +132,58 @@ export async function generateMetadata({
       ogpDescription: true,
     },
   })
+}
+
+/**
+ * 前後の記事を取得（キャッシュ付き）
+ */
+async function getAdjacentPosts(postId: string, publishedAt: Date | null) {
+  'use cache'
+  cacheLife('hours')
+  cacheTag('blog')
+
+  const [prevPost, nextPost] = await Promise.all([
+    prisma.blogPost.findFirst({
+      where: {
+        isPublished: true,
+        AND: [
+          { publishedAt: { not: null } },
+          publishedAt
+            ? { publishedAt: { lt: publishedAt } }
+            : { id: { lt: postId } },
+        ],
+      },
+      orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }],
+      select: { slug: true, title: true },
+    }),
+    prisma.blogPost.findFirst({
+      where: {
+        isPublished: true,
+        AND: [
+          { publishedAt: { not: null } },
+          publishedAt
+            ? { publishedAt: { gt: publishedAt } }
+            : { id: { gt: postId } },
+        ],
+      },
+      orderBy: [{ publishedAt: 'asc' }, { id: 'asc' }],
+      select: { slug: true, title: true },
+    }),
+  ])
+
+  return { prevPost, nextPost }
+}
+
+// =============================================================================
+// Metadata
+// =============================================================================
+
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  const { slug } = await params
+
+  const post = await getBlogPostForMetadata(slug)
 
   if (!post) {
     return {
@@ -117,15 +214,32 @@ export async function generateMetadata({
   }
 }
 
+/**
+ * 静的パラメータ生成
+ * 公開中のブログ記事をビルド時に事前生成
+ */
 export async function generateStaticParams() {
-  const posts = await prisma.blogPost.findMany({
-    where: { isPublished: true },
-    select: { slug: true },
-  })
+  'use cache'
+  cacheLife('hours')
+  cacheTag('blog')
 
-  return posts.map((post) => ({
-    slug: post.slug,
-  }))
+  try {
+    const posts = await prisma.blogPost.findMany({
+      where: { isPublished: true },
+      select: { slug: true },
+      take: 100,
+    })
+
+    if (posts.length === 0) {
+      return [{ slug: '__placeholder__' }]
+    }
+
+    return posts.map((post) => ({
+      slug: post.slug,
+    }))
+  } catch {
+    return [{ slug: '__placeholder__' }]
+  }
 }
 
 // =============================================================================
@@ -137,70 +251,19 @@ export default async function BlogDetailPage({
 }: PageProps): Promise<ReactElement> {
   const { slug } = await params
 
-  const post = await prisma.blogPost.findUnique({
-    where: {
-      slug,
-      isPublished: true,
-    },
-    select: {
-      id: true,
-      title: true,
-      slug: true,
-      excerpt: true,
-      content: true,
-      thumbnailUrl: true,
-      ogpImageUrl: true,
-      publishedAt: true,
-      tags: true,
-      metaDescription: true,
-      metaKeywords: true,
-      ogpTitle: true,
-      ogpDescription: true,
-      categoryId: true,
-      category: {
-        select: {
-          name: true,
-          slug: true,
-        },
-      },
-    },
-  })
+  // プレースホルダーの場合は404
+  if (slug === '__placeholder__') {
+    notFound()
+  }
+
+  const post = await getBlogPostBySlug(slug)
 
   if (!post) {
     notFound()
   }
 
   const tags = parseStringArray(post.tags)
-
-  // 前後の記事を取得
-  const [prevPost, nextPost] = await Promise.all([
-    prisma.blogPost.findFirst({
-      where: {
-        isPublished: true,
-        AND: [
-          { publishedAt: { not: null } },
-          post.publishedAt
-            ? { publishedAt: { lt: post.publishedAt } }
-            : { id: { lt: post.id } },
-        ],
-      },
-      orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }],
-      select: { slug: true, title: true },
-    }),
-    prisma.blogPost.findFirst({
-      where: {
-        isPublished: true,
-        AND: [
-          { publishedAt: { not: null } },
-          post.publishedAt
-            ? { publishedAt: { gt: post.publishedAt } }
-            : { id: { gt: post.id } },
-        ],
-      },
-      orderBy: [{ publishedAt: 'asc' }, { id: 'asc' }],
-      select: { slug: true, title: true },
-    }),
-  ])
+  const { prevPost, nextPost } = await getAdjacentPosts(post.id, post.publishedAt)
 
   return (
     <section className={styles.section()}>
@@ -252,11 +315,13 @@ export default async function BlogDetailPage({
           </div>
 
           {/* 本文（HTMLコンテンツ + PostListWidget） */}
-          <BlogContentRenderer
+          <ContentRenderer
             html={post.content}
-            categoryId={post.categoryId}
-            currentPostId={post.id}
             className={styles.content()}
+            widgetContext={{
+              categoryId: post.categoryId,
+              excludePostId: post.id,
+            }}
           />
 
           {/* タグ */}

@@ -72,24 +72,15 @@ export async function getAnnouncementBars(): Promise<GetAnnouncementBarsResult> 
 
 /**
  * 有効なお知らせバーを複数取得（フロントエンド用）
- * 優先度順、表示期間内のもののみ
+ * 優先度順、isActiveがtrueのもののみ
+ *
+ * Note: 表示期間（startAt/endAt）のフィルタリングはクライアントサイドで実行
+ * cacheComponentsモードでは new Date() が静的レンダリング時に使用できないため
  */
 export async function getActiveAnnouncementBars(): Promise<AnnouncementBarData[]> {
-  const now = new Date()
-
   const bars = await prisma.announcementBar.findMany({
     where: {
       isActive: true,
-      OR: [
-        // 期間指定なし
-        { startAt: null, endAt: null },
-        // 開始日のみ指定
-        { startAt: { lte: now }, endAt: null },
-        // 終了日のみ指定
-        { startAt: null, endAt: { gte: now } },
-        // 両方指定
-        { startAt: { lte: now }, endAt: { gte: now } },
-      ],
     },
     orderBy: [
       { priority: 'desc' },

@@ -20,7 +20,6 @@ import {
 } from '@/components/admin/status-badges'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import type { ReservationStatus, InquiryStatus } from '@/generated/prisma/client/enums'
 
 export async function DashboardRecentSection() {
   // 関連データを並列取得
@@ -69,7 +68,7 @@ export async function DashboardRecentSection() {
                       </Link>
                     </TableCell>
                     <TableCell>
-                      <ReservationStatusBadge status={reservation.status as ReservationStatus} />
+                      <ReservationStatusBadge status={reservation.status} />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -117,7 +116,7 @@ export async function DashboardRecentSection() {
                       </Link>
                     </TableCell>
                     <TableCell>
-                      <InquiryStatusBadge status={inquiry.status as InquiryStatus} />
+                      <InquiryStatusBadge status={inquiry.status} />
                     </TableCell>
                   </TableRow>
                 ))}

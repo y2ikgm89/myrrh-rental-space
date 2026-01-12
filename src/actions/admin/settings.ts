@@ -486,7 +486,7 @@ export const updateSeoSettings = withAuth(async (_user, data: SeoSettingsInput) 
     update: parsed.data,
   })
 
-  // Analytics設定キャッシュを無効化
+  // Analytics設定キャッシュを即座に無効化
   revalidateTag('analytics-config', { expire: 0 })
   revalidatePath('/admin/settings')
   revalidatePath('/')

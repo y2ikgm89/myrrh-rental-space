@@ -2,8 +2,13 @@
  * スペース詳細ページ
  *
  * @description 動的ルーティングでスペースの詳細情報を表示
+ *
+ * Next.js 16 PPR対応:
+ * - use cache ディレクティブでデータ取得をキャッシュ
+ * - generateStaticParams でビルド時に事前生成
  */
 
+import { cacheLife, cacheTag } from 'next/cache'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -22,21 +27,73 @@ interface PageProps {
 }
 
 /**
+ * スペース詳細を取得（キャッシュ付き）
+ * idをキャッシュキーとして使用
+ */
+async function getSpaceById(id: string) {
+  'use cache'
+  cacheLife('hours')
+  cacheTag('spaces', `space-${id}`)
+
+  return await prisma.space.findUnique({
+    where: {
+      id,
+      isPublished: true,
+      isActive: true,
+    },
+  })
+}
+
+/**
+ * メタデータ用スペース情報を取得（キャッシュ付き）
+ */
+async function getSpaceForMetadata(id: string) {
+  'use cache'
+  cacheLife('hours')
+  cacheTag('spaces', `space-${id}`)
+
+  return await prisma.space.findUnique({
+    where: { id },
+    select: { name: true, description: true, mainImageUrl: true },
+  })
+}
+
+/**
  * 静的パラメータ生成
  * 公開中のスペースをビルド時に事前生成
  */
 export async function generateStaticParams() {
-  const spaces = await prisma.space.findMany({
-    where: {
-      isPublished: true,
-      isActive: true,
-    },
-    select: { id: true },
-  })
+  'use cache'
+  cacheLife('hours')
+  cacheTag('spaces')
 
-  return spaces.map((space) => ({
-    id: space.id,
-  }))
+  try {
+    const spaces = await prisma.space.findMany({
+      where: {
+        isPublished: true,
+        isActive: true,
+      },
+      select: { id: true },
+      take: 100,
+    })
+
+    if (spaces.length === 0) {
+      return [{ id: '__placeholder__' }]
+    }
+
+    return spaces.map((space) => ({
+      id: space.id,
+    }))
+  } catch {
+    return [{ id: '__placeholder__' }]
+  }
+}
+
+/**
+ * HTMLタグを除去してプレーンテキストを取得
+ */
+function stripHtmlTags(html: string): string {
+  return html.replace(/<[^>]*>/g, '').trim()
 }
 
 /**
@@ -46,10 +103,7 @@ export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
   const { id } = await params
-  const space = await prisma.space.findUnique({
-    where: { id },
-    select: { name: true, description: true, mainImageUrl: true },
-  })
+  const space = await getSpaceForMetadata(id)
 
   if (!space) {
     return {
@@ -57,15 +111,19 @@ export async function generateMetadata({
     }
   }
 
+  // HTMLタグを除去したプレーンテキストを取得
+  const plainDescription = stripHtmlTags(space.description)
+  const truncatedDescription =
+    plainDescription.length > 160
+      ? plainDescription.slice(0, 157) + '...'
+      : plainDescription
+
   return {
     title: space.name,
-    description:
-      space.description.length > 160
-        ? space.description.slice(0, 157) + '...'
-        : space.description,
+    description: truncatedDescription,
     openGraph: {
       title: space.name,
-      description: space.description,
+      description: truncatedDescription,
       images: [{ url: space.mainImageUrl }],
     },
   }
@@ -76,13 +134,12 @@ export default async function SpaceDetailPage({
 }: PageProps): Promise<ReactElement> {
   const { id } = await params
 
-  const space = await prisma.space.findUnique({
-    where: {
-      id,
-      isPublished: true,
-      isActive: true,
-    },
-  })
+  // プレースホルダーの場合は404
+  if (id === '__placeholder__') {
+    notFound()
+  }
+
+  const space = await getSpaceById(id)
 
   if (!space) {
     notFound()

@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { format, isSameDay, isSameMonth, isToday } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { getWeekdayHeaders, getWeekdayColorClass } from '@/lib/calendar'
@@ -27,21 +27,15 @@ export function MonthView({
   const weekdays = getWeekdayHeaders()
 
   // 月のキーを生成（月が変わると展開状態がリセットされる）
-  const monthKey = useMemo(
-    () => format(dateRange.start, 'yyyy-MM'),
-    [dateRange.start]
-  )
+  const monthKey = format(dateRange.start, 'yyyy-MM')
   const [expandedDay, setExpandedDay] = useState<string | null>(null)
 
-  // 週単位にグループ化
-  const weeks = useMemo(() => {
-    const result: Date[][] = []
-    const { displayDates } = dateRange
-    for (let i = 0; i < displayDates.length; i += 7) {
-      result.push(displayDates.slice(i, i + 7))
-    }
-    return result
-  }, [dateRange])
+  // 週単位にグループ化（React Compilerが自動メモ化）
+  const weeks: Date[][] = []
+  const { displayDates } = dateRange
+  for (let i = 0; i < displayDates.length; i += 7) {
+    weeks.push(displayDates.slice(i, i + 7))
+  }
 
   // 日別イベント取得
   const getEventsForDay = (day: Date) => {

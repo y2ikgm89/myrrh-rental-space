@@ -1,6 +1,5 @@
 'use client'
 
-import { useMemo } from 'react'
 import { format, isSameDay, isToday } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
@@ -22,16 +21,15 @@ interface WeekViewProps {
 }
 
 export function WeekView({ dateRange, events, onEventClick }: WeekViewProps) {
-  const timeSlots = useMemo(() => generateTimeSlots(DEFAULT_BUSINESS_HOURS), [])
+  // React Compilerが自動メモ化
+  const timeSlots = generateTimeSlots(DEFAULT_BUSINESS_HOURS)
   const displayDays = dateRange.displayDates.slice(0, 7)
 
-  // 日別にイベントをグループ化し、配置計算
-  const eventsByDay = useMemo(() => {
-    return displayDays.map((day) => {
-      const dayEvents = events.filter((e) => isSameDay(e.startTime, day))
-      return layoutOverlappingEvents(dayEvents)
-    })
-  }, [displayDays, events])
+  // 日別にイベントをグループ化し、配置計算（React Compilerが自動メモ化）
+  const eventsByDay = displayDays.map((day) => {
+    const dayEvents = events.filter((e) => isSameDay(e.startTime, day))
+    return layoutOverlappingEvents(dayEvents)
+  })
 
   const gridHeight = timeSlots.length * PIXELS_PER_HOUR
 

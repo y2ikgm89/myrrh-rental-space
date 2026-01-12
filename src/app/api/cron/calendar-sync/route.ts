@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server'
 import { syncFromCalendar } from '@/lib/calendar-sync'
-import { isTwoWaySyncEnabled, getTwoWaySyncSettings } from '@/lib/google-calendar'
-
-export const dynamic = 'force-dynamic'
-export const runtime = 'nodejs'
+import { isTwoWaySyncEnabled, getTwoWaySyncSettings, renewWebhookIfNeeded } from '@/lib/google-calendar'
+import { sendWebhookRenewalNotification } from '@/lib/email-service'
 
 /**
  * カレンダー同期用Cronエンドポイント
@@ -50,6 +48,41 @@ export async function GET(request: Request) {
       })
     }
 
+    // Webhook自動更新チェック（有効期限2日前に更新）
+    let webhookRenewed = false
+    try {
+      const renewalResult = await renewWebhookIfNeeded()
+      if (renewalResult.renewed) {
+        webhookRenewed = true
+        console.log('Webhook renewed successfully. New expiration:', renewalResult.newExpiration)
+        // 成功メール通知（非同期）
+        sendWebhookRenewalNotification({
+          success: true,
+          newExpiration: renewalResult.newExpiration,
+        }).catch((err) => {
+          console.error('Failed to send webhook renewal notification:', err)
+        })
+      } else if (!renewalResult.success) {
+        // 更新失敗時のメール通知
+        console.error('Webhook renewal failed:', renewalResult.error)
+        sendWebhookRenewalNotification({
+          success: false,
+          error: renewalResult.error,
+        }).catch((err) => {
+          console.error('Failed to send webhook renewal notification:', err)
+        })
+      }
+    } catch (renewalError) {
+      // Webhook更新エラーはログ記録のみ（同期処理は継続）
+      console.error('Webhook renewal error:', renewalError)
+      sendWebhookRenewalNotification({
+        success: false,
+        error: renewalError instanceof Error ? renewalError.message : 'Unknown error',
+      }).catch((err) => {
+        console.error('Failed to send webhook renewal notification:', err)
+      })
+    }
+
     // 同期実行
     const result = await syncFromCalendar()
 
@@ -70,6 +103,7 @@ export async function GET(request: Request) {
       deleted: result.deleted,
       updated: result.updated,
       errors: result.errors,
+      webhookRenewed,
       timestamp: new Date().toISOString(),
     })
   } catch (error) {

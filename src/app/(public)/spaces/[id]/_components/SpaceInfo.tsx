@@ -6,6 +6,7 @@
 
 import { tv } from 'tailwind-variants'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/site/ui'
+import { ContentRenderer } from '@/components/site/ContentRenderer'
 import type { ReactElement } from 'react'
 
 const styles = tv({
@@ -34,7 +35,7 @@ interface SpaceInfoProps {
   facilities: string[]
 }
 
-export function SpaceInfo({
+export async function SpaceInfo({
   name,
   description,
   address,
@@ -42,13 +43,15 @@ export function SpaceInfo({
   capacity,
   area,
   facilities,
-}: SpaceInfoProps): ReactElement {
+}: SpaceInfoProps): Promise<ReactElement> {
   return (
     <div className={styles.section()}>
       {/* タイトルと説明 */}
       <div>
         <h1 className={styles.title()}>{name}</h1>
-        <p className={styles.description()}>{description}</p>
+        <div className="mt-4">
+          <ContentRenderer html={description} />
+        </div>
       </div>
 
       {/* 基本情報 */}

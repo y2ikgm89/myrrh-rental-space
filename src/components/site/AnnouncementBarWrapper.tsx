@@ -2,10 +2,13 @@
  * お知らせバーラッパー（Server Component）
  *
  * DBから有効なお知らせバーとカルーセル設定を取得して表示
+ * Next.js 16 PPR対応: unstable_cache でキャッシュされた関数を使用
  */
 
-import { getActiveAnnouncementBars } from '@/actions/admin/announcement-bar'
-import { getAnnouncementBarCarouselSettings } from '@/actions/admin/settings'
+import {
+  getActiveAnnouncementBarsCached,
+  getAnnouncementBarCarouselSettingsCached,
+} from '@/lib/settings'
 import { AnnouncementBarCarousel } from './AnnouncementBarCarousel'
 import type { CarouselSettings } from './AnnouncementBarCarousel'
 import type { ReactElement } from 'react'
@@ -13,8 +16,8 @@ import { validateAnimation, validateDesignStyle } from '@/lib/announcement-bar-u
 
 export async function AnnouncementBarWrapper(): Promise<ReactElement | null> {
   const [bars, dbSettings] = await Promise.all([
-    getActiveAnnouncementBars(),
-    getAnnouncementBarCarouselSettings(),
+    getActiveAnnouncementBarsCached(),
+    getAnnouncementBarCarouselSettingsCached(),
   ])
 
   if (bars.length === 0) {
@@ -52,6 +55,8 @@ export async function AnnouncementBarWrapper(): Promise<ReactElement | null> {
         linkText: bar.linkText,
         bgColor: bar.bgColor,
         textColor: bar.textColor,
+        startAt: bar.startAt?.toISOString() ?? null,
+        endAt: bar.endAt?.toISOString() ?? null,
       }))}
       settings={settings}
     />

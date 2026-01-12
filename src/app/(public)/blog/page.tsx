@@ -2,8 +2,14 @@
  * ブログ一覧ページ
  *
  * @description nuqs を使用した URL State 管理のサンプル実装
+ *
+ * Next.js 16 PPR対応:
+ * - 静的シェル: ページヘッダー
+ * - 動的コンテンツ: 検索結果（Suspenseでラップ）
  */
 
+import { Suspense } from 'react'
+import { cacheLife, cacheTag } from 'next/cache'
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -71,9 +77,6 @@ interface BlogCardProps {
 
 /**
  * 公開日を表示用に整形する
- *
- * @param value - 公開日
- * @returns 表示用日付
  */
 function formatPublishedDate(value: Date | null): string {
   if (!value) return '公開準備中'
@@ -120,13 +123,30 @@ function BlogCard({ post }: BlogCardProps): ReactElement {
   )
 }
 
-interface PageProps {
-  searchParams: Promise<SearchParams>
+/**
+ * フィルター用データを取得（キャッシュ付き）
+ */
+async function getFilterData() {
+  'use cache'
+  cacheLife('hours')
+  cacheTag('blog')
+
+  const [categories, tagsList] = await Promise.all([
+    prisma.blogCategory.findMany({ orderBy: { order: 'asc' } }),
+    prisma.blogTag.findMany({ orderBy: { name: 'asc' } }),
+  ])
+
+  return { categories, tagsList }
 }
 
-export default async function BlogPage({
+/**
+ * 動的コンテンツ: ブログ一覧
+ */
+async function BlogResults({
   searchParams,
-}: PageProps): Promise<ReactElement> {
+}: {
+  searchParams: Promise<SearchParams>
+}): Promise<ReactElement> {
   const { q, page, perPage, category, tags, sort } =
     await loadBlogSearchParams(searchParams)
 
@@ -171,7 +191,7 @@ export default async function BlogPage({
     }),
   } satisfies Prisma.BlogPostWhereInput
 
-  const [posts, totalCount, categories, tagsList] = await Promise.all([
+  const [posts, totalCount] = await Promise.all([
     prisma.blogPost.findMany({
       where,
       skip: (safePage - 1) * safePerPage,
@@ -194,8 +214,6 @@ export default async function BlogPage({
       },
     }),
     prisma.blogPost.count({ where }),
-    prisma.blogCategory.findMany({ orderBy: { order: 'asc' } }),
-    prisma.blogTag.findMany({ orderBy: { name: 'asc' } }),
   ])
 
   const totalPages = Math.ceil(totalCount / safePerPage)
@@ -204,8 +222,63 @@ export default async function BlogPage({
     totalCount === 0 ? 0 : Math.min(safePage * safePerPage, totalCount)
 
   return (
+    <>
+      <p className={styles.resultCount()}>
+        {totalCount}件中 {startCount}-{endCount}件を表示
+        {safeQuery && (
+          <span className="ml-2">（検索: &quot;{safeQuery}&quot;）</span>
+        )}
+      </p>
+
+      {posts.length > 0 ? (
+        <div className={styles.grid()}>
+          {posts.map((post) => (
+            <BlogCard key={post.id} post={post} />
+          ))}
+        </div>
+      ) : (
+        <div className={styles.emptyState()}>
+          <p>条件に一致するブログ記事が見つかりませんでした。</p>
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <BlogPagination currentPage={safePage} totalPages={totalPages} />
+      )}
+    </>
+  )
+}
+
+/**
+ * ローディングUI
+ */
+function BlogResultsLoading(): ReactElement {
+  return (
+    <div className="animate-pulse space-y-4">
+      <div className="h-6 bg-muted rounded w-48" />
+      <div className={styles.grid()}>
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="h-72 bg-muted rounded-lg" />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+interface PageProps {
+  searchParams: Promise<SearchParams>
+}
+
+export default async function BlogPage({
+  searchParams,
+}: PageProps): Promise<ReactElement> {
+  // フィルター用データは静的シェルに含める
+  const { categories, tagsList } = await getFilterData()
+
+  return (
     <section className={styles.section()}>
       <Container>
+        {/* 静的シェル: ヘッダー */}
         <header className={styles.header()}>
           <h1 className={styles.title()}>ブログ</h1>
           <p className={styles.subtitle()}>
@@ -213,32 +286,15 @@ export default async function BlogPage({
           </p>
         </header>
 
+        {/* フィルター（キャッシュされたデータ） */}
         <div className={styles.filtersWrapper()}>
           <BlogFilters categories={categories} tags={tagsList} />
         </div>
 
-        <p className={styles.resultCount()}>
-          {totalCount}件中 {startCount}-{endCount}件を表示
-          {safeQuery && (
-            <span className="ml-2">（検索: &quot;{safeQuery}&quot;）</span>
-          )}
-        </p>
-
-        {posts.length > 0 ? (
-          <div className={styles.grid()}>
-            {posts.map((post) => (
-              <BlogCard key={post.id} post={post} />
-            ))}
-          </div>
-        ) : (
-          <div className={styles.emptyState()}>
-            <p>条件に一致するブログ記事が見つかりませんでした。</p>
-          </div>
-        )}
-
-        {totalPages > 1 && (
-        <BlogPagination currentPage={safePage} totalPages={totalPages} />
-        )}
+        {/* 動的コンテンツ: ブログ一覧 */}
+        <Suspense fallback={<BlogResultsLoading />}>
+          <BlogResults searchParams={searchParams} />
+        </Suspense>
       </Container>
     </section>
   )

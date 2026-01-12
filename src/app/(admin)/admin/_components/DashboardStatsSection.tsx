@@ -6,6 +6,7 @@
 
 import { getDashboardStats } from '@/actions/admin/dashboard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/admin/ui/card'
+import { formatCurrency, formatChange, getChangeColor } from '@/lib/utils'
 
 export async function DashboardStatsSection() {
   const stats = await getDashboardStats()
@@ -60,23 +61,4 @@ export async function DashboardStatsSection() {
       </Card>
     </div>
   )
-}
-
-function getChangeColor(change: number): string {
-  if (change > 0) return 'text-green-600'
-  if (change < 0) return 'text-red-600'
-  return 'text-muted-foreground'
-}
-
-function formatChange(change: number): string {
-  if (change > 0) return `+${change}%`
-  if (change < 0) return `${change}%`
-  return '0%'
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('ja-JP', {
-    style: 'currency',
-    currency: 'JPY',
-  }).format(value)
 }

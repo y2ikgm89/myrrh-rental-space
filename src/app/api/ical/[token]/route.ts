@@ -3,9 +3,6 @@ import { prisma } from '@/lib/prisma'
 import { generateICalFeed, type CalendarEvent } from '@/lib/ical'
 import { format } from 'date-fns'
 
-export const dynamic = 'force-dynamic'
-export const runtime = 'nodejs'
-
 /**
  * iCalフィード配信エンドポイント
  * GET /api/ical/{token}

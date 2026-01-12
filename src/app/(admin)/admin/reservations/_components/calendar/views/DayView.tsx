@@ -1,6 +1,5 @@
 'use client'
 
-import { useMemo } from 'react'
 import { format, isToday } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
@@ -22,12 +21,11 @@ interface DayViewProps {
 }
 
 export function DayView({ date, events, onEventClick }: DayViewProps) {
-  const timeSlots = useMemo(() => generateTimeSlots(DEFAULT_BUSINESS_HOURS), [])
+  // React Compilerが自動メモ化
+  const timeSlots = generateTimeSlots(DEFAULT_BUSINESS_HOURS)
 
-  // イベント配置計算
-  const positionedEvents = useMemo(() => {
-    return layoutOverlappingEvents(events)
-  }, [events])
+  // イベント配置計算（React Compilerが自動メモ化）
+  const positionedEvents = layoutOverlappingEvents(events)
 
   const gridHeight = timeSlots.length * PIXELS_PER_HOUR
   const dayOfWeek = date.getDay()

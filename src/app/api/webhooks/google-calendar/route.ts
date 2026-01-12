@@ -3,9 +3,6 @@ import { prisma } from '@/lib/prisma'
 import { syncFromCalendar } from '@/lib/calendar-sync'
 import { isTwoWaySyncEnabled, getTwoWaySyncSettings } from '@/lib/google-calendar'
 
-export const dynamic = 'force-dynamic'
-export const runtime = 'nodejs'
-
 /**
  * Google Calendar Push Notification Webhook
  * POST /api/webhooks/google-calendar

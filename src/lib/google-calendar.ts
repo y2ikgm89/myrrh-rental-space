@@ -793,6 +793,113 @@ export function isValidCalendarId(calendarId: string): boolean {
   return calendarId === 'primary' || emailRegex.test(calendarId)
 }
 
+// =============================================================================
+// Webhook Auto-Renewal
+// =============================================================================
+
+const WEBHOOK_RENEWAL_THRESHOLD_DAYS = 2
+
+export interface WebhookRenewalResult {
+  success: boolean
+  renewed: boolean
+  newExpiration?: Date
+  error?: string
+}
+
+/**
+ * Webhookの自動更新チェック
+ *
+ * 有効期限の2日前になったら自動的に更新
+ * 既存のWebhookを停止し、新しいWebhookを設定
+ */
+export async function renewWebhookIfNeeded(): Promise<WebhookRenewalResult> {
+  const settings = await prisma.settings.findUnique({
+    where: { id: 'singleton' },
+    select: {
+      googleCalendarWebhookExpiration: true,
+      googleCalendarWebhookChannelId: true,
+      googleCalendarWebhookResourceId: true,
+      googleCalendarSyncMethod: true,
+    },
+  })
+
+  // Webhookが設定されていない場合はスキップ
+  if (!settings?.googleCalendarWebhookExpiration) {
+    return { success: true, renewed: false }
+  }
+
+  // Webhook方式でない場合はスキップ
+  if (settings.googleCalendarSyncMethod !== 'webhook' && settings.googleCalendarSyncMethod !== 'both') {
+    return { success: true, renewed: false }
+  }
+
+  // 2日前判定
+  const now = new Date()
+  const threshold = new Date(now)
+  threshold.setDate(threshold.getDate() + WEBHOOK_RENEWAL_THRESHOLD_DAYS)
+
+  if (settings.googleCalendarWebhookExpiration > threshold) {
+    // まだ更新不要
+    return { success: true, renewed: false }
+  }
+
+  console.log('Webhook renewal needed. Current expiration:', settings.googleCalendarWebhookExpiration)
+
+  try {
+    // 既存Webhookを停止（エラーは無視 - Google側で自動期限切れになる）
+    if (settings.googleCalendarWebhookChannelId && settings.googleCalendarWebhookResourceId) {
+      await stopWebhookWatch(
+        settings.googleCalendarWebhookChannelId,
+        settings.googleCalendarWebhookResourceId
+      ).catch((err) => {
+        console.warn('Failed to stop old webhook (will expire automatically):', err)
+      })
+    }
+
+    // 新しいWebhookを設定
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL
+    if (!baseUrl) {
+      return { success: false, renewed: false, error: 'APP_URL not configured' }
+    }
+
+    const webhookUrl = `${baseUrl.startsWith('http') ? baseUrl : `https://${baseUrl}`}/api/webhooks/google-calendar`
+    const result = await setupWebhookWatch(webhookUrl)
+
+    if (!result.success) {
+      return { success: false, renewed: false, error: result.error }
+    }
+
+    // 設定を更新
+    await prisma.settings.update({
+      where: { id: 'singleton' },
+      data: {
+        googleCalendarWebhookChannelId: result.channelId,
+        googleCalendarWebhookResourceId: result.resourceId,
+        googleCalendarWebhookExpiration: result.expiration,
+      },
+    })
+
+    console.log('Webhook renewed successfully. New expiration:', result.expiration)
+
+    return {
+      success: true,
+      renewed: true,
+      newExpiration: result.expiration,
+    }
+  } catch (error) {
+    console.error('Webhook renewal failed:', error)
+    return {
+      success: false,
+      renewed: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }
+  }
+}
+
+// =============================================================================
+// Helpers
+// =============================================================================
+
 /**
  * Google APIエラーをユーザーフレンドリーなメッセージに変換
  */

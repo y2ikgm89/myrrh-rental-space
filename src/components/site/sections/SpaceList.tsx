@@ -1,5 +1,13 @@
+/**
+ * スペース一覧セクション
+ *
+ * Next.js 16 PPR対応:
+ * - use cache ディレクティブでスペースデータをキャッシュ
+ */
+
 import Link from 'next/link'
 import Image from 'next/image'
+import { cacheLife, cacheTag } from 'next/cache'
 import { tv } from 'tailwind-variants'
 import { cn } from '@/lib/utils'
 import { Container, Card, CardContent, CardFooter } from '@/components/site/ui'
@@ -98,17 +106,29 @@ function SpaceCard({ space }: SpaceCardProps): ReactElement {
   )
 }
 
+async function getPopularSpaces(): Promise<Space[]> {
+  'use cache'
+  cacheLife('minutes')
+  cacheTag('spaces')
+
+  try {
+    return await prisma.space.findMany({
+      where: {
+        isPublished: true,
+        isActive: true,
+      },
+      take: 6,
+      orderBy: {
+        createdAt: 'desc',
+      },
+    })
+  } catch {
+    return []
+  }
+}
+
 export async function SpaceList(): Promise<ReactElement> {
-  const spaces = await prisma.space.findMany({
-    where: {
-      isPublished: true,
-      isActive: true,
-    },
-    take: 6,
-    orderBy: {
-      createdAt: 'desc',
-    },
-  })
+  const spaces = await getPopularSpaces()
 
   return (
     <section className={section()}>

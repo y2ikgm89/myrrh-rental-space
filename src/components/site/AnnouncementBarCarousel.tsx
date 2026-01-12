@@ -42,6 +42,8 @@ export interface AnnouncementBarItem {
   linkText?: string | null
   bgColor?: string | null
   textColor?: string | null
+  startAt?: Date | string | null
+  endAt?: Date | string | null
 }
 
 export type { DesignStyle, AnimationType }
@@ -76,6 +78,30 @@ export interface AnnouncementBarCarouselProps {
 // =============================================================================
 
 const STORAGE_KEY = 'dismissed-announcement-bars'
+
+/**
+ * 表示期間内かどうかをチェック
+ * サーバーサイドでは new Date() が使えないため、クライアントサイドでフィルタリング
+ */
+function isWithinDisplayPeriod(bar: AnnouncementBarItem): boolean {
+  const now = new Date()
+
+  // startAtとendAtをDateオブジェクトに変換
+  const startAt = bar.startAt ? new Date(bar.startAt) : null
+  const endAt = bar.endAt ? new Date(bar.endAt) : null
+
+  // 期間指定なし → 常に表示
+  if (!startAt && !endAt) return true
+
+  // 開始日のみ指定 → 開始日以降なら表示
+  if (startAt && !endAt) return now >= startAt
+
+  // 終了日のみ指定 → 終了日以前なら表示
+  if (!startAt && endAt) return now <= endAt
+
+  // 両方指定 → 期間内なら表示
+  return now >= startAt! && now <= endAt!
+}
 
 // =============================================================================
 // Session Storage Utilities
@@ -137,8 +163,10 @@ export function AnnouncementBarCarousel({ bars, settings }: AnnouncementBarCarou
     getServerSnapshot
   )
 
-  // 非表示でないバーのみフィルタ
-  const visibleBars = bars.filter((bar) => !dismissedIds.includes(bar.id))
+  // 非表示でないバーかつ表示期間内のもののみフィルタ
+  const visibleBars = bars.filter(
+    (bar) => !dismissedIds.includes(bar.id) && isWithinDisplayPeriod(bar)
+  )
 
   // currentIndexが範囲外になった場合の補正（visibleBarsが空の場合も考慮）
   const safeIndex = visibleBars.length === 0 ? 0 : (currentIndex >= visibleBars.length ? 0 : currentIndex)

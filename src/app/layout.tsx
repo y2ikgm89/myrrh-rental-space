@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   description: 'レンタルスペースの予約・管理サービス',
 }
 
-// Analytics設定はunstable_cacheでキャッシュされるため、静的レンダリングが可能
+// Analytics設定は 'use cache' ディレクティブでキャッシュされるため、静的レンダリングが可能
 // 設定変更時はrevalidateTag('analytics-config')で無効化される
 
 export default async function RootLayout({

@@ -1,9 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-export const dynamic = 'force-dynamic'
-export const runtime = 'nodejs'
-
 /**
  * Health check endpoint for Cloud Run / Load Balancer
  * GET /api/health

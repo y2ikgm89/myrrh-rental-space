@@ -33,8 +33,9 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
 
-  // Note: cacheComponents (PPR) は route segment config (dynamic, runtime) と互換性がないため無効
-  // 将来的にAPI Routes等の設計を見直した際に有効化を検討
+  // Partial Prerendering (PPR) - 静的シェル + 動的コンテンツのハイブリッドレンダリング
+  // use cache ディレクティブによる明示的キャッシュ制御を有効化
+  cacheComponents: true,
 
   // Experimental features
   experimental: {
