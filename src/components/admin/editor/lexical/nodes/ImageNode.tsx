@@ -12,7 +12,6 @@ import {
   type DOMConversionMap,
   type DOMConversionOutput,
   type DOMExportOutput,
-  type EditorConfig,
   type LexicalNode,
   type NodeKey,
   type SerializedLexicalNode,
@@ -124,7 +123,7 @@ export class ImageNode extends DecoratorNode<ReactElement> {
     return { element }
   }
 
-  createDOM(_config: EditorConfig): HTMLElement {
+  createDOM(): HTMLElement {
     const span = document.createElement('span')
     span.className = 'editor-image-wrapper'
     return span

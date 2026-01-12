@@ -6,9 +6,10 @@
  * 管理画面からの公開ページ編集用
  */
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { prisma } from '@/lib/prisma'
-import { requireAdmin } from '@/lib/auth'
+import { verifyAdminSession } from '@/lib/auth'
+import { LayoutWidth } from '@/types/prisma'
 import {
   updatePageSchema,
   type UpdatePageInput,
@@ -21,7 +22,7 @@ import {
  * @throws {Error} 認証が必要な場合
  */
 export async function getPagesList(): Promise<PageData[]> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const pages = await prisma.page.findMany({
     where: { isActive: true },
@@ -36,7 +37,7 @@ export async function getPagesList(): Promise<PageData[]> {
  * @throws {Error} 認証が必要な場合
  */
 export async function getPageBySlug(slug: string): Promise<PageData | null> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const page = await prisma.page.findUnique({
     where: { slug },
@@ -68,7 +69,7 @@ export async function updatePage(
   input: UpdatePageInput
 ): Promise<PageActionResult> {
   try {
-    await requireAdmin()
+    await verifyAdminSession()
   } catch {
     return { success: false, error: 'ログインが必要です' }
   }
@@ -115,6 +116,10 @@ export async function updatePage(
         ogpImageUrl: parsed.data.ogpImageUrl || null,
         isPublished: parsed.data.isPublished,
         publishedAt: parsed.data.publishedAt || null,
+        contentWidth: parsed.data.contentWidth
+          ? (parsed.data.contentWidth as LayoutWidth)
+          : null,
+        contentWidthCustom: parsed.data.contentWidthCustom ?? null,
       },
     })
 
@@ -122,6 +127,8 @@ export async function updatePage(
     revalidatePath(`/${slug}`)
     revalidatePath('/admin/pages')
     revalidatePath(`/admin/pages/${slug}/edit`)
+    revalidateTag('pages', { expire: 0 })
+    revalidateTag(`page-${slug}`, { expire: 0 })
 
     return { success: true, message: 'ページを更新しました' }
   } catch (error) {
@@ -139,7 +146,7 @@ export async function createPageIfNotExists(
   content: string
 ): Promise<PageData | null> {
   try {
-    await requireAdmin()
+    await verifyAdminSession()
   } catch {
     return null
   }

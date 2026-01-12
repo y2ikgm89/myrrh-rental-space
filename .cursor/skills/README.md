@@ -38,16 +38,16 @@ Prisma 7 ORMの効果的な使用方法、クエリ最適化、トランザク�
 - ページネーションの実装
 - インデックスの操作
 
-### 3. Auth.js 5 (`authjs-5/SKILL.md`)
+### 3. Better Auth (`better-auth/SKILL.md`)
 
-Auth.js 5での認証・認可の実装、JWTセッション、Prismaアダプター、セキュリティベストプラクティスに関するガイダンスを提供します。
+Better Authでの認証・認可の実装、セッション管理、Prismaアダプター、セキュリティベストプラクティスに関するガイダンスを提供します。
 
 **適用される場面**:
 - 認証フローの実装
 - セッションの操作
 - ルートとServer Actionsの保護
 - ロールベースアクセス制御（RBAC）の実装
-- Auth.jsプロバイダーの設定
+- Better Authプロバイダーの設定
 
 ### 4. Bun Runtime (`bun-runtime/SKILL.md`)
 
@@ -80,7 +80,7 @@ strictモードが有効なTypeScriptコードの記述、明示的な型アノ�
 
 ```
 skills/
-  ├── authjs-5/
+  ├── better-auth/
   │   └── SKILL.md
   ├── bun-runtime/
   │   └── SKILL.md

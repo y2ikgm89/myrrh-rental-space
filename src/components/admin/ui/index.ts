@@ -112,3 +112,11 @@ export { Pagination } from './pagination'
 
 // Toast
 export { Toaster } from './toaster'
+
+// Tooltip
+export {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from './tooltip'

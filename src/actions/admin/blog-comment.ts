@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
-import { requireAdmin } from '@/lib/auth'
+import { verifyAdminSession } from '@/lib/auth'
 import { toCommentAuthor, type CommentAuthor } from '@/lib/validations/comment'
 
 // ==============================================
@@ -92,7 +92,7 @@ export async function getAdminComments(
   filters: CommentFilters = {},
   pagination: { page?: number; limit?: number } = {}
 ): Promise<GetCommentsResult> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const { postId, status = 'ALL', search } = filters
   const page = pagination.page ?? 1
@@ -181,7 +181,7 @@ export async function getAdminComments(
  * コメント統計を取得
  */
 export async function getCommentStats(): Promise<CommentStats> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -222,7 +222,7 @@ export async function getCommentStats(): Promise<CommentStats> {
 export async function deleteCommentAdmin(
   commentId: string
 ): Promise<AdminCommentActionResult> {
-  const user = await requireAdmin()
+  const user = await verifyAdminSession()
 
   try {
     const comment = await prisma.blogComment.findUnique({
@@ -270,7 +270,7 @@ export async function deleteCommentAdmin(
 export async function deleteCommentsAdmin(
   commentIds: string[]
 ): Promise<BulkDeleteResult> {
-  const user = await requireAdmin()
+  const user = await verifyAdminSession()
 
   if (commentIds.length === 0) {
     return {
@@ -325,7 +325,7 @@ export async function deleteCommentsAdmin(
 export async function restoreCommentAdmin(
   commentId: string
 ): Promise<AdminCommentActionResult> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   try {
     const comment = await prisma.blogComment.findUnique({

@@ -2,29 +2,29 @@
 
 ## 概要
 
-Auth.js 5 による認証システム。JWTセッション + ロールベースアクセス制御。
+Better Auth による認証システム。セッション管理 + ロールベースアクセス制御。
 
 ## 技術スタック
 
 | コンポーネント | 技術 |
 |--------------|------|
-| 認証ライブラリ | Auth.js 5.0.0-beta.30 |
-| セッション | JWT (HS256) |
+| 認証ライブラリ | Better Auth 1.4.11 |
+| セッション | Cookie-based (scrypt) |
 | データベース | Prisma Adapter |
-| プロバイダー | Credentials, Google |
+| プロバイダー | Email/Password, Google |
 
 ## 認証フロー
 
 ### 1. ログイン
 
 ```
-[ログインフォーム] → [signIn()] → [JWT生成] → [Cookie設定]
+[ログインフォーム] → [signIn.email()] → [セッション生成] → [Cookie設定]
 ```
 
 ### 2. セッション検証
 
 ```
-[リクエスト] → [Cookie取得] → [JWT検証] → [ユーザー情報取得]
+[リクエスト] → [Cookie取得] → [セッション検証] → [ユーザー情報取得]
 ```
 
 ### 3. ログアウト
@@ -38,10 +38,10 @@ Auth.js 5 による認証システム。JWTセッション + ロールベース�
 ### Server Component
 
 ```typescript
-import { verifyAdminSession } from '@/lib/auth'
+import { verifySession } from '@/lib/auth'
 
 export default async function AdminPage() {
-  const user = await verifyAdminSession() // 未認証→リダイレクト
+  const user = await verifySession() // 未認証→リダイレクト
   return <Dashboard user={user} />
 }
 ```
@@ -61,42 +61,32 @@ export const updateSettings = withAuth(async (user, data: Input) => {
 ### オプショナル認証
 
 ```typescript
-import { getCurrentUser } from '@/lib/auth'
+import { getSession } from '@/lib/auth'
 
 export default async function PublicPage() {
-  const user = await getCurrentUser() // null許容
-  return <Page user={user} />
+  const session = await getSession() // null許容
+  return <Page user={session?.user} />
 }
 ```
 
-## JWTペイロード
+## セッション設定
 
 ```typescript
-interface JWTPayload {
-  sub: string      // ユーザーID
-  email: string
-  name: string
-  role: Role       // ADMIN | EDITOR | VIEWER
-  iat: number      // 発行時刻
-  exp: number      // 有効期限
+session: {
+  expiresIn: 60 * 60 * 24 * 30, // 30日（秒）
+  updateAge: 60 * 60 * 24,      // 24時間ごとに更新
+  cookieCache: {
+    enabled: true,
+    maxAge: 60 * 5,              // 5分間キャッシュ
+  },
 }
 ```
 
 ## Cookie設定
 
 ```typescript
-cookies: {
-  sessionToken: {
-    name: 'authjs.session-token',
-    options: {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-      path: '/',
-      maxAge: 30 * 24 * 60 * 60, // 30日
-    },
-  },
-}
+// Better Auth はセキュアなCookie設定をデフォルトで提供
+// HttpOnly, Secure (本番環境), SameSite: Lax
 ```
 
 ## RBAC（ロールベースアクセス制御）
@@ -108,6 +98,7 @@ enum Role {
   ADMIN = 'ADMIN',   // 全権限
   EDITOR = 'EDITOR', // コンテンツ編集
   VIEWER = 'VIEWER', // 閲覧のみ
+  USER = 'USER',     // デフォルト
 }
 ```
 
@@ -115,12 +106,15 @@ enum Role {
 
 ```typescript
 // 管理者のみ
-export const verifyAdminSession = cache(async () => {
-  const user = await verifySession()
-  if (user.role !== Role.ADMIN) {
+export const verifySession = cache(async () => {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  })
+
+  if (!session?.user || session.user.role !== Role.ADMIN) {
     redirect('/admin/login')
   }
-  return user
+  return session.user
 })
 ```
 
@@ -130,33 +124,53 @@ Google Calendar連携用のOAuth設定。
 
 ```typescript
 // src/lib/auth.ts
-GoogleProvider({
-  clientId: process.env.GOOGLE_CLIENT_ID!,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-  authorization: {
-    params: {
-      scope: 'openid email profile https://www.googleapis.com/auth/calendar.events',
-      access_type: 'offline',
-      prompt: 'consent',
-    },
+socialProviders: {
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID!,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    scope: [
+      'openid',
+      'email',
+      'profile',
+      'https://www.googleapis.com/auth/calendar.events',
+    ],
+    accessType: 'offline',
+    prompt: 'consent',
   },
-}),
+},
 ```
 
 ## セキュリティ考慮事項
 
+### パスワードハッシュ
+
+- scrypt（Better Auth デフォルト）
+- セキュアなソルト生成
+
 ### ブルートフォース対策
 
-- レート制限（10回/10秒）
+- レート制限
 - Turnstile bot保護
 
 ### セッションハイジャック対策
 
 - HttpOnly Cookie
 - Secure属性（本番環境）
-- 定期的なトークンローテーション
+- 定期的なセッション更新
 
 ### CSRF対策
 
 - SameSite=Lax
 - Server Actions自動保護
+
+## 環境変数
+
+```bash
+# 必須
+BETTER_AUTH_SECRET=your-secret-key-at-least-32-characters
+BETTER_AUTH_URL=https://your-domain.com
+
+# Google OAuth（オプション）
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+```

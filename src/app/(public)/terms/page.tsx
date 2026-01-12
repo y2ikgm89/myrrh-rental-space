@@ -13,14 +13,17 @@ import { cacheLife, cacheTag } from 'next/cache'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { tv } from 'tailwind-variants'
-import { Container } from '@/components/site/ui'
 import { ContentRenderer } from '@/components/site/ContentRenderer'
 import { prisma } from '@/lib/prisma'
+import { getPageLayoutSettings } from '@/lib/layout-settings'
+import { getContainerStyles, getContentStyles } from '@/lib/styles/layout-mapper'
 import type { ReactElement } from 'react'
 
 const styles = tv({
   slots: {
     section: 'py-16 bg-background min-h-screen',
+    container: 'mx-auto w-full px-4 sm:px-6 lg:px-8',
+    content: '', // 幅はgetContentStylesで動的に設定
     header: 'mb-12 text-center',
     title: 'text-3xl font-bold tracking-tight text-foreground',
     lastUpdated: 'mt-2 text-sm text-muted-foreground',
@@ -118,14 +121,21 @@ function TermsLoading(): ReactElement {
   )
 }
 
-export default function TermsOfServicePage(): ReactElement {
+export default async function TermsOfServicePage(): Promise<ReactElement> {
+  // レイアウト設定を取得
+  const layoutConfig = await getPageLayoutSettings('terms')
+  const containerStyles = getContainerStyles(layoutConfig)
+  const contentStyles = getContentStyles(layoutConfig)
+
   return (
     <section className={styles.section()}>
-      <Container size="md">
-        <Suspense fallback={<TermsLoading />}>
-          <TermsContent />
-        </Suspense>
-      </Container>
+      <div className={`${styles.container()} ${containerStyles.className}`} style={containerStyles.style}>
+        <div className={`${styles.content()} ${contentStyles.className}`} style={contentStyles.style}>
+          <Suspense fallback={<TermsLoading />}>
+            <TermsContent />
+          </Suspense>
+        </div>
+      </div>
     </section>
   )
 }

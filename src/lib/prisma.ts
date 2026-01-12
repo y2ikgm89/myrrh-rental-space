@@ -6,10 +6,10 @@
  */
 
 import { PrismaPg } from '@prisma/adapter-pg'
-import { PrismaClient } from '@/generated/prisma/client/client'
+import { PrismaClient, Role, Prisma } from '@/generated/prisma/client/client'
 import { Pool } from 'pg'
 
-export { Role, Prisma } from '@/generated/prisma/client/client'
+export { Role, Prisma }
 
 // PostgreSQL 接続プール
 // Prisma 7 では pg driver のデフォルト設定を使用するため、明示的にタイムアウトを設定

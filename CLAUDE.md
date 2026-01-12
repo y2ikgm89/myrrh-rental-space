@@ -22,7 +22,6 @@
 
 **Triage判断**:
 - 複数ファイル＋設計判断＋自律実行OK → `/feature-dev`（以下スキップ）
-- 複数ファイル＋事前分析必要 → Plan mode → Normal mode で実装
 - 軽微な修正（設定変更、コメント、定数のみ）→ 直接実行、code-simplifierスキップ
 
 **Explore**: コードベースを読む（コードは書かない）
@@ -79,7 +78,7 @@ bunx prisma migrate dev --name <name>  # DBマイグレーション
 
 ### 技術スタック
 
-Next.js 16 / React 19 / TypeScript 5.9 / Bun 1.3 / Prisma 7 / PostgreSQL (Supabase) / Auth.js 5 / Tailwind CSS 4 / Zod 4
+Next.js 16 / React 19 / TypeScript 5.9 / Bun 1.3 / Prisma 7 / PostgreSQL (Supabase) / Better Auth 1.x / Tailwind CSS 4 / Zod 4
 
 ### 構造
 

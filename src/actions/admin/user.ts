@@ -6,7 +6,7 @@ import { Role } from '@/generated/prisma/client/enums'
 import { z } from 'zod'
 import bcrypt from 'bcrypt'
 import { createSuccess, createFailure, withAuth } from '@/types'
-import { requireAdmin } from '@/lib/auth'
+import { verifyAdminSession } from '@/lib/auth'
 
 // =============================================================================
 // Types
@@ -73,7 +73,7 @@ export type UpdateUserInput = z.infer<typeof updateUserSchema>
  * ユーザー一覧を取得
  */
 export async function getUsers(params: UserListParams = {}): Promise<UserListResult> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const {
     page = 1,
@@ -139,7 +139,7 @@ export async function getUsers(params: UserListParams = {}): Promise<UserListRes
  * ユーザー詳細を取得
  */
 export async function getUser(id: string): Promise<UserData | null> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const user = await prisma.user.findUnique({
     where: { id },
@@ -340,7 +340,7 @@ export async function getUserStats(): Promise<{
   users: number
   recentUsers: number
 }> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const [total, admins, users, recentUsers] = await Promise.all([
     prisma.user.count(),

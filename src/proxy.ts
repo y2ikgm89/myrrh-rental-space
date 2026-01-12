@@ -1,34 +1,31 @@
 /**
  * Next.js 16 Proxy（ルート保護）
  *
- * JWT検証とルート保護を行う
+ * Better Auth セッション検証とルート保護
  * Next.js 16 では middleware.ts ではなく proxy.ts を使用
- * Auth.js 5 の推奨パターン: auth() をラッパーとして使用
  *
  * ログインページへのアクセスはシークレットトークンまたはワンタイムトークンで制限
  * 環境変数 ADMIN_LOGIN_TOKEN は必須（開発環境・本番環境ともに）
  */
 
 import { NextResponse, type NextRequest } from 'next/server'
-import { auth } from '@/lib/auth'
+import { getSessionCookie } from 'better-auth/cookies'
 import { prisma } from '@/lib/prisma'
 import { loginTokenSchema } from '@/lib/validations/auth'
-import type { Session } from 'next-auth'
 
 // 環境変数の検証（起動時にチェック）
-const ADMIN_LOGIN_TOKEN = process.env.ADMIN_LOGIN_TOKEN
-if (!ADMIN_LOGIN_TOKEN) {
-  throw new Error(
-    'ADMIN_LOGIN_TOKEN environment variable is required. Please set it in your .env.local file.'
-  )
-}
+const ADMIN_LOGIN_TOKEN: string = (() => {
+  const token = process.env.ADMIN_LOGIN_TOKEN
+  if (!token) {
+    throw new Error(
+      'ADMIN_LOGIN_TOKEN environment variable is required. Please set it in your .env.local file.'
+    )
+  }
+  return token
+})()
 
-type AuthRequest = NextRequest & { auth: Session | null }
-
-export const proxy = auth(
-  async (req: AuthRequest): Promise<NextResponse> => {
+export async function proxy(req: NextRequest): Promise<NextResponse> {
   const { pathname, searchParams } = req.nextUrl
-  const session = req.auth
 
   // ヘッダーにパス名を設定（Server Componentで使用）
   const createResponse = () => {
@@ -76,19 +73,19 @@ export const proxy = auth(
       return new NextResponse(null, { status: 404 })
     }
 
+    // Better Auth セッションクッキーのチェック（高速な初期チェック）
+    const sessionCookie = getSessionCookie(req)
+
     // 未認証の場合はログインページへリダイレクト（トークン付きURL）
-    if (!session) {
+    if (!sessionCookie) {
       const loginUrl = new URL('/admin/login', req.url)
       loginUrl.searchParams.set('token', ADMIN_LOGIN_TOKEN)
       return NextResponse.redirect(loginUrl)
     }
 
-    // ロールベースアクセス制御（ADMIN のみ管理画面にアクセス可能）
-    if (session.user.role !== 'ADMIN') {
-      const loginUrl = new URL('/admin/login', req.url)
-      loginUrl.searchParams.set('token', ADMIN_LOGIN_TOKEN)
-      return NextResponse.redirect(loginUrl)
-    }
+    // Note: ロールチェックはServer ComponentまたはServer Actionで実施
+    // proxy では Cookie の存在のみを確認（パフォーマンス優先）
+    // 詳細な検証は auth.api.getSession() を使用するページで実施
 
     // ログイン成功後、URLパラメータにトークンがある場合は有効期限を延長
     const token = searchParams.get('token')
@@ -125,8 +122,7 @@ export const proxy = auth(
   }
 
   return createResponse()
-  }
-)
+}
 
 export const config = {
   matcher: ['/admin/:path*'],

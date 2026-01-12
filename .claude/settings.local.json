@@ -13,6 +13,10 @@
       "TodoWrite",
       "NotebookEdit",
       "Bash",
+      "Bash(rm -rf .next)",
+      "Bash(rm -rf node_modules)",
+      "Bash(rmdir /s /q .next)",
+      "Bash(rmdir /s /q node_modules)",
       "mcp__*",
       "mcp__context7__resolve-library-id",
       "mcp__plugin_serena_serena__get_current_config",
@@ -24,7 +28,11 @@
       "mcp__plugin_serena_serena__find_file",
       "mcp__plugin_serena_serena__think_about_collected_information",
       "mcp__plugin_serena_serena__think_about_whether_you_are_done",
-      "mcp__plugin_serena_serena__get_symbols_overview"
+      "mcp__plugin_serena_serena__get_symbols_overview",
+      "mcp__plugin_playwright_playwright__browser_navigate",
+      "mcp__plugin_playwright_playwright__browser_type",
+      "mcp__plugin_playwright_playwright__browser_click",
+      "mcp__plugin_playwright_playwright__browser_close"
     ],
     "deny": [
       "Bash(rm:*)",

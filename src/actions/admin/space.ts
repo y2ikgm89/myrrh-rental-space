@@ -12,7 +12,7 @@ import {
 } from '@/lib/validations/space'
 import { createSuccess, createFailure, type SpaceWhereInput, withAuth } from '@/types'
 import { parseStringArray, parseBusinessHours } from '@/lib/json-validators'
-import { requireAdmin } from '@/lib/auth'
+import { verifyAdminSession } from '@/lib/auth'
 
 // =============================================================================
 // Actions
@@ -25,7 +25,7 @@ export async function getSpaces(
   filters: SpaceFilters = {},
   pagination: SpacePagination = {}
 ): Promise<GetSpacesResult> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const { isPublished, search } = filters
   const {
@@ -96,7 +96,7 @@ export async function getSpaces(
  * スペース詳細を取得
  */
 export async function getSpaceById(id: string): Promise<SpaceWithStats | null> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const space = await prisma.space.findUnique({
     where: { id },
@@ -297,7 +297,7 @@ export async function getSpaceStats(): Promise<{
   unpublished: number
   totalCapacity: number
 }> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const [total, published, spaces] = await Promise.all([
     prisma.space.count({ where: { isActive: true } }),

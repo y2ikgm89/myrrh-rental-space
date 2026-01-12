@@ -1,12 +1,13 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { z } from 'zod'
-import { requireAdmin } from '@/lib/auth'
+import { verifyAdminSession } from '@/lib/auth'
 import { createSuccess, createFailure, withAuth, type BlogPostWhereInput } from '@/types'
 import { parseStringArray } from '@/lib/json-validators'
 import { determinePublishedAt } from '@/lib/utils'
+import { LayoutWidth } from '@/types/prisma'
 
 // =============================================================================
 // Types
@@ -32,6 +33,8 @@ export type BlogPostData = {
   viewCount: number
   createdAt: Date
   updatedAt: Date
+  contentWidth: string | null
+  contentWidthCustom: number | null
   category: {
     id: string
     name: string
@@ -97,6 +100,8 @@ const blogPostSchema = z.object({
   ogpDescription: z.string().max(160).nullable().optional(),
   isPublished: z.boolean(),
   publishedAt: z.string().nullable().optional(),
+  contentWidth: z.string().nullable().optional(),
+  contentWidthCustom: z.number().int().min(320).max(1920).nullable().optional(),
 })
 
 const blogCategorySchema = z.object({
@@ -120,7 +125,7 @@ export async function getBlogPosts(
   filters: BlogPostFilters = {},
   pagination: BlogPostPagination = {}
 ): Promise<GetBlogPostsResult> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const { status, categoryId, search } = filters
 
@@ -200,7 +205,7 @@ export async function getBlogPosts(
  * ブログ記事詳細を取得
  */
 export async function getBlogPostById(id: string): Promise<BlogPostData | null> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const post = await prisma.blogPost.findUnique({
     where: { id },
@@ -247,7 +252,7 @@ export const createBlogPost = withAuth(async (user, data: BlogPostInput) => {
     return createFailure('このスラッグは既に使用されています')
   }
 
-  const { isPublished, publishedAt, ...rest } = parsed.data
+  const { isPublished, publishedAt, contentWidth, contentWidthCustom, ...rest } = parsed.data
 
   const post = await prisma.blogPost.create({
     data: {
@@ -256,11 +261,14 @@ export const createBlogPost = withAuth(async (user, data: BlogPostInput) => {
       isDraft: !isPublished,
       publishedAt: determinePublishedAt(publishedAt, isPublished),
       authorId: user.id,
+      contentWidth: contentWidth ? (contentWidth as LayoutWidth) : null,
+      contentWidthCustom: contentWidthCustom ?? null,
     },
   })
 
   revalidatePath('/admin/blog')
   revalidatePath('/blog')
+  revalidateTag('blog', { expire: 0 })
 
   return createSuccess('ブログ記事を作成しました', { id: post.id })
 })
@@ -293,7 +301,7 @@ export const updateBlogPost = withAuth(async (_user, id: string, data: BlogPostI
     return createFailure('このスラッグは既に使用されています')
   }
 
-  const { isPublished, publishedAt, ...rest } = parsed.data
+  const { isPublished, publishedAt, contentWidth, contentWidthCustom, ...rest } = parsed.data
 
   await prisma.blogPost.update({
     where: { id },
@@ -302,6 +310,8 @@ export const updateBlogPost = withAuth(async (_user, id: string, data: BlogPostI
       isPublished,
       isDraft: !isPublished,
       publishedAt: determinePublishedAt(publishedAt, isPublished, existingPost.publishedAt),
+      contentWidth: contentWidth ? (contentWidth as LayoutWidth) : null,
+      contentWidthCustom: contentWidthCustom ?? null,
     },
   })
 
@@ -309,6 +319,8 @@ export const updateBlogPost = withAuth(async (_user, id: string, data: BlogPostI
   revalidatePath(`/admin/blog/${id}`)
   revalidatePath('/blog')
   revalidatePath(`/blog/${parsed.data.slug}`)
+  revalidateTag('blog', { expire: 0 })
+  revalidateTag(`blog-${id}`, { expire: 0 })
 
   return createSuccess('ブログ記事を更新しました')
 })
@@ -373,7 +385,7 @@ export const toggleBlogPostPublish = withAuth(async (_user, id: string) => {
  * カテゴリ一覧を取得
  */
 export async function getBlogCategories(): Promise<BlogCategoryData[]> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const categories = await prisma.blogCategory.findMany({
     include: {
@@ -391,7 +403,7 @@ export async function getBlogCategories(): Promise<BlogCategoryData[]> {
  * カテゴリ詳細を取得
  */
 export async function getBlogCategoryById(id: string): Promise<BlogCategoryData | null> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const category = await prisma.blogCategory.findUnique({
     where: { id },

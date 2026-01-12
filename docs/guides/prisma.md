@@ -1,6 +1,6 @@
 # Prisma 7 ガイド
 
-> **最終更新**: 2026-01-08（driver adaptersの詳細な説明を追加）
+> **最終更新**: 2026-01-12（prisma-client ジェネレーター + Turbopack 互換確認）
 > **Prisma バージョン**: 7.2.0
 
 ## 概要
@@ -22,6 +22,19 @@
 ### 2. インポート方法の変更
 
 カスタム出力パスを指定した場合、`@prisma/client`からのインポートは**動作しません**。
+
+### 3. ジェネレーターの変更
+
+Prisma 7 では新しい `prisma-client` ジェネレーターが推奨されます。
+
+| ジェネレーター | 状態 | Rust エンジン | バンドルサイズ |
+|---------------|------|--------------|---------------|
+| `prisma-client` | **最新（推奨）** | 不使用 | 小さい |
+| `prisma-client-js` | レガシー | 使用 | 大きい |
+
+### 4. Turbopack 互換性
+
+**✅ 確認済み**: Next.js 16.1.1 + Prisma 7.2.0 の組み合わせで、`prisma-client` ジェネレーターは Turbopack と互換性があります。
 
 ---
 
@@ -118,27 +131,13 @@ import { PrismaClient, Prisma } from '@prisma/client'
    - `schema`: 相対パス（`prisma.config.ts` からの相対）
    - `earlyAccess: true` は**不要**（正式版では削除）
 
-3. **インポートパスの解決（2つのアプローチ）**
-   Prisma 7 は `client.ts` を生成します。TypeScript でインポートするには2つの方法があります:
+3. **インポートパス**
+   `prisma-client` ジェネレーターでも `index.ts` が自動生成されるため、シンプルなパスでインポートできます:
 
-   **方法A: `/client/client` を直接指定（推奨・メンテナンスフリー）**
    ```typescript
-   // ✅ prisma generate 後も安定
-   import { PrismaClient } from '@/generated/prisma/client/client'
-   ```
-
-   **方法B: index.ts を作成**
-   ```typescript
-   // src/generated/prisma/client/index.ts（手動作成）
-   export * from './client'
-   ```
-   ```typescript
-   // これで @/generated/prisma/client でインポート可能
+   // ✅ 推奨: シンプルなインポートパス
    import { PrismaClient } from '@/generated/prisma/client'
    ```
-
-   > **注意**: 方法Bの index.ts は `prisma generate` で上書きされません。
-   > ただし、将来の Prisma バージョンで自動生成される可能性があります。
 
 4. **すべてのインポートを統一**
    ```typescript
@@ -386,6 +385,10 @@ import type { StockStatus } from '@/generated/prisma/client'
 
 ## 更新履歴
 
+- **2026-01-12**: Turbopack互換性を確認・更新
+  - Next.js 16.1.1 + Prisma 7.2.0 で `prisma-client` ジェネレーターがTurbopackと互換性があることを確認
+  - `prisma-client-js`（レガシー）から`prisma-client`（最新推奨）への移行を完了
+  - インポートパスを `/client/client` から `/client` に統一（`index.ts`が自動生成されるため）
 - **2026-01-08**: Context7で取得した最新情報に基づき、driver adaptersの詳細な説明を追加
   - driver adaptersの必須性とインストール方法
   - 接続プーリングの詳細な設定方法（`max`、`idleTimeoutMillis`、`connectionTimeoutMillis`）

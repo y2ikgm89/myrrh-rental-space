@@ -13,10 +13,12 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { tv } from 'tailwind-variants'
-import { Container, buttonVariants } from '@/components/site/ui'
+import { buttonVariants } from '@/components/site/ui'
 import { ContentRenderer } from '@/components/site/ContentRenderer'
 import { prisma } from '@/lib/prisma'
 import { cn } from '@/lib/utils'
+import { getNewsLayoutSettings } from '@/lib/layout-settings'
+import { getContainerStyles, getContentStyles } from '@/lib/styles/layout-mapper'
 import type { ReactElement } from 'react'
 
 interface PageProps {
@@ -88,7 +90,8 @@ export async function generateStaticParams() {
 const styles = tv({
   slots: {
     section: 'py-16 bg-background min-h-screen',
-    article: 'max-w-3xl mx-auto',
+    container: 'mx-auto w-full px-4 sm:px-6 lg:px-8',
+    article: '', // 幅はgetContentStylesで動的に設定
     header: 'mb-8',
     title: 'text-3xl font-bold tracking-tight text-foreground',
     date: 'mt-2 text-sm text-muted-foreground',
@@ -152,10 +155,15 @@ export default async function NewsDetailPage({
     notFound()
   }
 
+  // レイアウト設定を取得
+  const layoutConfig = await getNewsLayoutSettings(news.id)
+  const containerStyles = getContainerStyles(layoutConfig)
+  const contentStyles = getContentStyles(layoutConfig)
+
   return (
     <section className={styles.section()}>
-      <Container>
-        <article className={styles.article()}>
+      <div className={`${styles.container()} ${containerStyles.className}`} style={containerStyles.style}>
+        <article className={`${styles.article()} ${contentStyles.className}`} style={contentStyles.style}>
           <header className={styles.header()}>
             <h1 className={styles.title()}>{news.title}</h1>
             <time
@@ -192,7 +200,7 @@ export default async function NewsDetailPage({
             </Link>
           </div>
         </article>
-      </Container>
+      </div>
     </section>
   )
 }

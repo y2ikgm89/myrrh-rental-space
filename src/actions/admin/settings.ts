@@ -25,7 +25,7 @@ import {
 } from '@/lib/google-calendar'
 import { syncFromCalendar } from '@/lib/calendar-sync'
 import { stripeSettingsSchema, type StripeSettingsInput } from '@/lib/validations/stripe'
-import { requireAdmin } from '@/lib/auth' // For query functions only
+import { verifyAdminSession } from '@/lib/auth' // For query functions only
 
 // =============================================================================
 // Types
@@ -172,6 +172,11 @@ export type SettingsData = {
   googleCalendarLastSyncedAt: Date | null
   googleCalendarWebhookActive: boolean
   googleCalendarWebhookExpiration: Date | null
+  // Layout Width Settings
+  containerWidth: string
+  containerWidthCustom: number | null
+  contentWidth: string
+  contentWidthCustom: number | null
   createdAt: Date
   updatedAt: Date
 }
@@ -303,6 +308,16 @@ export type MaintenanceSettingsInput = z.infer<typeof maintenanceSettingsSchema>
 export type TermsAgreementSettingsInput = z.infer<typeof termsAgreementSettingsSchema>
 export type CookieConsentSettingsInput = z.infer<typeof cookieConsentSettingsSchema>
 
+// Layout Settings Schema
+const layoutSettingsSchema = z.object({
+  containerWidth: z.enum(['XS', 'SM', 'MD', 'LG', 'XL', 'FULL', 'CUSTOM']),
+  containerWidthCustom: z.number().int().min(320).max(2560).nullable(),
+  contentWidth: z.enum(['XS', 'SM', 'MD', 'LG', 'XL', 'FULL', 'CUSTOM']),
+  contentWidthCustom: z.number().int().min(320).max(1920).nullable(),
+})
+
+export type LayoutSettingsInput = z.infer<typeof layoutSettingsSchema>
+
 // =============================================================================
 // Actions
 // =============================================================================
@@ -311,7 +326,7 @@ export type CookieConsentSettingsInput = z.infer<typeof cookieConsentSettingsSch
  * 設定を取得
  */
 export async function getSettings(): Promise<SettingsData> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   let settings = await prisma.settings.findUnique({
     where: { id: 'singleton' },
@@ -363,6 +378,11 @@ export async function getSettings(): Promise<SettingsData> {
     googleCalendarLastSyncedAt: settings.googleCalendarLastSyncedAt,
     googleCalendarWebhookActive: !!settings.googleCalendarWebhookChannelId,
     googleCalendarWebhookExpiration: settings.googleCalendarWebhookExpiration,
+    // Layout Width Settings
+    containerWidth: settings.containerWidth,
+    containerWidthCustom: settings.containerWidthCustom,
+    contentWidth: settings.contentWidth,
+    contentWidthCustom: settings.contentWidthCustom,
   }
 }
 
@@ -649,7 +669,7 @@ export async function testStripeConnectionAction(
   mode?: 'test' | 'live'
 }> {
   try {
-    await requireAdmin()
+    await verifyAdminSession()
 
     const result = await testStripeConnectionLib(secretKey)
 
@@ -942,7 +962,7 @@ export async function testGoogleCalendarConnectionAction(params: {
   accountEmail?: string
 }> {
   try {
-    await requireAdmin()
+    await verifyAdminSession()
 
     if (!isValidCalendarId(params.calendarId)) {
       return { success: false, error: 'カレンダーIDの形式が無効です' }
@@ -995,7 +1015,7 @@ export async function testGoogleCalendarOAuthAction(): Promise<{
   calendarName?: string
 }> {
   try {
-    const user = await requireAdmin()
+    const user = await verifyAdminSession()
     if (!user.id) {
       return { success: false, error: 'ユーザーIDが見つかりません' }
     }
@@ -1123,7 +1143,7 @@ export async function setupCalendarWebhook(): Promise<{
   expiration?: Date
 }> {
   try {
-    await requireAdmin()
+    await verifyAdminSession()
 
     // ベースURLを取得（環境変数から）
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL
@@ -1165,7 +1185,7 @@ export async function stopCalendarWebhook(): Promise<{
   error?: string
 }> {
   try {
-    await requireAdmin()
+    await verifyAdminSession()
 
     const settings = await prisma.settings.findUnique({
       where: { id: 'singleton' },
@@ -1215,7 +1235,7 @@ export async function triggerManualSync(): Promise<{
   errors?: string[]
 }> {
   try {
-    await requireAdmin()
+    await verifyAdminSession()
 
     const result = await syncFromCalendar()
 
@@ -1234,3 +1254,49 @@ export async function triggerManualSync(): Promise<{
     return { success: false, errors: ['同期に失敗しました'] }
   }
 }
+
+// =============================================================================
+// Layout Settings Actions
+// =============================================================================
+
+/**
+ * レイアウト設定を更新
+ */
+export const updateLayoutSettings = withAuth(async (_user, data: LayoutSettingsInput) => {
+  const parsed = layoutSettingsSchema.safeParse(data)
+  if (!parsed.success) {
+    return createFailure(parsed.error.issues[0].message)
+  }
+
+  // CUSTOMを選択している場合はカスタム値が必須
+  if (parsed.data.containerWidth === 'CUSTOM' && !parsed.data.containerWidthCustom) {
+    return createFailure('Container幅のカスタム値を入力してください')
+  }
+  if (parsed.data.contentWidth === 'CUSTOM' && !parsed.data.contentWidthCustom) {
+    return createFailure('コンテンツ幅のカスタム値を入力してください')
+  }
+
+  await prisma.settings.upsert({
+    where: { id: 'singleton' },
+    create: {
+      id: 'singleton',
+      containerWidth: parsed.data.containerWidth,
+      containerWidthCustom: parsed.data.containerWidth === 'CUSTOM' ? parsed.data.containerWidthCustom : null,
+      contentWidth: parsed.data.contentWidth,
+      contentWidthCustom: parsed.data.contentWidth === 'CUSTOM' ? parsed.data.contentWidthCustom : null,
+    },
+    update: {
+      containerWidth: parsed.data.containerWidth,
+      containerWidthCustom: parsed.data.containerWidth === 'CUSTOM' ? parsed.data.containerWidthCustom : null,
+      contentWidth: parsed.data.contentWidth,
+      contentWidthCustom: parsed.data.contentWidth === 'CUSTOM' ? parsed.data.contentWidthCustom : null,
+    },
+  })
+
+  revalidatePath('/admin/settings')
+  revalidatePath('/', 'layout')
+  revalidateTag('settings', { expire: 0 })
+  revalidateTag('layout-settings', { expire: 0 })
+
+  return createSuccess('レイアウト設定を更新しました')
+})

@@ -15,10 +15,11 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { tv } from 'tailwind-variants'
-import { Container } from '@/components/site/ui'
 import { ContentRenderer } from '@/components/site/ContentRenderer'
 import { prisma } from '@/lib/prisma'
 import { parseStringArray } from '@/lib/json-validators'
+import { getBlogLayoutSettings } from '@/lib/layout-settings'
+import { getContainerStyles, getContentStyles } from '@/lib/styles/layout-mapper'
 import { CommentSection } from './_components'
 import type { ReactElement } from 'react'
 
@@ -29,7 +30,8 @@ import type { ReactElement } from 'react'
 const styles = tv({
   slots: {
     section: 'py-16 bg-background min-h-screen',
-    article: 'max-w-3xl mx-auto',
+    container: 'mx-auto w-full px-4 sm:px-6 lg:px-8',
+    article: '', // 幅はgetContentStylesで動的に設定
     breadcrumb: 'mb-8 flex items-center gap-2 text-sm text-muted-foreground',
     breadcrumbLink: 'hover:text-foreground transition-colors',
     header: 'mb-8',
@@ -265,10 +267,15 @@ export default async function BlogDetailPage({
   const tags = parseStringArray(post.tags)
   const { prevPost, nextPost } = await getAdjacentPosts(post.id, post.publishedAt)
 
+  // レイアウト設定を取得
+  const layoutConfig = await getBlogLayoutSettings(post.id)
+  const containerStyles = getContainerStyles(layoutConfig)
+  const contentStyles = getContentStyles(layoutConfig)
+
   return (
     <section className={styles.section()}>
-      <Container>
-        <article className={styles.article()}>
+      <div className={`${styles.container()} ${containerStyles.className}`} style={containerStyles.style}>
+        <article className={`${styles.article()} ${contentStyles.className}`} style={contentStyles.style}>
           {/* パンくずリスト */}
           <nav className={styles.breadcrumb()} aria-label="パンくずリスト">
             <Link href="/" className={styles.breadcrumbLink()}>
@@ -384,7 +391,7 @@ export default async function BlogDetailPage({
             <CommentSection postId={post.id} postSlug={post.slug} />
           </Suspense>
         </article>
-      </Container>
+      </div>
     </section>
   )
 }

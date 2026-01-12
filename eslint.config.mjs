@@ -19,6 +19,14 @@ const eslintConfig = defineConfig([
   },
   // Prettier compatibility (disables conflicting rules)
   prettier,
+  // Custom rules for specific files
+  {
+    files: ["src/lib/auth.ts"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+    },
+  },
   // Ignored paths
   globalIgnores([
     ".next/**",

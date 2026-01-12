@@ -1,11 +1,12 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { z } from 'zod'
 import { createSuccess, createFailure, type NewsWhereInput, withAuth } from '@/types'
 import { determinePublishedAt } from '@/lib/utils'
-import { requireAdmin } from '@/lib/auth'
+import { verifyAdminSession } from '@/lib/auth'
+import { LayoutWidth } from '@/types/prisma'
 
 // =============================================================================
 // Types
@@ -19,6 +20,8 @@ export type NewsData = {
   isPublished: boolean
   createdAt: Date
   updatedAt: Date
+  contentWidth: string | null
+  contentWidthCustom: number | null
 }
 
 export type GetNewsListResult = {
@@ -50,6 +53,8 @@ const newsSchema = z.object({
   content: z.string().min(1, '本文は必須です'),
   isPublished: z.boolean(),
   publishedAt: z.string().nullable().optional(),
+  contentWidth: z.string().nullable().optional(),
+  contentWidthCustom: z.number().int().min(320).max(1920).nullable().optional(),
 })
 
 export type NewsInput = z.infer<typeof newsSchema>
@@ -65,7 +70,7 @@ export async function getNewsList(
   filters: NewsFilters = {},
   pagination: NewsPagination = {}
 ): Promise<GetNewsListResult> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const { status, search } = filters
 
@@ -118,7 +123,7 @@ export async function getNewsList(
  * お知らせ詳細を取得
  */
 export async function getNewsById(id: string): Promise<NewsData | null> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   return prisma.news.findUnique({
     where: { id },
@@ -134,7 +139,7 @@ export const createNews = withAuth(async (_user, data: NewsInput) => {
     return createFailure(parsed.error.issues[0].message)
   }
 
-  const { title, content, isPublished, publishedAt } = parsed.data
+  const { title, content, isPublished, publishedAt, contentWidth, contentWidthCustom } = parsed.data
 
   const news = await prisma.news.create({
     data: {
@@ -142,11 +147,14 @@ export const createNews = withAuth(async (_user, data: NewsInput) => {
       content,
       isPublished,
       publishedAt: determinePublishedAt(publishedAt, isPublished),
+      contentWidth: contentWidth ? (contentWidth as LayoutWidth) : null,
+      contentWidthCustom: contentWidthCustom ?? null,
     },
   })
 
   revalidatePath('/admin/news')
   revalidatePath('/news')
+  revalidateTag('news', { expire: 0 })
 
   return createSuccess('お知らせを作成しました', { id: news.id })
 })
@@ -168,7 +176,7 @@ export const updateNews = withAuth(async (_user, id: string, data: NewsInput) =>
     return createFailure('お知らせが見つかりません')
   }
 
-  const { title, content, isPublished, publishedAt } = parsed.data
+  const { title, content, isPublished, publishedAt, contentWidth, contentWidthCustom } = parsed.data
 
   await prisma.news.update({
     where: { id },
@@ -177,6 +185,8 @@ export const updateNews = withAuth(async (_user, id: string, data: NewsInput) =>
       content,
       isPublished,
       publishedAt: determinePublishedAt(publishedAt, isPublished, existingNews.publishedAt),
+      contentWidth: contentWidth ? (contentWidth as LayoutWidth) : null,
+      contentWidthCustom: contentWidthCustom ?? null,
     },
   })
 
@@ -184,6 +194,8 @@ export const updateNews = withAuth(async (_user, id: string, data: NewsInput) =>
   revalidatePath(`/admin/news/${id}`)
   revalidatePath('/news')
   revalidatePath(`/news/${id}`)
+  revalidateTag('news', { expire: 0 })
+  revalidateTag(`news-${id}`, { expire: 0 })
 
   return createSuccess('お知らせを更新しました')
 })

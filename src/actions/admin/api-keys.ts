@@ -10,7 +10,7 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { createSuccess, createFailure, withAuth } from '@/types'
 import { encrypt, safeDecrypt } from '@/lib/crypto'
-import { requireAdmin } from '@/lib/auth'
+import { verifyAdminSession } from '@/lib/auth'
 import {
   resendSettingsSchema,
   turnstileSettingsSchema,
@@ -45,7 +45,7 @@ import type {
  * Resend設定を取得
  */
 export async function getResendConfig(): Promise<ResendConfig> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const settings = await prisma.settings.findUnique({
     where: { id: 'singleton' },
@@ -70,7 +70,7 @@ export async function getResendConfig(): Promise<ResendConfig> {
  * Turnstile設定を取得
  */
 export async function getTurnstileConfig(): Promise<TurnstileConfig> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const settings = await prisma.settings.findUnique({
     where: { id: 'singleton' },
@@ -97,7 +97,7 @@ export async function getTurnstileConfig(): Promise<TurnstileConfig> {
  * Google Maps設定を取得
  */
 export async function getGoogleMapsConfig(): Promise<GoogleMapsConfig> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const settings = await prisma.settings.findUnique({
     where: { id: 'singleton' },
@@ -122,7 +122,7 @@ export async function getGoogleMapsConfig(): Promise<GoogleMapsConfig> {
  * カスタムAPIキー一覧を取得
  */
 export async function getCustomApiKeys(): Promise<CustomApiKeyData[]> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const settings = await prisma.settings.findUnique({
     where: { id: 'singleton' },
@@ -529,7 +529,7 @@ export const deleteCustomApiKey = withAuth(async (_user, id: string) => {
  * カスタムAPIキーの復号化された値を取得（内部使用のみ）
  */
 export async function getCustomApiKeyValue(id: string): Promise<string | null> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const settings = await prisma.settings.findUnique({
     where: { id: 'singleton' },

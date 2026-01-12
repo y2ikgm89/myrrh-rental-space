@@ -5,7 +5,7 @@
  */
 
 import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { randomBytes } from 'crypto'
 
@@ -15,7 +15,7 @@ import { randomBytes } from 'crypto'
 export async function POST(): Promise<NextResponse> {
   try {
     // 認証チェック
-    const session = await auth()
+    const session = await getSession()
     if (!session?.user || session.user.role !== 'ADMIN') {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -40,10 +40,7 @@ export async function POST(): Promise<NextResponse> {
     })
 
     // ログインURLを生成
-    const baseUrl =
-      process.env.AUTH_URL ||
-      process.env.NEXTAUTH_URL ||
-      'http://localhost:3000'
+    const baseUrl = process.env.BETTER_AUTH_URL ?? 'http://localhost:3000'
     const loginUrl = `${baseUrl}/admin/login?token=${token}`
 
     return NextResponse.json({
@@ -66,7 +63,7 @@ export async function POST(): Promise<NextResponse> {
 export async function GET(): Promise<NextResponse> {
   try {
     // 認証チェック
-    const session = await auth()
+    const session = await getSession()
     if (!session?.user || session.user.role !== 'ADMIN') {
       return NextResponse.json(
         { error: 'Unauthorized' },

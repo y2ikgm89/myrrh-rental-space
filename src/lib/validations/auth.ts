@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import { Role } from '@/generated/prisma/client/enums'
 
 /**
  * 認証用入力スキーマ（クライアント/サーバー共通）
@@ -11,26 +10,6 @@ export const credentialsSchema = z.object({
 
 export type CredentialsInput = z.input<typeof credentialsSchema>
 export type CredentialsData = z.output<typeof credentialsSchema>
-
-/**
- * Auth.js コールバック用のユーザー識別子スキーマ
- */
-export const authUserSchema = z
-  .object({
-    id: z.string(),
-    role: z.nativeEnum(Role),
-  })
-  .passthrough()
-
-/**
- * JWT へ付与するペイロードスキーマ
- */
-export const authTokenSchema = z
-  .object({
-    id: z.string(),
-    role: z.nativeEnum(Role),
-  })
-  .passthrough()
 
 /**
  * ログイントークンの最小バリデーション

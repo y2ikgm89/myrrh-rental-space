@@ -4,7 +4,7 @@ import { createHash } from 'crypto'
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
-import { auth } from '@/lib/auth'
+import { getSession } from '@/lib/auth'
 import { isTurnstileEnabled } from '@/lib/turnstile'
 import { validateTurnstile, extractFieldErrors } from '@/lib/action-helpers'
 import {
@@ -144,7 +144,7 @@ export async function createComment(input: {
   turnstileToken?: string
 }): Promise<CommentActionResult> {
   // 認証情報を取得
-  const session = await auth()
+  const session = await getSession()
   const isLoggedIn = !!session?.user?.id
 
   // ゲストの場合はTurnstile検証必須
@@ -340,7 +340,7 @@ export async function getCommentsByPostId(
 export async function deleteComment(
   commentId: string
 ): Promise<DeleteCommentResult> {
-  const session = await auth()
+  const session = await getSession()
 
   if (!session?.user?.id) {
     return {

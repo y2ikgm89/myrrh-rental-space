@@ -10,7 +10,7 @@ import {
   sendReservationAdminNotification,
 } from '@/lib/email-service'
 import { createSuccess, createFailure, type ReservationWhereInput, withAuth } from '@/types'
-import { requireAdmin } from '@/lib/auth'
+import { verifyAdminSession } from '@/lib/auth'
 import { syncReservationToCalendar, updateCalendarSync, deleteCalendarSync, type ReservationSyncData } from '@/lib/calendar-sync'
 
 // =============================================================================
@@ -89,7 +89,7 @@ export async function getReservations(
   filters: ReservationFilters = {},
   pagination: ReservationPagination = {}
 ): Promise<GetReservationsResult> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const {
     status,
@@ -194,7 +194,7 @@ export async function getReservations(
 export async function getReservationById(
   id: string
 ): Promise<ReservationWithRelations | null> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const reservation = await prisma.reservation.findUnique({
     where: { id },
@@ -402,7 +402,7 @@ export async function getReservationsForCalendar(
   customerEmail: string
   customerPhone: string | null
 }[]> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   // 期間と重複する予約を取得
   // 重複条件: reservation.startTime < endDate AND reservation.endTime > startDate
@@ -459,7 +459,7 @@ export async function getReservationsForCalendar(
 export async function getSpacesForCalendar(): Promise<
   { id: string; name: string }[]
 > {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const spaces = await prisma.space.findMany({
     where: { isActive: true },
@@ -481,7 +481,7 @@ export async function getReservationStats(): Promise<{
   todayCount: number
   thisWeekCount: number
 }> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)

@@ -222,6 +222,7 @@ function ImageDialog({ isOpen, onClose }: ImageDialogProps) {
 
           {previewUrl && (
             <div className={styles.preview()}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- Editor handles external URLs */}
               <img
                 src={previewUrl}
                 alt={alt || 'プレビュー'}

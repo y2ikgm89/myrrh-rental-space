@@ -2,7 +2,7 @@
  * Analytics設定取得ヘルパー
  *
  * DBからAnalytics関連の設定を取得する
- * Next.js 16 use cache ディレクティブによる明示的キャッシュ制御
+ * Next.js 16 'use cache' ディレクティブによる明示的キャッシュ制御
  */
 
 import { cacheLife, cacheTag } from 'next/cache'
@@ -34,8 +34,9 @@ function getDefaultAnalyticsConfig(): AnalyticsConfig {
 /**
  * Analytics設定を取得（キャッシュ付き）
  *
- * - 1時間キャッシュ
- * - 設定変更時は revalidateTag('analytics-config') で無効化
+ * Next.js 16 'use cache' パターン:
+ * - cacheLife('hours'): 1時間キャッシュ
+ * - cacheTag: 設定変更時に revalidateTag('analytics-config') で無効化
  */
 export async function getAnalyticsConfig(): Promise<AnalyticsConfig> {
   'use cache'
@@ -59,6 +60,7 @@ export async function getAnalyticsConfig(): Promise<AnalyticsConfig> {
       return getDefaultAnalyticsConfig()
     }
 
+    // プレーンオブジェクトとして返す（シリアライズ可能）
     return {
       analyticsType: (settings.analyticsType as 'ga4' | 'gtm' | null) ?? null,
       googleAnalyticsId: settings.googleAnalyticsId ?? null,

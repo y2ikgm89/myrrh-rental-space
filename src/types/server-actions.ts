@@ -4,9 +4,8 @@
  * 全てのServer ActionはActionResult<T>を返す
  */
 
-import { auth } from '@/lib/auth'
+import { getSession, type User } from '@/lib/auth'
 import { Role } from '@/generated/prisma/client/enums'
-import type { Session } from 'next-auth'
 
 // =============================================================================
 // Types
@@ -135,10 +134,10 @@ export function isActionFailure<T>(
  * })
  */
 export function withAuth<TArgs extends unknown[], TData = void>(
-  fn: (user: Session['user'], ...args: TArgs) => Promise<ActionResult<TData>>
+  fn: (user: User, ...args: TArgs) => Promise<ActionResult<TData>>
 ): (...args: TArgs) => Promise<ActionResult<TData>> {
   return async (...args: TArgs): Promise<ActionResult<TData>> => {
-    const session = await auth()
+    const session = await getSession()
 
     if (!session?.user) {
       return createFailure('ログインが必要です')
@@ -148,6 +147,6 @@ export function withAuth<TArgs extends unknown[], TData = void>(
       return createFailure('管理者権限が必要です')
     }
 
-    return await fn(session.user, ...args)
+    return await fn(session.user as User, ...args)
   }
 }

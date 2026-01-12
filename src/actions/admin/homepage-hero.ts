@@ -8,7 +8,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
-import { requireAdmin } from '@/lib/auth'
+import { verifyAdminSession } from '@/lib/auth'
 import {
   updateHomepageHeroSchema,
   type UpdateHomepageHeroInput,
@@ -36,7 +36,7 @@ const DEFAULT_HERO: Omit<HomepageHeroData, 'id' | 'createdAt' | 'updatedAt'> = {
  * 存在しない場合はデフォルト値で作成
  */
 export async function getHomepageHero(): Promise<HomepageHeroData> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   let hero = await prisma.homepageHero.findUnique({
     where: { id: 'singleton' },
@@ -62,7 +62,7 @@ export async function updateHomepageHero(
   input: UpdateHomepageHeroInput
 ): Promise<PageActionResult> {
   try {
-    await requireAdmin()
+    await verifyAdminSession()
   } catch {
     return { success: false, error: 'ログインが必要です' }
   }

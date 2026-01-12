@@ -18,7 +18,6 @@ import {
   type DOMConversionMap,
   type DOMConversionOutput,
   type DOMExportOutput,
-  type EditorConfig,
   type LexicalNode,
   type NodeKey,
   type SerializedLexicalNode,
@@ -135,7 +134,7 @@ export class PostListWidgetNode extends DecoratorNode<ReactElement> {
     return { element }
   }
 
-  createDOM(_config: EditorConfig): HTMLElement {
+  createDOM(): HTMLElement {
     const div = document.createElement('div')
     div.className = 'post-list-widget-wrapper my-4'
     return div

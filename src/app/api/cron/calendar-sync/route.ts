@@ -1,6 +1,12 @@
+import { connection } from 'next/server'
+import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { syncFromCalendar } from '@/lib/calendar-sync'
-import { isTwoWaySyncEnabled, getTwoWaySyncSettings, renewWebhookIfNeeded } from '@/lib/google-calendar'
+import {
+  isTwoWaySyncEnabled,
+  getTwoWaySyncSettings,
+  renewWebhookIfNeeded,
+} from '@/lib/google-calendar'
 import { sendWebhookRenewalNotification } from '@/lib/email-service'
 
 /**
@@ -12,16 +18,23 @@ import { sendWebhookRenewalNotification } from '@/lib/email-service'
  *
  * セキュリティ: CRON_SECRET環境変数による認証
  */
-export async function GET(request: Request) {
+export async function GET() {
+  // Next.js 16: connection() でプリレンダリングをオプトアウト
+  await connection()
+
   try {
-    // 認証チェック（CRON_SECRETが設定されている場合は必須）
-    const authHeader = request.headers.get('authorization')
+    // Next.js 16: headers() で動的にヘッダーを取得
+    const headersList = await headers()
+    const authHeader = headersList.get('authorization')
     const cronSecret = process.env.CRON_SECRET
 
     // 本番環境ではCRON_SECRETを必須とする
     if (!cronSecret && process.env.NODE_ENV === 'production') {
       console.error('CRON_SECRET is not set in production environment')
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      )
     }
 
     if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
@@ -54,7 +67,10 @@ export async function GET(request: Request) {
       const renewalResult = await renewWebhookIfNeeded()
       if (renewalResult.renewed) {
         webhookRenewed = true
-        console.log('Webhook renewed successfully. New expiration:', renewalResult.newExpiration)
+        console.log(
+          'Webhook renewed successfully. New expiration:',
+          renewalResult.newExpiration
+        )
         // 成功メール通知（非同期）
         sendWebhookRenewalNotification({
           success: true,
@@ -77,7 +93,8 @@ export async function GET(request: Request) {
       console.error('Webhook renewal error:', renewalError)
       sendWebhookRenewalNotification({
         success: false,
-        error: renewalError instanceof Error ? renewalError.message : 'Unknown error',
+        error:
+          renewalError instanceof Error ? renewalError.message : 'Unknown error',
       }).catch((err) => {
         console.error('Failed to send webhook renewal notification:', err)
       })

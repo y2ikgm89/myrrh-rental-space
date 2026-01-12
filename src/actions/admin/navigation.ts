@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { NavigationType, SocialPlatform } from '@/generated/prisma/client/enums'
 import { z } from 'zod'
 import { createSuccess, createFailure, withAuth } from '@/types'
-import { requireAdmin } from '@/lib/auth'
+import { verifyAdminSession } from '@/lib/auth'
 
 // =============================================================================
 // Types
@@ -73,7 +73,7 @@ export type SocialLinkInput = z.infer<typeof socialLinkSchema>
  * ナビゲーションアイテム一覧を取得
  */
 export async function getNavigationItems(type?: NavigationType): Promise<NavigationItemData[]> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const items = await prisma.navigationItem.findMany({
     where: type ? { type, parentId: null } : { parentId: null },
@@ -235,7 +235,7 @@ export type GetSocialLinksOptions = {
  * SNSリンク一覧を取得
  */
 export async function getSocialLinks(options: GetSocialLinksOptions = {}): Promise<SocialLinkData[]> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const { showOnDesktop, showOnMobile, activeOnly = false } = options
 

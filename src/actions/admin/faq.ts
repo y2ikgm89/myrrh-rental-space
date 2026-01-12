@@ -3,7 +3,7 @@
 import { prisma } from '@/lib/prisma'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { createSuccess, createFailure, withAuth } from '@/types'
-import { requireAdmin } from '@/lib/auth'
+import { verifyAdminSession } from '@/lib/auth'
 import {
   faqCategoryFormSchema,
   faqItemFormSchema,
@@ -49,7 +49,7 @@ export type FaqItemPagination = {
  * FAQカテゴリ一覧を取得（アイテム含む）
  */
 export async function getFaqCategories(): Promise<FaqCategoryListResult> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const categories = await prisma.faqCategory.findMany({
     include: {
@@ -71,7 +71,7 @@ export async function getFaqCategories(): Promise<FaqCategoryListResult> {
  * FAQカテゴリ詳細を取得
  */
 export async function getFaqCategoryById(id: string): Promise<FaqCategoryWithItems | null> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   return prisma.faqCategory.findUnique({
     where: { id },
@@ -216,7 +216,7 @@ export async function getFaqItems(
   filters: FaqItemFilters = {},
   pagination: FaqItemPagination = {}
 ): Promise<FaqItemListResult> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const { categoryId, search, isActive } = filters
   const { page = 1, limit = 20 } = pagination
@@ -278,7 +278,7 @@ export async function getFaqItems(
  * FAQ項目詳細を取得
  */
 export async function getFaqItemById(id: string): Promise<FaqItemWithCategory | null> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   return prisma.faqItem.findUnique({
     where: { id },

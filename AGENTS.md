@@ -16,7 +16,7 @@ A reservation and management system for rental spaces. Provides a highly designe
 
 **Key Principles**:
 
-- Use the latest stable versions of Next.js 16, React 19, Prisma 7, Auth.js 5, and other dependencies
+- Use the latest stable versions of Next.js 16, React 19, Prisma 7, Better Auth, and other dependencies
 - Follow official best practices and recommended patterns (no deprecated APIs)
 - Prefer modern patterns (Server Components, Server Actions, JWT sessions) over legacy approaches
 - Remove deprecated code patterns and replace them with modern alternatives
@@ -87,7 +87,7 @@ A reservation and management system for rental spaces. Provides a highly designe
 - **React**: 19.2.3, **Next.js**: 16.1.1, **TypeScript**: 5.9.3, **Bun**: 1.3.5
 - **Prisma**: 7.2.0, **Supabase**: PostgreSQL, **Zod**: 4.3.5
 - **Tailwind CSS**: 4.1.18, **GSAP** or **Motion** (formerly Framer Motion), **Three.js** (`@react-three/fiber` + `@react-three/drei`) or **Pixi.js** (`@pixi/react`)
-- **Auth.js**: 5.0.0-beta.30, **nuqs**: 2.8.6
+- **Better Auth**: 1.4.11, **nuqs**: 2.8.6
 - **Deployment**: Google Cloud Run (Bun runtime), Supabase
 
 **For detailed version information**: See `[docs/architecture/TECH_STACK.md](docs/architecture/TECH_STACK.md)`
@@ -96,7 +96,7 @@ A reservation and management system for rental spaces. Provides a highly designe
 
 - **Prisma does not support Edge Runtime**: Use Bun Runtime (`runtime = "nodejs"`) for API Routes and Server Actions
 - **Full Bun Runtime Support**: This project runs fully on Bun 1.3.5 (package manager, runtime, build tool, test runner)
-- **Auth.js 5**: Use `@auth/prisma-adapter` 2.11.1, verify compatibility before version updates
+- **Better Auth**: Use `better-auth/adapters/prisma` with Prisma 7, verify compatibility before version updates
 - **Security**: React 19.2.3 and Next.js 16.1.1 required (CVE-2025-55182 fix). Always validate inputs with Zod schemas (client and server)
 
 **For detailed constraints**: See `[docs/operations/bun.md](docs/operations/bun.md)` and `[docs/security/README.md](docs/security/README.md)`
@@ -141,9 +141,9 @@ Project Rules provide more granular, context-aware guidance than `AGENTS.md`. Th
 
 ## Authentication & authorization
 
-- **Auth.js 5**: Email/Password, Google OAuth (as needed)
-- **Session strategy**: JWT (recommended) or Database
-- **Prisma Adapter**: Use `@auth/prisma-adapter` (check compatibility with Prisma 7.2.0)
+- **Better Auth**: Email/Password, Google OAuth (as needed)
+- **Session strategy**: Cookie-based (scrypt password hashing)
+- **Prisma Adapter**: Use `better-auth/adapters/prisma` (check compatibility with Prisma 7.2.0)
 - **Roles**: `admin`, `user`
 - **Protection**: Next.js Middleware for routes, permission checks in Server Actions
 - **Supabase RLS**: Database-level security
@@ -165,7 +165,7 @@ This project includes Cursor Agent Skills that provide domain-specific guidance 
 
 - **Next.js 16 App Router**: Server Components, Server Actions, caching strategies
 - **Prisma 7**: Query optimization, transactions, best practices
-- **Auth.js 5**: Authentication, authorization, JWT sessions
+- **Better Auth**: Authentication, authorization, cookie sessions
 - **Bun Runtime**: Development, build, testing, deployment
 - **TypeScript Strict Mode**: Type safety, explicit annotations
 
@@ -207,7 +207,7 @@ Key documents:
 
 - [Next.js 16 Documentation](https://nextjs.org/docs)
 - [Prisma Documentation](https://www.prisma.io/docs)
-- [Auth.js Documentation](https://authjs.dev)
+- [Better Auth Documentation](https://www.better-auth.com/docs)
 - [Supabase Documentation](https://supabase.com/docs)
 - [Google Cloud Run Documentation](https://cloud.google.com/run/docs)
 - [Context7 MCP](https://github.com/upstash/context7) - Up-to-date code documentation for LLMs

@@ -12,7 +12,7 @@
 | ランタイム | Bun | 1.3.5 |
 | ORM | Prisma | 7.2.0 |
 | データベース | PostgreSQL | 16 |
-| 認証 | Auth.js (NextAuth v5) | 5.0.0-beta.30 |
+| 認証 | Better Auth | 1.4.11 |
 | スタイリング | Tailwind CSS | 4.x |
 
 ## 開発環境セットアップ

@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { randomBytes } from 'crypto'
 import { createSuccess, createFailure, withAuth } from '@/types'
-import { requireAdmin } from '@/lib/auth'
+import { verifyAdminSession } from '@/lib/auth'
 
 // =============================================================================
 // Types
@@ -42,7 +42,7 @@ const createTokenSchema = z.object({
  * iCalトークン一覧を取得
  */
 export async function getICalTokens(): Promise<ICalTokenWithRelations[]> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const tokens = await prisma.iCalToken.findMany({
     include: {
@@ -166,7 +166,7 @@ export async function getICalFeedSettings(): Promise<{
   icalFeedEnabled: boolean
   icalFeedIncludeCustomerInfo: boolean
 }> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const settings = await prisma.settings.findFirst()
 

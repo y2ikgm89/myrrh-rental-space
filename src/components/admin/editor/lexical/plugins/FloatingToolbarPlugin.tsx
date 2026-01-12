@@ -2,6 +2,7 @@
  * Floating Toolbar Plugin
  *
  * テキスト選択時に表示されるフローティングツールバー
+ * リンク挿入はダイアログで行う
  */
 
 'use client'
@@ -29,26 +30,32 @@ import {
   Link,
   Link2Off,
 } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  Button,
+  Input,
+  Label,
+  TooltipProvider,
+} from '@/components/admin/ui'
+import { Z_INDEX } from '@/lib/styles/z-index'
+import { ToolbarButton } from './toolbar'
+import {
+  KEYBOARD_SHORTCUTS,
+  getShortcutDisplay,
+} from '../config/keyboard-shortcuts'
 
 const styles = tv({
   slots: {
     toolbar: [
       'absolute flex items-center gap-0.5 p-1',
-      'bg-popover border rounded-lg shadow-lg z-50',
+      'bg-popover border rounded-lg shadow-lg',
       'animate-in fade-in-0 zoom-in-95',
     ],
-    button: [
-      'p-1.5 rounded-md transition-colors',
-      'hover:bg-muted text-muted-foreground hover:text-foreground',
-    ],
     divider: 'w-px h-5 bg-border mx-0.5',
-  },
-  variants: {
-    active: {
-      true: {
-        button: 'bg-primary/20 text-primary',
-      },
-    },
   },
 })()
 
@@ -63,6 +70,10 @@ function FloatingToolbar() {
   const [isCode, setIsCode] = useState(false)
   const [isHighlight, setIsHighlight] = useState(false)
   const [isLink, setIsLink] = useState(false)
+
+  // リンクダイアログ状態
+  const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false)
+  const [linkUrl, setLinkUrl] = useState('')
 
   const updateToolbar = useCallback(() => {
     const selection = $getSelection()
@@ -136,90 +147,144 @@ function FloatingToolbar() {
     )
   }, [editor, updateToolbar])
 
-  const insertLink = useCallback(() => {
+  const handleLinkClick = useCallback(() => {
     if (isLink) {
+      // リンク解除
       editor.dispatchCommand(TOGGLE_LINK_COMMAND, null)
     } else {
-      const url = prompt('URLを入力してください:')
-      if (url) {
-        editor.dispatchCommand(TOGGLE_LINK_COMMAND, url)
-      }
+      // リンクダイアログを開く
+      setLinkUrl('')
+      setIsLinkDialogOpen(true)
     }
   }, [editor, isLink])
+
+  const handleLinkSubmit = useCallback(() => {
+    if (linkUrl.trim()) {
+      // URLの形式を整える
+      let url = linkUrl.trim()
+      if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('/')) {
+        url = `https://${url}`
+      }
+      editor.dispatchCommand(TOGGLE_LINK_COMMAND, url)
+    }
+    setIsLinkDialogOpen(false)
+    setLinkUrl('')
+  }, [editor, linkUrl])
+
+  const handleLinkKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        handleLinkSubmit()
+      }
+    },
+    [handleLinkSubmit]
+  )
 
   if (!isVisible) {
     return null
   }
 
   return (
-    <div ref={toolbarRef} className={styles.toolbar()}>
-      <button
-        type="button"
-        onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'bold')}
-        className={styles.button({ active: isBold })}
-        aria-label="太字"
-      >
-        <Bold className="w-4 h-4" />
-      </button>
-      <button
-        type="button"
-        onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'italic')}
-        className={styles.button({ active: isItalic })}
-        aria-label="斜体"
-      >
-        <Italic className="w-4 h-4" />
-      </button>
-      <button
-        type="button"
-        onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'underline')}
-        className={styles.button({ active: isUnderline })}
-        aria-label="下線"
-      >
-        <Underline className="w-4 h-4" />
-      </button>
-      <button
-        type="button"
-        onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'strikethrough')}
-        className={styles.button({ active: isStrikethrough })}
-        aria-label="打消し線"
-      >
-        <Strikethrough className="w-4 h-4" />
-      </button>
+    <>
+      <TooltipProvider delayDuration={300}>
+        <div
+          ref={toolbarRef}
+          className={styles.toolbar()}
+          style={{ zIndex: Z_INDEX.editorFloating }}
+        >
+          <ToolbarButton
+            icon={Bold}
+            label={KEYBOARD_SHORTCUTS.bold.label}
+            shortcut={getShortcutDisplay('bold')}
+            isActive={isBold}
+            onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'bold')}
+          />
+          <ToolbarButton
+            icon={Italic}
+            label={KEYBOARD_SHORTCUTS.italic.label}
+            shortcut={getShortcutDisplay('italic')}
+            isActive={isItalic}
+            onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'italic')}
+          />
+          <ToolbarButton
+            icon={Underline}
+            label={KEYBOARD_SHORTCUTS.underline.label}
+            shortcut={getShortcutDisplay('underline')}
+            isActive={isUnderline}
+            onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'underline')}
+          />
+          <ToolbarButton
+            icon={Strikethrough}
+            label={KEYBOARD_SHORTCUTS.strikethrough.label}
+            shortcut={getShortcutDisplay('strikethrough')}
+            isActive={isStrikethrough}
+            onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'strikethrough')}
+          />
 
-      <div className={styles.divider()} />
+          <div className={styles.divider()} />
 
-      <button
-        type="button"
-        onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'code')}
-        className={styles.button({ active: isCode })}
-        aria-label="コード"
-      >
-        <Code className="w-4 h-4" />
-      </button>
-      <button
-        type="button"
-        onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'highlight')}
-        className={styles.button({ active: isHighlight })}
-        aria-label="ハイライト"
-      >
-        <Highlighter className="w-4 h-4" />
-      </button>
+          <ToolbarButton
+            icon={Code}
+            label={KEYBOARD_SHORTCUTS.code.label}
+            shortcut={getShortcutDisplay('code')}
+            isActive={isCode}
+            onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'code')}
+          />
+          <ToolbarButton
+            icon={Highlighter}
+            label="ハイライト"
+            isActive={isHighlight}
+            onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'highlight')}
+          />
 
-      <div className={styles.divider()} />
+          <div className={styles.divider()} />
 
-      <button
-        type="button"
-        onClick={insertLink}
-        className={styles.button({ active: isLink })}
-        aria-label={isLink ? 'リンク解除' : 'リンク'}
-      >
-        {isLink ? (
-          <Link2Off className="w-4 h-4" />
-        ) : (
-          <Link className="w-4 h-4" />
-        )}
-      </button>
-    </div>
+          <ToolbarButton
+            icon={isLink ? Link2Off : Link}
+            label={isLink ? 'リンク解除' : KEYBOARD_SHORTCUTS.link.label}
+            shortcut={isLink ? undefined : getShortcutDisplay('link')}
+            isActive={isLink}
+            onClick={handleLinkClick}
+          />
+        </div>
+      </TooltipProvider>
+
+      {/* リンク挿入ダイアログ */}
+      <Dialog open={isLinkDialogOpen} onOpenChange={setIsLinkDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>リンクを挿入</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="link-url">URL</Label>
+              <Input
+                id="link-url"
+                type="url"
+                placeholder="https://example.com"
+                value={linkUrl}
+                onChange={(e) => setLinkUrl(e.target.value)}
+                onKeyDown={handleLinkKeyDown}
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsLinkDialogOpen(false)}
+            >
+              キャンセル
+            </Button>
+            <Button type="button" onClick={handleLinkSubmit}>
+              挿入
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
 

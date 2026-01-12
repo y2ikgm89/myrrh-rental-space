@@ -45,14 +45,12 @@ type YouTubeComponentProps = {
   nodeKey: string
   videoId: string
   width: number
-  height: number
 }
 
 export function YouTubeComponent({
   nodeKey,
   videoId,
   width,
-  height: _height,
 }: YouTubeComponentProps) {
   const [editor] = useLexicalComposerContext()
   const [isSelected, setSelected, clearSelection] =

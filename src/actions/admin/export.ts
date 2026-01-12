@@ -7,7 +7,7 @@
  */
 
 import { prisma } from '@/lib/prisma'
-import { requireAdmin } from '@/lib/auth'
+import { verifyAdminSession } from '@/lib/auth'
 import type {
   ReservationWhereInput,
   CustomerWhereInput,
@@ -119,7 +119,7 @@ export async function exportReservations(
   options: ExportOptions = {}
 ): Promise<ExportResult> {
   try {
-    await requireAdmin()
+    await verifyAdminSession()
   } catch {
     return { success: false, error: '認証が必要です' }
   }
@@ -205,7 +205,7 @@ export async function exportCustomers(
   options: ExportOptions = {}
 ): Promise<ExportResult> {
   try {
-    await requireAdmin()
+    await verifyAdminSession()
   } catch {
     return { success: false, error: '認証が必要です' }
   }
@@ -282,7 +282,7 @@ export async function exportInquiries(
   options: ExportOptions = {}
 ): Promise<ExportResult> {
   try {
-    await requireAdmin()
+    await verifyAdminSession()
   } catch {
     return { success: false, error: '認証が必要です' }
   }

@@ -1,160 +1,89 @@
 /**
- * Auth.js 5 (NextAuth v5) 設定
+ * Better Auth 設定
+ *
+ * @see https://www.better-auth.com/docs
  *
  * - Prisma Adapter でデータベース連携
- * - JWT セッション管理
- * - Credentials Provider（メール/パスワード認証）
+ * - 30日間セッション
+ * - Credentials / Google OAuth Provider
  */
 
 import { cache } from 'react'
+import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
-import NextAuth from 'next-auth'
-import { PrismaAdapter } from '@auth/prisma-adapter'
-import Credentials from 'next-auth/providers/credentials'
-import Google from 'next-auth/providers/google'
-import bcrypt from 'bcrypt'
-import { prisma } from './prisma'
-import { Role } from '@/generated/prisma/client/enums'
-import {
-  authTokenSchema,
-  authUserSchema,
-  credentialsSchema,
-} from '@/lib/validations/auth'
-import type { Session } from 'next-auth'
-import type { JWT } from 'next-auth/jwt'
-import type { User } from '@/generated/prisma/client/client'
+import { betterAuth } from 'better-auth'
+import { prismaAdapter } from 'better-auth/adapters/prisma'
+import { nextCookies } from 'better-auth/next-js'
+import { prisma, Role } from './prisma'
 
 /**
- * Auth.js 設定
+ * Better Auth インスタンス
  */
-export const { handlers, signIn, signOut, auth } = NextAuth({
-  adapter: PrismaAdapter(prisma),
+export const auth = betterAuth({
+  database: prismaAdapter(prisma, {
+    provider: 'postgresql',
+  }),
   session: {
-    strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-  },
-  pages: {
-    signIn: '/admin/login',
-    error: '/admin/login',
-  },
-  providers: [
-    Credentials({
-      name: 'credentials',
-      credentials: {
-        email: { label: 'Email', type: 'email' },
-        password: { label: 'Password', type: 'password' },
-      },
-      async authorize(
-        credentials: Partial<Record<'email' | 'password', unknown>>,
-        request: Request
-      ): Promise<Pick<User, 'id' | 'email' | 'name' | 'role'> | null> {
-        const parsedCredentials = credentialsSchema.safeParse(
-          credentials ?? {}
-        )
-        if (!parsedCredentials.success) {
-          return null
-        }
-        void request
-
-        const { email, password } = parsedCredentials.data
-
-        // ユーザーを検索
-        const user = await prisma.user.findUnique({
-          where: { email },
-        })
-
-        if (!user) {
-          return null
-        }
-
-        // パスワードが設定されていない場合は認証失敗
-        if (!user.password) {
-          return null
-        }
-
-        // bcryptでパスワードを検証
-        const isValid = await bcrypt.compare(password, user.password)
-        if (!isValid) {
-          return null
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-        }
-      },
-    }),
-    // Google OAuth（管理者のカレンダー連携用）
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      authorization: {
-        params: {
-          scope:
-            'openid email profile https://www.googleapis.com/auth/calendar.events',
-          access_type: 'offline',
-          prompt: 'consent',
-        },
-      },
-    }),
-  ],
-  callbacks: {
-    /**
-     * JWT トークンにカスタムデータを追加
-     */
-    async jwt({ token, user }: { token: JWT; user?: unknown }): Promise<JWT> {
-      const parsedUser = authUserSchema.safeParse(user)
-      if (parsedUser.success) {
-        token.id = parsedUser.data.id
-        token.role = parsedUser.data.role
-      }
-      return token
-    },
-    /**
-     * セッションにカスタムデータを追加
-     */
-    async session({
-      session,
-      token,
-    }: {
-      session: Session
-      token: JWT
-    }): Promise<Session> {
-      const parsedToken = authTokenSchema.safeParse(token)
-      if (parsedToken.success && session.user) {
-        session.user.id = parsedToken.data.id
-        session.user.role = parsedToken.data.role
-      }
-      return session
+    expiresIn: 60 * 60 * 24 * 30, // 30 days
+    updateAge: 60 * 60 * 24, // 1 day (session refresh interval)
+    cookieCache: {
+      enabled: true,
+      maxAge: 60 * 5, // 5 minutes
     },
   },
-  trustHost: true,
+  emailAndPassword: {
+    enabled: true,
+  },
+  socialProviders: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      scope: [
+        'openid',
+        'email',
+        'profile',
+        'https://www.googleapis.com/auth/calendar.events',
+      ],
+    },
+  },
+  user: {
+    additionalFields: {
+      role: {
+        type: 'string',
+        defaultValue: Role.USER,
+        input: false,
+      },
+    },
+  },
+  plugins: [nextCookies()],
+  trustedOrigins: [process.env.BETTER_AUTH_URL ?? 'http://localhost:3000'],
 })
+
+/**
+ * セッション型
+ */
+export type Session = typeof auth.$Infer.Session
+export type User = Session['user']
 
 /**
  * セッション検証（cache()でリクエスト単位でメモ化）
  *
  * Next.js公式ベストプラクティス: Data Access Layer (DAL) パターン
- * - 同一リクエスト内で複数回呼び出されても1回のみ実行
- * - 未認証時は自動的にログインページへリダイレクト
  */
-export const verifySession = cache(async (): Promise<Session['user']> => {
-  const session = await auth()
+export const verifySession = cache(async (): Promise<User> => {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  })
   if (!session?.user) {
     redirect('/admin/login')
   }
-  return session.user
+  return session.user as User
 })
 
 /**
- * 管理者セッション検証（cache()でリクエスト単位でメモ化）
- *
- * - verifySession()を内部で呼び出し（キャッシュ済み）
- * - 非管理者は自動的にログインページへリダイレクト
+ * 管理者セッション検証（cache()でメモ化）
  */
-export const verifyAdminSession = cache(async (): Promise<Session['user']> => {
+export const verifyAdminSession = cache(async (): Promise<User> => {
   const user = await verifySession()
   if (user.role !== Role.ADMIN) {
     redirect('/admin/login')
@@ -165,15 +94,14 @@ export const verifyAdminSession = cache(async (): Promise<Session['user']> => {
 /**
  * 現在のユーザーを取得（cache()でメモ化）
  *
- * - リダイレクトなし版（オプショナル認証用）
- * - 未認証の場合はundefinedを返す
+ * リダイレクトなし版（オプショナル認証用）
  */
-export const getCurrentUser = cache(
-  async (): Promise<Session['user'] | undefined> => {
-    const session = await auth()
-    return session?.user
-  }
-)
+export const getCurrentUser = cache(async (): Promise<User | undefined> => {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  })
+  return session?.user as User | undefined
+})
 
 /**
  * 管理者権限チェック（cache()でメモ化）
@@ -184,11 +112,12 @@ export const isAdmin = cache(async (): Promise<boolean> => {
 })
 
 /**
- * @deprecated verifySession()を使用してください
+ * セッション取得（キャッシュなし）
+ *
+ * Server Actions など cache() が適さない場所で使用
  */
-export const requireAuth = verifySession
-
-/**
- * @deprecated verifyAdminSession()を使用してください
- */
-export const requireAdmin = verifyAdminSession
+export async function getSession(): Promise<Session | null> {
+  return auth.api.getSession({
+    headers: await headers(),
+  })
+}

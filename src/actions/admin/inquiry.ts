@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { InquiryStatus } from '@/generated/prisma/client/enums'
 import { z } from 'zod'
 import { createSuccess, createFailure, type InquiryWhereInput, withAuth } from '@/types'
-import { requireAdmin } from '@/lib/auth'
+import { verifyAdminSession } from '@/lib/auth'
 
 // =============================================================================
 // Types
@@ -62,7 +62,7 @@ export async function getInquiries(
   filters: InquiryFilters = {},
   pagination: InquiryPagination = {}
 ): Promise<GetInquiriesResult> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const { status, search } = filters
 
@@ -115,7 +115,7 @@ export async function getInquiries(
  * お問い合わせ詳細を取得
  */
 export async function getInquiryById(id: string): Promise<InquiryData | null> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   return prisma.inquiry.findUnique({
     where: { id },
@@ -183,7 +183,7 @@ export async function getInquiryStats(): Promise<{
   resolved: number
   closed: number
 }> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const [total, newCount, inProgress, resolved, closed] = await Promise.all([
     prisma.inquiry.count(),

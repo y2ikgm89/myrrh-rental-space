@@ -8,7 +8,7 @@
  */
 
 import { useState, useTransition, useRef } from 'react'
-import { useSession } from 'next-auth/react'
+import { useSession } from '@/lib/auth-client'
 import { Send, Loader2 } from 'lucide-react'
 import { Turnstile } from '@/components/Turnstile'
 import { createComment } from '@/actions/blog-comment'
@@ -31,15 +31,14 @@ export function CommentForm({
   isReply = false,
 }: Props) {
   void _postSlug
-  const { data: session, status } = useSession()
+  const { data: session, isPending: isLoading } = useSession()
   const [isPending, startTransition] = useTransition()
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({})
   const formRef = useRef<HTMLFormElement>(null)
 
-  const isLoggedIn = status === 'authenticated' && !!session?.user
-  const isLoading = status === 'loading'
+  const isLoggedIn = !isLoading && !!session?.user
 
   // Turnstileが必要かどうか（ゲストの場合のみ）
   const needsTurnstile = !isLoggedIn && typeof window !== 'undefined' && !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY

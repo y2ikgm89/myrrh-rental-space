@@ -12,7 +12,6 @@ import {
   type DOMConversionMap,
   type DOMConversionOutput,
   type DOMExportOutput,
-  type EditorConfig,
   type LexicalNode,
   type NodeKey,
   type SerializedLexicalNode,
@@ -146,7 +145,7 @@ export class YouTubeNode extends DecoratorNode<ReactElement> {
     return { element }
   }
 
-  createDOM(_config: EditorConfig): HTMLElement {
+  createDOM(): HTMLElement {
     const div = document.createElement('div')
     div.className = 'youtube-wrapper my-4'
     return div
@@ -187,7 +186,6 @@ export class YouTubeNode extends DecoratorNode<ReactElement> {
           nodeKey={this.__key}
           videoId={this.__videoId}
           width={this.__width}
-          height={this.__height}
         />
       </Suspense>
     )

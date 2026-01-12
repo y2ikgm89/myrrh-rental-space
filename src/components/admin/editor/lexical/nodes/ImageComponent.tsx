@@ -149,6 +149,7 @@ export function ImageComponent({
       className={`${styles.wrapper({ dragging: isResizing })} group`}
       draggable={false}
     >
+      {/* eslint-disable-next-line @next/next/no-img-element -- Editor handles external URLs */}
       <img
         ref={imageRef}
         src={src}

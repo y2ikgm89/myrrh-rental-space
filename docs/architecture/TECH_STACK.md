@@ -200,35 +200,22 @@
 
 ## 認証
 
-### Auth.js (NextAuth.js v5)
+### Better Auth
 
-- **現在のプロジェクトバージョン**: 5.0.0-beta.30
-- **最新安定版**: 
-  - `next-auth`: **4.24.13** (2026-01-05時点)
-  - `@auth/core`: **0.34.3** (2026-01-05時点)
-- **最新ベータ版**:
-  - `next-auth`: **5.0.0-beta.30** (2026-01-05時点)
-- **状態**: Auth.js v5はベータ版
-- **重要な注意事項**:
-  - NextAuth.js v4の最新安定版: 4.24.13 (2025-10-29リリース)
-  - Auth.js v5はApp Routerファースト、OAuthサポートの改善、ユニバーサル`auth()`メソッドを導入
-  - NextAuth.jsはBetter Authと統合予定
-- **推奨**: 
-  - 本番環境: Auth.js v5を使用する場合はリスク評価を行い、安定版リリースを継続監視
-  - 既存運用: 認証基盤の変更は影響が大きいため、移行方針は別途合意の上で実施
-- **リリースノート**: [Auth.js GitHub](https://github.com/nextauthjs/next-auth/releases)
-
-### @auth/prisma-adapter
-
-- **現在のプロジェクトバージョン**: 2.11.0
-- **最新バージョン**: **2.11.0** (2026-01-10時点)
+- **現在のプロジェクトバージョン**: 1.4.11
+- **最新安定版**: **1.4.11** (2026-01-13時点)
 - **状態**: 安定版
 - **重要な機能**:
-  - Auth.jsのPasskeyプロバイダーとの互換性
-- **Prisma 7との互換性**:
-  - Prisma 7.2.0で動作確認済み
-  - Prisma 7ではdriver adaptersが必須のため、互換性に注意が必要
-- **GitHub**: [@auth/prisma-adapter](https://github.com/sidebase/authjs-prisma-adapter)
+  - Next.js 16 App Router対応
+  - Prisma 7 Adapter対応
+  - Cookie-based セッション管理
+  - scrypt パスワードハッシュ
+  - Google OAuth連携
+  - nextCookies() プラグインによるServer Actions対応
+- **移行履歴**:
+  - 2026-01-13: Auth.js v5 (next-auth@5.0.0-beta.30) から Better Auth 1.4.11 に移行完了
+- **公式サイト**: [Better Auth](https://www.better-auth.com)
+- **リリースノート**: [Better Auth GitHub](https://github.com/better-auth/better-auth/releases)
 
 ---
 
@@ -263,9 +250,9 @@
    - Zod 4.3.5が安定版としてリリースされたため、アップグレードを推奨
    - JSON Schema統合などの新機能が利用可能
 
-3. **Auth.js**: 
-   - Auth.js v5の安定版リリースを監視
-   - 認証基盤の変更は影響が大きいため、方針は別途合意の上で検討
+3. **Better Auth**:
+   - Better Auth 1.x安定版を使用中
+   - Auth.js v5から2026-01-13に移行完了
 
 ### 最新版への更新推奨
 
@@ -280,7 +267,7 @@
 9. **@react-three/drei**: 最新版 10.7.7
 10. **Pixi.js**: 最新版 8.15.0
 11. **@pixi/react**: 最新版 8.0.5（React 19、PixiJS v8対応）
-12. **@auth/prisma-adapter**: 最新版 2.11.0
+12. **Better Auth**: 最新版 1.4.11
 
 ---
 
@@ -303,13 +290,16 @@
 
 ## 更新履歴
 
+- **2026-01-13 (更新)**: Auth.js v5からBetter Auth 1.4.11に移行完了
+  - next-auth, @auth/prisma-adapterを削除
+  - better-auth@1.4.11を追加
+  - 認証関連ドキュメントを更新
 - **2026-01-10 (更新)**: package.jsonと照合してバージョン情報を更新
   - @react-three/fiber: 9.5.0（プロジェクト使用バージョン）
   - @react-three/drei: 10.7.7（プロジェクト使用バージョン）
   - @pixi/react: 8.0.5（プロジェクト使用バージョン）
   - nuqs: 2.8.6（プロジェクト使用バージョン）
   - Motion: 12.24.7（プロジェクト使用バージョン）
-  - @auth/prisma-adapter: 2.11.0（プロジェクト使用バージョン）
 - **2026-01-06 (更新)**: React専用パッケージの情報を追加
 - **2026-01-05 (更新)**: 最新バージョン情報を再調査・更新
 - **2026-01-05**: 初版作成、全技術スタックの最新バージョン情報を調査・まとめ

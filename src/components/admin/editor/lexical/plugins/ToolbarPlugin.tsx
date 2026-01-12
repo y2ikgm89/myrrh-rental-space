@@ -2,6 +2,7 @@
  * Toolbar Plugin
  *
  * エディタのフォーマットツールバー
+ * ドロップダウンメニュー形式でグループ化
  */
 
 'use client'
@@ -63,7 +64,22 @@ import {
   Superscript,
   Newspaper,
   Table,
+  Info,
+  HelpCircle,
+  MousePointerClick,
+  LayoutGrid,
+  Minus,
+  Type,
+  Plus,
+  Puzzle,
 } from 'lucide-react'
+import { TooltipProvider } from '@/components/admin/ui'
+import { ToolbarButton, ToolbarDropdown } from './toolbar'
+import type { ToolbarDropdownGroup, ToolbarDropdownItem } from './toolbar'
+import {
+  KEYBOARD_SHORTCUTS,
+  getShortcutDisplay,
+} from '../config/keyboard-shortcuts'
 import type { BlockType } from '../types'
 
 const styles = tv({
@@ -74,22 +90,6 @@ const styles = tv({
     ],
     group: 'flex items-center gap-0.5',
     divider: 'w-px h-6 bg-border mx-1',
-    button: [
-      'p-1.5 rounded-md transition-colors',
-      'hover:bg-muted text-muted-foreground hover:text-foreground',
-      'disabled:opacity-50 disabled:cursor-not-allowed',
-    ],
-    select: [
-      'h-8 px-2 text-sm rounded-md border bg-background',
-      'focus:outline-none focus:ring-2 focus:ring-primary',
-    ],
-  },
-  variants: {
-    active: {
-      true: {
-        button: 'bg-primary/20 text-primary',
-      },
-    },
   },
 })()
 
@@ -100,6 +100,11 @@ type ToolbarPluginProps = {
   onInsertLink?: () => void
   onInsertTable?: () => void
   onInsertWidget?: () => void
+  onInsertCallout?: () => void
+  onInsertFAQ?: () => void
+  onInsertButton?: () => void
+  onInsertCard?: () => void
+  onInsertDivider?: () => void
 }
 
 export function ToolbarPlugin({
@@ -109,6 +114,11 @@ export function ToolbarPlugin({
   onInsertLink,
   onInsertTable,
   onInsertWidget,
+  onInsertCallout,
+  onInsertFAQ,
+  onInsertButton,
+  onInsertCard,
+  onInsertDivider,
 }: ToolbarPluginProps) {
   const [editor] = useLexicalComposerContext()
   const [canUndo, setCanUndo] = useState(false)
@@ -167,7 +177,7 @@ export function ToolbarPlugin({
           const type = $isHeadingNode(element)
             ? element.getTag()
             : element.getType()
-          if (type in blockTypeToBlockName) {
+          if (VALID_BLOCK_TYPES.has(type)) {
             setBlockType(type as BlockType)
           }
         }
@@ -243,7 +253,7 @@ export function ToolbarPlugin({
     }
   }, [blockType, editor])
 
-  const formatCode = useCallback(() => {
+  const formatCodeBlock = useCallback(() => {
     if (blockType !== 'code') {
       editor.update(() => {
         const selection = $getSelection()
@@ -264,294 +274,318 @@ export function ToolbarPlugin({
     }
   }, [blockType, editor])
 
+  // ブロックタイプドロップダウンのアイテム
+  const blockTypeGroups: ToolbarDropdownGroup[] = [
+    {
+      items: [
+        {
+          id: 'paragraph',
+          icon: Pilcrow,
+          label: '段落',
+          isActive: blockType === 'paragraph',
+          onClick: formatParagraph,
+        },
+        {
+          id: 'h1',
+          icon: Heading1,
+          label: '見出し1',
+          shortcut: getShortcutDisplay('h1'),
+          isActive: blockType === 'h1',
+          onClick: () => formatHeading('h1'),
+        },
+        {
+          id: 'h2',
+          icon: Heading2,
+          label: '見出し2',
+          shortcut: getShortcutDisplay('h2'),
+          isActive: blockType === 'h2',
+          onClick: () => formatHeading('h2'),
+        },
+        {
+          id: 'h3',
+          icon: Heading3,
+          label: '見出し3',
+          shortcut: getShortcutDisplay('h3'),
+          isActive: blockType === 'h3',
+          onClick: () => formatHeading('h3'),
+        },
+      ],
+    },
+    {
+      items: [
+        {
+          id: 'bullet',
+          icon: List,
+          label: '箇条書き',
+          shortcut: getShortcutDisplay('bulletList'),
+          isActive: blockType === 'bullet',
+          onClick: () =>
+            editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined),
+        },
+        {
+          id: 'number',
+          icon: ListOrdered,
+          label: '番号付きリスト',
+          shortcut: getShortcutDisplay('numberedList'),
+          isActive: blockType === 'number',
+          onClick: () =>
+            editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined),
+        },
+      ],
+    },
+    {
+      items: [
+        {
+          id: 'quote',
+          icon: Quote,
+          label: '引用',
+          shortcut: getShortcutDisplay('quote'),
+          isActive: blockType === 'quote',
+          onClick: formatQuote,
+        },
+        {
+          id: 'code',
+          icon: Code,
+          label: 'コードブロック',
+          isActive: blockType === 'code',
+          onClick: formatCodeBlock,
+        },
+      ],
+    },
+  ]
+
+  // 挿入ドロップダウンのアイテム（条件付きでフィルタリング）
+  const mediaItems = [
+    onInsertLink && {
+      id: 'link',
+      icon: Link,
+      label: 'リンク',
+      shortcut: getShortcutDisplay('link'),
+      onClick: onInsertLink,
+    },
+    onInsertImage && {
+      id: 'image',
+      icon: ImageIcon,
+      label: '画像',
+      onClick: onInsertImage,
+    },
+    onInsertVideo && {
+      id: 'video',
+      icon: Youtube,
+      label: 'YouTube動画',
+      onClick: onInsertVideo,
+    },
+    onInsertTable && {
+      id: 'table',
+      icon: Table,
+      label: 'テーブル',
+      onClick: onInsertTable,
+    },
+    onInsertWidget && {
+      id: 'widget',
+      icon: Newspaper,
+      label: '記事リストウィジェット',
+      onClick: onInsertWidget,
+    },
+  ].filter(Boolean) as ToolbarDropdownItem[]
+
+  const insertGroups: ToolbarDropdownGroup[] =
+    mediaItems.length > 0 ? [{ items: mediaItems }] : []
+
+  // コンポーネントドロップダウンのアイテム
+  const componentItems = [
+    onInsertCallout && {
+      id: 'callout',
+      icon: Info,
+      label: 'コールアウト',
+      onClick: onInsertCallout,
+    },
+    onInsertFAQ && {
+      id: 'faq',
+      icon: HelpCircle,
+      label: 'FAQ',
+      onClick: onInsertFAQ,
+    },
+    onInsertButton && {
+      id: 'button',
+      icon: MousePointerClick,
+      label: 'ボタン',
+      onClick: onInsertButton,
+    },
+    onInsertCard && {
+      id: 'card',
+      icon: LayoutGrid,
+      label: 'カード',
+      onClick: onInsertCard,
+    },
+    onInsertDivider && {
+      id: 'divider',
+      icon: Minus,
+      label: '区切り線',
+      onClick: onInsertDivider,
+    },
+  ].filter(Boolean) as ToolbarDropdownItem[]
+
+  const componentGroups: ToolbarDropdownGroup[] =
+    componentItems.length > 0 ? [{ items: componentItems }] : []
+
   return (
-    <div className={styles.toolbar()}>
-      {/* Undo/Redo */}
-      <div className={styles.group()}>
-        <button
-          type="button"
-          disabled={disabled || !canUndo}
-          onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)}
-          className={styles.button()}
-          aria-label="元に戻す"
-          title="元に戻す"
-        >
-          <Undo className="w-4 h-4" />
-        </button>
-        <button
-          type="button"
-          disabled={disabled || !canRedo}
-          onClick={() => editor.dispatchCommand(REDO_COMMAND, undefined)}
-          className={styles.button()}
-          aria-label="やり直す"
-          title="やり直す"
-        >
-          <Redo className="w-4 h-4" />
-        </button>
-      </div>
+    <TooltipProvider delayDuration={300}>
+      <div className={styles.toolbar()}>
+        {/* Undo/Redo */}
+        <div className={styles.group()}>
+          <ToolbarButton
+            icon={Undo}
+            label={KEYBOARD_SHORTCUTS.undo.label}
+            shortcut={getShortcutDisplay('undo')}
+            disabled={disabled || !canUndo}
+            onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)}
+          />
+          <ToolbarButton
+            icon={Redo}
+            label={KEYBOARD_SHORTCUTS.redo.label}
+            shortcut={getShortcutDisplay('redo')}
+            disabled={disabled || !canRedo}
+            onClick={() => editor.dispatchCommand(REDO_COMMAND, undefined)}
+          />
+        </div>
 
-      <div className={styles.divider()} />
+        <div className={styles.divider()} />
 
-      {/* Block Type */}
-      <div className={styles.group()}>
-        <button
-          type="button"
+        {/* Block Type Dropdown */}
+        <ToolbarDropdown
+          icon={Type}
+          label="ブロック"
+          groups={blockTypeGroups}
           disabled={disabled}
-          onClick={formatParagraph}
-          className={styles.button({ active: blockType === 'paragraph' })}
-          aria-label="段落"
-          title="段落"
-        >
-          <Pilcrow className="w-4 h-4" />
-        </button>
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={() => formatHeading('h1')}
-          className={styles.button({ active: blockType === 'h1' })}
-          aria-label="見出し1"
-          title="見出し1"
-        >
-          <Heading1 className="w-4 h-4" />
-        </button>
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={() => formatHeading('h2')}
-          className={styles.button({ active: blockType === 'h2' })}
-          aria-label="見出し2"
-          title="見出し2"
-        >
-          <Heading2 className="w-4 h-4" />
-        </button>
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={() => formatHeading('h3')}
-          className={styles.button({ active: blockType === 'h3' })}
-          aria-label="見出し3"
-          title="見出し3"
-        >
-          <Heading3 className="w-4 h-4" />
-        </button>
-      </div>
+        />
 
-      <div className={styles.divider()} />
+        <div className={styles.divider()} />
 
-      {/* Text Formatting */}
-      <div className={styles.group()}>
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'bold')}
-          className={styles.button({ active: isBold })}
-          aria-label="太字"
-          title="太字"
-        >
-          <Bold className="w-4 h-4" />
-        </button>
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'italic')}
-          className={styles.button({ active: isItalic })}
-          aria-label="斜体"
-          title="斜体"
-        >
-          <Italic className="w-4 h-4" />
-        </button>
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'underline')}
-          className={styles.button({ active: isUnderline })}
-          aria-label="下線"
-          title="下線"
-        >
-          <Underline className="w-4 h-4" />
-        </button>
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'strikethrough')}
-          className={styles.button({ active: isStrikethrough })}
-          aria-label="打消し線"
-          title="打消し線"
-        >
-          <Strikethrough className="w-4 h-4" />
-        </button>
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'subscript')}
-          className={styles.button({ active: isSubscript })}
-          aria-label="下付き"
-          title="下付き"
-        >
-          <Subscript className="w-4 h-4" />
-        </button>
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'superscript')}
-          className={styles.button({ active: isSuperscript })}
-          aria-label="上付き"
-          title="上付き"
-        >
-          <Superscript className="w-4 h-4" />
-        </button>
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'code')}
-          className={styles.button({ active: isCode })}
-          aria-label="インラインコード"
-          title="インラインコード"
-        >
-          <Code className="w-4 h-4" />
-        </button>
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'highlight')}
-          className={styles.button({ active: isHighlight })}
-          aria-label="ハイライト"
-          title="ハイライト"
-        >
-          <Highlighter className="w-4 h-4" />
-        </button>
-      </div>
-
-      <div className={styles.divider()} />
-
-      {/* Lists & Quote & Code */}
-      <div className={styles.group()}>
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={() =>
-            editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined)
-          }
-          className={styles.button({ active: blockType === 'bullet' })}
-          aria-label="箇条書き"
-          title="箇条書き"
-        >
-          <List className="w-4 h-4" />
-        </button>
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={() =>
-            editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined)
-          }
-          className={styles.button({ active: blockType === 'number' })}
-          aria-label="番号付きリスト"
-          title="番号付きリスト"
-        >
-          <ListOrdered className="w-4 h-4" />
-        </button>
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={formatQuote}
-          className={styles.button({ active: blockType === 'quote' })}
-          aria-label="引用"
-          title="引用"
-        >
-          <Quote className="w-4 h-4" />
-        </button>
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={formatCode}
-          className={styles.button({ active: blockType === 'code' })}
-          aria-label="コードブロック"
-          title="コードブロック"
-        >
-          <Code className="w-4 h-4" />
-        </button>
-      </div>
-
-      <div className={styles.divider()} />
-
-      {/* Insert */}
-      <div className={styles.group()}>
-        {onInsertLink && (
-          <button
-            type="button"
+        {/* Text Formatting */}
+        <div className={styles.group()}>
+          <ToolbarButton
+            icon={Bold}
+            label={KEYBOARD_SHORTCUTS.bold.label}
+            shortcut={getShortcutDisplay('bold')}
+            isActive={isBold}
             disabled={disabled}
-            onClick={onInsertLink}
-            className={styles.button()}
-            aria-label="リンク"
-            title="リンク"
-          >
-            <Link className="w-4 h-4" />
-          </button>
+            onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'bold')}
+          />
+          <ToolbarButton
+            icon={Italic}
+            label={KEYBOARD_SHORTCUTS.italic.label}
+            shortcut={getShortcutDisplay('italic')}
+            isActive={isItalic}
+            disabled={disabled}
+            onClick={() =>
+              editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'italic')
+            }
+          />
+          <ToolbarButton
+            icon={Underline}
+            label={KEYBOARD_SHORTCUTS.underline.label}
+            shortcut={getShortcutDisplay('underline')}
+            isActive={isUnderline}
+            disabled={disabled}
+            onClick={() =>
+              editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'underline')
+            }
+          />
+          <ToolbarButton
+            icon={Strikethrough}
+            label={KEYBOARD_SHORTCUTS.strikethrough.label}
+            shortcut={getShortcutDisplay('strikethrough')}
+            isActive={isStrikethrough}
+            disabled={disabled}
+            onClick={() =>
+              editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'strikethrough')
+            }
+          />
+        </div>
+
+        <div className={styles.divider()} />
+
+        {/* Additional Text Formatting */}
+        <div className={styles.group()}>
+          <ToolbarButton
+            icon={Subscript}
+            label="下付き"
+            isActive={isSubscript}
+            disabled={disabled}
+            onClick={() =>
+              editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'subscript')
+            }
+          />
+          <ToolbarButton
+            icon={Superscript}
+            label="上付き"
+            isActive={isSuperscript}
+            disabled={disabled}
+            onClick={() =>
+              editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'superscript')
+            }
+          />
+          <ToolbarButton
+            icon={Code}
+            label={KEYBOARD_SHORTCUTS.code.label}
+            shortcut={getShortcutDisplay('code')}
+            isActive={isCode}
+            disabled={disabled}
+            onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'code')}
+          />
+          <ToolbarButton
+            icon={Highlighter}
+            label="ハイライト"
+            isActive={isHighlight}
+            disabled={disabled}
+            onClick={() =>
+              editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'highlight')
+            }
+          />
+        </div>
+
+        {/* Insert Dropdown */}
+        {insertGroups.length > 0 && (
+          <>
+            <div className={styles.divider()} />
+            <ToolbarDropdown
+              icon={Plus}
+              label="挿入"
+              groups={insertGroups}
+              disabled={disabled}
+            />
+          </>
         )}
-        {onInsertImage && (
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={onInsertImage}
-            className={styles.button()}
-            aria-label="画像"
-            title="画像"
-          >
-            <ImageIcon className="w-4 h-4" />
-          </button>
-        )}
-        {onInsertVideo && (
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={onInsertVideo}
-            className={styles.button()}
-            aria-label="YouTube"
-            title="YouTube"
-          >
-            <Youtube className="w-4 h-4" />
-          </button>
-        )}
-        {onInsertTable && (
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={onInsertTable}
-            className={styles.button()}
-            aria-label="テーブル"
-            title="テーブル"
-          >
-            <Table className="w-4 h-4" />
-          </button>
-        )}
-        {onInsertWidget && (
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={onInsertWidget}
-            className={styles.button()}
-            aria-label="記事リストウィジェット"
-            title="記事リストウィジェット"
-          >
-            <Newspaper className="w-4 h-4" />
-          </button>
+
+        {/* Components Dropdown */}
+        {componentGroups.length > 0 && (
+          <>
+            <div className={styles.divider()} />
+            <ToolbarDropdown
+              icon={Puzzle}
+              label="コンポーネント"
+              groups={componentGroups}
+              disabled={disabled}
+            />
+          </>
         )}
       </div>
-    </div>
+    </TooltipProvider>
   )
 }
 
-const blockTypeToBlockName: Record<string, string> = {
-  paragraph: '段落',
-  h1: '見出し1',
-  h2: '見出し2',
-  h3: '見出し3',
-  h4: '見出し4',
-  h5: '見出し5',
-  h6: '見出し6',
-  bullet: '箇条書き',
-  number: '番号付きリスト',
-  check: 'チェックリスト',
-  quote: '引用',
-  code: 'コードブロック',
-}
+const VALID_BLOCK_TYPES = new Set([
+  'paragraph',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'bullet',
+  'number',
+  'check',
+  'quote',
+  'code',
+])

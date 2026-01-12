@@ -30,7 +30,16 @@ import { tv } from 'tailwind-variants'
 
 import { editorTheme } from './theme'
 import type { LexicalEditorProps } from './types'
-import { ImageNode, YouTubeNode, PostListWidgetNode } from './nodes'
+import {
+  ImageNode,
+  YouTubeNode,
+  PostListWidgetNode,
+  CalloutNode,
+  FAQNode,
+  ButtonNode,
+  CardNode,
+  DividerNode,
+} from './nodes'
 import {
   ToolbarPlugin,
   FloatingToolbarPlugin,
@@ -42,6 +51,16 @@ import {
   usePostListWidgetDialog,
   useLinkDialog,
   useTableDialog,
+  CalloutPlugin,
+  useCalloutDialog,
+  FAQPlugin,
+  useFAQDialog,
+  ButtonPlugin,
+  useButtonDialog,
+  CardPlugin,
+  useCardDialog,
+  DividerPlugin,
+  useDividerDialog,
 } from './plugins'
 
 const styles = tv({
@@ -197,6 +216,11 @@ function EditorInner({
   const { openPostListWidgetDialog, PostListWidgetDialog } = usePostListWidgetDialog()
   const { openLinkDialog, LinkDialog } = useLinkDialog()
   const { openTableDialog, TableDialog } = useTableDialog()
+  const { openCalloutDialog, CalloutDialog } = useCalloutDialog()
+  const { openFAQDialog, FAQDialog } = useFAQDialog()
+  const { openButtonDialog, ButtonDialog } = useButtonDialog()
+  const { openCardDialog, CardDialog } = useCardDialog()
+  const { openDividerDialog, DividerDialog } = useDividerDialog()
 
   return (
     <div className={`${styles.wrapper({ disabled })} ${className || ''}`}>
@@ -208,6 +232,11 @@ function EditorInner({
           onInsertLink={openLinkDialog}
           onInsertTable={openTableDialog}
           onInsertWidget={openPostListWidgetDialog}
+          onInsertCallout={openCalloutDialog}
+          onInsertFAQ={openFAQDialog}
+          onInsertButton={openButtonDialog}
+          onInsertCard={openCardDialog}
+          onInsertDivider={openDividerDialog}
         />
       )}
 
@@ -238,6 +267,11 @@ function EditorInner({
       <ImagePlugin />
       <YouTubePlugin />
       <PostListWidgetPlugin />
+      <CalloutPlugin />
+      <FAQPlugin />
+      <ButtonPlugin />
+      <CardPlugin />
+      <DividerPlugin />
 
       {showFloatingToolbar && <FloatingToolbarPlugin />}
 
@@ -247,6 +281,11 @@ function EditorInner({
       <PostListWidgetDialog />
       <LinkDialog />
       <TableDialog />
+      <CalloutDialog />
+      <FAQDialog />
+      <ButtonDialog />
+      <CardDialog />
+      <DividerDialog />
     </div>
   )
 }
@@ -281,6 +320,11 @@ export function LexicalEditor({
         ImageNode,
         YouTubeNode,
         PostListWidgetNode,
+        CalloutNode,
+        FAQNode,
+        ButtonNode,
+        CardNode,
+        DividerNode,
       ],
       onError: (error: Error) => {
         console.error('Lexical Editor Error:', error)

@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { CustomerStatus } from '@/generated/prisma/client/enums'
 import { z } from 'zod'
 import { createSuccess, createFailure, type CustomerWhereInput, withAuth } from '@/types'
-import { requireAdmin } from '@/lib/auth'
+import { verifyAdminSession } from '@/lib/auth'
 
 // =============================================================================
 // Types
@@ -89,7 +89,7 @@ export async function getCustomers(
   filters: CustomerFilters = {},
   pagination: CustomerPagination = {}
 ): Promise<GetCustomersResult> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const { status, search, isActive } = filters
 
@@ -152,7 +152,7 @@ export async function getCustomers(
  * 顧客詳細を取得（予約履歴付き）
  */
 export async function getCustomerById(id: string): Promise<CustomerWithReservations | null> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const customer = await prisma.customer.findUnique({
     where: { id },
@@ -284,7 +284,7 @@ export async function getCustomerStats(): Promise<{
   inactive: number
   blacklist: number
 }> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const [total, newCount, regular, vip, inactive, blacklist] = await Promise.all([
     prisma.customer.count(),

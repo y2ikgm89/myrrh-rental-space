@@ -14,6 +14,8 @@ export const updatePageSchema = z.object({
   ogpImageUrl: z.string().url('有効なURLを入力してください').optional().or(z.literal('')),
   isPublished: z.boolean().default(true),
   publishedAt: z.coerce.date().optional(),
+  contentWidth: z.enum(['XS', 'SM', 'MD', 'LG', 'CUSTOM']).optional(),
+  contentWidthCustom: z.number().int().min(320).max(1920).optional(),
 })
 
 export type UpdatePageInput = z.infer<typeof updatePageSchema>
@@ -64,6 +66,8 @@ export type PageData = {
   isActive: boolean
   createdAt: Date
   updatedAt: Date
+  contentWidth: string | null
+  contentWidthCustom: number | null
 }
 
 /**

@@ -11,7 +11,7 @@ import {
 } from '@/lib/storage'
 import { STORAGE_BUCKETS } from '@/lib/supabase'
 import { revalidatePath } from 'next/cache'
-import { requireAdmin } from '@/lib/auth'
+import { verifyAdminSession } from '@/lib/auth'
 
 // =============================================================================
 // Types
@@ -35,7 +35,7 @@ export async function uploadSpaceImageAction(
   spaceId: string
 ): Promise<UploadActionResult> {
   try {
-    await requireAdmin()
+    await verifyAdminSession()
     const file = formData.get('file') as File | null
 
     if (!file) {
@@ -68,7 +68,7 @@ export async function uploadSpaceImagesAction(
   spaceId: string
 ): Promise<{ success: boolean; urls?: string[]; error?: string }> {
   try {
-    await requireAdmin()
+    await verifyAdminSession()
     const files = formData.getAll('files') as File[]
 
     if (files.length === 0) {
@@ -103,7 +103,7 @@ export async function deleteSpaceImageAction(
   imageUrl: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    await requireAdmin()
+    await verifyAdminSession()
     const path = extractPathFromUrl(imageUrl, STORAGE_BUCKETS.SPACES)
     if (!path) {
       return { success: false, error: '無効な画像URLです' }
@@ -128,7 +128,7 @@ export async function uploadBlogImageAction(
   postId?: string
 ): Promise<UploadActionResult> {
   try {
-    await requireAdmin()
+    await verifyAdminSession()
     const file = formData.get('file') as File | null
 
     if (!file) {
@@ -160,7 +160,7 @@ export async function deleteBlogImageAction(
   imageUrl: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    await requireAdmin()
+    await verifyAdminSession()
     const path = extractPathFromUrl(imageUrl, STORAGE_BUCKETS.BLOG)
     if (!path) {
       return { success: false, error: '無効な画像URLです' }
@@ -184,7 +184,7 @@ export async function uploadLogoAction(
   formData: FormData
 ): Promise<UploadActionResult> {
   try {
-    await requireAdmin()
+    await verifyAdminSession()
     const file = formData.get('file') as File | null
 
     if (!file) {
@@ -216,7 +216,7 @@ export async function uploadFaviconAction(
   formData: FormData
 ): Promise<UploadActionResult> {
   try {
-    await requireAdmin()
+    await verifyAdminSession()
     const file = formData.get('file') as File | null
 
     if (!file) {
@@ -248,7 +248,7 @@ export async function uploadOgpImageAction(
   formData: FormData
 ): Promise<UploadActionResult> {
   try {
-    await requireAdmin()
+    await verifyAdminSession()
     const file = formData.get('file') as File | null
 
     if (!file) {
@@ -279,7 +279,7 @@ export async function deleteSiteImageAction(
   imageUrl: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    await requireAdmin()
+    await verifyAdminSession()
     const path = extractPathFromUrl(imageUrl, STORAGE_BUCKETS.SITE)
     if (!path) {
       return { success: false, error: '無効な画像URLです' }
@@ -310,7 +310,7 @@ export async function deleteSpaceImagesAction(
   imageUrls: string[]
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    await requireAdmin()
+    await verifyAdminSession()
     if (imageUrls.length === 0) {
       return { success: true }
     }
@@ -341,7 +341,7 @@ export async function deleteBlogImagesAction(
   imageUrls: string[]
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    await requireAdmin()
+    await verifyAdminSession()
     if (imageUrls.length === 0) {
       return { success: true }
     }

@@ -2,7 +2,7 @@
 
 import { connection } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAdmin } from '@/lib/auth'
+import { verifyAdminSession } from '@/lib/auth'
 import type { ReservationStatus, InquiryStatus } from '@/generated/prisma/client/enums'
 
 // =============================================================================
@@ -57,7 +57,7 @@ export type RecentInquiry = {
  * ダッシュボード統計を取得
  */
 export async function getDashboardStats(): Promise<DashboardStats> {
-  await requireAdmin()
+  await verifyAdminSession()
   await connection()
 
   const now = new Date()
@@ -158,7 +158,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
  * 最近の予約を取得
  */
 export async function getRecentReservations(limit = 5): Promise<RecentReservation[]> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const reservations = await prisma.reservation.findMany({
     take: limit,
@@ -184,7 +184,7 @@ export async function getRecentReservations(limit = 5): Promise<RecentReservatio
  * 最近のお問い合わせを取得
  */
 export async function getRecentInquiries(limit = 5): Promise<RecentInquiry[]> {
-  await requireAdmin()
+  await verifyAdminSession()
 
   const inquiries = await prisma.inquiry.findMany({
     take: limit,
@@ -205,7 +205,7 @@ export async function getRecentInquiries(limit = 5): Promise<RecentInquiry[]> {
  * 今日の予約を取得
  */
 export async function getTodayReservations(): Promise<RecentReservation[]> {
-  await requireAdmin()
+  await verifyAdminSession()
   await connection()
 
   const today = new Date()

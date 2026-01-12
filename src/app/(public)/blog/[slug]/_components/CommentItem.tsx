@@ -8,7 +8,7 @@
  */
 
 import { useState } from 'react'
-import { useSession } from 'next-auth/react'
+import { useSession } from '@/lib/auth-client'
 import { formatDistanceToNow } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { MessageCircle, ChevronDown, ChevronUp, Trash2, User } from 'lucide-react'
