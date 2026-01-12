@@ -11,7 +11,7 @@ CREATE TYPE "InquiryStatus" AS ENUM ('NEW', 'IN_PROGRESS', 'RESOLVED', 'CLOSED')
 CREATE TYPE "CustomerStatus" AS ENUM ('NEW', 'REGULAR', 'VIP', 'INACTIVE', 'BLACKLIST');
 
 -- CreateEnum
-CREATE TYPE "NavigationType" AS ENUM ('HEADER', 'FOOTER');
+CREATE TYPE "NavigationType" AS ENUM ('HEADER_DESKTOP', 'HEADER_MOBILE', 'FOOTER');
 
 -- CreateEnum
 CREATE TYPE "SocialPlatform" AS ENUM ('TWITTER', 'FACEBOOK', 'INSTAGRAM', 'YOUTUBE', 'LINE', 'TIKTOK', 'OTHER');
@@ -113,8 +113,13 @@ CREATE TABLE "reservations" (
     "status" "ReservationStatus" NOT NULL DEFAULT 'PENDING',
     "totalPrice" DECIMAL(10,2),
     "notes" TEXT,
+    "termsAgreedAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "googleCalendarEventId" TEXT,
+    "googleCalendarOAuthEventId" TEXT,
+    "calendarSyncedAt" TIMESTAMP(3),
+    "calendarSyncError" TEXT,
 
     CONSTRAINT "reservations_pkey" PRIMARY KEY ("id")
 );
@@ -168,6 +173,25 @@ CREATE TABLE "news" (
 );
 
 -- CreateTable
+CREATE TABLE "announcement_bars" (
+    "id" TEXT NOT NULL,
+    "message" VARCHAR(200) NOT NULL,
+    "type" TEXT NOT NULL DEFAULT 'info',
+    "linkUrl" TEXT,
+    "linkText" TEXT,
+    "bgColor" TEXT,
+    "textColor" TEXT,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "priority" INTEGER NOT NULL DEFAULT 0,
+    "startAt" TIMESTAMP(3),
+    "endAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "announcement_bars_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "blog_posts" (
     "id" TEXT NOT NULL,
     "title" TEXT NOT NULL,
@@ -218,6 +242,26 @@ CREATE TABLE "blog_tags" (
 );
 
 -- CreateTable
+CREATE TABLE "blog_comments" (
+    "id" TEXT NOT NULL,
+    "postId" TEXT NOT NULL,
+    "parentCommentId" TEXT,
+    "content" TEXT NOT NULL,
+    "userId" TEXT,
+    "guestName" TEXT,
+    "guestEmail" TEXT,
+    "ipAddress" TEXT,
+    "contentHash" TEXT,
+    "isDeleted" BOOLEAN NOT NULL DEFAULT false,
+    "deletedAt" TIMESTAMP(3),
+    "deletedBy" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "blog_comments_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "pages" (
     "id" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
@@ -236,6 +280,23 @@ CREATE TABLE "pages" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "pages_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "homepage_hero" (
+    "id" TEXT NOT NULL DEFAULT 'singleton',
+    "title" TEXT NOT NULL DEFAULT '理想のスペースを、あなたに。',
+    "subtitle" TEXT,
+    "ctaPrimaryText" TEXT NOT NULL DEFAULT 'スペースを探す',
+    "ctaPrimaryUrl" TEXT NOT NULL DEFAULT '/spaces',
+    "ctaSecondaryText" TEXT DEFAULT 'お問い合わせ',
+    "ctaSecondaryUrl" TEXT DEFAULT '/contact',
+    "backgroundImageUrl" TEXT,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "homepage_hero_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -262,10 +323,40 @@ CREATE TABLE "social_links" (
     "iconUrl" TEXT,
     "order" INTEGER NOT NULL,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "showOnDesktop" BOOLEAN NOT NULL DEFAULT true,
+    "showOnMobile" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "social_links_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "faq_categories" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "slug" TEXT NOT NULL,
+    "description" TEXT,
+    "order" INTEGER NOT NULL DEFAULT 0,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "faq_categories_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "faq_items" (
+    "id" TEXT NOT NULL,
+    "categoryId" TEXT NOT NULL,
+    "question" TEXT NOT NULL,
+    "answer" TEXT NOT NULL,
+    "order" INTEGER NOT NULL DEFAULT 0,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "faq_items_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -313,14 +404,22 @@ CREATE TABLE "settings" (
     "defaultMetaKeywords" TEXT,
     "defaultOgpTitle" TEXT,
     "defaultOgpDescription" TEXT,
+    "analyticsType" TEXT,
     "googleAnalyticsId" TEXT,
+    "googleTagManagerId" TEXT,
     "googleSearchConsoleId" TEXT,
+    "bingWebmasterToolsId" TEXT,
+    "gaPropertyId" TEXT,
     "defaultTimeSlot" INTEGER DEFAULT 60,
     "minReservationDuration" INTEGER DEFAULT 60,
     "maxReservationDuration" INTEGER DEFAULT 480,
     "cancellationPolicy" TEXT,
     "sendReservationConfirmationEmail" BOOLEAN NOT NULL DEFAULT true,
     "sendAdminNotificationEmail" BOOLEAN NOT NULL DEFAULT true,
+    "termsAgreementEnabled" BOOLEAN NOT NULL DEFAULT true,
+    "termsAgreementText" TEXT,
+    "requireTermsAgreement" BOOLEAN NOT NULL DEFAULT true,
+    "requirePrivacyAgreement" BOOLEAN NOT NULL DEFAULT true,
     "notifyNewReservation" BOOLEAN NOT NULL DEFAULT true,
     "notifyReservationChange" BOOLEAN NOT NULL DEFAULT true,
     "notifyReservationCancel" BOOLEAN NOT NULL DEFAULT true,
@@ -330,8 +429,78 @@ CREATE TABLE "settings" (
     "language" TEXT DEFAULT 'ja',
     "maintenanceMode" BOOLEAN NOT NULL DEFAULT false,
     "maintenanceMessage" TEXT,
+    "stripeEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "stripeTestMode" BOOLEAN NOT NULL DEFAULT true,
+    "stripePublishableKey" TEXT,
+    "stripeSecretKey" TEXT,
+    "stripeWebhookSecret" TEXT,
+    "stripeAccountId" TEXT,
+    "stripeCurrency" TEXT NOT NULL DEFAULT 'jpy',
+    "stripeLastTestedAt" TIMESTAMP(3),
+    "stripeConnectionStatus" TEXT,
+    "cookieConsentEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "cookieConsentMessage" TEXT,
+    "cookieConsentAcceptText" TEXT,
+    "cookieConsentRejectText" TEXT,
+    "cookieConsentPolicyUrl" TEXT,
+    "announcementBarAnimation" TEXT NOT NULL DEFAULT 'fade',
+    "announcementBarDuration" INTEGER NOT NULL DEFAULT 5000,
+    "announcementBarAutoPlay" BOOLEAN NOT NULL DEFAULT true,
+    "announcementBarPauseOnHover" BOOLEAN NOT NULL DEFAULT true,
+    "announcementBarShowArrows" BOOLEAN NOT NULL DEFAULT true,
+    "announcementBarShowIndicator" BOOLEAN NOT NULL DEFAULT true,
+    "announcementBarDesignStyle" TEXT NOT NULL DEFAULT 'solid',
+    "announcementBarBgColor" TEXT,
+    "announcementBarTextColor" TEXT,
+    "announcementBarStripeColor" TEXT,
+    "announcementBarStripeAnimation" BOOLEAN NOT NULL DEFAULT false,
+    "announcementBarGradientAnimation" BOOLEAN NOT NULL DEFAULT false,
+    "announcementBarGlassAnimation" BOOLEAN NOT NULL DEFAULT false,
+    "resendApiKey" TEXT,
+    "resendLastTestedAt" TIMESTAMP(3),
+    "resendConnectionStatus" TEXT,
+    "turnstileSiteKey" TEXT,
+    "turnstileSecretKey" TEXT,
+    "turnstileLastTestedAt" TIMESTAMP(3),
+    "turnstileConnectionStatus" TEXT,
+    "googleMapsApiKey" TEXT,
+    "googleMapsLastTestedAt" TIMESTAMP(3),
+    "googleMapsConnectionStatus" TEXT,
+    "customApiKeys" JSONB DEFAULT '{}',
+    "googleCalendarEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "googleCalendarServiceAccountJson" TEXT,
+    "googleCalendarId" TEXT,
+    "googleCalendarLastTestedAt" TIMESTAMP(3),
+    "googleCalendarConnectionStatus" TEXT,
+    "googleCalendarOAuthEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "icalAttachmentEnabled" BOOLEAN NOT NULL DEFAULT true,
+    "addToCalendarLinksEnabled" BOOLEAN NOT NULL DEFAULT true,
+    "icalFeedEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "icalFeedIncludeCustomerInfo" BOOLEAN NOT NULL DEFAULT false,
+    "googleCalendarTwoWaySyncEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "googleCalendarSyncMethod" TEXT NOT NULL DEFAULT 'polling',
+    "googleCalendarPollingIntervalMin" INTEGER NOT NULL DEFAULT 5,
+    "googleCalendarSyncToken" TEXT,
+    "googleCalendarLastSyncedAt" TIMESTAMP(3),
+    "googleCalendarWebhookChannelId" TEXT,
+    "googleCalendarWebhookResourceId" TEXT,
+    "googleCalendarWebhookExpiration" TIMESTAMP(3),
 
     CONSTRAINT "settings_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ical_tokens" (
+    "id" TEXT NOT NULL,
+    "token" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "spaceId" TEXT,
+    "createdBy" TEXT NOT NULL,
+    "expiresAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "lastUsedAt" TIMESTAMP(3),
+
+    CONSTRAINT "ical_tokens_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -413,6 +582,12 @@ CREATE INDEX "inquiries_createdAt_idx" ON "inquiries"("createdAt");
 CREATE INDEX "news_isPublished_publishedAt_idx" ON "news"("isPublished", "publishedAt");
 
 -- CreateIndex
+CREATE INDEX "announcement_bars_isActive_priority_idx" ON "announcement_bars"("isActive", "priority");
+
+-- CreateIndex
+CREATE INDEX "announcement_bars_startAt_endAt_idx" ON "announcement_bars"("startAt", "endAt");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "blog_posts_slug_key" ON "blog_posts"("slug");
 
 -- CreateIndex
@@ -440,6 +615,30 @@ CREATE UNIQUE INDEX "blog_tags_name_key" ON "blog_tags"("name");
 CREATE UNIQUE INDEX "blog_tags_slug_key" ON "blog_tags"("slug");
 
 -- CreateIndex
+CREATE INDEX "blog_comments_postId_createdAt_idx" ON "blog_comments"("postId", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "blog_comments_parentCommentId_idx" ON "blog_comments"("parentCommentId");
+
+-- CreateIndex
+CREATE INDEX "blog_comments_userId_idx" ON "blog_comments"("userId");
+
+-- CreateIndex
+CREATE INDEX "blog_comments_ipAddress_createdAt_idx" ON "blog_comments"("ipAddress", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "blog_comments_guestEmail_createdAt_idx" ON "blog_comments"("guestEmail", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "blog_comments_contentHash_idx" ON "blog_comments"("contentHash");
+
+-- CreateIndex
+CREATE INDEX "blog_comments_isDeleted_idx" ON "blog_comments"("isDeleted");
+
+-- CreateIndex
+CREATE INDEX "blog_comments_isDeleted_createdAt_idx" ON "blog_comments"("isDeleted", "createdAt" DESC);
+
+-- CreateIndex
 CREATE UNIQUE INDEX "pages_slug_key" ON "pages"("slug");
 
 -- CreateIndex
@@ -450,6 +649,33 @@ CREATE INDEX "navigation_items_type_order_idx" ON "navigation_items"("type", "or
 
 -- CreateIndex
 CREATE INDEX "social_links_order_idx" ON "social_links"("order");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "faq_categories_slug_key" ON "faq_categories"("slug");
+
+-- CreateIndex
+CREATE INDEX "faq_categories_order_idx" ON "faq_categories"("order");
+
+-- CreateIndex
+CREATE INDEX "faq_categories_isActive_order_idx" ON "faq_categories"("isActive", "order");
+
+-- CreateIndex
+CREATE INDEX "faq_items_categoryId_order_idx" ON "faq_items"("categoryId", "order");
+
+-- CreateIndex
+CREATE INDEX "faq_items_isActive_idx" ON "faq_items"("isActive");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ical_tokens_token_key" ON "ical_tokens"("token");
+
+-- CreateIndex
+CREATE INDEX "ical_tokens_token_idx" ON "ical_tokens"("token");
+
+-- CreateIndex
+CREATE INDEX "ical_tokens_spaceId_idx" ON "ical_tokens"("spaceId");
+
+-- CreateIndex
+CREATE INDEX "ical_tokens_createdBy_idx" ON "ical_tokens"("createdBy");
 
 -- AddForeignKey
 ALTER TABLE "accounts" ADD CONSTRAINT "accounts_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -473,4 +699,22 @@ ALTER TABLE "blog_posts" ADD CONSTRAINT "blog_posts_categoryId_fkey" FOREIGN KEY
 ALTER TABLE "blog_posts" ADD CONSTRAINT "blog_posts_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "blog_comments" ADD CONSTRAINT "blog_comments_postId_fkey" FOREIGN KEY ("postId") REFERENCES "blog_posts"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "blog_comments" ADD CONSTRAINT "blog_comments_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "blog_comments" ADD CONSTRAINT "blog_comments_parentCommentId_fkey" FOREIGN KEY ("parentCommentId") REFERENCES "blog_comments"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "navigation_items" ADD CONSTRAINT "navigation_items_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "navigation_items"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "faq_items" ADD CONSTRAINT "faq_items_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "faq_categories"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ical_tokens" ADD CONSTRAINT "ical_tokens_spaceId_fkey" FOREIGN KEY ("spaceId") REFERENCES "spaces"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ical_tokens" ADD CONSTRAINT "ical_tokens_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
