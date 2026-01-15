@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { LayoutWidth } from '@/generated/prisma/client/enums'
 
 /**
  * ページ更新用バリデーションスキーマ
@@ -14,38 +15,27 @@ export const updatePageSchema = z.object({
   ogpImageUrl: z.string().url('有効なURLを入力してください').optional().or(z.literal('')),
   isPublished: z.boolean().default(true),
   publishedAt: z.coerce.date().optional(),
-  contentWidth: z.enum(['XS', 'SM', 'MD', 'LG', 'CUSTOM']).optional(),
+  contentWidth: z.nativeEnum(LayoutWidth).optional(),
   contentWidthCustom: z.number().int().min(320).max(1920).optional(),
 })
 
-export type UpdatePageInput = z.infer<typeof updatePageSchema>
-
 /**
- * ホームページヒーロー更新用バリデーションスキーマ
+ * ページ作成用バリデーションスキーマ
  */
-/**
- * URL検証: 内部パス（/で始まる）またはhttp/httpsのみ許可
- */
-const safeUrlSchema = z
-  .string()
-  .max(200, 'URLは200文字以内です')
-  .refine(
-    (url) => url === '' || url.startsWith('/') || url.startsWith('http://') || url.startsWith('https://'),
-    '有効なURLまたはパス（/で始まる）を入力してください'
-  )
-
-export const updateHomepageHeroSchema = z.object({
-  title: z.string().min(1, 'タイトルは必須です').max(100, 'タイトルは100文字以内です'),
-  subtitle: z.string().max(300, 'サブタイトルは300文字以内です').optional(),
-  ctaPrimaryText: z.string().min(1, 'ボタンテキストは必須です').max(50, 'ボタンテキストは50文字以内です'),
-  ctaPrimaryUrl: safeUrlSchema.refine((url) => url.length > 0, 'ボタンURLは必須です'),
-  ctaSecondaryText: z.string().max(50, 'ボタンテキストは50文字以内です').optional(),
-  ctaSecondaryUrl: safeUrlSchema.optional().or(z.literal('')),
-  backgroundImageUrl: z.string().url('有効なURLを入力してください').optional().or(z.literal('')),
-  isActive: z.boolean().default(true),
+export const createPageSchema = z.object({
+  slug: z
+    .string()
+    .min(1, 'スラッグは必須です')
+    .max(100, 'スラッグは100文字以内です')
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'スラッグは半角英数字とハイフンのみ使用可能です'),
+  title: z.string().min(1, 'タイトルは必須です').max(200, 'タイトルは200文字以内です'),
+  description: z.string().max(500, '説明は500文字以内です').optional(),
+  isPublished: z.boolean().default(false),
 })
 
-export type UpdateHomepageHeroInput = z.infer<typeof updateHomepageHeroSchema>
+export type UpdatePageInput = z.infer<typeof updatePageSchema>
+export type CreatePageInput = z.infer<typeof createPageSchema>
+
 
 /**
  * ページデータ型
@@ -64,28 +54,12 @@ export type PageData = {
   isPublished: boolean
   publishedAt: Date | null
   isActive: boolean
+  contentWidth: LayoutWidth | null
+  contentWidthCustom: number | null
   createdAt: Date
   updatedAt: Date
-  contentWidth: string | null
-  contentWidthCustom: number | null
 }
 
-/**
- * ホームページヒーローデータ型
- */
-export type HomepageHeroData = {
-  id: string
-  title: string
-  subtitle: string | null
-  ctaPrimaryText: string
-  ctaPrimaryUrl: string
-  ctaSecondaryText: string | null
-  ctaSecondaryUrl: string | null
-  backgroundImageUrl: string | null
-  isActive: boolean
-  createdAt: Date
-  updatedAt: Date
-}
 
 /**
  * Server Actionレスポンス型
@@ -96,6 +70,9 @@ export type PageActionResult =
 
 /**
  * システムページのスラッグリスト
+ * - privacy: プライバシーポリシー
+ * - terms: 利用規約
+ * - homepage: ホームページ（セクション管理）
  */
-export const SYSTEM_PAGE_SLUGS = ['privacy', 'terms'] as const
+export const SYSTEM_PAGE_SLUGS = ['privacy', 'terms', 'homepage'] as const
 export type SystemPageSlug = (typeof SYSTEM_PAGE_SLUGS)[number]

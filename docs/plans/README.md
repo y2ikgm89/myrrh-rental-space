@@ -2,6 +2,306 @@
 
 ## 完了した計画
 
+### 025-homepage-settings-to-pages.md (2026-01-15)
+
+ホームページ設定のページ管理への移動
+
+**実装内容**:
+- ホームページセクション管理を「設定 > ホームページタブ」から「ページ管理」に移動
+- ページ一覧に仮想「ホームページ」行を追加（先頭表示）
+- 設定タブを10→9タブに削減
+- 既存コンポーネント（HomepageTab, SectionEditor）を100%再利用
+
+**新規ファイル**:
+- `src/app/(admin)/admin/(dashboard)/pages/homepage/edit/page.tsx` - 編集画面
+
+**変更ファイル**:
+- `src/lib/validations/page.ts` - SYSTEM_PAGE_SLUGSに'homepage'追加
+- `src/app/(admin)/admin/(dashboard)/pages/page.tsx` - 仮想行追加
+- `src/app/(admin)/admin/(dashboard)/settings/_components/SettingsTabs.tsx` - タブ削除
+- `src/app/(admin)/admin/(dashboard)/settings/_components/tabs/index.ts` - export削除
+- `src/actions/admin/homepage-settings.ts` - revalidatePath更新
+- `src/actions/admin/page.ts` - SYSTEM_PAGE_SLUGS使用に統一
+
+**マイグレーション**: 不要
+
+---
+
+### 024-bun-test-framework.md (2026-01-14)
+
+Bun 1.3.6テストフレームワーク導入
+
+**実装内容**:
+- Bun ネイティブテストランナー(`bun:test`)による包括的テスト環境
+- Prisma Client モック（外部ライブラリ不使用）
+- Better Auth セッションモック
+- Next.js API モック（headers, redirect, revalidatePath）
+- カスタムアサーション（ActionResult型対応）
+- 121テスト、379 expect() calls、150ms実行
+
+**新規ファイル**:
+- `__tests__/setup.ts` - グローバルセットアップ
+- `__tests__/mocks/` - prisma.ts, auth.ts, next.ts, index.ts
+- `__tests__/fixtures/` - users.ts, reservations.ts, index.ts
+- `__tests__/helpers/` - session-mock.ts, assertions.ts, index.ts
+- `__tests__/unit/lib/permissions.test.ts` - 権限管理テスト
+- `__tests__/unit/lib/validations/reservation.test.ts` - 予約バリデーションテスト
+- `__tests__/unit/lib/reservation-utils.test.ts` - 予約重複チェックテスト
+- `__tests__/unit/types/server-actions.test.ts` - Server Actions HOFテスト
+
+**変更ファイル**:
+- `bunfig.toml` - テスト設定追加
+- `package.json` - テストスクリプト追加
+
+**マイグレーション**: 不要
+
+---
+
+### 023-grapesjs-removal-homepage-settings.md (2026-01-14)
+
+GrapesJS完全廃止 + ホームページセクション設定機能
+
+**実装内容**:
+- GrapesJSビジュアルエディターの完全削除（パッケージ、スキーマ、コード、ドキュメント）
+- Blog/News/PageエディターをLexicalに統一
+- ホームページセクション設定: CTA、Blog、News、FAQの4セクション
+- FAQセクション: 専用モデル（HomepageFaq/HomepageFaqItem）、ドラッグ＆ドロップ並び替え
+- 管理画面: 設定ページに「ホームページ」タブ追加
+- 公開ページ: 設定ベースのセクション表示
+
+**新規ファイル**:
+- `src/actions/admin/homepage-settings.ts` - Server Actions
+- `src/app/.../settings/_components/tabs/HomepageTab.tsx` - 管理画面タブ
+- `src/components/site/sections/BlogSection.tsx` - ブログセクション
+- `src/components/site/sections/NewsSection.tsx` - お知らせセクション
+- `src/components/site/sections/FAQSection.tsx` - FAQセクション
+
+**削除ファイル**:
+- `src/components/admin/editor/grapesjs/` - GrapesJSエディター全体
+- `src/actions/admin/grapes-page.ts`, `src/lib/grapesjs-renderer.ts`
+- `src/app/(admin)/.../grapes-pages/`, `src/app/(public)/g/`
+- GrapesJS関連docs（016, 017, 018, 020）
+
+**マイグレーション**: `bunx prisma db push` または `bunx prisma migrate dev --name remove_grapesjs_add_homepage_settings`
+
+---
+
+### 022-type-safety-hof-migration.md (2026-01-13)
+
+型安全性向上 + HOFパターン統一
+
+**実装内容**:
+- AuditUser型導入: `as never` アサーション30箇所以上を排除
+- withPermission HOF移行: 13ファイルの手動認証パターンを統一
+- checkReadPermissionヘルパー: 読み取り専用アクション用軽量パターン
+- React 19対応: forwardRef廃止、FC型廃止
+
+**変更ファイル**:
+- `src/lib/audit.ts` - AuditUser型、isSuccessResult型ガード
+- `src/types/server-actions.ts` - AuditUser再エクスポート
+- `src/actions/admin/*.ts` - 12ファイルをwithPermission HOFに移行
+- `src/components/site/ui/Checkbox.tsx` - forwardRef → ref as props
+- `src/contexts/aria-live-context.tsx` - FC → 関数宣言
+
+**マイグレーション**: 不要
+
+---
+
+### 021-seo-accessibility-optimization.md (2026-01-13)
+
+SEO/アクセシビリティ最適化（メタデータ・JSON-LD・WCAG 2.1 AA準拠）
+
+**実装内容**:
+- SEOメタデータファクトリ: Settings DBから動的生成、canonical URL対応
+- JSON-LD構造化データ: WebSite/Article/NewsArticle、XSSサニタイズ強化
+- アクセシビリティ基盤: SkipLink、ARIAライブリージョン、prefers-reduced-motion
+- CSS改善: WCAG AA準拠コントラスト比（4.5:1以上）
+
+**新規ファイル**:
+- `src/lib/seo/` - metadata-factory.ts, json-ld-config.ts, index.ts
+- `src/lib/a11y/` - skip-link.ts, motion-utils.ts, aria-live.ts, index.ts
+- `src/contexts/` - aria-live-context.tsx, index.ts
+- `src/components/a11y/` - SkipLink.tsx, AriaLiveRegion.tsx, index.ts
+
+**変更ファイル**:
+- `src/components/seo/JsonLd.tsx` - NewsArticleJsonLd追加、XSSサニタイズ強化
+- `src/app/(public)/page.tsx` - generateMetadata + WebSiteJsonLd追加
+- `src/app/(public)/blog/[slug]/page.tsx` - ArticleJsonLd追加
+- `src/app/(public)/news/[id]/page.tsx` - NewsArticleJsonLd追加
+- `src/app/globals.css` - コントラスト比改善 + prefers-reduced-motion
+- `src/app/(public)/layout.tsx` - SkipLink, AriaLiveProvider, AriaLiveRegion追加
+
+**マイグレーション**: 不要
+
+---
+
+### 021-permission-management-system.md (2026-01-13)
+
+権限管理システム（RBAC + 監査ログ + レートリミット）
+
+**実装内容**:
+- 5階層ロールシステム: SUPER_ADMIN, ADMIN, EDITOR, VIEWER, USER
+- 権限ライブラリ: コードベースRBAC（ROLE_PERMISSIONS定義）
+- 監査ログ: 書き込み操作 + セキュリティイベント自動記録
+- レートリミット: ログイン試行制限（5回/15分）
+- 管理UI: 権限マトリクス、監査ログ一覧、ロール管理強化
+
+**新規ファイル**:
+- `src/lib/permissions.ts` - 権限定義・チェック関数
+- `src/lib/audit.ts` - 監査ログライブラリ
+- `src/lib/rate-limit.ts` - レートリミットライブラリ
+- `src/actions/admin/audit-log.ts` - 監査ログServer Actions
+- `src/app/(admin)/admin/(dashboard)/audit-logs/` - 監査ログページ
+- `src/app/(admin)/admin/(dashboard)/settings/permissions/` - 権限マトリクスページ
+
+**変更ファイル**:
+- `prisma/schema.prisma` - Role enum拡張、Permission/RolePermission/AuditLog/LoginAttemptモデル追加
+- `src/types/server-actions.ts` - withPermission/withRole HOF追加
+- `src/actions/admin/user.ts` - 権限ベース認可に移行
+- `src/app/(admin)/admin/(dashboard)/users/` - 新ロールシステム対応UI
+
+**マイグレーション**: `bunx prisma db push` 済み
+
+---
+
+### 020-blog-news-grapesjs-migration.md (2026-01-13)
+
+Blog/News GrapesJS移行 + ステータスEnum化 + バージョン管理
+
+**実装内容**:
+- DBスキーマ: `BlogPostStatus`/`NewsStatus` enum、`projectData` JSON、Versionモデル追加
+- Server Actions: GrapesJS対応、publish/unpublish分離、バージョン自動作成
+- エディター: `BlogInlineEditor`/`NewsInlineEditor`をGrapesJS統合
+- 公開ページ: 全クエリを`status: PUBLISHED`に変更
+
+**変更ファイル**:
+- `prisma/schema.prisma` - enum、Versionモデル
+- `src/actions/admin/blog.ts`, `news.ts` - Server Actions
+- `src/app/(admin)/admin/(dashboard)/blog/_components/BlogInlineEditor.tsx` - GrapesJS
+- `src/app/(admin)/admin/(dashboard)/news/_components/NewsInlineEditor.tsx` - GrapesJS
+- `src/components/admin/editor/inline/EditorHeader.tsx` - publishActions
+- 公開ページ/クエリ: status enum使用
+
+**マイグレーション**: `bunx prisma migrate dev --name blog_news_grapesjs_migration`
+
+---
+
+### 019-admin-ui-ux-integration.md (2026-01-13)
+
+Admin UI/UX統合（レスポンシブ対応・ダッシュボード改善）
+
+**実装内容**:
+- レスポンシブ対応: サイドバー折りたたみ、モバイルオーバーレイ、TopBar追加
+- AdminLayoutContext: サイドバー状態管理（expanded/collapsed/hidden）
+- GenericSidePanel: 汎用サイドパネル設計（タブ対応、型安全ジェネリクス）
+- ダッシュボードグラフ: Recharts導入、直近30日予約数・売上推移
+
+**新規ファイル**:
+- `src/types/admin-layout.ts` - レスポンシブレイアウト型
+- `src/contexts/admin-layout-context.tsx` - サイドバー状態Context
+- `src/app/(admin)/admin/(dashboard)/_components/ResponsiveSidebar.tsx` - レスポンシブサイドバー
+- `src/app/(admin)/admin/(dashboard)/_components/TopBar.tsx` - モバイルヘッダー
+- `src/types/editor-panel.ts` - 汎用パネル型
+- `src/components/admin/editor/shared/GenericSidePanel.tsx` - 統合サイドパネル
+- `src/app/(admin)/admin/(dashboard)/_components/charts/ReservationChart.tsx` - 予約・売上グラフ
+
+**変更ファイル**:
+- `src/app/(admin)/admin/(dashboard)/layout.tsx` - レスポンシブレイアウト
+- `src/actions/admin/dashboard.ts` - getReservationChartData()追加
+- `src/app/(admin)/admin/(dashboard)/page.tsx` - グラフセクション追加
+
+**マイグレーション**: 不要
+
+---
+
+### 018-grapesjs-database-integration.md (2026-01-13)
+
+GrapesJSデータベース連携機能
+
+**実装内容**:
+- GrapesPageモデル: ページデータ（title, slug, content, projectData）永続化
+- GrapesPageVersionモデル: バージョン履歴（公開時に自動作成）
+- ステータス管理: DRAFT/PUBLISHED/ARCHIVED、論理削除（isActive）
+- SEO対応: metaDescription, metaKeywords, OGP設定
+- Server Actions: CRUD、公開/非公開、バージョン復元、バックアップ/インポート/エクスポート
+- 管理画面UI: 一覧、作成ダイアログ、GrapesJSエディター統合、バージョン履歴
+- 公開ページ: `/g/[slug]` ルートでGrapesPageコンテンツ表示
+
+**新規ファイル**:
+- `src/lib/validations/grapes-page.ts` - Zodスキーマ、型定義
+- `src/actions/admin/grapes-page.ts` - Server Actions（全CRUD、バージョン、バックアップ）
+- `src/app/(admin)/admin/(dashboard)/grapes-pages/page.tsx` - 一覧ページ
+- `src/app/(admin)/admin/(dashboard)/grapes-pages/[id]/edit/page.tsx` - 編集ページ
+- `src/app/(admin)/admin/(dashboard)/grapes-pages/_components/` - コンポーネント一式
+  - `CreateGrapesPageDialog.tsx` - 新規作成ダイアログ
+  - `GrapesPageActions.tsx` - 操作メニュー
+  - `GrapesPageEditor.tsx` - エディターUI
+  - `GrapesPageSidePanel.tsx` - SEO/OGP設定パネル
+  - `GrapesPageVersionHistory.tsx` - バージョン履歴
+  - `index.ts` - エクスポート
+- `src/app/(public)/g/[slug]/page.tsx` - 公開表示ページ
+
+**変更ファイル**:
+- `prisma/schema.prisma` - GrapesPageStatus enum, GrapesPage, GrapesPageVersion モデル追加
+
+**マイグレーション**: `bunx prisma migrate dev --name add_grapes_page` が必要
+
+---
+
+### 017-grapesjs-custom-blocks.md (2026-01-13)
+
+GrapesJSカスタムブロック拡張（レンタルスペース専用）
+
+**実装内容**:
+- HeroSection: フルワイドヒーロー（背景画像/グラデーション、CTAボタン）
+- ReservationForm: 予約フォームプレースホルダー（公開時に実コンポーネント置換）
+- FeatureGrid: 機能紹介グリッド（2-4カラム、アイコン+タイトル+説明）
+- TestimonialSlider: お客様の声スライダー（静的/動的データソース選択）
+- ContactSection: お問い合わせセクション（2カラム、連絡先+フォーム）
+- 新規ブロックカテゴリ「レンタルスペース」追加
+- CSS変数対応（テーマカスタマイズ）
+- GrapesJSレンダラー（プレースホルダー置換ユーティリティ）
+
+**新規ファイル**:
+- `src/components/admin/editor/grapesjs/blocks/hero-section.ts`
+- `src/components/admin/editor/grapesjs/blocks/reservation-form.ts`
+- `src/components/admin/editor/grapesjs/blocks/feature-grid.ts`
+- `src/components/admin/editor/grapesjs/blocks/testimonial-slider.ts`
+- `src/components/admin/editor/grapesjs/blocks/contact-section.ts`
+- `src/lib/grapesjs-renderer.ts`
+
+**変更ファイル**:
+- `src/components/admin/editor/grapesjs/config/editor-config.ts` - rentalカテゴリ追加
+- `src/components/admin/editor/grapesjs/blocks/index.ts` - 新ブロック登録
+- `public/admin/grapesjs-canvas.css` - ブロックスタイル追加
+
+**マイグレーション**: 不要
+
+---
+
+### 016-grapesjs-visual-editor.md (2026-01-13)
+
+GrapesJSビジュアルエディター環境構築
+
+**実装内容**:
+- GrapesJS本体と公式React統合のインストール（@grapesjs/react v2.0.0）
+- TypeScript型定義の作成
+- Next.js 16クライアントサイド対応（SSR回避）
+- カスタムブロック登録（Callout, FAQ, PostListWidget, Button, Divider）
+- プラグイン動的インポート（コード分割）
+- エディターテーマとキャンバススタイル
+
+**新規ファイル**:
+- `src/components/admin/editor/grapesjs/` - エディターコンポーネント一式
+- `public/admin/grapesjs-canvas.css` - キャンバス内スタイル
+
+**変更ファイル**:
+- `package.json` - GrapesJS関連パッケージ追加
+
+**マイグレーション**: 不要
+
+---
+
 ### 015-code-quality-refactoring.md (2026-01-12)
 
 コード品質リファクタリング

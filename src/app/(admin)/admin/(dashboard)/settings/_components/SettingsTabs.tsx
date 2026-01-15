@@ -3,8 +3,10 @@
 /**
  * 設定タブナビゲーション
  *
- * 6タブ構成のナビゲーションコンポーネント
+ * 9タブ構成のナビゲーションコンポーネント
  * URL状態管理はnuqsで親コンポーネントから制御
+ *
+ * Note: ホームページ設定は /admin/pages/homepage/edit に移動
  */
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/admin/ui'

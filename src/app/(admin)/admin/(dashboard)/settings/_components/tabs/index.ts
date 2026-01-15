@@ -1,5 +1,8 @@
 /**
  * タブコンポーネント エクスポート
+ *
+ * Note: HomepageTabは /admin/pages/homepage/edit に移動
+ * 直接参照: src/app/(admin)/admin/(dashboard)/pages/homepage/edit/page.tsx
  */
 
 export { GeneralTab } from './GeneralTab'
