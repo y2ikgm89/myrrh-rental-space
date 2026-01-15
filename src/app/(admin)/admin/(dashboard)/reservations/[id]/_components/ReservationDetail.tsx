@@ -30,7 +30,10 @@ import {
   deleteReservation,
 } from '@/actions/admin/reservation'
 import type { ReservationWithRelations } from '@/actions/admin/reservation'
-import type { ReservationStatus } from '@/generated/prisma/client/enums'
+import {
+  isValidReservationStatus,
+  type ReservationStatus,
+} from '@/lib/validations/enums'
 
 type ReservationDetailProps = {
   reservation: ReservationWithRelations
@@ -108,9 +111,9 @@ export function ReservationDetail({ reservation }: ReservationDetailProps) {
             <ReservationStatusBadge status={reservation.status} />
             <Select
               value={reservation.status}
-              onValueChange={(value) =>
-                handleStatusChange(value as ReservationStatus)
-              }
+              onValueChange={(value) => {
+                if (isValidReservationStatus(value)) handleStatusChange(value)
+              }}
               disabled={isPending}
             >
               <SelectTrigger className="w-48">

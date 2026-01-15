@@ -34,7 +34,10 @@ import {
   toggleCustomerActive,
 } from '@/actions/admin/customer'
 import type { CustomerWithReservations } from '@/actions/admin/customer'
-import type { CustomerStatus, ReservationStatus } from '@/generated/prisma/client/enums'
+import {
+  isValidCustomerStatus,
+  type CustomerStatus,
+} from '@/lib/validations/enums'
 
 type CustomerDetailProps = {
   customer: CustomerWithReservations
@@ -200,7 +203,7 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
                             : '-'}
                         </TableCell>
                         <TableCell>
-                          <ReservationStatusBadge status={reservation.status as ReservationStatus} />
+                          <ReservationStatusBadge status={reservation.status} />
                         </TableCell>
                         <TableCell>
                           <Button asChild variant="outline" size="sm">
@@ -232,9 +235,9 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
               </div>
               <Select
                 value={customer.status}
-                onValueChange={(value) =>
-                  handleStatusChange(value as CustomerStatus)
-                }
+                onValueChange={(value) => {
+                  if (isValidCustomerStatus(value)) handleStatusChange(value)
+                }}
                 disabled={isPending}
               >
                 <SelectTrigger>

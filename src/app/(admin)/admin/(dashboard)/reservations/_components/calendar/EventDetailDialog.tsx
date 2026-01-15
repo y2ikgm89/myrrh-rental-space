@@ -18,7 +18,10 @@ import {
 } from '@/components/admin/ui'
 import { ReservationStatusBadge } from '@/components/admin/status-badges'
 import type { CalendarEvent } from '@/lib/calendar'
-import type { ReservationStatus } from '@/generated/prisma/client/enums'
+import {
+  isValidReservationStatus,
+  type ReservationStatus,
+} from '@/lib/validations/enums'
 
 interface EventDetailDialogProps {
   event: CalendarEvent | null
@@ -126,9 +129,9 @@ export function EventDetailDialog({
             </label>
             <Select
               value={event.status}
-              onValueChange={(value) =>
-                handleStatusChange(value as ReservationStatus)
-              }
+              onValueChange={(value) => {
+                if (isValidReservationStatus(value)) handleStatusChange(value)
+              }}
               disabled={isPending}
             >
               <SelectTrigger className="w-full">

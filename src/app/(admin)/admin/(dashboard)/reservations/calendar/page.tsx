@@ -5,11 +5,11 @@ import {
   getReservationsForCalendar,
   getSpacesForCalendar,
 } from '@/actions/admin/reservation'
-import { getCalendarDateRange, type CalendarView } from '@/lib/calendar'
+import { getCalendarDateRange, getValidCalendarView } from '@/lib/calendar'
+import { getReservationStatusFilterOrAll } from '@/lib/validations/enums'
 import { CalendarViewWrapper } from '../_components/calendar'
 import { Button } from '@/components/admin/ui'
 import type { Metadata } from 'next'
-import type { ReservationStatus } from '@/generated/prisma/client/enums'
 
 export const metadata: Metadata = {
   title: '予約カレンダー | Myrrh Rental Space',
@@ -37,10 +37,10 @@ function CalendarSkeleton() {
 
 async function CalendarData({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams
-  const view = (params.view as CalendarView) || 'week'
+  const view = getValidCalendarView(params.view, 'week')
   const date = params.date ? new Date(params.date) : new Date()
   const spaceId = params.spaceId || undefined
-  const status = (params.status as ReservationStatus | 'ALL') || undefined
+  const status = getReservationStatusFilterOrAll(params.status)
 
   const dateRange = getCalendarDateRange(date, view)
 

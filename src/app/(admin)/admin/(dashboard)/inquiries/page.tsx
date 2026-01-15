@@ -3,7 +3,7 @@ import { getInquiries } from '@/actions/admin/inquiry'
 import { InquiryFilters } from './_components/InquiryFilters'
 import { InquiryTable } from './_components/InquiryTable'
 import { Pagination } from '@/components/admin/ui'
-import type { InquiryStatus } from '@/generated/prisma/client/enums'
+import { parseInquiryStatusFilter } from '@/lib/validations/enums'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -22,7 +22,7 @@ type PageProps = {
 
 async function InquiryList({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams
-  const status = params.status as InquiryStatus | 'ALL' | undefined
+  const status = parseInquiryStatusFilter(params.status)
   const search = params.search
   const page = params.page ? parseInt(params.page, 10) : 1
 

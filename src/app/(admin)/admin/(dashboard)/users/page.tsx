@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import { getUsers, getUserStats } from '@/actions/admin/user'
-import { parseAsInteger, parseAsString, createSearchParamsCache } from 'nuqs/server'
+import { loadAdminUserSearchParams } from '@/lib/nuqs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/admin/ui/card'
 import { Button } from '@/components/admin/ui/button'
 import { Input } from '@/components/admin/ui/input'
@@ -23,38 +23,51 @@ import {
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { Role } from '@/generated/prisma/client/enums'
+import { Role, getRoleFilterOrAll } from '@/lib/validations/enums'
 import { UserActions } from './_components/UserActions'
 import { Pagination } from '@/components/admin/ui'
+// URLパラメータのバリデーション用型
+type SortBy = 'name' | 'email' | 'role' | 'createdAt'
+type SortOrder = 'asc' | 'desc'
+
+const VALID_SORT_BY: readonly SortBy[] = ['name', 'email', 'role', 'createdAt']
+
+// 型安全なバリデーション関数
+function isValidSortBy(value: string): value is SortBy {
+  return VALID_SORT_BY.includes(value as SortBy)
+}
+
+function validateSortBy(value: string): SortBy {
+  return isValidSortBy(value) ? value : 'createdAt'
+}
+
+function validateSortOrder(value: string): SortOrder {
+  return value === 'asc' || value === 'desc' ? value : 'desc'
+}
 
 export const metadata = {
   title: 'ユーザー管理 | 管理画面',
 }
-
-const searchParamsCache = createSearchParamsCache({
-  page: parseAsInteger.withDefault(1),
-  perPage: parseAsInteger.withDefault(20),
-  search: parseAsString.withDefault(''),
-  role: parseAsString.withDefault('ALL'),
-  sortBy: parseAsString.withDefault('createdAt'),
-  sortOrder: parseAsString.withDefault('desc'),
-})
 
 type Props = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
 export default async function UsersPage({ searchParams }: Props) {
-  const params = await searchParamsCache.parse(searchParams)
+  const params = await loadAdminUserSearchParams(searchParams)
+
+  const validatedRole = getRoleFilterOrAll(params.role)
+  const validatedSortBy = validateSortBy(params.sortBy)
+  const validatedSortOrder = validateSortOrder(params.sortOrder)
 
   const [result, stats] = await Promise.all([
     getUsers({
       page: params.page,
       perPage: params.perPage,
       search: params.search || undefined,
-      role: params.role as Role | 'ALL',
-      sortBy: params.sortBy as 'name' | 'email' | 'role' | 'createdAt',
-      sortOrder: params.sortOrder as 'asc' | 'desc',
+      role: validatedRole,
+      sortBy: validatedSortBy,
+      sortOrder: validatedSortOrder,
     }),
     getUserStats(),
   ])
@@ -139,7 +152,7 @@ export default async function UsersPage({ searchParams }: Props) {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  result.users.map((user) => (
+                  result.users.map((user: (typeof result.users)[number]) => (
                     <TableRow key={user.id}>
                       <TableCell>
                         <Link
@@ -184,14 +197,23 @@ export default async function UsersPage({ searchParams }: Props) {
 }
 
 function RoleBadge({ role }: { role: Role }) {
-  switch (role) {
-    case 'ADMIN':
-      return <Badge variant="default">管理者</Badge>
-    case 'USER':
-      return <Badge variant="secondary">ユーザー</Badge>
-    default:
-      return <Badge variant="outline">{role}</Badge>
+  const variants: Record<Role, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+    SUPER_ADMIN: 'destructive',
+    ADMIN: 'default',
+    EDITOR: 'secondary',
+    VIEWER: 'outline',
+    USER: 'outline',
   }
+
+  const labels: Record<Role, string> = {
+    SUPER_ADMIN: 'スーパー管理者',
+    ADMIN: '管理者',
+    EDITOR: '編集者',
+    VIEWER: '閲覧者',
+    USER: 'ユーザー',
+  }
+
+  return <Badge variant={variants[role]}>{labels[role]}</Badge>
 }
 
 function UserFilters({ search, role }: { search: string; role: string }) {
@@ -209,7 +231,10 @@ function UserFilters({ search, role }: { search: string; role: string }) {
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="ALL">すべて</SelectItem>
+          <SelectItem value="SUPER_ADMIN">スーパー管理者</SelectItem>
           <SelectItem value="ADMIN">管理者</SelectItem>
+          <SelectItem value="EDITOR">編集者</SelectItem>
+          <SelectItem value="VIEWER">閲覧者</SelectItem>
           <SelectItem value="USER">ユーザー</SelectItem>
         </SelectContent>
       </Select>

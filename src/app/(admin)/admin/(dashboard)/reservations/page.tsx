@@ -5,7 +5,7 @@ import { getReservations } from '@/actions/admin/reservation'
 import { ReservationFilters } from './_components/ReservationFilters'
 import { ReservationTable } from './_components/ReservationTable'
 import { Pagination, Button } from '@/components/admin/ui'
-import type { ReservationStatus } from '@/generated/prisma/client/enums'
+import { parseReservationStatusFilter } from '@/lib/validations/enums'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -24,7 +24,7 @@ type PageProps = {
 
 async function ReservationList({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams
-  const status = params.status as ReservationStatus | 'ALL' | undefined
+  const status = parseReservationStatusFilter(params.status)
   const search = params.search
   const page = params.page ? parseInt(params.page, 10) : 1
 

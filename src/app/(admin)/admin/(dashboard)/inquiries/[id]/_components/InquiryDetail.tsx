@@ -27,7 +27,10 @@ import {
 import { InquiryStatusBadge } from '@/components/admin/status-badges'
 import { updateInquiryStatus, deleteInquiry } from '@/actions/admin/inquiry'
 import type { InquiryData } from '@/actions/admin/inquiry'
-import type { InquiryStatus } from '@/generated/prisma/client/enums'
+import {
+  isValidInquiryStatus,
+  type InquiryStatus,
+} from '@/lib/validations/enums'
 
 type InquiryDetailProps = {
   inquiry: InquiryData
@@ -147,9 +150,9 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
               </div>
               <Select
                 value={inquiry.status}
-                onValueChange={(value) =>
-                  handleStatusChange(value as InquiryStatus)
-                }
+                onValueChange={(value) => {
+                  if (isValidInquiryStatus(value)) handleStatusChange(value)
+                }}
                 disabled={isPending}
               >
                 <SelectTrigger>

@@ -9,7 +9,9 @@ import {
   navigateNext,
   navigatePrevious,
   getEventsForDay,
+  getValidCalendarView,
 } from '@/lib/calendar'
+import { getReservationStatusFilterOrAll } from '@/lib/validations/enums'
 import type { ReservationStatus } from '@/generated/prisma/client/enums'
 
 interface UseCalendarStateOptions {
@@ -22,10 +24,10 @@ export function useCalendarState({ events, spaces }: UseCalendarStateOptions) {
   const searchParams = useSearchParams()
 
   // URL State から読み取り
-  const view = (searchParams.get('view') as CalendarView) || 'week'
+  const view = getValidCalendarView(searchParams.get('view'), 'week')
   const dateParam = searchParams.get('date')
   const spaceId = searchParams.get('spaceId') || undefined
-  const status = (searchParams.get('status') as ReservationStatus | 'ALL') || 'ALL'
+  const status = getReservationStatusFilterOrAll(searchParams.get('status'))
 
   // 日付計算（useCallbackの依存配列で安定した参照が必要なためuseMemo維持）
   const currentDate = useMemo(

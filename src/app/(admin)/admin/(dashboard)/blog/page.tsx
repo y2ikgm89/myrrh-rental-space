@@ -4,6 +4,7 @@ import { getBlogPosts, getBlogCategories } from '@/actions/admin/blog'
 import { BlogFilters } from './_components/BlogFilters'
 import { BlogTable } from './_components/BlogTable'
 import { Button, Pagination } from '@/components/admin/ui'
+import { parseBlogPostStatusFilter } from '@/lib/validations/enums'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -28,7 +29,7 @@ async function BlogFiltersWrapper() {
 
 async function BlogList({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams
-  const status = params.status as 'ALL' | 'PUBLISHED' | 'DRAFT' | undefined
+  const status = parseBlogPostStatusFilter(params.status)
   const categoryId = params.categoryId
   const search = params.search
   const page = params.page ? parseInt(params.page, 10) : 1

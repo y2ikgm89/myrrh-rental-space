@@ -9,8 +9,8 @@
 import { prisma } from '@/lib/prisma'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { createSuccess, createFailure, withPermission } from '@/types'
-import { getSession } from '@/lib/auth'
-import { Role, HomepageSectionType } from '@/generated/prisma/client/enums'
+import { getSession, getRoleFromSession } from '@/lib/auth'
+import { HomepageSectionType } from '@/lib/validations/enums'
 import { hasPermission, canAccessAdmin } from '@/lib/permissions'
 import { logPermissionDenied } from '@/lib/audit'
 import {
@@ -25,6 +25,18 @@ import {
   type UpdateSectionOrderInput,
   type SectionConfig,
 } from '@/lib/validations/homepage-section'
+
+/**
+ * PrismaのJson型をSectionConfigに変換（ランタイムバリデーション付き）
+ */
+function parseSectionConfig(type: HomepageSectionType, config: unknown): SectionConfig {
+  const result = validateSectionConfig(type, config)
+  if (result.success) {
+    return result.data as SectionConfig
+  }
+  // バリデーション失敗時はデフォルト設定にフォールバック
+  return defaultSectionConfigs[type]
+}
 
 // =============================================================================
 // Types
@@ -49,7 +61,8 @@ export type HomepageSectionData = {
 async function checkReadPermission(): Promise<boolean> {
   const session = await getSession()
   if (!session?.user) return false
-  const role = session.user.role as Role
+  const role = getRoleFromSession(session)
+  if (!role) return false
   if (!canAccessAdmin(role)) return false
   if (!hasPermission(role, 'settings', 'read')) {
     void logPermissionDenied(session.user.id, 'settings', 'read')
@@ -82,7 +95,7 @@ export async function getHomepageSections(): Promise<HomepageSectionData[] | nul
 
   return sections.map((section) => ({
     ...section,
-    config: section.config as SectionConfig,
+    config: parseSectionConfig(section.type, section.config),
   }))
 }
 
@@ -97,7 +110,7 @@ export async function getPublicHomepageSections(): Promise<HomepageSectionData[]
 
   return sections.map((section) => ({
     ...section,
-    config: section.config as SectionConfig,
+    config: parseSectionConfig(section.type, section.config),
   }))
 }
 
@@ -116,7 +129,7 @@ export async function getHomepageSection(id: string): Promise<HomepageSectionDat
 
   return {
     ...section,
-    config: section.config as SectionConfig,
+    config: parseSectionConfig(section.type, section.config),
   }
 }
 
@@ -135,7 +148,7 @@ export async function getHomepageSectionByType(
 
   return {
     ...section,
-    config: section.config as SectionConfig,
+    config: parseSectionConfig(section.type, section.config),
   }
 }
 

@@ -15,7 +15,6 @@ import {
 import { ReservationStatusBadge } from '@/components/admin/status-badges'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import type { ReservationStatus } from '@/generated/prisma/client/enums'
 
 export async function DashboardTodaySection() {
   const todayReservations = await getTodayReservations()
@@ -52,7 +51,7 @@ export async function DashboardTodaySection() {
                 <TableCell>{reservation.spaceName}</TableCell>
                 <TableCell>{reservation.customerName}</TableCell>
                 <TableCell>
-                  <ReservationStatusBadge status={reservation.status as ReservationStatus} />
+                  <ReservationStatusBadge status={reservation.status} />
                 </TableCell>
               </TableRow>
             ))}

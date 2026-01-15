@@ -5,6 +5,25 @@ import type { ReservationStatus } from '@/generated/prisma/client/enums'
  */
 export type CalendarView = 'month' | 'week' | 'day'
 
+const CALENDAR_VIEWS: readonly CalendarView[] = ['month', 'week', 'day']
+
+/**
+ * CalendarViewの型ガード
+ */
+export function isValidCalendarView(value: string): value is CalendarView {
+  return CALENDAR_VIEWS.includes(value as CalendarView)
+}
+
+/**
+ * CalendarViewのバリデーション付き取得
+ */
+export function getValidCalendarView(
+  value: string | null | undefined,
+  fallback: CalendarView = 'week'
+): CalendarView {
+  return value && isValidCalendarView(value) ? value : fallback
+}
+
 /**
  * カレンダーイベント（予約の表示用型）
  */

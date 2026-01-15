@@ -4,6 +4,7 @@ import { getNewsList } from '@/actions/admin/news'
 import { NewsFilters } from './_components/NewsFilters'
 import { NewsTable } from './_components/NewsTable'
 import { Button, Pagination } from '@/components/admin/ui'
+import { parseNewsStatusFilter } from '@/lib/validations/enums'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -22,7 +23,7 @@ type PageProps = {
 
 async function NewsList({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams
-  const status = params.status as 'ALL' | 'PUBLISHED' | 'DRAFT' | undefined
+  const status = parseNewsStatusFilter(params.status)
   const search = params.search
   const page = params.page ? parseInt(params.page, 10) : 1
 

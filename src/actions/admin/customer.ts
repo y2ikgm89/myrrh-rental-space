@@ -2,10 +2,18 @@
 
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
-import { CustomerStatus } from '@/generated/prisma/client/enums'
+import { CustomerStatus, ReservationStatus } from '@/lib/validations/enums'
 import { z } from 'zod'
-import { createSuccess, createFailure, type CustomerWhereInput, withAuth } from '@/types'
-import { verifyAdminSession } from '@/lib/auth'
+import {
+  createSuccess,
+  createFailure,
+  withPermission,
+  type ActionResult,
+  type CustomerWhereInput,
+} from '@/types'
+import { getSession, getRoleFromSession } from '@/lib/auth'
+import { hasPermission, canAccessAdmin } from '@/lib/permissions'
+import { logPermissionDenied } from '@/lib/audit'
 
 // =============================================================================
 // Types
@@ -34,7 +42,7 @@ export type CustomerWithReservations = CustomerData & {
     id: string
     startTime: Date
     endTime: Date
-    status: string
+    status: ReservationStatus
     totalPrice: number | null
     space: {
       id: string
@@ -79,6 +87,26 @@ const updateNotesSchema = z.object({
 })
 
 // =============================================================================
+// Helper Functions
+// =============================================================================
+
+/**
+ * 読み取り権限チェックヘルパー
+ */
+async function checkReadPermission(): Promise<boolean> {
+  const session = await getSession()
+  if (!session?.user) return false
+  const role = getRoleFromSession(session)
+  if (!role) return false
+  if (!canAccessAdmin(role)) return false
+  if (!hasPermission(role, 'customer', 'read')) {
+    void logPermissionDenied(session.user.id, 'customer', 'read')
+    return false
+  }
+  return true
+}
+
+// =============================================================================
 // Actions
 // =============================================================================
 
@@ -89,7 +117,9 @@ export async function getCustomers(
   filters: CustomerFilters = {},
   pagination: CustomerPagination = {}
 ): Promise<GetCustomersResult> {
-  await verifyAdminSession()
+  if (!(await checkReadPermission())) {
+    return { customers: [], total: 0, page: 1, limit: 10, totalPages: 0 }
+  }
 
   const { status, search, isActive } = filters
 
@@ -152,7 +182,9 @@ export async function getCustomers(
  * 顧客詳細を取得（予約履歴付き）
  */
 export async function getCustomerById(id: string): Promise<CustomerWithReservations | null> {
-  await verifyAdminSession()
+  if (!(await checkReadPermission())) {
+    return null
+  }
 
   const customer = await prisma.customer.findUnique({
     where: { id },
@@ -193,67 +225,72 @@ export async function getCustomerById(id: string): Promise<CustomerWithReservati
 /**
  * 顧客ステータスを更新
  */
-export const updateCustomerStatus = withAuth(
-  async (_user, id: string, status: CustomerStatus) => {
-    const parsed = updateStatusSchema.safeParse({ id, status })
-    if (!parsed.success) {
-      return createFailure('入力が不正です')
-    }
-
-    const customer = await prisma.customer.findUnique({
-      where: { id },
-    })
-
-    if (!customer) {
-      return createFailure('顧客が見つかりません')
-    }
-
-    await prisma.customer.update({
-      where: { id },
-      data: { status },
-    })
-
-    revalidatePath('/admin/customers')
-    revalidatePath(`/admin/customers/${id}`)
-
-    return createSuccess('ステータスを更新しました')
+export const updateCustomerStatus = withPermission<[id: string, status: CustomerStatus], void>(
+  'customer',
+  'update'
+)(async (_user, id, status): Promise<ActionResult<void>> => {
+  const parsed = updateStatusSchema.safeParse({ id, status })
+  if (!parsed.success) {
+    return createFailure('入力が不正です')
   }
-)
+
+  const customer = await prisma.customer.findUnique({
+    where: { id },
+  })
+
+  if (!customer) {
+    return createFailure('顧客が見つかりません')
+  }
+
+  await prisma.customer.update({
+    where: { id },
+    data: { status },
+  })
+
+  revalidatePath('/admin/customers')
+  revalidatePath(`/admin/customers/${id}`)
+
+  return createSuccess('ステータスを更新しました')
+})
 
 /**
  * 顧客メモを更新
  */
-export const updateCustomerNotes = withAuth(
-  async (_user, id: string, notes: string | null) => {
-    const parsed = updateNotesSchema.safeParse({ id, notes })
-    if (!parsed.success) {
-      return createFailure('入力が不正です')
-    }
-
-    const customer = await prisma.customer.findUnique({
-      where: { id },
-    })
-
-    if (!customer) {
-      return createFailure('顧客が見つかりません')
-    }
-
-    await prisma.customer.update({
-      where: { id },
-      data: { notes },
-    })
-
-    revalidatePath('/admin/customers')
-    revalidatePath(`/admin/customers/${id}`)
-
-    return createSuccess('メモを更新しました')
+export const updateCustomerNotes = withPermission<[id: string, notes: string | null], void>(
+  'customer',
+  'update'
+)(async (_user, id, notes): Promise<ActionResult<void>> => {
+  const parsed = updateNotesSchema.safeParse({ id, notes })
+  if (!parsed.success) {
+    return createFailure('入力が不正です')
   }
-)
+
+  const customer = await prisma.customer.findUnique({
+    where: { id },
+  })
+
+  if (!customer) {
+    return createFailure('顧客が見つかりません')
+  }
+
+  await prisma.customer.update({
+    where: { id },
+    data: { notes },
+  })
+
+  revalidatePath('/admin/customers')
+  revalidatePath(`/admin/customers/${id}`)
+
+  return createSuccess('メモを更新しました')
+})
 
 /**
  * 顧客のアクティブ状態を切り替え
  */
-export const toggleCustomerActive = withAuth(async (_user, id: string) => {
+export const toggleCustomerActive = withPermission<[id: string], void>(
+  'customer',
+  'update'
+)(async (_user, id): Promise<ActionResult<void>> => {
   const customer = await prisma.customer.findUnique({
     where: { id },
   })
@@ -284,7 +321,9 @@ export async function getCustomerStats(): Promise<{
   inactive: number
   blacklist: number
 }> {
-  await verifyAdminSession()
+  if (!(await checkReadPermission())) {
+    return { total: 0, new: 0, regular: 0, vip: 0, inactive: 0, blacklist: 0 }
+  }
 
   const [total, newCount, regular, vip, inactive, blacklist] = await Promise.all([
     prisma.customer.count(),

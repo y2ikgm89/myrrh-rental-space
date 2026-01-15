@@ -25,6 +25,11 @@ import {
 } from '@/components/admin/ui'
 import { updateLayoutSettings } from '@/actions/admin/settings'
 import type { SettingsData } from '@/actions/admin/settings'
+import {
+  LayoutWidth,
+  isValidLayoutWidth,
+  getValidLayoutWidth,
+} from '@/lib/validations/enums'
 
 // =============================================================================
 // Types
@@ -35,14 +40,12 @@ interface LayoutTabProps {
   onUpdate: () => void
 }
 
-type LayoutWidthValue = 'XS' | 'SM' | 'MD' | 'LG' | 'XL' | 'FULL' | 'CUSTOM'
-
 // =============================================================================
 // Constants
 // =============================================================================
 
 const CONTAINER_WIDTH_OPTIONS: Array<{
-  value: LayoutWidthValue
+  value: LayoutWidth
   label: string
   description: string
 }> = [
@@ -55,7 +58,7 @@ const CONTAINER_WIDTH_OPTIONS: Array<{
 ]
 
 const CONTENT_WIDTH_OPTIONS: Array<{
-  value: LayoutWidthValue
+  value: LayoutWidth
   label: string
   description: string
 }> = [
@@ -73,14 +76,14 @@ const CONTENT_WIDTH_OPTIONS: Array<{
 export function LayoutTab({ settings, onUpdate }: LayoutTabProps) {
   const [isPending, startTransition] = useTransition()
 
-  const [containerWidth, setContainerWidth] = useState<LayoutWidthValue>(
-    settings.containerWidth as LayoutWidthValue
+  const [containerWidth, setContainerWidth] = useState<LayoutWidth>(
+    getValidLayoutWidth(settings.containerWidth, 'LG')
   )
   const [containerWidthCustom, setContainerWidthCustom] = useState<string>(
     settings.containerWidthCustom?.toString() || ''
   )
-  const [contentWidth, setContentWidth] = useState<LayoutWidthValue>(
-    settings.contentWidth as LayoutWidthValue
+  const [contentWidth, setContentWidth] = useState<LayoutWidth>(
+    getValidLayoutWidth(settings.contentWidth, 'SM')
   )
   const [contentWidthCustom, setContentWidthCustom] = useState<string>(
     settings.contentWidthCustom?.toString() || ''
@@ -127,7 +130,9 @@ export function LayoutTab({ settings, onUpdate }: LayoutTabProps) {
             <Label htmlFor="containerWidth">Container幅</Label>
             <Select
               value={containerWidth}
-              onValueChange={(value) => setContainerWidth(value as LayoutWidthValue)}
+              onValueChange={(value) => {
+                if (isValidLayoutWidth(value)) setContainerWidth(value)
+              }}
               disabled={isPending}
             >
               <SelectTrigger id="containerWidth">
@@ -183,7 +188,9 @@ export function LayoutTab({ settings, onUpdate }: LayoutTabProps) {
             <Label htmlFor="contentWidth">コンテンツ幅</Label>
             <Select
               value={contentWidth}
-              onValueChange={(value) => setContentWidth(value as LayoutWidthValue)}
+              onValueChange={(value) => {
+                if (isValidLayoutWidth(value)) setContentWidth(value)
+              }}
               disabled={isPending}
             >
               <SelectTrigger id="contentWidth">
