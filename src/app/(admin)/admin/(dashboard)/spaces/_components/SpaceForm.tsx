@@ -2,10 +2,11 @@
 
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useId } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
+import { ImagePlus } from 'lucide-react'
 import {
   Button,
   Card,
@@ -15,6 +16,11 @@ import {
   Input,
   Label,
   Switch,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   DndContext,
   closestCenter,
   useSensor,
@@ -38,10 +44,21 @@ import {
 import { createSpace, updateSpace } from '@/actions/admin/space'
 import { cn } from '@/lib/utils'
 import { RichTextEditor } from '@/components/admin/editor'
+import {
+  useSingleMediaPicker,
+  useMultipleMediaPicker,
+} from '@/hooks/use-media-picker'
+
+type TermsOption = {
+  id: string
+  title: string
+  type: string
+}
 
 type SpaceFormProps = {
   space?: SpaceWithStats
   mode: 'create' | 'edit'
+  availableTerms?: TermsOption[]
 }
 
 // =============================================================================
@@ -117,6 +134,7 @@ function SortableImageItem({ id, url, index, onRemove, disabled }: SortableImage
         width={40}
         height={40}
         className="rounded object-cover"
+        style={{ width: 40, height: 40 }}
       />
       <span className="flex-1 truncate text-sm">{url}</span>
       <Button
@@ -136,13 +154,36 @@ function SortableImageItem({ id, url, index, onRemove, disabled }: SortableImage
 // Main Component
 // =============================================================================
 
-export function SpaceForm({ space, mode }: SpaceFormProps) {
+export function SpaceForm({ space, mode, availableTerms = [] }: SpaceFormProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [imageUrls, setImageUrls] = useState<string[]>(space?.imageUrls || [])
   const [facilities, setFacilities] = useState<string[]>(space?.facilities || [])
-  const [newImageUrl, setNewImageUrl] = useState('')
   const [newFacility, setNewFacility] = useState('')
+  // SSR対応のDndContext ID（hydration mismatch防止）
+  const dndContextId = useId()
+
+  // メイン画像用メディアピッカー（単一選択）
+  const mainImagePicker = useSingleMediaPicker({
+    defaultUsage: 'SPACE',
+    onSelect: (media) => {
+      if (media.length > 0) {
+        setValue('mainImageUrl', media[0].url)
+      }
+    },
+  })
+
+  // 追加画像用メディアピッカー（複数選択）
+  const additionalImagesPicker = useMultipleMediaPicker({
+    defaultUsage: 'SPACE',
+    maxSelections: 10 - imageUrls.length,
+    onSelect: (media) => {
+      if (media.length > 0) {
+        const newUrls = media.map((m) => m.url)
+        setImageUrls((prev) => [...prev, ...newUrls].slice(0, 10))
+      }
+    },
+  })
 
   // D&D Sensors
   const sensors = useSensors(
@@ -178,15 +219,17 @@ export function SpaceForm({ space, mode }: SpaceFormProps) {
           imageUrls: space.imageUrls,
           facilities: space.facilities,
           isPublished: space.isPublished,
+          termsId: space.termsId,
         }
       : defaultSpaceFormValues,
   })
 
   const isPublished = useWatch({ control, name: 'isPublished' })
+  const termsId = useWatch({ control, name: 'termsId' })
+  const mainImageUrl = useWatch({ control, name: 'mainImageUrl' })
 
   const onSubmit = async (data: SpaceFormInput) => {
     startTransition(async () => {
-      // imageUrlsとfacilitiesを追加
       const submitData = {
         name: data.name,
         description: data.description,
@@ -220,23 +263,10 @@ export function SpaceForm({ space, mode }: SpaceFormProps) {
     })
   }
 
-  const addImageUrl = () => {
-    if (newImageUrl && imageUrls.length < 10) {
-      try {
-        new URL(newImageUrl)
-        setImageUrls([...imageUrls, newImageUrl])
-        setNewImageUrl('')
-      } catch {
-        toast.error('有効なURLを入力してください')
-      }
-    }
-  }
-
   const removeImageUrl = (index: number) => {
     setImageUrls(imageUrls.filter((_, i) => i !== index))
   }
 
-  // Image D&D Handler
   const handleImageDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id) return
@@ -416,14 +446,42 @@ export function SpaceForm({ space, mode }: SpaceFormProps) {
           <CardTitle>画像設定</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* メイン画像 */}
           <div className="space-y-2">
-            <Label htmlFor="mainImageUrl">メイン画像URL *</Label>
-            <Input
-              id="mainImageUrl"
-              {...register('mainImageUrl')}
-              placeholder="https://example.com/image.jpg"
-              disabled={isPending}
-            />
+            <Label>メイン画像 *</Label>
+            <div className="flex items-start gap-4">
+              {mainImageUrl ? (
+                <div className="relative h-24 w-24 overflow-hidden rounded-lg border">
+                  <Image
+                    src={mainImageUrl}
+                    alt="メイン画像"
+                    fill
+                    sizes="96px"
+                    className="object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="flex h-24 w-24 items-center justify-center rounded-lg border border-dashed bg-muted">
+                  <ImagePlus className="h-8 w-8 text-muted-foreground" />
+                </div>
+              )}
+              <div className="flex-1 space-y-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => mainImagePicker.openPicker()}
+                  disabled={isPending}
+                >
+                  <ImagePlus className="mr-2 h-4 w-4" />
+                  画像を選択
+                </Button>
+                {mainImageUrl && (
+                  <p className="truncate text-sm text-muted-foreground">
+                    {mainImageUrl}
+                  </p>
+                )}
+              </div>
+            </div>
             {errors.mainImageUrl && (
               <p className="text-sm text-destructive">
                 {errors.mainImageUrl.message}
@@ -431,30 +489,25 @@ export function SpaceForm({ space, mode }: SpaceFormProps) {
             )}
           </div>
 
+          {/* 追加画像 */}
           <div className="space-y-2">
-            <Label>追加画像URL（最大10枚）</Label>
-            <div className="flex gap-2">
-              <Input
-                value={newImageUrl}
-                onChange={(e) => setNewImageUrl(e.target.value)}
-                placeholder="https://example.com/image.jpg"
-                disabled={isPending || imageUrls.length >= 10}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={addImageUrl}
-                disabled={isPending || imageUrls.length >= 10}
-              >
-                追加
-              </Button>
-            </div>
+            <Label>追加画像（最大10枚）</Label>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => additionalImagesPicker.openPicker()}
+              disabled={isPending || imageUrls.length >= 10}
+            >
+              <ImagePlus className="mr-2 h-4 w-4" />
+              画像を追加
+            </Button>
             {imageUrls.length > 0 && (
               <>
                 <p className="text-sm text-muted-foreground">
-                  ドラッグ&ドロップで順序を変更できます
+                  {imageUrls.length} / 10 枚選択中 ・ ドラッグ&ドロップで順序を変更できます
                 </p>
                 <DndContext
+                  id={dndContextId}
                   sensors={sensors}
                   collisionDetection={closestCenter}
                   onDragEnd={handleImageDragEnd}
@@ -528,6 +581,40 @@ export function SpaceForm({ space, mode }: SpaceFormProps) {
         </CardContent>
       </Card>
 
+      {/* 利用規約設定 */}
+      {availableTerms.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>利用規約設定</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="termsId">適用する利用規約</Label>
+              <Select
+                value={termsId || ''}
+                onValueChange={(value) => setValue('termsId', value || null)}
+                disabled={isPending}
+              >
+                <SelectTrigger id="termsId">
+                  <SelectValue placeholder="規約を選択（任意）" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">なし（規約同意不要）</SelectItem>
+                  {availableTerms.map((term) => (
+                    <SelectItem key={term.id} value={term.id}>
+                      {term.title}（{term.type}）
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-muted-foreground">
+                規約を設定すると、予約時に顧客が規約に同意する必要があります
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* 公開設定 */}
       <Card>
         <CardHeader>
@@ -572,6 +659,10 @@ export function SpaceForm({ space, mode }: SpaceFormProps) {
               : '更新する'}
         </Button>
       </div>
+
+      {/* メディアピッカーダイアログ */}
+      <mainImagePicker.MediaPicker />
+      <additionalImagesPicker.MediaPicker />
     </form>
   )
 }
