@@ -1,0 +1,14 @@
+# Bun設定ファイル
+# https://bun.sh/docs/runtime/bunfig
+
+[test]
+# テストファイルのプリロード
+preload = ["./__tests__/setup.ts"]
+
+# カバレッジ設定
+coverage = false
+coverageReporter = ["text", "lcov"]
+coverageDir = ".coverage"
+
+# タイムアウト設定（5秒）
+timeout = 5000
