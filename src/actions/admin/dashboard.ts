@@ -255,38 +255,41 @@ export async function getReservationChartData(): Promise<ChartDataPoint[]> {
   const now = new Date()
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
 
-  // 日付ごとの予約データを取得
-  const reservations = await prisma.reservation.findMany({
-    where: {
-      createdAt: { gte: thirtyDaysAgo },
-      status: { not: 'CANCELLED' },
-    },
-    select: {
-      createdAt: true,
-      totalPrice: true,
-      status: true,
-    },
-  })
+  // DB側で日付ごとに集計
+  type DailyStats = {
+    date: Date
+    reservations: bigint
+    revenue: number | null
+  }
 
-  // 日付ごとに集計
+  const dailyStats = await prisma.$queryRaw<DailyStats[]>`
+    SELECT
+      DATE("createdAt") as date,
+      COUNT(*)::bigint as reservations,
+      SUM(CASE WHEN status = 'CONFIRMED' THEN "totalPrice"::numeric ELSE 0 END) as revenue
+    FROM "Reservation"
+    WHERE "createdAt" >= ${thirtyDaysAgo}
+      AND status != 'CANCELLED'
+    GROUP BY DATE("createdAt")
+    ORDER BY date ASC
+  `
+
+  // 30日分の日付マップを初期化
   const dataMap = new Map<string, { reservations: number; revenue: number }>()
-
-  // 30日分の日付を初期化
   for (let i = 29; i >= 0; i--) {
     const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000)
     const dateStr = date.toISOString().split('T')[0]
     dataMap.set(dateStr, { reservations: 0, revenue: 0 })
   }
 
-  // データを集計
-  for (const r of reservations) {
-    const dateStr = r.createdAt.toISOString().split('T')[0]
-    const existing = dataMap.get(dateStr)
-    if (existing) {
-      existing.reservations += 1
-      if (r.status === 'CONFIRMED' && r.totalPrice) {
-        existing.revenue += Number(r.totalPrice)
-      }
+  // DB集計結果をマージ
+  for (const stat of dailyStats) {
+    const dateStr = stat.date.toISOString().split('T')[0]
+    if (dataMap.has(dateStr)) {
+      dataMap.set(dateStr, {
+        reservations: Number(stat.reservations),
+        revenue: Number(stat.revenue || 0),
+      })
     }
   }
 

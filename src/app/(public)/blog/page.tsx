@@ -77,6 +77,7 @@ type BlogPostListItem = Prisma.BlogPostGetPayload<{
 
 interface BlogCardProps {
   post: BlogPostListItem
+  index: number
 }
 
 /**
@@ -87,7 +88,7 @@ function formatPublishedDate(value: Date | null): string {
   return value.toLocaleDateString('ja-JP')
 }
 
-function BlogCard({ post }: BlogCardProps): ReactElement {
+function BlogCard({ post, index }: BlogCardProps): ReactElement {
   const tags = parseStringArray(post.tags)
 
   return (
@@ -98,6 +99,7 @@ function BlogCard({ post }: BlogCardProps): ReactElement {
             src={post.thumbnailUrl}
             alt={post.title}
             fill
+            priority={index < 2}
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             className={styles.image()}
           />
@@ -236,8 +238,8 @@ async function BlogResults({
 
       {posts.length > 0 ? (
         <div className={styles.grid()}>
-          {posts.map((post) => (
-            <BlogCard key={post.id} post={post} />
+          {posts.map((post, index) => (
+            <BlogCard key={post.id} post={post} index={index} />
           ))}
         </div>
       ) : (

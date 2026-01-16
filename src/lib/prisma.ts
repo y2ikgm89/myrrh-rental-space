@@ -19,9 +19,10 @@ const pool = new Pool({
   connectionTimeoutMillis: 10000,
   // アイドル接続のタイムアウト（デフォルト: 10秒）
   idleTimeoutMillis: 10000,
-  // 最大接続数（Cloud Run/サーバーレス環境では低めに設定）
-  // 例: 20インスタンス × 5接続 = 100接続（Supabase制限内）
-  max: 5,
+  // 最大接続数（環境に応じて調整）
+  // 本番環境: 20接続、開発環境: 5接続
+  // 例: 本番 - 20インスタンス × 20接続 = 400接続（Supabase制限内）
+  max: process.env.NODE_ENV === 'production' ? 20 : 5,
 })
 
 // Prisma アダプター

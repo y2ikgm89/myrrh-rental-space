@@ -12,7 +12,12 @@
 - [ ] `cc:blocked` ブロック中のタスク
 -->
 
-（現在アクティブなタスクはありません）
+### 035: パフォーマンス最適化 - Priority 1
+
+- [x] `cc:DONE` 1.1 DBインデックス追加（prisma/schema.prisma）→ 既存（変更不要）
+- [x] `cc:DONE` 1.2 コネクションプール調整（src/lib/prisma.ts）
+- [x] `cc:DONE` 1.3 ダッシュボード集計最適化（src/actions/admin/dashboard.ts）
+- [x] `cc:DONE` 1.4 画像priority属性追加（blog/page.tsx, spaces/page.tsx）
 
 ## 次に予定しているタスク
 

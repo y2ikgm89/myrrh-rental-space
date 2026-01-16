@@ -64,9 +64,10 @@ function formatPrice(value: unknown): string {
 
 interface SpaceCardProps {
   space: Space
+  index: number
 }
 
-function SpaceCard({ space }: SpaceCardProps): ReactElement {
+function SpaceCard({ space, index }: SpaceCardProps): ReactElement {
   return (
     <Link href={`/spaces/${space.id}`}>
       <Card className="h-full overflow-hidden transition-shadow hover:shadow-lg">
@@ -75,6 +76,7 @@ function SpaceCard({ space }: SpaceCardProps): ReactElement {
             src={space.mainImageUrl}
             alt={space.name}
             fill
+            priority={index < 2}
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             className={styles.image()}
           />
@@ -161,8 +163,8 @@ async function SpaceResults({
       {/* スペースグリッド */}
       {spaces.length > 0 ? (
         <div className={styles.grid()}>
-          {spaces.map((space) => (
-            <SpaceCard key={space.id} space={space} />
+          {spaces.map((space, index) => (
+            <SpaceCard key={space.id} space={space} index={index} />
           ))}
         </div>
       ) : (

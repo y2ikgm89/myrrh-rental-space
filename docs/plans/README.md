@@ -1,6 +1,35 @@
 # 実装計画履歴
 
+## 進行中の計画
+
+なし
+
+---
+
 ## 完了した計画
+
+### 035-performance-optimization.md (2026-01-16)
+
+パフォーマンス最適化 Priority 1 実装完了
+
+**概要**:
+プロジェクト全体の分析に基づき、パフォーマンス改善を実施。
+
+**実装内容（Priority 1）**:
+- DBインデックス: 既に存在（変更不要）
+- コネクションプール: 本番環境 max: 20 に調整
+- ダッシュボード集計: $queryRaw でDB側集計に最適化
+- 画像priority: blog/spaces の最初の2画像に追加
+
+**変更ファイル**:
+- `src/lib/prisma.ts` - コネクションプール調整
+- `src/actions/admin/dashboard.ts` - 集計最適化
+- `src/app/(public)/blog/page.tsx` - 画像priority追加
+- `src/app/(public)/spaces/page.tsx` - 画像priority追加
+
+**マイグレーション**: 不要
+
+---
 
 ### 034-react-compiler-memoization-cleanup.md (2026-01-16)
 
@@ -989,12 +1018,6 @@ TipTap エディタの統合
 - RichTextEditor コンポーネント作成
 - EditorToolbar / EditorContent 分離
 - BlogForm への統合
-
----
-
-## 進行中の計画
-
-なし
 
 ---
 
