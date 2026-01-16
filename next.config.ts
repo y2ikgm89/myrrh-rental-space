@@ -7,6 +7,17 @@ const nextConfig: NextConfig = {
   // React Compiler for automatic memoization
   reactCompiler: true,
 
+  // Turbopack configuration (default bundler in Next.js 16)
+  turbopack: {
+    // Resolve alias for ESM module resolution compatibility
+    // better-auth imports 'next/headers' without .js extension
+    resolveAlias: {
+      'next/headers': 'next/headers.js',
+      'next/navigation': 'next/navigation.js',
+      'next/server': 'next/server.js',
+    },
+  },
+
   // Standalone output for Docker deployment (Linux only)
   ...(isDockerBuild && { output: 'standalone' }),
 
@@ -23,8 +34,16 @@ const nextConfig: NextConfig = {
         hostname: 'img.youtube.com',
         pathname: '/vi/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'placehold.co',
+      },
     ],
     formats: ['image/avif', 'image/webp'],
+    // placehold.co等のSVGプレースホルダー画像を許可（開発/シード用）
+    dangerouslyAllowSVG: true,
+    contentDispositionType: 'attachment',
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
@@ -36,6 +55,10 @@ const nextConfig: NextConfig = {
   // Partial Prerendering (PPR) - 静的シェル + 動的コンテンツのハイブリッドレンダリング
   // use cache ディレクティブによる明示的キャッシュ制御を有効化
   cacheComponents: true,
+
+  // Transpile packages that need ESM module resolution fixes
+  // better-auth uses dynamic import("next/headers") without .js extension
+  transpilePackages: ['better-auth'],
 
   // Experimental features
   experimental: {

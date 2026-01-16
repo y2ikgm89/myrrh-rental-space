@@ -16,9 +16,9 @@
 
 import 'dotenv/config'
 import { PrismaPg } from '@prisma/adapter-pg'
-import { PrismaClient } from '../src/generated/prisma/client/client'
+import { PrismaClient, Prisma } from '../src/generated/prisma/client/client'
 import { Pool } from 'pg'
-import bcrypt from 'bcrypt'
+import { hashPassword } from 'better-auth/crypto'
 
 // PostgreSQL 接続プール
 const pool = new Pool({
@@ -38,30 +38,62 @@ const prisma = new PrismaClient({
 // =============================================================================
 
 async function seedAdmin(email: string, password: string, name: string = 'Administrator') {
-  const saltRounds = 10
-  const hashedPassword = await bcrypt.hash(password, saltRounds)
+  // Better Auth のデフォルト（Scrypt）でハッシュ化
+  const hashedPassword = await hashPassword(password)
 
   const existingUser = await prisma.user.findUnique({
     where: { email },
+    include: { accounts: true },
   })
 
   if (existingUser) {
-    const updatedUser = await prisma.user.update({
+    // ユーザー更新
+    await prisma.user.update({
       where: { email },
       data: {
-        password: hashedPassword,
         role: 'ADMIN',
         name,
       },
     })
-    console.log(`✅ Updated existing admin user: ${updatedUser.email}`)
+
+    // credential account のパスワード更新 or 作成
+    const credentialAccount = existingUser.accounts.find(
+      (acc) => acc.providerId === 'credential'
+    )
+    if (credentialAccount) {
+      await prisma.account.update({
+        where: { id: credentialAccount.id },
+        data: { password: hashedPassword },
+      })
+    } else {
+      await prisma.account.create({
+        data: {
+          userId: existingUser.id,
+          accountId: existingUser.id,
+          providerId: 'credential',
+          password: hashedPassword,
+        },
+      })
+    }
+
+    console.log(`✅ Updated existing admin user: ${email}`)
   } else {
+    // ユーザーと credential account を同時作成
+    // Better Auth: パスワードは Account テーブルに保存
+    const userId = crypto.randomUUID()
     const newUser = await prisma.user.create({
       data: {
+        id: userId,
         email,
-        password: hashedPassword,
         name,
         role: 'ADMIN',
+        accounts: {
+          create: {
+            accountId: userId,
+            providerId: 'credential',
+            password: hashedPassword,
+          },
+        },
       },
     })
     console.log(`✅ Created new admin user: ${newUser.email}`)
@@ -93,10 +125,10 @@ async function seedSpaces() {
       area: 25.5,
       hourlyPrice: 3000,
       dailyPrice: 20000,
-      mainImageUrl: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800',
+      mainImageUrl: 'https://placehold.co/800x600/e2e8f0/64748b?text=Meeting+Room',
       imageUrls: [
-        'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800',
-        'https://images.unsplash.com/photo-1497366811353-6870744d04b2?w=800',
+        'https://placehold.co/800x600/e2e8f0/64748b?text=Meeting+Room',
+        'https://placehold.co/800x600/e2e8f0/64748b?text=Meeting+Room+2',
       ],
       facilities: ['Wi-Fi', 'プロジェクター', 'ホワイトボード', '空調', '電源タップ'],
       isPublished: true,
@@ -121,10 +153,10 @@ async function seedSpaces() {
       area: 60.0,
       hourlyPrice: 8000,
       dailyPrice: 50000,
-      mainImageUrl: 'https://images.unsplash.com/photo-1517502884422-41eaead166d4?w=800',
+      mainImageUrl: 'https://placehold.co/800x600/dbeafe/3b82f6?text=Seminar+Room',
       imageUrls: [
-        'https://images.unsplash.com/photo-1517502884422-41eaead166d4?w=800',
-        'https://images.unsplash.com/photo-1560439514-4e9645039924?w=800',
+        'https://placehold.co/800x600/dbeafe/3b82f6?text=Seminar+Room',
+        'https://placehold.co/800x600/dbeafe/3b82f6?text=Seminar+Room+2',
       ],
       facilities: ['Wi-Fi', 'プロジェクター', '大型スクリーン', 'マイク', '空調', '可動式テーブル'],
       isPublished: true,
@@ -149,10 +181,10 @@ async function seedSpaces() {
       area: 80.0,
       hourlyPrice: 500,
       dailyPrice: 3000,
-      mainImageUrl: 'https://images.unsplash.com/photo-1527192491265-7e15c55b1ed2?w=800',
+      mainImageUrl: 'https://placehold.co/800x600/dcfce7/22c55e?text=Coworking',
       imageUrls: [
-        'https://images.unsplash.com/photo-1527192491265-7e15c55b1ed2?w=800',
-        'https://images.unsplash.com/photo-1497215842964-222b430dc094?w=800',
+        'https://placehold.co/800x600/dcfce7/22c55e?text=Coworking',
+        'https://placehold.co/800x600/dcfce7/22c55e?text=Coworking+2',
       ],
       facilities: ['Wi-Fi', '電源', 'ロッカー', 'ドリンクバー', '複合機', '空調'],
       isPublished: true,
@@ -179,7 +211,7 @@ async function seedSpaces() {
 // =============================================================================
 
 async function seedNews() {
-  const newsItems = [
+  const newsItems: Prisma.NewsCreateInput[] = [
     {
       title: '【重要】年末年始の営業について',
       content: `いつもMyrrh Rental Spaceをご利用いただきありがとうございます。
@@ -194,7 +226,7 @@ async function seedNews() {
 
 休業期間中にいただいたお問い合わせは、1月4日以降順次ご対応させていただきます。
 ご不便をおかけいたしますが、何卒よろしくお願いいたします。`,
-      isPublished: true,
+      status: 'PUBLISHED',
       publishedAt: new Date(),
     },
     {
@@ -211,7 +243,7 @@ async function seedNews() {
 
 オープン記念として、1月末まで全日20%OFFでご提供いたします。
 この機会にぜひご利用ください。`,
-      isPublished: true,
+      status: 'PUBLISHED',
       publishedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 1週間前
     },
     {
@@ -221,7 +253,7 @@ async function seedNews() {
 これにより、オンライン会議や大容量データの送受信もストレスなく行えるようになりました。
 
 ぜひご利用ください。`,
-      isPublished: true,
+      status: 'PUBLISHED',
       publishedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000), // 2週間前
     },
     {
@@ -232,13 +264,13 @@ async function seedNews() {
 スペースの検索・予約もスムーズに行えるようになっています。
 
 今後ともMyrrh Rental Spaceをよろしくお願いいたします。`,
-      isPublished: true,
+      status: 'PUBLISHED',
       publishedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 1ヶ月前
     },
     {
       title: '【未公開】春のキャンペーン企画中',
       content: `春のキャンペーンを企画中です。詳細は後日公開予定。`,
-      isPublished: false,
+      status: 'DRAFT',
       publishedAt: null,
     },
   ]
@@ -304,7 +336,7 @@ async function seedBlog() {
   }
 
   // Create blog posts
-  const posts = [
+  const posts: Prisma.BlogPostUncheckedCreateInput[] = [
     {
       title: 'レンタルスペースを活用したセミナー開催のコツ',
       slug: 'seminar-tips',
@@ -337,11 +369,11 @@ async function seedBlog() {
 
 適切な会場選びで、セミナーの成功率がぐっと上がります。
 ぜひ参考にしてみてください。`,
-      thumbnailUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800',
+      thumbnailUrl: 'https://placehold.co/800x600/fef3c7/f59e0b?text=Blog+1',
       categoryId: tipsCategory.id,
       authorId: author.id,
       tags: ['セミナー', '会場選び', 'ビジネス'],
-      isPublished: true,
+      status: 'PUBLISHED',
       publishedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
     },
     {
@@ -375,11 +407,11 @@ async function seedBlog() {
 次の利用者のためにも、片付けの時間を確保しましょう。
 
 これらのポイントを意識して、生産性の高い会議を実現しましょう！`,
-      thumbnailUrl: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800',
+      thumbnailUrl: 'https://placehold.co/800x600/e2e8f0/64748b?text=Meeting+Room',
       categoryId: tipsCategory.id,
       authorId: author.id,
       tags: ['会議', '生産性', 'ビジネス'],
-      isPublished: true,
+      status: 'PUBLISHED',
       publishedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
     },
     {
@@ -415,11 +447,11 @@ A社様は急成長中のスタートアップ企業。
 
 ありがとうございました！
 またのご利用をお待ちしております。`,
-      thumbnailUrl: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800',
+      thumbnailUrl: 'https://placehold.co/800x600/fce7f3/ec4899?text=Blog+3',
       categoryId: caseStudyCategory.id,
       authorId: author.id,
       tags: ['活用事例', '研修', 'IT企業'],
-      isPublished: true,
+      status: 'PUBLISHED',
       publishedAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000),
     },
   ]
@@ -693,35 +725,144 @@ async function seedPages() {
       console.log(`⏭️ Skipped existing page: ${page.title}`)
     }
   }
+
+  // SEOのみ編集可能なシステムページ（コンテンツはコードで実装）
+  const seoOnlyPages = [
+    { slug: 'reservation', title: '予約', description: 'レンタルスペースの予約' },
+    { slug: 'spaces', title: 'スペース一覧', description: 'ご利用可能なレンタルスペース' },
+    { slug: 'contact', title: 'お問い合わせ', description: 'お問い合わせフォーム' },
+    { slug: 'blog', title: 'ブログ', description: 'ブログ記事一覧' },
+    { slug: 'news', title: 'お知らせ', description: 'ニュース・お知らせ一覧' },
+    { slug: 'about', title: '会社概要', description: '会社・サービスについて' },
+    { slug: 'faq', title: 'よくある質問', description: 'FAQ' },
+  ]
+
+  for (const page of seoOnlyPages) {
+    const existing = await prisma.page.findFirst({
+      where: { slug: page.slug },
+    })
+
+    if (!existing) {
+      await prisma.page.create({
+        data: {
+          slug: page.slug,
+          title: page.title,
+          description: page.description,
+          content: '',
+          isPublished: true,
+          isActive: true,
+          isSystemPage: true,
+        },
+      })
+      console.log(`✅ Created system page: ${page.title}`)
+    } else if (!existing.isSystemPage) {
+      // 既存ページをシステムページに更新
+      await prisma.page.update({
+        where: { id: existing.id },
+        data: { isSystemPage: true },
+      })
+      console.log(`🔄 Updated to system page: ${page.title}`)
+    } else {
+      console.log(`⏭️ Skipped existing system page: ${page.title}`)
+    }
+  }
 }
 
 // =============================================================================
-// Demo Homepage Hero
+// Demo Homepage Sections
 // =============================================================================
 
-async function seedHomepageHero() {
-  const existing = await prisma.homepageHero.findUnique({
-    where: { id: 'singleton' },
-  })
+async function seedHomepageSections() {
+  const existingCount = await prisma.homepageSection.count()
 
-  if (!existing) {
-    await prisma.homepageHero.create({
-      data: {
-        id: 'singleton',
+  if (existingCount > 0) {
+    console.log('⏭️ Homepage sections already exist')
+    return
+  }
+
+  const sections: Prisma.HomepageSectionCreateInput[] = [
+    {
+      type: 'HERO',
+      config: {
         title: '理想のスペースを、あなたに。',
         subtitle: 'ビジネスからプライベートまで、あらゆるシーンに対応するレンタルスペース',
-        ctaPrimaryText: 'スペースを探す',
-        ctaPrimaryUrl: '/spaces',
-        ctaSecondaryText: 'お問い合わせ',
-        ctaSecondaryUrl: '/contact',
-        backgroundImageUrl: null,
-        isActive: true,
+        backgroundImageUrl: '',
+        ctaPrimary: { text: 'スペースを探す', url: '/spaces' },
+        ctaSecondary: { text: 'お問い合わせ', url: '/contact' },
       },
-    })
-    console.log('✅ Created homepage hero')
-  } else {
-    console.log('⏭️ Homepage hero already exists')
+      order: 0,
+      isActive: true,
+    },
+    {
+      type: 'SPACE_LIST',
+      config: {
+        maxItems: 6,
+        showOnlyPublished: true,
+      },
+      order: 1,
+      isActive: true,
+    },
+    {
+      type: 'NEWS',
+      config: {
+        title: 'お知らせ',
+        maxItems: 3,
+        showViewAllLink: true,
+      },
+      order: 2,
+      isActive: true,
+    },
+    {
+      type: 'BLOG',
+      config: {
+        title: '最新の記事',
+        maxItems: 3,
+        showViewAllLink: true,
+      },
+      order: 3,
+      isActive: true,
+    },
+    {
+      type: 'FAQ',
+      config: {
+        title: 'よくあるご質問',
+        maxItems: 5,
+        items: [
+          {
+            question: '予約のキャンセルはできますか？',
+            answer: 'はい、予約日の48時間前までは無料でキャンセル可能です。それ以降のキャンセルは料金の50%をご負担いただきます。',
+          },
+          {
+            question: '支払い方法は何がありますか？',
+            answer: 'クレジットカード（Visa, Mastercard, AMEX）、銀行振込に対応しております。',
+          },
+          {
+            question: '利用時間の延長はできますか？',
+            answer: '空き状況に応じて可能です。当日、スタッフにお申し付けください。',
+          },
+        ],
+      },
+      order: 4,
+      isActive: true,
+    },
+    {
+      type: 'CTA',
+      config: {
+        title: 'ご予約・お問い合わせ',
+        description: 'お気軽にお問い合わせください',
+        ctaPrimary: { text: '予約する', url: '/reservation' },
+        ctaSecondary: { text: 'お問い合わせ', url: '/contact' },
+      },
+      order: 5,
+      isActive: true,
+    },
+  ]
+
+  for (const section of sections) {
+    await prisma.homepageSection.create({ data: section })
   }
+
+  console.log('✅ Created homepage sections')
 }
 
 // =============================================================================
@@ -809,7 +950,7 @@ Examples:
     await seedSpaces()
     await seedNews()
     await seedPages()
-    await seedHomepageHero()
+    await seedHomepageSections()
 
     // Blog needs an admin user
     const adminUser = await prisma.user.findFirst({ where: { role: 'ADMIN' } })
@@ -838,7 +979,7 @@ Examples:
     await seedSpaces()
     await seedNews()
     await seedPages()
-    await seedHomepageHero()
+    await seedHomepageSections()
     await seedBlog()
   } else {
     // Legacy mode: bun prisma/seed.ts <email> <password> [name]

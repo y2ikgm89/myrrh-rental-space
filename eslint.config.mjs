@@ -1,30 +1,30 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
-import reactCompiler from "eslint-plugin-react-compiler";
 import prettier from "eslint-config-prettier/flat";
 
 const eslintConfig = defineConfig([
-  // Next.js recommended configs
+  // Next.js recommended configs (includes eslint-plugin-react-hooks@7.x with React Compiler rules)
   ...nextVitals,
   ...nextTs,
-  // React Compiler compatibility rules
-  {
-    plugins: {
-      "react-compiler": reactCompiler,
-    },
-    rules: {
-      "react-compiler/react-compiler": "error",
-    },
-  },
   // Prettier compatibility (disables conflicting rules)
   prettier,
+  // Global TypeScript rules
+  {
+    files: ["**/*.ts", "**/*.tsx"],
+    rules: {
+      // Allow unused parameters prefixed with underscore (common pattern for HOF callbacks)
+      "@typescript-eslint/no-unused-vars": ["warn", {
+        argsIgnorePattern: "^_",
+        varsIgnorePattern: "^_",
+      }],
+    },
+  },
   // Custom rules for specific files
   {
     files: ["src/lib/auth.ts"],
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
-      "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
     },
   },
   // Ignored paths
@@ -34,6 +34,7 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     "src/generated/**",
+    "__tests__/**",
   ]),
 ]);
 

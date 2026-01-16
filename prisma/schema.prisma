@@ -17,8 +17,11 @@ datasource db {
 // ==============================================
 
 enum Role {
-  ADMIN
-  USER
+  SUPER_ADMIN // 全権限（システム設定、ユーザー管理、監査ログ）
+  ADMIN       // コンテンツ管理全般
+  EDITOR      // 割り当てページ編集のみ
+  VIEWER      // 閲覧のみ
+  USER        // 公開ユーザー（非管理者）
 }
 
 enum ReservationStatus {
@@ -58,70 +61,130 @@ enum SocialPlatform {
   OTHER
 }
 
+enum LayoutWidth {
+  XS
+  SM
+  MD
+  LG
+  XL
+  FULL
+  CUSTOM
+}
+
+enum HomepageSectionType {
+  HERO       // ヒーローセクション
+  SPACE_LIST // スペース一覧
+  NEWS       // お知らせ一覧
+  BLOG       // ブログ一覧
+  FAQ        // FAQ
+  CTA        // Call to Action
+  CUSTOM     // カスタム（Lexicalフルコンテンツ）
+}
+
+enum BlogPostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum NewsStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum TermsType {
+  TERMS_OF_USE     // 利用規約
+  PRIVACY_POLICY   // プライバシーポリシー
+  CANCELLATION     // キャンセルポリシー
+  PAYMENT          // 支払い規約
+  CUSTOM           // カスタム規約
+}
+
+enum TermsStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
 // ==============================================
-// Auth.js Models
+// Better Auth Models
 // ==============================================
 
 model User {
-  id            String    @id @default(uuid())
-  email         String    @unique
-  password      String?   // bcrypt hashed password
-  name          String?
-  emailVerified DateTime?
+  id            String   @id @default(uuid())
+  email         String   @unique
+  name          String
+  emailVerified Boolean  @default(false)
   image         String?
-  role          Role      @default(USER)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  role          Role     @default(USER)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // RBAC: EDITOR用の割り当てページID（JSON配列）
+  assignedPages Json @default("[]") // ["page-id-1", "page-id-2"]
 
   // Relations
-  accounts     Account[]
-  sessions     Session[]
-  reservations Reservation[]
-  blogPosts    BlogPost[]
-  blogComments BlogComment[]
-  icalTokens   ICalToken[]
+  accounts        Account[]
+  sessions        Session[]
+  reservations    Reservation[]
+  blogPosts       BlogPost[]
+  blogComments    BlogComment[]
+  icalTokens      ICalToken[]
+  auditLogs       AuditLog[]
+  mediaFiles      Media[]
+  termsAgreements TermsAgreement[]
 
-  @@map("users")
+  @@map("user")
 }
 
 model Account {
-  id                String  @id @default(uuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
+  id                    String    @id @default(uuid())
+  userId                String
+  accountId             String    // Better Auth: ユーザーID or プロバイダーのアカウントID
+  providerId            String    // Better Auth: "credential" or "google" etc.
+  accessToken           String?   @db.Text
+  refreshToken          String?   @db.Text
+  idToken               String?   @db.Text
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?   // Better Auth: credential provider のパスワード（scrypt hash）
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([provider, providerAccountId])
-  @@map("accounts")
+  @@index([userId])
+  @@map("account")
 }
 
 model Session {
-  id           String   @id @default(uuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("sessions")
+  @@index([userId])
+  @@map("session")
 }
 
-model VerificationToken {
+model Verification {
+  id         String   @id @default(uuid())
   identifier String
-  token      String   @unique
-  expires    DateTime
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  @@unique([identifier, token])
-  @@map("verification_tokens")
+  @@index([identifier])
+  @@map("verification")
 }
 
 model LoginToken {
@@ -162,11 +225,16 @@ model Space {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  // 規約設定
+  termsId String? // 任意の規約参照
+
   // Relations
   reservations Reservation[]
   icalTokens   ICalToken[]
+  terms        Terms?        @relation(fields: [termsId], references: [id], onDelete: SetNull)
 
   @@index([isPublished, isActive])
+  @@index([termsId])
   @@map("spaces")
 }
 
@@ -180,7 +248,7 @@ model Reservation {
   status        ReservationStatus @default(PENDING)
   totalPrice    Decimal?          @db.Decimal(10, 2)
   notes         String?           @db.Text
-  termsAgreedAt DateTime?         // 規約同意日時
+  termsAgreedAt DateTime?         // 規約同意日時（レガシー互換）
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
@@ -191,9 +259,10 @@ model Reservation {
   calendarSyncError          String?   @db.Text // 同期エラーメッセージ
 
   // Relations
-  space    Space    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
-  user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  space           Space            @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  user            User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  customer        Customer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  termsAgreements TermsAgreement[]
 
   @@index([spaceId])
   @@index([customerId])
@@ -249,16 +318,38 @@ model Inquiry {
 }
 
 model News {
-  id          String    @id @default(uuid())
-  title       String
-  content     String    @db.Text
-  publishedAt DateTime?
-  isPublished Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id                 String      @id @default(uuid())
+  title              String
+  content            String      @db.Text              // HTMLコンテンツ（レンダリング用）
+  status             NewsStatus  @default(DRAFT)
+  publishedAt        DateTime?
+  contentWidth       LayoutWidth?
+  contentWidthCustom Int?                              // CUSTOMの場合の幅（px）
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
 
-  @@index([isPublished, publishedAt])
+  // Relations
+  versions NewsVersion[]
+
+  @@index([status, publishedAt])
   @@map("news")
+}
+
+/// Newsのバージョン履歴
+model NewsVersion {
+  id          String   @id @default(uuid())
+  newsId      String
+  version     Int                                    // 自動インクリメント（News内でユニーク）
+  content     String   @db.Text                      // HTMLスナップショット
+  createdAt   DateTime @default(now())
+  createdBy   String?                                // 作成者ID（User.id）
+
+  // Relations
+  news News @relation(fields: [newsId], references: [id], onDelete: Cascade)
+
+  @@unique([newsId, version])
+  @@index([newsId, createdAt])
+  @@map("news_versions")
 }
 
 model AnnouncementBar {
@@ -286,36 +377,55 @@ model AnnouncementBar {
 // ==============================================
 
 model BlogPost {
-  id              String    @id @default(uuid())
-  title           String
-  slug            String    @unique
-  excerpt         String    @db.Text
-  content         String    @db.Text
-  thumbnailUrl    String
-  ogpImageUrl     String?
-  categoryId      String
-  tags            Json      @default("[]")
-  metaDescription String?
-  metaKeywords    String?
-  ogpTitle        String?
-  ogpDescription  String?
-  publishedAt     DateTime?
-  isPublished     Boolean   @default(false)
-  isDraft         Boolean   @default(true)
-  authorId        String
-  viewCount       Int       @default(0)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id                 String         @id @default(uuid())
+  title              String
+  slug               String         @unique
+  excerpt            String         @db.Text
+  content            String         @db.Text              // HTMLコンテンツ（レンダリング用）
+  thumbnailUrl       String
+  ogpImageUrl        String?
+  categoryId         String
+  tags               Json           @default("[]")
+  metaDescription    String?
+  metaKeywords       String?
+  ogpTitle           String?
+  ogpDescription     String?
+  publishedAt        DateTime?
+  status             BlogPostStatus @default(DRAFT)
+  authorId           String
+  viewCount          Int            @default(0)
+  contentWidth       LayoutWidth?
+  contentWidthCustom Int?                                 // CUSTOMの場合の幅（px）
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
 
   // Relations
-  category BlogCategory @relation(fields: [categoryId], references: [id])
-  author   User         @relation(fields: [authorId], references: [id])
+  category BlogCategory      @relation(fields: [categoryId], references: [id])
+  author   User              @relation(fields: [authorId], references: [id])
   comments BlogComment[]
+  versions BlogPostVersion[]
 
-  @@index([isPublished, publishedAt])
-  @@index([categoryId, isPublished, publishedAt])
+  @@index([status, publishedAt])
+  @@index([categoryId, status, publishedAt])
   @@index([viewCount])
   @@map("blog_posts")
+}
+
+/// BlogPostのバージョン履歴
+model BlogPostVersion {
+  id          String   @id @default(uuid())
+  postId      String
+  version     Int                                    // 自動インクリメント（Post内でユニーク）
+  content     String   @db.Text                      // HTMLスナップショット
+  createdAt   DateTime @default(now())
+  createdBy   String?                                // 作成者ID（User.id）
+
+  // Relations
+  post BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, version])
+  @@index([postId, createdAt])
+  @@map("blog_post_versions")
 }
 
 model BlogCategory {
@@ -397,7 +507,7 @@ model Page {
   slug            String    @unique
   title           String
   description     String?   @db.Text
-  content         String    @db.Text
+  content         String    @db.Text              // HTMLコンテンツ（レンダリング用）
   metaDescription String?
   metaKeywords    String?
   ogpTitle        String?
@@ -406,28 +516,17 @@ model Page {
   isPublished     Boolean   @default(true)
   publishedAt     DateTime?
   isActive        Boolean   @default(true)
+  isSystemPage    Boolean   @default(false)       // システムページ（SEO/OGPのみ編集可、コンテンツ編集不可）
+  contentWidth    LayoutWidth?
+  contentWidthCustom Int?                         // CUSTOMの場合の幅（px）
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
   @@index([isPublished, isActive])
+  @@index([isSystemPage])
   @@map("pages")
 }
 
-model HomepageHero {
-  id                 String   @id @default("singleton")
-  title              String   @default("理想のスペースを、あなたに。")
-  subtitle           String?  @db.Text
-  ctaPrimaryText     String   @default("スペースを探す")
-  ctaPrimaryUrl      String   @default("/spaces")
-  ctaSecondaryText   String?  @default("お問い合わせ")
-  ctaSecondaryUrl    String?  @default("/contact")
-  backgroundImageUrl String?
-  isActive           Boolean  @default(true)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-
-  @@map("homepage_hero")
-}
 
 model NavigationItem {
   id         String         @id @default(uuid())
@@ -567,6 +666,12 @@ model Settings {
   defaultMetaKeywords     String?
   defaultOgpTitle         String?
   defaultOgpDescription   String?
+
+  // Layout Settings (レイアウト設定)
+  containerWidth       LayoutWidth?
+  containerWidthCustom Int?                      // CUSTOMの場合の幅（px）
+  contentWidth         LayoutWidth?
+  contentWidthCustom   Int?                      // CUSTOMの場合の幅（px）
 
   // Analytics Settings
   analyticsType           String?   // "ga4" | "gtm" | null
@@ -730,4 +835,252 @@ model ICalToken {
   @@index([spaceId])
   @@index([createdBy])
   @@map("ical_tokens")
+}
+
+// =============================================================================
+// Homepage Section Models
+// =============================================================================
+
+/// ホームページセクション（統一モデル）
+/// 各セクションタイプに応じた設定をconfigに格納
+model HomepageSection {
+  id        String              @id @default(uuid())
+  type      HomepageSectionType
+  title     String?                           // セクション見出し（表示用）
+  config    Json                @default("{}") // タイプ別設定（JSON Schema で型安全）
+  content   String?             @db.Text       // Lexical HTML（CUSTOM, FAQ等で使用）
+  order     Int                 @default(0)    // 表示順序（DnDで変更可能）
+  isActive  Boolean             @default(true) // ON/OFF制御
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  @@index([order, isActive])
+  @@index([type])
+  @@map("homepage_sections")
+}
+
+// =============================================================================
+// RBAC: 権限管理
+// =============================================================================
+
+/// 権限定義（resource:action の組み合わせ）
+model Permission {
+  id          String   @id @default(uuid())
+  resource    String   // 'space', 'blog', 'news', 'page', 'user', 'settings' 等
+  action      String   // 'create', 'read', 'update', 'delete', 'publish' 等
+  description String?  // 説明（UI表示用）
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  rolePermissions RolePermission[]
+
+  @@unique([resource, action])
+  @@index([resource])
+  @@map("permissions")
+}
+
+/// ロールと権限の紐付け
+model RolePermission {
+  id           String   @id @default(uuid())
+  role         Role
+  permissionId String
+  createdAt    DateTime @default(now())
+
+  // Relations
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([role, permissionId])
+  @@index([role])
+  @@map("role_permissions")
+}
+
+// =============================================================================
+// 監査ログ
+// =============================================================================
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  PUBLISH
+  UNPUBLISH
+  LOGIN_SUCCESS
+  LOGIN_FAILED
+  PERMISSION_DENIED
+  PASSWORD_CHANGE
+  ROLE_CHANGE
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  DOCUMENT
+  OTHER
+}
+
+enum MediaUsage {
+  BLOG
+  NEWS
+  PAGE
+  SPACE
+  SITE
+  GENERAL
+}
+
+/// 監査ログ（書き込み操作 + セキュリティイベント）
+model AuditLog {
+  id          String      @id @default(uuid())
+  userId      String?     // 実行ユーザー（null = システム or 未認証）
+  action      AuditAction // 操作種別
+  resource    String      // 対象リソース種別 ('space', 'blog' 等)
+  resourceId  String?     // 対象リソースID
+  oldValue    Json?       // 変更前の値（UPDATE時）
+  newValue    Json?       // 変更後の値 or 作成値
+  metadata    Json?       // 追加情報（IPアドレス、UserAgent等）
+  createdAt   DateTime    @default(now())
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([resource, resourceId])
+  @@index([action])
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@map("audit_logs")
+}
+
+// =============================================================================
+// メディア管理
+// =============================================================================
+
+/// メディアファイル管理
+model Media {
+  id          String     @id @default(uuid())
+  filename    String                          // 元のファイル名
+  storagePath String                          // Supabase Storage パス
+  url         String                          // 公開URL
+  bucket      String                          // Supabase バケット名
+  mimeType    String                          // MIME type
+  size        Int                             // ファイルサイズ（bytes）
+  width       Int?                            // 画像幅（px）
+  height      Int?                            // 画像高さ（px）
+
+  // 分類・検索用
+  type        MediaType                       // メディア種別
+  usage       MediaUsage  @default(GENERAL)   // 用途
+  alt         String?                         // 代替テキスト
+  title       String?                         // タイトル
+  description String?     @db.Text            // 説明
+  tags        Json        @default("[]")      // タグ配列
+
+  // 管理情報
+  uploadedBy  String                          // アップロードユーザーID
+  isActive    Boolean     @default(true)      // ソフトデリート
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relations
+  uploader User @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
+
+  @@index([type, usage])
+  @@index([uploadedBy])
+  @@index([isActive, createdAt])
+  @@index([mimeType])
+  @@map("media")
+}
+
+// =============================================================================
+// レートリミット
+// =============================================================================
+
+/// ログイン試行記録（レートリミット用）
+model LoginAttempt {
+  id         String   @id @default(uuid())
+  identifier String   // IPアドレス or メールのハッシュ
+  email      String   // 試行されたメールアドレス
+  success    Boolean  // 成功/失敗
+  createdAt  DateTime @default(now())
+
+  @@index([identifier, createdAt])
+  @@index([email, createdAt])
+  @@map("login_attempts")
+}
+
+// =============================================================================
+// 規約管理
+// =============================================================================
+
+/// 規約マスター（複数のバージョンを持つ）
+model Terms {
+  id        String    @id @default(uuid())
+  type      TermsType
+  title     String                    // 表示タイトル（例: "利用規約"）
+  slug      String    @unique         // URL用スラッグ（例: "terms-of-use"）
+  isActive  Boolean   @default(true)  // 現在有効な規約か
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Relations
+  versions   TermsVersion[]
+  spaces     Space[]           // この規約を使用するスペース
+  agreements TermsAgreement[]  // 同意記録
+
+  @@index([type, isActive])
+  @@index([slug])
+  @@map("terms")
+}
+
+/// 規約バージョン（不変オブジェクト）
+model TermsVersion {
+  id               String      @id @default(uuid())
+  termsId          String
+  version          Int                           // 自動インクリメント（Terms内でユニーク）
+  content          String      @db.Text          // Lexical HTML（リッチテキスト）
+  status           TermsStatus @default(DRAFT)
+  publishedAt      DateTime?                     // 公開日時
+  publishedBy      String?                       // 公開者ID（User.id）
+  isCurrentVersion Boolean     @default(false)   // 現在の有効バージョン
+  createdAt        DateTime    @default(now())
+  createdBy        String                        // 作成者ID（User.id）
+
+  // Relations
+  terms      Terms            @relation(fields: [termsId], references: [id], onDelete: Cascade)
+  agreements TermsAgreement[]
+
+  @@unique([termsId, version])
+  @@index([termsId, isCurrentVersion])
+  @@index([status, publishedAt])
+  @@map("terms_versions")
+}
+
+/// 規約同意記録（監査証跡）
+model TermsAgreement {
+  id            String   @id @default(uuid())
+  termsId       String
+  versionId     String                    // 同意した規約バージョンID
+  reservationId String?                   // 予約ID（予約時の同意の場合）
+  userId        String?                   // ユーザーID（ログイン済みの場合）
+
+  // 同意者情報（ゲストユーザー用）
+  guestName  String? // ゲスト氏名
+  guestEmail String? // ゲストメール
+
+  // 監査情報
+  agreedAt  DateTime @default(now()) // 同意日時
+  ipAddress String?                  // IPアドレス（ハッシュ化）
+  userAgent String?                  // ブラウザ情報
+
+  // Relations
+  terms       Terms        @relation(fields: [termsId], references: [id], onDelete: Cascade)
+  version     TermsVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  reservation Reservation? @relation(fields: [reservationId], references: [id], onDelete: SetNull)
+  user        User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([reservationId])
+  @@index([userId, agreedAt])
+  @@index([termsId, versionId])
+  @@index([guestEmail, agreedAt])
+  @@map("terms_agreements")
 }
