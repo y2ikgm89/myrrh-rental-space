@@ -1,13 +1,18 @@
 import Link from 'next/link'
+import { connection } from 'next/server'
 import { SpaceForm } from '../_components/SpaceForm'
 import { Button } from '@/components/admin/ui'
+import { getActiveTermsForSelect } from '@/actions/admin/terms'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'スペース新規作成 | Myrrh Rental Space',
 }
 
-export default function NewSpacePage() {
+export default async function NewSpacePage() {
+  await connection()
+  const availableTerms = await getActiveTermsForSelect()
+
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
@@ -24,7 +29,7 @@ export default function NewSpacePage() {
       </div>
 
       {/* フォーム */}
-      <SpaceForm mode="create" />
+      <SpaceForm mode="create" availableTerms={availableTerms} />
     </div>
   )
 }

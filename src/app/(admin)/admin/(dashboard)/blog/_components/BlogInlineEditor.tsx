@@ -3,29 +3,35 @@
 /**
  * ブログインラインエディター
  *
- * Webflow型のフルページ編集UI
- * 公開ページと同じ見た目でコンテンツを編集
+ * Lexicalリッチテキストエディターを使用したブログ記事編集UI
  * 新規作成・編集の両方に対応
  */
 
-import { useState, useTransition, useCallback } from 'react'
+import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
+import { LexicalEditor } from '@/components/admin/editor/lexical'
 import {
   InlineEditorLayout,
   EditorHeader,
-  EditorCanvas,
   useKeyboardShortcuts,
   useBeforeUnload,
 } from '@/components/admin/editor/inline'
 import { BlogSidePanel } from '@/components/admin/editor/inline/BlogSidePanel'
-import { createBlogPost, updateBlogPost, deleteBlogPost } from '@/actions/admin/blog'
+import {
+  createBlogPost,
+  updateBlogPost,
+  deleteBlogPost,
+  publishBlogPost,
+  unpublishBlogPost,
+} from '@/actions/admin/blog'
 import type { BlogPostData, BlogCategoryData } from '@/actions/admin/blog'
-import type { BlogEditorFormData, BlogCategoryOption } from '@/components/admin/editor/inline/types'
+import type { BlogCategoryOption } from '@/components/admin/editor/inline/types'
+import { BlogPostStatus } from '@/generated/prisma/client/enums'
 import {
   Button,
   Dialog,
@@ -36,6 +42,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/admin/ui'
+import { EDITOR_PROSE_CLASSES } from '@/lib/styles/prose'
+
+// =============================================================================
+// Schema
+// =============================================================================
 
 const formSchema = z.object({
   title: z.string().min(1, 'タイトルは必須です').max(200, 'タイトルは200文字以内'),
@@ -50,9 +61,17 @@ const formSchema = z.object({
   metaKeywords: z.string().optional(),
   ogpTitle: z.string().max(60).optional(),
   ogpDescription: z.string().max(160).optional(),
-  isPublished: z.boolean(),
+  status: z.nativeEnum(BlogPostStatus),
   publishedAt: z.string().optional(),
+  contentWidth: z.string().optional(),
+  contentWidthCustom: z.string().optional(),
 })
+
+type FormData = z.infer<typeof formSchema>
+
+// =============================================================================
+// Types
+// =============================================================================
 
 type BlogInlineEditorProps = {
   post?: BlogPostData
@@ -60,11 +79,16 @@ type BlogInlineEditorProps = {
   mode?: 'create' | 'edit'
 }
 
+// =============================================================================
+// Component
+// =============================================================================
+
 export function BlogInlineEditor({ post, categories, mode = 'edit' }: BlogInlineEditorProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [hasEditorChanges, setHasEditorChanges] = useState(false)
 
   const categoryOptions: BlogCategoryOption[] = categories.map((c) => ({
     id: c.id,
@@ -79,7 +103,7 @@ export function BlogInlineEditor({ post, categories, mode = 'edit' }: BlogInline
     getValues,
     reset,
     formState: { errors, isDirty },
-  } = useForm<BlogEditorFormData>({
+  } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: post
       ? {
@@ -95,10 +119,12 @@ export function BlogInlineEditor({ post, categories, mode = 'edit' }: BlogInline
           metaKeywords: post.metaKeywords ?? '',
           ogpTitle: post.ogpTitle ?? '',
           ogpDescription: post.ogpDescription ?? '',
-          isPublished: post.isPublished,
+          status: post.status,
           publishedAt: post.publishedAt
             ? format(new Date(post.publishedAt), "yyyy-MM-dd'T'HH:mm")
             : '',
+          contentWidth: post.contentWidth ?? '',
+          contentWidthCustom: post.contentWidthCustom?.toString() ?? '',
         }
       : {
           title: '',
@@ -113,113 +139,137 @@ export function BlogInlineEditor({ post, categories, mode = 'edit' }: BlogInline
           metaKeywords: '',
           ogpTitle: '',
           ogpDescription: '',
-          isPublished: false,
+          status: BlogPostStatus.DRAFT,
           publishedAt: '',
+          contentWidth: '',
+          contentWidthCustom: '',
         },
   })
 
   const title = useWatch({ control, name: 'title' })
-  const content = useWatch({ control, name: 'content' })
   const slug = useWatch({ control, name: 'slug' })
+  const status = useWatch({ control, name: 'status' })
+  const content = useWatch({ control, name: 'content' })
 
-  const onSubmit = useCallback(
-    (data: BlogEditorFormData) => {
-      startTransition(async () => {
-        try {
-          const tags = data.tags
-            ? data.tags.split(',').map((t) => t.trim()).filter(Boolean)
-            : []
+  const handleHtmlChange = (html: string) => {
+    setValue('content', html, { shouldDirty: true })
+    setHasEditorChanges(true)
+  }
 
-          const payload = {
-            title: data.title,
-            slug: data.slug,
-            excerpt: data.excerpt,
-            content: data.content,
-            thumbnailUrl: data.thumbnailUrl,
-            ogpImageUrl: data.ogpImageUrl || null,
-            categoryId: data.categoryId,
-            tags,
-            metaDescription: data.metaDescription || null,
-            metaKeywords: data.metaKeywords || null,
-            ogpTitle: data.ogpTitle || null,
-            ogpDescription: data.ogpDescription || null,
-            isPublished: data.isPublished,
-            publishedAt: data.publishedAt || null,
-          }
+  const onSubmit = (data: FormData) => {
+    startTransition(async () => {
+      try {
+        const tags = data.tags
+          ? data.tags.split(',').map((t) => t.trim()).filter(Boolean)
+          : []
 
-          if (mode === 'create') {
-            const result = await createBlogPost(payload)
-            if (result.success) {
-              toast.success('記事を作成しました')
-              router.push(`/admin/blog/${result.data.id}`)
-            } else {
-              toast.error(result.error)
-            }
-          } else if (post) {
-            const result = await updateBlogPost(post.id, payload)
-            if (result.success) {
-              reset(data)
-              router.refresh()
-              toast.success('記事を保存しました')
-            } else {
-              toast.error(result.error)
-            }
-          }
-        } catch (error) {
-          console.error('保存中にエラーが発生しました:', error)
-          toast.error('保存中にエラーが発生しました')
+        const payload = {
+          title: data.title,
+          slug: data.slug,
+          excerpt: data.excerpt,
+          content: data.content,
+          thumbnailUrl: data.thumbnailUrl,
+          ogpImageUrl: data.ogpImageUrl || null,
+          categoryId: data.categoryId,
+          tags,
+          metaDescription: data.metaDescription || null,
+          metaKeywords: data.metaKeywords || null,
+          ogpTitle: data.ogpTitle || null,
+          ogpDescription: data.ogpDescription || null,
+          contentWidth: (data.contentWidth || null) as 'XS' | 'SM' | 'MD' | 'LG' | 'XL' | 'FULL' | 'CUSTOM' | null,
+          contentWidthCustom: data.contentWidthCustom
+            ? parseInt(data.contentWidthCustom, 10)
+            : null,
         }
-      })
-    },
-    [mode, post, router, reset]
-  )
 
-  const handleSave = useCallback(() => {
+        if (mode === 'create') {
+          const result = await createBlogPost(payload)
+          if (result.success) {
+            toast.success('記事を作成しました')
+            router.push(`/admin/blog/${result.data.id}`)
+          } else {
+            toast.error(result.error)
+          }
+        } else if (post) {
+          const result = await updateBlogPost(post.id, payload)
+          if (result.success) {
+            reset(data)
+            setHasEditorChanges(false)
+            router.refresh()
+            toast.success('記事を保存しました')
+          } else {
+            toast.error(result.error)
+          }
+        }
+      } catch (error) {
+        console.error('保存中にエラーが発生しました:', error)
+        toast.error('保存中にエラーが発生しました')
+      }
+    })
+  }
+
+  const handleSave = () => {
     if (isPending) return
     handleSubmit(onSubmit)()
-  }, [handleSubmit, onSubmit, isPending])
+  }
 
-  const handlePreview = useCallback(() => {
+  const handlePublish = () => {
+    if (!post || isPending) return
+    startTransition(async () => {
+      const result = await publishBlogPost(post.id)
+      if (result.success) {
+        toast.success(result.message)
+        setValue('status', BlogPostStatus.PUBLISHED)
+        router.refresh()
+      } else {
+        toast.error(result.error)
+      }
+    })
+  }
+
+  const handleUnpublish = () => {
+    if (!post || isPending) return
+    startTransition(async () => {
+      const result = await unpublishBlogPost(post.id)
+      if (result.success) {
+        toast.success(result.message)
+        setValue('status', BlogPostStatus.DRAFT)
+        router.refresh()
+      } else {
+        toast.error(result.error)
+      }
+    })
+  }
+
+  const handlePreview = () => {
     if (mode === 'create') {
       toast.info('記事を作成後にプレビューできます')
       return
     }
-    if (isDirty) {
+    const isUnsaved = isDirty || hasEditorChanges
+    if (isUnsaved) {
       toast.info('プレビューには保存済みのコンテンツが表示されます')
     }
     window.open(`/blog/${slug}`, '_blank')
-  }, [mode, slug, isDirty])
+  }
 
-  const handleBack = useCallback(() => {
-    if (isDirty && !window.confirm('保存されていない変更があります。破棄してもよろしいですか？')) {
+  const handleBack = () => {
+    const isUnsaved = isDirty || hasEditorChanges
+    if (isUnsaved && !window.confirm('保存されていない変更があります。破棄してもよろしいですか？')) {
       return
     }
     router.push('/admin/blog')
-  }, [router, isDirty])
+  }
 
-  const handleToggleSidePanel = useCallback(() => {
+  const handleToggleSidePanel = () => {
     setIsSidePanelOpen((prev) => !prev)
-  }, [])
+  }
 
-  const handleCloseSidePanel = useCallback(() => {
+  const handleCloseSidePanel = () => {
     setIsSidePanelOpen(false)
-  }, [])
+  }
 
-  const handleContentChange = useCallback(
-    (html: string) => {
-      setValue('content', html, { shouldDirty: true })
-    },
-    [setValue]
-  )
-
-  const handleTitleChange = useCallback(
-    (newTitle: string) => {
-      setValue('title', newTitle, { shouldDirty: true })
-    },
-    [setValue]
-  )
-
-  const handleDelete = useCallback(() => {
+  const handleDelete = () => {
     if (!post) return
     startTransition(async () => {
       try {
@@ -235,77 +285,90 @@ export function BlogInlineEditor({ post, categories, mode = 'edit' }: BlogInline
         toast.error('削除中にエラーが発生しました')
       }
     })
-  }, [post, router])
+  }
 
   useKeyboardShortcuts({ onSave: handleSave })
-  useBeforeUnload({ isDirty })
+  useBeforeUnload({ isDirty: isDirty || hasEditorChanges })
+
+  const isFormDirty = isDirty || hasEditorChanges
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="h-screen">
       <InlineEditorLayout>
         <div className="flex flex-1 flex-col overflow-hidden">
-          <div className="flex items-center justify-between border-b bg-background px-4 py-2">
-            <EditorHeader
-              title={title}
-              slug={`blog/${slug}`}
-              isDirty={isDirty}
-              isPending={isPending}
-              isSidePanelOpen={isSidePanelOpen}
-              onToggleSidePanel={handleToggleSidePanel}
-              onSave={handleSave}
-              onPreview={handlePreview}
-              onBack={handleBack}
-            />
-
-            {mode === 'edit' && post && (
-              <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive hover:text-destructive"
-                    disabled={isPending}
-                  >
-                    削除
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>ブログ記事を削除しますか？</DialogTitle>
-                    <DialogDescription>
-                      この操作は取り消せません。本当に削除してもよろしいですか？
-                    </DialogDescription>
-                  </DialogHeader>
-                  <DialogFooter>
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsDeleteDialogOpen(false)}
-                      disabled={isPending}
-                    >
-                      キャンセル
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      onClick={handleDelete}
-                      disabled={isPending}
-                    >
-                      {isPending ? '削除中...' : '削除する'}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            )}
-          </div>
-
-          <EditorCanvas
+          <EditorHeader
             title={title}
-            onTitleChange={handleTitleChange}
-            showTitle={true}
-            content={content}
-            onChange={handleContentChange}
-            disabled={isPending}
+            slug={`blog/${slug}`}
+            isDirty={isFormDirty}
+            isPending={isPending}
+            isSidePanelOpen={isSidePanelOpen}
+            onToggleSidePanel={handleToggleSidePanel}
+            onSave={handleSave}
+            onPreview={handlePreview}
+            onBack={handleBack}
+            publishActions={
+              mode === 'edit' && post
+                ? {
+                    status,
+                    onPublish: handlePublish,
+                    onUnpublish: handleUnpublish,
+                  }
+                : undefined
+            }
+            extraActions={
+              mode === 'edit' && post ? (
+                <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive"
+                      disabled={isPending}
+                    >
+                      削除
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>ブログ記事を削除しますか？</DialogTitle>
+                      <DialogDescription>
+                        この操作は取り消せません。本当に削除してもよろしいですか？
+                      </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsDeleteDialogOpen(false)}
+                        disabled={isPending}
+                      >
+                        キャンセル
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        onClick={handleDelete}
+                        disabled={isPending}
+                      >
+                        {isPending ? '削除中...' : '削除する'}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              ) : undefined
+            }
           />
+
+          {/* Lexical Editor */}
+          <div className="flex-1 overflow-auto p-4">
+            <LexicalEditor
+              content={content}
+              onChange={handleHtmlChange}
+              disabled={isPending}
+              className={EDITOR_PROSE_CLASSES}
+              showToolbar
+              minHeight="calc(100vh - 200px)"
+            />
+          </div>
         </div>
 
         <BlogSidePanel

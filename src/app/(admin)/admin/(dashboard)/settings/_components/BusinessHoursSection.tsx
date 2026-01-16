@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -16,13 +15,18 @@ import {
 } from '@/components/admin/ui'
 import { updateBusinessHoursSettings } from '@/actions/admin/settings'
 import type { SettingsData, BusinessHours, BusinessHoursDay } from '@/actions/admin/settings'
+import { useRefreshOnSuccess } from './hooks'
 
 interface BusinessHoursSectionProps {
   settings: SettingsData
-  onUpdate: () => void
 }
 
-const DAYS_OF_WEEK = [
+interface DayOfWeek {
+  key: keyof BusinessHours
+  label: string
+}
+
+const DAYS_OF_WEEK: readonly DayOfWeek[] = [
   { key: 'monday', label: '月曜日' },
   { key: 'tuesday', label: '火曜日' },
   { key: 'wednesday', label: '水曜日' },
@@ -30,7 +34,7 @@ const DAYS_OF_WEEK = [
   { key: 'friday', label: '金曜日' },
   { key: 'saturday', label: '土曜日' },
   { key: 'sunday', label: '日曜日' },
-] as const
+]
 
 const DEFAULT_HOURS: BusinessHoursDay = {
   isOpen: true,
@@ -48,7 +52,8 @@ const DEFAULT_BUSINESS_HOURS: BusinessHours = {
   sunday: { isOpen: false, openTime: null, closeTime: null },
 }
 
-export function BusinessHoursSection({ settings, onUpdate }: BusinessHoursSectionProps) {
+export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
+  const { handleResult } = useRefreshOnSuccess()
   const [isPending, startTransition] = useTransition()
 
   const initialBusinessHours = settings.businessHours ?? DEFAULT_BUSINESS_HOURS
@@ -109,11 +114,7 @@ export function BusinessHoursSection({ settings, onUpdate }: BusinessHoursSectio
         holidayNotice: holidayNotice || null,
       })
 
-      if (!result.success) {
-        toast.error(result.error)
-      } else {
-        onUpdate()
-      }
+      handleResult({ ...result, message: result.success ? '営業時間設定を保存しました' : undefined })
     })
   }
 

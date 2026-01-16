@@ -1,22 +1,15 @@
-'use client'
-
 /**
  * サイト設定ページ
  *
- * 6タブ構成の設定管理画面
- * URL状態管理: nuqs（`?tab=general` など）
+ * Server ComponentでデータをフェッチしClient Componentに渡す
+ * Next.js App Router推奨パターン
  *
  * @see docs/plans/settings-tab-refactoring.md
  */
 
-import { useEffect, useState } from 'react'
-import Link from 'next/link'
-import { useQueryState, parseAsStringEnum } from 'nuqs'
-import { Button } from '@/components/admin/ui'
+import { Suspense } from 'react'
 import { getSettings } from '@/actions/admin/settings'
-import type { SettingsData } from '@/actions/admin/settings'
-import { SettingsTabs, SETTINGS_TABS } from './_components'
-import type { SettingsTabId } from './_components'
+import { SettingsPageClient } from './_components'
 
 // =============================================================================
 // Loading Component
@@ -42,71 +35,35 @@ function SettingsLoading() {
 }
 
 // =============================================================================
-// Main Component
+// Content Component (Server Component)
+// =============================================================================
+
+async function SettingsContent() {
+  // Note: Error handling is done via error.tsx boundary (Next.js App Router pattern)
+  const settings = await getSettings()
+
+  if (!settings) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-muted-foreground">設定が見つかりません</p>
+        <p className="text-sm text-muted-foreground mt-2">
+          初期設定を作成してください
+        </p>
+      </div>
+    )
+  }
+
+  return <SettingsPageClient initialSettings={settings} />
+}
+
+// =============================================================================
+// Page Component
 // =============================================================================
 
 export default function SettingsPage() {
-  // URL状態管理（nuqs）
-  const [activeTab, setActiveTab] = useQueryState(
-    'tab',
-    parseAsStringEnum([...SETTINGS_TABS]).withDefault('general')
-  )
-
-  // 設定データ
-  const [settings, setSettings] = useState<SettingsData | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-
-  // 設定を読み込み
-  const loadSettings = async () => {
-    try {
-      const data = await getSettings()
-      setSettings(data)
-    } catch (error) {
-      console.error('Failed to load settings:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    loadSettings()
-  }, [])
-
-  // タブ変更ハンドラ
-  const handleTabChange = (tab: SettingsTabId) => {
-    setActiveTab(tab)
-  }
-
-  // ローディング中
-  if (isLoading || !settings) {
-    return <SettingsLoading />
-  }
-
   return (
-    <div className="space-y-6">
-      {/* ヘッダー */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">サイト設定</h1>
-          <p className="text-muted-foreground">サイト全体の設定を管理します</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button asChild variant="outline">
-            <Link href="/admin/settings/announcement-bar">お知らせバー</Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link href="/admin/settings/navigation">ナビゲーション管理</Link>
-          </Button>
-        </div>
-      </div>
-
-      {/* タブコンテンツ */}
-      <SettingsTabs
-        activeTab={activeTab as SettingsTabId}
-        onTabChange={handleTabChange}
-        settings={settings}
-        onSettingsUpdate={loadSettings}
-      />
-    </div>
+    <Suspense fallback={<SettingsLoading />}>
+      <SettingsContent />
+    </Suspense>
   )
 }

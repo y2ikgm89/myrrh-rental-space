@@ -18,6 +18,15 @@ import { createUser, updateUser, type UserData } from '@/actions/admin/user'
 import { Role } from '@/generated/prisma/client/enums'
 import { useState } from 'react'
 
+// ロールラベル（クライアント用ローカル定義）
+const ROLE_LABELS: Record<Role, string> = {
+  SUPER_ADMIN: 'スーパー管理者',
+  ADMIN: '管理者',
+  EDITOR: '編集者',
+  VIEWER: '閲覧者',
+  USER: 'ユーザー',
+}
+
 type CreateFormData = {
   email: string
   password: string
@@ -32,18 +41,21 @@ type UpdateFormData = {
   role: Role
 }
 
+type RoleValue = 'SUPER_ADMIN' | 'ADMIN' | 'EDITOR' | 'VIEWER' | 'USER'
+const ROLE_VALUES: readonly RoleValue[] = ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'VIEWER', 'USER']
+
 const createSchema = z.object({
   email: z.string().email('有効なメールアドレスを入力してください'),
   password: z.string().min(8, 'パスワードは8文字以上必要です'),
   name: z.string().min(1, '名前は必須です').max(100),
-  role: z.enum(['ADMIN', 'USER']),
+  role: z.enum(ROLE_VALUES),
 }) satisfies z.ZodType<CreateFormData>
 
 const updateSchema = z.object({
   email: z.string().email('有効なメールアドレスを入力してください'),
   password: z.string().min(8, 'パスワードは8文字以上必要です').or(z.literal('')),
   name: z.string().min(1, '名前は必須です').max(100),
-  role: z.enum(['ADMIN', 'USER']),
+  role: z.enum(ROLE_VALUES),
 }) satisfies z.ZodType<UpdateFormData>
 
 type Props =
@@ -177,10 +189,20 @@ export function UserForm({ mode, user }: Props) {
               <SelectValue placeholder="ロールを選択" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ADMIN">管理者</SelectItem>
-              <SelectItem value="USER">ユーザー</SelectItem>
+              {ROLE_VALUES.map((role) => (
+                <SelectItem key={role} value={role}>
+                  {ROLE_LABELS[role]}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
+          <p className="text-xs text-muted-foreground">
+            {currentRole === 'SUPER_ADMIN' && 'システム全体の管理権限（ユーザー管理、監査ログ含む）'}
+            {currentRole === 'ADMIN' && 'コンテンツ管理全般（ユーザー管理除く）'}
+            {currentRole === 'EDITOR' && '割り当てられたページのみ編集可能'}
+            {currentRole === 'VIEWER' && '閲覧のみ（編集不可）'}
+            {currentRole === 'USER' && '公開ユーザー（管理画面アクセス不可）'}
+          </p>
           {errors.role && (
             <p className="text-sm text-destructive">{errors.role.message}</p>
           )}

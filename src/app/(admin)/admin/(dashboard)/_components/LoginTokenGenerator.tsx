@@ -6,7 +6,7 @@
  * 管理者がスタッフにログインURLを共有するためのワンタイムトークンを生成
  */
 
-import { useState, type ReactElement } from 'react'
+import { useState, useRef, useEffect, type ReactElement } from 'react'
 import { Copy, Check, RefreshCw } from 'lucide-react'
 import { loginTokenResponseSchema } from '@/lib/validations/auth'
 
@@ -16,6 +16,16 @@ export function LoginTokenGenerator(): ReactElement {
   const [isLoading, setIsLoading] = useState(false)
   const [isCopied, setIsCopied] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // アンマウント時にタイムアウトをクリーンアップ
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const generateToken = async (): Promise<void> => {
     setIsLoading(true)
@@ -51,7 +61,13 @@ export function LoginTokenGenerator(): ReactElement {
     try {
       await navigator.clipboard.writeText(loginUrl)
       setIsCopied(true)
-      setTimeout(() => setIsCopied(false), 2000)
+
+      // 既存のタイムアウトをクリア
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current)
+      }
+
+      copyTimeoutRef.current = setTimeout(() => setIsCopied(false), 2000)
     } catch {
       setError('クリップボードへのコピーに失敗しました')
     }

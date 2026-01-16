@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -20,10 +19,10 @@ import {
 } from '@/components/admin/ui'
 import { updateBusinessInfo } from '@/actions/admin/settings'
 import type { SettingsData } from '@/actions/admin/settings'
+import { useRefreshOnSuccess } from './hooks'
 
 interface BusinessInfoSectionProps {
   settings: SettingsData
-  onUpdate: () => void
 }
 
 const BUSINESS_TYPES = [
@@ -43,7 +42,8 @@ const INDUSTRY_TYPES = [
   { value: 'other', label: 'その他' },
 ]
 
-export function BusinessInfoSection({ settings, onUpdate }: BusinessInfoSectionProps) {
+export function BusinessInfoSection({ settings }: BusinessInfoSectionProps) {
+  const { handleResult } = useRefreshOnSuccess()
   const [isPending, startTransition] = useTransition()
   const [formData, setFormData] = useState({
     businessName: settings.businessName || '',
@@ -72,11 +72,7 @@ export function BusinessInfoSection({ settings, onUpdate }: BusinessInfoSectionP
         invoiceNumber: formData.invoiceNumber || null,
         businessDescription: formData.businessDescription || null,
       })
-      if (!result.success) {
-        toast.error(result.error)
-      } else {
-        onUpdate()
-      }
+      handleResult({ ...result, message: result.success ? '事業者情報を保存しました' : undefined })
     })
   }
 

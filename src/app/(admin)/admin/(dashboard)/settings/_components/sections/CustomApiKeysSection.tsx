@@ -7,7 +7,6 @@
  */
 
 import { useState, useTransition } from 'react'
-import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -34,6 +33,7 @@ import {
   deleteCustomApiKey,
 } from '@/actions/admin/api-keys'
 import type { CustomApiKeyData } from '@/types/api-keys'
+import { useRefreshOnSuccess } from '../hooks'
 
 // =============================================================================
 // Types
@@ -41,7 +41,6 @@ import type { CustomApiKeyData } from '@/types/api-keys'
 
 interface CustomApiKeysSectionProps {
   keys: CustomApiKeyData[]
-  onUpdate: () => void
 }
 
 // =============================================================================
@@ -50,8 +49,8 @@ interface CustomApiKeysSectionProps {
 
 export function CustomApiKeysSection({
   keys,
-  onUpdate,
 }: CustomApiKeysSectionProps) {
+  const { handleResult } = useRefreshOnSuccess()
   const [isPending, startTransition] = useTransition()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [formData, setFormData] = useState({
@@ -64,13 +63,11 @@ export function CustomApiKeysSection({
   const handleAdd = () => {
     startTransition(async () => {
       const result = await addCustomApiKey(formData)
-      if (!result.success) {
-        toast.error(result.error)
-      } else {
+      if (result.success) {
         setFormData({ name: '', keyName: '', keyValue: '', description: '' })
         setIsDialogOpen(false)
-        onUpdate()
       }
+      handleResult(result)
     })
   }
 
@@ -79,11 +76,7 @@ export function CustomApiKeysSection({
 
     startTransition(async () => {
       const result = await deleteCustomApiKey(id)
-      if (!result.success) {
-        toast.error(result.error)
-      } else {
-        onUpdate()
-      }
+      handleResult(result)
     })
   }
 

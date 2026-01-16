@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useTransition } from 'react'
+import { useTransition, useRef, useEffect } from 'react'
 import {
   Select,
   SelectContent,
@@ -15,11 +15,21 @@ export function ReservationFilters() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isPending, startTransition] = useTransition()
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const currentStatus = searchParams.get('status') || 'ALL'
   const currentSearch = searchParams.get('search') || ''
 
-  const updateParams = (key: string, value: string) => {
+  // アンマウント時にタイムアウトをクリーンアップ
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  function updateParams(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString())
     if (value && value !== 'ALL') {
       params.set(key, value)
@@ -32,6 +42,20 @@ export function ReservationFilters() {
     startTransition(() => {
       router.push(`/admin/reservations?${params.toString()}`)
     })
+  }
+
+  function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const value = e.target.value
+
+    // 既存のタイムアウトをクリア
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
+
+    // デバウンス処理（300ms）
+    searchTimeoutRef.current = setTimeout(() => {
+      updateParams('search', value)
+    }, 300)
   }
 
   return (
@@ -61,14 +85,7 @@ export function ReservationFilters() {
           type="search"
           placeholder="顧客名、スペース名で検索..."
           defaultValue={currentSearch}
-          onChange={(e) => {
-            const value = e.target.value
-            // デバウンス処理（300ms）
-            const timeoutId = setTimeout(() => {
-              updateParams('search', value)
-            }, 300)
-            return () => clearTimeout(timeoutId)
-          }}
+          onChange={handleSearchChange}
           disabled={isPending}
         />
       </div>

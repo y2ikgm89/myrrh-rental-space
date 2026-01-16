@@ -4,7 +4,7 @@
  * メディアフィルター
  */
 
-import { useCallback, useRef, useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Search, Grid, List, Upload } from 'lucide-react'
 import { Button } from '@/components/admin/ui'
@@ -23,44 +23,47 @@ export function MediaFilters() {
   const currentView = searchParams.get('view') || 'grid'
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const updateParams = useCallback(
-    (updates: Record<string, string | null>) => {
-      const params = new URLSearchParams(searchParams.toString())
+  function updateParams(updates: Record<string, string | null>) {
+    const params = new URLSearchParams(searchParams.toString())
 
-      for (const [key, value] of Object.entries(updates)) {
-        if (value === null || value === '') {
-          params.delete(key)
-        } else {
-          params.set(key, value)
-        }
+    for (const [key, value] of Object.entries(updates)) {
+      if (value === null || value === '') {
+        params.delete(key)
+      } else {
+        params.set(key, value)
       }
+    }
 
-      // Reset page when filter changes
-      if (!('page' in updates)) {
-        params.delete('page')
-      }
+    // Reset page when filter changes
+    if (!('page' in updates)) {
+      params.delete('page')
+    }
 
-      startTransition(() => {
-        router.push(`/admin/media?${params.toString()}`)
-      })
-    },
-    [router, searchParams]
-  )
+    startTransition(() => {
+      router.push(`/admin/media?${params.toString()}`)
+    })
+  }
 
-  const handleSearchChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const value = e.target.value
+  function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const value = e.target.value
 
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
+      updateParams({ search: value || null })
+    }, 300)
+  }
+
+  // アンマウント時にタイムアウトをクリーンアップ
+  useEffect(() => {
+    return () => {
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current)
       }
-
-      searchTimeoutRef.current = setTimeout(() => {
-        updateParams({ search: value || null })
-      }, 300)
-    },
-    [updateParams]
-  )
+    }
+  }, [])
 
   return (
     <>

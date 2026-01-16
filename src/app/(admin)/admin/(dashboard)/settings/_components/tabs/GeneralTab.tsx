@@ -11,14 +11,13 @@ import { BasicInfoSection, ContactInfoSection } from '../sections'
 
 interface GeneralTabProps {
   settings: SettingsData
-  onUpdate: () => void
 }
 
-export function GeneralTab({ settings, onUpdate }: GeneralTabProps) {
+export function GeneralTab({ settings }: GeneralTabProps) {
   return (
     <div className="space-y-6">
-      <BasicInfoSection settings={settings} onUpdate={onUpdate} />
-      <ContactInfoSection settings={settings} onUpdate={onUpdate} />
+      <BasicInfoSection settings={settings} />
+      <ContactInfoSection settings={settings} />
     </div>
   )
 }

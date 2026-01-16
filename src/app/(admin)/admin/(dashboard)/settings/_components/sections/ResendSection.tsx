@@ -7,7 +7,6 @@
  */
 
 import { useState, useTransition } from 'react'
-import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -25,6 +24,7 @@ import {
 } from '@/actions/admin/api-keys'
 import type { ResendConfig } from '@/types/api-keys'
 import { StatusBanner } from '../shared'
+import { useRefreshOnSuccess } from '../hooks'
 
 // =============================================================================
 // Types
@@ -32,14 +32,14 @@ import { StatusBanner } from '../shared'
 
 interface ResendSectionProps {
   config: ResendConfig
-  onUpdate: () => void
 }
 
 // =============================================================================
 // Main Component
 // =============================================================================
 
-export function ResendSection({ config, onUpdate }: ResendSectionProps) {
+export function ResendSection({ config }: ResendSectionProps) {
+  const { handleResult, refresh } = useRefreshOnSuccess()
   const [isPending, startTransition] = useTransition()
   const [isTesting, setIsTesting] = useState(false)
   const [testResult, setTestResult] = useState<{
@@ -58,13 +58,11 @@ export function ResendSection({ config, onUpdate }: ResendSectionProps) {
       const result = await updateResendSettings({
         resendApiKey: formData.resendApiKey || null,
       })
-      if (!result.success) {
-        toast.error(result.error)
-      } else {
+      if (result.success) {
         setFormData({ resendApiKey: '' })
         setShowKeyInput(false)
-        onUpdate()
       }
+      handleResult(result)
     })
   }
 
@@ -87,7 +85,7 @@ export function ResendSection({ config, onUpdate }: ResendSectionProps) {
           success: true,
           message: result.data?.message || '接続成功',
         })
-        onUpdate()
+        refresh()
       } else {
         setTestResult({
           success: false,
@@ -109,13 +107,11 @@ export function ResendSection({ config, onUpdate }: ResendSectionProps) {
 
     startTransition(async () => {
       const result = await clearResendKeys()
-      if (!result.success) {
-        toast.error(result.error)
-      } else {
+      if (result.success) {
         setFormData({ resendApiKey: '' })
         setTestResult(null)
-        onUpdate()
       }
+      handleResult(result)
     })
   }
 

@@ -7,7 +7,6 @@
  */
 
 import { useState, useTransition } from 'react'
-import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -20,13 +19,14 @@ import {
 } from '@/components/admin/ui'
 import { updateNotificationSettings } from '@/actions/admin/settings'
 import type { SettingsData } from '@/actions/admin/settings'
+import { useRefreshOnSuccess } from '../hooks'
 
 interface NotificationSectionProps {
   settings: SettingsData
-  onUpdate: () => void
 }
 
-export function NotificationSection({ settings, onUpdate }: NotificationSectionProps) {
+export function NotificationSection({ settings }: NotificationSectionProps) {
+  const { handleResult } = useRefreshOnSuccess()
   const [isPending, startTransition] = useTransition()
   const [formData, setFormData] = useState({
     notifyNewReservation: settings.notifyNewReservation,
@@ -38,11 +38,7 @@ export function NotificationSection({ settings, onUpdate }: NotificationSectionP
   const handleSave = () => {
     startTransition(async () => {
       const result = await updateNotificationSettings(formData)
-      if (!result.success) {
-        toast.error(result.error)
-      } else {
-        onUpdate()
-      }
+      handleResult(result)
     })
   }
 

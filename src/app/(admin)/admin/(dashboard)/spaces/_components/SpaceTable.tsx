@@ -103,6 +103,7 @@ export function SpaceTable({ spaces }: SpaceTableProps) {
                       width={40}
                       height={40}
                       className="rounded object-cover"
+                      style={{ width: 40, height: 40 }}
                     />
                   )}
                   <div>

@@ -11,14 +11,13 @@ import { EmailSection, NotificationSection } from '../sections'
 
 interface EmailTabProps {
   settings: SettingsData
-  onUpdate: () => void
 }
 
-export function EmailTab({ settings, onUpdate }: EmailTabProps) {
+export function EmailTab({ settings }: EmailTabProps) {
   return (
     <div className="space-y-6">
-      <EmailSection settings={settings} onUpdate={onUpdate} />
-      <NotificationSection settings={settings} onUpdate={onUpdate} />
+      <EmailSection settings={settings} />
+      <NotificationSection settings={settings} />
     </div>
   )
 }

@@ -13,12 +13,16 @@ import {
   TableHeader,
   TableRow,
   Button,
-  Switch,
   Badge,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from '@/components/admin/ui'
-import { PublishStatusBadge } from '@/components/admin/status-badges'
-import { toggleBlogPostPublish } from '@/actions/admin/blog'
+import { BlogPostStatusBadge } from '@/components/admin/status-badges'
+import { publishBlogPost, unpublishBlogPost } from '@/actions/admin/blog'
 import type { BlogPostData } from '@/actions/admin/blog'
+import { BlogPostStatus } from '@/generated/prisma/client/enums'
 
 type BlogTableProps = {
   posts: BlogPostData[]
@@ -27,10 +31,23 @@ type BlogTableProps = {
 export function BlogTable({ posts }: BlogTableProps) {
   const [isPending, startTransition] = useTransition()
 
-  const handleTogglePublish = (id: string) => {
+  const handlePublish = (id: string) => {
     startTransition(async () => {
-      const result = await toggleBlogPostPublish(id)
-      if (!result.success) {
+      const result = await publishBlogPost(id)
+      if (result.success) {
+        toast.success(result.message)
+      } else {
+        toast.error(result.error)
+      }
+    })
+  }
+
+  const handleUnpublish = (id: string) => {
+    startTransition(async () => {
+      const result = await unpublishBlogPost(id)
+      if (result.success) {
+        toast.success(result.message)
+      } else {
         toast.error(result.error)
       }
     })
@@ -49,27 +66,19 @@ export function BlogTable({ posts }: BlogTableProps) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-20">公開</TableHead>
-            <TableHead className="w-24">ステータス</TableHead>
+            <TableHead className="w-32">ステータス</TableHead>
             <TableHead>タイトル</TableHead>
             <TableHead className="w-32">カテゴリ</TableHead>
             <TableHead className="w-24">PV</TableHead>
             <TableHead className="w-36">公開日時</TableHead>
-            <TableHead className="w-24">操作</TableHead>
+            <TableHead className="w-32">操作</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {posts.map((post) => (
             <TableRow key={post.id}>
               <TableCell>
-                <Switch
-                  checked={post.isPublished}
-                  onCheckedChange={() => handleTogglePublish(post.id)}
-                  disabled={isPending}
-                />
-              </TableCell>
-              <TableCell>
-                <PublishStatusBadge isPublished={post.isPublished} />
+                <BlogPostStatusBadge status={post.status} />
               </TableCell>
               <TableCell>
                 <div className="max-w-xs truncate font-medium">
@@ -93,9 +102,31 @@ export function BlogTable({ posts }: BlogTableProps) {
                   : '-'}
               </TableCell>
               <TableCell>
-                <Button asChild variant="outline" size="sm">
-                  <Link href={`/admin/blog/${post.id}`}>編集</Link>
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button asChild variant="outline" size="sm">
+                    <Link href={`/admin/blog/${post.id}`}>編集</Link>
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" disabled={isPending}>
+                        •••
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {post.status === BlogPostStatus.PUBLISHED ? (
+                        <DropdownMenuItem
+                          onClick={() => handleUnpublish(post.id)}
+                        >
+                          下書きに戻す
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem onClick={() => handlePublish(post.id)}>
+                          公開する
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </TableCell>
             </TableRow>
           ))}

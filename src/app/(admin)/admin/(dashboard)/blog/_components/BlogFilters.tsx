@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useTransition } from 'react'
+import { useTransition, useRef, useEffect } from 'react'
 import {
   Select,
   SelectContent,
@@ -20,12 +20,22 @@ export function BlogFilters({ categories }: BlogFiltersProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isPending, startTransition] = useTransition()
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const currentStatus = searchParams.get('status') || 'ALL'
   const currentCategory = searchParams.get('categoryId') || 'ALL'
   const currentSearch = searchParams.get('search') || ''
 
-  const updateParams = (key: string, value: string) => {
+  // アンマウント時にタイムアウトをクリーンアップ
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  function updateParams(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString())
     if (value && value !== 'ALL') {
       params.set(key, value)
@@ -38,6 +48,20 @@ export function BlogFilters({ categories }: BlogFiltersProps) {
     startTransition(() => {
       router.push(`/admin/blog?${params.toString()}`)
     })
+  }
+
+  function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const value = e.target.value
+
+    // 既存のタイムアウトをクリア
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
+
+    // デバウンス処理（300ms）
+    searchTimeoutRef.current = setTimeout(() => {
+      updateParams('search', value)
+    }, 300)
   }
 
   return (
@@ -87,14 +111,7 @@ export function BlogFilters({ categories }: BlogFiltersProps) {
           type="search"
           placeholder="タイトル、本文で検索..."
           defaultValue={currentSearch}
-          onChange={(e) => {
-            const value = e.target.value
-            // デバウンス処理（300ms）
-            const timeoutId = setTimeout(() => {
-              updateParams('search', value)
-            }, 300)
-            return () => clearTimeout(timeoutId)
-          }}
+          onChange={handleSearchChange}
           disabled={isPending}
         />
       </div>

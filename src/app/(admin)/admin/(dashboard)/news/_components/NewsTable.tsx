@@ -13,11 +13,15 @@ import {
   TableHeader,
   TableRow,
   Button,
-  Switch,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from '@/components/admin/ui'
-import { PublishStatusBadge } from '@/components/admin/status-badges'
-import { toggleNewsPublish } from '@/actions/admin/news'
+import { NewsStatusBadge } from '@/components/admin/status-badges'
+import { publishNews, unpublishNews } from '@/actions/admin/news'
 import type { NewsData } from '@/actions/admin/news'
+import { NewsStatus } from '@/generated/prisma/client/enums'
 
 type NewsTableProps = {
   news: NewsData[]
@@ -26,10 +30,23 @@ type NewsTableProps = {
 export function NewsTable({ news }: NewsTableProps) {
   const [isPending, startTransition] = useTransition()
 
-  const handleTogglePublish = (id: string) => {
+  const handlePublish = (id: string) => {
     startTransition(async () => {
-      const result = await toggleNewsPublish(id)
-      if (!result.success) {
+      const result = await publishNews(id)
+      if (result.success) {
+        toast.success(result.message)
+      } else {
+        toast.error(result.error)
+      }
+    })
+  }
+
+  const handleUnpublish = (id: string) => {
+    startTransition(async () => {
+      const result = await unpublishNews(id)
+      if (result.success) {
+        toast.success(result.message)
+      } else {
         toast.error(result.error)
       }
     })
@@ -48,26 +65,18 @@ export function NewsTable({ news }: NewsTableProps) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-24">公開</TableHead>
             <TableHead className="w-32">ステータス</TableHead>
             <TableHead>タイトル</TableHead>
             <TableHead className="w-40">公開日時</TableHead>
             <TableHead className="w-40">作成日時</TableHead>
-            <TableHead className="w-24">操作</TableHead>
+            <TableHead className="w-32">操作</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {news.map((item) => (
             <TableRow key={item.id}>
               <TableCell>
-                <Switch
-                  checked={item.isPublished}
-                  onCheckedChange={() => handleTogglePublish(item.id)}
-                  disabled={isPending}
-                />
-              </TableCell>
-              <TableCell>
-                <PublishStatusBadge isPublished={item.isPublished} />
+                <NewsStatusBadge status={item.status} />
               </TableCell>
               <TableCell>
                 <div className="max-w-xs truncate font-medium">
@@ -87,9 +96,31 @@ export function NewsTable({ news }: NewsTableProps) {
                 })}
               </TableCell>
               <TableCell>
-                <Button asChild variant="outline" size="sm">
-                  <Link href={`/admin/news/${item.id}`}>編集</Link>
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button asChild variant="outline" size="sm">
+                    <Link href={`/admin/news/${item.id}`}>編集</Link>
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" disabled={isPending}>
+                        •••
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {item.status === NewsStatus.PUBLISHED ? (
+                        <DropdownMenuItem
+                          onClick={() => handleUnpublish(item.id)}
+                        >
+                          下書きに戻す
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem onClick={() => handlePublish(item.id)}>
+                          公開する
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </TableCell>
             </TableRow>
           ))}

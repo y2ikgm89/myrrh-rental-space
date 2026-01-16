@@ -11,13 +11,12 @@ import { SeoSection } from '../sections'
 
 interface SeoTabProps {
   settings: SettingsData
-  onUpdate: () => void
 }
 
-export function SeoTab({ settings, onUpdate }: SeoTabProps) {
+export function SeoTab({ settings }: SeoTabProps) {
   return (
     <div className="space-y-6">
-      <SeoSection settings={settings} onUpdate={onUpdate} />
+      <SeoSection settings={settings} />
     </div>
   )
 }

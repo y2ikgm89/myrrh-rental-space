@@ -11,14 +11,13 @@ import { BusinessInfoSection, BusinessHoursSection } from '../sections'
 
 interface BusinessTabProps {
   settings: SettingsData
-  onUpdate: () => void
 }
 
-export function BusinessTab({ settings, onUpdate }: BusinessTabProps) {
+export function BusinessTab({ settings }: BusinessTabProps) {
   return (
     <div className="space-y-6">
-      <BusinessInfoSection settings={settings} onUpdate={onUpdate} />
-      <BusinessHoursSection settings={settings} onUpdate={onUpdate} />
+      <BusinessInfoSection settings={settings} />
+      <BusinessHoursSection settings={settings} />
     </div>
   )
 }

@@ -4,7 +4,7 @@
  * メディア詳細ダイアログ
  */
 
-import { useState, useTransition, useRef, useMemo } from 'react'
+import { useState, useTransition, useRef } from 'react'
 import { X, Copy, ExternalLink, Trash2, Save, Loader2, FileText, Film, File } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
@@ -45,7 +45,7 @@ export function MediaDetailDialog({ item, onClose }: Props) {
   const currentItemId = item?.id ?? null
 
   // Reset form state when item changes
-  const initialFormState = useMemo(() => getInitialFormState(item), [item])
+  const initialFormState = getInitialFormState(item)
 
   const [formData, setFormData] = useState<FormState>(initialFormState)
 

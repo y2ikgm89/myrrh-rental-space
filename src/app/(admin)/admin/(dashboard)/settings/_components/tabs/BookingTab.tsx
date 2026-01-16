@@ -17,17 +17,16 @@ import {
 
 interface BookingTabProps {
   settings: SettingsData
-  onUpdate: () => void
 }
 
-export function BookingTab({ settings, onUpdate }: BookingTabProps) {
+export function BookingTab({ settings }: BookingTabProps) {
   return (
     <div className="space-y-6">
-      <ReservationSection settings={settings} onUpdate={onUpdate} />
-      <TermsAgreementSection settings={settings} onUpdate={onUpdate} />
-      <GoogleCalendarSection settings={settings} onUpdate={onUpdate} />
-      <TwoWaySyncSection settings={settings} onUpdate={onUpdate} />
-      <ICalFeedSection onUpdate={onUpdate} />
+      <ReservationSection settings={settings} />
+      <TermsAgreementSection settings={settings} />
+      <GoogleCalendarSection settings={settings} />
+      <TwoWaySyncSection settings={settings} />
+      <ICalFeedSection />
     </div>
   )
 }

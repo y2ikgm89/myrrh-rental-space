@@ -3,29 +3,34 @@
 /**
  * お知らせインラインエディター
  *
- * Webflow型のフルページ編集UI
- * 公開ページと同じ見た目でコンテンツを編集
+ * Lexicalリッチテキストエディターを使用したお知らせ編集UI
  * 新規作成・編集の両方に対応
  */
 
-import { useState, useTransition, useCallback } from 'react'
+import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
+import { LexicalEditor } from '@/components/admin/editor/lexical'
 import {
   InlineEditorLayout,
   EditorHeader,
-  EditorCanvas,
   useKeyboardShortcuts,
   useBeforeUnload,
 } from '@/components/admin/editor/inline'
 import { NewsSidePanel } from '@/components/admin/editor/inline/NewsSidePanel'
-import { createNews, updateNews, deleteNews } from '@/actions/admin/news'
+import {
+  createNews,
+  updateNews,
+  deleteNews,
+  publishNews,
+  unpublishNews,
+} from '@/actions/admin/news'
 import type { NewsData } from '@/actions/admin/news'
-import type { NewsEditorFormData } from '@/components/admin/editor/inline/types'
+import { NewsStatus } from '@/generated/prisma/client/enums'
 import {
   Button,
   Dialog,
@@ -36,24 +41,42 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/admin/ui'
+import { EDITOR_PROSE_CLASSES } from '@/lib/styles/prose'
+
+// =============================================================================
+// Schema
+// =============================================================================
 
 const formSchema = z.object({
   title: z.string().min(1, 'タイトルは必須です').max(200, 'タイトルは200文字以内で入力してください'),
   content: z.string().min(1, '本文は必須です'),
-  isPublished: z.boolean(),
+  status: z.nativeEnum(NewsStatus),
   publishedAt: z.string().optional(),
+  contentWidth: z.string().optional(),
+  contentWidthCustom: z.string().optional(),
 })
+
+type FormData = z.infer<typeof formSchema>
+
+// =============================================================================
+// Types
+// =============================================================================
 
 type NewsInlineEditorProps = {
   news?: NewsData
   mode?: 'create' | 'edit'
 }
 
+// =============================================================================
+// Component
+// =============================================================================
+
 export function NewsInlineEditor({ news, mode = 'edit' }: NewsInlineEditorProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [hasEditorChanges, setHasEditorChanges] = useState(false)
 
   const {
     register,
@@ -62,114 +85,140 @@ export function NewsInlineEditor({ news, mode = 'edit' }: NewsInlineEditorProps)
     setValue,
     reset,
     formState: { errors, isDirty },
-  } = useForm<NewsEditorFormData>({
+  } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: news
       ? {
           title: news.title,
           content: news.content,
-          isPublished: news.isPublished,
+          status: news.status,
           publishedAt: news.publishedAt
             ? format(new Date(news.publishedAt), "yyyy-MM-dd'T'HH:mm")
             : '',
+          contentWidth: news.contentWidth ?? '',
+          contentWidthCustom: news.contentWidthCustom?.toString() ?? '',
         }
       : {
           title: '',
           content: '',
-          isPublished: false,
+          status: NewsStatus.DRAFT,
           publishedAt: '',
+          contentWidth: '',
+          contentWidthCustom: '',
         },
   })
 
   const title = useWatch({ control, name: 'title' })
+  const status = useWatch({ control, name: 'status' })
   const content = useWatch({ control, name: 'content' })
 
-  const onSubmit = useCallback(
-    (data: NewsEditorFormData) => {
-      startTransition(async () => {
-        try {
-          const payload = {
-            title: data.title,
-            content: data.content,
-            isPublished: data.isPublished,
-            publishedAt: data.publishedAt || null,
-          }
+  const handleHtmlChange = (html: string) => {
+    setValue('content', html, { shouldDirty: true })
+    setHasEditorChanges(true)
+  }
 
-          if (mode === 'create') {
-            const result = await createNews(payload)
-            if (result.success) {
-              toast.success('お知らせを作成しました')
-              router.push(`/admin/news/${result.data.id}`)
-            } else {
-              toast.error(result.error)
-            }
-          } else if (news) {
-            const result = await updateNews(news.id, payload)
-            if (result.success) {
-              reset(data)
-              router.refresh()
-              toast.success('お知らせを保存しました')
-            } else {
-              toast.error(result.error)
-            }
-          }
-        } catch (error) {
-          console.error('保存中にエラーが発生しました:', error)
-          toast.error('保存中にエラーが発生しました')
+  const onSubmit = (data: FormData) => {
+    startTransition(async () => {
+      try {
+        const payload = {
+          title: data.title,
+          content: data.content,
+          contentWidth: (data.contentWidth || null) as 'XS' | 'SM' | 'MD' | 'LG' | 'XL' | 'FULL' | 'CUSTOM' | null,
+          contentWidthCustom: data.contentWidthCustom
+            ? parseInt(data.contentWidthCustom, 10)
+            : null,
         }
-      })
-    },
-    [mode, news, router, reset]
-  )
 
-  const handleSave = useCallback(() => {
+        if (mode === 'create') {
+          const result = await createNews(payload)
+          if (result.success) {
+            toast.success('お知らせを作成しました')
+            router.push(`/admin/news/${result.data.id}`)
+          } else {
+            toast.error(result.error)
+          }
+        } else if (news) {
+          const result = await updateNews(news.id, payload)
+          if (result.success) {
+            reset(data)
+            setHasEditorChanges(false)
+            router.refresh()
+            toast.success('お知らせを保存しました')
+          } else {
+            toast.error(result.error)
+          }
+        }
+      } catch (error) {
+        console.error('保存中にエラーが発生しました:', error)
+        toast.error('保存中にエラーが発生しました')
+      }
+    })
+  }
+
+  const handleSave = () => {
     if (isPending) return
     handleSubmit(onSubmit)()
-  }, [handleSubmit, onSubmit, isPending])
+  }
 
-  const handlePreview = useCallback(() => {
+  const handlePublish = () => {
+    if (!news || isPending) return
+    startTransition(async () => {
+      const result = await publishNews(news.id)
+      if (result.success) {
+        toast.success(result.message)
+        setValue('status', NewsStatus.PUBLISHED)
+        router.refresh()
+      } else {
+        toast.error(result.error)
+      }
+    })
+  }
+
+  const handleUnpublish = () => {
+    if (!news || isPending) return
+    startTransition(async () => {
+      const result = await unpublishNews(news.id)
+      if (result.success) {
+        toast.success(result.message)
+        setValue('status', NewsStatus.DRAFT)
+        router.refresh()
+      } else {
+        toast.error(result.error)
+      }
+    })
+  }
+
+  const handlePreview = () => {
     if (mode === 'create') {
       toast.info('お知らせを作成後にプレビューできます')
       return
     }
-    if (isDirty) {
+    const isUnsaved = isDirty || hasEditorChanges
+    if (isUnsaved) {
       toast.info('プレビューには保存済みのコンテンツが表示されます')
     }
     if (news) {
       window.open(`/news/${news.id}`, '_blank')
     }
-  }, [mode, news, isDirty])
+  }
 
-  const handleBack = useCallback(() => {
-    if (isDirty && !window.confirm('保存されていない変更があります。破棄してもよろしいですか？')) {
+  const handleBack = () => {
+    const isUnsaved = isDirty || hasEditorChanges
+    if (isUnsaved && !window.confirm('保存されていない変更があります。破棄してもよろしいですか？')) {
       return
     }
     router.push('/admin/news')
-  }, [router, isDirty])
+  }
 
-  const handleToggleSidePanel = useCallback(() => {
+  const handleToggleSidePanel = () => {
     setIsSidePanelOpen((prev) => !prev)
-  }, [])
+  }
 
-  const handleCloseSidePanel = useCallback(() => {
+  const handleCloseSidePanel = () => {
     setIsSidePanelOpen(false)
-  }, [])
+  }
 
-  const handleContentChange = useCallback(
-    (html: string) => {
-      setValue('content', html, { shouldDirty: true })
-    },
-    [setValue]
-  )
-
-  const handleTitleChange = useCallback(
-    (newTitle: string) => {
-      setValue('title', newTitle, { shouldDirty: true })
-    },
-    [setValue]
-  )
-
-  const handleDelete = useCallback(() => {
+  const handleDelete = () => {
     if (!news) return
     startTransition(async () => {
       try {
@@ -185,77 +234,90 @@ export function NewsInlineEditor({ news, mode = 'edit' }: NewsInlineEditorProps)
         toast.error('削除中にエラーが発生しました')
       }
     })
-  }, [news, router])
+  }
 
   useKeyboardShortcuts({ onSave: handleSave })
-  useBeforeUnload({ isDirty })
+  useBeforeUnload({ isDirty: isDirty || hasEditorChanges })
+
+  const isFormDirty = isDirty || hasEditorChanges
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="h-screen">
       <InlineEditorLayout>
         <div className="flex flex-1 flex-col overflow-hidden">
-          <div className="flex items-center justify-between border-b bg-background px-4 py-2">
-            <EditorHeader
-              title={title}
-              slug={news ? `news/${news.id}` : 'news/new'}
-              isDirty={isDirty}
-              isPending={isPending}
-              isSidePanelOpen={isSidePanelOpen}
-              onToggleSidePanel={handleToggleSidePanel}
-              onSave={handleSave}
-              onPreview={handlePreview}
-              onBack={handleBack}
-            />
-
-            {mode === 'edit' && news && (
-              <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive hover:text-destructive"
-                    disabled={isPending}
-                  >
-                    削除
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>お知らせを削除しますか？</DialogTitle>
-                    <DialogDescription>
-                      この操作は取り消せません。本当に削除してもよろしいですか？
-                    </DialogDescription>
-                  </DialogHeader>
-                  <DialogFooter>
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsDeleteDialogOpen(false)}
-                      disabled={isPending}
-                    >
-                      キャンセル
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      onClick={handleDelete}
-                      disabled={isPending}
-                    >
-                      {isPending ? '削除中...' : '削除する'}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            )}
-          </div>
-
-          <EditorCanvas
+          <EditorHeader
             title={title}
-            onTitleChange={handleTitleChange}
-            showTitle={true}
-            content={content}
-            onChange={handleContentChange}
-            disabled={isPending}
+            slug={news ? `news/${news.id}` : 'news/new'}
+            isDirty={isFormDirty}
+            isPending={isPending}
+            isSidePanelOpen={isSidePanelOpen}
+            onToggleSidePanel={handleToggleSidePanel}
+            onSave={handleSave}
+            onPreview={handlePreview}
+            onBack={handleBack}
+            publishActions={
+              mode === 'edit' && news
+                ? {
+                    status,
+                    onPublish: handlePublish,
+                    onUnpublish: handleUnpublish,
+                  }
+                : undefined
+            }
+            extraActions={
+              mode === 'edit' && news ? (
+                <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive"
+                      disabled={isPending}
+                    >
+                      削除
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>お知らせを削除しますか？</DialogTitle>
+                      <DialogDescription>
+                        この操作は取り消せません。本当に削除してもよろしいですか？
+                      </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsDeleteDialogOpen(false)}
+                        disabled={isPending}
+                      >
+                        キャンセル
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        onClick={handleDelete}
+                        disabled={isPending}
+                      >
+                        {isPending ? '削除中...' : '削除する'}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              ) : undefined
+            }
           />
+
+          {/* Lexical Editor */}
+          <div className="flex-1 overflow-auto p-4">
+            <LexicalEditor
+              content={content}
+              onChange={handleHtmlChange}
+              disabled={isPending}
+              className={EDITOR_PROSE_CLASSES}
+              showToolbar
+              minHeight="calc(100vh - 200px)"
+            />
+          </div>
         </div>
 
         <NewsSidePanel

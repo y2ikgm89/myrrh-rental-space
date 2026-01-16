@@ -7,7 +7,6 @@
  */
 
 import { useState, useTransition } from 'react'
-import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -25,6 +24,7 @@ import {
 } from '@/actions/admin/api-keys'
 import type { TurnstileConfig } from '@/types/api-keys'
 import { StatusBanner } from '../shared'
+import { useRefreshOnSuccess } from '../hooks'
 
 // =============================================================================
 // Types
@@ -32,14 +32,14 @@ import { StatusBanner } from '../shared'
 
 interface TurnstileSectionProps {
   config: TurnstileConfig
-  onUpdate: () => void
 }
 
 // =============================================================================
 // Main Component
 // =============================================================================
 
-export function TurnstileSection({ config, onUpdate }: TurnstileSectionProps) {
+export function TurnstileSection({ config }: TurnstileSectionProps) {
+  const { handleResult, refresh } = useRefreshOnSuccess()
   const [isPending, startTransition] = useTransition()
   const [isTesting, setIsTesting] = useState(false)
   const [testResult, setTestResult] = useState<{
@@ -61,16 +61,14 @@ export function TurnstileSection({ config, onUpdate }: TurnstileSectionProps) {
         turnstileSiteKey: formData.turnstileSiteKey || null,
         turnstileSecretKey: formData.turnstileSecretKey || null,
       })
-      if (!result.success) {
-        toast.error(result.error)
-      } else {
+      if (result.success) {
         setFormData((prev) => ({
           ...prev,
           turnstileSecretKey: '',
         }))
         setShowSecretKeyInput(false)
-        onUpdate()
       }
+      handleResult(result)
     })
   }
 
@@ -97,7 +95,7 @@ export function TurnstileSection({ config, onUpdate }: TurnstileSectionProps) {
           message: result.data?.message || '検証成功',
           note: result.data?.note,
         })
-        onUpdate()
+        refresh()
       } else {
         setTestResult({
           success: false,
@@ -119,13 +117,11 @@ export function TurnstileSection({ config, onUpdate }: TurnstileSectionProps) {
 
     startTransition(async () => {
       const result = await clearTurnstileKeys()
-      if (!result.success) {
-        toast.error(result.error)
-      } else {
+      if (result.success) {
         setFormData({ turnstileSiteKey: '', turnstileSecretKey: '' })
         setTestResult(null)
-        onUpdate()
       }
+      handleResult(result)
     })
   }
 

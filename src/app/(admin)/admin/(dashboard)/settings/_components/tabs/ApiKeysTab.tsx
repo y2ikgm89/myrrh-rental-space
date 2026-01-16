@@ -27,18 +27,10 @@ import type {
 } from '@/types/api-keys'
 
 // =============================================================================
-// Types
-// =============================================================================
-
-interface ApiKeysTabProps {
-  onUpdate: () => void
-}
-
-// =============================================================================
 // Main Component
 // =============================================================================
 
-export function ApiKeysTab({ onUpdate }: ApiKeysTabProps) {
+export function ApiKeysTab() {
   const [isLoading, setIsLoading] = useState(true)
   const [resendConfig, setResendConfig] = useState<ResendConfig | null>(null)
   const [turnstileConfig, setTurnstileConfig] = useState<TurnstileConfig | null>(null)
@@ -67,11 +59,6 @@ export function ApiKeysTab({ onUpdate }: ApiKeysTabProps) {
   useEffect(() => {
     loadConfigs()
   }, [])
-
-  const handleUpdate = () => {
-    loadConfigs()
-    onUpdate()
-  }
 
   if (isLoading) {
     return (
@@ -105,18 +92,18 @@ export function ApiKeysTab({ onUpdate }: ApiKeysTabProps) {
       </div>
 
       {resendConfig && (
-        <ResendSection config={resendConfig} onUpdate={handleUpdate} />
+        <ResendSection config={resendConfig} />
       )}
 
       {turnstileConfig && (
-        <TurnstileSection config={turnstileConfig} onUpdate={handleUpdate} />
+        <TurnstileSection config={turnstileConfig} />
       )}
 
       {googleMapsConfig && (
-        <GoogleMapsSection config={googleMapsConfig} onUpdate={handleUpdate} />
+        <GoogleMapsSection config={googleMapsConfig} />
       )}
 
-      <CustomApiKeysSection keys={customApiKeys} onUpdate={handleUpdate} />
+      <CustomApiKeysSection keys={customApiKeys} />
     </div>
   )
 }

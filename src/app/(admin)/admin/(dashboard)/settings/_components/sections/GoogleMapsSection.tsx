@@ -7,7 +7,6 @@
  */
 
 import { useState, useTransition } from 'react'
-import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -25,6 +24,7 @@ import {
 } from '@/actions/admin/api-keys'
 import type { GoogleMapsConfig } from '@/types/api-keys'
 import { StatusBanner } from '../shared'
+import { useRefreshOnSuccess } from '../hooks'
 
 // =============================================================================
 // Types
@@ -32,14 +32,14 @@ import { StatusBanner } from '../shared'
 
 interface GoogleMapsSectionProps {
   config: GoogleMapsConfig
-  onUpdate: () => void
 }
 
 // =============================================================================
 // Main Component
 // =============================================================================
 
-export function GoogleMapsSection({ config, onUpdate }: GoogleMapsSectionProps) {
+export function GoogleMapsSection({ config }: GoogleMapsSectionProps) {
+  const { handleResult, refresh } = useRefreshOnSuccess()
   const [isPending, startTransition] = useTransition()
   const [isTesting, setIsTesting] = useState(false)
   const [testResult, setTestResult] = useState<{
@@ -58,13 +58,11 @@ export function GoogleMapsSection({ config, onUpdate }: GoogleMapsSectionProps) 
       const result = await updateGoogleMapsSettings({
         googleMapsApiKey: formData.googleMapsApiKey || null,
       })
-      if (!result.success) {
-        toast.error(result.error)
-      } else {
+      if (result.success) {
         setFormData({ googleMapsApiKey: '' })
         setShowKeyInput(false)
-        onUpdate()
       }
+      handleResult(result)
     })
   }
 
@@ -89,7 +87,7 @@ export function GoogleMapsSection({ config, onUpdate }: GoogleMapsSectionProps) 
           success: true,
           message: result.data?.message || '接続成功',
         })
-        onUpdate()
+        refresh()
       } else {
         setTestResult({
           success: false,
@@ -111,13 +109,11 @@ export function GoogleMapsSection({ config, onUpdate }: GoogleMapsSectionProps) 
 
     startTransition(async () => {
       const result = await clearGoogleMapsKeys()
-      if (!result.success) {
-        toast.error(result.error)
-      } else {
+      if (result.success) {
         setFormData({ googleMapsApiKey: '' })
         setTestResult(null)
-        onUpdate()
       }
+      handleResult(result)
     })
   }
 

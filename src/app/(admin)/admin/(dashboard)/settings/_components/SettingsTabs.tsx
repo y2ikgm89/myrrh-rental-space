@@ -27,7 +27,18 @@ import {
 // Types
 // =============================================================================
 
-export const SETTINGS_TABS = [
+export type SettingsTabId =
+  | 'general'
+  | 'business'
+  | 'layout'
+  | 'seo'
+  | 'email'
+  | 'booking'
+  | 'payment'
+  | 'apikeys'
+  | 'system'
+
+export const SETTINGS_TABS: readonly SettingsTabId[] = [
   'general',
   'business',
   'layout',
@@ -37,9 +48,7 @@ export const SETTINGS_TABS = [
   'payment',
   'apikeys',
   'system',
-] as const
-
-export type SettingsTabId = (typeof SETTINGS_TABS)[number]
+]
 
 export interface TabConfig {
   id: SettingsTabId
@@ -67,14 +76,12 @@ interface SettingsTabsProps {
   activeTab: SettingsTabId
   onTabChange: (tab: SettingsTabId) => void
   settings: SettingsData
-  onSettingsUpdate: () => void
 }
 
 export function SettingsTabs({
   activeTab,
   onTabChange,
   settings,
-  onSettingsUpdate,
 }: SettingsTabsProps) {
   return (
     <Tabs
@@ -91,39 +98,39 @@ export function SettingsTabs({
       </TabsList>
 
       <TabsContent value="general">
-        <GeneralTab settings={settings} onUpdate={onSettingsUpdate} />
+        <GeneralTab settings={settings} />
       </TabsContent>
 
       <TabsContent value="business">
-        <BusinessTab settings={settings} onUpdate={onSettingsUpdate} />
+        <BusinessTab settings={settings} />
       </TabsContent>
 
       <TabsContent value="layout">
-        <LayoutTab settings={settings} onUpdate={onSettingsUpdate} />
+        <LayoutTab settings={settings} />
       </TabsContent>
 
       <TabsContent value="seo">
-        <SeoTab settings={settings} onUpdate={onSettingsUpdate} />
+        <SeoTab settings={settings} />
       </TabsContent>
 
       <TabsContent value="email">
-        <EmailTab settings={settings} onUpdate={onSettingsUpdate} />
+        <EmailTab settings={settings} />
       </TabsContent>
 
       <TabsContent value="booking">
-        <BookingTab settings={settings} onUpdate={onSettingsUpdate} />
+        <BookingTab settings={settings} />
       </TabsContent>
 
       <TabsContent value="payment">
-        <PaymentTab settings={settings} onUpdate={onSettingsUpdate} />
+        <PaymentTab settings={settings} />
       </TabsContent>
 
       <TabsContent value="apikeys">
-        <ApiKeysTab onUpdate={onSettingsUpdate} />
+        <ApiKeysTab />
       </TabsContent>
 
       <TabsContent value="system">
-        <SystemTab settings={settings} onUpdate={onSettingsUpdate} />
+        <SystemTab settings={settings} />
       </TabsContent>
     </Tabs>
   )

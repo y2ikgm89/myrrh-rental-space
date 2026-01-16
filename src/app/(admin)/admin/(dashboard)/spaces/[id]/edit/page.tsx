@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { connection } from 'next/server'
 import { getSpaceById } from '@/actions/admin/space'
+import { getActiveTermsForSelect } from '@/actions/admin/terms'
 import { SpaceForm } from '../../_components/SpaceForm'
 import { Button } from '@/components/admin/ui'
 import type { Metadata } from 'next'
@@ -27,8 +29,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function EditSpacePage({ params }: PageProps) {
+  await connection()
   const { id } = await params
-  const space = await getSpaceById(id)
+  const [space, availableTerms] = await Promise.all([
+    getSpaceById(id),
+    getActiveTermsForSelect(),
+  ])
 
   if (!space) {
     notFound()
@@ -48,7 +54,7 @@ export default async function EditSpacePage({ params }: PageProps) {
       </div>
 
       {/* フォーム */}
-      <SpaceForm space={space} mode="edit" />
+      <SpaceForm space={space} mode="edit" availableTerms={availableTerms} />
     </div>
   )
 }

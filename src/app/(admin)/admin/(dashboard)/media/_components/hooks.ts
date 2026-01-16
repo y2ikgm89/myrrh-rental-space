@@ -4,7 +4,7 @@
 
 'use client'
 
-import { useTransition, useCallback } from 'react'
+import { useTransition } from 'react'
 import { toast } from 'sonner'
 import { deleteMedia, type MediaData } from '@/actions/admin/media'
 
@@ -12,10 +12,10 @@ import { deleteMedia, type MediaData } from '@/actions/admin/media'
  * URLコピー機能
  */
 export function useCopyUrl(): (url: string) => Promise<void> {
-  return useCallback(async (url: string) => {
+  return async (url: string) => {
     await navigator.clipboard.writeText(url)
     toast.success('URLをコピーしました')
-  }, [])
+  }
 }
 
 /**
@@ -27,7 +27,7 @@ export function useDeleteMedia(): {
 } {
   const [isPending, startTransition] = useTransition()
 
-  const handleDelete = useCallback((item: MediaData) => {
+  const handleDelete = (item: MediaData) => {
     if (!confirm(`「${item.filename}」を削除しますか？`)) return
 
     startTransition(async () => {
@@ -38,7 +38,7 @@ export function useDeleteMedia(): {
         toast.error(result.error)
       }
     })
-  }, [])
+  }
 
   return { handleDelete, isPending }
 }

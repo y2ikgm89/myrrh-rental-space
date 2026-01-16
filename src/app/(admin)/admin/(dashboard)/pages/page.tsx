@@ -4,17 +4,19 @@
  * Lexicalリッチテキストエディターによるページ管理
  * ページの作成・編集・削除・公開状態の管理
  *
- * ホームページはセクション管理（DnD対応）で編集
+ * - ホームページ: セクション管理（DnD対応）で編集
+ * - コンテンツ編集可能ページ: Lexicalエディタで編集
+ * - システムページ（SEOのみ）: SEO/OGP設定のみ編集可能
  */
 
 import Link from 'next/link'
-import { Edit, Home } from 'lucide-react'
+import { Edit, Home, Settings2 } from 'lucide-react'
 import { getPagesList } from '@/actions/admin/page'
 import { Button } from '@/components/admin/ui'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/admin/ui/table'
 import { Badge } from '@/components/admin/ui/badge'
 import { CreatePageDialog, PageActions } from './_components'
-import { SYSTEM_PAGE_SLUGS } from '@/lib/validations/page'
+import { getSystemPageDefinition } from '@/lib/validations/page'
 import type { Metadata } from 'next'
 import type { ReactElement } from 'react'
 
@@ -32,7 +34,7 @@ export default async function PagesManagementPage(): Promise<ReactElement> {
         <div>
           <h1 className="text-2xl font-bold">ページ管理</h1>
           <p className="text-muted-foreground">
-            公開ページのコンテンツ編集
+            公開ページのコンテンツ・SEO設定
           </p>
         </div>
         <CreatePageDialog />
@@ -45,9 +47,10 @@ export default async function PagesManagementPage(): Promise<ReactElement> {
             <TableRow>
               <TableHead>スラッグ</TableHead>
               <TableHead>タイトル</TableHead>
+              <TableHead>種別</TableHead>
               <TableHead>ステータス</TableHead>
               <TableHead>更新日時</TableHead>
-              <TableHead className="w-32 text-right">操作</TableHead>
+              <TableHead className="w-40 text-right">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -57,12 +60,14 @@ export default async function PagesManagementPage(): Promise<ReactElement> {
                 <div className="flex items-center gap-2">
                   <Home className="h-4 w-4 text-primary" />
                   /
-                  <Badge variant="outline" className="text-xs">
-                    システム
-                  </Badge>
                 </div>
               </TableCell>
               <TableCell className="font-medium">ホームページ</TableCell>
+              <TableCell>
+                <Badge variant="outline" className="text-xs">
+                  セクション管理
+                </Badge>
+              </TableCell>
               <TableCell>
                 <Badge variant="success">公開中</Badge>
               </TableCell>
@@ -77,23 +82,34 @@ export default async function PagesManagementPage(): Promise<ReactElement> {
               </TableCell>
             </TableRow>
 
-            {/* 通常ページ */}
+            {/* ページ一覧 */}
             {pages.map((page) => {
-              const isSystemPage = SYSTEM_PAGE_SLUGS.includes(
-                page.slug as typeof SYSTEM_PAGE_SLUGS[number]
-              )
+              const systemPageDef = getSystemPageDefinition(page.slug)
+              const isContentEditable = systemPageDef?.isContentEditable ?? !page.isSystemPage
 
               return (
-                <TableRow key={page.id}>
+                <TableRow key={page.id} className={page.isSystemPage ? 'bg-muted/30' : ''}>
                   <TableCell className="font-mono text-sm">
                     /{page.slug}
-                    {isSystemPage && (
-                      <Badge variant="outline" className="ml-2 text-xs">
-                        システム
+                  </TableCell>
+                  <TableCell className="font-medium">{page.title}</TableCell>
+                  <TableCell>
+                    {page.isSystemPage ? (
+                      isContentEditable ? (
+                        <Badge variant="outline" className="text-xs">
+                          システム
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-xs">
+                          SEOのみ
+                        </Badge>
+                      )
+                    ) : (
+                      <Badge variant="default" className="text-xs">
+                        カスタム
                       </Badge>
                     )}
                   </TableCell>
-                  <TableCell className="font-medium">{page.title}</TableCell>
                   <TableCell>
                     {page.isPublished ? (
                       <Badge variant="success">公開中</Badge>
@@ -112,17 +128,26 @@ export default async function PagesManagementPage(): Promise<ReactElement> {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <Button asChild size="sm" variant="ghost">
-                        <Link href={`/admin/pages/${page.slug}/edit`}>
-                          <Edit className="h-4 w-4 mr-1" />
-                          編集
-                        </Link>
-                      </Button>
+                      {isContentEditable ? (
+                        <Button asChild size="sm" variant="ghost">
+                          <Link href={`/admin/pages/${page.slug}/edit`}>
+                            <Edit className="h-4 w-4 mr-1" />
+                            編集
+                          </Link>
+                        </Button>
+                      ) : (
+                        <Button asChild size="sm" variant="ghost">
+                          <Link href={`/admin/pages/${page.slug}/seo`}>
+                            <Settings2 className="h-4 w-4 mr-1" />
+                            SEO
+                          </Link>
+                        </Button>
+                      )}
                       <PageActions
                         slug={page.slug}
                         title={page.title}
                         isPublished={page.isPublished}
-                        isSystemPage={isSystemPage}
+                        isSystemPage={page.isSystemPage}
                       />
                     </div>
                   </TableCell>

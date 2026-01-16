@@ -10,13 +10,12 @@ import { StripeSection } from '../sections'
 
 interface PaymentTabProps {
   settings: SettingsData
-  onUpdate: () => void
 }
 
-export function PaymentTab({ settings, onUpdate }: PaymentTabProps) {
+export function PaymentTab({ settings }: PaymentTabProps) {
   return (
     <div className="space-y-6">
-      <StripeSection settings={settings} onUpdate={onUpdate} />
+      <StripeSection settings={settings} />
       {/* 将来: <PayPaySection />, <GMOSection /> */}
     </div>
   )

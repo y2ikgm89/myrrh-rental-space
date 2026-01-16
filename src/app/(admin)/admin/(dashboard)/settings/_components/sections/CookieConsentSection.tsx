@@ -7,7 +7,6 @@
  */
 
 import { useState, useTransition } from 'react'
-import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -22,6 +21,7 @@ import {
 } from '@/components/admin/ui'
 import { updateCookieConsentSettings } from '@/actions/admin/settings'
 import type { SettingsData } from '@/actions/admin/settings'
+import { useRefreshOnSuccess } from '../hooks'
 
 // デフォルト値
 const DEFAULT_MESSAGE =
@@ -32,13 +32,12 @@ const DEFAULT_POLICY_URL = '/privacy'
 
 interface CookieConsentSectionProps {
   settings: SettingsData
-  onUpdate: () => void
 }
 
 export function CookieConsentSection({
   settings,
-  onUpdate,
 }: CookieConsentSectionProps) {
+  const { handleResult } = useRefreshOnSuccess()
   const [isPending, startTransition] = useTransition()
   const [formData, setFormData] = useState({
     cookieConsentEnabled: settings.cookieConsentEnabled,
@@ -57,11 +56,7 @@ export function CookieConsentSection({
         cookieConsentRejectText: formData.cookieConsentRejectText || null,
         cookieConsentPolicyUrl: formData.cookieConsentPolicyUrl || null,
       })
-      if (!result.success) {
-        toast.error(result.error)
-      } else {
-        onUpdate()
-      }
+      handleResult(result)
     })
   }
 

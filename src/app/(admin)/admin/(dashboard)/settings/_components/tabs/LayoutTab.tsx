@@ -7,6 +7,7 @@
  */
 
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
   Button,
@@ -37,7 +38,6 @@ import {
 
 interface LayoutTabProps {
   settings: SettingsData
-  onUpdate: () => void
 }
 
 // =============================================================================
@@ -73,7 +73,8 @@ const CONTENT_WIDTH_OPTIONS: Array<{
 // Component
 // =============================================================================
 
-export function LayoutTab({ settings, onUpdate }: LayoutTabProps) {
+export function LayoutTab({ settings }: LayoutTabProps) {
+  const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
   const [containerWidth, setContainerWidth] = useState<LayoutWidth>(
@@ -106,7 +107,7 @@ export function LayoutTab({ settings, onUpdate }: LayoutTabProps) {
         toast.error(result.error)
       } else {
         toast.success('レイアウト設定を保存しました')
-        onUpdate()
+        router.refresh()
       }
     })
   }

@@ -7,7 +7,6 @@
  */
 
 import { useState, useTransition } from 'react'
-import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -21,13 +20,14 @@ import {
 } from '@/components/admin/ui'
 import { updateReservationSettings } from '@/actions/admin/settings'
 import type { SettingsData } from '@/actions/admin/settings'
+import { useRefreshOnSuccess } from '../hooks'
 
 interface ReservationSectionProps {
   settings: SettingsData
-  onUpdate: () => void
 }
 
-export function ReservationSection({ settings, onUpdate }: ReservationSectionProps) {
+export function ReservationSection({ settings }: ReservationSectionProps) {
+  const { handleResult } = useRefreshOnSuccess()
   const [isPending, startTransition] = useTransition()
   const [formData, setFormData] = useState({
     defaultTimeSlot: settings.defaultTimeSlot || 60,
@@ -44,11 +44,7 @@ export function ReservationSection({ settings, onUpdate }: ReservationSectionPro
         maxReservationDuration: formData.maxReservationDuration || null,
         cancellationPolicy: formData.cancellationPolicy || null,
       })
-      if (!result.success) {
-        toast.error(result.error)
-      } else {
-        onUpdate()
-      }
+      handleResult(result)
     })
   }
 

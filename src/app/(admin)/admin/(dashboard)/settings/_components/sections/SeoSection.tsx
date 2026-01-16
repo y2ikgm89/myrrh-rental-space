@@ -7,7 +7,6 @@
  */
 
 import { useState, useTransition } from 'react'
-import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -21,15 +20,16 @@ import {
 } from '@/components/admin/ui'
 import { updateSeoSettings } from '@/actions/admin/settings'
 import type { SettingsData } from '@/actions/admin/settings'
+import { useRefreshOnSuccess } from '../hooks'
 
 interface SeoSectionProps {
   settings: SettingsData
-  onUpdate: () => void
 }
 
 type AnalyticsType = 'ga4' | 'gtm' | null
 
-export function SeoSection({ settings, onUpdate }: SeoSectionProps) {
+export function SeoSection({ settings }: SeoSectionProps) {
+  const { handleResult } = useRefreshOnSuccess()
   const [isPending, startTransition] = useTransition()
   const [formData, setFormData] = useState({
     // Meta settings
@@ -61,11 +61,7 @@ export function SeoSection({ settings, onUpdate }: SeoSectionProps) {
         googleSearchConsoleId: formData.googleSearchConsoleId || null,
         bingWebmasterToolsId: formData.bingWebmasterToolsId || null,
       })
-      if (!result.success) {
-        toast.error(result.error)
-      } else {
-        onUpdate()
-      }
+      handleResult(result)
     })
   }
 

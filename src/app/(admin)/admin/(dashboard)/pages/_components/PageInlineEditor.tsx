@@ -7,7 +7,7 @@
  * 公開ページと同じ見た目でコンテンツを編集
  */
 
-import { useState, useTransition, useCallback } from 'react'
+import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -23,14 +23,20 @@ import {
   useBeforeUnload,
 } from '@/components/admin/editor/inline'
 import { updatePage } from '@/actions/admin/page'
-import { updatePageSchema } from '@/lib/validations/page'
 import type { PageData } from '@/lib/validations/page'
 
 /**
- * フォーム用スキーマ
- * サーバー側スキーマと一貫性を保ちつつ、フォーム入力に合わせた型を定義
+ * フォーム用スキーマ（Lexicalエディター用）
  */
-const formSchema = updatePageSchema.extend({
+const formSchema = z.object({
+  title: z.string().min(1, 'タイトルは必須です').max(200, 'タイトルは200文字以内です'),
+  description: z.string().max(500, '説明は500文字以内です').optional(),
+  content: z.string().min(1, 'コンテンツは必須です').max(500000, 'コンテンツは500,000文字以内です'),
+  metaDescription: z.string().max(160, 'メタディスクリプションは160文字以内です').optional(),
+  metaKeywords: z.string().max(200, 'メタキーワードは200文字以内です').optional(),
+  ogpTitle: z.string().max(100, 'OGPタイトルは100文字以内です').optional(),
+  ogpDescription: z.string().max(200, 'OGP説明は200文字以内です').optional(),
+  ogpImageUrl: z.string().url('有効なURLを入力してください').optional().or(z.literal('')),
   isPublished: z.boolean(),
   publishedAt: z.string().optional(),
   contentWidth: z.string().optional(),
@@ -78,82 +84,73 @@ export function PageInlineEditor({ page }: PageInlineEditorProps) {
   const title = useWatch({ control, name: 'title' })
   const content = useWatch({ control, name: 'content' })
 
-  const onSubmit = useCallback(
-    (data: FormData) => {
-      startTransition(async () => {
-        try {
-          const result = await updatePage(page.slug, {
-            title: data.title,
-            description: data.description,
-            content: data.content,
-            metaDescription: data.metaDescription,
-            metaKeywords: data.metaKeywords,
-            ogpTitle: data.ogpTitle,
-            ogpDescription: data.ogpDescription,
-            ogpImageUrl: data.ogpImageUrl,
-            isPublished: data.isPublished,
-            publishedAt: data.publishedAt ? new Date(data.publishedAt) : undefined,
-            contentWidth: (data.contentWidth || undefined) as 'XS' | 'SM' | 'MD' | 'LG' | 'CUSTOM' | undefined,
-            contentWidthCustom: data.contentWidthCustom ? parseInt(data.contentWidthCustom, 10) : undefined,
-          })
+  const onSubmit = (data: FormData) => {
+    startTransition(async () => {
+      try {
+        const result = await updatePage(page.slug, {
+          title: data.title,
+          description: data.description,
+          content: data.content,
+          metaDescription: data.metaDescription,
+          metaKeywords: data.metaKeywords,
+          ogpTitle: data.ogpTitle,
+          ogpDescription: data.ogpDescription,
+          ogpImageUrl: data.ogpImageUrl,
+          isPublished: data.isPublished,
+          publishedAt: data.publishedAt ? new Date(data.publishedAt) : undefined,
+          contentWidth: (data.contentWidth || undefined) as 'XS' | 'SM' | 'MD' | 'LG' | 'CUSTOM' | undefined,
+          contentWidthCustom: data.contentWidthCustom ? parseInt(data.contentWidthCustom, 10) : undefined,
+        })
 
-          if (result.success) {
-            // dirty状態をリセット
-            reset(data)
-            router.refresh()
-            toast.success('ページを保存しました')
-          } else {
-            toast.error(result.error)
-          }
-        } catch (error) {
-          console.error('保存中にエラーが発生しました:', error)
-          toast.error('保存中にエラーが発生しました')
+        if (result.success) {
+          // dirty状態をリセット
+          reset(data)
+          router.refresh()
+          toast.success('ページを保存しました')
+        } else {
+          toast.error(result.error)
         }
-      })
-    },
-    [page.slug, router, reset]
-  )
+      } catch (error) {
+        console.error('保存中にエラーが発生しました:', error)
+        toast.error('保存中にエラーが発生しました')
+      }
+    })
+  }
 
-  const handleSave = useCallback(() => {
+  const handleSave = () => {
     if (isPending) return
     handleSubmit(onSubmit)()
-  }, [handleSubmit, onSubmit, isPending])
+  }
 
-  const handlePreview = useCallback(() => {
+  const handlePreview = () => {
     if (isDirty) {
       toast.info('プレビューには保存済みのコンテンツが表示されます')
     }
     window.open(`/${page.slug}`, '_blank')
-  }, [page.slug, isDirty])
+  }
 
-  const handleBack = useCallback(() => {
+  const handleBack = () => {
     if (isDirty && !window.confirm('保存されていない変更があります。破棄してもよろしいですか？')) {
       return
     }
     router.push('/admin/pages')
-  }, [router, isDirty])
+  }
 
-  const handleToggleSidePanel = useCallback(() => {
+  const handleToggleSidePanel = () => {
     setIsSidePanelOpen((prev) => !prev)
-  }, [])
+  }
 
-  const handleCloseSidePanel = useCallback(() => {
+  const handleCloseSidePanel = () => {
     setIsSidePanelOpen(false)
-  }, [])
+  }
 
-  const handleContentChange = useCallback(
-    (html: string) => {
-      setValue('content', html, { shouldDirty: true })
-    },
-    [setValue]
-  )
+  const handleContentChange = (html: string) => {
+    setValue('content', html, { shouldDirty: true })
+  }
 
-  const handleTitleChange = useCallback(
-    (newTitle: string) => {
-      setValue('title', newTitle, { shouldDirty: true })
-    },
-    [setValue]
-  )
+  const handleTitleChange = (newTitle: string) => {
+    setValue('title', newTitle, { shouldDirty: true })
+  }
 
   // キーボードショートカット
   useKeyboardShortcuts({ onSave: handleSave })

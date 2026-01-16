@@ -7,7 +7,6 @@
  */
 
 import { useState, useTransition } from 'react'
-import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -21,13 +20,14 @@ import {
 } from '@/components/admin/ui'
 import { updateEmailSettings } from '@/actions/admin/settings'
 import type { SettingsData } from '@/actions/admin/settings'
+import { useRefreshOnSuccess } from '../hooks'
 
 interface EmailSectionProps {
   settings: SettingsData
-  onUpdate: () => void
 }
 
-export function EmailSection({ settings, onUpdate }: EmailSectionProps) {
+export function EmailSection({ settings }: EmailSectionProps) {
+  const { handleResult } = useRefreshOnSuccess()
   const [isPending, startTransition] = useTransition()
   const [formData, setFormData] = useState({
     senderEmail: settings.senderEmail || '',
@@ -48,11 +48,7 @@ export function EmailSection({ settings, onUpdate }: EmailSectionProps) {
         sendAdminNotificationEmail: formData.sendAdminNotificationEmail,
         notificationEmailAddresses: formData.notificationEmailAddresses || null,
       })
-      if (!result.success) {
-        toast.error(result.error)
-      } else {
-        onUpdate()
-      }
+      handleResult(result)
     })
   }
 

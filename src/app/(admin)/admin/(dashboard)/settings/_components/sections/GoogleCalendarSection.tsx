@@ -7,7 +7,6 @@
  */
 
 import { useState, useTransition } from 'react'
-import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -26,6 +25,7 @@ import {
   clearGoogleCalendarServiceAccount,
   type SettingsData,
 } from '@/actions/admin/settings'
+import { useRefreshOnSuccess } from '../hooks'
 
 // =============================================================================
 // Types
@@ -33,7 +33,6 @@ import {
 
 interface GoogleCalendarSectionProps {
   settings: SettingsData
-  onUpdate: () => void
 }
 
 interface StatusBannerProps {
@@ -60,7 +59,8 @@ function StatusBanner({ success, children }: StatusBannerProps): React.ReactElem
 // Main Component
 // =============================================================================
 
-export function GoogleCalendarSection({ settings, onUpdate }: GoogleCalendarSectionProps) {
+export function GoogleCalendarSection({ settings }: GoogleCalendarSectionProps) {
+  const { handleResult, refresh } = useRefreshOnSuccess()
   const [isPending, startTransition] = useTransition()
   const [isTesting, setIsTesting] = useState(false)
   const [testResult, setTestResult] = useState<{
@@ -88,17 +88,14 @@ export function GoogleCalendarSection({ settings, onUpdate }: GoogleCalendarSect
         icalAttachmentEnabled: formData.icalAttachmentEnabled,
         addToCalendarLinksEnabled: formData.addToCalendarLinksEnabled,
       })
-      if (!result.success) {
-        toast.error(result.error)
-      } else {
-        toast.success('Google Calendar設定を更新しました')
+      if (result.success) {
         setFormData((prev) => ({
           ...prev,
           serviceAccountJson: '',
         }))
         setShowServiceAccountInput(false)
-        onUpdate()
       }
+      handleResult({ ...result, message: result.success ? 'Google Calendar設定を更新しました' : undefined })
     })
   }
 
@@ -125,7 +122,7 @@ export function GoogleCalendarSection({ settings, onUpdate }: GoogleCalendarSect
           message: '接続成功',
           calendarName: result.calendarName,
         })
-        onUpdate()
+        refresh()
       } else {
         setTestResult({
           success: false,
@@ -147,17 +144,14 @@ export function GoogleCalendarSection({ settings, onUpdate }: GoogleCalendarSect
 
     startTransition(async () => {
       const result = await clearGoogleCalendarServiceAccount()
-      if (!result.success) {
-        toast.error(result.error)
-      } else {
-        toast.success('認証情報をクリアしました')
+      if (result.success) {
         setFormData((prev) => ({
           ...prev,
           serviceAccountJson: '',
         }))
         setTestResult(null)
-        onUpdate()
       }
+      handleResult({ ...result, message: result.success ? '認証情報をクリアしました' : undefined })
     })
   }
 

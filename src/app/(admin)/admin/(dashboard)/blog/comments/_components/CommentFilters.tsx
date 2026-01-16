@@ -7,12 +7,18 @@
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { Search, X } from 'lucide-react'
 import { Input, Button } from '@/components/admin/ui'
+import { getFormString } from '@/lib/utils'
 
-const STATUS_OPTIONS = [
+interface StatusOption {
+  value: string
+  label: string
+}
+
+const STATUS_OPTIONS: readonly StatusOption[] = [
   { value: 'ALL', label: 'すべて' },
   { value: 'ACTIVE', label: 'アクティブ' },
   { value: 'DELETED', label: '削除済み' },
-] as const
+]
 
 export function CommentFilters() {
   const router = useRouter()
@@ -49,7 +55,7 @@ export function CommentFilters() {
   function handleSearch(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
-    const search = formData.get('search') as string
+    const search = getFormString(formData, 'search')
     const query = createQueryString({ search: search || null })
     router.push(`${pathname}${query ? `?${query}` : ''}`)
   }

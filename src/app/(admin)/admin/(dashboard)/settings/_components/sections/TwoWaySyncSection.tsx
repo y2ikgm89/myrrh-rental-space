@@ -35,6 +35,7 @@ import {
   type SettingsData,
 } from '@/actions/admin/settings'
 import { RefreshCw, Clock, Webhook, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { useRefreshOnSuccess } from '../hooks'
 
 // =============================================================================
 // Types
@@ -42,14 +43,14 @@ import { RefreshCw, Clock, Webhook, AlertCircle, CheckCircle2 } from 'lucide-rea
 
 interface TwoWaySyncSectionProps {
   settings: SettingsData
-  onUpdate: () => void
 }
 
 // =============================================================================
 // Main Component
 // =============================================================================
 
-export function TwoWaySyncSection({ settings, onUpdate }: TwoWaySyncSectionProps) {
+export function TwoWaySyncSection({ settings }: TwoWaySyncSectionProps) {
+  const { handleResult, refresh } = useRefreshOnSuccess()
   const [isPending, startTransition] = useTransition()
   const [isSyncing, setIsSyncing] = useState(false)
   const [syncResult, setSyncResult] = useState<{
@@ -71,24 +72,14 @@ export function TwoWaySyncSection({ settings, onUpdate }: TwoWaySyncSectionProps
   const handleSave = () => {
     startTransition(async () => {
       const result = await updateTwoWaySyncSettings(formData)
-      if (!result.success) {
-        toast.error(result.error)
-      } else {
-        toast.success('双方向同期設定を更新しました')
-        onUpdate()
-      }
+      handleResult({ ...result, message: result.success ? '双方向同期設定を更新しました' : undefined })
     })
   }
 
   const handleSetupWebhook = () => {
     startTransition(async () => {
       const result = await setupCalendarWebhook()
-      if (!result.success) {
-        toast.error(result.error || 'Webhook設定に失敗しました')
-      } else {
-        toast.success('Webhookを設定しました')
-        onUpdate()
-      }
+      handleResult({ ...result, message: result.success ? 'Webhookを設定しました' : undefined })
     })
   }
 
@@ -97,12 +88,7 @@ export function TwoWaySyncSection({ settings, onUpdate }: TwoWaySyncSectionProps
 
     startTransition(async () => {
       const result = await stopCalendarWebhook()
-      if (!result.success) {
-        toast.error(result.error || 'Webhook停止に失敗しました')
-      } else {
-        toast.success('Webhookを停止しました')
-        onUpdate()
-      }
+      handleResult({ ...result, message: result.success ? 'Webhookを停止しました' : undefined })
     })
   }
 
@@ -118,7 +104,7 @@ export function TwoWaySyncSection({ settings, onUpdate }: TwoWaySyncSectionProps
           message: `同期完了: ${result.processed}件処理 (更新: ${result.updated}件, 削除: ${result.deleted}件)`,
         })
         toast.success('同期が完了しました')
-        onUpdate()
+        refresh()
       } else {
         setSyncResult({
           success: false,

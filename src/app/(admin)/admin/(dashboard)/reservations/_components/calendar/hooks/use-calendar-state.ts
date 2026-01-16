@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo } from 'react'
+import { useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { format } from 'date-fns'
 import type { CalendarView, CalendarEvent, SpaceOption } from '@/lib/calendar'
@@ -29,84 +29,69 @@ export function useCalendarState({ events, spaces }: UseCalendarStateOptions) {
   const spaceId = searchParams.get('spaceId') || undefined
   const status = getReservationStatusFilterOrAll(searchParams.get('status'))
 
-  // 日付計算（useCallbackの依存配列で安定した参照が必要なためuseMemo維持）
+  // 日付計算（new Date()の参照安定化のためuseMemo維持）
   const currentDate = useMemo(
     () => (dateParam ? new Date(dateParam) : new Date()),
     [dateParam]
   )
 
-  // 日付範囲計算（React Compilerが自動メモ化）
+  // 日付範囲計算
   const dateRange = getCalendarDateRange(currentDate, view)
 
-  // フィルタリング済みイベント（React Compilerが自動メモ化）
+  // フィルタリング済みイベント
   const filteredEvents = events.filter((event) => {
     if (spaceId && event.spaceId !== spaceId) return false
     if (status !== 'ALL' && event.status !== status) return false
     return true
   })
 
-  // URL更新ヘルパー（子コンポーネントに渡すためuseCallback維持）
-  const updateParams = useCallback(
-    (updates: Record<string, string | null>) => {
-      const params = new URLSearchParams(searchParams.toString())
-      Object.entries(updates).forEach(([key, value]) => {
-        if (value === null) {
-          params.delete(key)
-        } else {
-          params.set(key, value)
-        }
-      })
-      router.push(`?${params.toString()}`, { scroll: false })
-    },
-    [searchParams, router]
-  )
+  // URL更新ヘルパー
+  const updateParams = (updates: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParams.toString())
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null) {
+        params.delete(key)
+      } else {
+        params.set(key, value)
+      }
+    })
+    router.push(`?${params.toString()}`, { scroll: false })
+  }
 
   // ビュー切り替え
-  const setView = useCallback(
-    (newView: CalendarView) => {
-      updateParams({ view: newView })
-    },
-    [updateParams]
-  )
+  const setView = (newView: CalendarView) => {
+    updateParams({ view: newView })
+  }
 
   // 日付ナビゲーション
-  const goNext = useCallback(() => {
+  const goNext = () => {
     const nextDate = navigateNext(currentDate, view)
     updateParams({ date: format(nextDate, 'yyyy-MM-dd') })
-  }, [currentDate, view, updateParams])
+  }
 
-  const goPrevious = useCallback(() => {
+  const goPrevious = () => {
     const prevDate = navigatePrevious(currentDate, view)
     updateParams({ date: format(prevDate, 'yyyy-MM-dd') })
-  }, [currentDate, view, updateParams])
+  }
 
-  const goToday = useCallback(() => {
+  const goToday = () => {
     updateParams({ date: null })
-  }, [updateParams])
+  }
 
-  const goToDate = useCallback(
-    (date: Date) => {
-      updateParams({ date: format(date, 'yyyy-MM-dd') })
-    },
-    [updateParams]
-  )
+  const goToDate = (date: Date) => {
+    updateParams({ date: format(date, 'yyyy-MM-dd') })
+  }
 
   // フィルター変更
-  const setSpaceFilter = useCallback(
-    (id: string | null) => {
-      updateParams({ spaceId: id })
-    },
-    [updateParams]
-  )
+  const setSpaceFilter = (id: string | null) => {
+    updateParams({ spaceId: id })
+  }
 
-  const setStatusFilter = useCallback(
-    (newStatus: ReservationStatus | 'ALL' | null) => {
-      updateParams({ status: newStatus === 'ALL' ? null : newStatus })
-    },
-    [updateParams]
-  )
+  const setStatusFilter = (newStatus: ReservationStatus | 'ALL' | null) => {
+    updateParams({ status: newStatus === 'ALL' ? null : newStatus })
+  }
 
-  // 日別イベント取得（内部使用のためuseCallback不要）
+  // 日別イベント取得
   const getEventsForDayFn = (day: Date) => getEventsForDay(filteredEvents, day)
 
   return {
@@ -119,7 +104,7 @@ export function useCalendarState({ events, spaces }: UseCalendarStateOptions) {
     spaces,
     events: filteredEvents,
 
-    // Actions（useCallbackで安定化）
+    // Actions
     setView,
     goNext,
     goPrevious,

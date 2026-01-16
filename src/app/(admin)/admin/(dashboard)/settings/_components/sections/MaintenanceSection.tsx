@@ -7,7 +7,6 @@
  */
 
 import { useState, useTransition } from 'react'
-import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -21,13 +20,14 @@ import {
 } from '@/components/admin/ui'
 import { updateMaintenanceSettings } from '@/actions/admin/settings'
 import type { SettingsData } from '@/actions/admin/settings'
+import { useRefreshOnSuccess } from '../hooks'
 
 interface MaintenanceSectionProps {
   settings: SettingsData
-  onUpdate: () => void
 }
 
-export function MaintenanceSection({ settings, onUpdate }: MaintenanceSectionProps) {
+export function MaintenanceSection({ settings }: MaintenanceSectionProps) {
+  const { handleResult } = useRefreshOnSuccess()
   const [isPending, startTransition] = useTransition()
   const [formData, setFormData] = useState({
     maintenanceMode: settings.maintenanceMode,
@@ -40,11 +40,7 @@ export function MaintenanceSection({ settings, onUpdate }: MaintenanceSectionPro
         maintenanceMode: formData.maintenanceMode,
         maintenanceMessage: formData.maintenanceMessage || null,
       })
-      if (!result.success) {
-        toast.error(result.error)
-      } else {
-        onUpdate()
-      }
+      handleResult(result)
     })
   }
 

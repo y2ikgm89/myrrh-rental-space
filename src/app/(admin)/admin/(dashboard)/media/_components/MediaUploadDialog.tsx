@@ -4,7 +4,7 @@
  * メディアアップロードダイアログ
  */
 
-import { useState, useCallback, useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { X, Upload, File, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
@@ -49,7 +49,7 @@ export function MediaUploadDialog({
     title: '',
   })
 
-  const handleFileSelect = useCallback((selectedFile: File) => {
+  const handleFileSelect = (selectedFile: File) => {
     const type = inferMediaType(selectedFile.type)
     const validation = validateFile(selectedFile, type)
 
@@ -69,30 +69,24 @@ export function MediaUploadDialog({
     } else {
       setPreviewUrl(null)
     }
-  }, [])
+  }
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault()
-      setIsDragging(false)
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
 
-      const droppedFile = e.dataTransfer.files[0]
-      if (droppedFile) {
-        handleFileSelect(droppedFile)
-      }
-    },
-    [handleFileSelect]
-  )
+    const droppedFile = e.dataTransfer.files[0]
+    if (droppedFile) {
+      handleFileSelect(droppedFile)
+    }
+  }
 
-  const handleInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const selectedFile = e.target.files?.[0]
-      if (selectedFile) {
-        handleFileSelect(selectedFile)
-      }
-    },
-    [handleFileSelect]
-  )
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0]
+    if (selectedFile) {
+      handleFileSelect(selectedFile)
+    }
+  }
 
   const handleSubmit = () => {
     if (!file) return

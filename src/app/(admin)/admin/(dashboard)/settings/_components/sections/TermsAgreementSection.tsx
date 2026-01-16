@@ -7,7 +7,6 @@
  */
 
 import { useState, useTransition } from 'react'
-import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -21,13 +20,14 @@ import {
 } from '@/components/admin/ui'
 import { updateTermsAgreementSettings } from '@/actions/admin/settings'
 import type { SettingsData } from '@/actions/admin/settings'
+import { useRefreshOnSuccess } from '../hooks'
 
 interface TermsAgreementSectionProps {
   settings: SettingsData
-  onUpdate: () => void
 }
 
-export function TermsAgreementSection({ settings, onUpdate }: TermsAgreementSectionProps) {
+export function TermsAgreementSection({ settings }: TermsAgreementSectionProps) {
+  const { handleResult } = useRefreshOnSuccess()
   const [isPending, startTransition] = useTransition()
   const [formData, setFormData] = useState({
     termsAgreementEnabled: settings.termsAgreementEnabled,
@@ -44,11 +44,7 @@ export function TermsAgreementSection({ settings, onUpdate }: TermsAgreementSect
         requireTermsAgreement: formData.requireTermsAgreement,
         requirePrivacyAgreement: formData.requirePrivacyAgreement,
       })
-      if (!result.success) {
-        toast.error(result.error)
-      } else {
-        onUpdate()
-      }
+      handleResult(result)
     })
   }
 

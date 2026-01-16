@@ -7,7 +7,6 @@
  */
 
 import { useState, useTransition } from 'react'
-import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -21,13 +20,14 @@ import {
 } from '@/components/admin/ui'
 import { updateBasicInfo } from '@/actions/admin/settings'
 import type { SettingsData } from '@/actions/admin/settings'
+import { useRefreshOnSuccess } from '../hooks'
 
 interface BasicInfoSectionProps {
   settings: SettingsData
-  onUpdate: () => void
 }
 
-export function BasicInfoSection({ settings, onUpdate }: BasicInfoSectionProps) {
+export function BasicInfoSection({ settings }: BasicInfoSectionProps) {
+  const { handleResult } = useRefreshOnSuccess()
   const [isPending, startTransition] = useTransition()
   const [formData, setFormData] = useState({
     siteName: settings.siteName || '',
@@ -48,11 +48,7 @@ export function BasicInfoSection({ settings, onUpdate }: BasicInfoSectionProps) 
         headerLogoUrl: formData.headerLogoUrl || null,
         footerCopyright: formData.footerCopyright || null,
       })
-      if (!result.success) {
-        toast.error(result.error)
-      } else {
-        onUpdate()
-      }
+      handleResult(result)
     })
   }
 

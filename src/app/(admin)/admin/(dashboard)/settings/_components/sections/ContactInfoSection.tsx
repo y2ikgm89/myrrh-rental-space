@@ -7,7 +7,6 @@
  */
 
 import { useState, useTransition } from 'react'
-import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -21,13 +20,14 @@ import {
 } from '@/components/admin/ui'
 import { updateContactInfo } from '@/actions/admin/settings'
 import type { SettingsData } from '@/actions/admin/settings'
+import { useRefreshOnSuccess } from '../hooks'
 
 interface ContactInfoSectionProps {
   settings: SettingsData
-  onUpdate: () => void
 }
 
-export function ContactInfoSection({ settings, onUpdate }: ContactInfoSectionProps) {
+export function ContactInfoSection({ settings }: ContactInfoSectionProps) {
+  const { handleResult } = useRefreshOnSuccess()
   const [isPending, startTransition] = useTransition()
   const [formData, setFormData] = useState({
     phoneNumber: settings.phoneNumber || '',
@@ -54,11 +54,7 @@ export function ContactInfoSection({ settings, onUpdate }: ContactInfoSectionPro
         streetAddress: formData.streetAddress || null,
         buildingName: formData.buildingName || null,
       })
-      if (!result.success) {
-        toast.error(result.error)
-      } else {
-        onUpdate()
-      }
+      handleResult(result)
     })
   }
 

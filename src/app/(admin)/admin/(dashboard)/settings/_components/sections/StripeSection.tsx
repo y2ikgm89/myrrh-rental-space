@@ -7,7 +7,6 @@
  */
 
 import { useState, useTransition } from 'react'
-import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -33,6 +32,7 @@ import {
 } from '@/actions/admin/settings'
 import type { SettingsData } from '@/actions/admin/settings'
 import { SUPPORTED_CURRENCIES } from '@/lib/stripe'
+import { useRefreshOnSuccess } from '../hooks'
 
 // =============================================================================
 // Types
@@ -40,7 +40,6 @@ import { SUPPORTED_CURRENCIES } from '@/lib/stripe'
 
 interface StripeSectionProps {
   settings: SettingsData
-  onUpdate: () => void
 }
 
 interface StatusBannerProps {
@@ -67,7 +66,8 @@ function StatusBanner({ success, children }: StatusBannerProps): React.ReactElem
 // Main Component
 // =============================================================================
 
-export function StripeSection({ settings, onUpdate }: StripeSectionProps) {
+export function StripeSection({ settings }: StripeSectionProps) {
+  const { handleResult, refresh } = useRefreshOnSuccess()
   const [isPending, startTransition] = useTransition()
   const [isTesting, setIsTesting] = useState(false)
   const [testResult, setTestResult] = useState<{
@@ -98,9 +98,7 @@ export function StripeSection({ settings, onUpdate }: StripeSectionProps) {
         stripeWebhookSecret: formData.stripeWebhookSecret || null,
         stripeCurrency: formData.stripeCurrency,
       })
-      if (!result.success) {
-        toast.error(result.error)
-      } else {
+      if (result.success) {
         // 入力フィールドをリセット
         setFormData((prev) => ({
           ...prev,
@@ -109,8 +107,8 @@ export function StripeSection({ settings, onUpdate }: StripeSectionProps) {
         }))
         setShowSecretKeyInput(false)
         setShowWebhookSecretInput(false)
-        onUpdate()
       }
+      handleResult(result)
     })
   }
 
@@ -134,7 +132,7 @@ export function StripeSection({ settings, onUpdate }: StripeSectionProps) {
           message: `接続成功 (アカウントID: ${result.accountId})`,
           mode: result.mode,
         })
-        onUpdate()
+        refresh()
       } else {
         setTestResult({
           success: false,
@@ -156,9 +154,7 @@ export function StripeSection({ settings, onUpdate }: StripeSectionProps) {
 
     startTransition(async () => {
       const result = await clearStripeKeys()
-      if (!result.success) {
-        toast.error(result.error)
-      } else {
+      if (result.success) {
         setFormData((prev) => ({
           ...prev,
           stripePublishableKey: '',
@@ -166,8 +162,8 @@ export function StripeSection({ settings, onUpdate }: StripeSectionProps) {
           stripeWebhookSecret: '',
         }))
         setTestResult(null)
-        onUpdate()
       }
+      handleResult(result)
     })
   }
 

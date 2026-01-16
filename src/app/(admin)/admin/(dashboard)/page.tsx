@@ -11,6 +11,7 @@ import type { ReactElement } from 'react'
 import { Suspense } from 'react'
 import { DashboardHeader } from './_components/DashboardHeader'
 import { DashboardStatsSection } from './_components/DashboardStatsSection'
+import { DashboardChartSection } from './_components/DashboardChartSection'
 import { DashboardTodaySection } from './_components/DashboardTodaySection'
 import { DashboardRecentSection } from './_components/DashboardRecentSection'
 import { AnalyticsCard } from './_components/AnalyticsCard'
@@ -19,6 +20,10 @@ import {
   TodayReservationsSkeleton,
   RecentItemsSkeleton,
 } from './_components/skeletons'
+
+function ChartSkeleton() {
+  return <div className="h-80 animate-pulse rounded-lg bg-gray-100" />
+}
 
 export const metadata: Metadata = {
   title: 'ダッシュボード | 管理画面',
@@ -47,6 +52,11 @@ export default async function AdminDashboard(): Promise<ReactElement> {
       {/* 統計カード: 最も高速なDBクエリ */}
       <Suspense fallback={<StatsCardsSkeleton />}>
         <DashboardStatsSection />
+      </Suspense>
+
+      {/* 予約・売上推移グラフ */}
+      <Suspense fallback={<ChartSkeleton />}>
+        <DashboardChartSection />
       </Suspense>
 
       {/* アクセス解析: 外部API（Google Analytics）で最も遅い */}

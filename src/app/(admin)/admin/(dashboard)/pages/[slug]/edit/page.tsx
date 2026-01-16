@@ -1,7 +1,7 @@
 /**
  * ページ編集画面
  *
- * Webflow型インラインエディターでページを編集
+ * Lexicalリッチテキストエディターでページを編集
  */
 
 import { notFound } from 'next/navigation'
