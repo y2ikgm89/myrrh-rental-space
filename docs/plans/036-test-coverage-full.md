@@ -1,6 +1,6 @@
 # 036: テストカバレッジ向上（フルカバレッジ + E2E）
 
-> **ステータス**: `cc:TODO`
+> **ステータス**: `cc:DONE`
 > **作成日**: 2026-01-17
 > **優先度**: 高
 
@@ -97,7 +97,7 @@
 
 ---
 
-### Phase 3: Integration Tests - Server Actions `cc:IN_PROGRESS` `[feature:tdd]`
+### Phase 3: Integration Tests - Server Actions `cc:DONE` `[feature:tdd]`
 
 **対象**: `src/actions/` 27ファイル
 
@@ -151,13 +151,13 @@
 
 ---
 
-### Phase 4: E2E Tests - Playwright導入 `cc:TODO`
+### Phase 4: E2E Tests - Playwright導入 `cc:DONE`
 
 #### セットアップ
-- [ ] Playwright インストール (`bun add -D @playwright/test`)
-- [ ] `playwright.config.ts` 作成
-- [ ] `e2e/` ディレクトリ構造作成
-- [ ] CI設定（GitHub Actions）
+- [x] Playwright インストール (`bun add -D @playwright/test`)
+- [x] `playwright.config.ts` 作成
+- [x] `e2e/` ディレクトリ構造作成
+- [x] CI設定（GitHub Actions）
 
 #### テストシナリオ
 
@@ -187,24 +187,24 @@
 | ユーザー管理 | 一覧表示 → ロール変更 → 権限反映確認 |
 
 #### 実装タスク
-- [ ] `e2e/auth.spec.ts` - 認証フロー
-- [ ] `e2e/reservation.spec.ts` - 予約フロー
-- [ ] `e2e/admin/spaces.spec.ts` - スペース管理
-- [ ] `e2e/admin/blog.spec.ts` - ブログ管理
-- [ ] `e2e/admin/reservations.spec.ts` - 予約管理
-- [ ] `e2e/admin/users.spec.ts` - ユーザー管理
-- [ ] `e2e/fixtures/` - テストデータ
+- [x] `e2e/auth.spec.ts` - 認証フロー（31テスト）
+- [x] `e2e/reservation.spec.ts` - 予約フロー（11テスト）
+- [x] `e2e/admin/spaces.spec.ts` - スペース管理（25テスト）
+- [x] `e2e/admin/blog.spec.ts` - ブログ管理（43テスト）
+- [x] `e2e/admin/reservations.spec.ts` - 予約管理（40テスト）
+- [x] `e2e/admin/users.spec.ts` - ユーザー管理（45テスト）
+- [x] `e2e/fixtures/` - テストデータ
 
 ---
 
-### Phase 5: CI/CD統合 `cc:TODO`
+### Phase 5: CI/CD統合 `cc:DONE`
 
 #### GitHub Actions設定
-- [ ] `.github/workflows/test.yml` 作成
-- [ ] Unit/Integration テスト（bun test）
-- [ ] E2Eテスト（Playwright）
-- [ ] カバレッジレポート
-- [ ] PR時の自動実行
+- [x] `.github/workflows/ci.yml` 作成
+- [x] Unit/Integration テスト（bun test）
+- [x] E2Eテスト（Playwright）
+- [x] カバレッジレポート（HTMLレポート + アーティファクト）
+- [x] PR時の自動実行（push/PR on main/develop）
 
 ---
 

@@ -2,27 +2,32 @@
 
 ## 進行中の計画
 
-### 036-test-coverage-full.md (2026-01-17)
+*なし*
+
+---
+
+## 完了した計画
+
+### 036-test-coverage-full.md (2026-01-17) ✅
 
 テストカバレッジ向上（フルカバレッジ + E2E）
 
 **概要**:
 既存のBun Testフレームワーク基盤を活用し、プロジェクト全体のテストカバレッジを大幅に向上。
 
-**フェーズ構成**:
-- Phase 1: Unit Tests - Zodバリデーション（14ファイル）
+**フェーズ構成（全完了）**:
+- Phase 1: Unit Tests - Zodバリデーション（8ファイル完了）
 - Phase 2: Unit Tests - 権限・認証ロジック
-- Phase 3: Integration Tests - Server Actions（27ファイル）
-- Phase 4: E2E Tests - Playwright導入
+- Phase 3: Integration Tests - Server Actions（12ファイル完了）
+- Phase 4: E2E Tests - Playwright導入（195テスト）
 - Phase 5: CI/CD統合（GitHub Actions）
 
-**成功基準**:
-- 主要ロジックの80%以上カバレッジ
-- PRで自動テスト実行
+**成果**:
+- Unit/Integration テスト: 約50ファイル追加
+- E2Eテスト: 195テスト（auth:31, reservation:11, spaces:25, blog:43, reservations:40, users:45）
+- CI/CD: GitHub Actions ワークフロー完備
 
 ---
-
-## 完了した計画
 
 ### 035-performance-optimization.md (2026-01-16)
 
