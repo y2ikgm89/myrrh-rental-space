@@ -5,21 +5,29 @@
 /**
  * エラーカテゴリ - 発生源による分類
  */
-export const ErrorCategory = {
+export type ErrorCategory =
+  | 'DATABASE'
+  | 'EXTERNAL_API'
+  | 'VALIDATION'
+  | 'AUTHORIZATION'
+  | 'CACHE'
+  | 'UNKNOWN'
+
+export const ErrorCategory: Record<ErrorCategory, ErrorCategory> = {
   DATABASE: 'DATABASE',
   EXTERNAL_API: 'EXTERNAL_API',
   VALIDATION: 'VALIDATION',
   AUTHORIZATION: 'AUTHORIZATION',
   CACHE: 'CACHE',
   UNKNOWN: 'UNKNOWN',
-} as const
-
-export type ErrorCategory = (typeof ErrorCategory)[keyof typeof ErrorCategory]
+}
 
 /**
  * エラー深刻度 - 対応の緊急性による分類
  */
-export const ErrorSeverity = {
+export type ErrorSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
+
+export const ErrorSeverity: Record<ErrorSeverity, ErrorSeverity> = {
   /** システム障害、ユーザーは続行不可 */
   CRITICAL: 'CRITICAL',
   /** 機能障害、フォールバック利用可能 */
@@ -28,9 +36,7 @@ export const ErrorSeverity = {
   MEDIUM: 'MEDIUM',
   /** 軽微な問題、サイレント回復 */
   LOW: 'LOW',
-} as const
-
-export type ErrorSeverity = (typeof ErrorSeverity)[keyof typeof ErrorSeverity]
+}
 
 /**
  * エラーログコンテキスト

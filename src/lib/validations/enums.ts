@@ -19,6 +19,8 @@ import {
   AuditAction,
   MediaType,
   MediaUsage,
+  TermsType,
+  TermsStatus,
 } from '@/generated/prisma/client/client'
 
 // =============================================================================
@@ -39,7 +41,22 @@ export {
   AuditAction,
   MediaType,
   MediaUsage,
+  TermsType,
+  TermsStatus,
 }
+
+// =============================================================================
+// Status Constants (for Prisma where clauses)
+// =============================================================================
+
+/**
+ * アクティブな予約ステータス（PENDING, CONFIRMED）
+ * 重複チェック、カレンダー同期などで使用
+ */
+export const ACTIVE_RESERVATION_STATUSES: readonly ReservationStatus[] = [
+  ReservationStatus.PENDING,
+  ReservationStatus.CONFIRMED,
+]
 
 // =============================================================================
 // Type Guards
@@ -95,6 +112,14 @@ export function isValidMediaType(value: string): value is MediaType {
 
 export function isValidMediaUsage(value: string): value is MediaUsage {
   return Object.values(MediaUsage).includes(value as MediaUsage)
+}
+
+export function isValidTermsType(value: string): value is TermsType {
+  return Object.values(TermsType).includes(value as TermsType)
+}
+
+export function isValidTermsStatus(value: string): value is TermsStatus {
+  return Object.values(TermsStatus).includes(value as TermsStatus)
 }
 
 // =============================================================================

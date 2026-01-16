@@ -6,11 +6,15 @@ export {
   type ActionResult,
   type ActionSuccess,
   type ActionFailure,
+  type AuditUser,
   createSuccess,
   createFailure,
   isActionSuccess,
   isActionFailure,
   withAuth,
+  withPermission,
+  withReadPermission,
+  withRole,
 } from './server-actions'
 
 export {

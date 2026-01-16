@@ -6,10 +6,8 @@
 
 import type { Prisma } from '@/generated/prisma/client/client'
 
-// Re-export LayoutWidth Enum
-// Prisma 7では enums.tsから直接インポート
+// Re-export LayoutWidth from Prisma generated enums
 export { LayoutWidth } from '@/generated/prisma/client/enums'
-export type { LayoutWidth as LayoutWidthType } from '@/generated/prisma/client/enums'
 
 /**
  * Where Input Types

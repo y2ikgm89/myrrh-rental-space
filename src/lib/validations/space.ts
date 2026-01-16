@@ -69,6 +69,7 @@ export const spaceFormSchema = z.object({
   imageUrls: imageUrlsSchema,
   facilities: facilitiesSchema,
   isPublished: z.boolean().default(false),
+  termsId: z.string().uuid('利用規約IDが無効です').optional().nullable(),
 })
 
 /**
@@ -112,6 +113,7 @@ export const defaultSpaceFormValues: SpaceFormInput = {
   imageUrls: [],
   facilities: [],
   isPublished: false,
+  termsId: null,
 }
 
 // =============================================================================
@@ -140,6 +142,7 @@ export type SpaceWithStats = {
   isActive: boolean
   createdAt: Date
   updatedAt: Date
+  termsId: string | null
   _count: {
     reservations: number
   }

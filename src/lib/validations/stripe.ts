@@ -11,13 +11,21 @@ import {
 } from '@/lib/stripe'
 
 // バリデーションメッセージ
-const MESSAGES = {
+interface ValidationMessages {
+  publishableKey: string
+  secretKey: string
+  webhookSecret: string
+  keyModeMismatch: string
+  maxLength: (field: string) => string
+}
+
+const MESSAGES: ValidationMessages = {
   publishableKey: '公開可能キーは pk_test_ または pk_live_ で始まる必要があります',
   secretKey: 'シークレットキーは sk_test_ または sk_live_ で始まる必要があります',
   webhookSecret: 'Webhookシークレットは whsec_ で始まる必要があります',
   keyModeMismatch: '公開可能キーとシークレットキーのモード（test/live）が一致していません',
   maxLength: (field: string) => `${field}は200文字以内で入力してください`,
-} as const
+}
 
 /**
  * Stripe設定の更新スキーマ
