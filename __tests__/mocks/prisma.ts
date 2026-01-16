@@ -73,6 +73,15 @@ interface MockSettings {
   upsert: MockFunction
 }
 
+interface MockInquiry {
+  findUnique: MockFunction
+  findMany: MockFunction
+  create: MockFunction
+  update: MockFunction
+  delete: MockFunction
+  count: MockFunction
+}
+
 export interface MockPrismaClient {
   reservation: MockReservation
   customer: MockCustomer
@@ -82,6 +91,7 @@ export interface MockPrismaClient {
   rolePermission: MockRolePermission
   auditLog: MockAuditLog
   settings: MockSettings
+  inquiry: MockInquiry
   $transaction: MockFunction
   $queryRaw: MockFunction
 }
@@ -158,6 +168,18 @@ export function createMockPrismaClient(): MockPrismaClient {
     settings: {
       findUnique: mock(() => Promise.resolve(null)),
       upsert: mock(() => Promise.resolve({ id: 'test-settings-id' })),
+    },
+    inquiry: {
+      findUnique: mock(() => Promise.resolve(null)),
+      findMany: mock(() => Promise.resolve([])),
+      create: mock((args: Prisma.InquiryCreateArgs) =>
+        Promise.resolve({ id: 'test-inquiry-id', ...args.data })
+      ),
+      update: mock((args: Prisma.InquiryUpdateArgs) =>
+        Promise.resolve({ id: args.where.id, ...args.data })
+      ),
+      delete: mock(() => Promise.resolve({ id: 'test-inquiry-id' })),
+      count: mock(() => Promise.resolve(0)),
     },
     $transaction: mock((fn: unknown) => {
       if (typeof fn === 'function') {
