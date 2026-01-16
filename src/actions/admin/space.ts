@@ -10,12 +10,35 @@ import {
   type SpaceFilters,
   type SpacePagination,
 } from '@/lib/validations/space'
-import { createSuccess, createFailure, type SpaceWhereInput, withAuth } from '@/types'
+import { createSuccess, createFailure, withPermission, type ActionResult, type SpaceWhereInput } from '@/types'
 import { parseStringArray, parseBusinessHours } from '@/lib/json-validators'
-import { verifyAdminSession } from '@/lib/auth'
+import { getSession, getRoleFromSession } from '@/lib/auth'
+import { hasPermission, canAccessAdmin } from '@/lib/permissions'
+import { logPermissionDenied } from '@/lib/audit'
+import { ACTIVE_RESERVATION_STATUSES } from '@/lib/validations/enums'
 
 // =============================================================================
-// Actions
+// Helper Functions
+// =============================================================================
+
+/**
+ * 読み取り権限チェック
+ */
+async function checkReadPermission(): Promise<boolean> {
+  const session = await getSession()
+  if (!session?.user) return false
+  const role = getRoleFromSession(session)
+  if (!role) return false
+  if (!canAccessAdmin(role)) return false
+  if (!hasPermission(role, 'space', 'read')) {
+    void logPermissionDenied(session.user.id, 'space', 'read')
+    return false
+  }
+  return true
+}
+
+// =============================================================================
+// Read Actions
 // =============================================================================
 
 /**
@@ -25,7 +48,10 @@ export async function getSpaces(
   filters: SpaceFilters = {},
   pagination: SpacePagination = {}
 ): Promise<GetSpacesResult> {
-  await verifyAdminSession()
+  const hasPermission = await checkReadPermission()
+  if (!hasPermission) {
+    return { spaces: [], total: 0, page: 1, limit: 10, totalPages: 0 }
+  }
 
   const { isPublished, search } = filters
   const {
@@ -96,7 +122,10 @@ export async function getSpaces(
  * スペース詳細を取得
  */
 export async function getSpaceById(id: string): Promise<SpaceWithStats | null> {
-  await verifyAdminSession()
+  const hasPermission = await checkReadPermission()
+  if (!hasPermission) {
+    return null
+  }
 
   const space = await prisma.space.findUnique({
     where: { id },
@@ -125,9 +154,49 @@ export async function getSpaceById(id: string): Promise<SpaceWithStats | null> {
 }
 
 /**
+ * 統計情報を取得（ダッシュボード用）
+ */
+export async function getSpaceStats(): Promise<{
+  total: number
+  published: number
+  unpublished: number
+  totalCapacity: number
+}> {
+  const hasPermission = await checkReadPermission()
+  if (!hasPermission) {
+    return { total: 0, published: 0, unpublished: 0, totalCapacity: 0 }
+  }
+
+  const [total, published, spaces] = await Promise.all([
+    prisma.space.count({ where: { isActive: true } }),
+    prisma.space.count({ where: { isActive: true, isPublished: true } }),
+    prisma.space.findMany({
+      where: { isActive: true },
+      select: { capacity: true },
+    }),
+  ])
+
+  const totalCapacity = spaces.reduce((sum, s) => sum + s.capacity, 0)
+
+  return {
+    total,
+    published,
+    unpublished: total - published,
+    totalCapacity,
+  }
+}
+
+// =============================================================================
+// Write Actions (using withPermission HOF)
+// =============================================================================
+
+/**
  * スペースを作成
  */
-export const createSpace = withAuth(async (_user, input: SpaceFormData) => {
+export const createSpace = withPermission<[input: SpaceFormData], { id: string }>(
+  'space',
+  'create'
+)(async (_user, input): Promise<ActionResult<{ id: string }>> => {
   const parsed = spaceFormSchema.safeParse(input)
   if (!parsed.success) {
     return createFailure(parsed.error.issues[0]?.message || '入力が不正です')
@@ -150,6 +219,7 @@ export const createSpace = withAuth(async (_user, input: SpaceFormData) => {
       facilities: data.facilities,
       isPublished: data.isPublished,
       publishedAt: data.isPublished ? new Date() : null,
+      termsId: data.termsId || null,
     },
   })
 
@@ -163,7 +233,10 @@ export const createSpace = withAuth(async (_user, input: SpaceFormData) => {
 /**
  * スペースを更新
  */
-export const updateSpace = withAuth(async (_user, id: string, input: SpaceFormData) => {
+export const updateSpace = withPermission<[id: string, input: SpaceFormData], void>(
+  'space',
+  'update'
+)(async (_user, id, input): Promise<ActionResult<void>> => {
   const parsed = spaceFormSchema.safeParse(input)
   if (!parsed.success) {
     return createFailure(parsed.error.issues[0]?.message || '入力が不正です')
@@ -203,6 +276,7 @@ export const updateSpace = withAuth(async (_user, id: string, input: SpaceFormDa
       facilities: data.facilities,
       isPublished: data.isPublished,
       publishedAt,
+      termsId: data.termsId || null,
     },
   })
 
@@ -218,7 +292,10 @@ export const updateSpace = withAuth(async (_user, id: string, input: SpaceFormDa
 /**
  * スペースの公開状態を更新
  */
-export const updateSpacePublish = withAuth(async (_user, id: string, isPublished: boolean) => {
+export const updateSpacePublish = withPermission<[id: string, isPublished: boolean], void>(
+  'space',
+  'publish'
+)(async (_user, id, isPublished): Promise<ActionResult<void>> => {
   const space = await prisma.space.findUnique({
     where: { id },
   })
@@ -247,7 +324,10 @@ export const updateSpacePublish = withAuth(async (_user, id: string, isPublished
 /**
  * スペースを削除（論理削除）
  */
-export const deleteSpace = withAuth(async (_user, id: string) => {
+export const deleteSpace = withPermission<[id: string], void>(
+  'space',
+  'delete'
+)(async (_user, id): Promise<ActionResult<void>> => {
   const space = await prisma.space.findUnique({
     where: { id },
     include: {
@@ -255,7 +335,7 @@ export const deleteSpace = withAuth(async (_user, id: string) => {
         select: {
           reservations: {
             where: {
-              status: { in: ['PENDING', 'CONFIRMED'] },
+              status: { in: [...ACTIVE_RESERVATION_STATUSES] },
             },
           },
         },
@@ -287,33 +367,3 @@ export const deleteSpace = withAuth(async (_user, id: string) => {
 
   return createSuccess('スペースを削除しました')
 })
-
-/**
- * 統計情報を取得（ダッシュボード用）
- */
-export async function getSpaceStats(): Promise<{
-  total: number
-  published: number
-  unpublished: number
-  totalCapacity: number
-}> {
-  await verifyAdminSession()
-
-  const [total, published, spaces] = await Promise.all([
-    prisma.space.count({ where: { isActive: true } }),
-    prisma.space.count({ where: { isActive: true, isPublished: true } }),
-    prisma.space.findMany({
-      where: { isActive: true },
-      select: { capacity: true },
-    }),
-  ])
-
-  const totalCapacity = spaces.reduce((sum, s) => sum + s.capacity, 0)
-
-  return {
-    total,
-    published,
-    unpublished: total - published,
-    totalCapacity,
-  }
-}

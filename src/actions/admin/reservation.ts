@@ -9,9 +9,11 @@ import {
   sendReservationCancelledEmail,
   sendReservationAdminNotification,
 } from '@/lib/email-service'
-import { createSuccess, createFailure, type ReservationWhereInput, withAuth } from '@/types'
-import { verifyAdminSession } from '@/lib/auth'
+import { createSuccess, createFailure, withPermission, type ReservationWhereInput } from '@/types'
+import { getSession, getRoleFromSession } from '@/lib/auth'
 import { syncReservationToCalendar, updateCalendarSync, deleteCalendarSync, type ReservationSyncData } from '@/lib/calendar-sync'
+import { hasPermission, canAccessAdmin } from '@/lib/permissions'
+import { logPermissionDenied } from '@/lib/audit'
 
 // =============================================================================
 // Types
@@ -79,6 +81,26 @@ const updateNotesSchema = z.object({
 })
 
 // =============================================================================
+// Helper Functions
+// =============================================================================
+
+/**
+ * 読み取り権限チェックヘルパー
+ */
+async function checkReadPermission(): Promise<boolean> {
+  const session = await getSession()
+  if (!session?.user) return false
+  const role = getRoleFromSession(session)
+  if (!role) return false
+  if (!canAccessAdmin(role)) return false
+  if (!hasPermission(role, 'reservation', 'read')) {
+    void logPermissionDenied(session.user.id, 'reservation', 'read')
+    return false
+  }
+  return true
+}
+
+// =============================================================================
 // Actions
 // =============================================================================
 
@@ -89,7 +111,10 @@ export async function getReservations(
   filters: ReservationFilters = {},
   pagination: ReservationPagination = {}
 ): Promise<GetReservationsResult> {
-  await verifyAdminSession()
+  const hasPermission = await checkReadPermission()
+  if (!hasPermission) {
+    return { reservations: [], total: 0, page: 1, limit: 10, totalPages: 0 }
+  }
 
   const {
     status,
@@ -194,7 +219,10 @@ export async function getReservations(
 export async function getReservationById(
   id: string
 ): Promise<ReservationWithRelations | null> {
-  await verifyAdminSession()
+  const hasPermission = await checkReadPermission()
+  if (!hasPermission) {
+    return null
+  }
 
   const reservation = await prisma.reservation.findUnique({
     where: { id },
@@ -230,11 +258,10 @@ export async function getReservationById(
 /**
  * 予約ステータスを更新
  */
-export const updateReservationStatus = withAuth(async (
-  _user,
-  id: string,
-  status: ReservationStatus
-) => {
+export const updateReservationStatus = withPermission<[string, ReservationStatus]>(
+  'reservation',
+  'update'
+)(async (_user, id, status) => {
   const parsed = updateStatusSchema.safeParse({ id, status })
   if (!parsed.success) {
     return createFailure('入力が不正です')
@@ -323,11 +350,10 @@ export const updateReservationStatus = withAuth(async (
 /**
  * 予約メモを更新
  */
-export const updateReservationNotes = withAuth(async (
-  _user,
-  id: string,
-  notes: string | null
-) => {
+export const updateReservationNotes = withPermission<[string, string | null]>(
+  'reservation',
+  'update'
+)(async (_user, id, notes) => {
   const parsed = updateNotesSchema.safeParse({ id, notes })
   if (!parsed.success) {
     return createFailure('入力が不正です')
@@ -355,7 +381,10 @@ export const updateReservationNotes = withAuth(async (
 /**
  * 予約を削除
  */
-export const deleteReservation = withAuth(async (_user, id: string) => {
+export const deleteReservation = withPermission<[string]>(
+  'reservation',
+  'delete'
+)(async (_user, id) => {
   const reservation = await prisma.reservation.findUnique({
     where: { id },
   })
@@ -402,7 +431,10 @@ export async function getReservationsForCalendar(
   customerEmail: string
   customerPhone: string | null
 }[]> {
-  await verifyAdminSession()
+  const hasPermission = await checkReadPermission()
+  if (!hasPermission) {
+    return []
+  }
 
   // 期間と重複する予約を取得
   // 重複条件: reservation.startTime < endDate AND reservation.endTime > startDate
@@ -459,7 +491,10 @@ export async function getReservationsForCalendar(
 export async function getSpacesForCalendar(): Promise<
   { id: string; name: string }[]
 > {
-  await verifyAdminSession()
+  const hasPermission = await checkReadPermission()
+  if (!hasPermission) {
+    return []
+  }
 
   const spaces = await prisma.space.findMany({
     where: { isActive: true },
@@ -481,7 +516,10 @@ export async function getReservationStats(): Promise<{
   todayCount: number
   thisWeekCount: number
 }> {
-  await verifyAdminSession()
+  const hasPermission = await checkReadPermission()
+  if (!hasPermission) {
+    return { total: 0, pending: 0, confirmed: 0, cancelled: 0, todayCount: 0, thisWeekCount: 0 }
+  }
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)

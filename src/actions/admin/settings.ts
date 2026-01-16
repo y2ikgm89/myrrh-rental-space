@@ -3,7 +3,8 @@
 import { prisma, Prisma } from '@/lib/prisma'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { z } from 'zod'
-import { createSuccess, createFailure, withAuth } from '@/types'
+import { createSuccess, createFailure, withPermission, type ActionResult } from '@/types'
+import { LayoutWidth } from '@/generated/prisma/client/enums'
 import { encrypt, safeDecrypt } from '@/lib/crypto'
 import {
   parseBusinessHours,
@@ -25,7 +26,9 @@ import {
 } from '@/lib/google-calendar'
 import { syncFromCalendar } from '@/lib/calendar-sync'
 import { stripeSettingsSchema, type StripeSettingsInput } from '@/lib/validations/stripe'
-import { verifyAdminSession } from '@/lib/auth' // For query functions only
+import { getSession, getRoleFromSession } from '@/lib/auth'
+import { hasPermission, canAccessAdmin } from '@/lib/permissions'
+import { logPermissionDenied } from '@/lib/audit'
 
 // =============================================================================
 // Types
@@ -173,9 +176,9 @@ export type SettingsData = {
   googleCalendarWebhookActive: boolean
   googleCalendarWebhookExpiration: Date | null
   // Layout Width Settings
-  containerWidth: string
+  containerWidth: LayoutWidth | null
   containerWidthCustom: number | null
-  contentWidth: string
+  contentWidth: LayoutWidth | null
   contentWidthCustom: number | null
   createdAt: Date
   updatedAt: Date
@@ -310,23 +313,110 @@ export type CookieConsentSettingsInput = z.infer<typeof cookieConsentSettingsSch
 
 // Layout Settings Schema
 const layoutSettingsSchema = z.object({
-  containerWidth: z.enum(['XS', 'SM', 'MD', 'LG', 'XL', 'FULL', 'CUSTOM']),
+  containerWidth: z.nativeEnum(LayoutWidth),
   containerWidthCustom: z.number().int().min(320).max(2560).nullable(),
-  contentWidth: z.enum(['XS', 'SM', 'MD', 'LG', 'XL', 'FULL', 'CUSTOM']),
+  contentWidth: z.nativeEnum(LayoutWidth),
   contentWidthCustom: z.number().int().min(320).max(1920).nullable(),
 })
 
 export type LayoutSettingsInput = z.infer<typeof layoutSettingsSchema>
 
 // =============================================================================
+// Helper Functions
+// =============================================================================
+
+/**
+ * 読み取り権限チェック（読み取りアクションは権限なしなら空結果を返す）
+ */
+async function checkReadPermission(): Promise<boolean> {
+  const session = await getSession()
+  if (!session?.user) return false
+  const role = getRoleFromSession(session)
+  if (!role) return false
+  if (!canAccessAdmin(role)) return false
+  if (!hasPermission(role, 'settings', 'read')) {
+    void logPermissionDenied(session.user.id, 'settings', 'read')
+    return false
+  }
+  return true
+}
+
+/**
+ * 書き込み権限チェック（カスタム戻り値型を持つアクション用）
+ * withPermissionが使えない特殊なケース用
+ */
+async function checkWritePermission(): Promise<{ user: { id: string } } | { error: string }> {
+  const session = await getSession()
+  if (!session?.user) {
+    return { error: 'ログインが必要です' }
+  }
+  const role = getRoleFromSession(session)
+  if (!role) {
+    return { error: '権限情報が取得できません' }
+  }
+  if (!canAccessAdmin(role)) {
+    return { error: '管理者権限が必要です' }
+  }
+  if (!hasPermission(role, 'settings', 'update')) {
+    void logPermissionDenied(session.user.id, 'settings', 'update')
+    return { error: 'settingsのupdate権限がありません' }
+  }
+  return { user: { id: session.user.id } }
+}
+
+// =============================================================================
 // Actions
 // =============================================================================
 
 /**
- * 設定を取得
+ * 設定を取得（公開ページ用・認証不要）
+ * 機密情報（Stripeキー等）はマスク済みまたは除外
  */
-export async function getSettings(): Promise<SettingsData> {
-  await verifyAdminSession()
+export async function getPublicSettings(): Promise<SettingsData> {
+  let settings = await prisma.settings.findUnique({
+    where: { id: 'singleton' },
+  })
+
+  if (!settings) {
+    settings = await prisma.settings.create({
+      data: { id: 'singleton' },
+    })
+  }
+
+  // Prisma JsonValueをZodバリデーション関数で安全に変換
+  // 機密情報はnullとして返す（公開ページでは不要）
+  return {
+    ...settings,
+    businessHours: parseBusinessHours(settings.businessHours),
+    regularHolidays: parseStringArrayOrNull(settings.regularHolidays),
+    specialHolidays: parseStringArrayOrNull(settings.specialHolidays),
+    defaultBusinessHours: parseBusinessHours(settings.defaultBusinessHours),
+    stripeSecretKeyMasked: null, // 機密情報は公開しない
+    stripeWebhookSecretMasked: null,
+    googleCalendarServiceAccountEmailMasked: null,
+    // Two-Way Sync Settings
+    googleCalendarTwoWaySyncEnabled: settings.googleCalendarTwoWaySyncEnabled,
+    googleCalendarSyncMethod: settings.googleCalendarSyncMethod,
+    googleCalendarPollingIntervalMin: settings.googleCalendarPollingIntervalMin,
+    googleCalendarLastSyncedAt: settings.googleCalendarLastSyncedAt,
+    googleCalendarWebhookActive: !!settings.googleCalendarWebhookChannelId,
+    googleCalendarWebhookExpiration: settings.googleCalendarWebhookExpiration,
+    // Layout Width Settings
+    containerWidth: settings.containerWidth,
+    containerWidthCustom: settings.containerWidthCustom,
+    contentWidth: settings.contentWidth,
+    contentWidthCustom: settings.contentWidthCustom,
+  }
+}
+
+/**
+ * 設定を取得（管理画面用）
+ */
+export async function getSettings(): Promise<SettingsData | null> {
+  const hasAccess = await checkReadPermission()
+  if (!hasAccess) {
+    return null
+  }
 
   let settings = await prisma.settings.findUnique({
     where: { id: 'singleton' },
@@ -389,7 +479,10 @@ export async function getSettings(): Promise<SettingsData> {
 /**
  * 基本情報を更新
  */
-export const updateBasicInfo = withAuth(async (_user, data: BasicInfoInput) => {
+export const updateBasicInfo = withPermission<[data: BasicInfoInput], void>(
+  'settings',
+  'update'
+)(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = basicInfoSchema.safeParse(data)
   if (!parsed.success) {
     return createFailure(parsed.error.issues[0].message)
@@ -410,7 +503,10 @@ export const updateBasicInfo = withAuth(async (_user, data: BasicInfoInput) => {
 /**
  * 事業者情報を更新
  */
-export const updateBusinessInfo = withAuth(async (_user, data: BusinessInfoInput) => {
+export const updateBusinessInfo = withPermission<[data: BusinessInfoInput], void>(
+  'settings',
+  'update'
+)(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = businessInfoSchema.safeParse(data)
   if (!parsed.success) {
     return createFailure(parsed.error.issues[0].message)
@@ -438,7 +534,10 @@ export const updateBusinessInfo = withAuth(async (_user, data: BusinessInfoInput
 /**
  * 営業時間設定を更新
  */
-export const updateBusinessHoursSettings = withAuth(async (_user, data: BusinessHoursSettingsInput) => {
+export const updateBusinessHoursSettings = withPermission<[data: BusinessHoursSettingsInput], void>(
+  'settings',
+  'update'
+)(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = businessHoursSettingsSchema.safeParse(data)
   if (!parsed.success) {
     return createFailure(parsed.error.issues[0].message)
@@ -468,7 +567,10 @@ export const updateBusinessHoursSettings = withAuth(async (_user, data: Business
 /**
  * 連絡先情報を更新
  */
-export const updateContactInfo = withAuth(async (_user, data: ContactInfoInput) => {
+export const updateContactInfo = withPermission<[data: ContactInfoInput], void>(
+  'settings',
+  'update'
+)(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = contactInfoSchema.safeParse(data)
   if (!parsed.success) {
     return createFailure(parsed.error.issues[0].message)
@@ -494,7 +596,10 @@ export const updateContactInfo = withAuth(async (_user, data: ContactInfoInput) 
 /**
  * SEO設定を更新
  */
-export const updateSeoSettings = withAuth(async (_user, data: SeoSettingsInput) => {
+export const updateSeoSettings = withPermission<[data: SeoSettingsInput], void>(
+  'settings',
+  'update'
+)(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = seoSettingsSchema.safeParse(data)
   if (!parsed.success) {
     return createFailure(parsed.error.issues[0].message)
@@ -517,7 +622,10 @@ export const updateSeoSettings = withAuth(async (_user, data: SeoSettingsInput) 
 /**
  * メール設定を更新
  */
-export const updateEmailSettings = withAuth(async (_user, data: EmailSettingsInput) => {
+export const updateEmailSettings = withPermission<[data: EmailSettingsInput], void>(
+  'settings',
+  'update'
+)(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = emailSettingsSchema.safeParse(data)
   if (!parsed.success) {
     return createFailure(parsed.error.issues[0].message)
@@ -543,7 +651,10 @@ export const updateEmailSettings = withAuth(async (_user, data: EmailSettingsInp
 /**
  * 予約設定を更新
  */
-export const updateReservationSettings = withAuth(async (_user, data: ReservationSettingsInput) => {
+export const updateReservationSettings = withPermission<[data: ReservationSettingsInput], void>(
+  'settings',
+  'update'
+)(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = reservationSettingsSchema.safeParse(data)
   if (!parsed.success) {
     return createFailure(parsed.error.issues[0].message)
@@ -563,7 +674,10 @@ export const updateReservationSettings = withAuth(async (_user, data: Reservatio
 /**
  * 通知設定を更新
  */
-export const updateNotificationSettings = withAuth(async (_user, data: NotificationSettingsInput) => {
+export const updateNotificationSettings = withPermission<[data: NotificationSettingsInput], void>(
+  'settings',
+  'update'
+)(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = notificationSettingsSchema.safeParse(data)
   if (!parsed.success) {
     return createFailure(parsed.error.issues[0].message)
@@ -583,7 +697,10 @@ export const updateNotificationSettings = withAuth(async (_user, data: Notificat
 /**
  * メンテナンス設定を更新
  */
-export const updateMaintenanceSettings = withAuth(async (_user, data: MaintenanceSettingsInput) => {
+export const updateMaintenanceSettings = withPermission<[data: MaintenanceSettingsInput], void>(
+  'settings',
+  'update'
+)(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = maintenanceSettingsSchema.safeParse(data)
   if (!parsed.success) {
     return createFailure(parsed.error.issues[0].message)
@@ -610,7 +727,10 @@ export { type StripeSettingsInput }
 /**
  * Stripe設定を更新
  */
-export const updateStripeSettings = withAuth(async (_user, data: StripeSettingsInput) => {
+export const updateStripeSettings = withPermission<[data: StripeSettingsInput], void>(
+  'settings',
+  'update'
+)(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = stripeSettingsSchema.safeParse(data)
   if (!parsed.success) {
     return createFailure(parsed.error.issues[0].message)
@@ -669,7 +789,10 @@ export async function testStripeConnectionAction(
   mode?: 'test' | 'live'
 }> {
   try {
-    await verifyAdminSession()
+    const check = await checkWritePermission()
+    if ('error' in check) {
+      return { success: false, error: check.error }
+    }
 
     const result = await testStripeConnectionLib(secretKey)
 
@@ -703,7 +826,10 @@ export async function testStripeConnectionAction(
 /**
  * Stripeキーをクリア
  */
-export const clearStripeKeys = withAuth(async () => {
+export const clearStripeKeys = withPermission<[], void>(
+  'settings',
+  'update'
+)(async (): Promise<ActionResult<void>> => {
   await prisma.settings.update({
     where: { id: 'singleton' },
     data: {
@@ -764,7 +890,10 @@ export async function getTermsAgreementSettings(): Promise<{
 /**
  * 規約同意設定を更新（管理画面用）
  */
-export const updateTermsAgreementSettings = withAuth(async (_user, data: TermsAgreementSettingsInput) => {
+export const updateTermsAgreementSettings = withPermission<[data: TermsAgreementSettingsInput], void>(
+  'settings',
+  'update'
+)(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = termsAgreementSettingsSchema.safeParse(data)
   if (!parsed.success) {
     return createFailure(parsed.error.issues[0].message)
@@ -785,7 +914,10 @@ export const updateTermsAgreementSettings = withAuth(async (_user, data: TermsAg
 /**
  * Cookie同意設定を更新
  */
-export const updateCookieConsentSettings = withAuth(async (_user, data: CookieConsentSettingsInput) => {
+export const updateCookieConsentSettings = withPermission<[data: CookieConsentSettingsInput], void>(
+  'settings',
+  'update'
+)(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = cookieConsentSettingsSchema.safeParse(data)
   if (!parsed.success) {
     return createFailure(parsed.error.issues[0].message)
@@ -872,7 +1004,10 @@ export async function getAnnouncementBarCarouselSettings(): Promise<Announcement
 /**
  * お知らせバーカルーセル設定を更新
  */
-export const updateAnnouncementBarCarouselSettings = withAuth(async (_user, data: AnnouncementBarCarouselSettingsInput) => {
+export const updateAnnouncementBarCarouselSettings = withPermission<[data: AnnouncementBarCarouselSettingsInput], void>(
+  'settings',
+  'update'
+)(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = announcementBarCarouselSettingsSchema.safeParse(data)
   if (!parsed.success) {
     return createFailure(parsed.error.issues[0].message)
@@ -907,7 +1042,10 @@ export type GoogleCalendarSettingsInput = z.infer<typeof googleCalendarSettingsS
 /**
  * Google Calendar設定を更新
  */
-export const updateGoogleCalendarSettings = withAuth(async (_user, data: GoogleCalendarSettingsInput) => {
+export const updateGoogleCalendarSettings = withPermission<[data: GoogleCalendarSettingsInput], void>(
+  'settings',
+  'update'
+)(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = googleCalendarSettingsSchema.safeParse(data)
   if (!parsed.success) {
     return createFailure(parsed.error.issues[0].message)
@@ -962,7 +1100,10 @@ export async function testGoogleCalendarConnectionAction(params: {
   accountEmail?: string
 }> {
   try {
-    await verifyAdminSession()
+    const check = await checkWritePermission()
+    if ('error' in check) {
+      return { success: false, error: check.error }
+    }
 
     if (!isValidCalendarId(params.calendarId)) {
       return { success: false, error: 'カレンダーIDの形式が無効です' }
@@ -1015,12 +1156,12 @@ export async function testGoogleCalendarOAuthAction(): Promise<{
   calendarName?: string
 }> {
   try {
-    const user = await verifyAdminSession()
-    if (!user.id) {
-      return { success: false, error: 'ユーザーIDが見つかりません' }
+    const check = await checkWritePermission()
+    if ('error' in check) {
+      return { success: false, error: check.error }
     }
 
-    const result = await testOAuthConnection(user.id)
+    const result = await testOAuthConnection(check.user.id)
 
     if (result.success) {
       // 接続成功時、OAuth有効フラグを更新
@@ -1048,7 +1189,10 @@ export async function testGoogleCalendarOAuthAction(): Promise<{
 /**
  * Google Calendarサービスアカウント認証情報をクリア
  */
-export const clearGoogleCalendarServiceAccount = withAuth(async () => {
+export const clearGoogleCalendarServiceAccount = withPermission<[], void>(
+  'settings',
+  'update'
+)(async (): Promise<ActionResult<void>> => {
   await prisma.settings.update({
     where: { id: 'singleton' },
     data: {
@@ -1066,12 +1210,15 @@ export const clearGoogleCalendarServiceAccount = withAuth(async () => {
 /**
  * Google Calendar OAuth連携を解除
  */
-export const disconnectGoogleCalendarOAuth = withAuth(async (user) => {
+export const disconnectGoogleCalendarOAuth = withPermission<[], void>(
+  'settings',
+  'update'
+)(async (user): Promise<ActionResult<void>> => {
   // Accountテーブルからトークンを削除
   await prisma.account.deleteMany({
     where: {
       userId: user.id,
-      provider: 'google',
+      providerId: 'google',
     },
   })
 
@@ -1108,7 +1255,10 @@ export type TwoWaySyncSettingsInput = z.infer<typeof twoWaySyncSettingsSchema>
 /**
  * 双方向同期設定を更新
  */
-export const updateTwoWaySyncSettings = withAuth(async (_user, data: TwoWaySyncSettingsInput) => {
+export const updateTwoWaySyncSettings = withPermission<[data: TwoWaySyncSettingsInput], void>(
+  'settings',
+  'update'
+)(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = twoWaySyncSettingsSchema.safeParse(data)
   if (!parsed.success) {
     return createFailure(parsed.error.issues[0].message)
@@ -1143,7 +1293,10 @@ export async function setupCalendarWebhook(): Promise<{
   expiration?: Date
 }> {
   try {
-    await verifyAdminSession()
+    const check = await checkWritePermission()
+    if ('error' in check) {
+      return { success: false, error: check.error }
+    }
 
     // ベースURLを取得（環境変数から）
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL
@@ -1185,7 +1338,10 @@ export async function stopCalendarWebhook(): Promise<{
   error?: string
 }> {
   try {
-    await verifyAdminSession()
+    const check = await checkWritePermission()
+    if ('error' in check) {
+      return { success: false, error: check.error }
+    }
 
     const settings = await prisma.settings.findUnique({
       where: { id: 'singleton' },
@@ -1235,7 +1391,10 @@ export async function triggerManualSync(): Promise<{
   errors?: string[]
 }> {
   try {
-    await verifyAdminSession()
+    const check = await checkWritePermission()
+    if ('error' in check) {
+      return { success: false, errors: [check.error] }
+    }
 
     const result = await syncFromCalendar()
 
@@ -1262,7 +1421,10 @@ export async function triggerManualSync(): Promise<{
 /**
  * レイアウト設定を更新
  */
-export const updateLayoutSettings = withAuth(async (_user, data: LayoutSettingsInput) => {
+export const updateLayoutSettings = withPermission<[data: LayoutSettingsInput], void>(
+  'settings',
+  'update'
+)(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = layoutSettingsSchema.safeParse(data)
   if (!parsed.success) {
     return createFailure(parsed.error.issues[0].message)

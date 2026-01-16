@@ -4,8 +4,10 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { NavigationType, SocialPlatform } from '@/generated/prisma/client/enums'
 import { z } from 'zod'
-import { createSuccess, createFailure, withAuth } from '@/types'
-import { verifyAdminSession } from '@/lib/auth'
+import { createSuccess, createFailure, withPermission, type ActionResult } from '@/types'
+import { getSession, getRoleFromSession } from '@/lib/auth'
+import { hasPermission, canAccessAdmin } from '@/lib/permissions'
+import { logPermissionDenied } from '@/lib/audit'
 
 // =============================================================================
 // Types
@@ -66,6 +68,26 @@ export type NavigationItemInput = z.infer<typeof navigationItemSchema>
 export type SocialLinkInput = z.infer<typeof socialLinkSchema>
 
 // =============================================================================
+// Helper Functions
+// =============================================================================
+
+/**
+ * 読み取り権限チェック
+ */
+async function checkReadPermission(): Promise<boolean> {
+  const session = await getSession()
+  if (!session?.user) return false
+  const role = getRoleFromSession(session)
+  if (!role) return false
+  if (!canAccessAdmin(role)) return false
+  if (!hasPermission(role, 'navigation', 'read')) {
+    void logPermissionDenied(session.user.id, 'navigation', 'read')
+    return false
+  }
+  return true
+}
+
+// =============================================================================
 // Navigation Item Actions
 // =============================================================================
 
@@ -73,7 +95,10 @@ export type SocialLinkInput = z.infer<typeof socialLinkSchema>
  * ナビゲーションアイテム一覧を取得
  */
 export async function getNavigationItems(type?: NavigationType): Promise<NavigationItemData[]> {
-  await verifyAdminSession()
+  const hasPermission = await checkReadPermission()
+  if (!hasPermission) {
+    return []
+  }
 
   const items = await prisma.navigationItem.findMany({
     where: type ? { type, parentId: null } : { parentId: null },
@@ -97,7 +122,10 @@ export async function getNavigationItems(type?: NavigationType): Promise<Navigat
 /**
  * ナビゲーションアイテムを作成
  */
-export const createNavigationItem = withAuth(async (_user, data: NavigationItemInput) => {
+export const createNavigationItem = withPermission<[data: NavigationItemInput], { id: string }>(
+  'navigation',
+  'create'
+)(async (_user, data): Promise<ActionResult<{ id: string }>> => {
   const parsed = navigationItemSchema.safeParse(data)
   if (!parsed.success) {
     return createFailure(parsed.error.issues[0].message)
@@ -116,7 +144,10 @@ export const createNavigationItem = withAuth(async (_user, data: NavigationItemI
 /**
  * ナビゲーションアイテムを更新
  */
-export const updateNavigationItem = withAuth(async (_user, id: string, data: NavigationItemInput) => {
+export const updateNavigationItem = withPermission<[id: string, data: NavigationItemInput], void>(
+  'navigation',
+  'update'
+)(async (_user, id, data): Promise<ActionResult<void>> => {
   const parsed = navigationItemSchema.safeParse(data)
   if (!parsed.success) {
     return createFailure(parsed.error.issues[0].message)
@@ -144,7 +175,10 @@ export const updateNavigationItem = withAuth(async (_user, id: string, data: Nav
 /**
  * ナビゲーションアイテムを削除
  */
-export const deleteNavigationItem = withAuth(async (_user, id: string) => {
+export const deleteNavigationItem = withPermission<[id: string], void>(
+  'navigation',
+  'delete'
+)(async (_user, id): Promise<ActionResult<void>> => {
   const item = await prisma.navigationItem.findUnique({
     where: { id },
     include: {
@@ -173,47 +207,52 @@ export const deleteNavigationItem = withAuth(async (_user, id: string) => {
 /**
  * ナビゲーションの順序を更新
  */
-export const updateNavigationOrder = withAuth(
-  async (_user, items: { id: string; order: number; parentId?: string | null }[]) => {
-    await prisma.$transaction(
-      items.map((item) =>
-        prisma.navigationItem.update({
-          where: { id: item.id },
-          data: {
-            order: item.order,
-            ...(item.parentId !== undefined && { parentId: item.parentId }),
-          },
-        })
-      )
+export const updateNavigationOrder = withPermission<
+  [items: { id: string; order: number; parentId?: string | null }[]],
+  void
+>(
+  'navigation',
+  'update'
+)(async (_user, items): Promise<ActionResult<void>> => {
+  await prisma.$transaction(
+    items.map((item) =>
+      prisma.navigationItem.update({
+        where: { id: item.id },
+        data: {
+          order: item.order,
+          ...(item.parentId !== undefined && { parentId: item.parentId }),
+        },
+      })
     )
+  )
 
-    revalidatePath('/admin/settings/navigation')
-    revalidatePath('/')
+  revalidatePath('/admin/settings/navigation')
+  revalidatePath('/')
 
-    return createSuccess('順序を更新しました')
-  }
-)
+  return createSuccess('順序を更新しました')
+})
 
 /**
  * SNSリンクの順序を更新
  */
-export const updateSocialLinkOrder = withAuth(
-  async (_user, items: { id: string; order: number }[]) => {
-    await prisma.$transaction(
-      items.map((item) =>
-        prisma.socialLink.update({
-          where: { id: item.id },
-          data: { order: item.order },
-        })
-      )
+export const updateSocialLinkOrder = withPermission<[items: { id: string; order: number }[]], void>(
+  'navigation',
+  'update'
+)(async (_user, items): Promise<ActionResult<void>> => {
+  await prisma.$transaction(
+    items.map((item) =>
+      prisma.socialLink.update({
+        where: { id: item.id },
+        data: { order: item.order },
+      })
     )
+  )
 
-    revalidatePath('/admin/settings/navigation')
-    revalidatePath('/')
+  revalidatePath('/admin/settings/navigation')
+  revalidatePath('/')
 
-    return createSuccess('順序を更新しました')
-  }
-)
+  return createSuccess('順序を更新しました')
+})
 
 // =============================================================================
 // Social Link Actions
@@ -235,7 +274,10 @@ export type GetSocialLinksOptions = {
  * SNSリンク一覧を取得
  */
 export async function getSocialLinks(options: GetSocialLinksOptions = {}): Promise<SocialLinkData[]> {
-  await verifyAdminSession()
+  const hasPermission = await checkReadPermission()
+  if (!hasPermission) {
+    return []
+  }
 
   const { showOnDesktop, showOnMobile, activeOnly = false } = options
 
@@ -252,7 +294,10 @@ export async function getSocialLinks(options: GetSocialLinksOptions = {}): Promi
 /**
  * SNSリンクを作成
  */
-export const createSocialLink = withAuth(async (_user, data: SocialLinkInput) => {
+export const createSocialLink = withPermission<[data: SocialLinkInput], { id: string }>(
+  'navigation',
+  'create'
+)(async (_user, data): Promise<ActionResult<{ id: string }>> => {
   const parsed = socialLinkSchema.safeParse(data)
   if (!parsed.success) {
     return createFailure(parsed.error.issues[0].message)
@@ -271,7 +316,10 @@ export const createSocialLink = withAuth(async (_user, data: SocialLinkInput) =>
 /**
  * SNSリンクを更新
  */
-export const updateSocialLink = withAuth(async (_user, id: string, data: SocialLinkInput) => {
+export const updateSocialLink = withPermission<[id: string, data: SocialLinkInput], void>(
+  'navigation',
+  'update'
+)(async (_user, id, data): Promise<ActionResult<void>> => {
   const parsed = socialLinkSchema.safeParse(data)
   if (!parsed.success) {
     return createFailure(parsed.error.issues[0].message)
@@ -299,7 +347,10 @@ export const updateSocialLink = withAuth(async (_user, id: string, data: SocialL
 /**
  * SNSリンクを削除
  */
-export const deleteSocialLink = withAuth(async (_user, id: string) => {
+export const deleteSocialLink = withPermission<[id: string], void>(
+  'navigation',
+  'delete'
+)(async (_user, id): Promise<ActionResult<void>> => {
   const link = await prisma.socialLink.findUnique({
     where: { id },
   })

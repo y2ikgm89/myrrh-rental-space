@@ -11,9 +11,11 @@ import { prisma } from '@/lib/prisma'
 import { verifyAdminSession } from '@/lib/auth'
 import {
   updatePageSchema,
+  updatePageSeoSchema,
   createPageSchema,
   SYSTEM_PAGE_SLUGS,
   type UpdatePageInput,
+  type UpdatePageSeoInput,
   type CreatePageInput,
   type PageData,
   type PageActionResult,
@@ -439,5 +441,91 @@ export async function togglePagePublished(
     console.error('ページ公開状態変更エラー:', error)
     return { success: false, error: 'ページの更新中にエラーが発生しました' }
   }
+}
+
+/**
+ * システムページのSEO/OGP情報を更新
+ */
+export async function updatePageSeo(
+  slug: string,
+  input: UpdatePageSeoInput
+): Promise<PageActionResult> {
+  try {
+    await verifyAdminSession()
+  } catch {
+    return { success: false, error: 'ログインが必要です' }
+  }
+
+  // バリデーション
+  const parsed = updatePageSeoSchema.safeParse(input)
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string[]> = {}
+    for (const error of parsed.error.issues) {
+      const field = error.path.join('.')
+      if (!fieldErrors[field]) {
+        fieldErrors[field] = []
+      }
+      fieldErrors[field].push(error.message)
+    }
+    return {
+      success: false,
+      error: 'バリデーションエラー',
+      fieldErrors,
+    }
+  }
+
+  try {
+    // ページが存在するか確認
+    const existingPage = await prisma.page.findUnique({
+      where: { slug },
+    })
+
+    if (!existingPage) {
+      return { success: false, error: 'ページが見つかりません' }
+    }
+
+    // SEO/OGP情報のみ更新
+    await prisma.page.update({
+      where: { slug },
+      data: {
+        title: parsed.data.title,
+        metaDescription: parsed.data.metaDescription || null,
+        metaKeywords: parsed.data.metaKeywords || null,
+        ogpTitle: parsed.data.ogpTitle || null,
+        ogpDescription: parsed.data.ogpDescription || null,
+        ogpImageUrl: parsed.data.ogpImageUrl || null,
+      },
+    })
+
+    // キャッシュ無効化
+    revalidatePath(`/${slug}`)
+    revalidatePath('/admin/pages')
+    revalidatePath(`/admin/pages/${slug}/seo`)
+    revalidateTag('pages', { expire: 0 })
+    revalidateTag(`page-${slug}`, { expire: 0 })
+    revalidateTag(`page-seo-${slug}`, { expire: 0 })
+
+    return { success: true, message: 'SEO設定を更新しました' }
+  } catch (error) {
+    console.error('SEO設定更新エラー:', error)
+    return { success: false, error: 'SEO設定の更新中にエラーが発生しました' }
+  }
+}
+
+/**
+ * システムページ一覧取得（SEOのみ編集可能なページ）
+ */
+export async function getSystemPagesList(): Promise<PageData[]> {
+  await verifyAdminSession()
+
+  const pages = await prisma.page.findMany({
+    where: {
+      isActive: true,
+      isSystemPage: true,
+    },
+    orderBy: { slug: 'asc' },
+  })
+
+  return pages as PageData[]
 }
 

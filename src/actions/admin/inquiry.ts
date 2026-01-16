@@ -4,8 +4,16 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { InquiryStatus } from '@/generated/prisma/client/enums'
 import { z } from 'zod'
-import { createSuccess, createFailure, type InquiryWhereInput, withAuth } from '@/types'
-import { verifyAdminSession } from '@/lib/auth'
+import {
+  createSuccess,
+  createFailure,
+  withPermission,
+  type ActionResult,
+  type InquiryWhereInput,
+} from '@/types'
+import { getSession, getRoleFromSession } from '@/lib/auth'
+import { hasPermission, canAccessAdmin } from '@/lib/permissions'
+import { logPermissionDenied } from '@/lib/audit'
 
 // =============================================================================
 // Types
@@ -52,6 +60,26 @@ const updateStatusSchema = z.object({
 })
 
 // =============================================================================
+// Helper Functions
+// =============================================================================
+
+/**
+ * 読み取り権限チェック（権限なしなら空結果を返すパターン用）
+ */
+async function checkReadPermission(): Promise<boolean> {
+  const session = await getSession()
+  if (!session?.user) return false
+  const role = getRoleFromSession(session)
+  if (!role) return false
+  if (!canAccessAdmin(role)) return false
+  if (!hasPermission(role, 'inquiry', 'read')) {
+    void logPermissionDenied(session.user.id, 'inquiry', 'read')
+    return false
+  }
+  return true
+}
+
+// =============================================================================
 // Actions
 // =============================================================================
 
@@ -62,7 +90,10 @@ export async function getInquiries(
   filters: InquiryFilters = {},
   pagination: InquiryPagination = {}
 ): Promise<GetInquiriesResult> {
-  await verifyAdminSession()
+  const canRead = await checkReadPermission()
+  if (!canRead) {
+    return { inquiries: [], total: 0, page: 1, limit: 10, totalPages: 0 }
+  }
 
   const { status, search } = filters
 
@@ -115,7 +146,10 @@ export async function getInquiries(
  * お問い合わせ詳細を取得
  */
 export async function getInquiryById(id: string): Promise<InquiryData | null> {
-  await verifyAdminSession()
+  const canRead = await checkReadPermission()
+  if (!canRead) {
+    return null
+  }
 
   return prisma.inquiry.findUnique({
     where: { id },
@@ -125,37 +159,44 @@ export async function getInquiryById(id: string): Promise<InquiryData | null> {
 /**
  * お問い合わせステータスを更新
  */
-export const updateInquiryStatus = withAuth(
-  async (_user, id: string, status: InquiryStatus) => {
-    const parsed = updateStatusSchema.safeParse({ id, status })
-    if (!parsed.success) {
-      return createFailure('入力が不正です')
-    }
-
-    const inquiry = await prisma.inquiry.findUnique({
-      where: { id },
-    })
-
-    if (!inquiry) {
-      return createFailure('お問い合わせが見つかりません')
-    }
-
-    await prisma.inquiry.update({
-      where: { id },
-      data: { status },
-    })
-
-    revalidatePath('/admin/inquiries')
-    revalidatePath(`/admin/inquiries/${id}`)
-
-    return createSuccess('ステータスを更新しました')
+export const updateInquiryStatus = withPermission<
+  [id: string, status: InquiryStatus],
+  void
+>(
+  'inquiry',
+  'update'
+)(async (_user, id, status): Promise<ActionResult<void>> => {
+  const parsed = updateStatusSchema.safeParse({ id, status })
+  if (!parsed.success) {
+    return createFailure('入力が不正です')
   }
-)
+
+  const inquiry = await prisma.inquiry.findUnique({
+    where: { id },
+  })
+
+  if (!inquiry) {
+    return createFailure('お問い合わせが見つかりません')
+  }
+
+  await prisma.inquiry.update({
+    where: { id },
+    data: { status },
+  })
+
+  revalidatePath('/admin/inquiries')
+  revalidatePath(`/admin/inquiries/${id}`)
+
+  return createSuccess('ステータスを更新しました')
+})
 
 /**
  * お問い合わせを削除
  */
-export const deleteInquiry = withAuth(async (_user, id: string) => {
+export const deleteInquiry = withPermission<[id: string], void>(
+  'inquiry',
+  'delete'
+)(async (_user, id): Promise<ActionResult<void>> => {
   const inquiry = await prisma.inquiry.findUnique({
     where: { id },
   })
@@ -183,7 +224,10 @@ export async function getInquiryStats(): Promise<{
   resolved: number
   closed: number
 }> {
-  await verifyAdminSession()
+  const canRead = await checkReadPermission()
+  if (!canRead) {
+    return { total: 0, new: 0, inProgress: 0, resolved: 0, closed: 0 }
+  }
 
   const [total, newCount, inProgress, resolved, closed] = await Promise.all([
     prisma.inquiry.count(),

@@ -2,8 +2,15 @@
 
 import { prisma } from '@/lib/prisma'
 import { revalidatePath, revalidateTag } from 'next/cache'
-import { createSuccess, createFailure, withAuth } from '@/types'
-import { verifyAdminSession } from '@/lib/auth'
+import {
+  createSuccess,
+  createFailure,
+  withPermission,
+  type ActionResult,
+} from '@/types'
+import { getSession, getRoleFromSession } from '@/lib/auth'
+import { hasPermission, canAccessAdmin } from '@/lib/permissions'
+import { logPermissionDenied } from '@/lib/audit'
 import {
   faqCategoryFormSchema,
   faqItemFormSchema,
@@ -42,14 +49,37 @@ export type FaqItemPagination = {
 }
 
 // =============================================================================
-// FaqCategory Actions
+// Helper Functions
+// =============================================================================
+
+/**
+ * 読み取り権限チェック（権限なしの場合は空結果を返すための軽量チェック）
+ */
+async function checkReadPermission(): Promise<boolean> {
+  const session = await getSession()
+  if (!session?.user) return false
+
+  const role = getRoleFromSession(session)
+  if (!role) return false
+  if (!canAccessAdmin(role)) return false
+  if (!hasPermission(role, 'faq', 'read')) {
+    void logPermissionDenied(session.user.id, 'faq', 'read')
+    return false
+  }
+  return true
+}
+
+// =============================================================================
+// FaqCategory Read Actions
 // =============================================================================
 
 /**
  * FAQカテゴリ一覧を取得（アイテム含む）
  */
 export async function getFaqCategories(): Promise<FaqCategoryListResult> {
-  await verifyAdminSession()
+  if (!(await checkReadPermission())) {
+    return { categories: [], total: 0 }
+  }
 
   const categories = await prisma.faqCategory.findMany({
     include: {
@@ -71,7 +101,9 @@ export async function getFaqCategories(): Promise<FaqCategoryListResult> {
  * FAQカテゴリ詳細を取得
  */
 export async function getFaqCategoryById(id: string): Promise<FaqCategoryWithItems | null> {
-  await verifyAdminSession()
+  if (!(await checkReadPermission())) {
+    return null
+  }
 
   return prisma.faqCategory.findUnique({
     where: { id },
@@ -83,10 +115,17 @@ export async function getFaqCategoryById(id: string): Promise<FaqCategoryWithIte
   })
 }
 
+// =============================================================================
+// FaqCategory Write Actions (withPermission - 監査ログ自動記録)
+// =============================================================================
+
 /**
  * FAQカテゴリを作成
  */
-export const createFaqCategory = withAuth(async (_user, data: FaqCategoryFormInput) => {
+export const createFaqCategory = withPermission<
+  [data: FaqCategoryFormInput],
+  { id: string }
+>('faq', 'create')(async (user, data): Promise<ActionResult<{ id: string }>> => {
   const parsed = faqCategoryFormSchema.safeParse(data)
   if (!parsed.success) {
     return createFailure(parsed.error.issues[0].message)
@@ -122,7 +161,10 @@ export const createFaqCategory = withAuth(async (_user, data: FaqCategoryFormInp
 /**
  * FAQカテゴリを更新
  */
-export const updateFaqCategory = withAuth(async (_user, id: string, data: FaqCategoryFormInput) => {
+export const updateFaqCategory = withPermission<
+  [id: string, data: FaqCategoryFormInput],
+  void
+>('faq', 'update')(async (user, id, data): Promise<ActionResult<void>> => {
   const parsed = faqCategoryFormSchema.safeParse(data)
   if (!parsed.success) {
     return createFailure(parsed.error.issues[0].message)
@@ -162,7 +204,10 @@ export const updateFaqCategory = withAuth(async (_user, id: string, data: FaqCat
 /**
  * FAQカテゴリを削除
  */
-export const deleteFaqCategory = withAuth(async (_user, id: string) => {
+export const deleteFaqCategory = withPermission<[id: string], void>(
+  'faq',
+  'delete'
+)(async (user, id): Promise<ActionResult<void>> => {
   const category = await prisma.faqCategory.findUnique({
     where: { id },
     include: { _count: { select: { items: true } } },
@@ -189,7 +234,10 @@ export const deleteFaqCategory = withAuth(async (_user, id: string) => {
 /**
  * FAQカテゴリの順序を更新
  */
-export const reorderFaqCategories = withAuth(async (_user, orderedIds: string[]) => {
+export const reorderFaqCategories = withPermission<[orderedIds: string[]], void>(
+  'faq',
+  'update'
+)(async (user, orderedIds): Promise<ActionResult<void>> => {
   await prisma.$transaction(
     orderedIds.map((id, index) =>
       prisma.faqCategory.update({
@@ -206,7 +254,7 @@ export const reorderFaqCategories = withAuth(async (_user, orderedIds: string[])
 })
 
 // =============================================================================
-// FaqItem Actions
+// FaqItem Read Actions
 // =============================================================================
 
 /**
@@ -216,7 +264,9 @@ export async function getFaqItems(
   filters: FaqItemFilters = {},
   pagination: FaqItemPagination = {}
 ): Promise<FaqItemListResult> {
-  await verifyAdminSession()
+  if (!(await checkReadPermission())) {
+    return { items: [], total: 0, page: 1, limit: 20, totalPages: 0 }
+  }
 
   const { categoryId, search, isActive } = filters
   const { page = 1, limit = 20 } = pagination
@@ -278,7 +328,9 @@ export async function getFaqItems(
  * FAQ項目詳細を取得
  */
 export async function getFaqItemById(id: string): Promise<FaqItemWithCategory | null> {
-  await verifyAdminSession()
+  if (!(await checkReadPermission())) {
+    return null
+  }
 
   return prisma.faqItem.findUnique({
     where: { id },
@@ -294,10 +346,17 @@ export async function getFaqItemById(id: string): Promise<FaqItemWithCategory | 
   })
 }
 
+// =============================================================================
+// FaqItem Write Actions (withPermission - 監査ログ自動記録)
+// =============================================================================
+
 /**
  * FAQ項目を作成
  */
-export const createFaqItem = withAuth(async (_user, data: FaqItemFormInput) => {
+export const createFaqItem = withPermission<
+  [data: FaqItemFormInput],
+  { id: string }
+>('faq', 'create')(async (user, data): Promise<ActionResult<{ id: string }>> => {
   const parsed = faqItemFormSchema.safeParse(data)
   if (!parsed.success) {
     return createFailure(parsed.error.issues[0].message)
@@ -334,7 +393,10 @@ export const createFaqItem = withAuth(async (_user, data: FaqItemFormInput) => {
 /**
  * FAQ項目を更新
  */
-export const updateFaqItem = withAuth(async (_user, id: string, data: FaqItemFormInput) => {
+export const updateFaqItem = withPermission<
+  [id: string, data: FaqItemFormInput],
+  void
+>('faq', 'update')(async (user, id, data): Promise<ActionResult<void>> => {
   const parsed = faqItemFormSchema.safeParse(data)
   if (!parsed.success) {
     return createFailure(parsed.error.issues[0].message)
@@ -371,7 +433,10 @@ export const updateFaqItem = withAuth(async (_user, id: string, data: FaqItemFor
 /**
  * FAQ項目を削除
  */
-export const deleteFaqItem = withAuth(async (_user, id: string) => {
+export const deleteFaqItem = withPermission<[id: string], void>(
+  'faq',
+  'delete'
+)(async (user, id): Promise<ActionResult<void>> => {
   const item = await prisma.faqItem.findUnique({
     where: { id },
   })
@@ -393,7 +458,10 @@ export const deleteFaqItem = withAuth(async (_user, id: string) => {
 /**
  * FAQ項目の順序を更新（カテゴリ内）
  */
-export const reorderFaqItems = withAuth(async (_user, categoryId: string, orderedIds: string[]) => {
+export const reorderFaqItems = withPermission<
+  [categoryId: string, orderedIds: string[]],
+  void
+>('faq', 'update')(async (user, categoryId, orderedIds): Promise<ActionResult<void>> => {
   await prisma.$transaction(
     orderedIds.map((id, index) =>
       prisma.faqItem.update({
@@ -412,7 +480,10 @@ export const reorderFaqItems = withAuth(async (_user, categoryId: string, ordere
 /**
  * FAQ項目の公開状態を切り替え
  */
-export const toggleFaqItemActive = withAuth(async (_user, id: string) => {
+export const toggleFaqItemActive = withPermission<[id: string], void>(
+  'faq',
+  'update'
+)(async (user, id): Promise<ActionResult<void>> => {
   const item = await prisma.faqItem.findUnique({
     where: { id },
   })

@@ -234,3 +234,66 @@ export async function getTodayReservations(): Promise<RecentReservation[]> {
     totalPrice: r.totalPrice ? Number(r.totalPrice) : null,
   }))
 }
+
+// =============================================================================
+// Chart Data Types
+// =============================================================================
+
+export type ChartDataPoint = {
+  date: string
+  reservations: number
+  revenue: number
+}
+
+/**
+ * 直近30日の予約・売上推移データを取得
+ */
+export async function getReservationChartData(): Promise<ChartDataPoint[]> {
+  await verifyAdminSession()
+  await connection()
+
+  const now = new Date()
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+
+  // 日付ごとの予約データを取得
+  const reservations = await prisma.reservation.findMany({
+    where: {
+      createdAt: { gte: thirtyDaysAgo },
+      status: { not: 'CANCELLED' },
+    },
+    select: {
+      createdAt: true,
+      totalPrice: true,
+      status: true,
+    },
+  })
+
+  // 日付ごとに集計
+  const dataMap = new Map<string, { reservations: number; revenue: number }>()
+
+  // 30日分の日付を初期化
+  for (let i = 29; i >= 0; i--) {
+    const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000)
+    const dateStr = date.toISOString().split('T')[0]
+    dataMap.set(dateStr, { reservations: 0, revenue: 0 })
+  }
+
+  // データを集計
+  for (const r of reservations) {
+    const dateStr = r.createdAt.toISOString().split('T')[0]
+    const existing = dataMap.get(dateStr)
+    if (existing) {
+      existing.reservations += 1
+      if (r.status === 'CONFIRMED' && r.totalPrice) {
+        existing.revenue += Number(r.totalPrice)
+      }
+    }
+  }
+
+  // 配列に変換
+  return Array.from(dataMap.entries()).map(([date, data]) => ({
+    date: date.slice(5), // MM-DD形式
+    reservations: data.reservations,
+    revenue: data.revenue,
+  }))
+}

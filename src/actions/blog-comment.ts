@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
 import { isTurnstileEnabled } from '@/lib/turnstile'
 import { validateTurnstile, extractFieldErrors } from '@/lib/action-helpers'
+import { BlogPostStatus } from '@/generated/prisma/client/enums'
 import {
   createCommentSchema,
   toCommentAuthor,
@@ -182,7 +183,7 @@ export async function createComment(input: {
   try {
     // 記事の存在確認
     const post = await prisma.blogPost.findUnique({
-      where: { id: data.postId, isPublished: true },
+      where: { id: data.postId, status: BlogPostStatus.PUBLISHED },
       select: { id: true, slug: true },
     })
 

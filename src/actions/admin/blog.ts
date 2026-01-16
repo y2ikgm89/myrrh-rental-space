@@ -3,11 +3,13 @@
 import { prisma } from '@/lib/prisma'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { z } from 'zod'
-import { verifyAdminSession } from '@/lib/auth'
-import { createSuccess, createFailure, withAuth, type BlogPostWhereInput } from '@/types'
+import { getSession, getRoleFromSession } from '@/lib/auth'
+import { createSuccess, createFailure, withPermission, type BlogPostWhereInput } from '@/types'
 import { parseStringArray } from '@/lib/json-validators'
-import { determinePublishedAt } from '@/lib/utils'
 import { LayoutWidth } from '@/types/prisma'
+import { BlogPostStatus } from '@/generated/prisma/client/enums'
+import { hasPermission, canAccessAdmin } from '@/lib/permissions'
+import { logPermissionDenied } from '@/lib/audit'
 
 // =============================================================================
 // Types
@@ -28,12 +30,11 @@ export type BlogPostData = {
   ogpTitle: string | null
   ogpDescription: string | null
   publishedAt: Date | null
-  isPublished: boolean
-  isDraft: boolean
+  status: BlogPostStatus
   viewCount: number
   createdAt: Date
   updatedAt: Date
-  contentWidth: string | null
+  contentWidth: LayoutWidth | null
   contentWidthCustom: number | null
   category: {
     id: string
@@ -45,6 +46,15 @@ export type BlogPostData = {
     name: string | null
     email: string
   }
+}
+
+export type BlogPostVersionData = {
+  id: string
+  postId: string
+  version: number
+  content: string
+  createdAt: Date
+  createdBy: string | null
 }
 
 export type BlogCategoryData = {
@@ -69,7 +79,7 @@ export type GetBlogPostsResult = {
 }
 
 export type BlogPostFilters = {
-  status?: 'ALL' | 'PUBLISHED' | 'DRAFT'
+  status?: 'ALL' | 'PUBLISHED' | 'DRAFT' | 'ARCHIVED'
   categoryId?: string
   search?: string
 }
@@ -85,7 +95,22 @@ export type BlogPostPagination = {
 // Schemas
 // =============================================================================
 
-const blogPostSchema = z.object({
+const createBlogPostSchema = z.object({
+  title: z.string().min(1, 'タイトルは必須です').max(200, 'タイトルは200文字以内'),
+  slug: z.string().min(1, 'スラッグは必須です').max(200).regex(/^[a-z0-9-]+$/, 'スラッグは小文字英数字とハイフンのみ'),
+  excerpt: z.string().min(1, '抜粋は必須です').max(500, '抜粋は500文字以内'),
+  content: z.string().default(''),
+  thumbnailUrl: z.string().min(1, 'サムネイルURLは必須です'),
+  ogpImageUrl: z.string().nullable().optional(),
+  categoryId: z.string().uuid('カテゴリを選択してください'),
+  tags: z.array(z.string()).default([]),
+  metaDescription: z.string().max(160).nullable().optional(),
+  metaKeywords: z.string().nullable().optional(),
+  ogpTitle: z.string().max(60).nullable().optional(),
+  ogpDescription: z.string().max(160).nullable().optional(),
+})
+
+const updateBlogPostSchema = z.object({
   title: z.string().min(1, 'タイトルは必須です').max(200, 'タイトルは200文字以内'),
   slug: z.string().min(1, 'スラッグは必須です').max(200).regex(/^[a-z0-9-]+$/, 'スラッグは小文字英数字とハイフンのみ'),
   excerpt: z.string().min(1, '抜粋は必須です').max(500, '抜粋は500文字以内'),
@@ -98,9 +123,7 @@ const blogPostSchema = z.object({
   metaKeywords: z.string().nullable().optional(),
   ogpTitle: z.string().max(60).nullable().optional(),
   ogpDescription: z.string().max(160).nullable().optional(),
-  isPublished: z.boolean(),
-  publishedAt: z.string().nullable().optional(),
-  contentWidth: z.string().nullable().optional(),
+  contentWidth: z.nativeEnum(LayoutWidth).nullable().optional(),
   contentWidthCustom: z.number().int().min(320).max(1920).nullable().optional(),
 })
 
@@ -111,8 +134,29 @@ const blogCategorySchema = z.object({
   order: z.number().int().min(0).default(0),
 })
 
-export type BlogPostInput = z.infer<typeof blogPostSchema>
+export type CreateBlogPostInput = z.infer<typeof createBlogPostSchema>
+export type UpdateBlogPostInput = z.infer<typeof updateBlogPostSchema>
 export type BlogCategoryInput = z.infer<typeof blogCategorySchema>
+
+// =============================================================================
+// Helper Functions
+// =============================================================================
+
+/**
+ * 読み取り権限チェック共通ヘルパー
+ */
+async function checkReadPermission(): Promise<boolean> {
+  const session = await getSession()
+  if (!session?.user) return false
+  const role = getRoleFromSession(session)
+  if (!role) return false
+  if (!canAccessAdmin(role)) return false
+  if (!hasPermission(role, 'blog', 'read')) {
+    void logPermissionDenied(session.user.id, 'blog', 'read')
+    return false
+  }
+  return true
+}
 
 // =============================================================================
 // Blog Post Actions
@@ -125,7 +169,10 @@ export async function getBlogPosts(
   filters: BlogPostFilters = {},
   pagination: BlogPostPagination = {}
 ): Promise<GetBlogPostsResult> {
-  await verifyAdminSession()
+  const hasPermission = await checkReadPermission()
+  if (!hasPermission) {
+    return { posts: [], total: 0, page: 1, limit: 10, totalPages: 0 }
+  }
 
   const { status, categoryId, search } = filters
 
@@ -140,9 +187,11 @@ export async function getBlogPosts(
   const where: BlogPostWhereInput = {}
 
   if (status === 'PUBLISHED') {
-    where.isPublished = true
+    where.status = BlogPostStatus.PUBLISHED
   } else if (status === 'DRAFT') {
-    where.isDraft = true
+    where.status = BlogPostStatus.DRAFT
+  } else if (status === 'ARCHIVED') {
+    where.status = BlogPostStatus.ARCHIVED
   }
 
   if (categoryId) {
@@ -205,7 +254,10 @@ export async function getBlogPosts(
  * ブログ記事詳細を取得
  */
 export async function getBlogPostById(id: string): Promise<BlogPostData | null> {
-  await verifyAdminSession()
+  const hasPermission = await checkReadPermission()
+  if (!hasPermission) {
+    return null
+  }
 
   const post = await prisma.blogPost.findUnique({
     where: { id },
@@ -238,144 +290,286 @@ export async function getBlogPostById(id: string): Promise<BlogPostData | null> 
 /**
  * ブログ記事を作成
  */
-export const createBlogPost = withAuth(async (user, data: BlogPostInput) => {
-  const parsed = blogPostSchema.safeParse(data)
-  if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+export const createBlogPost = withPermission<[CreateBlogPostInput], { id: string }>(
+  'blog',
+  'create'
+)(async (user, data) => {
+    const parsed = createBlogPostSchema.safeParse(data)
+    if (!parsed.success) {
+      return createFailure(parsed.error.issues[0].message)
+    }
+
+    // スラッグの重複チェック
+    const existingPost = await prisma.blogPost.findUnique({
+      where: { slug: parsed.data.slug },
+    })
+    if (existingPost) {
+      return createFailure('このスラッグは既に使用されています')
+    }
+
+    const post = await prisma.blogPost.create({
+      data: {
+        ...parsed.data,
+        status: BlogPostStatus.DRAFT,
+        authorId: user.id,
+      },
+    })
+
+    revalidatePath('/admin/blog')
+    revalidatePath('/blog')
+    revalidateTag('blog', { expire: 0 })
+
+    return createSuccess('ブログ記事を作成しました', { id: post.id })
   }
-
-  // スラッグの重複チェック
-  const existingPost = await prisma.blogPost.findUnique({
-    where: { slug: parsed.data.slug },
-  })
-  if (existingPost) {
-    return createFailure('このスラッグは既に使用されています')
-  }
-
-  const { isPublished, publishedAt, contentWidth, contentWidthCustom, ...rest } = parsed.data
-
-  const post = await prisma.blogPost.create({
-    data: {
-      ...rest,
-      isPublished,
-      isDraft: !isPublished,
-      publishedAt: determinePublishedAt(publishedAt, isPublished),
-      authorId: user.id,
-      contentWidth: contentWidth ? (contentWidth as LayoutWidth) : null,
-      contentWidthCustom: contentWidthCustom ?? null,
-    },
-  })
-
-  revalidatePath('/admin/blog')
-  revalidatePath('/blog')
-  revalidateTag('blog', { expire: 0 })
-
-  return createSuccess('ブログ記事を作成しました', { id: post.id })
-})
+)
 
 /**
  * ブログ記事を更新
  */
-export const updateBlogPost = withAuth(async (_user, id: string, data: BlogPostInput) => {
-  const parsed = blogPostSchema.safeParse(data)
-  if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+export const updateBlogPost = withPermission<[string, UpdateBlogPostInput], void>(
+  'blog',
+  'update'
+)(async (user, id, data) => {
+    const parsed = updateBlogPostSchema.safeParse(data)
+    if (!parsed.success) {
+      return createFailure(parsed.error.issues[0].message)
+    }
+
+    const existingPost = await prisma.blogPost.findUnique({
+      where: { id },
+    })
+
+    if (!existingPost) {
+      return createFailure('ブログ記事が見つかりません')
+    }
+
+    // スラッグの重複チェック（自分以外）
+    const duplicateSlug = await prisma.blogPost.findFirst({
+      where: {
+        slug: parsed.data.slug,
+        id: { not: id },
+      },
+    })
+    if (duplicateSlug) {
+      return createFailure('このスラッグは既に使用されています')
+    }
+
+    const { contentWidth, contentWidthCustom, ...rest } = parsed.data
+
+    await prisma.blogPost.update({
+      where: { id },
+      data: {
+        ...rest,
+        contentWidth: contentWidth ?? null,
+        contentWidthCustom: contentWidthCustom ?? null,
+      },
+    })
+
+    revalidatePath('/admin/blog')
+    revalidatePath(`/admin/blog/${id}`)
+    revalidatePath('/blog')
+    revalidatePath(`/blog/${parsed.data.slug}`)
+    revalidateTag('blog', { expire: 0 })
+    revalidateTag(`blog-${id}`, { expire: 0 })
+
+    return createSuccess('ブログ記事を保存しました')
   }
-
-  const existingPost = await prisma.blogPost.findUnique({
-    where: { id },
-  })
-
-  if (!existingPost) {
-    return createFailure('ブログ記事が見つかりません')
-  }
-
-  // スラッグの重複チェック（自分以外）
-  const duplicateSlug = await prisma.blogPost.findFirst({
-    where: {
-      slug: parsed.data.slug,
-      id: { not: id },
-    },
-  })
-  if (duplicateSlug) {
-    return createFailure('このスラッグは既に使用されています')
-  }
-
-  const { isPublished, publishedAt, contentWidth, contentWidthCustom, ...rest } = parsed.data
-
-  await prisma.blogPost.update({
-    where: { id },
-    data: {
-      ...rest,
-      isPublished,
-      isDraft: !isPublished,
-      publishedAt: determinePublishedAt(publishedAt, isPublished, existingPost.publishedAt),
-      contentWidth: contentWidth ? (contentWidth as LayoutWidth) : null,
-      contentWidthCustom: contentWidthCustom ?? null,
-    },
-  })
-
-  revalidatePath('/admin/blog')
-  revalidatePath(`/admin/blog/${id}`)
-  revalidatePath('/blog')
-  revalidatePath(`/blog/${parsed.data.slug}`)
-  revalidateTag('blog', { expire: 0 })
-  revalidateTag(`blog-${id}`, { expire: 0 })
-
-  return createSuccess('ブログ記事を更新しました')
-})
+)
 
 /**
  * ブログ記事を削除
  */
-export const deleteBlogPost = withAuth(async (_user, id: string) => {
-  const post = await prisma.blogPost.findUnique({
-    where: { id },
-  })
+export const deleteBlogPost = withPermission<[string], void>(
+  'blog',
+  'delete'
+)(async (user, id) => {
+    const post = await prisma.blogPost.findUnique({
+      where: { id },
+    })
 
-  if (!post) {
-    return createFailure('ブログ記事が見つかりません')
+    if (!post) {
+      return createFailure('ブログ記事が見つかりません')
+    }
+
+    await prisma.blogPost.delete({
+      where: { id },
+    })
+
+    revalidatePath('/admin/blog')
+    revalidatePath('/blog')
+
+    return createSuccess('ブログ記事を削除しました')
   }
-
-  await prisma.blogPost.delete({
-    where: { id },
-  })
-
-  revalidatePath('/admin/blog')
-  revalidatePath('/blog')
-
-  return createSuccess('ブログ記事を削除しました')
-})
+)
 
 /**
- * 公開状態を切り替え
+ * ブログ記事を公開（バージョン自動作成）
  */
-export const toggleBlogPostPublish = withAuth(async (_user, id: string) => {
-  const post = await prisma.blogPost.findUnique({
-    where: { id },
-  })
+export const publishBlogPost = withPermission<[string], void>(
+  'blog',
+  'publish'
+)(async (user, id) => {
+    const post = await prisma.blogPost.findUnique({
+      where: { id },
+    })
 
-  if (!post) {
-    return createFailure('ブログ記事が見つかりません')
+    if (!post) {
+      return createFailure('ブログ記事が見つかりません')
+    }
+
+    // 次のバージョン番号を取得
+    const latestVersion = await prisma.blogPostVersion.findFirst({
+      where: { postId: id },
+      orderBy: { version: 'desc' },
+      select: { version: true },
+    })
+    const nextVersion = (latestVersion?.version ?? 0) + 1
+
+    // トランザクションで公開 + バージョン作成
+    await prisma.$transaction([
+      prisma.blogPost.update({
+        where: { id },
+        data: {
+          status: BlogPostStatus.PUBLISHED,
+          publishedAt: post.publishedAt ?? new Date(),
+        },
+      }),
+      prisma.blogPostVersion.create({
+        data: {
+          postId: id,
+          version: nextVersion,
+          content: post.content,
+          createdBy: user.id,
+        },
+      }),
+    ])
+
+    revalidatePath('/admin/blog')
+    revalidatePath(`/admin/blog/${id}`)
+    revalidatePath('/blog')
+    revalidatePath(`/blog/${post.slug}`)
+    revalidateTag('blog', { expire: 0 })
+    revalidateTag(`blog-${id}`, { expire: 0 })
+
+    return createSuccess(`公開しました（バージョン ${nextVersion}）`)
+  }
+)
+
+/**
+ * ブログ記事を非公開（下書きに戻す）
+ */
+export const unpublishBlogPost = withPermission<[string], void>(
+  'blog',
+  'publish'
+)(async (user, id) => {
+    const post = await prisma.blogPost.findUnique({
+      where: { id },
+    })
+
+    if (!post) {
+      return createFailure('ブログ記事が見つかりません')
+    }
+
+    await prisma.blogPost.update({
+      where: { id },
+      data: {
+        status: BlogPostStatus.DRAFT,
+      },
+    })
+
+    revalidatePath('/admin/blog')
+    revalidatePath(`/admin/blog/${id}`)
+    revalidatePath('/blog')
+
+    return createSuccess('下書きに戻しました')
+  }
+)
+
+/**
+ * バックアップを作成（バージョン手動作成）
+ */
+export const createBlogPostBackup = withPermission<[string], { version: number }>(
+  'blog',
+  'update'
+)(async (user, id) => {
+    const post = await prisma.blogPost.findUnique({
+      where: { id },
+    })
+
+    if (!post) {
+      return createFailure('ブログ記事が見つかりません')
+    }
+
+    // 次のバージョン番号を取得
+    const latestVersion = await prisma.blogPostVersion.findFirst({
+      where: { postId: id },
+      orderBy: { version: 'desc' },
+      select: { version: true },
+    })
+    const nextVersion = (latestVersion?.version ?? 0) + 1
+
+    await prisma.blogPostVersion.create({
+      data: {
+        postId: id,
+        version: nextVersion,
+        content: post.content,
+        createdBy: user.id,
+      },
+    })
+
+    return createSuccess(`バックアップを作成しました（バージョン ${nextVersion}）`, { version: nextVersion })
+  }
+)
+
+/**
+ * バージョン履歴を取得
+ */
+export async function getBlogPostVersions(postId: string): Promise<BlogPostVersionData[]> {
+  const hasPermission = await checkReadPermission()
+  if (!hasPermission) {
+    return []
   }
 
-  const newIsPublished = !post.isPublished
-
-  await prisma.blogPost.update({
-    where: { id },
-    data: {
-      isPublished: newIsPublished,
-      isDraft: !newIsPublished,
-      publishedAt: newIsPublished && !post.publishedAt ? new Date() : post.publishedAt,
-    },
+  const versions = await prisma.blogPostVersion.findMany({
+    where: { postId },
+    orderBy: { version: 'desc' },
   })
 
-  revalidatePath('/admin/blog')
-  revalidatePath(`/admin/blog/${id}`)
-  revalidatePath('/blog')
+  return versions
+}
 
-  return createSuccess('公開状態を変更しました')
-})
+/**
+ * バージョンを復元
+ */
+export const restoreBlogPostVersion = withPermission<[string, number], void>(
+  'blog',
+  'update'
+)(async (user, postId, version) => {
+    const versionData = await prisma.blogPostVersion.findUnique({
+      where: {
+        postId_version: { postId, version },
+      },
+    })
+
+    if (!versionData) {
+      return createFailure('バージョンが見つかりません')
+    }
+
+    await prisma.blogPost.update({
+      where: { id: postId },
+      data: {
+        content: versionData.content,
+        status: BlogPostStatus.DRAFT,
+      },
+    })
+
+    revalidatePath('/admin/blog')
+    revalidatePath(`/admin/blog/${postId}`)
+    revalidatePath('/blog')
+
+    return createSuccess(`バージョン ${version} を復元しました（下書き状態）`)
+  }
+)
 
 // =============================================================================
 // Blog Category Actions
@@ -385,7 +579,10 @@ export const toggleBlogPostPublish = withAuth(async (_user, id: string) => {
  * カテゴリ一覧を取得
  */
 export async function getBlogCategories(): Promise<BlogCategoryData[]> {
-  await verifyAdminSession()
+  const hasPermission = await checkReadPermission()
+  if (!hasPermission) {
+    return []
+  }
 
   const categories = await prisma.blogCategory.findMany({
     include: {
@@ -403,7 +600,10 @@ export async function getBlogCategories(): Promise<BlogCategoryData[]> {
  * カテゴリ詳細を取得
  */
 export async function getBlogCategoryById(id: string): Promise<BlogCategoryData | null> {
-  await verifyAdminSession()
+  const hasPermission = await checkReadPermission()
+  if (!hasPermission) {
+    return null
+  }
 
   const category = await prisma.blogCategory.findUnique({
     where: { id },
@@ -420,116 +620,188 @@ export async function getBlogCategoryById(id: string): Promise<BlogCategoryData 
 /**
  * カテゴリを作成
  */
-export const createBlogCategory = withAuth(async (_user, data: BlogCategoryInput) => {
-  const parsed = blogCategorySchema.safeParse(data)
-  if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+export const createBlogCategory = withPermission<[BlogCategoryInput], { id: string }>(
+  'blog',
+  'create'
+)(async (user, data) => {
+    const parsed = blogCategorySchema.safeParse(data)
+    if (!parsed.success) {
+      return createFailure(parsed.error.issues[0].message)
+    }
+
+    // スラッグの重複チェック
+    const existingCategory = await prisma.blogCategory.findUnique({
+      where: { slug: parsed.data.slug },
+    })
+    if (existingCategory) {
+      return createFailure('このスラッグは既に使用されています')
+    }
+
+    const category = await prisma.blogCategory.create({
+      data: parsed.data,
+    })
+
+    revalidatePath('/admin/blog/categories')
+    revalidatePath('/admin/blog')
+
+    return createSuccess('カテゴリを作成しました', { id: category.id })
   }
-
-  // スラッグの重複チェック
-  const existingCategory = await prisma.blogCategory.findUnique({
-    where: { slug: parsed.data.slug },
-  })
-  if (existingCategory) {
-    return createFailure('このスラッグは既に使用されています')
-  }
-
-  const category = await prisma.blogCategory.create({
-    data: parsed.data,
-  })
-
-  revalidatePath('/admin/blog/categories')
-  revalidatePath('/admin/blog')
-
-  return createSuccess('カテゴリを作成しました', { id: category.id })
-})
+)
 
 /**
  * カテゴリを更新
  */
-export const updateBlogCategory = withAuth(async (_user, id: string, data: BlogCategoryInput) => {
-  const parsed = blogCategorySchema.safeParse(data)
-  if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+export const updateBlogCategory = withPermission<[string, BlogCategoryInput], void>(
+  'blog',
+  'update'
+)(async (user, id, data) => {
+    const parsed = blogCategorySchema.safeParse(data)
+    if (!parsed.success) {
+      return createFailure(parsed.error.issues[0].message)
+    }
+
+    const existingCategory = await prisma.blogCategory.findUnique({
+      where: { id },
+    })
+
+    if (!existingCategory) {
+      return createFailure('カテゴリが見つかりません')
+    }
+
+    // スラッグの重複チェック（自分以外）
+    const duplicateSlug = await prisma.blogCategory.findFirst({
+      where: {
+        slug: parsed.data.slug,
+        id: { not: id },
+      },
+    })
+    if (duplicateSlug) {
+      return createFailure('このスラッグは既に使用されています')
+    }
+
+    await prisma.blogCategory.update({
+      where: { id },
+      data: parsed.data,
+    })
+
+    revalidatePath('/admin/blog/categories')
+    revalidatePath('/admin/blog')
+
+    return createSuccess('カテゴリを更新しました')
   }
-
-  const existingCategory = await prisma.blogCategory.findUnique({
-    where: { id },
-  })
-
-  if (!existingCategory) {
-    return createFailure('カテゴリが見つかりません')
-  }
-
-  // スラッグの重複チェック（自分以外）
-  const duplicateSlug = await prisma.blogCategory.findFirst({
-    where: {
-      slug: parsed.data.slug,
-      id: { not: id },
-    },
-  })
-  if (duplicateSlug) {
-    return createFailure('このスラッグは既に使用されています')
-  }
-
-  await prisma.blogCategory.update({
-    where: { id },
-    data: parsed.data,
-  })
-
-  revalidatePath('/admin/blog/categories')
-  revalidatePath('/admin/blog')
-
-  return createSuccess('カテゴリを更新しました')
-})
+)
 
 /**
  * カテゴリを削除
  */
-export const deleteBlogCategory = withAuth(async (_user, id: string) => {
-  const category = await prisma.blogCategory.findUnique({
-    where: { id },
-    include: {
-      _count: {
-        select: { posts: true },
+export const deleteBlogCategory = withPermission<[string], void>(
+  'blog',
+  'delete'
+)(async (user, id) => {
+    const category = await prisma.blogCategory.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: { posts: true },
+        },
       },
-    },
-  })
+    })
 
-  if (!category) {
-    return createFailure('カテゴリが見つかりません')
+    if (!category) {
+      return createFailure('カテゴリが見つかりません')
+    }
+
+    if (category._count.posts > 0) {
+      return createFailure('このカテゴリには記事が紐づいているため削除できません')
+    }
+
+    await prisma.blogCategory.delete({
+      where: { id },
+    })
+
+    revalidatePath('/admin/blog/categories')
+    revalidatePath('/admin/blog')
+
+    return createSuccess('カテゴリを削除しました')
   }
-
-  if (category._count.posts > 0) {
-    return createFailure('このカテゴリには記事が紐づいているため削除できません')
-  }
-
-  await prisma.blogCategory.delete({
-    where: { id },
-  })
-
-  revalidatePath('/admin/blog/categories')
-  revalidatePath('/admin/blog')
-
-  return createSuccess('カテゴリを削除しました')
-})
+)
 
 /**
  * ブログカテゴリの順序を更新
  */
-export const updateBlogCategoryOrder = withAuth(async (_user, items: { id: string; order: number }[]) => {
-  await prisma.$transaction(
-    items.map((item) =>
-      prisma.blogCategory.update({
-        where: { id: item.id },
-        data: { order: item.order },
-      })
+export const updateBlogCategoryOrder = withPermission<[{ id: string; order: number }[]], void>(
+  'blog',
+  'update'
+)(async (user, items) => {
+    await prisma.$transaction(
+      items.map((item) =>
+        prisma.blogCategory.update({
+          where: { id: item.id },
+          data: { order: item.order },
+        })
+      )
     )
-  )
 
-  revalidatePath('/admin/blog/categories')
-  revalidatePath('/admin/blog')
-  revalidatePath('/')
+    revalidatePath('/admin/blog/categories')
+    revalidatePath('/admin/blog')
+    revalidatePath('/')
 
-  return createSuccess('順序を更新しました')
-})
+    return createSuccess('順序を更新しました')
+  }
+)
+
+// =============================================================================
+// Public Functions (認証不要)
+// =============================================================================
+
+export type PublicBlogPost = {
+  id: string
+  title: string
+  slug: string
+  excerpt: string
+  thumbnailUrl: string
+  publishedAt: Date
+}
+
+export type GetPublishedBlogPostsOptions = {
+  take?: number
+  orderBy?: 'publishedAt' | 'viewCount'
+  categoryId?: string
+}
+
+/**
+ * 公開済みブログ記事一覧を取得（認証不要）
+ * ホームページや公開一覧ページで使用
+ */
+export async function getPublishedBlogPosts(
+  options: GetPublishedBlogPostsOptions = {}
+): Promise<PublicBlogPost[]> {
+  const { take = 3, orderBy = 'publishedAt', categoryId } = options
+
+  const posts = await prisma.blogPost.findMany({
+    where: {
+      status: BlogPostStatus.PUBLISHED,
+      publishedAt: { not: null },
+      ...(categoryId && { categoryId }),
+    },
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      excerpt: true,
+      thumbnailUrl: true,
+      publishedAt: true,
+    },
+    orderBy: {
+      [orderBy]: 'desc',
+    },
+    take,
+  })
+
+  return posts
+    .filter((post) => post.publishedAt && post.publishedAt <= new Date())
+    .map((post) => ({
+      ...post,
+      publishedAt: post.publishedAt!,
+    }))
+}

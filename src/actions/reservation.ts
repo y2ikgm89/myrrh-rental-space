@@ -1,5 +1,6 @@
 'use server'
 
+import { headers } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 import {
   reservationSchema,
@@ -9,7 +10,7 @@ import {
   type ReservationActionResult,
   type TimeSlot,
 } from '@/lib/validations/reservation'
-import { ReservationStatus } from '@/generated/prisma/client/enums'
+import { ReservationStatus } from '@/lib/validations/enums'
 import {
   sendReservationConfirmationEmail,
   sendReservationAdminNotification,
@@ -18,6 +19,7 @@ import { syncReservationToCalendar } from '@/lib/calendar-sync'
 import { checkReservationOverlap } from '@/lib/reservation-utils'
 import { validateTurnstile, extractFieldErrors } from '@/lib/action-helpers'
 import { getTermsAgreementSettings } from '@/actions/admin/settings'
+import { recordTermsAgreement } from '@/actions/public/terms'
 
 /**
  * 予約を作成する Server Action
@@ -48,8 +50,22 @@ export async function createReservation(
     }
   }
 
-  const { spaceId, date, startTime, endTime, lastName, firstName, email, phoneNumber, notes } =
-    validation.data
+  const {
+    spaceId,
+    date,
+    startTime,
+    endTime,
+    lastName,
+    firstName,
+    email,
+    phoneNumber,
+    notes,
+  } = validation.data
+
+  // スペース固有の規約同意情報（inputから直接取得）
+  const termsAgreement = 'termsAgreement' in input
+    ? (input.termsAgreement as { termsId: string; versionId: string } | undefined)
+    : undefined
 
   // 日時を Date オブジェクトに変換
   const startDateTime = new Date(`${date}T${startTime}:00`)
@@ -144,12 +160,29 @@ export async function createReservation(
         },
       })
 
-      return reservation
+      return { reservation, customer }
     })
+
+    // スペース固有の規約同意を記録
+    if (termsAgreement) {
+      const headersList = await headers()
+      const ipAddress = headersList.get('x-forwarded-for')?.split(',')[0].trim() || null
+      const userAgent = headersList.get('user-agent') || null
+
+      await recordTermsAgreement({
+        termsId: termsAgreement.termsId,
+        versionId: termsAgreement.versionId,
+        reservationId: result.reservation.id,
+        guestName: `${lastName} ${firstName}`,
+        guestEmail: email,
+        ipAddress: ipAddress || undefined,
+        userAgent: userAgent || undefined,
+      })
+    }
 
     // 予約確認メールを送信
     const emailData = {
-      reservationId: result.id,
+      reservationId: result.reservation.id,
       customerEmail: email,
       customerName: `${lastName} ${firstName}`,
       spaceName: space.name,
@@ -162,7 +195,7 @@ export async function createReservation(
 
     // カレンダー同期用データ
     const calendarData = {
-      reservationId: result.id,
+      reservationId: result.reservation.id,
       spaceName: space.name,
       customerName: `${lastName} ${firstName}`,
       customerEmail: email,
@@ -185,7 +218,7 @@ export async function createReservation(
     return {
       success: true,
       message: `予約を受け付けました。確認メールをお送りしましたので、ご確認ください。`,
-      reservationId: result.id,
+      reservationId: result.reservation.id,
     }
   } catch (error) {
     console.error('Reservation creation error:', error)

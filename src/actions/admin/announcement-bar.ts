@@ -3,7 +3,15 @@
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
-import { createSuccess, createFailure, withAuth } from '@/types'
+import {
+  createSuccess,
+  createFailure,
+  withPermission,
+  type ActionResult,
+} from '@/types'
+import { getSession, getRoleFromSession } from '@/lib/auth'
+import { hasPermission, canAccessAdmin } from '@/lib/permissions'
+import { logPermissionDenied } from '@/lib/audit'
 
 // =============================================================================
 // Types
@@ -50,13 +58,38 @@ const announcementBarSchema = z.object({
 export type AnnouncementBarInput = z.infer<typeof announcementBarSchema>
 
 // =============================================================================
-// Actions
+// Helper Functions
+// =============================================================================
+
+/**
+ * 読み取り権限チェック（権限なしの場合は空結果を返すための軽量チェック）
+ */
+async function checkReadPermission(): Promise<boolean> {
+  const session = await getSession()
+  if (!session?.user) return false
+
+  const role = getRoleFromSession(session)
+  if (!role) return false
+  if (!canAccessAdmin(role)) return false
+  if (!hasPermission(role, 'announcementBar', 'read')) {
+    void logPermissionDenied(session.user.id, 'announcementBar', 'read')
+    return false
+  }
+  return true
+}
+
+// =============================================================================
+// Read Actions
 // =============================================================================
 
 /**
  * お知らせバー一覧を取得（管理画面用）
  */
 export async function getAnnouncementBars(): Promise<GetAnnouncementBarsResult> {
+  if (!(await checkReadPermission())) {
+    return { items: [], total: 0 }
+  }
+
   const items = await prisma.announcementBar.findMany({
     orderBy: [
       { priority: 'desc' },
@@ -76,6 +109,8 @@ export async function getAnnouncementBars(): Promise<GetAnnouncementBarsResult> 
  *
  * Note: 表示期間（startAt/endAt）のフィルタリングはクライアントサイドで実行
  * cacheComponentsモードでは new Date() が静的レンダリング時に使用できないため
+ *
+ * 権限チェック不要（公開API）
  */
 export async function getActiveAnnouncementBars(): Promise<AnnouncementBarData[]> {
   const bars = await prisma.announcementBar.findMany({
@@ -95,15 +130,26 @@ export async function getActiveAnnouncementBars(): Promise<AnnouncementBarData[]
  * お知らせバー詳細を取得
  */
 export async function getAnnouncementBarById(id: string): Promise<AnnouncementBarData | null> {
+  if (!(await checkReadPermission())) {
+    return null
+  }
+
   return prisma.announcementBar.findUnique({
     where: { id },
   })
 }
 
+// =============================================================================
+// Write Actions (withPermission - 監査ログ自動記録)
+// =============================================================================
+
 /**
  * お知らせバーを作成
  */
-export const createAnnouncementBar = withAuth(async (_user, data: AnnouncementBarInput) => {
+export const createAnnouncementBar = withPermission<
+  [data: AnnouncementBarInput],
+  { id: string }
+>('announcementBar', 'create')(async (user, data): Promise<ActionResult<{ id: string }>> => {
   const parsed = announcementBarSchema.safeParse(data)
   if (!parsed.success) {
     return createFailure(parsed.error.issues[0].message)
@@ -146,7 +192,10 @@ export const createAnnouncementBar = withAuth(async (_user, data: AnnouncementBa
 /**
  * お知らせバーを更新
  */
-export const updateAnnouncementBar = withAuth(async (_user, id: string, data: AnnouncementBarInput) => {
+export const updateAnnouncementBar = withPermission<
+  [id: string, data: AnnouncementBarInput],
+  void
+>('announcementBar', 'update')(async (user, id, data): Promise<ActionResult<void>> => {
   const parsed = announcementBarSchema.safeParse(data)
   if (!parsed.success) {
     return createFailure(parsed.error.issues[0].message)
@@ -198,7 +247,10 @@ export const updateAnnouncementBar = withAuth(async (_user, id: string, data: An
 /**
  * お知らせバーを削除
  */
-export const deleteAnnouncementBar = withAuth(async (_user, id: string) => {
+export const deleteAnnouncementBar = withPermission<[id: string], void>(
+  'announcementBar',
+  'delete'
+)(async (user, id): Promise<ActionResult<void>> => {
   const bar = await prisma.announcementBar.findUnique({
     where: { id },
   })
@@ -220,7 +272,10 @@ export const deleteAnnouncementBar = withAuth(async (_user, id: string) => {
 /**
  * 有効/無効を切り替え
  */
-export const toggleAnnouncementBarActive = withAuth(async (_user, id: string) => {
+export const toggleAnnouncementBarActive = withPermission<[id: string], void>(
+  'announcementBar',
+  'update'
+)(async (user, id): Promise<ActionResult<void>> => {
   const bar = await prisma.announcementBar.findUnique({
     where: { id },
   })
