@@ -267,7 +267,7 @@ export async function getReservationChartData(): Promise<ChartDataPoint[]> {
       DATE("createdAt") as date,
       COUNT(*)::bigint as reservations,
       SUM(CASE WHEN status = 'CONFIRMED' THEN "totalPrice"::numeric ELSE 0 END) as revenue
-    FROM "Reservation"
+    FROM "reservations"
     WHERE "createdAt" >= ${thirtyDaysAgo}
       AND status != 'CANCELLED'
     GROUP BY DATE("createdAt")
