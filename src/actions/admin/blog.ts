@@ -315,7 +315,7 @@ export const createBlogPost = withPermission<[CreateBlogPostInput], { id: string
       },
     })
 
-    revalidateTag('blog-list', 'default')
+    revalidateTag('blog', 'default')
 
     return createSuccess('ブログ記事を作成しました', { id: post.id })
   }
@@ -354,6 +354,9 @@ export const updateBlogPost = withPermission<[string, UpdateBlogPostInput], void
 
     const { contentWidth, contentWidthCustom, ...rest } = parsed.data
 
+    // 旧 slug でのキャッシュ無効化のため、更新前の slug を保持
+    const oldSlug = existingPost.slug
+
     await prisma.blogPost.update({
       where: { id },
       data: {
@@ -363,8 +366,12 @@ export const updateBlogPost = withPermission<[string, UpdateBlogPostInput], void
       },
     })
 
-    revalidateTag('blog-list', 'default')
-    revalidateTag(`blog-${id}`, 'default')
+    revalidateTag('blog', 'default')
+    // slug 変更時は両方を無効化
+    revalidateTag(`blog-${oldSlug}`, 'default')
+    if (parsed.data.slug !== oldSlug) {
+      revalidateTag(`blog-${parsed.data.slug}`, 'default')
+    }
 
     return createSuccess('ブログ記事を保存しました')
   }
@@ -389,8 +396,8 @@ export const deleteBlogPost = withPermission<[string], void>(
       where: { id },
     })
 
-    revalidateTag('blog-list', 'default')
-    revalidateTag(`blog-${id}`, 'default')
+    revalidateTag('blog', 'default')
+    revalidateTag(`blog-${post.slug}`, 'default')
 
     return createSuccess('ブログ記事を削除しました')
   }
@@ -438,8 +445,8 @@ export const publishBlogPost = withPermission<[string], void>(
       }),
     ])
 
-    revalidateTag('blog-list', 'default')
-    revalidateTag(`blog-${id}`, 'default')
+    revalidateTag('blog', 'default')
+    revalidateTag(`blog-${post.slug}`, 'default')
 
     return createSuccess(`公開しました（バージョン ${nextVersion}）`)
   }
@@ -467,8 +474,8 @@ export const unpublishBlogPost = withPermission<[string], void>(
       },
     })
 
-    revalidateTag('blog-list', 'default')
-    revalidateTag(`blog-${id}`, 'default')
+    revalidateTag('blog', 'default')
+    revalidateTag(`blog-${post.slug}`, 'default')
 
     return createSuccess('下書きに戻しました')
   }
@@ -534,14 +541,24 @@ export const restoreBlogPostVersion = withPermission<[string, number], void>(
   'blog',
   'update'
 )(async (user, postId, version) => {
-    const versionData = await prisma.blogPostVersion.findUnique({
-      where: {
-        postId_version: { postId, version },
-      },
-    })
+    const [versionData, post] = await Promise.all([
+      prisma.blogPostVersion.findUnique({
+        where: {
+          postId_version: { postId, version },
+        },
+      }),
+      prisma.blogPost.findUnique({
+        where: { id: postId },
+        select: { slug: true },
+      }),
+    ])
 
     if (!versionData) {
       return createFailure('バージョンが見つかりません')
+    }
+
+    if (!post) {
+      return createFailure('ブログ記事が見つかりません')
     }
 
     await prisma.blogPost.update({
@@ -552,8 +569,8 @@ export const restoreBlogPostVersion = withPermission<[string, number], void>(
       },
     })
 
-    revalidateTag('blog-list', 'default')
-    revalidateTag(`blog-${postId}`, 'default')
+    revalidateTag('blog', 'default')
+    revalidateTag(`blog-${post.slug}`, 'default')
 
     return createSuccess(`バージョン ${version} を復元しました（下書き状態）`)
   }
@@ -629,8 +646,8 @@ export const createBlogCategory = withPermission<[BlogCategoryInput], { id: stri
       data: parsed.data,
     })
 
-    revalidateTag('blog-categories', 'default')
-    revalidateTag('blog-list', 'default')
+    // カテゴリ変更時はブログ一覧のキャッシュも無効化
+    revalidateTag('blog', 'default')
 
     return createSuccess('カテゴリを作成しました', { id: category.id })
   }
@@ -672,8 +689,8 @@ export const updateBlogCategory = withPermission<[string, BlogCategoryInput], vo
       data: parsed.data,
     })
 
-    revalidateTag('blog-categories', 'default')
-    revalidateTag('blog-list', 'default')
+    // カテゴリ変更時はブログ一覧のキャッシュも無効化
+    revalidateTag('blog', 'default')
 
     return createSuccess('カテゴリを更新しました')
   }
@@ -707,8 +724,8 @@ export const deleteBlogCategory = withPermission<[string], void>(
       where: { id },
     })
 
-    revalidateTag('blog-categories', 'default')
-    revalidateTag('blog-list', 'default')
+    // カテゴリ変更時はブログ一覧のキャッシュも無効化
+    revalidateTag('blog', 'default')
 
     return createSuccess('カテゴリを削除しました')
   }
@@ -730,8 +747,8 @@ export const updateBlogCategoryOrder = withPermission<[{ id: string; order: numb
       )
     )
 
-    revalidateTag('blog-categories', 'default')
-    revalidateTag('blog-list', 'default')
+    // カテゴリ順序変更時はブログ一覧のキャッシュも無効化
+    revalidateTag('blog', 'default')
 
     return createSuccess('順序を更新しました')
   }
