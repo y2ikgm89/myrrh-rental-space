@@ -15,7 +15,7 @@ import Image from 'next/image'
 import { tv } from 'tailwind-variants'
 import { cn } from '@/lib/utils'
 import { Container, Card, CardContent, CardFooter } from '@/components/site/ui'
-import { prisma } from '@/lib/prisma'
+import { prisma, type Space, Prisma } from '@/lib/prisma'
 import { loadSpaceSearchParams } from '@/lib/nuqs'
 import {
   spaceSearchParamsDefaults,
@@ -24,7 +24,6 @@ import {
 import { SpaceFilters } from './_components/SpaceFilters'
 import { Pagination } from './_components/Pagination'
 import { generatePageMetadata } from '@/lib/page-metadata'
-import type { Space, Prisma } from '@/generated/prisma/client/client'
 import type { SearchParams } from 'nuqs/server'
 import type { ReactElement } from 'react'
 

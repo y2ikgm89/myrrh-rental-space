@@ -6,9 +6,21 @@
 
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
+import dynamic from 'next/dynamic'
 import { Button, Label } from '@/components/admin/ui'
-import { LexicalEditor } from '@/components/admin/editor/lexical/LexicalEditor'
 import { EDITOR_PROSE_CLASSES } from '@/lib/styles/prose'
+
+const LexicalEditor = dynamic(
+  () => import('@/components/admin/editor/lexical/LexicalEditor').then((mod) => ({ default: mod.LexicalEditor })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[400px] flex items-center justify-center border rounded-lg bg-muted/50">
+        <div className="animate-pulse text-muted-foreground">エディタを読み込み中...</div>
+      </div>
+    ),
+  }
+)
 import {
   createTermsVersion,
   updateTermsVersion,

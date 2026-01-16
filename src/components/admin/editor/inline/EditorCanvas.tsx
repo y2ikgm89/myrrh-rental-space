@@ -8,11 +8,23 @@
  * タイトルのインライン編集に対応
  */
 
+import dynamic from 'next/dynamic'
 import { tv } from 'tailwind-variants'
-import { LexicalEditor } from '@/components/admin/editor'
 import { EDITOR_PROSE_CLASSES } from '@/lib/styles/prose'
 import { InlineTitleEditor } from './InlineTitleEditor'
 import type { EditorCanvasProps } from './types'
+
+const LexicalEditor = dynamic(
+  () => import('@/components/admin/editor').then((mod) => ({ default: mod.LexicalEditor })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[500px] flex items-center justify-center border rounded-lg bg-muted/50">
+        <div className="animate-pulse text-muted-foreground">エディタを読み込み中...</div>
+      </div>
+    ),
+  }
+)
 
 const styles = tv({
   slots: {

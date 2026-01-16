@@ -137,13 +137,8 @@ async function getSpaces(
       },
     })
 
-    // Prisma Decimal → number 変換（シリアライズ可能にする）
-    return spaces.map((space) => ({
-      ...space,
-      area: space.area?.toNumber() ?? null,
-      hourlyPrice: space.hourlyPrice.toNumber(),
-      dailyPrice: space.dailyPrice?.toNumber() ?? null,
-    }))
+    // Prisma の $extends により Decimal は自動的に number に変換済み
+    return spaces
   } catch {
     return []
   }

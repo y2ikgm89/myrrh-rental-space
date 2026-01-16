@@ -1,7 +1,7 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
-import { revalidatePath, revalidateTag } from 'next/cache'
+import { revalidateTag } from 'next/cache'
 import { z } from 'zod'
 import { getSession, getRoleFromSession } from '@/lib/auth'
 import { createSuccess, createFailure, withPermission, type BlogPostWhereInput } from '@/types'
@@ -315,9 +315,7 @@ export const createBlogPost = withPermission<[CreateBlogPostInput], { id: string
       },
     })
 
-    revalidatePath('/admin/blog')
-    revalidatePath('/blog')
-    revalidateTag('blog', { expire: 0 })
+    revalidateTag('blog-list', 'default')
 
     return createSuccess('ブログ記事を作成しました', { id: post.id })
   }
@@ -365,12 +363,8 @@ export const updateBlogPost = withPermission<[string, UpdateBlogPostInput], void
       },
     })
 
-    revalidatePath('/admin/blog')
-    revalidatePath(`/admin/blog/${id}`)
-    revalidatePath('/blog')
-    revalidatePath(`/blog/${parsed.data.slug}`)
-    revalidateTag('blog', { expire: 0 })
-    revalidateTag(`blog-${id}`, { expire: 0 })
+    revalidateTag('blog-list', 'default')
+    revalidateTag(`blog-${id}`, 'default')
 
     return createSuccess('ブログ記事を保存しました')
   }
@@ -395,8 +389,8 @@ export const deleteBlogPost = withPermission<[string], void>(
       where: { id },
     })
 
-    revalidatePath('/admin/blog')
-    revalidatePath('/blog')
+    revalidateTag('blog-list', 'default')
+    revalidateTag(`blog-${id}`, 'default')
 
     return createSuccess('ブログ記事を削除しました')
   }
@@ -444,12 +438,8 @@ export const publishBlogPost = withPermission<[string], void>(
       }),
     ])
 
-    revalidatePath('/admin/blog')
-    revalidatePath(`/admin/blog/${id}`)
-    revalidatePath('/blog')
-    revalidatePath(`/blog/${post.slug}`)
-    revalidateTag('blog', { expire: 0 })
-    revalidateTag(`blog-${id}`, { expire: 0 })
+    revalidateTag('blog-list', 'default')
+    revalidateTag(`blog-${id}`, 'default')
 
     return createSuccess(`公開しました（バージョン ${nextVersion}）`)
   }
@@ -477,9 +467,8 @@ export const unpublishBlogPost = withPermission<[string], void>(
       },
     })
 
-    revalidatePath('/admin/blog')
-    revalidatePath(`/admin/blog/${id}`)
-    revalidatePath('/blog')
+    revalidateTag('blog-list', 'default')
+    revalidateTag(`blog-${id}`, 'default')
 
     return createSuccess('下書きに戻しました')
   }
@@ -563,9 +552,8 @@ export const restoreBlogPostVersion = withPermission<[string, number], void>(
       },
     })
 
-    revalidatePath('/admin/blog')
-    revalidatePath(`/admin/blog/${postId}`)
-    revalidatePath('/blog')
+    revalidateTag('blog-list', 'default')
+    revalidateTag(`blog-${postId}`, 'default')
 
     return createSuccess(`バージョン ${version} を復元しました（下書き状態）`)
   }
@@ -641,8 +629,8 @@ export const createBlogCategory = withPermission<[BlogCategoryInput], { id: stri
       data: parsed.data,
     })
 
-    revalidatePath('/admin/blog/categories')
-    revalidatePath('/admin/blog')
+    revalidateTag('blog-categories', 'default')
+    revalidateTag('blog-list', 'default')
 
     return createSuccess('カテゴリを作成しました', { id: category.id })
   }
@@ -684,8 +672,8 @@ export const updateBlogCategory = withPermission<[string, BlogCategoryInput], vo
       data: parsed.data,
     })
 
-    revalidatePath('/admin/blog/categories')
-    revalidatePath('/admin/blog')
+    revalidateTag('blog-categories', 'default')
+    revalidateTag('blog-list', 'default')
 
     return createSuccess('カテゴリを更新しました')
   }
@@ -719,8 +707,8 @@ export const deleteBlogCategory = withPermission<[string], void>(
       where: { id },
     })
 
-    revalidatePath('/admin/blog/categories')
-    revalidatePath('/admin/blog')
+    revalidateTag('blog-categories', 'default')
+    revalidateTag('blog-list', 'default')
 
     return createSuccess('カテゴリを削除しました')
   }
@@ -742,9 +730,8 @@ export const updateBlogCategoryOrder = withPermission<[{ id: string; order: numb
       )
     )
 
-    revalidatePath('/admin/blog/categories')
-    revalidatePath('/admin/blog')
-    revalidatePath('/')
+    revalidateTag('blog-categories', 'default')
+    revalidateTag('blog-list', 'default')
 
     return createSuccess('順序を更新しました')
   }

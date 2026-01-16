@@ -14,13 +14,25 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
-import { LexicalEditor } from '@/components/admin/editor/lexical'
+import dynamic from 'next/dynamic'
 import {
   InlineEditorLayout,
   EditorHeader,
   useKeyboardShortcuts,
   useBeforeUnload,
 } from '@/components/admin/editor/inline'
+
+const LexicalEditor = dynamic(
+  () => import('@/components/admin/editor/lexical').then((mod) => ({ default: mod.LexicalEditor })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[500px] flex items-center justify-center border rounded-lg bg-muted/50">
+        <div className="animate-pulse text-muted-foreground">エディタを読み込み中...</div>
+      </div>
+    ),
+  }
+)
 import { NewsSidePanel } from '@/components/admin/editor/inline/NewsSidePanel'
 import {
   createNews,
