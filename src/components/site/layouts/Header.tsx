@@ -24,7 +24,11 @@ async function getDesktopNavigationItems(): Promise<NavItem[]> {
       },
       orderBy: { order: 'asc' },
     })
-    return items
+    // Prisma オブジェクトをプレーンオブジェクトに変換
+    return items.map((item) => ({
+      label: item.label,
+      url: item.url,
+    }))
   } catch {
     // DB未接続時は空配列を返す
     return []

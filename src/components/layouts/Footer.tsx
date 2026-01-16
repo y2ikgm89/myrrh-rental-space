@@ -49,7 +49,7 @@ async function getFooterNavItems(): Promise<NavItem[]> {
   cacheLife('hours')
   cacheTag('navigation')
 
-  return safeFetch({
+  const items = await safeFetch({
     fetch: () =>
       prisma.navigationItem.findMany({
         where: { type: 'FOOTER', isActive: true },
@@ -61,6 +61,8 @@ async function getFooterNavItems(): Promise<NavItem[]> {
     operationName: 'getFooterNavItems',
     context: { component: 'Footer' },
   })
+  // Prisma オブジェクトをプレーンオブジェクトに変換
+  return items.map((item) => ({ label: item.label, url: item.url }))
 }
 
 async function getSocialLinks(): Promise<SocialLinkItem[]> {
@@ -68,7 +70,7 @@ async function getSocialLinks(): Promise<SocialLinkItem[]> {
   cacheLife('hours')
   cacheTag('social-links')
 
-  return safeFetch({
+  const links = await safeFetch({
     fetch: () =>
       prisma.socialLink.findMany({
         where: { isActive: true },
@@ -87,6 +89,14 @@ async function getSocialLinks(): Promise<SocialLinkItem[]> {
     operationName: 'getSocialLinks',
     context: { component: 'Footer' },
   })
+  // Prisma オブジェクトをプレーンオブジェクトに変換
+  return links.map((link) => ({
+    id: link.id,
+    platform: link.platform,
+    url: link.url,
+    showOnDesktop: link.showOnDesktop,
+    showOnMobile: link.showOnMobile,
+  }))
 }
 
 type FooterSettings = Pick<

@@ -137,8 +137,29 @@ async function getSpaces(
       },
     })
 
-    // Prisma の $extends により Decimal は自動的に number に変換済み
-    return spaces
+    // Prisma オブジェクトをプレーンオブジェクトに変換
+    // Symbol プロパティを除去して Client Components に渡せるようにする
+    return spaces.map((space) => ({
+      id: space.id,
+      name: space.name,
+      description: space.description,
+      address: space.address,
+      access: space.access,
+      capacity: space.capacity,
+      area: space.area,
+      hourlyPrice: space.hourlyPrice,
+      dailyPrice: space.dailyPrice,
+      mainImageUrl: space.mainImageUrl,
+      imageUrls: space.imageUrls,
+      facilities: space.facilities,
+      businessHours: space.businessHours,
+      isPublished: space.isPublished,
+      publishedAt: space.publishedAt,
+      isActive: space.isActive,
+      createdAt: space.createdAt,
+      updatedAt: space.updatedAt,
+      termsId: space.termsId,
+    }))
   } catch {
     return []
   }

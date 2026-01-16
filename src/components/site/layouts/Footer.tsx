@@ -30,7 +30,11 @@ async function getFooterNavItems(): Promise<NavItem[]> {
       },
       orderBy: { order: 'asc' },
     })
-    return items
+    // Prisma オブジェクトをプレーンオブジェクトに変換
+    return items.map((item) => ({
+      label: item.label,
+      url: item.url,
+    }))
   } catch {
     return []
   }
@@ -42,7 +46,12 @@ async function getSocialLinks(): Promise<SocialLinkItem[]> {
       where: { isActive: true },
       orderBy: { order: 'asc' },
     })
-    return links
+    // Prisma オブジェクトをプレーンオブジェクトに変換
+    return links.map((link) => ({
+      id: link.id,
+      platform: link.platform,
+      url: link.url,
+    }))
   } catch {
     return []
   }

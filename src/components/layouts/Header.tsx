@@ -20,7 +20,7 @@ async function getDesktopNavigationItems(): Promise<NavItem[]> {
   cacheLife('hours')
   cacheTag('navigation')
 
-  return safeFetch({
+  const items = await safeFetch({
     fetch: () =>
       prisma.navigationItem.findMany({
         where: { type: 'HEADER_DESKTOP', isActive: true },
@@ -32,6 +32,8 @@ async function getDesktopNavigationItems(): Promise<NavItem[]> {
     operationName: 'getDesktopNavigationItems',
     context: { component: 'Header', type: 'HEADER_DESKTOP' },
   })
+  // Prisma オブジェクトをプレーンオブジェクトに変換（Client Component 用）
+  return items.map((item) => ({ label: item.label, url: item.url }))
 }
 
 async function getMobileNavigationItems(): Promise<NavItem[]> {
@@ -39,7 +41,7 @@ async function getMobileNavigationItems(): Promise<NavItem[]> {
   cacheLife('hours')
   cacheTag('navigation')
 
-  return safeFetch({
+  const items = await safeFetch({
     fetch: () =>
       prisma.navigationItem.findMany({
         where: { type: 'HEADER_MOBILE', isActive: true },
@@ -51,6 +53,8 @@ async function getMobileNavigationItems(): Promise<NavItem[]> {
     operationName: 'getMobileNavigationItems',
     context: { component: 'Header', type: 'HEADER_MOBILE' },
   })
+  // Prisma オブジェクトをプレーンオブジェクトに変換（Client Component 用）
+  return items.map((item) => ({ label: item.label, url: item.url }))
 }
 
 async function getSiteSettings(): Promise<Pick<Settings, 'siteName'> | null> {
