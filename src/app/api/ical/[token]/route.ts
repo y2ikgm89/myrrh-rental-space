@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { generateICalFeed, type CalendarEvent } from '@/lib/ical'
 import { format } from 'date-fns'
+import { ACTIVE_RESERVATION_STATUSES } from '@/lib/validations/enums'
 
 /**
  * iCalフィード配信エンドポイント
@@ -59,7 +60,7 @@ export async function GET(
     // 範囲と重複する予約を取得（startTime < rangeEnd AND endTime > rangeStart）
     const reservations = await prisma.reservation.findMany({
       where: {
-        status: { in: ['PENDING', 'CONFIRMED'] },
+        status: { in: [...ACTIVE_RESERVATION_STATUSES] },
         startTime: { lt: rangeEnd },
         endTime: { gt: rangeStart },
         ...(icalToken.spaceId && { spaceId: icalToken.spaceId }),

@@ -12,7 +12,7 @@ import { useSession } from '@/lib/auth-client'
 import { Send, Loader2 } from 'lucide-react'
 import { Turnstile } from '@/components/Turnstile'
 import { createComment } from '@/actions/blog-comment'
-import { cn } from '@/lib/utils'
+import { cn, getFormString, getFormStringOrNull } from '@/lib/utils'
 
 type Props = {
   postId: string
@@ -49,9 +49,9 @@ export function CommentForm({
     setFieldErrors({})
 
     startTransition(async () => {
-      const content = formData.get('content') as string
-      const guestName = formData.get('guestName') as string | null
-      const guestEmail = formData.get('guestEmail') as string | null
+      const content = getFormString(formData, 'content')
+      const guestName = getFormStringOrNull(formData, 'guestName')
+      const guestEmail = getFormStringOrNull(formData, 'guestEmail')
 
       const result = await createComment({
         postId,

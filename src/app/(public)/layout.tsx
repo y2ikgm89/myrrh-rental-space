@@ -4,6 +4,10 @@
  * ヘッダー・フッター・Analytics・Cookie同意バナー・お知らせバーを含むレイアウト
  * GDPR対応: Cookie同意後のみAnalyticsを有効化
  *
+ * アクセシビリティ対応:
+ * - スキップリンク: キーボードナビゲーション改善
+ * - ARIAライブリージョン: スクリーンリーダー向け動的通知
+ *
  * Next.js 16 PPR対応:
  * - 静的シェル: Header, Footer (use cache でキャッシュ)
  * - 動的コンテンツ: CookieConsentBanner, Analytics (Suspense でラップ)
@@ -15,6 +19,8 @@ import { Footer } from '@/components/layouts/Footer'
 import { AnalyticsProvider } from '@/components/analytics'
 import { CookieConsentBanner } from '@/components/site/CookieConsentBanner'
 import { AnnouncementBarWrapper } from '@/components/site/AnnouncementBarWrapper'
+import { SkipLink, AriaLiveRegion } from '@/components/a11y'
+import { AriaLiveProvider } from '@/contexts'
 import { getCookieConsentSettings } from '@/lib/settings'
 import { getAnalyticsConfig } from '@/lib/analytics/config'
 import type { ReactElement, ReactNode } from 'react'
@@ -50,19 +56,29 @@ export default async function PublicLayout({
   children: ReactNode
 }): Promise<ReactElement> {
   return (
-    <div className="flex min-h-screen flex-col">
-      {/* キャッシュされたコンテンツ - 静的シェルに含まれる */}
-      <AnnouncementBarWrapper />
-      <Header />
+    <AriaLiveProvider>
+      <div className="flex min-h-screen flex-col">
+        {/* アクセシビリティ: スキップリンク（初回Tabで表示） */}
+        <SkipLink />
 
-      <main className="flex-1">{children}</main>
+        {/* キャッシュされたコンテンツ - 静的シェルに含まれる */}
+        <AnnouncementBarWrapper />
+        <Header />
 
-      <Footer />
+        <main id="main-content" className="flex-1">
+          {children}
+        </main>
 
-      {/* 動的コンテンツ - リクエスト時にストリーミング */}
-      <Suspense fallback={null}>
-        <DynamicContent />
-      </Suspense>
-    </div>
+        <Footer />
+
+        {/* 動的コンテンツ - リクエスト時にストリーミング */}
+        <Suspense fallback={null}>
+          <DynamicContent />
+        </Suspense>
+
+        {/* アクセシビリティ: スクリーンリーダー向け通知領域 */}
+        <AriaLiveRegion />
+      </div>
+    </AriaLiveProvider>
   )
 }

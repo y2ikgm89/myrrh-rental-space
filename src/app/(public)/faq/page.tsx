@@ -15,12 +15,14 @@ import { Container, Section, SectionTitle } from '@/components/site/ui'
 import { FAQPageJsonLd, BreadcrumbJsonLd } from '@/components/seo/JsonLd'
 import { FAQAccordion } from './_components/FAQAccordion'
 import { prisma } from '@/lib/prisma'
+import { generatePageMetadata } from '@/lib/page-metadata'
 import type { ReactElement } from 'react'
 
-export const metadata: Metadata = {
-  title: 'よくある質問',
-  description:
-    'Myrrh Rental Spaceのよくある質問をまとめています。ご予約、ご利用方法、キャンセルポリシーなど。',
+export async function generateMetadata(): Promise<Metadata> {
+  return generatePageMetadata('faq', {
+    title: 'よくある質問',
+    description: 'Myrrh Rental Spaceのよくある質問をまとめています。ご予約、ご利用方法、キャンセルポリシーなど。',
+  })
 }
 
 /**

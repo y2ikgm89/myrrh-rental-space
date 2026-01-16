@@ -16,12 +16,16 @@ import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { tv } from 'tailwind-variants'
 import { ContentRenderer } from '@/components/site/ContentRenderer'
+import { ArticleJsonLd } from '@/components/seo/JsonLd'
 import { prisma } from '@/lib/prisma'
 import { parseStringArray } from '@/lib/json-validators'
 import { getBlogLayoutSettings } from '@/lib/layout-settings'
 import { getContainerStyles, getContentStyles } from '@/lib/styles/layout-mapper'
+import { BlogPostStatus } from '@/generated/prisma/client/enums'
 import { CommentSection } from './_components'
 import type { ReactElement } from 'react'
+
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://example.com'
 
 // =============================================================================
 // Styles
@@ -86,7 +90,7 @@ async function getBlogPostBySlug(slug: string) {
   return await prisma.blogPost.findUnique({
     where: {
       slug,
-      isPublished: true,
+      status: BlogPostStatus.PUBLISHED,
     },
     select: {
       id: true,
@@ -97,6 +101,7 @@ async function getBlogPostBySlug(slug: string) {
       thumbnailUrl: true,
       ogpImageUrl: true,
       publishedAt: true,
+      updatedAt: true,
       tags: true,
       metaDescription: true,
       metaKeywords: true,
@@ -147,7 +152,7 @@ async function getAdjacentPosts(postId: string, publishedAt: Date | null) {
   const [prevPost, nextPost] = await Promise.all([
     prisma.blogPost.findFirst({
       where: {
-        isPublished: true,
+        status: BlogPostStatus.PUBLISHED,
         AND: [
           { publishedAt: { not: null } },
           publishedAt
@@ -160,7 +165,7 @@ async function getAdjacentPosts(postId: string, publishedAt: Date | null) {
     }),
     prisma.blogPost.findFirst({
       where: {
-        isPublished: true,
+        status: BlogPostStatus.PUBLISHED,
         AND: [
           { publishedAt: { not: null } },
           publishedAt
@@ -227,7 +232,7 @@ export async function generateStaticParams() {
 
   try {
     const posts = await prisma.blogPost.findMany({
-      where: { isPublished: true },
+      where: { status: BlogPostStatus.PUBLISHED },
       select: { slug: true },
       take: 100,
     })
@@ -274,6 +279,17 @@ export default async function BlogDetailPage({
 
   return (
     <section className={styles.section()}>
+      {/* 構造化データ: Article */}
+      <ArticleJsonLd
+        headline={post.title}
+        description={post.excerpt || post.metaDescription || ''}
+        image={post.thumbnailUrl}
+        url={`${BASE_URL}/blog/${post.slug}`}
+        datePublished={post.publishedAt?.toISOString() || post.updatedAt.toISOString()}
+        dateModified={post.updatedAt.toISOString()}
+        author={{ name: 'Myrrh Rental Space' }}
+      />
+
       <div className={`${styles.container()} ${containerStyles.className}`} style={containerStyles.style}>
         <article className={`${styles.article()} ${contentStyles.className}`} style={contentStyles.style}>
           {/* パンくずリスト */}

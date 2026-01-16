@@ -14,13 +14,17 @@ import { tv } from 'tailwind-variants'
 import { Container } from '@/components/site/ui'
 import { prisma } from '@/lib/prisma'
 import { loadNewsSearchParams } from '@/lib/nuqs'
+import { generatePageMetadata } from '@/lib/page-metadata'
+import { NewsStatus } from '@/generated/prisma/client/enums'
 import { NewsList, NewsPagination } from './_components'
 import type { SearchParams } from 'nuqs/server'
 import type { ReactElement } from 'react'
 
-export const metadata: Metadata = {
-  title: 'お知らせ',
-  description: 'Myrrh Rental Space からの最新のお知らせ一覧です。',
+export async function generateMetadata(): Promise<Metadata> {
+  return generatePageMetadata('news', {
+    title: 'お知らせ',
+    description: 'Myrrh Rental Space からの最新のお知らせ一覧です。',
+  })
 }
 
 const styles = tv({
@@ -48,7 +52,7 @@ async function NewsResults({
   const safePerPage = perPage > 0 && perPage <= 50 ? perPage : 10
 
   const where = {
-    isPublished: true,
+    status: NewsStatus.PUBLISHED,
     publishedAt: { not: null },
   }
 

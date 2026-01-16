@@ -15,11 +15,15 @@ import { notFound } from 'next/navigation'
 import { tv } from 'tailwind-variants'
 import { buttonVariants } from '@/components/site/ui'
 import { ContentRenderer } from '@/components/site/ContentRenderer'
+import { NewsArticleJsonLd } from '@/components/seo/JsonLd'
 import { prisma } from '@/lib/prisma'
 import { cn } from '@/lib/utils'
 import { getNewsLayoutSettings } from '@/lib/layout-settings'
 import { getContainerStyles, getContentStyles } from '@/lib/styles/layout-mapper'
+import { NewsStatus } from '@/generated/prisma/client/enums'
 import type { ReactElement } from 'react'
+
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://example.com'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -36,7 +40,7 @@ async function getNewsById(id: string) {
   return await prisma.news.findUnique({
     where: {
       id,
-      isPublished: true,
+      status: NewsStatus.PUBLISHED,
       publishedAt: { not: null },
     },
   })
@@ -68,7 +72,7 @@ export async function generateStaticParams() {
   try {
     const news = await prisma.news.findMany({
       where: {
-        isPublished: true,
+        status: NewsStatus.PUBLISHED,
         publishedAt: { not: null },
       },
       select: { id: true },
@@ -160,8 +164,24 @@ export default async function NewsDetailPage({
   const containerStyles = getContainerStyles(layoutConfig)
   const contentStyles = getContentStyles(layoutConfig)
 
+  // 構造化データ用のプレーンテキスト説明文を生成
+  const plainText = (news.content || '').replace(/<[^>]*>/g, '').trim()
+  const description =
+    plainText.length > 160
+      ? plainText.slice(0, 160) + '...'
+      : plainText || 'お知らせの詳細'
+
   return (
     <section className={styles.section()}>
+      {/* 構造化データ: NewsArticle */}
+      <NewsArticleJsonLd
+        headline={news.title}
+        description={description}
+        url={`${BASE_URL}/news/${news.id}`}
+        datePublished={news.publishedAt?.toISOString() || news.updatedAt.toISOString()}
+        dateModified={news.updatedAt.toISOString()}
+      />
+
       <div className={`${styles.container()} ${containerStyles.className}`} style={containerStyles.style}>
         <article className={`${styles.article()} ${contentStyles.className}`} style={contentStyles.style}>
           <header className={styles.header()}>

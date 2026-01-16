@@ -61,6 +61,7 @@ export function BlogFilters({
     {
       shallow: false,
       scroll: false,
+      throttleMs: 500,
       startTransition,
     }
   )

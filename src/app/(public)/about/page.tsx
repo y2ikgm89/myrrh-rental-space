@@ -11,12 +11,14 @@ import type { Metadata } from 'next'
 import { Container, Section, SectionTitle } from '@/components/site/ui'
 import { LocalBusinessJsonLd, BreadcrumbJsonLd } from '@/components/seo/JsonLd'
 import { getPublicBusinessSettings } from '@/lib/settings'
+import { generatePageMetadata } from '@/lib/page-metadata'
 import type { ReactElement } from 'react'
 
-export const metadata: Metadata = {
-  title: '私たちについて',
-  description:
-    'Myrrh Rental Spaceは、ビジネスからプライベートまで、様々な用途に対応したレンタルスペースを提供しています。',
+export async function generateMetadata(): Promise<Metadata> {
+  return generatePageMetadata('about', {
+    title: '私たちについて',
+    description: 'Myrrh Rental Spaceは、ビジネスからプライベートまで、様々な用途に対応したレンタルスペースを提供しています。',
+  })
 }
 
 export default async function AboutPage(): Promise<ReactElement> {

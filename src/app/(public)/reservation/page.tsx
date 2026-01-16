@@ -20,15 +20,19 @@ import { prisma } from '@/lib/prisma'
 import { Container } from '@/components/site/ui'
 import { ReservationForm } from './_components'
 import { getTermsAgreementSettings } from '@/actions/admin/settings'
+import { getTermsForSpace } from '@/actions/public/terms'
+import { generatePageMetadata } from '@/lib/page-metadata'
 import type { ReactElement } from 'react'
 
 interface PageProps {
   searchParams: Promise<{ spaceId?: string }>
 }
 
-export const metadata: Metadata = {
-  title: '予約',
-  description: 'レンタルスペースのご予約はこちらから。日時を選択して、簡単にご予約いただけます。',
+export async function generateMetadata(): Promise<Metadata> {
+  return generatePageMetadata('reservation', {
+    title: '予約',
+    description: 'レンタルスペースのご予約はこちらから。日時を選択して、簡単にご予約いただけます。',
+  })
 }
 
 /**
@@ -91,8 +95,11 @@ async function ReservationContent({
     notFound()
   }
 
-  // 規約同意設定を取得
-  const termsSettings = await getTermsAgreementSettings()
+  // 規約同意設定とスペース固有の規約を並行取得
+  const [termsSettings, spaceTerms] = await Promise.all([
+    getTermsAgreementSettings(),
+    getTermsForSpace(spaceId),
+  ])
 
   return (
     <>
@@ -112,6 +119,7 @@ async function ReservationContent({
         spaceName={space.name}
         hourlyPrice={Number(space.hourlyPrice)}
         termsSettings={termsSettings}
+        spaceTerms={spaceTerms}
       />
     </>
   )

@@ -2,17 +2,44 @@
  * ホームページ
  *
  * レンタルスペースサービスのトップページ
+ * SEO最適化: 動的メタデータ + WebSite構造化データ
+ *
+ * HomepageSectionモデルベースの動的セクションレンダリング
  */
 
-import { Hero, SpaceList, CTA } from '@/components/site/sections'
+import type { Metadata } from 'next'
+import { connection } from 'next/server'
+import { HomepageSections } from '@/components/site/sections'
+import { WebSiteJsonLd } from '@/components/seo/JsonLd'
+import { generateHomeMetadata, getWebSiteJsonLdData } from '@/lib/seo'
+import { getPublicHomepageSections } from '@/actions/admin/homepage-settings'
 import type { ReactElement } from 'react'
 
-export default function HomePage(): ReactElement {
+/**
+ * ホームページメタデータ生成
+ * Settings DBから取得した設定を使用
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  return generateHomeMetadata()
+}
+
+export default async function HomePage(): Promise<ReactElement> {
+  // Dynamic rendering - データベースから動的にコンテンツを取得
+  await connection()
+
+  const [webSiteData, sections] = await Promise.all([
+    getWebSiteJsonLdData(),
+    getPublicHomepageSections(),
+  ])
+
   return (
     <>
-      <Hero />
-      <SpaceList />
-      <CTA />
+      <WebSiteJsonLd
+        name={webSiteData.name}
+        description={webSiteData.description}
+        url={webSiteData.url}
+      />
+      <HomepageSections sections={sections} />
     </>
   )
 }

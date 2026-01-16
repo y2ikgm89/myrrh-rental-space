@@ -42,6 +42,8 @@ export function SpaceFilters(): ReactElement {
       shallow: false,
       // ページ遷移時にスクロールをトップに戻さない
       scroll: false,
+      // 検索入力のスロットリング（500ms）
+      throttleMs: 500,
       // 変更時にページを1に戻す
       startTransition,
     }

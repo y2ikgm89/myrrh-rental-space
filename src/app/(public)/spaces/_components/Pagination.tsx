@@ -37,6 +37,7 @@ export function Pagination({
     ...parseAsPage,
     shallow: false,
     scroll: true,
+    history: 'push',
     startTransition,
   })
 

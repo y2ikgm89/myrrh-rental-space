@@ -37,6 +37,7 @@ export function BlogPagination({
     ...parseAsPage,
     shallow: false,
     scroll: true,
+    history: 'push',
     startTransition,
   })
 

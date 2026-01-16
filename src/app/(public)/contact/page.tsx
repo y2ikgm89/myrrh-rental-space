@@ -1,16 +1,26 @@
 import type { Metadata } from 'next'
 import type { ReactElement } from 'react'
+import { connection } from 'next/server'
 import { Container } from '@/components/site/ui/Container'
 import { ContactForm } from './_components/ContactForm'
-import { getSettings } from '@/actions/admin/settings'
+import { getPublicSettings } from '@/actions/public/settings'
+import { generatePageMetadata } from '@/lib/page-metadata'
 
-export const metadata: Metadata = {
-  title: 'お問い合わせ | Myrrh Rental Space',
-  description:
-    'レンタルスペースに関するお問い合わせはこちらから。ご質問・ご予約のご相談など、お気軽にお問い合わせください。',
+export async function generateMetadata(): Promise<Metadata> {
+  return generatePageMetadata('contact', {
+    title: 'お問い合わせ',
+    description: 'レンタルスペースに関するお問い合わせはこちらから。ご質問・ご予約のご相談など、お気軽にお問い合わせください。',
+  })
 }
 
-const DAYS_OF_WEEK = [
+type DayOfWeekKey = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday'
+
+interface DayOfWeekItem {
+  key: DayOfWeekKey
+  label: string
+}
+
+const DAYS_OF_WEEK: readonly DayOfWeekItem[] = [
   { key: 'monday', label: '月曜日' },
   { key: 'tuesday', label: '火曜日' },
   { key: 'wednesday', label: '水曜日' },
@@ -18,10 +28,13 @@ const DAYS_OF_WEEK = [
   { key: 'friday', label: '金曜日' },
   { key: 'saturday', label: '土曜日' },
   { key: 'sunday', label: '日曜日' },
-] as const
+]
 
 export default async function ContactPage(): Promise<ReactElement> {
-  const settings = await getSettings()
+  // Next.js 16 Cache Components: 動的データアクセスを明示
+  await connection()
+
+  const settings = await getPublicSettings()
 
   // 住所の組み立て
   const addressParts = [

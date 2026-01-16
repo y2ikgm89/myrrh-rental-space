@@ -10,6 +10,7 @@
 
 import { useEffect, useRef, type ReactElement } from 'react'
 import DOMPurify from 'dompurify'
+import { ENHANCED_PROSE_CLASSES } from '@/lib/styles/prose'
 
 interface NewsContentProps {
   content: string
@@ -141,7 +142,7 @@ export function NewsContent({ content }: NewsContentProps): ReactElement {
   return (
     <div
       ref={containerRef}
-      className="prose prose-slate max-w-none dark:prose-invert"
+      className={ENHANCED_PROSE_CLASSES}
     />
   )
 }

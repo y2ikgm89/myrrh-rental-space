@@ -4,6 +4,7 @@
  * ブログ記事詳細ページに表示するコメント機能のメインコンテナ
  */
 
+import { connection } from 'next/server'
 import { getCommentsByPostId } from '@/actions/blog-comment'
 import { CommentList } from './CommentList'
 import { CommentForm } from './CommentForm'
@@ -15,6 +16,9 @@ type Props = {
 }
 
 export async function CommentSection({ postId, postSlug }: Props) {
+  // 動的レンダリングにopt-in（コメントは動的コンテンツ）
+  await connection()
+
   const comments = await getCommentsByPostId(postId)
   const totalCount = comments.reduce(
     (acc, comment) => acc + 1 + countReplies(comment.replies),

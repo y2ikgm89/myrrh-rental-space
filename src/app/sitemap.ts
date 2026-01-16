@@ -6,6 +6,7 @@
 
 import type { MetadataRoute } from 'next'
 import { prisma } from '@/lib/prisma'
+import { BlogPostStatus, NewsStatus } from '@/generated/prisma/client/enums'
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://example.com'
 
@@ -90,7 +91,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // ニュースページ（公開中のみ）
   const news = await prisma.news.findMany({
     where: {
-      isPublished: true,
+      status: NewsStatus.PUBLISHED,
     },
     select: {
       id: true,
@@ -108,7 +109,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // ブログ記事（公開中のみ）
   const blogPosts = await prisma.blogPost.findMany({
     where: {
-      isPublished: true,
+      status: BlogPostStatus.PUBLISHED,
     },
     select: {
       slug: true,

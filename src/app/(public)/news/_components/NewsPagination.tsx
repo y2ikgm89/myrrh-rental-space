@@ -35,6 +35,7 @@ export function NewsPagination({
     ...parseAsPage,
     shallow: false,
     scroll: true,
+    history: 'push',
     startTransition,
   })
 

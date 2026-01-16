@@ -23,13 +23,16 @@ import {
 } from '@/lib/validations/search-params'
 import { SpaceFilters } from './_components/SpaceFilters'
 import { Pagination } from './_components/Pagination'
-import type { Space } from '@/generated/prisma/client/client'
+import { generatePageMetadata } from '@/lib/page-metadata'
+import type { Space, Prisma } from '@/generated/prisma/client/client'
 import type { SearchParams } from 'nuqs/server'
 import type { ReactElement } from 'react'
 
-export const metadata: Metadata = {
-  title: 'スペース一覧',
-  description: 'ご利用可能なレンタルスペースの一覧です。',
+export async function generateMetadata(): Promise<Metadata> {
+  return generatePageMetadata('spaces', {
+    title: 'スペース一覧',
+    description: 'ご利用可能なレンタルスペースの一覧です。',
+  })
 }
 
 const styles = tv({
@@ -123,11 +126,11 @@ async function SpaceResults({
     isActive: true,
     ...(safeQuery && {
       OR: [
-        { name: { contains: safeQuery, mode: 'insensitive' as const } },
-        { description: { contains: safeQuery, mode: 'insensitive' as const } },
+        { name: { contains: safeQuery, mode: 'insensitive' } },
+        { description: { contains: safeQuery, mode: 'insensitive' } },
       ],
     }),
-  }
+  } satisfies Prisma.SpaceWhereInput
 
   // 並列でデータ取得
   const [spaces, totalCount] = await Promise.all([

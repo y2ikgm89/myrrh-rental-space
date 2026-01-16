@@ -12,6 +12,7 @@ import { Button } from '@/components/site/ui/Button'
 import { Checkbox } from '@/components/site/ui/Checkbox'
 import { Input } from '@/components/site/ui/Input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/site/ui/Card'
+import { TermsAgreementDialog } from '@/components/site/TermsAgreementDialog'
 import { Calendar } from './Calendar'
 import { TimeSlotPicker } from './TimeSlotPicker'
 import { createReservation } from '@/actions/reservation'
@@ -22,6 +23,7 @@ import {
   type ReservationWithTermsInput,
   type ReservationActionResult,
 } from '@/lib/validations/reservation'
+import type { TermsWithVersion } from '@/lib/validations/terms'
 import { cn } from '@/lib/utils'
 
 const formStyles = tv({
@@ -118,6 +120,8 @@ interface ReservationFormProps {
   spaceName: string
   hourlyPrice: number
   termsSettings: TermsSettings
+  /** スペース固有の規約（設定されている場合） */
+  spaceTerms: TermsWithVersion | null
 }
 
 type FormStep = 'datetime' | 'info' | 'confirm'
@@ -129,6 +133,8 @@ interface FormState {
   phoneNumber: string
   notes: string
   agreedToTerms: boolean
+  /** スペース固有の規約に同意したバージョンID */
+  agreedTermsVersionId: string | null
 }
 
 const initialFormState: FormState = {
@@ -138,6 +144,7 @@ const initialFormState: FormState = {
   phoneNumber: '',
   notes: '',
   agreedToTerms: false,
+  agreedTermsVersionId: null,
 }
 
 export function ReservationForm({
@@ -145,6 +152,7 @@ export function ReservationForm({
   spaceName,
   hourlyPrice,
   termsSettings,
+  spaceTerms,
 }: ReservationFormProps): ReactElement {
   // 日時選択状態
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
@@ -159,6 +167,10 @@ export function ReservationForm({
 
   // ステップ管理
   const [currentStep, setCurrentStep] = useState<FormStep>('datetime')
+
+  // 規約ダイアログ状態
+  const [isTermsDialogOpen, setIsTermsDialogOpen] = useState(false)
+  const [isTermsAgreeing, setIsTermsAgreeing] = useState(false)
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -193,6 +205,36 @@ export function ReservationForm({
     setCurrentStep('datetime')
   }
 
+  // スペース固有の規約同意ハンドラ
+  const handleOpenTermsDialog = (): void => {
+    if (spaceTerms?.currentVersion) {
+      setIsTermsDialogOpen(true)
+    }
+  }
+
+  const handleTermsAgree = async (_termsId: string, versionId: string): Promise<void> => {
+    setIsTermsAgreeing(true)
+    // 同意を記録（実際の保存は予約確定時に行う）
+    setFormState((prev) => ({
+      ...prev,
+      agreedTermsVersionId: versionId,
+    }))
+    setIsTermsAgreeing(false)
+    setIsTermsDialogOpen(false)
+  }
+
+  const handleTermsDecline = (): void => {
+    setFormState((prev) => ({
+      ...prev,
+      agreedTermsVersionId: null,
+    }))
+  }
+
+  // スペース規約に同意済みかどうか
+  const hasAgreedToSpaceTerms =
+    !spaceTerms || // 規約がない場合は同意不要
+    formState.agreedTermsVersionId === spaceTerms.currentVersion?.id
+
   const calculateTotal = (): number => {
     if (!startTime || !endTime) return 0
     const [startHour] = startTime.split(':').map(Number)
@@ -205,6 +247,14 @@ export function ReservationForm({
     e.preventDefault()
 
     if (!selectedDate || !startTime || !endTime) {
+      return
+    }
+
+    // スペース固有の規約に同意していない場合はエラー
+    if (spaceTerms?.currentVersion && !formState.agreedTermsVersionId) {
+      setFieldErrors({
+        spaceTerms: ['スペースの利用規約に同意してください'],
+      })
       return
     }
 
@@ -221,6 +271,13 @@ export function ReservationForm({
       email: formState.email,
       phoneNumber: formState.phoneNumber,
       notes: formState.notes || undefined,
+      // スペース固有の規約同意情報
+      termsAgreement: formState.agreedTermsVersionId && spaceTerms
+        ? {
+            termsId: spaceTerms.id,
+            versionId: formState.agreedTermsVersionId,
+          }
+        : undefined,
     }
 
     const input: ReservationInput | ReservationWithTermsInput = termsSettings.enabled
@@ -553,6 +610,43 @@ export function ReservationForm({
                 )}
               </div>
 
+              {/* スペース固有の規約同意 */}
+              {spaceTerms?.currentVersion && (
+                <div className={styles.fieldGroup()}>
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-foreground">
+                          {spaceTerms.title}
+                          <span className={styles.required()}>*</span>
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {hasAgreedToSpaceTerms ? (
+                            <span className="text-green-600">同意済み</span>
+                          ) : (
+                            '予約前に規約をご確認ください'
+                          )}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant={hasAgreedToSpaceTerms ? 'outline' : 'primary'}
+                        size="sm"
+                        onClick={handleOpenTermsDialog}
+                        disabled={isPending}
+                      >
+                        {hasAgreedToSpaceTerms ? '再確認' : '規約を確認'}
+                      </Button>
+                    </div>
+                  </div>
+                  {fieldErrors.spaceTerms && (
+                    <p id="spaceTerms-error" className={styles.errorText()}>
+                      {fieldErrors.spaceTerms[0]}
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* 規約同意チェックボックス */}
               {termsSettings.enabled && (
                 <div className={styles.fieldGroup()}>
@@ -596,13 +690,29 @@ export function ReservationForm({
                 >
                   戻る
                 </Button>
-                <Button type="submit" disabled={isPending} className="flex-1">
+                <Button
+                  type="submit"
+                  disabled={isPending || !hasAgreedToSpaceTerms}
+                  className="flex-1"
+                >
                   {isPending ? '送信中...' : '予約を確定する'}
                 </Button>
               </div>
             </form>
           </CardContent>
         </Card>
+      )}
+
+      {/* スペース固有の規約ダイアログ */}
+      {spaceTerms?.currentVersion && (
+        <TermsAgreementDialog
+          open={isTermsDialogOpen}
+          onOpenChange={setIsTermsDialogOpen}
+          terms={spaceTerms}
+          onAgree={handleTermsAgree}
+          onDecline={handleTermsDecline}
+          loading={isTermsAgreeing}
+        />
       )}
     </div>
   )

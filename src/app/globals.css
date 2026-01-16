@@ -14,7 +14,8 @@
     --secondary: 0 0% 96.1%;
     --secondary-foreground: 0 0% 9%;
     --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
+    /* WCAG AA準拠: コントラスト比改善 45.1% → 40% (4.5:1以上) */
+    --muted-foreground: 0 0% 40%;
     --accent: 0 0% 96.1%;
     --accent-foreground: 0 0% 9%;
     --destructive: 0 84.2% 60.2%;
@@ -37,7 +38,8 @@
     --secondary: 0 0% 14.9%;
     --secondary-foreground: 0 0% 98%;
     --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
+    /* WCAG AA準拠: コントラスト比改善 63.9% → 70% */
+    --muted-foreground: 0 0% 70%;
     --accent: 0 0% 14.9%;
     --accent-foreground: 0 0% 98%;
     --destructive: 0 62.8% 30.6%;
@@ -89,5 +91,21 @@
   /* モバイルメニュー開閉時のスクロール制御 */
   body.overflow-hidden {
     overflow: hidden;
+  }
+
+  /* ==========================================================================
+   * アクセシビリティ: prefers-reduced-motion 対応
+   * ユーザーがアニメーションを削減する設定を有効にしている場合、
+   * 全てのアニメーション・トランジションを無効化
+   * ========================================================================== */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }

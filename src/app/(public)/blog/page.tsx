@@ -25,13 +25,17 @@ import {
 import { BlogFilters } from './_components/blog-filters'
 import { BlogPagination } from './_components/blog-pagination'
 import { parseStringArray } from '@/lib/json-validators'
+import { generatePageMetadata } from '@/lib/page-metadata'
+import { BlogPostStatus } from '@/generated/prisma/client/enums'
 import type { Prisma } from '@/generated/prisma/client/client'
 import type { SearchParams } from 'nuqs/server'
 import type { ReactElement } from 'react'
 
-export const metadata: Metadata = {
-  title: 'ブログ',
-  description: '最新のレンタルスペース活用情報とお知らせをお届けします。',
+export async function generateMetadata(): Promise<Metadata> {
+  return generatePageMetadata('blog', {
+    title: 'ブログ',
+    description: '最新のレンタルスペース活用情報とお知らせをお届けします。',
+  })
 }
 
 const styles = tv({
@@ -174,13 +178,13 @@ async function BlogResults({
   } = parsedParams.success ? parsedParams.data : blogSearchParamsDefaults
 
   const where = {
-    isPublished: true,
+    status: BlogPostStatus.PUBLISHED,
     publishedAt: { not: null },
     ...(safeQuery && {
       OR: [
-        { title: { contains: safeQuery, mode: 'insensitive' as const } },
-        { excerpt: { contains: safeQuery, mode: 'insensitive' as const } },
-        { content: { contains: safeQuery, mode: 'insensitive' as const } },
+        { title: { contains: safeQuery, mode: 'insensitive' } },
+        { excerpt: { contains: safeQuery, mode: 'insensitive' } },
+        { content: { contains: safeQuery, mode: 'insensitive' } },
       ],
     }),
     ...(safeCategory && {
