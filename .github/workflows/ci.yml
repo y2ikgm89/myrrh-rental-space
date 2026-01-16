@@ -116,7 +116,6 @@ jobs:
 
       - name: Seed test database
         run: bunx prisma db seed
-        continue-on-error: true
 
       - name: Build application
         run: bun run build
