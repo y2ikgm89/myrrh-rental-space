@@ -90,3 +90,11 @@ yarn-debug.log*
 yarn-error.log*
 yarn-error.log*
 tmpclaude-*-cwd
+
+# Claude Code local files
+.claude/logs/
+.claude/state/
+.claude/memory/
+
+# Playwright MCP screenshots
+.playwright-mcp/
