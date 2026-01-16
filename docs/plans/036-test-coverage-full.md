@@ -136,11 +136,17 @@
 
 #### 実装タスク
 - [x] `__tests__/integration/actions/admin/user.test.ts` - バリデーション + Role整合性
-- [ ] `__tests__/integration/actions/admin/reservation.test.ts`
+- [x] `__tests__/integration/actions/admin/reservation.test.ts` - updateStatusSchema, updateNotesSchema
 - [x] `__tests__/integration/actions/reservation.test.ts` - バリデーション + 日時/顧客情報
 - [x] `__tests__/integration/actions/contact.test.ts` - バリデーション + action-helpers
-- [ ] `__tests__/integration/actions/admin/blog.test.ts`
-- [ ] 中優先度8ファイル
+- [x] `__tests__/integration/actions/admin/blog.test.ts` - createBlogPostSchema, updateBlogPostSchema, blogCategorySchema
+- [x] `__tests__/integration/actions/admin/space.test.ts` - spaceFormSchema
+- [x] `__tests__/integration/actions/admin/customer.test.ts` - updateStatusSchema, updateNotesSchema
+- [x] `__tests__/integration/actions/admin/news.test.ts` - createNewsSchema, updateNewsSchema
+- [x] `__tests__/integration/actions/admin/page.test.ts` - createPageSchema, updatePageSchema, updatePageSeoSchema
+- [x] `__tests__/integration/actions/admin/faq.test.ts` - faqCategoryFormSchema, faqItemFormSchema
+- [x] `__tests__/integration/actions/admin/terms.test.ts` - createTermsSchema, updateTermsSchema, createTermsVersionSchema
+- [x] `__tests__/integration/actions/admin/media.test.ts` - mediaUploadSchema, mediaUpdateSchema
 - [ ] 低優先度11ファイル
 
 ---
