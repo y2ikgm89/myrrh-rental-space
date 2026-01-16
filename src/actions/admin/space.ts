@@ -98,15 +98,29 @@ export async function getSpaces(
     take: limit,
   })
 
-  // Decimal型をnumber型に変換
+  // Prisma オブジェクトをプレーンオブジェクトに変換
+  // Symbol プロパティを除去して Client Components に渡せるようにする
   const formattedSpaces: SpaceWithStats[] = spaces.map((s) => ({
-    ...s,
+    id: s.id,
+    name: s.name,
+    description: s.description,
+    address: s.address,
+    access: s.access,
+    capacity: s.capacity,
     area: s.area ? Number(s.area) : null,
     hourlyPrice: Number(s.hourlyPrice),
     dailyPrice: s.dailyPrice ? Number(s.dailyPrice) : null,
+    mainImageUrl: s.mainImageUrl,
     imageUrls: parseStringArray(s.imageUrls),
     facilities: parseStringArray(s.facilities),
     businessHours: parseBusinessHours(s.businessHours),
+    isPublished: s.isPublished,
+    publishedAt: s.publishedAt,
+    isActive: s.isActive,
+    createdAt: s.createdAt,
+    updatedAt: s.updatedAt,
+    termsId: s.termsId,
+    _count: { reservations: s._count.reservations },
   }))
 
   return {
@@ -142,14 +156,29 @@ export async function getSpaceById(id: string): Promise<SpaceWithStats | null> {
     return null
   }
 
+  // Prisma オブジェクトをプレーンオブジェクトに変換
+  // Symbol プロパティを除去して Client Components に渡せるようにする
   return {
-    ...space,
+    id: space.id,
+    name: space.name,
+    description: space.description,
+    address: space.address,
+    access: space.access,
+    capacity: space.capacity,
     area: space.area ? Number(space.area) : null,
     hourlyPrice: Number(space.hourlyPrice),
     dailyPrice: space.dailyPrice ? Number(space.dailyPrice) : null,
+    mainImageUrl: space.mainImageUrl,
     imageUrls: parseStringArray(space.imageUrls),
     facilities: parseStringArray(space.facilities),
     businessHours: parseBusinessHours(space.businessHours),
+    isPublished: space.isPublished,
+    publishedAt: space.publishedAt,
+    isActive: space.isActive,
+    createdAt: space.createdAt,
+    updatedAt: space.updatedAt,
+    termsId: space.termsId,
+    _count: { reservations: space._count.reservations },
   }
 }
 
