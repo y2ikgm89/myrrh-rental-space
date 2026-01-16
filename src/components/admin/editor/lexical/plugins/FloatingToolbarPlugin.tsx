@@ -7,7 +7,7 @@
 
 'use client'
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
@@ -62,6 +62,7 @@ const styles = tv({
 function FloatingToolbar() {
   const [editor] = useLexicalComposerContext()
   const toolbarRef = useRef<HTMLDivElement>(null)
+  const isMountedRef = useRef(true)
   const [isVisible, setIsVisible] = useState(false)
   const [isBold, setIsBold] = useState(false)
   const [isItalic, setIsItalic] = useState(false)
@@ -75,7 +76,7 @@ function FloatingToolbar() {
   const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false)
   const [linkUrl, setLinkUrl] = useState('')
 
-  const updateToolbar = useCallback(() => {
+  const updateToolbar = () => {
     const selection = $getSelection()
     if (!$isRangeSelection(selection) || selection.isCollapsed()) {
       setIsVisible(false)
@@ -119,6 +120,8 @@ function FloatingToolbar() {
         placement: 'top',
         middleware: [offset(8), flip(), shift({ padding: 8 })],
       }).then(({ x, y }) => {
+        // アンマウント後にDOMを更新しない
+        if (!isMountedRef.current) return
         if (toolbarRef.current) {
           toolbarRef.current.style.left = `${x}px`
           toolbarRef.current.style.top = `${y}px`
@@ -127,6 +130,14 @@ function FloatingToolbar() {
     }
 
     setIsVisible(true)
+  }
+
+  // マウント状態を追跡
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
   }, [])
 
   useEffect(() => {
@@ -145,9 +156,9 @@ function FloatingToolbar() {
         1
       )
     )
-  }, [editor, updateToolbar])
+  }, [editor])
 
-  const handleLinkClick = useCallback(() => {
+  const handleLinkClick = () => {
     if (isLink) {
       // リンク解除
       editor.dispatchCommand(TOGGLE_LINK_COMMAND, null)
@@ -156,9 +167,9 @@ function FloatingToolbar() {
       setLinkUrl('')
       setIsLinkDialogOpen(true)
     }
-  }, [editor, isLink])
+  }
 
-  const handleLinkSubmit = useCallback(() => {
+  const handleLinkSubmit = () => {
     if (linkUrl.trim()) {
       // URLの形式を整える
       let url = linkUrl.trim()
@@ -169,17 +180,14 @@ function FloatingToolbar() {
     }
     setIsLinkDialogOpen(false)
     setLinkUrl('')
-  }, [editor, linkUrl])
+  }
 
-  const handleLinkKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter') {
-        e.preventDefault()
-        handleLinkSubmit()
-      }
-    },
-    [handleLinkSubmit]
-  )
+  const handleLinkKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleLinkSubmit()
+    }
+  }
 
   if (!isVisible) {
     return null

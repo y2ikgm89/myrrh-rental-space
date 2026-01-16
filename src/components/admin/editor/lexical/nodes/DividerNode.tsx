@@ -138,27 +138,24 @@ function DividerComponent({
     )
   }, [clearSelection, editor, onDelete, setSelected])
 
-  const handleStyleChange = useCallback(
-    (newStyle: DividerStyle) => {
-      editor.update(() => {
-        const node = $getNodeByKey(nodeKey)
-        if ($isDividerNode(node)) {
-          node.setDividerStyle(newStyle)
-        }
-      })
-      setShowStyleDropdown(false)
-    },
-    [editor, nodeKey]
-  )
+  const handleStyleChange = (newStyle: DividerStyle) => {
+    editor.update(() => {
+      const node = $getNodeByKey(nodeKey)
+      if ($isDividerNode(node)) {
+        node.setDividerStyle(newStyle)
+      }
+    })
+    setShowStyleDropdown(false)
+  }
 
-  const handleRemove = useCallback(() => {
+  const handleRemove = () => {
     editor.update(() => {
       const node = $getNodeByKey(nodeKey)
       if ($isDividerNode(node)) {
         node.remove()
       }
     })
-  }, [editor, nodeKey])
+  }
 
   // Close dropdown when clicking outside
   useEffect(() => {

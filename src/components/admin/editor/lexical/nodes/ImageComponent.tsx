@@ -114,35 +114,32 @@ export function ImageComponent({
     )
   }, [clearSelection, editor, isSelected, onDelete, setSelected])
 
-  const handleResize = useCallback(
-    (event: React.MouseEvent) => {
-      event.preventDefault()
-      const startX = event.clientX
-      const startWidth = imageRef.current?.offsetWidth || 0
+  const handleResize = (event: React.MouseEvent) => {
+    event.preventDefault()
+    const startX = event.clientX
+    const startWidth = imageRef.current?.offsetWidth || 0
 
-      setIsResizing(true)
+    setIsResizing(true)
 
-      const handleMouseMove = (e: MouseEvent) => {
-        const newWidth = Math.max(100, startWidth + (e.clientX - startX))
-        editor.update(() => {
-          const node = $getNodeByKey(nodeKey)
-          if ($isImageNode(node)) {
-            node.setDimensions(newWidth, undefined)
-          }
-        })
-      }
+    const handleMouseMove = (e: MouseEvent) => {
+      const newWidth = Math.max(100, startWidth + (e.clientX - startX))
+      editor.update(() => {
+        const node = $getNodeByKey(nodeKey)
+        if ($isImageNode(node)) {
+          node.setDimensions(newWidth, undefined)
+        }
+      })
+    }
 
-      const handleMouseUp = () => {
-        setIsResizing(false)
-        document.removeEventListener('mousemove', handleMouseMove)
-        document.removeEventListener('mouseup', handleMouseUp)
-      }
+    const handleMouseUp = () => {
+      setIsResizing(false)
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
 
-      document.addEventListener('mousemove', handleMouseMove)
-      document.addEventListener('mouseup', handleMouseUp)
-    },
-    [editor, nodeKey]
-  )
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+  }
 
   return (
     <span

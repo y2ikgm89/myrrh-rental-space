@@ -162,41 +162,35 @@ export function CalloutComponent({
     )
   }, [clearSelection, editor, onDelete, setSelected])
 
-  const handleTypeChange = useCallback(
-    (newType: CalloutType) => {
-      editor.update(() => {
-        const node = $getNodeByKey(nodeKey)
-        if ($isCalloutNode(node)) {
-          node.setCalloutType(newType)
-        }
-      })
-      setShowTypeDropdown(false)
-    },
-    [editor, nodeKey]
-  )
+  const handleTypeChange = (newType: CalloutType) => {
+    editor.update(() => {
+      const node = $getNodeByKey(nodeKey)
+      if ($isCalloutNode(node)) {
+        node.setCalloutType(newType)
+      }
+    })
+    setShowTypeDropdown(false)
+  }
 
-  const handleContentChange = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      const newContent = e.target.value
-      setLocalContent(newContent)
-      editor.update(() => {
-        const node = $getNodeByKey(nodeKey)
-        if ($isCalloutNode(node)) {
-          node.setContent(newContent)
-        }
-      })
-    },
-    [editor, nodeKey]
-  )
+  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newContent = e.target.value
+    setLocalContent(newContent)
+    editor.update(() => {
+      const node = $getNodeByKey(nodeKey)
+      if ($isCalloutNode(node)) {
+        node.setContent(newContent)
+      }
+    })
+  }
 
-  const handleRemove = useCallback(() => {
+  const handleRemove = () => {
     editor.update(() => {
       const node = $getNodeByKey(nodeKey)
       if ($isCalloutNode(node)) {
         node.remove()
       }
     })
-  }, [editor, nodeKey])
+  }
 
   // Close dropdown when clicking outside
   useEffect(() => {

@@ -18,7 +18,7 @@ export type LexicalEditorProps = {
   placeholder?: string
   /** 編集不可状態 */
   disabled?: boolean
-  /** 追加のCSSクラス */
+  /** proseスタイルクラス（EDITOR_PROSE_CLASSESなど）- contentEditableに適用 */
   className?: string
   /** 文字数制限 */
   characterLimit?: number

@@ -143,8 +143,10 @@ export function BlogSidePanel({
                   </CardHeader>
                   <CardContent>
                     <ImageFields
-                      register={register}
                       errors={errors}
+                      setValue={setValue}
+                      thumbnailUrl={getValues('thumbnailUrl')}
+                      ogpImageUrl={getValues('ogpImageUrl')}
                       disabled={disabled}
                     />
                   </CardContent>

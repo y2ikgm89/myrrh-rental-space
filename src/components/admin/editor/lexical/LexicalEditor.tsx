@@ -7,7 +7,7 @@
 
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { LexicalComposer } from '@lexical/react/LexicalComposer'
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin'
 import { ContentEditable } from '@lexical/react/LexicalContentEditable'
@@ -39,6 +39,7 @@ import {
   ButtonNode,
   CardNode,
   DividerNode,
+  ReservationWidgetNode,
 } from './nodes'
 import {
   ToolbarPlugin,
@@ -61,26 +62,19 @@ import {
   useCardDialog,
   DividerPlugin,
   useDividerDialog,
+  ReservationWidgetPlugin,
+  useReservationWidgetDialog,
+  MediaLibraryPlugin,
+  useMediaLibrary,
 } from './plugins'
 
 const styles = tv({
   slots: {
     wrapper: 'border rounded-lg overflow-hidden bg-background',
     editorContainer: 'relative',
-    contentEditable: [
-      'outline-none p-4',
-      'prose prose-sm max-w-none',
-      'prose-headings:font-bold prose-headings:text-foreground',
-      'prose-p:text-foreground prose-p:leading-relaxed',
-      'prose-a:text-primary prose-a:underline',
-      'prose-strong:text-foreground prose-strong:font-bold',
-      'prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm',
-      'prose-pre:bg-muted prose-pre:p-4 prose-pre:rounded-lg',
-      'prose-blockquote:border-l-4 prose-blockquote:border-primary prose-blockquote:pl-4 prose-blockquote:italic',
-      'prose-ul:list-disc prose-ol:list-decimal',
-      'prose-img:rounded-lg prose-img:max-w-full',
-      'prose-table:border-collapse prose-th:border prose-th:p-2 prose-th:bg-muted prose-td:border prose-td:p-2',
-    ],
+    // proseスタイルは外部から className プロップで注入される
+    // @see EDITOR_PROSE_CLASSES in src/lib/styles/prose.ts
+    contentEditable: 'outline-none p-4',
     placeholder: 'absolute top-4 left-4 text-muted-foreground pointer-events-none',
     characterCount: 'px-4 py-2 text-xs text-muted-foreground border-t text-right',
   },
@@ -168,17 +162,14 @@ function OnChangeHandler({
 }) {
   const [editor] = useLexicalComposerContext()
 
-  const handleChange = useCallback(
-    (editorState: EditorState) => {
-      if (!onChange) return
+  const handleChange = (editorState: EditorState) => {
+    if (!onChange) return
 
-      editorState.read(() => {
-        const html = $generateHtmlFromNodes(editor, null)
-        onChange(html)
-      })
-    },
-    [editor, onChange]
-  )
+    editorState.read(() => {
+      const html = $generateHtmlFromNodes(editor, null)
+      onChange(html)
+    })
+  }
 
   return <OnChangePlugin onChange={handleChange} />
 }
@@ -192,7 +183,8 @@ type EditorInnerProps = {
   onChange?: (html: string) => void
   placeholder: string
   disabled: boolean
-  className?: string
+  /** proseスタイルクラス（EDITOR_PROSE_CLASSESなど） */
+  proseClassName?: string
   characterLimit?: number
   minHeight: string
   showToolbar: boolean
@@ -204,7 +196,7 @@ function EditorInner({
   onChange,
   placeholder,
   disabled,
-  className,
+  proseClassName,
   characterLimit,
   minHeight,
   showToolbar,
@@ -221,12 +213,20 @@ function EditorInner({
   const { openButtonDialog, ButtonDialog } = useButtonDialog()
   const { openCardDialog, CardDialog } = useCardDialog()
   const { openDividerDialog, DividerDialog } = useDividerDialog()
+  const { openReservationWidgetDialog, ReservationWidgetDialog } = useReservationWidgetDialog()
+  const { openMediaLibrary, MediaLibrary } = useMediaLibrary()
+
+  // proseクラスをcontentEditableに直接適用（公開ページと同じスタイルを実現）
+  const contentEditableClassName = proseClassName
+    ? `${styles.contentEditable()} ${proseClassName}`
+    : styles.contentEditable()
 
   return (
-    <div className={`${styles.wrapper({ disabled })} ${className || ''}`}>
+    <div className={styles.wrapper({ disabled })}>
       {showToolbar && (
         <ToolbarPlugin
           disabled={disabled}
+          onOpenMediaLibrary={openMediaLibrary}
           onInsertImage={openImageDialog}
           onInsertVideo={openYouTubeDialog}
           onInsertLink={openLinkDialog}
@@ -237,6 +237,7 @@ function EditorInner({
           onInsertButton={openButtonDialog}
           onInsertCard={openCardDialog}
           onInsertDivider={openDividerDialog}
+          onInsertReservationWidget={openReservationWidgetDialog}
         />
       )}
 
@@ -244,7 +245,7 @@ function EditorInner({
         <RichTextPlugin
           contentEditable={
             <ContentEditable
-              className={styles.contentEditable()}
+              className={contentEditableClassName}
               style={{ minHeight }}
               aria-placeholder={placeholder}
               placeholder={<Placeholder text={placeholder} />}
@@ -272,6 +273,8 @@ function EditorInner({
       <ButtonPlugin />
       <CardPlugin />
       <DividerPlugin />
+      <ReservationWidgetPlugin />
+      <MediaLibraryPlugin />
 
       {showFloatingToolbar && <FloatingToolbarPlugin />}
 
@@ -286,6 +289,8 @@ function EditorInner({
       <ButtonDialog />
       <CardDialog />
       <DividerDialog />
+      <ReservationWidgetDialog />
+      <MediaLibrary />
     </div>
   )
 }
@@ -325,6 +330,7 @@ export function LexicalEditor({
         ButtonNode,
         CardNode,
         DividerNode,
+        ReservationWidgetNode,
       ],
       onError: (error: Error) => {
         console.error('Lexical Editor Error:', error)
@@ -341,7 +347,7 @@ export function LexicalEditor({
         onChange={onChange}
         placeholder={placeholder}
         disabled={disabled}
-        className={className}
+        proseClassName={className}
         characterLimit={characterLimit}
         minHeight={minHeight}
         showToolbar={showToolbar}

@@ -7,6 +7,7 @@
 
 import { unstable_cache } from 'next/cache'
 import { prisma } from '@/lib/prisma'
+import { BlogPostStatus } from '@/generated/prisma/client/enums'
 
 export interface BlogPostSummary {
   id: string
@@ -39,7 +40,7 @@ const blogPostSelect = {
       slug: true,
     },
   },
-} as const
+}
 
 /**
  * 最新記事を取得（キャッシュ付き）
@@ -48,7 +49,7 @@ export const getRecentPosts = unstable_cache(
   async (count: number = 5): Promise<BlogPostSummary[]> => {
     const posts = await prisma.blogPost.findMany({
       where: {
-        isPublished: true,
+        status: BlogPostStatus.PUBLISHED,
         publishedAt: {
           lte: new Date(),
         },
@@ -73,7 +74,7 @@ export const getPopularPosts = unstable_cache(
   async (count: number = 5): Promise<BlogPostSummary[]> => {
     const posts = await prisma.blogPost.findMany({
       where: {
-        isPublished: true,
+        status: BlogPostStatus.PUBLISHED,
         publishedAt: {
           lte: new Date(),
         },
@@ -107,7 +108,7 @@ export const getRelatedPosts = unstable_cache(
 
     const posts = await prisma.blogPost.findMany({
       where: {
-        isPublished: true,
+        status: BlogPostStatus.PUBLISHED,
         publishedAt: {
           lte: new Date(),
         },
@@ -125,7 +126,7 @@ export const getRelatedPosts = unstable_cache(
     if (posts.length < count) {
       const additionalPosts = await prisma.blogPost.findMany({
         where: {
-          isPublished: true,
+          status: BlogPostStatus.PUBLISHED,
           publishedAt: {
             lte: new Date(),
           },

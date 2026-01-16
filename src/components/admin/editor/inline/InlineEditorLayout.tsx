@@ -9,13 +9,13 @@
  * 管理画面レイアウト内で動作（fixed inset-0ではなくrelative配置）
  */
 
-import { useEffect, useCallback } from 'react'
+import { useEffect } from 'react'
 import { tv } from 'tailwind-variants'
 import type { InlineEditorLayoutProps } from './types'
 
 const styles = tv({
   slots: {
-    wrapper: 'min-h-[calc(100vh-4rem)] flex flex-col bg-muted/30 relative',
+    wrapper: 'h-full flex flex-col bg-muted/30 relative',
     main: 'flex flex-1 overflow-hidden',
   },
 })()
@@ -28,21 +28,18 @@ type UseKeyboardShortcutsProps = {
  * キーボードショートカットフック
  */
 function useKeyboardShortcuts({ onSave }: UseKeyboardShortcutsProps) {
-  const handleKeyDown = useCallback(
-    (event: KeyboardEvent) => {
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
       // Ctrl/Cmd + S で保存
       if ((event.ctrlKey || event.metaKey) && event.key === 's') {
         event.preventDefault()
         onSave?.()
       }
-    },
-    [onSave]
-  )
+    }
 
-  useEffect(() => {
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [handleKeyDown])
+  }, [onSave])
 }
 
 type UseBeforeUnloadProps = {

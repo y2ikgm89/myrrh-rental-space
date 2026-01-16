@@ -106,13 +106,13 @@ export function ButtonComponent({
   const [localOpenInNewTab, setLocalOpenInNewTab] = useState(openInNewTab)
 
   // Reset local state when popup opens
-  const handleOpenPopup = useCallback(() => {
+  const handleOpenPopup = () => {
     setLocalText(text)
     setLocalUrl(url)
     setLocalVariant(variant)
     setLocalOpenInNewTab(openInNewTab)
     setShowPopup(true)
-  }, [text, url, variant, openInNewTab])
+  }
 
   const onDelete = useCallback(
     (event: KeyboardEvent) => {
@@ -160,7 +160,7 @@ export function ButtonComponent({
     )
   }, [clearSelection, editor, onDelete, setSelected])
 
-  const handleSave = useCallback(() => {
+  const handleSave = () => {
     editor.update(() => {
       const node = $getNodeByKey(nodeKey)
       if ($isButtonNode(node)) {
@@ -171,16 +171,16 @@ export function ButtonComponent({
       }
     })
     setShowPopup(false)
-  }, [editor, nodeKey, localText, localUrl, localVariant, localOpenInNewTab])
+  }
 
-  const handleRemove = useCallback(() => {
+  const handleRemove = () => {
     editor.update(() => {
       const node = $getNodeByKey(nodeKey)
       if ($isButtonNode(node)) {
         node.remove()
       }
     })
-  }, [editor, nodeKey])
+  }
 
   // Close popup when clicking outside
   useEffect(() => {

@@ -7,7 +7,7 @@
  * contenteditable を使用したシンプルな実装
  */
 
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, type KeyboardEvent, type ChangeEvent } from 'react'
 import { tv } from 'tailwind-variants'
 
 const styles = tv({
@@ -53,29 +53,23 @@ export function InlineTitleEditor({
   }, [value, adjustHeight])
 
   // キーボードイベント処理
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      // Enterキーで改行を防ぎ、次の要素にフォーカス
-      if (e.key === 'Enter') {
-        e.preventDefault()
-        // Lexicalエディターにフォーカスを移動（data-lexical-editor属性で特定）
-        const editor = document.querySelector('[data-lexical-editor="true"]')
-        if (editor instanceof HTMLElement) {
-          editor.focus()
-        }
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    // Enterキーで改行を防ぎ、次の要素にフォーカス
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      // Lexicalエディターにフォーカスを移動（data-lexical-editor属性で特定）
+      const editor = document.querySelector('[data-lexical-editor="true"]')
+      if (editor instanceof HTMLElement) {
+        editor.focus()
       }
-    },
-    []
-  )
+    }
+  }
 
-  const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      const newValue = e.target.value.replace(/\n/g, '') // 改行を除去
-      onChange(newValue)
-      adjustHeight()
-    },
-    [onChange, adjustHeight]
-  )
+  const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = e.target.value.replace(/\n/g, '') // 改行を除去
+    onChange(newValue)
+    adjustHeight()
+  }
 
   return (
     <div className={styles.wrapper()}>

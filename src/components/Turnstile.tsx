@@ -87,7 +87,13 @@ export function Turnstile({
       script.addEventListener('load', initWidget)
     }
 
+    // クリーンアップ時にリスナーとウィジェットを削除
+    const scriptElement = script
     return () => {
+      // イベントリスナーを削除
+      scriptElement.removeEventListener('load', initWidget)
+
+      // ウィジェットを削除
       if (widgetIdRef.current && window.turnstile) {
         window.turnstile.remove(widgetIdRef.current)
       }

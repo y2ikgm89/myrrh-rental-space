@@ -10,14 +10,30 @@ import { prisma } from '@/lib/prisma'
 import { safeFetch, ErrorCategory, ErrorSeverity } from '@/lib/errors'
 
 /** お知らせバー設定のデフォルト値 */
-const DEFAULT_ANNOUNCEMENT_BAR_SETTINGS = {
-  announcementBarAnimation: 'fade' as const,
+interface AnnouncementBarSettings {
+  announcementBarAnimation: string
+  announcementBarDuration: number
+  announcementBarAutoPlay: boolean
+  announcementBarPauseOnHover: boolean
+  announcementBarShowArrows: boolean
+  announcementBarShowIndicator: boolean
+  announcementBarDesignStyle: string
+  announcementBarBgColor: string | null
+  announcementBarTextColor: string | null
+  announcementBarStripeColor: string | null
+  announcementBarStripeAnimation: boolean
+  announcementBarGradientAnimation: boolean
+  announcementBarGlassAnimation: boolean
+}
+
+const DEFAULT_ANNOUNCEMENT_BAR_SETTINGS: AnnouncementBarSettings = {
+  announcementBarAnimation: 'fade',
   announcementBarDuration: 5000,
   announcementBarAutoPlay: true,
   announcementBarPauseOnHover: true,
   announcementBarShowArrows: true,
   announcementBarShowIndicator: true,
-  announcementBarDesignStyle: 'solid' as const,
+  announcementBarDesignStyle: 'solid',
   announcementBarBgColor: null,
   announcementBarTextColor: null,
   announcementBarStripeColor: null,

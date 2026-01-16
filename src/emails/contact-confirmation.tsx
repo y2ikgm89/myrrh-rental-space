@@ -114,11 +114,11 @@ const detailItem = {
   margin: '8px 0',
 }
 
-const messageText = {
+const messageText: React.CSSProperties = {
   fontSize: '14px',
   lineHeight: '22px',
   color: '#484848',
-  whiteSpace: 'pre-wrap' as const,
+  whiteSpace: 'pre-wrap',
   backgroundColor: '#ffffff',
   padding: '12px',
   borderRadius: '4px',

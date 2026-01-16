@@ -6,7 +6,7 @@
 
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
   $insertNodes,
@@ -67,22 +67,18 @@ function DividerDialog({ isOpen, onClose }: DividerDialogProps) {
   const [editor] = useLexicalComposerContext()
   const [selectedStyle, setSelectedStyle] = useState<DividerStyle>('solid')
 
-  const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault()
-      editor.dispatchCommand(INSERT_DIVIDER_COMMAND, {
-        dividerStyle: selectedStyle,
-      })
-      onClose()
-      setSelectedStyle('solid')
-    },
-    [editor, selectedStyle, onClose]
-  )
-
-  const handleClose = useCallback(() => {
+  const handleSubmit = () => {
+    editor.dispatchCommand(INSERT_DIVIDER_COMMAND, {
+      dividerStyle: selectedStyle,
+    })
     onClose()
     setSelectedStyle('solid')
-  }, [onClose])
+  }
+
+  const handleClose = () => {
+    onClose()
+    setSelectedStyle('solid')
+  }
 
   if (!isOpen) {
     return null
@@ -106,7 +102,7 @@ function DividerDialog({ isOpen, onClose }: DividerDialogProps) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className={styles.form()}>
+        <div className={styles.form()}>
           <div className={styles.field()}>
             <label className={styles.label()}>スタイル</label>
             <div className={styles.styleGrid()}>
@@ -142,13 +138,14 @@ function DividerDialog({ isOpen, onClose }: DividerDialogProps) {
               キャンセル
             </button>
             <button
-              type="submit"
+              type="button"
+              onClick={handleSubmit}
               className={`${styles.button()} ${styles.buttonPrimary()}`}
             >
               挿入
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   )
@@ -157,17 +154,16 @@ function DividerDialog({ isOpen, onClose }: DividerDialogProps) {
 export function useDividerDialog() {
   const [isOpen, setIsOpen] = useState(false)
 
-  const openDividerDialog = useCallback(() => {
+  const openDividerDialog = () => {
     setIsOpen(true)
-  }, [])
+  }
 
-  const closeDividerDialog = useCallback(() => {
+  const closeDividerDialog = () => {
     setIsOpen(false)
-  }, [])
+  }
 
-  const DividerDialogComponent = useCallback(
-    () => <DividerDialog isOpen={isOpen} onClose={closeDividerDialog} />,
-    [isOpen, closeDividerDialog]
+  const DividerDialogComponent = () => (
+    <DividerDialog isOpen={isOpen} onClose={closeDividerDialog} />
   )
 
   return {

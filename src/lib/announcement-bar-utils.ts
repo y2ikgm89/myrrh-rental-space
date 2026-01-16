@@ -107,7 +107,7 @@ export const ANIMATION_VARIANTS = {
     animate: { opacity: 1, y: 0 },
     exit: { opacity: 0, y: 20 },
   },
-} as const
+}
 
 // =============================================================================
 // Helper Functions
@@ -189,7 +189,7 @@ export function getGradientAnimationStyle(animate: boolean): CSSProperties {
 export function getGlassShimmerStyle(animate: boolean): CSSProperties {
   if (!animate) return {}
   return {
-    position: 'relative' as const,
+    position: 'relative',
     overflow: 'hidden',
   }
 }

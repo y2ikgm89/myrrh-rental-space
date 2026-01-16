@@ -1,0 +1,1 @@
+export { GenericSidePanel } from './GenericSidePanel'

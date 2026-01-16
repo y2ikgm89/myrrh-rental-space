@@ -72,6 +72,7 @@ import {
   Type,
   Plus,
   Puzzle,
+  Calendar,
 } from 'lucide-react'
 import { TooltipProvider } from '@/components/admin/ui'
 import { ToolbarButton, ToolbarDropdown } from './toolbar'
@@ -96,6 +97,7 @@ const styles = tv({
 type ToolbarPluginProps = {
   disabled?: boolean
   onInsertImage?: () => void
+  onOpenMediaLibrary?: () => void
   onInsertVideo?: () => void
   onInsertLink?: () => void
   onInsertTable?: () => void
@@ -105,11 +107,13 @@ type ToolbarPluginProps = {
   onInsertButton?: () => void
   onInsertCard?: () => void
   onInsertDivider?: () => void
+  onInsertReservationWidget?: () => void
 }
 
 export function ToolbarPlugin({
   disabled = false,
   onInsertImage,
+  onOpenMediaLibrary,
   onInsertVideo,
   onInsertLink,
   onInsertTable,
@@ -119,6 +123,7 @@ export function ToolbarPlugin({
   onInsertButton,
   onInsertCard,
   onInsertDivider,
+  onInsertReservationWidget,
 }: ToolbarPluginProps) {
   const [editor] = useLexicalComposerContext()
   const [canUndo, setCanUndo] = useState(false)
@@ -219,30 +224,27 @@ export function ToolbarPlugin({
     )
   }, [editor, $updateToolbar])
 
-  const formatParagraph = useCallback(() => {
+  const formatParagraph = () => {
     editor.update(() => {
       const selection = $getSelection()
       if ($isRangeSelection(selection)) {
         $setBlocksType(selection, () => $createParagraphNode())
       }
     })
-  }, [editor])
+  }
 
-  const formatHeading = useCallback(
-    (headingSize: HeadingTagType) => {
-      if (blockType !== headingSize) {
-        editor.update(() => {
-          const selection = $getSelection()
-          if ($isRangeSelection(selection)) {
-            $setBlocksType(selection, () => $createHeadingNode(headingSize))
-          }
-        })
-      }
-    },
-    [blockType, editor]
-  )
+  const formatHeading = (headingSize: HeadingTagType) => {
+    if (blockType !== headingSize) {
+      editor.update(() => {
+        const selection = $getSelection()
+        if ($isRangeSelection(selection)) {
+          $setBlocksType(selection, () => $createHeadingNode(headingSize))
+        }
+      })
+    }
+  }
 
-  const formatQuote = useCallback(() => {
+  const formatQuote = () => {
     if (blockType !== 'quote') {
       editor.update(() => {
         const selection = $getSelection()
@@ -251,9 +253,9 @@ export function ToolbarPlugin({
         }
       })
     }
-  }, [blockType, editor])
+  }
 
-  const formatCodeBlock = useCallback(() => {
+  const formatCodeBlock = () => {
     if (blockType !== 'code') {
       editor.update(() => {
         const selection = $getSelection()
@@ -272,7 +274,7 @@ export function ToolbarPlugin({
         }
       })
     }
-  }, [blockType, editor])
+  }
 
   // ブロックタイプドロップダウンのアイテム
   const blockTypeGroups: ToolbarDropdownGroup[] = [
@@ -363,10 +365,16 @@ export function ToolbarPlugin({
       shortcut: getShortcutDisplay('link'),
       onClick: onInsertLink,
     },
+    onOpenMediaLibrary && {
+      id: 'media-library',
+      icon: ImageIcon,
+      label: 'メディアライブラリ',
+      onClick: onOpenMediaLibrary,
+    },
     onInsertImage && {
       id: 'image',
       icon: ImageIcon,
-      label: '画像',
+      label: '画像（直接アップロード）',
       onClick: onInsertImage,
     },
     onInsertVideo && {
@@ -386,6 +394,12 @@ export function ToolbarPlugin({
       icon: Newspaper,
       label: '記事リストウィジェット',
       onClick: onInsertWidget,
+    },
+    onInsertReservationWidget && {
+      id: 'reservation-widget',
+      icon: Calendar,
+      label: '予約ウィジェット',
+      onClick: onInsertReservationWidget,
     },
   ].filter(Boolean) as ToolbarDropdownItem[]
 

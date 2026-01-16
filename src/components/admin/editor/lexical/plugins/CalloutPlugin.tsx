@@ -6,7 +6,7 @@
 
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
   $insertNodes,
@@ -70,19 +70,15 @@ function CalloutDialog({ isOpen, onClose }: CalloutDialogProps) {
   const [selectedType, setSelectedType] = useState<CalloutType>('info')
   const [content, setContent] = useState('')
 
-  const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault()
-      editor.dispatchCommand(INSERT_CALLOUT_COMMAND, {
-        calloutType: selectedType,
-        content: content.trim(),
-      })
-      onClose()
-      setSelectedType('info')
-      setContent('')
-    },
-    [editor, selectedType, content, onClose]
-  )
+  const handleSubmit = () => {
+    editor.dispatchCommand(INSERT_CALLOUT_COMMAND, {
+      calloutType: selectedType,
+      content: content.trim(),
+    })
+    onClose()
+    setSelectedType('info')
+    setContent('')
+  }
 
   if (!isOpen) {
     return null
@@ -103,7 +99,7 @@ function CalloutDialog({ isOpen, onClose }: CalloutDialogProps) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className={styles.form()}>
+        <div className={styles.form()}>
           <div className={styles.field()}>
             <label className={styles.label()}>タイプ</label>
             <div className={styles.typeGrid()}>
@@ -144,13 +140,14 @@ function CalloutDialog({ isOpen, onClose }: CalloutDialogProps) {
               キャンセル
             </button>
             <button
-              type="submit"
+              type="button"
+              onClick={handleSubmit}
               className={`${styles.button()} ${styles.buttonPrimary()}`}
             >
               挿入
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   )
@@ -159,17 +156,16 @@ function CalloutDialog({ isOpen, onClose }: CalloutDialogProps) {
 export function useCalloutDialog() {
   const [isOpen, setIsOpen] = useState(false)
 
-  const openCalloutDialog = useCallback(() => {
+  const openCalloutDialog = () => {
     setIsOpen(true)
-  }, [])
+  }
 
-  const closeCalloutDialog = useCallback(() => {
+  const closeCalloutDialog = () => {
     setIsOpen(false)
-  }, [])
+  }
 
-  const CalloutDialogComponent = useCallback(
-    () => <CalloutDialog isOpen={isOpen} onClose={closeCalloutDialog} />,
-    [isOpen, closeCalloutDialog]
+  const CalloutDialogComponent = () => (
+    <CalloutDialog isOpen={isOpen} onClose={closeCalloutDialog} />
   )
 
   return {

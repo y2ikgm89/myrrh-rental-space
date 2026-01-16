@@ -40,3 +40,11 @@ export {
   useDividerDialog,
   INSERT_DIVIDER_COMMAND,
 } from './DividerPlugin'
+
+export {
+  ReservationWidgetPlugin,
+  useReservationWidgetDialog,
+  INSERT_RESERVATION_WIDGET_COMMAND,
+} from './ReservationWidgetPlugin'
+
+export { MediaLibraryPlugin, useMediaLibrary } from './MediaLibraryPlugin'

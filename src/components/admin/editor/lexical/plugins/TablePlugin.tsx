@@ -6,7 +6,7 @@
 
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { INSERT_TABLE_COMMAND } from '@lexical/table'
 import { tv } from 'tailwind-variants'
@@ -44,19 +44,15 @@ function TableDialog({ isOpen, onClose }: TableDialogProps) {
   const [rows, setRows] = useState(3)
   const [columns, setColumns] = useState(3)
 
-  const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault()
-      editor.dispatchCommand(INSERT_TABLE_COMMAND, {
-        rows: rows.toString(),
-        columns: columns.toString(),
-      })
-      onClose()
-      setRows(3)
-      setColumns(3)
-    },
-    [editor, rows, columns, onClose]
-  )
+  const handleSubmit = () => {
+    editor.dispatchCommand(INSERT_TABLE_COMMAND, {
+      rows: rows.toString(),
+      columns: columns.toString(),
+    })
+    onClose()
+    setRows(3)
+    setColumns(3)
+  }
 
   if (!isOpen) {
     return null
@@ -80,7 +76,7 @@ function TableDialog({ isOpen, onClose }: TableDialogProps) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className={styles.form()}>
+        <div className={styles.form()}>
           <div className={styles.grid()}>
             <div className={styles.field()}>
               <label className={styles.label()}>行数</label>
@@ -141,13 +137,14 @@ function TableDialog({ isOpen, onClose }: TableDialogProps) {
               キャンセル
             </button>
             <button
-              type="submit"
+              type="button"
+              onClick={handleSubmit}
               className={`${styles.button()} ${styles.buttonPrimary()}`}
             >
               挿入
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   )
@@ -156,17 +153,16 @@ function TableDialog({ isOpen, onClose }: TableDialogProps) {
 export function useTableDialog() {
   const [isOpen, setIsOpen] = useState(false)
 
-  const openTableDialog = useCallback(() => {
+  const openTableDialog = () => {
     setIsOpen(true)
-  }, [])
+  }
 
-  const closeTableDialog = useCallback(() => {
+  const closeTableDialog = () => {
     setIsOpen(false)
-  }, [])
+  }
 
-  const TableDialogComponent = useCallback(
-    () => <TableDialog isOpen={isOpen} onClose={closeTableDialog} />,
-    [isOpen, closeTableDialog]
+  const TableDialogComponent = () => (
+    <TableDialog isOpen={isOpen} onClose={closeTableDialog} />
   )
 
   return {

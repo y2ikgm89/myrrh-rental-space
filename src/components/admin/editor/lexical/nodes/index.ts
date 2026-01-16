@@ -66,3 +66,11 @@ export {
   type DividerStyle,
   type SerializedDividerNode,
 } from './DividerNode'
+
+export {
+  ReservationWidgetNode,
+  $createReservationWidgetNode,
+  $isReservationWidgetNode,
+  type ReservationWidgetOptions,
+  type SerializedReservationWidgetNode,
+} from './ReservationWidgetNode'

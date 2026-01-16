@@ -7,7 +7,6 @@
  * ブログ記事用
  */
 
-import { useCallback } from 'react'
 import type { UseFormRegister, UseFormGetValues, UseFormSetValue, FieldErrors } from 'react-hook-form'
 import { Input, Label, Textarea, Button } from '@/components/admin/ui'
 import type { BlogEditorFormData } from '../types'
@@ -27,7 +26,7 @@ export function BasicInfoFields({
   errors,
   disabled,
 }: BasicInfoFieldsProps) {
-  const generateSlug = useCallback(() => {
+  const generateSlug = () => {
     const title = getValues('title')
     if (title) {
       const slug = title
@@ -38,7 +37,7 @@ export function BasicInfoFields({
         .trim()
       setValue('slug', slug, { shouldDirty: true })
     }
-  }, [getValues, setValue])
+  }
 
   return (
     <div className="space-y-4">

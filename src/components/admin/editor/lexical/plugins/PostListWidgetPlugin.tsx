@@ -6,7 +6,7 @@
 
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
   $insertNodes,
@@ -62,21 +62,17 @@ function PostListWidgetDialog({ isOpen, onClose }: PostListWidgetDialogProps) {
   const [count, setCount] = useState(5)
   const [categoryId, setCategoryId] = useState('')
 
-  const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault()
-      editor.dispatchCommand(INSERT_POST_LIST_WIDGET_COMMAND, {
-        type: widgetType,
-        count,
-        categoryId: categoryId || undefined,
-      })
-      onClose()
-      setWidgetType('recent')
-      setCount(5)
-      setCategoryId('')
-    },
-    [editor, widgetType, count, categoryId, onClose]
-  )
+  const handleSubmit = () => {
+    editor.dispatchCommand(INSERT_POST_LIST_WIDGET_COMMAND, {
+      type: widgetType,
+      count,
+      categoryId: categoryId || undefined,
+    })
+    onClose()
+    setWidgetType('recent')
+    setCount(5)
+    setCategoryId('')
+  }
 
   if (!isOpen) {
     return null
@@ -100,7 +96,7 @@ function PostListWidgetDialog({ isOpen, onClose }: PostListWidgetDialogProps) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className={styles.form()}>
+        <div className={styles.form()}>
           <div className={styles.field()}>
             <label className={styles.label()}>表示タイプ</label>
             <select
@@ -152,13 +148,14 @@ function PostListWidgetDialog({ isOpen, onClose }: PostListWidgetDialogProps) {
               キャンセル
             </button>
             <button
-              type="submit"
+              type="button"
+              onClick={handleSubmit}
               className={`${styles.button()} ${styles.buttonPrimary()}`}
             >
               挿入
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   )
@@ -167,19 +164,16 @@ function PostListWidgetDialog({ isOpen, onClose }: PostListWidgetDialogProps) {
 export function usePostListWidgetDialog() {
   const [isOpen, setIsOpen] = useState(false)
 
-  const openPostListWidgetDialog = useCallback(() => {
+  const openPostListWidgetDialog = () => {
     setIsOpen(true)
-  }, [])
+  }
 
-  const closePostListWidgetDialog = useCallback(() => {
+  const closePostListWidgetDialog = () => {
     setIsOpen(false)
-  }, [])
+  }
 
-  const PostListWidgetDialogComponent = useCallback(
-    () => (
-      <PostListWidgetDialog isOpen={isOpen} onClose={closePostListWidgetDialog} />
-    ),
-    [isOpen, closePostListWidgetDialog]
+  const PostListWidgetDialogComponent = () => (
+    <PostListWidgetDialog isOpen={isOpen} onClose={closePostListWidgetDialog} />
   )
 
   return {

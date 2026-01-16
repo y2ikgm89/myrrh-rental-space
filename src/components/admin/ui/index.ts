@@ -50,6 +50,20 @@ export {
   DialogDescription,
 } from './dialog'
 
+export {
+  AlertDialog,
+  AlertDialogPortal,
+  AlertDialogOverlay,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from './alert-dialog'
+
 export { Textarea } from './textarea'
 
 export { Label } from './label'
@@ -108,7 +122,7 @@ export type {
 } from './sortable'
 
 // Pagination
-export { Pagination } from './pagination'
+export { Pagination } from './Pagination'
 
 // Toast
 export { Toaster } from './toaster'

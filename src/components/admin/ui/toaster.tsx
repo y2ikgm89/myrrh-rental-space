@@ -9,6 +9,7 @@ export function Toaster() {
       richColors
       closeButton
       duration={4000}
+      visibleToasts={5}
     />
   )
 }

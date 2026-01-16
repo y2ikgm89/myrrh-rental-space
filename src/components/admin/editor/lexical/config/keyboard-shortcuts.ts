@@ -136,7 +136,7 @@ export const KEYBOARD_SHORTCUTS: Record<ShortcutKey, ShortcutDefinition> = {
     win: 'Ctrl+S',
     label: '保存',
   },
-} as const
+}
 
 /**
  * プラットフォームに応じたショートカット表示を取得

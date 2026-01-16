@@ -4,12 +4,14 @@
  * ニュース用サイドパネル
  *
  * お知らせの編集設定パネル
- * タイトルと公開設定のみのシンプルな構成
+ * タイトルとレイアウト設定
+ * 公開/非公開はヘッダーのボタンで操作
  */
 
 import { X } from 'lucide-react'
 import { tv } from 'tailwind-variants'
 import type { UseFormRegister, Control, FieldErrors, UseFormSetValue } from 'react-hook-form'
+import { useWatch } from 'react-hook-form'
 import {
   Button,
   Card,
@@ -18,9 +20,12 @@ import {
   CardTitle,
   Input,
   Label,
-  Switch,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/admin/ui'
-import { useWatch } from 'react-hook-form'
 import type { NewsEditorFormData } from './types'
 
 const styles = tv({
@@ -51,6 +56,22 @@ const styles = tv({
   },
 })
 
+interface ContentWidthOption {
+  value: string
+  label: string
+}
+
+const CONTENT_WIDTH_OPTIONS: readonly ContentWidthOption[] = [
+  { value: '', label: 'デフォルト' },
+  { value: 'XS', label: '極小 (640px)' },
+  { value: 'SM', label: '小 (768px)' },
+  { value: 'MD', label: '中 (1024px)' },
+  { value: 'LG', label: '大 (1280px)' },
+  { value: 'XL', label: '特大 (1536px)' },
+  { value: 'FULL', label: '全幅' },
+  { value: 'CUSTOM', label: 'カスタム' },
+]
+
 type NewsSidePanelProps = {
   isOpen: boolean
   onClose: () => void
@@ -71,7 +92,7 @@ export function NewsSidePanel({
   disabled,
 }: NewsSidePanelProps) {
   const classes = styles({ isOpen })
-  const isPublished = useWatch({ control, name: 'isPublished' })
+  const contentWidth = useWatch({ control, name: 'contentWidth' })
 
   return (
     <>
@@ -115,38 +136,51 @@ export function NewsSidePanel({
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm">公開設定</CardTitle>
+                <CardTitle className="text-sm">レイアウト</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="isPublished" className="text-base">
-                      公開する
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      オフにすると下書き状態になります
-                    </p>
-                  </div>
-                  <Switch
-                    id="isPublished"
-                    checked={isPublished}
-                    onCheckedChange={(checked) => setValue('isPublished', checked, { shouldDirty: true })}
-                    disabled={disabled}
-                  />
-                </div>
-
                 <div className="space-y-2">
-                  <Label htmlFor="publishedAt">公開日時</Label>
-                  <Input
-                    id="publishedAt"
-                    type="datetime-local"
-                    {...register('publishedAt')}
+                  <Label htmlFor="contentWidth">コンテンツ幅</Label>
+                  <Select
+                    value={contentWidth || ''}
+                    onValueChange={(value) => {
+                      setValue('contentWidth', value || undefined, { shouldDirty: true })
+                      if (value !== 'CUSTOM') {
+                        setValue('contentWidthCustom', undefined, { shouldDirty: true })
+                      }
+                    }}
                     disabled={disabled}
-                  />
+                  >
+                    <SelectTrigger id="contentWidth">
+                      <SelectValue placeholder="デフォルト" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CONTENT_WIDTH_OPTIONS.map((option) => (
+                        <SelectItem key={option.value || 'default'} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <p className="text-xs text-muted-foreground">
-                    空欄の場合、公開時の日時が設定されます
+                    個別に幅を設定（空欄でサイト設定を使用）
                   </p>
                 </div>
+
+                {contentWidth === 'CUSTOM' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="contentWidthCustom">カスタム幅 (px)</Label>
+                    <Input
+                      id="contentWidthCustom"
+                      type="number"
+                      min="320"
+                      max="1920"
+                      {...register('contentWidthCustom')}
+                      placeholder="例: 900"
+                      disabled={disabled}
+                    />
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

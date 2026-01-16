@@ -1,0 +1,1 @@
+export { PublishFieldsGeneric } from './PublishFieldsGeneric'

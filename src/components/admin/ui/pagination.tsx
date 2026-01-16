@@ -1,8 +1,9 @@
 'use client'
 
-import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useTransition } from 'react'
+import { useQueryState } from 'nuqs'
 import { Button } from '@/components/admin/ui'
+import { parseAsPage } from '@/lib/nuqs'
 
 type PaginationProps = {
   currentPage: number
@@ -11,22 +12,18 @@ type PaginationProps = {
 }
 
 export function Pagination({ currentPage, totalPages, total }: PaginationProps) {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const pathname = usePathname()
   const [isPending, startTransition] = useTransition()
 
-  const goToPage = (page: number) => {
-    const params = new URLSearchParams(searchParams.toString())
-    if (page > 1) {
-      params.set('page', String(page))
-    } else {
-      params.delete('page')
-    }
+  const [, setPage] = useQueryState('page', {
+    ...parseAsPage,
+    shallow: false,
+    history: 'push',
+    startTransition,
+  })
 
-    startTransition(() => {
-      router.push(`${pathname}?${params.toString()}`)
-    })
+  const goToPage = (page: number) => {
+    // デフォルト値（1）の場合はURLから削除
+    setPage(page === 1 ? null : page)
   }
 
   if (totalPages <= 1) {

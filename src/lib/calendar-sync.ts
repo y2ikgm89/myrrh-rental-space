@@ -20,6 +20,7 @@ import {
 import { sendCalendarSyncRejectionEmail } from './email-service'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
+import { ACTIVE_RESERVATION_STATUSES } from './validations/enums'
 
 // =============================================================================
 // Types
@@ -291,7 +292,7 @@ export async function retryFailedSyncs(): Promise<{
     where: {
       googleCalendarEventId: null,
       calendarSyncError: { not: null },
-      status: { in: ['PENDING', 'CONFIRMED'] },
+      status: { in: [...ACTIVE_RESERVATION_STATUSES] },
     },
     include: {
       space: true,
@@ -512,7 +513,7 @@ async function processCalendarChange(change: CalendarChange): Promise<ProcessRes
         const overlappingReservation = await tx.reservation.findFirst({
           where: {
             spaceId: reservation.spaceId,
-            status: { in: ['PENDING', 'CONFIRMED'] },
+            status: { in: [...ACTIVE_RESERVATION_STATUSES] },
             id: { not: reservation.id },
             AND: [
               { startTime: { lt: change.endTime } },

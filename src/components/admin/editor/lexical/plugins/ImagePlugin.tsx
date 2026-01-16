@@ -6,7 +6,7 @@
 
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
   $insertNodes,
@@ -69,65 +69,74 @@ function ImageDialog({ isOpen, onClose }: ImageDialogProps) {
   const [alt, setAlt] = useState('')
   const [previewUrl, setPreviewUrl] = useState('')
   const [isDragging, setIsDragging] = useState(false)
+  const fileReaderRef = useRef<FileReader | null>(null)
+  const isMountedRef = useRef(true)
 
-  const handleUrlChange = useCallback((value: string) => {
-    setUrl(value)
-    setPreviewUrl(value)
+  // マウント状態を追跡し、FileReaderをクリーンアップ
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+      if (fileReaderRef.current) {
+        fileReaderRef.current.abort()
+      }
+    }
   }, [])
 
-  const handleFileSelect = useCallback(
-    async (file: File) => {
-      // In a real app, you would upload the file to a server
-      // For now, we'll use a data URL for preview
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const dataUrl = e.target?.result as string
-        setPreviewUrl(dataUrl)
-        setUrl(dataUrl)
-      }
-      reader.readAsDataURL(file)
-    },
-    []
-  )
+  const handleUrlChange = (value: string) => {
+    setUrl(value)
+    setPreviewUrl(value)
+  }
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault()
-      setIsDragging(false)
-      const file = e.dataTransfer.files[0]
-      if (file && file.type.startsWith('image/')) {
-        handleFileSelect(file)
-      }
-    },
-    [handleFileSelect]
-  )
+  const handleFileSelect = async (file: File) => {
+    // 既存のFileReaderをキャンセル
+    if (fileReaderRef.current) {
+      fileReaderRef.current.abort()
+    }
 
-  const handleInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0]
-      if (file) {
-        handleFileSelect(file)
-      }
-    },
-    [handleFileSelect]
-  )
+    // In a real app, you would upload the file to a server
+    // For now, we'll use a data URL for preview
+    const reader = new FileReader()
+    fileReaderRef.current = reader
 
-  const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault()
-      if (url.trim()) {
-        editor.dispatchCommand(INSERT_IMAGE_COMMAND, {
-          src: url.trim(),
-          alt: alt.trim(),
-        })
-      }
-      onClose()
-      setUrl('')
-      setAlt('')
-      setPreviewUrl('')
-    },
-    [editor, url, alt, onClose]
-  )
+    reader.onload = (e) => {
+      // アンマウント後にsetStateしない
+      if (!isMountedRef.current) return
+      const dataUrl = e.target?.result as string
+      setPreviewUrl(dataUrl)
+      setUrl(dataUrl)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+    const file = e.dataTransfer.files[0]
+    if (file && file.type.startsWith('image/')) {
+      handleFileSelect(file)
+    }
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      handleFileSelect(file)
+    }
+  }
+
+  const handleSubmit = () => {
+    if (url.trim()) {
+      editor.dispatchCommand(INSERT_IMAGE_COMMAND, {
+        src: url.trim(),
+        alt: alt.trim(),
+      })
+    }
+    onClose()
+    setUrl('')
+    setAlt('')
+    setPreviewUrl('')
+  }
 
   if (!isOpen) {
     return null
@@ -171,7 +180,7 @@ function ImageDialog({ isOpen, onClose }: ImageDialogProps) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className={styles.form()}>
+        <div className={styles.form()}>
           {activeTab === 'url' ? (
             <div className={styles.field()}>
               <label className={styles.label()}>画像URL</label>
@@ -240,14 +249,15 @@ function ImageDialog({ isOpen, onClose }: ImageDialogProps) {
               キャンセル
             </button>
             <button
-              type="submit"
+              type="button"
+              onClick={handleSubmit}
               disabled={!url.trim()}
               className={`${styles.button()} ${styles.buttonPrimary()} disabled:opacity-50`}
             >
               挿入
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   )
@@ -256,17 +266,16 @@ function ImageDialog({ isOpen, onClose }: ImageDialogProps) {
 export function useImageDialog() {
   const [isOpen, setIsOpen] = useState(false)
 
-  const openImageDialog = useCallback(() => {
+  const openImageDialog = () => {
     setIsOpen(true)
-  }, [])
+  }
 
-  const closeImageDialog = useCallback(() => {
+  const closeImageDialog = () => {
     setIsOpen(false)
-  }, [])
+  }
 
-  const ImageDialogComponent = useCallback(
-    () => <ImageDialog isOpen={isOpen} onClose={closeImageDialog} />,
-    [isOpen, closeImageDialog]
+  const ImageDialogComponent = () => (
+    <ImageDialog isOpen={isOpen} onClose={closeImageDialog} />
   )
 
   return {

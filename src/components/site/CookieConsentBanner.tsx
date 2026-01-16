@@ -23,10 +23,16 @@ const STORAGE_KEY = 'cookie-consent'
 
 export type CookieConsentStatus = 'accepted' | 'rejected' | null
 
+// 型ガード: localStorageの値がCookieConsentStatusかどうか
+function isValidConsentStatus(value: string | null): value is 'accepted' | 'rejected' {
+  return value === 'accepted' || value === 'rejected'
+}
+
 // localStorageからCookie同意状態を取得
 function getSnapshot(): CookieConsentStatus {
   try {
-    return localStorage.getItem(STORAGE_KEY) as CookieConsentStatus
+    const value = localStorage.getItem(STORAGE_KEY)
+    return isValidConsentStatus(value) ? value : null
   } catch {
     // プライベートブラウジングモードなどでlocalStorageが使用不可の場合
     return null
@@ -156,7 +162,8 @@ export function CookieConsentBanner({
 export function getCookieConsentStatus(): CookieConsentStatus {
   if (typeof window === 'undefined') return null
   try {
-    return localStorage.getItem(STORAGE_KEY) as CookieConsentStatus
+    const value = localStorage.getItem(STORAGE_KEY)
+    return isValidConsentStatus(value) ? value : null
   } catch {
     return null
   }

@@ -96,18 +96,18 @@ export async function getOAuthClient(
   const account = await prisma.account.findFirst({
     where: {
       userId,
-      provider: 'google',
+      providerId: 'google',
     },
     select: {
       id: true,
-      providerAccountId: true,
-      access_token: true,
-      refresh_token: true,
-      expires_at: true,
+      accountId: true,
+      accessToken: true,
+      refreshToken: true,
+      accessTokenExpiresAt: true,
     },
   })
 
-  if (!account?.access_token) {
+  if (!account?.accessToken) {
     return null
   }
 
@@ -118,23 +118,25 @@ export async function getOAuthClient(
     )
 
     oauth2Client.setCredentials({
-      access_token: account.access_token,
-      refresh_token: account.refresh_token ?? undefined,
-      expiry_date: account.expires_at ? account.expires_at * 1000 : undefined,
+      access_token: account.accessToken,
+      refresh_token: account.refreshToken ?? undefined,
+      expiry_date: account.accessTokenExpiresAt
+        ? account.accessTokenExpiresAt.getTime()
+        : undefined,
     })
 
     // トークンリフレッシュのハンドラー
     const accountId = account.id
     oauth2Client.on('tokens', async (tokens) => {
       if (tokens.access_token) {
-        // refresh_tokenも更新（Googleがローテーションした場合に備える）
+        // refreshTokenも更新（Googleがローテーションした場合に備える）
         await prisma.account.update({
           where: { id: accountId },
           data: {
-            access_token: tokens.access_token,
-            refresh_token: tokens.refresh_token ?? undefined,
-            expires_at: tokens.expiry_date
-              ? Math.floor(tokens.expiry_date / 1000)
+            accessToken: tokens.access_token,
+            refreshToken: tokens.refresh_token ?? undefined,
+            accessTokenExpiresAt: tokens.expiry_date
+              ? new Date(tokens.expiry_date)
               : undefined,
           },
         })

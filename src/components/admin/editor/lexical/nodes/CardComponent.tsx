@@ -112,13 +112,13 @@ export function CardComponent({
   const [settingsLinkText, setSettingsLinkText] = useState(linkText || '')
 
   // Reset settings state when dialog opens
-  const handleOpenSettings = useCallback(() => {
+  const handleOpenSettings = () => {
     setSettingsImageUrl(imageUrl || '')
     setSettingsImageAlt(imageAlt || '')
     setSettingsLinkUrl(linkUrl || '')
     setSettingsLinkText(linkText || '')
     setShowSettings(true)
-  }, [imageUrl, imageAlt, linkUrl, linkText])
+  }
 
   const onDelete = useCallback(
     (event: KeyboardEvent) => {
@@ -166,35 +166,29 @@ export function CardComponent({
     )
   }, [clearSelection, editor, onDelete, setSelected])
 
-  const handleTitleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const newTitle = e.target.value
-      setLocalTitle(newTitle)
-      editor.update(() => {
-        const node = $getNodeByKey(nodeKey)
-        if ($isCardNode(node)) {
-          node.setTitle(newTitle)
-        }
-      })
-    },
-    [editor, nodeKey]
-  )
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newTitle = e.target.value
+    setLocalTitle(newTitle)
+    editor.update(() => {
+      const node = $getNodeByKey(nodeKey)
+      if ($isCardNode(node)) {
+        node.setTitle(newTitle)
+      }
+    })
+  }
 
-  const handleDescriptionChange = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      const newDescription = e.target.value
-      setLocalDescription(newDescription)
-      editor.update(() => {
-        const node = $getNodeByKey(nodeKey)
-        if ($isCardNode(node)) {
-          node.setDescription(newDescription)
-        }
-      })
-    },
-    [editor, nodeKey]
-  )
+  const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newDescription = e.target.value
+    setLocalDescription(newDescription)
+    editor.update(() => {
+      const node = $getNodeByKey(nodeKey)
+      if ($isCardNode(node)) {
+        node.setDescription(newDescription)
+      }
+    })
+  }
 
-  const handleSaveSettings = useCallback(() => {
+  const handleSaveSettings = () => {
     editor.update(() => {
       const node = $getNodeByKey(nodeKey)
       if ($isCardNode(node)) {
@@ -205,16 +199,16 @@ export function CardComponent({
       }
     })
     setShowSettings(false)
-  }, [editor, nodeKey, settingsImageUrl, settingsImageAlt, settingsLinkUrl, settingsLinkText])
+  }
 
-  const handleRemove = useCallback(() => {
+  const handleRemove = () => {
     editor.update(() => {
       const node = $getNodeByKey(nodeKey)
       if ($isCardNode(node)) {
         node.remove()
       }
     })
-  }, [editor, nodeKey])
+  }
 
   // Close settings when clicking outside
   useEffect(() => {

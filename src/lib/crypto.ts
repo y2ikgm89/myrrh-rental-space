@@ -21,7 +21,7 @@ import {
 const ALGORITHM = 'aes-256-gcm'
 const IV_LENGTH = 12
 const AUTH_TAG_LENGTH = 16
-const ENCODING = 'base64' as const
+const ENCODING: BufferEncoding = 'base64'
 const VERSION = 1
 const DEFAULT_PURPOSE = 'generic'
 

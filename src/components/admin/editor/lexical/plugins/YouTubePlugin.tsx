@@ -6,7 +6,7 @@
 
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
   $insertNodes,
@@ -61,7 +61,7 @@ function YouTubeDialog({ isOpen, onClose }: YouTubeDialogProps) {
   const [videoId, setVideoId] = useState<string | null>(null)
   const [error, setError] = useState('')
 
-  const handleUrlChange = useCallback((value: string) => {
+  const handleUrlChange = (value: string) => {
     setUrl(value)
     setError('')
 
@@ -79,20 +79,16 @@ function YouTubeDialog({ isOpen, onClose }: YouTubeDialogProps) {
         setError('有効なYouTube URLを入力してください')
       }
     }
-  }, [])
+  }
 
-  const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault()
-      if (videoId) {
-        editor.dispatchCommand(INSERT_YOUTUBE_COMMAND, { videoId })
-        onClose()
-        setUrl('')
-        setVideoId(null)
-      }
-    },
-    [editor, videoId, onClose]
-  )
+  const handleSubmit = () => {
+    if (videoId) {
+      editor.dispatchCommand(INSERT_YOUTUBE_COMMAND, { videoId })
+      onClose()
+      setUrl('')
+      setVideoId(null)
+    }
+  }
 
   if (!isOpen) {
     return null
@@ -116,7 +112,7 @@ function YouTubeDialog({ isOpen, onClose }: YouTubeDialogProps) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className={styles.form()}>
+        <div className={styles.form()}>
           <div className={styles.field()}>
             <label className={styles.label()}>YouTube URL</label>
             <input
@@ -154,14 +150,15 @@ function YouTubeDialog({ isOpen, onClose }: YouTubeDialogProps) {
               キャンセル
             </button>
             <button
-              type="submit"
+              type="button"
+              onClick={handleSubmit}
               disabled={!videoId}
               className={`${styles.button()} ${styles.buttonPrimary()} disabled:opacity-50`}
             >
               挿入
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   )
@@ -170,17 +167,16 @@ function YouTubeDialog({ isOpen, onClose }: YouTubeDialogProps) {
 export function useYouTubeDialog() {
   const [isOpen, setIsOpen] = useState(false)
 
-  const openYouTubeDialog = useCallback(() => {
+  const openYouTubeDialog = () => {
     setIsOpen(true)
-  }, [])
+  }
 
-  const closeYouTubeDialog = useCallback(() => {
+  const closeYouTubeDialog = () => {
     setIsOpen(false)
-  }, [])
+  }
 
-  const YouTubeDialogComponent = useCallback(
-    () => <YouTubeDialog isOpen={isOpen} onClose={closeYouTubeDialog} />,
-    [isOpen, closeYouTubeDialog]
+  const YouTubeDialogComponent = () => (
+    <YouTubeDialog isOpen={isOpen} onClose={closeYouTubeDialog} />
   )
 
   return {

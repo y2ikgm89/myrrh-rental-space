@@ -6,7 +6,7 @@
 
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { $isLinkNode, TOGGLE_LINK_COMMAND } from '@lexical/link'
 import { $getSelection, $isRangeSelection, type LexicalEditor } from 'lexical'
@@ -47,28 +47,24 @@ function LinkDialog({ isOpen, onClose, initialUrl = '', editor }: LinkDialogProp
     setUrl(initialUrl)
   }, [initialUrl])
 
-  const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault()
-      if (!editor) return
-      if (url.trim()) {
-        let finalUrl = url.trim()
-        // Add https:// if no protocol specified
-        if (!/^https?:\/\//i.test(finalUrl) && !finalUrl.startsWith('/')) {
-          finalUrl = `https://${finalUrl}`
-        }
-        editor.dispatchCommand(TOGGLE_LINK_COMMAND, finalUrl)
+  const handleSubmit = () => {
+    if (!editor) return
+    if (url.trim()) {
+      let finalUrl = url.trim()
+      // Add https:// if no protocol specified
+      if (!/^https?:\/\//i.test(finalUrl) && !finalUrl.startsWith('/')) {
+        finalUrl = `https://${finalUrl}`
       }
-      onClose()
-    },
-    [editor, url, onClose]
-  )
+      editor.dispatchCommand(TOGGLE_LINK_COMMAND, finalUrl)
+    }
+    onClose()
+  }
 
-  const handleRemove = useCallback(() => {
+  const handleRemove = () => {
     if (!editor) return
     editor.dispatchCommand(TOGGLE_LINK_COMMAND, null)
     onClose()
-  }, [editor, onClose])
+  }
 
   if (!isOpen) {
     return null
@@ -89,7 +85,7 @@ function LinkDialog({ isOpen, onClose, initialUrl = '', editor }: LinkDialogProp
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className={styles.form()}>
+        <div className={styles.form()}>
           <div className={styles.field()}>
             <label className={styles.label()}>URL</label>
             <input
@@ -132,13 +128,14 @@ function LinkDialog({ isOpen, onClose, initialUrl = '', editor }: LinkDialogProp
               キャンセル
             </button>
             <button
-              type="submit"
+              type="button"
+              onClick={handleSubmit}
               className={`${styles.button()} ${styles.buttonPrimary()}`}
             >
               {initialUrl ? '更新' : '挿入'}
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   )
@@ -153,7 +150,7 @@ export function useLinkDialog() {
   const [isOpen, setIsOpen] = useState(false)
   const [initialUrl, setInitialUrl] = useState('')
 
-  const openLinkDialog = useCallback(() => {
+  const openLinkDialog = () => {
     editor.getEditorState().read(() => {
       const selection = $getSelection()
       if ($isRangeSelection(selection)) {
@@ -167,22 +164,19 @@ export function useLinkDialog() {
       }
     })
     setIsOpen(true)
-  }, [editor])
+  }
 
-  const closeLinkDialog = useCallback(() => {
+  const closeLinkDialog = () => {
     setIsOpen(false)
-  }, [])
+  }
 
-  const LinkDialogComponent = useCallback(
-    () => (
-      <LinkDialog
-        isOpen={isOpen}
-        onClose={closeLinkDialog}
-        initialUrl={initialUrl}
-        editor={editor}
-      />
-    ),
-    [isOpen, closeLinkDialog, initialUrl, editor]
+  const LinkDialogComponent = () => (
+    <LinkDialog
+      isOpen={isOpen}
+      onClose={closeLinkDialog}
+      initialUrl={initialUrl}
+      editor={editor}
+    />
   )
 
   return {

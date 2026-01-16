@@ -5,11 +5,11 @@
  * PostListWidgetの動的置換とDOMPurifyによるサニタイズを提供
  */
 
-import DOMPurify from 'isomorphic-dompurify'
 import { z } from 'zod'
 import { cn } from '@/lib/utils'
 import { PROSE_CLASSES } from '@/lib/styles/prose'
 import { PostListWidgetRenderer } from './PostListWidgetRenderer'
+import { SanitizedHtml } from './SanitizedHtml'
 
 // =============================================================================
 // Types
@@ -35,15 +35,6 @@ type ContentRendererProps = {
 
 // ウィジェットの正規表現パターン
 const WIDGET_REGEX = /<div\s+data-post-list-widget(?:\s+[^>]*)?>[\s\S]*?<\/div>/gi
-
-// 信頼できるiframeホスト
-const TRUSTED_IFRAME_HOSTS = [
-  'www.youtube.com',
-  'youtube.com',
-  'www.youtube-nocookie.com',
-  'player.vimeo.com',
-  'challenges.cloudflare.com',
-]
 
 // =============================================================================
 // Validation Schemas
@@ -71,53 +62,6 @@ function mapWidgetType(type: WidgetData['type']): SupportedWidgetType {
     return 'related'
   }
   return type
-}
-
-// =============================================================================
-// DOMPurify Configuration
-// =============================================================================
-
-// DOMPurifyフック: iframeのsrcを検証
-function setupDOMPurifyHooks() {
-  // 既存のフックをクリア
-  DOMPurify.removeAllHooks()
-
-  DOMPurify.addHook('uponSanitizeElement', (node) => {
-    if (node.nodeType !== 1) return
-    const element = node as Element
-    if (element.tagName === 'IFRAME') {
-      const src = element.getAttribute('src')
-      if (src) {
-        try {
-          const url = new URL(src)
-          if (!TRUSTED_IFRAME_HOSTS.includes(url.host)) {
-            element.remove()
-          }
-        } catch {
-          element.remove()
-        }
-      }
-    }
-  })
-}
-
-setupDOMPurifyHooks()
-
-const DOMPURIFY_CONFIG = {
-  ADD_TAGS: ['iframe'] as string[],
-  ADD_ATTR: [
-    'allow',
-    'allowfullscreen',
-    'frameborder',
-    'scrolling',
-    'src',
-    'width',
-    'height',
-    'title',
-    'loading',
-    'target',
-    'rel',
-  ] as string[],
 }
 
 // =============================================================================
@@ -211,14 +155,7 @@ export async function ContentRenderer({
   // ウィジェットが含まれていない場合
   const hasWidgets = parts.some((part) => part.type === 'widget')
   if (!hasWidgets) {
-    const cleanHtml = DOMPurify.sanitize(html, DOMPURIFY_CONFIG)
-
-    return (
-      <div
-        className={cn(PROSE_CLASSES, className)}
-        dangerouslySetInnerHTML={{ __html: cleanHtml }}
-      />
-    )
+    return <SanitizedHtml html={html} className={cn(PROSE_CLASSES, className)} />
   }
 
   // ウィジェットを含む場合はパーツごとにレンダリング
@@ -226,14 +163,7 @@ export async function ContentRenderer({
     <div className={cn(PROSE_CLASSES, className)}>
       {parts.map((part, index) => {
         if (part.type === 'html') {
-          const cleanHtml = DOMPurify.sanitize(part.content, DOMPURIFY_CONFIG)
-
-          return (
-            <div
-              key={`html-${index}`}
-              dangerouslySetInnerHTML={{ __html: cleanHtml }}
-            />
-          )
+          return <SanitizedHtml key={`html-${index}`} html={part.content} />
         }
 
         // ウィジェット

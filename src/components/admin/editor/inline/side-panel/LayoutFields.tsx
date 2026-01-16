@@ -19,14 +19,20 @@ import {
 } from '@/components/admin/ui'
 import type { SidePanelSectionProps } from '../types'
 
-const CONTENT_WIDTH_OPTIONS = [
+interface ContentWidthOption {
+  value: string
+  label: string
+  description: string
+}
+
+const CONTENT_WIDTH_OPTIONS: readonly ContentWidthOption[] = [
   { value: '', label: 'デフォルト（サイト設定を使用）', description: '' },
   { value: 'XS', label: '極小 (640px)', description: '狭いコンテンツ向け' },
   { value: 'SM', label: '小 (768px)', description: '記事コンテンツ推奨' },
   { value: 'MD', label: '中 (1024px)', description: 'バランスの良い幅' },
   { value: 'LG', label: '大 (1280px)', description: '広めのコンテンツ' },
   { value: 'CUSTOM', label: 'カスタム', description: '任意の幅を指定' },
-] as const
+]
 
 export function LayoutFields({
   register,

@@ -4,6 +4,7 @@
 
 import type { ReactNode } from 'react'
 import type { FieldErrors, UseFormRegister, Control, UseFormSetValue } from 'react-hook-form'
+import type { BlogPostStatus, NewsStatus } from '@/generated/prisma/client/enums'
 
 /**
  * ページ編集用フォームデータ
@@ -36,6 +37,13 @@ export type EditorHeaderProps = {
   onSave: () => void
   onPreview: () => void
   onBack: () => void
+  extraActions?: ReactNode
+  /** 公開/非公開ボタンの表示 */
+  publishActions?: {
+    status: BlogPostStatus | NewsStatus
+    onPublish: () => void
+    onUnpublish: () => void
+  }
 }
 
 /**
@@ -97,7 +105,7 @@ export type BlogEditorFormData = {
   metaKeywords?: string
   ogpTitle?: string
   ogpDescription?: string
-  isPublished: boolean
+  status: BlogPostStatus
   publishedAt?: string
   contentWidth?: string
   contentWidthCustom?: string
@@ -117,7 +125,7 @@ export type BlogCategoryOption = {
 export type NewsEditorFormData = {
   title: string
   content: string
-  isPublished: boolean
+  status: NewsStatus
   publishedAt?: string
   contentWidth?: string
   contentWidthCustom?: string

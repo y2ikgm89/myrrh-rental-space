@@ -5,6 +5,8 @@ import type {
   CustomerStatus,
   InquiryStatus,
   ReservationStatus,
+  BlogPostStatus,
+  NewsStatus,
 } from '@/generated/prisma/client/enums'
 
 // =============================================================================
@@ -43,9 +45,16 @@ const reservationStatusConfig: StatusConfig<ReservationStatus> = {
   CANCELLED: { label: 'キャンセル', variant: 'destructive' },
 }
 
-const publishStatusConfig = {
-  published: { label: '公開中', variant: 'success' as const },
-  draft: { label: '下書き', variant: 'secondary' as const },
+const blogPostStatusConfig: StatusConfig<BlogPostStatus> = {
+  DRAFT: { label: '下書き', variant: 'secondary' },
+  PUBLISHED: { label: '公開中', variant: 'success' },
+  ARCHIVED: { label: 'アーカイブ', variant: 'outline' },
+}
+
+const newsStatusConfig: StatusConfig<NewsStatus> = {
+  DRAFT: { label: '下書き', variant: 'secondary' },
+  PUBLISHED: { label: '公開中', variant: 'success' },
+  ARCHIVED: { label: 'アーカイブ', variant: 'outline' },
 }
 
 // =============================================================================
@@ -71,13 +80,12 @@ export function ReservationStatusBadge({
   return <Badge variant={config.variant}>{config.label}</Badge>
 }
 
-export function PublishStatusBadge({
-  isPublished,
-}: {
-  isPublished: boolean
-}) {
-  const config = isPublished
-    ? publishStatusConfig.published
-    : publishStatusConfig.draft
+export function BlogPostStatusBadge({ status }: { status: BlogPostStatus }) {
+  const config = blogPostStatusConfig[status]
+  return <Badge variant={config.variant}>{config.label}</Badge>
+}
+
+export function NewsStatusBadge({ status }: { status: NewsStatus }) {
+  const config = newsStatusConfig[status]
   return <Badge variant={config.variant}>{config.label}</Badge>
 }

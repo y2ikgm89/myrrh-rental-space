@@ -7,7 +7,7 @@
  * 保存、プレビュー、設定パネル切り替えなどのアクションを提供
  */
 
-import { ArrowLeft, Settings, Eye, Save, Loader2 } from 'lucide-react'
+import { ArrowLeft, Settings, Eye, Save, Loader2, Globe, GlobeLock } from 'lucide-react'
 import { tv } from 'tailwind-variants'
 import { Button } from '@/components/admin/ui'
 import { Z_INDEX } from '@/lib/styles/z-index'
@@ -20,9 +20,9 @@ const styles = tv({
     left: 'flex items-center gap-3',
     center: 'flex-1 flex items-center justify-center',
     right: 'flex items-center gap-2',
-    titleSection: 'flex flex-col',
-    title: 'text-sm font-medium truncate max-w-[300px]',
-    slug: 'text-xs text-muted-foreground',
+    titleSection: 'flex items-center gap-2',
+    title: 'text-base font-medium truncate max-w-[300px]',
+    slug: 'text-sm text-muted-foreground',
     dirtyIndicator: 'ml-2 text-xs text-amber-500',
   },
 })()
@@ -37,7 +37,11 @@ export function EditorHeader({
   onSave,
   onPreview,
   onBack,
+  extraActions,
+  publishActions,
 }: EditorHeaderProps) {
+  const isPublished = publishActions?.status === 'PUBLISHED'
+
   return (
     <header className={styles.header()}>
       <div className={styles.container()}>
@@ -55,13 +59,11 @@ export function EditorHeader({
           </Button>
 
           <div className={styles.titleSection()}>
-            <div className="flex items-center">
-              <span className={styles.title()}>{title || '無題'}</span>
-              {isDirty && (
-                <span className={styles.dirtyIndicator()}>未保存</span>
-              )}
-            </div>
+            <span className={styles.title()}>{title || '無題'}</span>
             <span className={styles.slug()}>/{slug}</span>
+            {isDirty && (
+              <span className={styles.dirtyIndicator()}>未保存</span>
+            )}
           </div>
         </div>
 
@@ -105,6 +107,37 @@ export function EditorHeader({
               {isPending ? '保存中...' : '保存'}
             </span>
           </Button>
+
+          {/* 公開/非公開ボタン */}
+          {publishActions && (
+            isPublished ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={publishActions.onUnpublish}
+                disabled={isPending}
+                className="gap-1 text-amber-600 hover:text-amber-700"
+              >
+                <GlobeLock className="h-4 w-4" />
+                <span className="hidden sm:inline">非公開にする</span>
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="default"
+                size="sm"
+                onClick={publishActions.onPublish}
+                disabled={isPending || isDirty}
+                className="gap-1 bg-green-600 hover:bg-green-700"
+              >
+                <Globe className="h-4 w-4" />
+                <span className="hidden sm:inline">公開する</span>
+              </Button>
+            )
+          )}
+
+          {extraActions}
         </div>
       </div>
     </header>

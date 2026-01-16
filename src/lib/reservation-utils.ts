@@ -5,7 +5,7 @@
  */
 
 import { prisma } from './prisma'
-import { ReservationStatus } from '@/generated/prisma/client/enums'
+import { ReservationStatus, ACTIVE_RESERVATION_STATUSES } from '@/lib/validations/enums'
 
 // =============================================================================
 // Types
@@ -50,7 +50,7 @@ export async function checkReservationOverlap(
   const overlappingReservation = await prisma.reservation.findFirst({
     where: {
       spaceId,
-      status: { in: ['PENDING', 'CONFIRMED'] as ReservationStatus[] },
+      status: { in: [...ACTIVE_RESERVATION_STATUSES] },
       ...(excludeReservationId && { id: { not: excludeReservationId } }),
       // 重複判定: 2つの時間範囲 [A, B) と [C, D) が重複する条件は A < D && C < B
       // これは隣接スロット（例: 10:00-11:00 と 11:00-12:00）を重複として検出しない

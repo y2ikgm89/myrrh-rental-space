@@ -88,13 +88,22 @@ interface JsonLdProps {
 /**
  * JSON-LDスクリプトタグを生成
  *
- * Note: JSON.stringifyは適切にエスケープされたJSON文字列を生成するため、
- * dangerouslySetInnerHTMLを使用しても安全です（HTMLではなくJSONデータ）。
+ * セキュリティ: JSON-LDはJSONデータのみを含むため、適切なエスケープにより安全。
+ * - JSON.stringifyでシリアライズ
+ * - 追加のUnicodeエスケープで < > & をエンコード
+ * - U+2028/U+2029 をエスケープしてJavaScript改行問題を回避
+ *
+ * @see https://redux.js.org/usage/server-rendering#security-considerations
  */
 function JsonLd({ data }: JsonLdProps): ReactElement {
-  // JSON.stringifyは<script>などをエスケープしないため、
-  // 追加のサニタイズを行う
-  const safeJsonString = JSON.stringify(data).replace(/</g, '\\u003c')
+  // セキュリティ: HTML/Script特殊文字とJavaScript改行文字をUnicodeエスケープ
+  // これによりscriptタグ内でのXSS攻撃を防止
+  const safeJsonString = JSON.stringify(data)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029')
 
   return (
     <script
@@ -249,6 +258,36 @@ export function ArticleJsonLd({
         ...(author.url && { url: author.url }),
       },
     }),
+    publisher: {
+      '@type': 'Organization',
+      name: 'Myrrh Rental Space',
+      url: BASE_URL,
+    },
+  }
+
+  return <JsonLd data={data} />
+}
+
+/**
+ * NewsArticle構造化データ（ニュース記事向け）
+ */
+export function NewsArticleJsonLd({
+  headline,
+  description,
+  image,
+  url,
+  datePublished,
+  dateModified,
+}: Omit<ArticleData, 'author'>): ReactElement {
+  const data = {
+    '@context': 'https://schema.org',
+    '@type': 'NewsArticle',
+    headline,
+    description,
+    ...(image && { image }),
+    url,
+    datePublished,
+    dateModified: dateModified || datePublished,
     publisher: {
       '@type': 'Organization',
       name: 'Myrrh Rental Space',

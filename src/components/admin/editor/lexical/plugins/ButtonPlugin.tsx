@@ -6,7 +6,7 @@
 
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
   $insertNodes,
@@ -86,31 +86,27 @@ function ButtonDialog({ isOpen, onClose }: ButtonDialogProps) {
   const [variant, setVariant] = useState<ButtonVariant>('primary')
   const [openInNewTab, setOpenInNewTab] = useState(false)
 
-  const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault()
-      editor.dispatchCommand(INSERT_BUTTON_COMMAND, {
-        text: text.trim() || 'ボタン',
-        url: url.trim(),
-        variant,
-        openInNewTab,
-      })
-      onClose()
-      setText('ボタン')
-      setUrl('')
-      setVariant('primary')
-      setOpenInNewTab(false)
-    },
-    [editor, text, url, variant, openInNewTab, onClose]
-  )
-
-  const handleClose = useCallback(() => {
+  const handleSubmit = () => {
+    editor.dispatchCommand(INSERT_BUTTON_COMMAND, {
+      text: text.trim() || 'ボタン',
+      url: url.trim(),
+      variant,
+      openInNewTab,
+    })
     onClose()
     setText('ボタン')
     setUrl('')
     setVariant('primary')
     setOpenInNewTab(false)
-  }, [onClose])
+  }
+
+  const handleClose = () => {
+    onClose()
+    setText('ボタン')
+    setUrl('')
+    setVariant('primary')
+    setOpenInNewTab(false)
+  }
 
   if (!isOpen) {
     return null
@@ -134,7 +130,7 @@ function ButtonDialog({ isOpen, onClose }: ButtonDialogProps) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className={styles.form()}>
+        <div className={styles.form()}>
           <div className={styles.field()}>
             <label className={styles.label()}>ボタンテキスト</label>
             <input
@@ -210,13 +206,14 @@ function ButtonDialog({ isOpen, onClose }: ButtonDialogProps) {
               キャンセル
             </button>
             <button
-              type="submit"
+              type="button"
+              onClick={handleSubmit}
               className={`${styles.button()} ${styles.buttonPrimary()}`}
             >
               挿入
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   )
@@ -225,17 +222,16 @@ function ButtonDialog({ isOpen, onClose }: ButtonDialogProps) {
 export function useButtonDialog() {
   const [isOpen, setIsOpen] = useState(false)
 
-  const openButtonDialog = useCallback(() => {
+  const openButtonDialog = () => {
     setIsOpen(true)
-  }, [])
+  }
 
-  const closeButtonDialog = useCallback(() => {
+  const closeButtonDialog = () => {
     setIsOpen(false)
-  }, [])
+  }
 
-  const ButtonDialogComponent = useCallback(
-    () => <ButtonDialog isOpen={isOpen} onClose={closeButtonDialog} />,
-    [isOpen, closeButtonDialog]
+  const ButtonDialogComponent = () => (
+    <ButtonDialog isOpen={isOpen} onClose={closeButtonDialog} />
   )
 
   return {

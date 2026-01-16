@@ -58,9 +58,9 @@ export async function getSiteLayoutSettings(): Promise<LayoutConfig> {
   }
 
   return {
-    containerWidth: settings.containerWidth,
+    containerWidth: settings.containerWidth ?? DEFAULT_LAYOUT_CONFIG.containerWidth,
     containerWidthCustom: settings.containerWidthCustom,
-    contentWidth: settings.contentWidth,
+    contentWidth: settings.contentWidth ?? DEFAULT_LAYOUT_CONFIG.contentWidth,
     contentWidthCustom: settings.contentWidthCustom,
   }
 }

@@ -42,7 +42,12 @@ const CONTENT_WIDTH_MAP: Record<LayoutWidth, string> = {
 /**
  * 幅プリセットのピクセル値（UI表示用）
  */
-export const WIDTH_PRESETS = {
+interface WidthPreset {
+  label: string
+  px: number | null
+}
+
+export const WIDTH_PRESETS: Record<LayoutWidth, WidthPreset> = {
   [LayoutWidth.XS]: { label: '極小', px: 640 },
   [LayoutWidth.SM]: { label: '小', px: 768 },
   [LayoutWidth.MD]: { label: '中', px: 1024 },
@@ -50,7 +55,7 @@ export const WIDTH_PRESETS = {
   [LayoutWidth.XL]: { label: '特大', px: 1536 },
   [LayoutWidth.FULL]: { label: '全幅', px: null },
   [LayoutWidth.CUSTOM]: { label: 'カスタム', px: null },
-} as const
+}
 
 // =============================================================================
 // Container Style Functions

@@ -6,7 +6,8 @@
 
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import Image from 'next/image'
+import { useEffect, useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
   $insertNodes,
@@ -18,7 +19,9 @@ import {
 } from 'lexical'
 import { $wrapNodeInElement, mergeRegister } from '@lexical/utils'
 import { tv } from 'tailwind-variants'
-import { X, LayoutGrid, ImageIcon } from 'lucide-react'
+import { X, LayoutGrid, ImageIcon, ImagePlus } from 'lucide-react'
+import { Button } from '@/components/admin/ui'
+import { useSingleMediaPicker } from '@/hooks/use-media-picker'
 import { $createCardNode, CardNode, type CardNodeOptions } from '../nodes/CardNode'
 
 const styles = tv({
@@ -64,29 +67,27 @@ function CardDialog({ isOpen, onClose }: CardDialogProps) {
   const [linkUrl, setLinkUrl] = useState('')
   const [linkText, setLinkText] = useState('')
 
-  const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault()
-      editor.dispatchCommand(INSERT_CARD_COMMAND, {
-        title: title.trim(),
-        description: description.trim(),
-        imageUrl: imageUrl.trim() || undefined,
-        imageAlt: imageAlt.trim() || undefined,
-        linkUrl: linkUrl.trim() || undefined,
-        linkText: linkText.trim() || undefined,
-      })
-      onClose()
-      setTitle('')
-      setDescription('')
-      setImageUrl('')
-      setImageAlt('')
-      setLinkUrl('')
-      setLinkText('')
+  const imagePicker = useSingleMediaPicker({
+    defaultUsage: 'GENERAL',
+    onSelect: (media) => {
+      if (media.length > 0) {
+        setImageUrl(media[0].url)
+        if (media[0].alt) {
+          setImageAlt(media[0].alt)
+        }
+      }
     },
-    [editor, title, description, imageUrl, imageAlt, linkUrl, linkText, onClose]
-  )
+  })
 
-  const handleClose = useCallback(() => {
+  const handleSubmit = () => {
+    editor.dispatchCommand(INSERT_CARD_COMMAND, {
+      title: title.trim(),
+      description: description.trim(),
+      imageUrl: imageUrl.trim() || undefined,
+      imageAlt: imageAlt.trim() || undefined,
+      linkUrl: linkUrl.trim() || undefined,
+      linkText: linkText.trim() || undefined,
+    })
     onClose()
     setTitle('')
     setDescription('')
@@ -94,7 +95,17 @@ function CardDialog({ isOpen, onClose }: CardDialogProps) {
     setImageAlt('')
     setLinkUrl('')
     setLinkText('')
-  }, [onClose])
+  }
+
+  const handleClose = () => {
+    onClose()
+    setTitle('')
+    setDescription('')
+    setImageUrl('')
+    setImageAlt('')
+    setLinkUrl('')
+    setLinkText('')
+  }
 
   if (!isOpen) {
     return null
@@ -118,7 +129,7 @@ function CardDialog({ isOpen, onClose }: CardDialogProps) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className={styles.form()}>
+        <div className={styles.form()}>
           <div className={styles.field()}>
             <label className={styles.label()}>タイトル</label>
             <input
@@ -143,14 +154,52 @@ function CardDialog({ isOpen, onClose }: CardDialogProps) {
           </div>
 
           <div className={styles.field()}>
-            <label className={styles.label()}>画像URL（任意）</label>
-            <input
-              type="url"
-              className={styles.input()}
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="https://..."
-            />
+            <label className={styles.label()}>画像（任意）</label>
+            <div className="flex items-start gap-3">
+              {imageUrl ? (
+                <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border">
+                  <Image
+                    src={imageUrl}
+                    alt={imageAlt || ''}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-dashed bg-muted">
+                  <ImagePlus className="h-5 w-5 text-muted-foreground" />
+                </div>
+              )}
+              <div className="flex-1 space-y-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => imagePicker.openPicker()}
+                >
+                  <ImagePlus className="mr-1 h-3 w-3" />
+                  画像を選択
+                </Button>
+                {imageUrl && (
+                  <>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {imageUrl}
+                    </p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setImageUrl('')
+                        setImageAlt('')
+                      }}
+                    >
+                      削除
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
 
           <div className={styles.field()}>
@@ -227,13 +276,17 @@ function CardDialog({ isOpen, onClose }: CardDialogProps) {
               キャンセル
             </button>
             <button
-              type="submit"
+              type="button"
+              onClick={handleSubmit}
               className={`${styles.button()} ${styles.buttonPrimary()}`}
             >
               挿入
             </button>
           </div>
-        </form>
+        </div>
+
+        {/* メディアピッカーダイアログ */}
+        <imagePicker.MediaPicker />
       </div>
     </div>
   )
@@ -242,17 +295,16 @@ function CardDialog({ isOpen, onClose }: CardDialogProps) {
 export function useCardDialog() {
   const [isOpen, setIsOpen] = useState(false)
 
-  const openCardDialog = useCallback(() => {
+  const openCardDialog = () => {
     setIsOpen(true)
-  }, [])
+  }
 
-  const closeCardDialog = useCallback(() => {
+  const closeCardDialog = () => {
     setIsOpen(false)
-  }, [])
+  }
 
-  const CardDialogComponent = useCallback(
-    () => <CardDialog isOpen={isOpen} onClose={closeCardDialog} />,
-    [isOpen, closeCardDialog]
+  const CardDialogComponent = () => (
+    <CardDialog isOpen={isOpen} onClose={closeCardDialog} />
   )
 
   return {

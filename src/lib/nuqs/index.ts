@@ -45,10 +45,18 @@ export {
   loadBlogSearchParams,
   // お知らせ
   loadNewsSearchParams,
-  // スペース
-  loadSpaceSearchParams,
   newsSearchParams,
   newsSearchParamsCache,
+  // スペース
+  loadSpaceSearchParams,
   spaceSearchParams,
   spaceSearchParamsCache,
+  // 管理画面: ユーザー一覧
+  adminUserSearchParams,
+  adminUserSearchParamsCache,
+  loadAdminUserSearchParams,
+  // 管理画面: 監査ログ
+  adminAuditLogSearchParams,
+  adminAuditLogSearchParamsCache,
+  loadAdminAuditLogSearchParams,
 } from './search-params'

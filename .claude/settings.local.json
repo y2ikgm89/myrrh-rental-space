@@ -32,7 +32,19 @@
       "mcp__plugin_playwright_playwright__browser_navigate",
       "mcp__plugin_playwright_playwright__browser_type",
       "mcp__plugin_playwright_playwright__browser_click",
-      "mcp__plugin_playwright_playwright__browser_close"
+      "mcp__plugin_playwright_playwright__browser_close",
+      "Skill(feature-dev:feature-dev)",
+      "mcp__plugin_playwright_playwright__browser_fill_form",
+      "mcp__plugin_playwright_playwright__browser_take_screenshot",
+      "mcp__plugin_playwright_playwright__browser_console_messages",
+      "mcp__plugin_playwright_playwright__browser_snapshot",
+      "mcp__plugin_playwright_playwright__browser_wait_for",
+      "mcp__plugin_playwright_playwright__browser_evaluate",
+      "mcp__plugin_playwright_playwright__browser_handle_dialog",
+      "mcp__plugin_serena_serena__search_for_pattern",
+      "mcp__context7__query-docs",
+      "Skill(claude-code-harness:setup)",
+      "Skill(claude-code-harness:review)"
     ],
     "deny": [
       "Bash(rm:*)",

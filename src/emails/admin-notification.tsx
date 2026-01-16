@@ -211,11 +211,11 @@ const detailItem = {
   margin: '8px 0',
 }
 
-const messageText = {
+const messageText: React.CSSProperties = {
   fontSize: '14px',
   lineHeight: '22px',
   color: '#484848',
-  whiteSpace: 'pre-wrap' as const,
+  whiteSpace: 'pre-wrap',
   backgroundColor: '#ffffff',
   padding: '12px',
   borderRadius: '4px',
@@ -227,8 +227,8 @@ const hr = {
   margin: '16px 0',
 }
 
-const buttonSection = {
-  textAlign: 'center' as const,
+const buttonSection: React.CSSProperties = {
+  textAlign: 'center',
   margin: '24px 0',
 }
 

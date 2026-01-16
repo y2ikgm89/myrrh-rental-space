@@ -149,47 +149,41 @@ export function FAQComponent({ nodeKey, items }: FAQComponentProps) {
     )
   }, [clearSelection, editor, onDelete, setSelected])
 
-  const handleAddItem = useCallback(() => {
+  const handleAddItem = () => {
     editor.update(() => {
       const node = $getNodeByKey(nodeKey)
       if ($isFAQNode(node)) {
         node.addItem()
       }
     })
-  }, [editor, nodeKey])
+  }
 
-  const handleRemoveItem = useCallback(
-    (id: string) => {
-      editor.update(() => {
-        const node = $getNodeByKey(nodeKey)
-        if ($isFAQNode(node)) {
-          node.removeItem(id)
-        }
-      })
-    },
-    [editor, nodeKey]
-  )
+  const handleRemoveItem = (id: string) => {
+    editor.update(() => {
+      const node = $getNodeByKey(nodeKey)
+      if ($isFAQNode(node)) {
+        node.removeItem(id)
+      }
+    })
+  }
 
-  const handleUpdateItem = useCallback(
-    (id: string, field: 'question' | 'answer', value: string) => {
-      editor.update(() => {
-        const node = $getNodeByKey(nodeKey)
-        if ($isFAQNode(node)) {
-          node.updateItem(id, field, value)
-        }
-      })
-    },
-    [editor, nodeKey]
-  )
+  const handleUpdateItem = (id: string, field: 'question' | 'answer', value: string) => {
+    editor.update(() => {
+      const node = $getNodeByKey(nodeKey)
+      if ($isFAQNode(node)) {
+        node.updateItem(id, field, value)
+      }
+    })
+  }
 
-  const handleRemoveNode = useCallback(() => {
+  const handleRemoveNode = () => {
     editor.update(() => {
       const node = $getNodeByKey(nodeKey)
       if ($isFAQNode(node)) {
         node.remove()
       }
     })
-  }, [editor, nodeKey])
+  }
 
   return (
     <div className={styles.wrapper({ selected: isSelected })}>

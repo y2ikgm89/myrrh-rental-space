@@ -137,7 +137,7 @@ export function PostListWidgetComponent({
     )
   }, [clearSelection, editor, onDelete, setSelected])
 
-  const handleSaveSettings = useCallback(() => {
+  const handleSaveSettings = () => {
     editor.update(() => {
       const node = $getNodeByKey(nodeKey)
       if ($isPostListWidgetNode(node)) {
@@ -147,16 +147,16 @@ export function PostListWidgetComponent({
       }
     })
     setShowSettings(false)
-  }, [editor, nodeKey, localType, localCount, localCategoryId])
+  }
 
-  const handleRemove = useCallback(() => {
+  const handleRemove = () => {
     editor.update(() => {
       const node = $getNodeByKey(nodeKey)
       if ($isPostListWidgetNode(node)) {
         node.remove()
       }
     })
-  }, [editor, nodeKey])
+  }
 
   return (
     <div className={styles.wrapper({ selected: isSelected })}>

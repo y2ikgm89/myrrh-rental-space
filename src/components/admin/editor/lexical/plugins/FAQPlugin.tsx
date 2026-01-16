@@ -6,7 +6,7 @@
 
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
   $insertNodes,
@@ -69,50 +69,43 @@ function FAQDialog({ isOpen, onClose }: FAQDialogProps) {
     { id: generateId(), question: '', answer: '' },
   ])
 
-  const handleAddItem = useCallback(() => {
+  const handleAddItem = () => {
     setItems((prev) => [...prev, { id: generateId(), question: '', answer: '' }])
-  }, [])
+  }
 
-  const handleRemoveItem = useCallback((id: string) => {
+  const handleRemoveItem = (id: string) => {
     setItems((prev) => {
       const newItems = prev.filter((item) => item.id !== id)
       return newItems.length > 0
         ? newItems
         : [{ id: generateId(), question: '', answer: '' }]
     })
-  }, [])
+  }
 
-  const handleUpdateItem = useCallback(
-    (id: string, field: 'question' | 'answer', value: string) => {
-      setItems((prev) =>
-        prev.map((item) =>
-          item.id === id ? { ...item, [field]: value } : item
-        )
+  const handleUpdateItem = (id: string, field: 'question' | 'answer', value: string) => {
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, [field]: value } : item
       )
-    },
-    []
-  )
+    )
+  }
 
-  const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault()
-      // Filter out empty items
-      const validItems = items.filter(
-        (item) => item.question.trim() || item.answer.trim()
-      )
-      editor.dispatchCommand(INSERT_FAQ_COMMAND, {
-        items: validItems.length > 0 ? validItems : items,
-      })
-      onClose()
-      setItems([{ id: generateId(), question: '', answer: '' }])
-    },
-    [editor, items, onClose]
-  )
-
-  const handleClose = useCallback(() => {
+  const handleSubmit = () => {
+    // Filter out empty items
+    const validItems = items.filter(
+      (item) => item.question.trim() || item.answer.trim()
+    )
+    editor.dispatchCommand(INSERT_FAQ_COMMAND, {
+      items: validItems.length > 0 ? validItems : items,
+    })
     onClose()
     setItems([{ id: generateId(), question: '', answer: '' }])
-  }, [onClose])
+  }
+
+  const handleClose = () => {
+    onClose()
+    setItems([{ id: generateId(), question: '', answer: '' }])
+  }
 
   if (!isOpen) {
     return null
@@ -140,7 +133,7 @@ function FAQDialog({ isOpen, onClose }: FAQDialogProps) {
           質問と回答のペアを追加してください。挿入後も編集可能です。
         </p>
 
-        <form onSubmit={handleSubmit} className={styles.form()}>
+        <div className={styles.form()}>
           <div className={styles.itemList()}>
             {items.map((item, index) => (
               <div key={item.id} className={styles.item()}>
@@ -197,13 +190,14 @@ function FAQDialog({ isOpen, onClose }: FAQDialogProps) {
               キャンセル
             </button>
             <button
-              type="submit"
+              type="button"
+              onClick={handleSubmit}
               className={`${styles.button()} ${styles.buttonPrimary()}`}
             >
               挿入
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   )
@@ -212,17 +206,16 @@ function FAQDialog({ isOpen, onClose }: FAQDialogProps) {
 export function useFAQDialog() {
   const [isOpen, setIsOpen] = useState(false)
 
-  const openFAQDialog = useCallback(() => {
+  const openFAQDialog = () => {
     setIsOpen(true)
-  }, [])
+  }
 
-  const closeFAQDialog = useCallback(() => {
+  const closeFAQDialog = () => {
     setIsOpen(false)
-  }, [])
+  }
 
-  const FAQDialogComponent = useCallback(
-    () => <FAQDialog isOpen={isOpen} onClose={closeFAQDialog} />,
-    [isOpen, closeFAQDialog]
+  const FAQDialogComponent = () => (
+    <FAQDialog isOpen={isOpen} onClose={closeFAQDialog} />
   )
 
   return {

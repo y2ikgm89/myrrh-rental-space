@@ -26,13 +26,21 @@ export interface StripeConnectionTestResult {
 }
 
 // キープレフィックス定数
-const KEY_PREFIXES = {
+interface KeyPrefixes {
+  publishableTest: string
+  publishableLive: string
+  secretTest: string
+  secretLive: string
+  webhook: string
+}
+
+const KEY_PREFIXES: KeyPrefixes = {
   publishableTest: 'pk_test_',
   publishableLive: 'pk_live_',
   secretTest: 'sk_test_',
   secretLive: 'sk_live_',
   webhook: 'whsec_',
-} as const
+}
 
 /**
  * テストキーかどうかを判定
@@ -214,10 +222,15 @@ export function getCurrencyDisplayName(currency: string): string {
 /**
  * サポートされている通貨一覧
  */
-export const SUPPORTED_CURRENCIES = [
+export interface CurrencyOption {
+  value: SupportedCurrency
+  label: string
+}
+
+export type SupportedCurrency = 'jpy' | 'usd' | 'eur'
+
+export const SUPPORTED_CURRENCIES: readonly CurrencyOption[] = [
   { value: 'jpy', label: '日本円 (JPY)' },
   { value: 'usd', label: '米ドル (USD)' },
   { value: 'eur', label: 'ユーロ (EUR)' },
-] as const
-
-export type SupportedCurrency = (typeof SUPPORTED_CURRENCIES)[number]['value']
+]

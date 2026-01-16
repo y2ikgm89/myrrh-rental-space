@@ -28,8 +28,8 @@ export const parseAsPerPage = parseAsInteger.withDefault(10)
 // ============================================================
 
 /** ソート順 */
-export const sortOrders = ['asc', 'desc'] as const
-export type SortOrder = (typeof sortOrders)[number]
+export type SortOrder = 'asc' | 'desc'
+export const sortOrders: readonly SortOrder[] = ['asc', 'desc']
 
 export const parseAsSortOrder = parseAsStringLiteral(sortOrders).withDefault(
   'desc'
