@@ -1,6 +1,6 @@
 # 技術スタック最新バージョン情報
 
-> **Note**: このドキュメントは、プロジェクトで使用している技術スタックの最新バージョン情報をまとめたものです。最終更新: **2026-01-10**
+> **Note**: このドキュメントは、プロジェクトで使用している技術スタックの最新バージョン情報をまとめたものです。最終更新: **2026-01-13**
 
 ---
 
@@ -54,11 +54,15 @@
 
 ### Bun
 
-- **現在のプロジェクトバージョン**: 1.3.5
-- **最新安定版**: **1.3.5** (2026-01-05時点)
+- **現在のプロジェクトバージョン**: 1.3.6 ✅
+- **最新安定版**: **1.3.6** (2026-01-13リリース)
 - **状態**: 安定版
 - **アップグレード方法**: `bun upgrade`
 - **公式サイト**: [bun.sh](https://bun.sh)
+- **Node.js互換性**: BunはNode.js互換ランタイムだが、独自の実装のため、Node.jsのセキュリティパッチが直接適用されるわけではない
+- **セキュリティ対応**: Bun v1.3.6（2026-01-13リリース）にアップグレード済み。Node.js 24.13.0のセキュリティパッチへの対応状況は、Bunの公式リリースノートで確認が必要
+- **リリースノート**: [Bun v1.3.6 Release Notes](https://bun.com/blog/bun-v1.3.6)
+- **新機能ガイド**: [Bun v1.3.6 新機能ガイド](./BUN_V1.3.6_FEATURES.md)
 
 ---
 
@@ -286,10 +290,65 @@
 - **修正版**: Next.js 16.1.1+
 - **対応**: 即座にアップグレードを推奨
 
+### Node.js セキュリティリリース（2026-01-13）
+
+- **リリース日**: 2026年1月13日
+- **影響範囲**: Node.js 20.x, 22.x, 24.x, 25.x
+- **修正版**: Node.js 20.20.0, 22.22.0, 24.13.0 (LTS), 25.3.0
+- **深刻度**: 高（3件）、中（4件）、低（1件）
+- **主な脆弱性**:
+  - **CVE-2025-55131** (High): Timeout-based race conditions make Uint8Array/Buffer.alloc non-zerofilled
+    - `vm`モジュールのタイムアウトオプション使用時に、バッファ割り当てが中断されると未初期化メモリが露出する可能性
+    - 修正: 安全でないバッファ作成をリファクタリングし、ゼロフィルトグルを削除
+  - **CVE-2025-55130** (High): Bypass File System Permissions using crafted symlinks
+    - 権限モデルで`--allow-fs-read`と`--allow-fs-write`の制限を、細工された相対シンボリックリンクパスでバイパス可能
+    - 修正: シンボリックリンクAPIに完全な読み取りと書き込み権限を要求
+  - **CVE-2025-59465** (High): Node.js HTTP/2 server crashes with unhandled error when receiving malformed HEADERS frame
+    - 不正なHTTP/2 HEADERSフレームでNode.jsがクラッシュする可能性
+    - 修正: TLSSocketにデフォルトエラーハンドラーを追加
+  - **CVE-2025-59466** (Medium): Uncatchable "Maximum call stack size exceeded" error on Node.js via async_hooks
+    - `async_hooks.createHook()`が有効な場合、スタックオーバーフローエラーがキャッチ不可能になる
+    - 修正: async_hooksでスタックオーバーフロー例外を再スロー
+  - **CVE-2025-59464** (Medium): Memory leak that enables remote Denial of Service against applications processing TLS client certificates
+    - TLSクライアント証明書処理時のメモリリーク
+  - **CVE-2026-21636** (Medium): Node.js permission model bypass via unchecked Unix Domain Socket connections (UDS)
+    - 権限モデルでUnix Domain Socket接続がネットワーク制限をバイパス可能
+  - **CVE-2026-21637** (Medium): TLS PSK/ALPN Callback Exceptions Bypass Error Handlers, Causing DoS and FD Leak
+    - TLSサーバーで`pskCallback`や`ALPNCallback`使用時に、コールバック例外がエラーハンドラーをバイパス
+    - 修正: コールバック例外をエラーハンドラー経由でルーティング
+  - **CVE-2025-55132** (Low): fs.futimes() Bypasses Read-Only Permission Model
+    - 読み取り専用権限でも`futimes()`でファイルのタイムスタンプを変更可能
+    - 修正: 権限モデルが有効な場合、futimesを無効化
+- **依存関係の更新**:
+  - c-ares: v1.34.6
+  - undici: 7.18.2 (Node.js 24.13.0)
+- **対応状況**: 
+  - ⚠️ **注意**: BunはNode.jsとは別のランタイムのため、Node.jsのセキュリティパッチが直接適用されるわけではありません
+  - ✅ `@types/node@24.10.8`に更新済み（Node.js 24.13.0 (LTS) の型定義に対応）
+  - ✅ `package.json`で`"@types/node": "^24"`を指定（24.x系の最新が自動インストール）
+  - ⚠️ **要確認**: Bun v1.3.6（2026-01-13リリース、Node.js 24.13.0と同じ日）のリリースノートには、Node.js 24.13.0のセキュリティパッチ（CVE-2025-55131, CVE-2025-55130, CVE-2025-59465等）への明示的な言及は見つかりませんでした
+  - **推奨**: 
+    - Bun v1.3.6へのアップグレードを検討（`bun upgrade`）
+    - Bunの公式リリースノートとセキュリティアドバイザリを定期的に確認
+    - プロジェクトで使用している機能（`vm`モジュール、HTTP/2、TLS、権限モデル等）が影響を受けるか確認
+- **参考**: 
+  - [Node.js Security Releases (2026-01-13)](https://nodejs.org/ja/blog/vulnerability/december-2025-security-releases)
+  - [Node.js 24.13.0 (LTS) Release Notes](https://nodejs.org/ja/blog/release/v24.13.0)
+
 ---
 
 ## 更新履歴
 
+- **2026-01-13 (更新)**: Bun 1.3.5から1.3.6にアップグレード完了
+  - `bun upgrade`でBun 1.3.6にアップグレード
+  - 型チェックとlintが正常に動作することを確認
+  - Dockerfileは`oven/bun:1.3-alpine`を使用（1.3系の最新を指す）
+- **2026-01-13 (更新)**: Node.js 24.13.0 (LTS) セキュリティリリースへの対応状況を確認・記録
+  - `@types/node`を20.19.29から24.10.8に更新（Node.js 24.13.0 (LTS) の型定義に対応）
+  - Bun v1.3.6（2026-01-13リリース）にアップグレード完了
+  - ⚠️ **注意**: BunはNode.jsとは別のランタイムのため、Node.jsのセキュリティパッチが直接適用されるわけではありません。Bun v1.3.6のリリースノートには、Node.js 24.13.0のセキュリティパッチへの明示的な言及は見つかりませんでした
+  - セキュリティ情報セクションにNode.js セキュリティリリース（2026-01-13）の詳細を追加
+  - Node.js 24.13.0 (LTS) リリースノートへのリンクを追加
 - **2026-01-13 (更新)**: Auth.js v5からBetter Auth 1.4.11に移行完了
   - next-auth, @auth/prisma-adapterを削除
   - better-auth@1.4.11を追加

@@ -11,7 +11,9 @@ docs/
 ├── guides/          # 開発ガイド
 ├── security/        # セキュリティ
 ├── operations/      # 運用・デプロイ
-└── plans/           # 実装計画・履歴
+├── plans/           # 実装計画・履歴
+├── comparison/      # 技術比較・評価
+└── templates/       # ドキュメントテンプレート
 ```
 
 ## クイックリンク
@@ -24,6 +26,8 @@ docs/
 | [security/](./security/) | 認証・保護対策 | [README.md](./security/README.md) |
 | [operations/](./operations/) | デプロイ・インフラ | [README.md](./operations/README.md) |
 | [plans/](./plans/) | 実装計画・完了履歴 | [README.md](./plans/README.md) |
+| [comparison/](./comparison/) | 技術比較・評価 | [puck-vs-grapesjs.md](./comparison/puck-vs-grapesjs.md) |
+| [templates/](./templates/) | ドキュメントテンプレート | plan.md, requirements.md |
 
 ## 技術スタック
 
@@ -59,6 +63,12 @@ docs/
 - Server Components / Server Actions 優先
 - Zodバリデーション必須
 
+## 技術比較
+
+### ビジュアルエディター
+
+- [Puck vs GrapesJS 詳細比較](./comparison/puck-vs-grapesjs.md) - ノーコードビジュアルエディターの選択肢比較
+
 ---
 
-最終更新: 2026-01-11
+最終更新: 2026-01-13

@@ -2,6 +2,299 @@
 
 ## 完了した計画
 
+### 034-react-compiler-memoization-cleanup.md (2026-01-16)
+
+React Compiler対応 - useMemo/useCallback削除
+
+**概要**:
+React Compiler（Next.js 16で有効）環境に対応し、不要な手動メモ化（useMemo/useCallback）を削除。React公式ベストプラクティスに準拠したクリーンな実装に移行。
+
+**実装内容**:
+- useMemo: 4ファイル → 2ファイル（2削除）
+- useCallback: 50ファイル → 12ファイル（38削除）
+- 保持基準: useEffect依存配列で使用、外部ライブラリAPI統合（Lexical registerCommand）、参照安定化必須
+
+**削除対象**:
+- 単純なイベントハンドラ（onClick, onChange等）
+- Context Provider関数
+- カスタムフック戻り値
+- ダイアログ開閉関数
+- コンポーネント返却のuseCallback（アンチパターン）
+
+**保持ファイル**:
+- `use-calendar-state.ts` - useMemo（new Date()参照安定化）
+- `LexicalEditor.tsx` - useMemo（Lexical initialConfig）
+- `ToolbarPlugin.tsx` - useCallback（$updateToolbar、useEffect依存）
+- `MediaLibraryPlugin.tsx` - useCallback（fetchMedia、useEffect依存）
+- `InlineTitleEditor.tsx` - useCallback（adjustHeight、useEffect依存）
+- 9 Lexicalノードコンポーネント - useCallback（onDelete、editor.registerCommand依存）
+
+**マイグレーション**: 不要
+
+---
+
+### 033-media-picker-integration.md (2026-01-16)
+
+メディアピッカー統合（画像設定UI改善）
+
+**概要**:
+画像設定UIをURL直接入力からメディアライブラリダイアログへ移行。クリーンアーキテクチャで汎用メディアピッカーを新規構築。
+
+**実装内容**:
+- 3タブ構成: ライブラリ選択 + URL入力 + アップロード
+- 単一/複数選択モード対応
+- React Hook Form統合（useSingleMediaPicker, useMultipleMediaPicker）
+- Lexical非依存の汎用コンポーネント
+- 5箇所のフォームに統合（SpaceForm, ImageFields, PageSeoForm, SectionEditor, CardPlugin）
+
+**新規ファイル**:
+- `src/types/media-picker.ts` - 型定義
+- `src/hooks/use-media-picker.tsx` - 公開APIフック
+- `src/hooks/use-media-selection.ts` - 選択状態管理
+- `src/hooks/use-media-library.ts` - ライブラリ取得
+- `src/hooks/use-media-upload.ts` - アップロード処理
+- `src/components/admin/media-picker/` - ダイアログ・タブ・UIコンポーネント
+
+**変更ファイル**:
+- `src/app/(admin)/admin/(dashboard)/spaces/_components/SpaceForm.tsx`
+- `src/components/admin/editor/inline/side-panel/ImageFields.tsx`
+- `src/components/admin/editor/inline/BlogSidePanel.tsx`
+- `src/app/(admin)/admin/(dashboard)/pages/[slug]/seo/_components/PageSeoForm.tsx`
+- `src/app/(admin)/admin/(dashboard)/settings/_components/tabs/SectionEditor.tsx`
+- `src/components/admin/editor/lexical/plugins/CardPlugin.tsx`
+
+**マイグレーション**: 不要
+
+---
+
+### 031-terms-agreement-management.md (2026-01-16)
+
+利用規約同意機能の実装
+
+**概要**:
+予約システムに利用規約同意機能を実装。スペースごとに異なる利用規約を設定でき、予約時に顧客が規約に同意することで法的コンプライアンスを担保。
+
+**実装内容**:
+- Terms/TermsVersion/TermsAgreementモデル（バージョン管理・同意記録）
+- 管理画面CRUD UI（規約一覧・作成・編集・バージョン管理）
+- 公開UI（TermsAgreementDialog - スクロール検出付きモーダル）
+- Server Actions（管理用・公開用）
+- RBAC権限設定（termsリソース追加）
+- SpaceForm統合（規約選択ドロップダウン）
+
+**変更ファイル**:
+- `prisma/schema.prisma` - Terms, TermsVersion, TermsAgreementモデル追加
+- `src/lib/validations/terms.ts` - 新規: Zodスキーマ
+- `src/actions/admin/terms.ts` - 新規: 管理用Server Actions
+- `src/actions/public/terms.ts` - 新規: 公開用Server Actions
+- `src/lib/permissions.ts` - termsリソース権限追加
+- `src/lib/validations/space.ts` - termsId追加
+- `src/actions/admin/space.ts` - termsId保存対応
+- `src/components/site/TermsAgreementDialog.tsx` - 新規: 公開UI
+- `src/app/(admin)/admin/(dashboard)/terms/**` - 新規: 管理画面
+- `src/app/(admin)/admin/(dashboard)/spaces/_components/SpaceForm.tsx` - 規約選択追加
+
+**マイグレーション**: `20260116010114_add_terms_management`
+
+---
+
+### 032-enum-type-guards.md (2026-01-16)
+
+Prisma Enum型アサーション全削除 + 型ガード集約
+
+**問題**:
+- コードベース全体で`as ReservationStatus`等の型アサーションが散在
+- 実行時検証なしの危険な型変換
+- Prisma生成enum型とZod推論型の混在
+
+**解決策**:
+- 中央集権型ガードモジュール（`src/lib/validations/enums.ts`）作成
+- Prismaのenum型をre-export、型ガード関数を提供
+- URLパラメータ用フィルターパーサー追加
+- CalendarView型ガード追加
+- PrismaのJson型フィールドに実行時バリデーション追加
+
+**変更ファイル**:
+- `src/lib/validations/enums.ts` - 新規: 中央集権型ガードモジュール
+- `src/lib/calendar/calendar-types.ts` - isValidCalendarView, getValidCalendarView追加
+- `src/lib/validations/media.ts` - parseMediaTypeFilter, parseMediaUsageFilter追加
+- `src/actions/admin/customer.ts` - CustomerWithReservations型修正
+- `src/actions/admin/homepage-settings.ts` - parseSectionConfig追加
+- `src/components/site/sections/SectionRenderer.tsx` - getSafeConfig使用
+- 各種ページ・コンポーネント - 型ガード使用に移行
+
+**マイグレーション**: 不要
+
+---
+
+### 031-media-type-assertion-removal.md (2026-01-16)
+
+MediaType/MediaUsage型アサーション排除
+
+**問題**:
+- `as MediaType`/`as MediaUsage`型アサーションが4箇所で使用されていた
+- Zod推論型とPrisma生成型が別の型として認識されていた
+
+**解決策**:
+- ZodスキーマでPrisma生成のenumを直接使用（re-export）
+- 型ガード関数（`isValidMediaType`, `isValidMediaUsage`）を追加
+- constants.tsを型安全に修正（MediaType/MediaUsageを直接使用）
+- UIコンポーネントで型ガードを使用
+
+**変更ファイル**:
+- `src/lib/validations/media.ts` - Prisma型をre-export、型ガード追加
+- `src/actions/admin/media.ts` - 型アサーション削除
+- `src/app/(admin)/admin/(dashboard)/media/_components/constants.ts` - 型安全な定数
+- `src/app/(admin)/admin/(dashboard)/media/_components/MediaDetailDialog.tsx` - 型ガード使用
+- `src/app/(admin)/admin/(dashboard)/media/_components/MediaUploadDialog.tsx` - 型ガード使用
+- `src/app/(admin)/admin/(dashboard)/media/_components/MediaGrid.tsx` - 型ガード使用
+- `src/app/(admin)/admin/(dashboard)/media/_components/MediaTable.tsx` - 型ガード使用
+
+**マイグレーション**: 不要
+
+---
+
+### 030-media-management.md (2026-01-16)
+
+メディア管理機能
+
+**実装内容**:
+- Mediaモデル: ファイルメタデータ永続化（filename, url, size, dimensions等）
+- MediaType/MediaUsage enum: ファイル種別・用途分類
+- Supabase Storage連携: `media`バケットへのファイルアップロード
+- Server Actions: CRUD、論理削除、一括削除
+- 管理画面UI: グリッド/リストビュー、フィルター、検索、D&Dアップロード
+- Lexicalエディター連携: MediaLibraryPlugin（画像選択・挿入）
+
+**新規ファイル**:
+- `src/lib/validations/media.ts` - Zodスキーマ
+- `src/actions/admin/media.ts` - Server Actions
+- `src/app/(admin)/admin/(dashboard)/media/` - 管理画面ページ・コンポーネント
+- `src/components/admin/editor/lexical/plugins/MediaLibraryPlugin.tsx` - エディタープラグイン
+
+**変更ファイル**:
+- `prisma/schema.prisma` - Mediaモデル、enum追加
+- `src/lib/supabase.ts` - MEDIAバケット追加
+- `src/lib/permissions.ts` - mediaリソース権限追加
+- `src/lib/utils.ts` - formatBytes, formatDate関数追加
+- `src/components/admin/editor/lexical/` - MediaLibraryPlugin統合
+
+**マイグレーション**: `bunx prisma migrate dev --name add_media_model`
+
+---
+
+### 029-type-errors-fix.md (2026-01-16)
+
+型エラー・ビルドエラー修正
+
+**問題**:
+- `isSystemPage` 型エラー: Prisma マイグレーション未適用
+- Server Actions 同期関数エラー: `canDeletePage` が sync 関数
+- Next.js 16 PPR エラー: `generateMetadata` 内の Prisma クエリ
+
+**解決策**:
+- `bunx prisma migrate dev --name add_is_system_page_to_pages` 実行
+- `canDeletePage` を `src/lib/validations/page.ts` へ移動
+- `getPageSeo` に `'use cache'` ディレクティブ追加
+
+**変更ファイル**:
+- `prisma/migrations/20260115154941_add_is_system_page_to_pages/`
+- `src/actions/admin/page.ts`
+- `src/lib/validations/page.ts`
+- `src/lib/page-metadata.ts`
+
+**マイグレーション**: あり（isSystemPage カラム追加）
+
+---
+
+### 028-prisma-decimal-serialization-fix.md (2026-01-16)
+
+Prisma Decimal シリアライゼーション修正
+
+**問題**: `SpaceListSection.tsx` で「Only plain objects can be passed to Client Components」エラー
+
+**原因**: Prisma Decimal 型（`area`, `hourlyPrice`, `dailyPrice`）は JSON シリアライズ不可
+
+**実装内容**:
+- `SerializedSpace` 型定義: Decimal → number 変換後の型
+- `getSpaces()` 関数: `.toNumber()` で Decimal → number 変換
+- 既存パターン（`src/actions/admin/space.ts`）と整合性のある実装
+
+**変更ファイル**:
+- `src/components/site/sections/SpaceListSection.tsx`
+
+**マイグレーション**: 不要
+
+---
+
+### 027-nuqs-best-practices.md (2026-01-16)
+
+nuqs ベストプラクティス準拠
+
+**実装内容**:
+- history: 'push' - Paginationにブラウザ履歴サポート追加（UX改善）
+- throttleMs: 500 - 検索入力にスロットリング追加（パフォーマンス改善）
+- 管理画面パーサー集約: `src/lib/nuqs/search-params.ts`に`adminUserSearchParams`/`adminAuditLogSearchParams`追加
+- createLoaderパターン統一: 管理画面で`createSearchParamsCache.parse()`を`createLoader`に置き換え
+
+**変更ファイル**:
+- `src/lib/nuqs/search-params.ts` - 管理画面用SearchParams追加
+- `src/lib/nuqs/index.ts` - エクスポート追加
+- `src/app/(public)/blog/_components/blog-pagination.tsx` - history: 'push'追加
+- `src/app/(public)/blog/_components/blog-filters.tsx` - throttleMs追加
+- `src/app/(public)/spaces/_components/Pagination.tsx` - history: 'push'追加
+- `src/app/(public)/spaces/_components/SpaceFilters.tsx` - throttleMs追加
+- `src/app/(public)/news/_components/NewsPagination.tsx` - history: 'push'追加
+- `src/app/(admin)/admin/(dashboard)/users/page.tsx` - loadAdminUserSearchParams使用
+- `src/app/(admin)/admin/(dashboard)/audit-logs/page.tsx` - loadAdminAuditLogSearchParams使用
+- `src/components/admin/ui/Pagination.tsx` - nuqs移行（router.push → useQueryState）
+- `src/components/admin/ui/index.ts` - インポートパス修正
+
+**マイグレーション**: 不要
+
+---
+
+### 026-remove-as-const-assertions.md (2026-01-16)
+
+as const型アサーション削除 + 型アサーション改善（Phase 1-3）
+
+**Phase 1: as const削除**
+- プロジェクト全体から`as const`型アサーションを削除
+- オブジェクト定数: interfaceまたはRecord型による明示的な型注釈に移行
+- 配列定数: union型定義 + readonly配列に移行
+- Enum風定数: union型 + Recordパターンに移行
+- インラインCSS: React.CSSPropertiesによる型注釈に移行
+- Prismaクエリ: satisfies演算子による型安全性確保
+
+**Phase 2: 型アサーション（as Type）改善**
+- セッションユーザー型: `getSessionUser`型ガード関数で`as User`/`as Role`を削除
+- User型再定義: Better Auth の string 型 role を Role enum に変換
+- 実行時検証追加: `isValidRole`でrole値を検証
+- HOF改善: withAuth/withPermission/withReadPermission/withRole から型アサーション削除
+- createSuccess改善: 関数オーバーロードで戻り値型を明確化
+
+**Phase 3: さらなる型アサーション削減**
+- Server Actions: 13ファイルで`as Role`を`getRoleFromSession`ヘルパーに置き換え
+- URLSearchParams: 4ファイルでバリデーション関数（validateStatus等）に置き換え
+- JSON config: 7つの型ガード関数追加（isHeroConfig, isSpaceListConfig等）
+- FormData: `getFormString`, `getFormStringOrNull`等のヘルパー追加
+- localStorage: 限定値の型ガード追加（isValidConsentStatus）
+
+**変更ファイル**: 50+ファイル
+- `src/lib/auth.ts` - User型再定義、getSessionUser型ガード、isValidRole、getRoleFromSession追加
+- `src/lib/permissions.ts` - `as Role`削除
+- `src/lib/utils.ts` - FormDataヘルパー追加
+- `src/lib/validations/homepage-section.ts` - 型ガード関数追加
+- `src/types/server-actions.ts` - HOF改善、createSuccess改善
+- `src/actions/admin/*.ts` - 13ファイルをgetRoleFromSessionに移行
+- `src/app/(admin)/.../users/page.tsx` 他4ファイル - URLSearchParamsバリデーション追加
+- `src/app/(admin)/.../settings/_components/tabs/SectionEditor.tsx` - 型ガード使用
+- `src/components/site/CookieConsentBanner.tsx` - localStorage型ガード追加
+
+**マイグレーション**: 不要
+
+---
+
 ### 025-homepage-settings-to-pages.md (2026-01-15)
 
 ホームページ設定のページ管理への移動

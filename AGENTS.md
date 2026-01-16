@@ -84,7 +84,7 @@ A reservation and management system for rental spaces. Provides a highly designe
 
 ## Technical stack
 
-- **React**: 19.2.3, **Next.js**: 16.1.1, **TypeScript**: 5.9.3, **Bun**: 1.3.5
+- **React**: 19.2.3, **Next.js**: 16.1.1, **TypeScript**: 5.9.3, **Bun**: 1.3.6
 - **Prisma**: 7.2.0, **Supabase**: PostgreSQL, **Zod**: 4.3.5
 - **Tailwind CSS**: 4.1.18, **GSAP** or **Motion** (formerly Framer Motion), **Three.js** (`@react-three/fiber` + `@react-three/drei`) or **Pixi.js** (`@pixi/react`)
 - **Better Auth**: 1.4.11, **nuqs**: 2.8.6
@@ -95,7 +95,7 @@ A reservation and management system for rental spaces. Provides a highly designe
 ## Important technical constraints
 
 - **Prisma does not support Edge Runtime**: Use Bun Runtime (`runtime = "nodejs"`) for API Routes and Server Actions
-- **Full Bun Runtime Support**: This project runs fully on Bun 1.3.5 (package manager, runtime, build tool, test runner)
+- **Full Bun Runtime Support**: This project runs fully on Bun 1.3.6 (package manager, runtime, build tool, test runner)
 - **Better Auth**: Use `better-auth/adapters/prisma` with Prisma 7, verify compatibility before version updates
 - **Security**: React 19.2.3 and Next.js 16.1.1 required (CVE-2025-55182 fix). Always validate inputs with Zod schemas (client and server)
 

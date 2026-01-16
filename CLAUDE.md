@@ -21,7 +21,7 @@
 | 7 | **Commit** | - | `plans/README.md` |
 
 **Triage判断**:
-- 複数ファイル＋設計判断＋自律実行OK → `/feature-dev`（以下スキップ）
+- 複数ファイル＋設計判断＋自律実行OK → `/feature-dev`（**実装後、必ずドキュメント生成**）
 - 軽微な修正（設定変更、コメント、定数のみ）→ 直接実行、code-simplifierスキップ
 
 **Explore**: コードベースを読む（コードは書かない）
@@ -42,6 +42,15 @@
 □ Review: code-reviewer
 □ Commit: git commit + docs/plans/README.md更新
 ```
+
+## /feature-dev 完了後（必須）
+
+1. `docs/plans/NNN-title.md` 作成（既存ファイルの最大番号+1）
+2. `docs/plans/README.md` の「完了した計画」先頭に追記
+3. `docs/requirements/` 関連ファイル更新
+4. `docs/architecture/` 設計変更時のみ更新
+
+※テンプレート: `docs/templates/`
 
 ## 対話ルール
 
