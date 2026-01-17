@@ -1,0 +1,6 @@
+export { BlogSidebar } from './BlogSidebar'
+export { SearchWidget } from './SearchWidget'
+export { RecentPostsWidget } from './RecentPostsWidget'
+export { PopularPostsWidget } from './PopularPostsWidget'
+export { CategoriesWidget } from './CategoriesWidget'
+export { TagsWidget } from './TagsWidget'

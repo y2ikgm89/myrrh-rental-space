@@ -519,6 +519,7 @@ model Page {
   isSystemPage    Boolean   @default(false)       // システムページ（SEO/OGPのみ編集可、コンテンツ編集不可）
   contentWidth    LayoutWidth?
   contentWidthCustom Int?                         // CUSTOMの場合の幅（px）
+  showSidebar     Boolean?                        // null=デフォルト使用、true/false=明示的指定
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -672,6 +673,12 @@ model Settings {
   containerWidthCustom Int?                      // CUSTOMの場合の幅（px）
   contentWidth         LayoutWidth?
   contentWidthCustom   Int?                      // CUSTOMの場合の幅（px）
+
+  // Sidebar Settings (サイドバー設定)
+  sidebarEnabled       Boolean @default(true)   // サイドバー全体の有効/無効
+  sidebarWidgets       Json    @default("{\"search\":true,\"recent\":true,\"popular\":true,\"categories\":true,\"tags\":true}") // ウィジェット個別設定
+  sidebarRecentCount   Int     @default(5)      // 新着記事の表示件数
+  sidebarPopularCount  Int     @default(5)      // 人気記事の表示件数
 
   // Analytics Settings
   analyticsType           String?   // "ga4" | "gtm" | null
