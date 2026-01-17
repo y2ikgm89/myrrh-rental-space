@@ -8,7 +8,7 @@
 
 ## 完了した計画
 
-### 041-admin-cleanup-refactoring.md (2026-01-17) ✅ Phase 1-4
+### 041-admin-cleanup-refactoring.md (2026-01-17) ✅ Phase 1-5
 
 管理画面クリーンアップ＆フルリファクタリング
 
@@ -25,15 +25,18 @@
   - 6テーブルをServer Componentに移行
   - インタラクティブ要素のみClient Component化（PublishSwitch, ActionCell等）
   - クライアントJSバンドル削減
-
-**保留フェーズ** (次回以降):
-- Phase 5: 設定セクション整理
-- Phase 6: 公開ページ統一 (Pagination/Filters)
+- ✅ Phase 5: 設定セクション整理（orphaned sections統合）
+  - TermsAgreementSectionをbusiness/予約タブに統合
+  - GoogleCalendarSection, ICalFeedSection, TwoWaySyncSectionをapi/カレンダータブに統合
+- ✅ Phase 6: 公開ページPagination/Filters分析 → **現状維持**
+  - 顧客カスタマイズを考慮し、ローカルコンポーネント構成を維持
+  - 共通化はテンプレート配布時のカスタマイズ性を損なうため見送り
 
 **コミット**:
 - b68b15d (Phase 1-3)
 - 297ff46 (P2修正: サイドバー条件付きレイアウト)
 - 84cd14b (Phase 4: Server Component Table移行)
+- c3f8820 (Phase 5: orphaned sections統合)
 
 ---
 
