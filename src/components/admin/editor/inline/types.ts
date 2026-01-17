@@ -22,6 +22,7 @@ export type PageEditorFormData = {
   publishedAt?: string
   contentWidth?: string
   contentWidthCustom?: string
+  showSidebar?: boolean | null  // null=デフォルト（カスタムページは非表示）、true=表示、false=非表示
 }
 
 /**

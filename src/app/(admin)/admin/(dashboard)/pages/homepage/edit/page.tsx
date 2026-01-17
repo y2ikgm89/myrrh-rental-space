@@ -5,7 +5,7 @@
  * 旧: /admin/settings?tab=homepage → 新: /admin/pages/homepage/edit
  */
 
-import { HomepageTab } from '@/app/(admin)/admin/(dashboard)/settings/_components/tabs/HomepageTab'
+import { HomepageTab } from '@/app/(admin)/admin/(dashboard)/settings/_components/homepage/HomepageTab'
 import type { Metadata } from 'next'
 import type { ReactElement } from 'react'
 

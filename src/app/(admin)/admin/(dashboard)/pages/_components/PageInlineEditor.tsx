@@ -41,6 +41,7 @@ const formSchema = z.object({
   publishedAt: z.string().optional(),
   contentWidth: z.string().optional(),
   contentWidthCustom: z.string().optional(),
+  showSidebar: z.boolean().nullable().optional(),  // null=デフォルト（カスタムページは非表示）、true=表示、false=非表示
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -78,6 +79,7 @@ export function PageInlineEditor({ page }: PageInlineEditorProps) {
         : '',
       contentWidth: page.contentWidth ?? '',
       contentWidthCustom: page.contentWidthCustom?.toString() ?? '',
+      showSidebar: page.showSidebar,
     },
   })
 
@@ -100,6 +102,7 @@ export function PageInlineEditor({ page }: PageInlineEditorProps) {
           publishedAt: data.publishedAt ? new Date(data.publishedAt) : undefined,
           contentWidth: (data.contentWidth || undefined) as 'XS' | 'SM' | 'MD' | 'LG' | 'CUSTOM' | undefined,
           contentWidthCustom: data.contentWidthCustom ? parseInt(data.contentWidthCustom, 10) : undefined,
+          showSidebar: data.showSidebar,
         })
 
         if (result.success) {

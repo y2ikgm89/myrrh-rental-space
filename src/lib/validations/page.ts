@@ -31,6 +31,7 @@ export const updatePageSchema = z.object({
   publishedAt: z.coerce.date().optional(),
   contentWidth: z.nativeEnum(LayoutWidth).optional(),
   contentWidthCustom: z.number().int().min(320).max(1920).optional(),
+  showSidebar: z.boolean().nullable().optional(),  // null=デフォルト（カスタムページは非表示）、true=表示、false=非表示
 })
 
 /**
@@ -71,6 +72,7 @@ export type PageData = {
   isSystemPage: boolean
   contentWidth: LayoutWidth | null
   contentWidthCustom: number | null
+  showSidebar: boolean | null  // null=デフォルト（カスタムページは非表示）、true=表示、false=非表示
   createdAt: Date
   updatedAt: Date
 }

@@ -26,6 +26,7 @@ import {
 } from '@/lib/google-calendar'
 import { syncFromCalendar } from '@/lib/calendar-sync'
 import { stripeSettingsSchema, type StripeSettingsInput } from '@/lib/validations/stripe'
+import { sidebarSettingsSchema, type SidebarSettings } from '@/lib/validations/sidebar'
 import { getSession, getRoleFromSession } from '@/lib/auth'
 import { hasPermission, canAccessAdmin } from '@/lib/permissions'
 import { logPermissionDenied } from '@/lib/audit'
@@ -180,6 +181,11 @@ export type SettingsData = {
   containerWidthCustom: number | null
   contentWidth: LayoutWidth | null
   contentWidthCustom: number | null
+  // Sidebar Settings
+  sidebarEnabled: boolean
+  sidebarWidgets: unknown // JSON型（SidebarWidgetsとしてパース）
+  sidebarRecentCount: number
+  sidebarPopularCount: number
   createdAt: Date
   updatedAt: Date
 }
@@ -321,6 +327,9 @@ const layoutSettingsSchema = z.object({
 
 export type LayoutSettingsInput = z.infer<typeof layoutSettingsSchema>
 
+// Sidebar Settings (imported from validations)
+export type SidebarSettingsInput = SidebarSettings
+
 // =============================================================================
 // Helper Functions
 // =============================================================================
@@ -406,6 +415,11 @@ export async function getPublicSettings(): Promise<SettingsData> {
     containerWidthCustom: settings.containerWidthCustom,
     contentWidth: settings.contentWidth,
     contentWidthCustom: settings.contentWidthCustom,
+    // Sidebar Settings
+    sidebarEnabled: settings.sidebarEnabled,
+    sidebarWidgets: settings.sidebarWidgets,
+    sidebarRecentCount: settings.sidebarRecentCount,
+    sidebarPopularCount: settings.sidebarPopularCount,
   }
 }
 
@@ -473,6 +487,11 @@ export async function getSettings(): Promise<SettingsData | null> {
     containerWidthCustom: settings.containerWidthCustom,
     contentWidth: settings.contentWidth,
     contentWidthCustom: settings.contentWidthCustom,
+    // Sidebar Settings
+    sidebarEnabled: settings.sidebarEnabled,
+    sidebarWidgets: settings.sidebarWidgets,
+    sidebarRecentCount: settings.sidebarRecentCount,
+    sidebarPopularCount: settings.sidebarPopularCount,
   }
 }
 
@@ -1461,4 +1480,45 @@ export const updateLayoutSettings = withPermission<[data: LayoutSettingsInput], 
   revalidateTag('layout-settings', { expire: 0 })
 
   return createSuccess('レイアウト設定を更新しました')
+})
+
+// =============================================================================
+// Sidebar Settings Actions
+// =============================================================================
+
+/**
+ * サイドバー設定を更新
+ */
+export const updateSidebarSettings = withPermission<[data: SidebarSettingsInput], void>(
+  'settings',
+  'update'
+)(async (_user, data): Promise<ActionResult<void>> => {
+  const parsed = sidebarSettingsSchema.safeParse(data)
+  if (!parsed.success) {
+    return createFailure(parsed.error.issues[0].message)
+  }
+
+  await prisma.settings.upsert({
+    where: { id: 'singleton' },
+    create: {
+      id: 'singleton',
+      sidebarEnabled: parsed.data.sidebarEnabled,
+      sidebarWidgets: parsed.data.sidebarWidgets,
+      sidebarRecentCount: parsed.data.sidebarRecentCount,
+      sidebarPopularCount: parsed.data.sidebarPopularCount,
+    },
+    update: {
+      sidebarEnabled: parsed.data.sidebarEnabled,
+      sidebarWidgets: parsed.data.sidebarWidgets,
+      sidebarRecentCount: parsed.data.sidebarRecentCount,
+      sidebarPopularCount: parsed.data.sidebarPopularCount,
+    },
+  })
+
+  revalidatePath('/admin/settings')
+  revalidatePath('/blog', 'layout')
+  revalidateTag('sidebar-settings', { expire: 0 })
+  revalidateTag('sidebar-data', { expire: 0 })
+
+  return createSuccess('サイドバー設定を更新しました')
 })

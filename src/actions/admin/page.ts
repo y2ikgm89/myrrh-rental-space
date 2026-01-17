@@ -122,6 +122,7 @@ export async function updatePage(
         publishedAt: parsed.data.publishedAt || null,
         contentWidth: parsed.data.contentWidth ?? null,
         contentWidthCustom: parsed.data.contentWidthCustom ?? null,
+        showSidebar: parsed.data.showSidebar ?? null,
       },
     })
 

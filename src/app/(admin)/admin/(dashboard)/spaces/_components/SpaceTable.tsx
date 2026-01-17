@@ -52,14 +52,14 @@ function PublishSwitch({
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-col items-center gap-1">
       <Switch
         checked={isPublished}
         onCheckedChange={handleChange}
         disabled={isPending}
       />
-      <span className="text-sm text-muted-foreground">
-        {isPublished ? '公開中' : '非公開'}
+      <span className="text-xs text-muted-foreground">
+        {isPublished ? '公開' : '非公開'}
       </span>
     </div>
   )
