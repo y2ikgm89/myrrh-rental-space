@@ -1,0 +1,99 @@
+/**
+ * 通知・決済設定ページ
+ *
+ * メール・通知・決済設定をタブで切り替え
+ *
+ * Next.js 16 PPR対応:
+ * - 静的シェル: ローディングUI
+ * - 動的コンテンツ: 設定データ（Suspenseでラップ）
+ */
+
+import { Suspense } from 'react'
+import { connection } from 'next/server'
+import { getSettings } from '@/actions/admin/settings'
+import { SettingsLayout } from '../_components/SettingsLayout'
+import { SettingsTabs } from '../_components/SettingsTabs'
+import {
+  EmailSection,
+  NotificationSection,
+  StripeSection,
+} from '../_components/sections'
+import type { ReactElement } from 'react'
+
+/**
+ * 動的コンテンツ: 通知・決済設定
+ */
+async function NotifySettingsContent(): Promise<ReactElement> {
+  await connection()
+
+  const settings = await getSettings()
+
+  if (!settings) {
+    return (
+      <SettingsLayout
+        title="通知・決済"
+        description="メール通知とオンライン決済の設定"
+      >
+        <div className="text-center py-8 text-muted-foreground">
+          設定を読み込めませんでした
+        </div>
+      </SettingsLayout>
+    )
+  }
+
+  const tabs = [
+    {
+      value: 'email',
+      label: 'メール',
+      content: <EmailSection settings={settings} />,
+    },
+    {
+      value: 'notification',
+      label: '通知',
+      content: <NotificationSection settings={settings} />,
+    },
+    {
+      value: 'payment',
+      label: '決済',
+      content: <StripeSection settings={settings} />,
+    },
+  ]
+
+  return (
+    <SettingsLayout
+      title="通知・決済"
+      description="メール通知とオンライン決済の設定"
+    >
+      <SettingsTabs tabs={tabs} defaultTab="email" />
+    </SettingsLayout>
+  )
+}
+
+/**
+ * ローディングUI
+ */
+function NotifySettingsLoading(): ReactElement {
+  return (
+    <SettingsLayout
+      title="通知・決済"
+      description="メール通知とオンライン決済の設定"
+    >
+      <div className="animate-pulse space-y-6">
+        <div className="flex gap-1 h-10 bg-muted rounded-lg p-1">
+          <div className="h-8 w-14 bg-gray-300 rounded-md" />
+          <div className="h-8 w-12 bg-gray-200 rounded-md" />
+          <div className="h-8 w-12 bg-gray-200 rounded-md" />
+        </div>
+        <div className="h-48 bg-gray-200 rounded" />
+      </div>
+    </SettingsLayout>
+  )
+}
+
+export default function NotifySettingsPage(): ReactElement {
+  return (
+    <Suspense fallback={<NotifySettingsLoading />}>
+      <NotifySettingsContent />
+    </Suspense>
+  )
+}

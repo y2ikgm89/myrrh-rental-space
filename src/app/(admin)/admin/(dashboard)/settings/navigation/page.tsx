@@ -1,23 +1,11 @@
-import {
-  getNavigationItems,
-  getSocialLinks,
-} from '@/actions/admin/navigation'
-import { NavigationManager } from './_components/NavigationManager'
+/**
+ * ナビゲーション設定ページ（リダイレクト）
+ *
+ * サイト設定ページのナビゲーションタブにリダイレクト
+ */
 
-export default async function NavigationSettingsPage() {
-  const [desktopItems, mobileItems, footerItems, socialLinks] = await Promise.all([
-    getNavigationItems('HEADER_DESKTOP'),
-    getNavigationItems('HEADER_MOBILE'),
-    getNavigationItems('FOOTER'),
-    getSocialLinks(),
-  ])
+import { redirect } from 'next/navigation'
 
-  return (
-    <NavigationManager
-      initialDesktopItems={desktopItems}
-      initialMobileItems={mobileItems}
-      initialFooterItems={footerItems}
-      initialSocialLinks={socialLinks}
-    />
-  )
+export default function NavigationSettingsPage(): never {
+  redirect('/admin/settings/site?tab=navigation')
 }

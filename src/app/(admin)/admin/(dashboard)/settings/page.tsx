@@ -1,69 +1,73 @@
 /**
- * サイト設定ページ
+ * 設定トップページ
  *
- * Server ComponentでデータをフェッチしClient Componentに渡す
- * Next.js App Router推奨パターン
- *
- * @see docs/plans/settings-tab-refactoring.md
+ * カテゴリカード一覧を表示
+ * 各カテゴリをクリックすると詳細ページへ遷移
  */
 
-import { Suspense } from 'react'
-import { getSettings } from '@/actions/admin/settings'
-import { SettingsPageClient } from './_components'
+import {
+  Globe,
+  Building2,
+  Bell,
+  Key,
+  Settings,
+} from 'lucide-react'
+import { SettingsCard } from './_components/SettingsCard'
+import type { SettingsCardProps } from './_components/SettingsCard'
 
-// =============================================================================
-// Loading Component
-// =============================================================================
-
-function SettingsLoading() {
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="space-y-2">
-          <div className="h-8 w-48 animate-pulse rounded bg-muted" />
-          <div className="h-4 w-64 animate-pulse rounded bg-muted" />
-        </div>
-        <div className="h-10 w-40 animate-pulse rounded bg-muted" />
-      </div>
-      <div className="h-10 w-full animate-pulse rounded bg-muted" />
-      <div className="space-y-4">
-        <div className="h-64 w-full animate-pulse rounded-lg bg-muted" />
-        <div className="h-48 w-full animate-pulse rounded-lg bg-muted" />
-      </div>
-    </div>
-  )
-}
-
-// =============================================================================
-// Content Component (Server Component)
-// =============================================================================
-
-async function SettingsContent() {
-  // Note: Error handling is done via error.tsx boundary (Next.js App Router pattern)
-  const settings = await getSettings()
-
-  if (!settings) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-muted-foreground">設定が見つかりません</p>
-        <p className="text-sm text-muted-foreground mt-2">
-          初期設定を作成してください
-        </p>
-      </div>
-    )
-  }
-
-  return <SettingsPageClient initialSettings={settings} />
-}
-
-// =============================================================================
-// Page Component
-// =============================================================================
+const SETTINGS_CATEGORIES: SettingsCardProps[] = [
+  {
+    title: 'サイト設定',
+    description: 'サイトの基本情報、SEO、レイアウト、ナビゲーションを設定',
+    href: '/admin/settings/site',
+    icon: Globe,
+    items: ['一般', 'SEO', 'レイアウト', 'ナビゲーション', 'お知らせバー'],
+  },
+  {
+    title: 'ビジネス設定',
+    description: '事業者情報、営業時間、予約設定を管理',
+    href: '/admin/settings/business',
+    icon: Building2,
+    items: ['事業者情報', '営業時間', '予約'],
+  },
+  {
+    title: '通知・決済',
+    description: 'メール通知、オンライン決済を設定',
+    href: '/admin/settings/notify',
+    icon: Bell,
+    items: ['メール', '決済 (Stripe)'],
+  },
+  {
+    title: '外部連携',
+    description: '外部サービスのAPIキーを管理',
+    href: '/admin/settings/api',
+    icon: Key,
+    items: ['Resend', 'Turnstile', 'Google'],
+  },
+  {
+    title: 'システム管理',
+    description: 'メンテナンス、Cookie同意、権限を管理',
+    href: '/admin/settings/system',
+    icon: Settings,
+    items: ['メンテナンス', 'Cookie', '権限'],
+  },
+]
 
 export default function SettingsPage() {
   return (
-    <Suspense fallback={<SettingsLoading />}>
-      <SettingsContent />
-    </Suspense>
+    <div className="space-y-6">
+      {/* ヘッダー */}
+      <div>
+        <h1 className="text-2xl font-bold">サイト設定</h1>
+        <p className="text-muted-foreground">サイト全体の設定を管理します</p>
+      </div>
+
+      {/* カテゴリカード一覧 */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {SETTINGS_CATEGORIES.map((category) => (
+          <SettingsCard key={category.href} {...category} />
+        ))}
+      </div>
+    </div>
   )
 }

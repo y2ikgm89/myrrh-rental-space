@@ -1,15 +1,27 @@
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/admin/ui/card'
-import { Badge } from '@/components/admin/ui/badge'
+'use client'
+
+/**
+ * 権限マトリクスセクション
+ *
+ * ロール別のリソースアクセス権限を表示
+ */
+
+import Link from 'next/link'
 import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Badge,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/admin/ui/table'
-import { Button } from '@/components/admin/ui/button'
-import Link from 'next/link'
+} from '@/components/admin/ui'
 import { Role } from '@/generated/prisma/client/enums'
 import {
   ROLE_PERMISSIONS,
@@ -18,14 +30,13 @@ import {
   ROLE_LABELS,
   type Resource,
   type Action,
-} from '@/lib/permissions'
+} from '@/lib/permissions-constants'
 import { Check, X } from 'lucide-react'
 
-export const metadata = {
-  title: '権限マトリクス | 管理画面',
-}
+// =============================================================================
+// Constants
+// =============================================================================
 
-// リソースとアクションの一覧
 const RESOURCES: Resource[] = [
   'space',
   'reservation',
@@ -46,36 +57,41 @@ const ACTIONS: Action[] = ['create', 'read', 'update', 'delete', 'publish', 'man
 
 const ADMIN_ROLES: Role[] = [Role.SUPER_ADMIN, Role.ADMIN, Role.EDITOR, Role.VIEWER]
 
-export default function PermissionsPage() {
+const ROLE_DESCRIPTIONS: Record<Role, string> = {
+  SUPER_ADMIN: 'システム全体の管理権限。ユーザー管理、監査ログ、全設定へのアクセス。',
+  ADMIN: 'コンテンツ管理全般。ユーザー管理と監査ログ以外の全機能。',
+  EDITOR: '割り当てられたページのみ編集可能。新規作成・削除は不可。',
+  VIEWER: '閲覧のみ。編集・削除などの操作は不可。',
+  USER: '公開サイトのユーザーアカウント。管理画面へのアクセス権限なし。',
+}
+
+const ROLE_VARIANTS: Record<Role, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+  SUPER_ADMIN: 'destructive',
+  ADMIN: 'default',
+  EDITOR: 'secondary',
+  VIEWER: 'outline',
+  USER: 'outline',
+}
+
+// =============================================================================
+// Component
+// =============================================================================
+
+export function PermissionsSection() {
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">権限マトリクス</h1>
-          <p className="text-muted-foreground">ロール別の権限一覧を確認</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" asChild>
-            <Link href="/admin/users">ユーザー管理</Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href="/admin/audit-logs">監査ログ</Link>
-          </Button>
-        </div>
-      </div>
-
       {/* ロール説明 */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {ADMIN_ROLES.map((role) => (
           <Card key={role}>
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
-                <RoleBadge role={role} />
+                <Badge variant={ROLE_VARIANTS[role]}>{ROLE_LABELS[role]}</Badge>
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                {getRoleDescription(role)}
+                {ROLE_DESCRIPTIONS[role]}
               </p>
             </CardContent>
           </Card>
@@ -85,10 +101,17 @@ export default function PermissionsPage() {
       {/* 権限マトリクス */}
       <Card>
         <CardHeader>
-          <CardTitle>権限マトリクス</CardTitle>
-          <CardDescription>
-            各ロールが持つリソースへのアクセス権限
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>権限マトリクス</CardTitle>
+              <CardDescription>
+                各ロールが持つリソースへのアクセス権限
+              </CardDescription>
+            </div>
+            <Button variant="outline" asChild>
+              <Link href="/admin/users">ユーザー管理</Link>
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -178,31 +201,4 @@ export default function PermissionsPage() {
       </Card>
     </div>
   )
-}
-
-function RoleBadge({ role }: { role: Role }) {
-  const variants: Record<Role, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-    SUPER_ADMIN: 'destructive',
-    ADMIN: 'default',
-    EDITOR: 'secondary',
-    VIEWER: 'outline',
-    USER: 'outline',
-  }
-
-  return <Badge variant={variants[role]}>{ROLE_LABELS[role]}</Badge>
-}
-
-function getRoleDescription(role: Role): string {
-  switch (role) {
-    case Role.SUPER_ADMIN:
-      return 'システム全体の管理権限。ユーザー管理、監査ログ、全設定へのアクセス。'
-    case Role.ADMIN:
-      return 'コンテンツ管理全般。ユーザー管理と監査ログ以外の全機能。'
-    case Role.EDITOR:
-      return '割り当てられたページのみ編集可能。新規作成・削除は不可。'
-    case Role.VIEWER:
-      return '閲覧のみ。編集・削除などの操作は不可。'
-    default:
-      return ''
-  }
 }

@@ -10,7 +10,12 @@ export { NotificationSection } from './NotificationSection'
 export { ReservationSection } from './ReservationSection'
 export { TermsAgreementSection } from './TermsAgreementSection'
 export { MaintenanceSection } from './MaintenanceSection'
+export { CookieConsentSection } from './CookieConsentSection'
 export { StripeSection } from './StripeSection'
+
+// Layout Settings
+export { LayoutSection } from './LayoutSection'
+export { SidebarSection } from './SidebarSection'
 
 // External Service API Keys
 export { ResendSection } from './ResendSection'

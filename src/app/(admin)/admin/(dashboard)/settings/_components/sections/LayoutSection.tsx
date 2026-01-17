@@ -1,9 +1,9 @@
 'use client'
 
 /**
- * レイアウト設定タブ
+ * レイアウト設定セクション
  *
- * サイト全体のContainer幅と記事コンテンツの幅を設定
+ * サイト全体の幅と記事コンテンツ幅を設定
  */
 
 import { useState, useTransition } from 'react'
@@ -36,7 +36,7 @@ import {
 // Types
 // =============================================================================
 
-interface LayoutTabProps {
+interface LayoutSectionProps {
   settings: SettingsData
 }
 
@@ -73,7 +73,7 @@ const CONTENT_WIDTH_OPTIONS: Array<{
 // Component
 // =============================================================================
 
-export function LayoutTab({ settings }: LayoutTabProps) {
+export function LayoutSection({ settings }: LayoutSectionProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
