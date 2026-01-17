@@ -13,6 +13,7 @@ import {
   getGoogleMapsConfig,
   getCustomApiKeys,
 } from '@/actions/admin/api-keys'
+import { getSettings } from '@/actions/admin/settings'
 import { SettingsLayout } from '../_components/SettingsLayout'
 import { SettingsTabs } from '../_components/SettingsTabs'
 import {
@@ -20,6 +21,9 @@ import {
   TurnstileSection,
   GoogleMapsSection,
   CustomApiKeysSection,
+  GoogleCalendarSection,
+  ICalFeedSection,
+  TwoWaySyncSection,
 } from '../_components/sections'
 import type { ReactElement } from 'react'
 
@@ -29,12 +33,13 @@ import type { ReactElement } from 'react'
 async function ApiSettingsContent(): Promise<ReactElement> {
   await connection()
 
-  const [resendConfig, turnstileConfig, googleMapsConfig, customApiKeys] =
+  const [resendConfig, turnstileConfig, googleMapsConfig, customApiKeys, settings] =
     await Promise.all([
       getResendConfig(),
       getTurnstileConfig(),
       getGoogleMapsConfig(),
       getCustomApiKeys(),
+      getSettings(),
     ])
 
   const tabs = [
@@ -58,6 +63,21 @@ async function ApiSettingsContent(): Promise<ReactElement> {
       label: 'カスタム',
       content: <CustomApiKeysSection keys={customApiKeys} />,
     },
+    ...(settings
+      ? [
+          {
+            value: 'calendar',
+            label: 'カレンダー',
+            content: (
+              <div className="space-y-6">
+                <GoogleCalendarSection settings={settings} />
+                <ICalFeedSection />
+                <TwoWaySyncSection settings={settings} />
+              </div>
+            ),
+          },
+        ]
+      : []),
   ]
 
   return (
@@ -89,6 +109,7 @@ function ApiSettingsLoading(): ReactElement {
           <div className="h-8 w-18 bg-gray-200 rounded-md" />
           <div className="h-8 w-24 bg-gray-200 rounded-md" />
           <div className="h-8 w-16 bg-gray-200 rounded-md" />
+          <div className="h-8 w-20 bg-gray-200 rounded-md" />
         </div>
         <div className="h-48 bg-gray-200 rounded" />
       </div>
