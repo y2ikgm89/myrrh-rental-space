@@ -8,7 +8,7 @@
 
 ## 完了した計画
 
-### 041-admin-cleanup-refactoring.md (2026-01-17) ✅ Phase 1-3
+### 041-admin-cleanup-refactoring.md (2026-01-17) ✅ Phase 1-4
 
 管理画面クリーンアップ＆フルリファクタリング
 
@@ -20,15 +20,19 @@
 - ✅ Phase 1: サイドバーにユーザー管理・監査ログ追加、廃止コンポーネント削除
 - ✅ Phase 2: 未使用ディレクトリ削除（.gitkeepのみのディレクトリ）
 - ✅ Phase 3: 命名規則統一（blog-filters.tsx → BlogFilters.tsx等）
+- ✅ Phase 4: DataTable統一（TanStack React Table v8 + shadcn/ui）
+  - 新規: `src/components/admin/ui/data-table.tsx`
+  - 移行: SpaceTable, BlogTable, NewsTable, CustomerTable, InquiryTable, ReservationTable
+  - 機能: ソート、フィルター、ページネーション、カラム表示切替
 
 **保留フェーズ** (次回以降):
-- Phase 4: テーブルコンポーネント統一 (DataTable)
 - Phase 5: 設定セクション整理
 - Phase 6: 公開ページ統一 (Pagination/Filters)
 
 **コミット**:
 - b68b15d (Phase 1-3)
 - 297ff46 (P2修正: サイドバー条件付きレイアウト)
+- 1827510 (Phase 4: DataTable統一)
 
 ---
 
