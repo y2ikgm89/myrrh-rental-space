@@ -15,6 +15,8 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { tv } from 'tailwind-variants'
 import { Card, CardContent, CardFooter, Container } from '@/components/site/ui'
+import { BlogSidebar } from '@/components/site/sidebar'
+import { getSidebarSettings, getSidebarData } from '@/actions/public/sidebar'
 import { prisma } from '@/lib/prisma'
 import { loadBlogSearchParams } from '@/lib/nuqs'
 import { cn } from '@/lib/utils'
@@ -22,8 +24,8 @@ import {
   blogSearchParamsDefaults,
   blogSearchParamsSchema,
 } from '@/lib/validations/search-params'
-import { BlogFilters } from './_components/blog-filters'
-import { BlogPagination } from './_components/blog-pagination'
+import { BlogFilters } from './_components/BlogFilters'
+import { BlogPagination } from './_components/BlogPagination'
 import { parseStringArray } from '@/lib/json-validators'
 import { generatePageMetadata } from '@/lib/page-metadata'
 import { BlogPostStatus } from '@/generated/prisma/client/enums'
@@ -45,6 +47,9 @@ const styles = tv({
     title: 'text-3xl font-bold tracking-tight text-foreground',
     subtitle: 'mt-2 text-muted-foreground',
     filtersWrapper: 'mb-8',
+    layout: 'lg:grid lg:grid-cols-[1fr_300px] lg:gap-8',
+    mainContent: '',
+    sidebar: 'mt-8 lg:mt-0',
     grid: 'grid gap-6 sm:grid-cols-2 lg:grid-cols-3',
     imageWrapper: 'relative aspect-[4/3] overflow-hidden rounded-t-lg',
     image: 'object-cover transition-transform duration-300 hover:scale-105',
@@ -279,7 +284,11 @@ export default async function BlogPage({
   searchParams,
 }: PageProps): Promise<ReactElement> {
   // フィルター用データは静的シェルに含める
-  const { categories, tagsList } = await getFilterData()
+  const [{ categories, tagsList }, sidebarSettings, sidebarData] = await Promise.all([
+    getFilterData(),
+    getSidebarSettings(),
+    getSidebarData(),
+  ])
 
   return (
     <section className={styles.section()}>
@@ -297,10 +306,23 @@ export default async function BlogPage({
           <BlogFilters categories={categories} tags={tagsList} />
         </div>
 
-        {/* 動的コンテンツ: ブログ一覧 */}
-        <Suspense fallback={<BlogResultsLoading />}>
-          <BlogResults searchParams={searchParams} />
-        </Suspense>
+        {/* 2カラムレイアウト: メイン + サイドバー */}
+        <div className={styles.layout()}>
+          {/* メインコンテンツ */}
+          <main className={styles.mainContent()}>
+            {/* 動的コンテンツ: ブログ一覧 */}
+            <Suspense fallback={<BlogResultsLoading />}>
+              <BlogResults searchParams={searchParams} />
+            </Suspense>
+          </main>
+
+          {/* サイドバー */}
+          {sidebarSettings.enabled && (
+            <aside className={styles.sidebar()}>
+              <BlogSidebar settings={sidebarSettings.widgets} data={sidebarData} />
+            </aside>
+          )}
+        </div>
       </Container>
     </section>
   )
