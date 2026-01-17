@@ -124,9 +124,6 @@ export type {
 // Pagination
 export { Pagination } from './Pagination'
 
-// DataTable (TanStack React Table)
-export { DataTable, DataTableColumnHeader, type ColumnDef } from './data-table'
-export type { DataTableProps } from './data-table'
 
 // Toast
 export { Toaster } from './toaster'

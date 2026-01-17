@@ -1,27 +1,16 @@
-'use client'
-
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { useTransition, useMemo, useCallback } from 'react'
-import { toast } from 'sonner'
 import {
   Button,
-  DataTable,
-  DataTableColumnHeader,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  type ColumnDef,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '@/components/admin/ui'
 import { ReservationStatusBadge } from '@/components/admin/status-badges'
-import { updateReservationStatus } from '@/actions/admin/reservation'
+import { ReservationStatusSelect } from './ReservationStatusSelect'
 import type { ReservationWithRelations } from '@/actions/admin/reservation'
-import {
-  isValidReservationStatus,
-  type ReservationStatus,
-} from '@/lib/validations/enums'
 
 // =============================================================================
 // Types
@@ -60,145 +49,10 @@ function formatPrice(price: number | null): string {
 }
 
 // =============================================================================
-// Cell Components
-// =============================================================================
-
-function StatusSelect({
-  reservationId,
-  currentStatus,
-}: {
-  reservationId: string
-  currentStatus: ReservationStatus
-}) {
-  const router = useRouter()
-  const [isPending, startTransition] = useTransition()
-
-  const handleStatusChange = useCallback(
-    (newStatus: ReservationStatus) => {
-      if (newStatus === currentStatus) return
-
-      startTransition(async () => {
-        const result = await updateReservationStatus(reservationId, newStatus)
-        if (result.success) {
-          router.refresh()
-        } else {
-          toast.error(result.error || 'エラーが発生しました')
-        }
-      })
-    },
-    [reservationId, currentStatus, router]
-  )
-
-  return (
-    <Select
-      value={currentStatus}
-      onValueChange={(value) => {
-        if (isValidReservationStatus(value)) handleStatusChange(value)
-      }}
-      disabled={isPending}
-    >
-      <SelectTrigger className="w-32">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="PENDING">保留中</SelectItem>
-        <SelectItem value="CONFIRMED">確認済み</SelectItem>
-        <SelectItem value="CANCELLED">キャンセル</SelectItem>
-      </SelectContent>
-    </Select>
-  )
-}
-
-function ActionCell({ reservation }: { reservation: ReservationWithRelations }) {
-  return (
-    <div className="flex items-center justify-end gap-2">
-      <StatusSelect
-        reservationId={reservation.id}
-        currentStatus={reservation.status}
-      />
-      <Button variant="outline" size="sm" asChild>
-        <Link href={`/admin/reservations/${reservation.id}`}>詳細</Link>
-      </Button>
-    </div>
-  )
-}
-
-// =============================================================================
-// Column Definitions
-// =============================================================================
-
-const columns: ColumnDef<ReservationWithRelations>[] = [
-  {
-    id: 'datetime',
-    accessorFn: (row) => row.startTime,
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="予約日時" />
-    ),
-    cell: ({ row }) => (
-      <div>
-        <div className="font-medium">{formatDate(row.original.startTime)}</div>
-        <div className="text-sm text-muted-foreground">
-          {formatTime(row.original.startTime)} - {formatTime(row.original.endTime)}
-        </div>
-      </div>
-    ),
-  },
-  {
-    id: 'space',
-    accessorFn: (row) => row.space.name,
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="スペース" />
-    ),
-    cell: ({ row }) => <span>{row.original.space.name}</span>,
-  },
-  {
-    id: 'customer',
-    accessorFn: (row) => `${row.customer.lastName} ${row.customer.firstName}`,
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="顧客" />
-    ),
-    cell: ({ row }) => (
-      <div>
-        <div className="font-medium">
-          {row.original.customer.lastName} {row.original.customer.firstName}
-        </div>
-        <div className="text-sm text-muted-foreground">
-          {row.original.customer.email}
-        </div>
-      </div>
-    ),
-  },
-  {
-    accessorKey: 'totalPrice',
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="料金" className="justify-end" />
-    ),
-    cell: ({ row }) => (
-      <div className="text-right">{formatPrice(row.getValue('totalPrice'))}</div>
-    ),
-  },
-  {
-    accessorKey: 'status',
-    header: 'ステータス',
-    cell: ({ row }) => <ReservationStatusBadge status={row.getValue('status')} />,
-    enableSorting: false,
-  },
-  {
-    id: 'actions',
-    header: () => <div className="text-right">操作</div>,
-    cell: ({ row }) => <ActionCell reservation={row.original} />,
-    enableSorting: false,
-    enableHiding: false,
-  },
-]
-
-// =============================================================================
-// ReservationTable Component
+// ReservationTable Component (Server Component)
 // =============================================================================
 
 export function ReservationTable({ reservations }: ReservationTableProps) {
-  const memoizedColumns = useMemo(() => columns, [])
-
   if (reservations.length === 0) {
     return (
       <div className="rounded-lg border bg-white p-12 text-center">
@@ -208,13 +62,61 @@ export function ReservationTable({ reservations }: ReservationTableProps) {
   }
 
   return (
-    <DataTable
-      columns={memoizedColumns}
-      data={reservations}
-      filterColumn="customer"
-      filterPlaceholder="顧客名で検索..."
-      emptyMessage="予約がありません"
-      initialSorting={[{ id: 'datetime', desc: true }]}
-    />
+    <div className="overflow-hidden rounded-lg border bg-white">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>予約日時</TableHead>
+            <TableHead>スペース</TableHead>
+            <TableHead>顧客</TableHead>
+            <TableHead className="text-right">料金</TableHead>
+            <TableHead>ステータス</TableHead>
+            <TableHead className="text-right">操作</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {reservations.map((reservation) => (
+            <TableRow key={reservation.id}>
+              <TableCell>
+                <div>
+                  <div className="font-medium">{formatDate(reservation.startTime)}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {formatTime(reservation.startTime)} - {formatTime(reservation.endTime)}
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell>{reservation.space.name}</TableCell>
+              <TableCell>
+                <div>
+                  <div className="font-medium">
+                    {reservation.customer.lastName} {reservation.customer.firstName}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {reservation.customer.email}
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell className="text-right">
+                {formatPrice(reservation.totalPrice)}
+              </TableCell>
+              <TableCell>
+                <ReservationStatusBadge status={reservation.status} />
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex items-center justify-end gap-2">
+                  <ReservationStatusSelect
+                    reservationId={reservation.id}
+                    currentStatus={reservation.status}
+                  />
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href={`/admin/reservations/${reservation.id}`}>詳細</Link>
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   )
 }
