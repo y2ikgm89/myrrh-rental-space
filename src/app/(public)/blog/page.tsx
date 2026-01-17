@@ -307,7 +307,7 @@ export default async function BlogPage({
         </div>
 
         {/* 2カラムレイアウト: メイン + サイドバー */}
-        <div className={styles.layout()}>
+        <div className={sidebarSettings.enabled ? styles.layout() : ''}>
           {/* メインコンテンツ */}
           <main className={styles.mainContent()}>
             {/* 動的コンテンツ: ブログ一覧 */}

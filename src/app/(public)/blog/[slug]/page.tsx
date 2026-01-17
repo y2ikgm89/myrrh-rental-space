@@ -17,6 +17,8 @@ import { Suspense } from 'react'
 import { tv } from 'tailwind-variants'
 import { ContentRenderer } from '@/components/site/ContentRenderer'
 import { ArticleJsonLd } from '@/components/seo/JsonLd'
+import { BlogSidebar } from '@/components/site/sidebar'
+import { getSidebarSettings, getSidebarData } from '@/actions/public/sidebar'
 import { prisma } from '@/lib/prisma'
 import { parseStringArray } from '@/lib/json-validators'
 import { getBlogLayoutSettings } from '@/lib/layout-settings'
@@ -35,6 +37,9 @@ const styles = tv({
   slots: {
     section: 'py-16 bg-background min-h-screen',
     container: 'mx-auto w-full px-4 sm:px-6 lg:px-8',
+    layout: 'lg:grid lg:grid-cols-[1fr_300px] lg:gap-8',
+    mainContent: '',
+    sidebar: 'mt-8 lg:mt-0',
     article: '', // 幅はgetContentStylesで動的に設定
     breadcrumb: 'mb-8 flex items-center gap-2 text-sm text-muted-foreground',
     breadcrumbLink: 'hover:text-foreground transition-colors',
@@ -270,7 +275,13 @@ export default async function BlogDetailPage({
   }
 
   const tags = parseStringArray(post.tags)
-  const { prevPost, nextPost } = await getAdjacentPosts(post.id, post.publishedAt)
+
+  // サイドバーデータと前後記事を並列取得
+  const [{ prevPost, nextPost }, sidebarSettings, sidebarData] = await Promise.all([
+    getAdjacentPosts(post.id, post.publishedAt),
+    getSidebarSettings(),
+    getSidebarData(),
+  ])
 
   // レイアウト設定を取得
   const layoutConfig = await getBlogLayoutSettings(post.id)
@@ -291,122 +302,134 @@ export default async function BlogDetailPage({
       />
 
       <div className={`${styles.container()} ${containerStyles.className}`} style={containerStyles.style}>
-        <article className={`${styles.article()} ${contentStyles.className}`} style={contentStyles.style}>
-          {/* パンくずリスト */}
-          <nav className={styles.breadcrumb()} aria-label="パンくずリスト">
-            <Link href="/" className={styles.breadcrumbLink()}>
-              ホーム
-            </Link>
-            <span aria-hidden="true">/</span>
-            <Link href="/blog" className={styles.breadcrumbLink()}>
-              ブログ
-            </Link>
-            <span aria-hidden="true">/</span>
-            <span className="truncate max-w-[200px]">{post.title}</span>
-          </nav>
+        <div className={sidebarSettings.enabled ? styles.layout() : ''}>
+          {/* メインコンテンツ */}
+          <main className={styles.mainContent()}>
+            <article className={`${styles.article()} ${contentStyles.className}`} style={contentStyles.style}>
+              {/* パンくずリスト */}
+              <nav className={styles.breadcrumb()} aria-label="パンくずリスト">
+                <Link href="/" className={styles.breadcrumbLink()}>
+                  ホーム
+                </Link>
+                <span aria-hidden="true">/</span>
+                <Link href="/blog" className={styles.breadcrumbLink()}>
+                  ブログ
+                </Link>
+                <span aria-hidden="true">/</span>
+                <span className="truncate max-w-[200px]">{post.title}</span>
+              </nav>
 
-          {/* ヘッダー */}
-          <header className={styles.header()}>
-            <div className={styles.meta()}>
-              <Link
-                href={`/blog?category=${post.category.slug}`}
-                className={styles.category()}
-              >
-                {post.category.name}
-              </Link>
-              <span aria-hidden="true">•</span>
-              <time dateTime={post.publishedAt?.toISOString()}>
-                {formatDate(post.publishedAt)}
-              </time>
-            </div>
-            <h1 className={styles.title()}>{post.title}</h1>
-            {post.excerpt && (
-              <p className={styles.excerpt()}>{post.excerpt}</p>
-            )}
-          </header>
-
-          {/* サムネイル */}
-          <div className={styles.imageWrapper()}>
-            <Image
-              src={post.thumbnailUrl}
-              alt={post.title}
-              fill
-              sizes="(max-width: 768px) 100vw, 768px"
-              className={styles.image()}
-              priority
-            />
-          </div>
-
-          {/* 本文（HTMLコンテンツ + PostListWidget） */}
-          <ContentRenderer
-            html={post.content}
-            className={styles.content()}
-            widgetContext={{
-              categoryId: post.categoryId,
-              excludePostId: post.id,
-            }}
-          />
-
-          {/* タグ */}
-          {tags.length > 0 && (
-            <div className={styles.tagsWrapper()}>
-              <h2 className={styles.tagsTitle()}>タグ</h2>
-              <ul className={styles.tagsList()}>
-                {tags.map((tag) => (
-                  <li key={tag}>
-                    <Link
-                      href={`/blog?tags=${encodeURIComponent(tag)}`}
-                      className={styles.tag()}
-                    >
-                      #{tag}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* 前後の記事ナビゲーション */}
-          {(prevPost || nextPost) && (
-            <nav className={styles.navigation()} aria-label="記事ナビゲーション">
-              <div className={styles.navLinks()}>
-                {prevPost ? (
-                  <Link href={`/blog/${prevPost.slug}`} className={styles.navLink()}>
-                    <div className={styles.navLabel()}>← 前の記事</div>
-                    <div className={styles.navTitle()}>{prevPost.title}</div>
-                  </Link>
-                ) : (
-                  <div className="flex-1" />
-                )}
-                {nextPost ? (
+              {/* ヘッダー */}
+              <header className={styles.header()}>
+                <div className={styles.meta()}>
                   <Link
-                    href={`/blog/${nextPost.slug}`}
-                    className={`${styles.navLink()} text-right`}
+                    href={`/blog?category=${post.category.slug}`}
+                    className={styles.category()}
                   >
-                    <div className={styles.navLabel()}>次の記事 →</div>
-                    <div className={styles.navTitle()}>{nextPost.title}</div>
+                    {post.category.name}
                   </Link>
-                ) : (
-                  <div className="flex-1" />
-                )}
-              </div>
-            </nav>
-          )}
-
-          {/* コメントセクション */}
-          <Suspense
-            fallback={
-              <div className="mt-12 border-t pt-8">
-                <div className="animate-pulse space-y-4">
-                  <div className="h-8 bg-muted rounded w-32" />
-                  <div className="h-32 bg-muted rounded" />
+                  <span aria-hidden="true">•</span>
+                  <time dateTime={post.publishedAt?.toISOString()}>
+                    {formatDate(post.publishedAt)}
+                  </time>
                 </div>
+                <h1 className={styles.title()}>{post.title}</h1>
+                {post.excerpt && (
+                  <p className={styles.excerpt()}>{post.excerpt}</p>
+                )}
+              </header>
+
+              {/* サムネイル */}
+              <div className={styles.imageWrapper()}>
+                <Image
+                  src={post.thumbnailUrl}
+                  alt={post.title}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 768px"
+                  className={styles.image()}
+                  priority
+                />
               </div>
-            }
-          >
-            <CommentSection postId={post.id} postSlug={post.slug} />
-          </Suspense>
-        </article>
+
+              {/* 本文（HTMLコンテンツ + PostListWidget） */}
+              <ContentRenderer
+                html={post.content}
+                className={styles.content()}
+                widgetContext={{
+                  categoryId: post.categoryId,
+                  excludePostId: post.id,
+                }}
+              />
+
+              {/* タグ */}
+              {tags.length > 0 && (
+                <div className={styles.tagsWrapper()}>
+                  <h2 className={styles.tagsTitle()}>タグ</h2>
+                  <ul className={styles.tagsList()}>
+                    {tags.map((tag) => (
+                      <li key={tag}>
+                        <Link
+                          href={`/blog?tags=${encodeURIComponent(tag)}`}
+                          className={styles.tag()}
+                        >
+                          #{tag}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* 前後の記事ナビゲーション */}
+              {(prevPost || nextPost) && (
+                <nav className={styles.navigation()} aria-label="記事ナビゲーション">
+                  <div className={styles.navLinks()}>
+                    {prevPost ? (
+                      <Link href={`/blog/${prevPost.slug}`} className={styles.navLink()}>
+                        <div className={styles.navLabel()}>← 前の記事</div>
+                        <div className={styles.navTitle()}>{prevPost.title}</div>
+                      </Link>
+                    ) : (
+                      <div className="flex-1" />
+                    )}
+                    {nextPost ? (
+                      <Link
+                        href={`/blog/${nextPost.slug}`}
+                        className={`${styles.navLink()} text-right`}
+                      >
+                        <div className={styles.navLabel()}>次の記事 →</div>
+                        <div className={styles.navTitle()}>{nextPost.title}</div>
+                      </Link>
+                    ) : (
+                      <div className="flex-1" />
+                    )}
+                  </div>
+                </nav>
+              )}
+
+              {/* コメントセクション */}
+              <Suspense
+                fallback={
+                  <div className="mt-12 border-t pt-8">
+                    <div className="animate-pulse space-y-4">
+                      <div className="h-8 bg-muted rounded w-32" />
+                      <div className="h-32 bg-muted rounded" />
+                    </div>
+                  </div>
+                }
+              >
+                <CommentSection postId={post.id} postSlug={post.slug} />
+              </Suspense>
+            </article>
+          </main>
+
+          {/* サイドバー */}
+          {sidebarSettings.enabled && (
+            <aside className={styles.sidebar()}>
+              <BlogSidebar settings={sidebarSettings.widgets} data={sidebarData} />
+            </aside>
+          )}
+        </div>
       </div>
     </section>
   )
