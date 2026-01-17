@@ -2,21 +2,18 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useTransition } from 'react'
+import { useTransition, useMemo, useCallback } from 'react'
 import { toast } from 'sonner'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
   Button,
+  DataTable,
+  DataTableColumnHeader,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
+  type ColumnDef,
 } from '@/components/admin/ui'
 import { ReservationStatusBadge } from '@/components/admin/status-badges'
 import { updateReservationStatus } from '@/actions/admin/reservation'
@@ -26,9 +23,17 @@ import {
   type ReservationStatus,
 } from '@/lib/validations/enums'
 
+// =============================================================================
+// Types
+// =============================================================================
+
 type ReservationTableProps = {
   reservations: ReservationWithRelations[]
 }
+
+// =============================================================================
+// Helper Functions
+// =============================================================================
 
 function formatDate(date: Date): string {
   return new Intl.DateTimeFormat('ja-JP', {
@@ -54,6 +59,10 @@ function formatPrice(price: number | null): string {
   }).format(price)
 }
 
+// =============================================================================
+// Cell Components
+// =============================================================================
+
 function StatusSelect({
   reservationId,
   currentStatus,
@@ -64,18 +73,21 @@ function StatusSelect({
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
-  const handleStatusChange = async (newStatus: ReservationStatus) => {
-    if (newStatus === currentStatus) return
+  const handleStatusChange = useCallback(
+    (newStatus: ReservationStatus) => {
+      if (newStatus === currentStatus) return
 
-    startTransition(async () => {
-      const result = await updateReservationStatus(reservationId, newStatus)
-      if (result.success) {
-        router.refresh()
-      } else {
-        toast.error(result.error || 'エラーが発生しました')
-      }
-    })
-  }
+      startTransition(async () => {
+        const result = await updateReservationStatus(reservationId, newStatus)
+        if (result.success) {
+          router.refresh()
+        } else {
+          toast.error(result.error || 'エラーが発生しました')
+        }
+      })
+    },
+    [reservationId, currentStatus, router]
+  )
 
   return (
     <Select
@@ -97,7 +109,96 @@ function StatusSelect({
   )
 }
 
+function ActionCell({ reservation }: { reservation: ReservationWithRelations }) {
+  return (
+    <div className="flex items-center justify-end gap-2">
+      <StatusSelect
+        reservationId={reservation.id}
+        currentStatus={reservation.status}
+      />
+      <Button variant="outline" size="sm" asChild>
+        <Link href={`/admin/reservations/${reservation.id}`}>詳細</Link>
+      </Button>
+    </div>
+  )
+}
+
+// =============================================================================
+// Column Definitions
+// =============================================================================
+
+const columns: ColumnDef<ReservationWithRelations>[] = [
+  {
+    id: 'datetime',
+    accessorFn: (row) => row.startTime,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="予約日時" />
+    ),
+    cell: ({ row }) => (
+      <div>
+        <div className="font-medium">{formatDate(row.original.startTime)}</div>
+        <div className="text-sm text-muted-foreground">
+          {formatTime(row.original.startTime)} - {formatTime(row.original.endTime)}
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: 'space',
+    accessorFn: (row) => row.space.name,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="スペース" />
+    ),
+    cell: ({ row }) => <span>{row.original.space.name}</span>,
+  },
+  {
+    id: 'customer',
+    accessorFn: (row) => `${row.customer.lastName} ${row.customer.firstName}`,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="顧客" />
+    ),
+    cell: ({ row }) => (
+      <div>
+        <div className="font-medium">
+          {row.original.customer.lastName} {row.original.customer.firstName}
+        </div>
+        <div className="text-sm text-muted-foreground">
+          {row.original.customer.email}
+        </div>
+      </div>
+    ),
+  },
+  {
+    accessorKey: 'totalPrice',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="料金" className="justify-end" />
+    ),
+    cell: ({ row }) => (
+      <div className="text-right">{formatPrice(row.getValue('totalPrice'))}</div>
+    ),
+  },
+  {
+    accessorKey: 'status',
+    header: 'ステータス',
+    cell: ({ row }) => <ReservationStatusBadge status={row.getValue('status')} />,
+    enableSorting: false,
+  },
+  {
+    id: 'actions',
+    header: () => <div className="text-right">操作</div>,
+    cell: ({ row }) => <ActionCell reservation={row.original} />,
+    enableSorting: false,
+    enableHiding: false,
+  },
+]
+
+// =============================================================================
+// ReservationTable Component
+// =============================================================================
+
 export function ReservationTable({ reservations }: ReservationTableProps) {
+  const memoizedColumns = useMemo(() => columns, [])
+
   if (reservations.length === 0) {
     return (
       <div className="rounded-lg border bg-white p-12 text-center">
@@ -107,60 +208,13 @@ export function ReservationTable({ reservations }: ReservationTableProps) {
   }
 
   return (
-    <div className="rounded-lg border bg-white">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>予約日時</TableHead>
-            <TableHead>スペース</TableHead>
-            <TableHead>顧客</TableHead>
-            <TableHead>料金</TableHead>
-            <TableHead>ステータス</TableHead>
-            <TableHead className="text-right">操作</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {reservations.map((reservation) => (
-            <TableRow key={reservation.id}>
-              <TableCell>
-                <div className="font-medium">
-                  {formatDate(reservation.startTime)}
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  {formatTime(reservation.startTime)} -{' '}
-                  {formatTime(reservation.endTime)}
-                </div>
-              </TableCell>
-              <TableCell>{reservation.space.name}</TableCell>
-              <TableCell>
-                <div className="font-medium">
-                  {reservation.customer.lastName} {reservation.customer.firstName}
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  {reservation.customer.email}
-                </div>
-              </TableCell>
-              <TableCell>{formatPrice(reservation.totalPrice)}</TableCell>
-              <TableCell>
-                <ReservationStatusBadge status={reservation.status} />
-              </TableCell>
-              <TableCell className="text-right">
-                <div className="flex items-center justify-end gap-2">
-                  <StatusSelect
-                    reservationId={reservation.id}
-                    currentStatus={reservation.status}
-                  />
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href={`/admin/reservations/${reservation.id}`}>
-                      詳細
-                    </Link>
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+    <DataTable
+      columns={memoizedColumns}
+      data={reservations}
+      filterColumn="customer"
+      filterPlaceholder="顧客名で検索..."
+      emptyMessage="予約がありません"
+      initialSorting={[{ id: 'datetime', desc: true }]}
+    />
   )
 }

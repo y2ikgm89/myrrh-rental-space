@@ -58,6 +58,7 @@
     "@react-three/fiber": "^9.5.0",
     "@supabase/supabase-js": "^2.89.0",
     "@tailwindcss/typography": "^0.5.19",
+    "@tanstack/react-table": "^8.21.3",
     "bcrypt": "^6.0.0",
     "better-auth": "^1.4.13",
     "clsx": "^2.1.1",
