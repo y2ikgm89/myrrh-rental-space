@@ -243,6 +243,10 @@ export function DataTable<TData, TValue>({
   initialSorting = [],
   initialPageSize = 10,
 }: DataTableProps<TData, TValue>) {
+  // TanStack Table's useReactTable is incompatible with React Compiler
+  // See: https://react.dev/reference/react-compiler/directives/use-no-memo
+  'use no memo'
+
   const [sorting, setSorting] = React.useState<SortingState>(initialSorting)
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
@@ -252,6 +256,7 @@ export function DataTable<TData, TValue>({
     pageSize: initialPageSize,
   })
 
+  // eslint-disable-next-line react-hooks/incompatible-library -- Opted out via 'use no memo'
   const table = useReactTable({
     data,
     columns,
