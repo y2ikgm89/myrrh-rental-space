@@ -2,11 +2,162 @@
 
 ## 進行中の計画
 
-*なし*
+なし
 
 ---
 
 ## 完了した計画
+
+### 041-admin-cleanup-refactoring.md (2026-01-17) ✅ Phase 1-3
+
+管理画面クリーンアップ＆フルリファクタリング
+
+**概要**:
+プロジェクト全体を分析し、まとまりがない部分・不足している部分を洗い出し、
+2025-2026年のベストプラクティスに準拠したクリーンな実装へリファクタリング。
+
+**完了フェーズ**:
+- ✅ Phase 1: サイドバーにユーザー管理・監査ログ追加、廃止コンポーネント削除
+- ✅ Phase 2: 未使用ディレクトリ削除（.gitkeepのみのディレクトリ）
+- ✅ Phase 3: 命名規則統一（blog-filters.tsx → BlogFilters.tsx等）
+
+**保留フェーズ** (次回以降):
+- Phase 4: テーブルコンポーネント統一 (DataTable)
+- Phase 5: 設定セクション整理
+- Phase 6: 公開ページ統一 (Pagination/Filters)
+
+**コミット**: b68b15d
+
+---
+
+### 040-system-features-tab-integration.md (2026-01-17) ✅
+
+システム管理の関連機能をサイト設定にタブ統合
+
+**概要**:
+039で追加したシステム管理ページの「関連機能」リンクカードを廃止し、
+ナビゲーション・お知らせバーはサイト設定にタブ統合、監査ログはリンクカードとして配置。
+
+**実装内容**:
+- サイト設定: 3タブ → 5タブ（一般/SEO/レイアウト/ナビゲーション/お知らせバー）+ 監査ログリンクカード
+- システム管理: リンクカードセクション削除（3タブのみ）
+- 旧ページのリダイレクト: `/settings/navigation` → `/settings/site?tab=navigation`、`/settings/announcement-bar` → `/settings/site?tab=announcement-bar`
+
+**変更ファイル**:
+- `src/app/(admin)/admin/(dashboard)/settings/site/page.tsx` - タブ追加、データ取得追加
+- `src/app/(admin)/admin/(dashboard)/settings/system/page.tsx` - リンクカード削除
+- `src/app/(admin)/admin/(dashboard)/settings/navigation/page.tsx` - リダイレクト化
+- `src/app/(admin)/admin/(dashboard)/settings/announcement-bar/page.tsx` - リダイレクト化
+
+**マイグレーション**: 不要
+
+---
+
+### 039-settings-category-tabs.md (2026-01-17) ✅
+
+設定カテゴリページへのタブUI追加
+
+**概要**:
+038で作成したカテゴリカード方式の詳細ページに、タブUIを追加する。
+
+**タブ構成**:
+- site: 一般 / SEO / レイアウト（3タブ）
+- business: 事業者情報 / 営業時間 / 予約（3タブ）
+- notify: メール / 通知 / 決済（3タブ）
+- api: Resend / Turnstile / Google Maps / カスタム（4タブ）
+- system: メンテナンス / Cookie / 権限（3タブ + リンクカード）
+
+**実装内容**:
+- 汎用タブコンポーネント `SettingsTabs.tsx`（nuqs + Radix UI Tabs）
+- 全5カテゴリページにタブUI適用
+- URL状態同期（`?tab=xxx`）
+
+**新規ファイル**:
+- `settings/_components/SettingsTabs.tsx`
+
+**変更ファイル**:
+- `settings/site/page.tsx`
+- `settings/business/page.tsx`
+- `settings/notify/page.tsx`
+- `settings/api/page.tsx`
+- `settings/system/page.tsx`
+
+**マイグレーション**: 不要
+
+---
+
+### 038-settings-page-restructure.md (2026-01-17) ✅
+
+設定ページのカテゴリカード方式へのリストラクチャ
+
+**概要**:
+現在のタブベース設定ページ（10タブ + 3ボタン）を、カテゴリカード方式（iOS設定/WordPress風）に再構築。
+
+**カテゴリ構成**:
+- サイト設定: 一般、SEO、レイアウト
+- ビジネス設定: 事業者情報、営業時間、予約
+- 通知・決済: メール、決済（Stripe）
+- 外部連携: APIキー（Resend、Turnstile、Google等）
+- システム管理: メンテナンス、Cookie同意、権限マトリクス（リンク: ナビ/お知らせバー/監査ログ）
+
+**実装内容**:
+- カード一覧トップページ（5カテゴリ）
+- 各カテゴリの独立ページ（site/business/notify/api/system）
+- SettingsCard/SettingsLayoutコンポーネント
+- 旧タブベースUI削除
+
+**新規ファイル**:
+- `settings/page.tsx` - カード一覧トップ
+- `settings/site/page.tsx` - サイト設定
+- `settings/business/page.tsx` - ビジネス設定
+- `settings/notify/page.tsx` - 通知・決済
+- `settings/api/page.tsx` - 外部連携
+- `settings/system/page.tsx` - システム管理
+- `_components/SettingsCard.tsx`
+- `_components/SettingsLayout.tsx`
+
+**マイグレーション**: 不要
+
+---
+
+### 037-blog-sidebar.md (2026-01-17) ✅
+
+ブログサイドバー機能
+
+**概要**:
+ブログページにサイドバーを追加し、検索・新着記事・人気記事・カテゴリー・タグのウィジェットを表示する。サイト設定でグローバル制御、ページ単位で個別制御が可能。
+
+**実装内容**:
+- DBスキーマ: Settings/Pageモデルにサイドバー設定フィールド追加
+- Server Actions: `getSidebarSettings()`, `updateSidebarSettings()`, `getSidebarData()`
+- サイドバーコンポーネント: 5ウィジェット（検索、新着、人気、カテゴリー、タグ）
+- ブログページ統合: 一覧・詳細ページに2カラムレイアウト
+- 管理画面UI: レイアウトタブにサイドバー設定セクション追加
+- ページ単位設定: カスタムページでのサイドバー表示ON/OFF設定
+- レスポンシブ: lg以上で2カラム、md以下で1カラム（サイドバー下部）
+
+**新規ファイル**:
+- `src/lib/validations/sidebar.ts`
+- `src/actions/public/sidebar.ts`
+- `src/components/site/sidebar/` - 6コンポーネント
+- `src/app/(admin)/admin/(dashboard)/settings/_components/sections/SidebarSection.tsx`
+- `src/app/(public)/p/[slug]/page.tsx` - カスタムページ公開表示（サイドバー対応）
+
+**変更ファイル**:
+- `prisma/schema.prisma` - Settings/Pageモデル拡張
+- `src/actions/admin/settings.ts` - サイドバー設定追加
+- `src/actions/admin/page.ts` - showSidebar保存処理追加
+- `src/lib/validations/page.ts` - showSidebarスキーマ追加
+- `src/app/(public)/blog/page.tsx` - サイドバー統合
+- `src/app/(public)/blog/[slug]/page.tsx` - サイドバー統合
+- `src/app/(admin)/admin/(dashboard)/settings/_components/tabs/LayoutTab.tsx`
+- `src/components/admin/editor/inline/types.ts` - PageEditorFormData拡張
+- `src/components/admin/editor/inline/side-panel/LayoutFields.tsx` - サイドバー設定UI追加
+- `src/app/(admin)/admin/(dashboard)/pages/_components/PageInlineEditor.tsx` - showSidebar対応
+
+**マイグレーション**: `20260117000900_add_sidebar_settings`
+
+---
 
 ### 036-test-coverage-full.md (2026-01-17) ✅
 
