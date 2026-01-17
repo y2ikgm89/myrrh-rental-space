@@ -20,10 +20,11 @@
 - ✅ Phase 1: サイドバーにユーザー管理・監査ログ追加、廃止コンポーネント削除
 - ✅ Phase 2: 未使用ディレクトリ削除（.gitkeepのみのディレクトリ）
 - ✅ Phase 3: 命名規則統一（blog-filters.tsx → BlogFilters.tsx等）
-- ✅ Phase 4: DataTable統一（TanStack React Table v8 + shadcn/ui）
-  - 新規: `src/components/admin/ui/data-table.tsx`
-  - 移行: SpaceTable, BlogTable, NewsTable, CustomerTable, InquiryTable, ReservationTable
-  - 機能: ソート、フィルター、ページネーション、カラム表示切替
+- ✅ Phase 4: テーブルをServer Component化（React Compiler完全互換）
+  - TanStack Table依存を削除
+  - 6テーブルをServer Componentに移行
+  - インタラクティブ要素のみClient Component化（PublishSwitch, ActionCell等）
+  - クライアントJSバンドル削減
 
 **保留フェーズ** (次回以降):
 - Phase 5: 設定セクション整理
@@ -32,7 +33,7 @@
 **コミット**:
 - b68b15d (Phase 1-3)
 - 297ff46 (P2修正: サイドバー条件付きレイアウト)
-- 1827510 (Phase 4: DataTable統一)
+- 84cd14b (Phase 4: Server Component Table移行)
 
 ---
 
