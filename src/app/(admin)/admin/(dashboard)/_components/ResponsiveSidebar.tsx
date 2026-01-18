@@ -13,10 +13,10 @@ import { tv } from 'tailwind-variants'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { X } from 'lucide-react'
-import { useAdminLayout } from '@/contexts/admin-layout-context'
-import { Button } from '@/components/admin/ui'
+import { useAdminLayout } from '@/admin/contexts/admin-layout-context'
+import { Button } from '@/admin/components/ui'
 import { SIDEBAR_ITEMS } from './sidebar-items'
-import { Z_INDEX } from '@/lib/styles/z-index'
+import { Z_INDEX } from '@/admin/lib/styles/z-index'
 
 const styles = tv({
   slots: {

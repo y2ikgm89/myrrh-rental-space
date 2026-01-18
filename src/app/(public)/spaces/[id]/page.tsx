@@ -11,13 +11,13 @@
 import { cacheLife, cacheTag } from 'next/cache'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { prisma } from '@/lib/prisma'
-import { Container } from '@/components/site/ui'
-import { ProductJsonLd, BreadcrumbJsonLd } from '@/components/seo/JsonLd'
+import { prisma } from '@/shared/lib/prisma'
+import { Container } from '@/public/components/ui'
+import { ProductJsonLd, BreadcrumbJsonLd } from '@/public/components/seo/JsonLd'
 import { SpaceInfo } from './_components/SpaceInfo'
 import { ImageGallery } from './_components/ImageGallery'
 import { ReservationCTA } from './_components/ReservationCTA'
-import { parseStringArray } from '@/lib/json-validators'
+import { parseStringArray } from '@/shared/lib/json-validators'
 import type { ReactElement } from 'react'
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://example.com'
@@ -40,6 +40,23 @@ async function getSpaceById(id: string) {
       id,
       isPublished: true,
       isActive: true,
+    },
+    include: {
+      location: {
+        select: {
+          id: true,
+          name: true,
+          address: true,
+        },
+      },
+      category: {
+        select: {
+          id: true,
+          name: true,
+          icon: true,
+          color: true,
+        },
+      },
     },
   })
 }
@@ -192,6 +209,8 @@ export default async function SpaceDetailPage({
                 capacity={space.capacity}
                 area={space.area ? Number(space.area) : null}
                 facilities={facilities}
+                location={space.location}
+                category={space.category}
               />
             </div>
 

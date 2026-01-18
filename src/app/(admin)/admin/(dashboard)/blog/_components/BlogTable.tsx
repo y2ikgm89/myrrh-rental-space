@@ -10,10 +10,10 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/admin/ui'
-import { BlogPostStatusBadge } from '@/components/admin/status-badges'
+} from '@/admin/components/ui'
+import { BlogPostStatusBadge } from '@/admin/components/status-badges'
 import { BlogActionCell } from './BlogActionCell'
-import type { BlogPostData } from '@/actions/admin/blog'
+import type { BlogPostData } from '@/admin/actions/blog'
 
 // =============================================================================
 // Types

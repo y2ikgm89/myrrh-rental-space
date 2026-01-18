@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { getTermsById } from '@/actions/admin/terms'
+import { getTermsById } from '@/admin/actions/terms'
 import { TermsDetailView } from '../_components/TermsDetailView'
-import { Button } from '@/components/admin/ui'
+import { Button } from '@/admin/components/ui'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {

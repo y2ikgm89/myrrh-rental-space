@@ -18,22 +18,22 @@ import {
   CardHeader,
   CardTitle,
   Label,
-} from '@/components/admin/ui'
-import { Switch } from '@/components/admin/ui/switch'
+} from '@/admin/components/ui'
+import { Switch } from '@/admin/components/ui/switch'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/admin/ui/select'
+} from '@/admin/components/ui/select'
 import {
   updateTwoWaySyncSettings,
   setupCalendarWebhook,
   stopCalendarWebhook,
   triggerManualSync,
   type SettingsData,
-} from '@/actions/admin/settings'
+} from '@/admin/actions/settings'
 import { RefreshCw, Clock, Webhook, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { useRefreshOnSuccess } from '../hooks'
 

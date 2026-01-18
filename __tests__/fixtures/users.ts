@@ -2,7 +2,7 @@
  * ユーザーテストデータ
  */
 
-import { Role } from '@/generated/prisma/client/enums'
+import { Role } from '@/shared/generated/prisma/enums'
 import type { MockUser } from '../mocks/auth'
 
 export const SUPER_ADMIN_USER: MockUser = {

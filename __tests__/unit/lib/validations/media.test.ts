@@ -15,7 +15,7 @@ import {
   isAllowedFileSize,
   MAX_FILE_SIZES,
   ALLOWED_MIME_TYPES,
-} from '@/lib/validations/media'
+} from '@/admin/lib/validations/media'
 
 describe('mediaUploadSchema', () => {
   describe('正常系', () => {

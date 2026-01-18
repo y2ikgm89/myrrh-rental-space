@@ -11,12 +11,12 @@
 
 import Link from 'next/link'
 import { Edit, Home, Settings2 } from 'lucide-react'
-import { getPagesList } from '@/actions/admin/page'
-import { Button } from '@/components/admin/ui'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/admin/ui/table'
-import { Badge } from '@/components/admin/ui/badge'
+import { getPagesList } from '@/admin/actions/page'
+import { Button } from '@/admin/components/ui'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/admin/components/ui/table'
+import { Badge } from '@/admin/components/ui/badge'
 import { CreatePageDialog, PageActions } from './_components'
-import { getSystemPageDefinition } from '@/lib/validations/page'
+import { getSystemPageDefinition } from '@/admin/lib/validations/page'
 import type { Metadata } from 'next'
 import type { ReactElement } from 'react'
 

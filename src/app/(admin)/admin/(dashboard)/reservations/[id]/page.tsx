@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { getReservationById } from '@/actions/admin/reservation'
+import { getReservationById } from '@/admin/actions/reservation'
 import { ReservationDetail } from './_components/ReservationDetail'
-import { Button } from '@/components/admin/ui'
+import { Button } from '@/admin/components/ui'
 import type { Metadata } from 'next'
 
 type Params = Promise<{ id: string }>

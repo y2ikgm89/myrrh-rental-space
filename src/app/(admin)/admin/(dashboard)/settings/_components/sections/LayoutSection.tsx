@@ -23,14 +23,14 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/admin/ui'
-import { updateLayoutSettings } from '@/actions/admin/settings'
-import type { SettingsData } from '@/actions/admin/settings'
+} from '@/admin/components/ui'
+import { updateLayoutSettings } from '@/admin/actions/settings'
+import type { SettingsData } from '@/admin/actions/settings'
 import {
   LayoutWidth,
   isValidLayoutWidth,
   getValidLayoutWidth,
-} from '@/lib/validations/enums'
+} from '@/shared/lib/validations/enums'
 
 // =============================================================================
 // Types

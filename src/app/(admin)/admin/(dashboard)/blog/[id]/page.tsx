@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { getBlogPostById, getBlogCategories } from '@/actions/admin/blog'
+import { getBlogPostById, getBlogCategories } from '@/admin/actions/blog'
 import { BlogInlineEditor } from '../_components/BlogInlineEditor'
 import type { Metadata } from 'next'
 

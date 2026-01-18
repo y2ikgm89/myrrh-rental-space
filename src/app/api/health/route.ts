@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prisma } from '@/shared/lib/prisma'
 
 /**
  * Health check endpoint for Cloud Run / Load Balancer

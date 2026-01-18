@@ -1,8 +1,8 @@
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
-import { getTermsById, getTermsVersionById } from '@/actions/admin/terms'
+import { getTermsById, getTermsVersionById } from '@/admin/actions/terms'
 import { TermsVersionForm } from '../../../../_components/TermsVersionForm'
-import { Button } from '@/components/admin/ui'
+import { Button } from '@/admin/components/ui'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {

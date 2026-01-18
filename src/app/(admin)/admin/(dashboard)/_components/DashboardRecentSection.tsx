@@ -3,9 +3,9 @@
  */
 
 import Link from 'next/link'
-import { getRecentReservations, getRecentInquiries } from '@/actions/admin/dashboard'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/admin/ui/card'
-import { Button } from '@/components/admin/ui/button'
+import { getRecentReservations, getRecentInquiries } from '@/admin/actions/dashboard'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/admin/components/ui/card'
+import { Button } from '@/admin/components/ui/button'
 import {
   Table,
   TableBody,
@@ -13,11 +13,11 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/admin/ui/table'
+} from '@/admin/components/ui/table'
 import {
   ReservationStatusBadge,
   InquiryStatusBadge,
-} from '@/components/admin/status-badges'
+} from '@/admin/components/status-badges'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 

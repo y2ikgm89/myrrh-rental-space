@@ -16,9 +16,9 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/admin/ui'
-import { updateBusinessInfo } from '@/actions/admin/settings'
-import type { SettingsData } from '@/actions/admin/settings'
+} from '@/admin/components/ui'
+import { updateBusinessInfo } from '@/admin/actions/settings'
+import type { SettingsData } from '@/admin/actions/settings'
 import { useRefreshOnSuccess } from './hooks'
 
 interface BusinessInfoSectionProps {

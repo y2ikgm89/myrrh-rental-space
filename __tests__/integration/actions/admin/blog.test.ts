@@ -9,8 +9,8 @@
 
 import { describe, test, expect } from 'bun:test'
 import { z } from 'zod'
-import { BlogPostStatus } from '@/generated/prisma/client/enums'
-import { LayoutWidth } from '@/types/prisma'
+import { BlogPostStatus } from '@/shared/generated/prisma/enums'
+import { LayoutWidth } from '@/shared/types/prisma'
 
 // blog.ts 内で定義されているスキーマを再現
 const createBlogPostSchema = z.object({

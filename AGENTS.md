@@ -61,7 +61,13 @@ A reservation and management system for rental spaces. Provides a highly designe
 
 ## Dev environment tips
 
-- Project structure: Use `src/app/` for App Router, `src/components/` for components, `src/actions/` for Server Actions, `src/types/` or module-level for type definitions, `src/lib/` for utilities (see `docs/architecture/PROJECT_STRUCTURE.md` for details)
+- Project structure: **Admin/Public/Shared Complete Separation Architecture** (Plan 042)
+  - `src/admin/` - Admin-only (components, actions, hooks, contexts, lib, types)
+  - `src/public/` - Public-only (components, actions, emails, lib, types)
+  - `src/shared/` - Shared utilities (prisma, auth, utils, email, storage, generated/prisma)
+  - `src/app/` - App Router routes
+  - Path aliases: `@/admin/*`, `@/public/*`, `@/shared/*`
+  - See `docs/architecture/PROJECT_STRUCTURE.md` for details
 - Prisma: Create migration after schema changes with `bunx prisma migrate dev --name <migration_name>`, deploy with `bunx prisma migrate deploy`, view DB with `bunx prisma studio`
 - Environment variables: Use `.env.local` for development (don't commit), Google Secret Manager for production, see `.env.example` for required variables
 - Debugging: Server Components log to server console, Client Components use browser dev tools, enable Prisma query logs with `DEBUG=prisma:*`

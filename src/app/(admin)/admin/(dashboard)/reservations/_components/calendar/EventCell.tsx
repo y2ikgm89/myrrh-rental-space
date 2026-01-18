@@ -1,9 +1,9 @@
 'use client'
 
 import { format } from 'date-fns'
-import { cn } from '@/lib/utils'
-import { getStatusColorClass } from '@/lib/calendar'
-import type { CalendarEvent, PositionedEvent } from '@/lib/calendar'
+import { cn } from '@/shared/lib/utils'
+import { getStatusColorClass } from '@/admin/lib/calendar'
+import type { CalendarEvent, PositionedEvent } from '@/admin/lib/calendar'
 
 interface EventCellProps {
   event: PositionedEvent

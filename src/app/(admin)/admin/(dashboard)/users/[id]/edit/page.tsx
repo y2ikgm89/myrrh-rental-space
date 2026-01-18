@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { getUser } from '@/actions/admin/user'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/admin/ui/card'
-import { Button } from '@/components/admin/ui/button'
+import { getUser } from '@/admin/actions/user'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/admin/components/ui/card'
+import { Button } from '@/admin/components/ui/button'
 import { UserForm } from '../../_components/UserForm'
 
 export const metadata = {

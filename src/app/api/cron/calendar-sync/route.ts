@@ -1,13 +1,13 @@
 import { connection } from 'next/server'
 import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
-import { syncFromCalendar } from '@/lib/calendar-sync'
+import { syncFromCalendar } from '@/shared/lib/calendar-sync'
 import {
   isTwoWaySyncEnabled,
   getTwoWaySyncSettings,
   renewWebhookIfNeeded,
-} from '@/lib/google-calendar'
-import { sendWebhookRenewalNotification } from '@/lib/email-service'
+} from '@/shared/lib/google-calendar'
+import { sendWebhookRenewalNotification } from '@/shared/lib/email-service'
 
 /**
  * カレンダー同期用Cronエンドポイント

@@ -10,7 +10,7 @@ import {
   faqItemFormSchema,
   defaultFaqCategoryFormValues,
   defaultFaqItemFormValues,
-} from '@/lib/validations/faq'
+} from '@/admin/lib/validations/faq'
 
 // 有効なFAQカテゴリデータ
 const VALID_FAQ_CATEGORY = {

@@ -5,7 +5,7 @@
  */
 
 import { notFound } from 'next/navigation'
-import { getPageBySlug } from '@/actions/admin/page'
+import { getPageBySlug } from '@/admin/actions/page'
 import { PageInlineEditor } from '../../_components/PageInlineEditor'
 import type { Metadata } from 'next'
 import type { ReactElement } from 'react'

@@ -23,14 +23,14 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/admin/ui'
-import { InquiryStatusBadge } from '@/components/admin/status-badges'
-import { updateInquiryStatus, deleteInquiry } from '@/actions/admin/inquiry'
-import type { InquiryData } from '@/actions/admin/inquiry'
+} from '@/admin/components/ui'
+import { InquiryStatusBadge } from '@/admin/components/status-badges'
+import { updateInquiryStatus, deleteInquiry } from '@/admin/actions/inquiry'
+import type { InquiryData } from '@/admin/actions/inquiry'
 import {
   isValidInquiryStatus,
   type InquiryStatus,
-} from '@/lib/validations/enums'
+} from '@/shared/lib/validations/enums'
 
 type InquiryDetailProps = {
   inquiry: InquiryData

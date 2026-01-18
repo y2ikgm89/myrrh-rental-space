@@ -13,17 +13,17 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
 import { tv } from 'tailwind-variants'
-import { cn } from '@/lib/utils'
-import { Container, Card, CardContent, CardFooter } from '@/components/site/ui'
-import { prisma, type Space, Prisma } from '@/lib/prisma'
-import { loadSpaceSearchParams } from '@/lib/nuqs'
+import { cn, formatPrice } from '@/shared/lib/utils'
+import { Container, Card, CardContent, CardFooter } from '@/public/components/ui'
+import { prisma, type Space, Prisma } from '@/shared/lib/prisma'
+import { loadSpaceSearchParams } from '@/shared/lib/nuqs'
 import {
   spaceSearchParamsDefaults,
   spaceSearchParamsSchema,
-} from '@/lib/validations/search-params'
+} from '@/shared/lib/validations/search-params'
 import { SpaceFilters } from './_components/SpaceFilters'
 import { Pagination } from './_components/Pagination'
-import { generatePageMetadata } from '@/lib/page-metadata'
+import { generatePageMetadata } from '@/public/lib/page-metadata'
 import type { SearchParams } from 'nuqs/server'
 import type { ReactElement } from 'react'
 
@@ -53,13 +53,6 @@ const styles = tv({
     resultCount: 'text-sm text-muted-foreground mb-4',
   },
 })()
-
-function formatPrice(value: unknown): string {
-  if (value === null || value === undefined) return '要問合せ'
-  const numValue = typeof value === 'number' ? value : Number(value)
-  if (isNaN(numValue)) return '要問合せ'
-  return `¥${numValue.toLocaleString('ja-JP')}`
-}
 
 interface SpaceCardProps {
   space: Space

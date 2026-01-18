@@ -2,10 +2,10 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { getTermsById, getTermsVersionById } from '@/actions/admin/terms'
-import { SanitizedHtml } from '@/components/site/SanitizedHtml'
-import { PROSE_CLASSES } from '@/lib/styles/prose'
-import { cn } from '@/lib/utils'
+import { getTermsById, getTermsVersionById } from '@/admin/actions/terms'
+import { SanitizedHtml } from '@/public/components/SanitizedHtml'
+import { PROSE_CLASSES } from '@/shared/lib/styles/prose'
+import { cn } from '@/shared/lib/utils'
 import {
   Card,
   CardContent,
@@ -14,7 +14,7 @@ import {
   CardDescription,
   Button,
   Badge,
-} from '@/components/admin/ui'
+} from '@/admin/components/ui'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {

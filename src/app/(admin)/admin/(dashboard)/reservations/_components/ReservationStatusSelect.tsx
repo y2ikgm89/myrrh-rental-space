@@ -9,12 +9,12 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/admin/ui'
-import { updateReservationStatus } from '@/actions/admin/reservation'
+} from '@/admin/components/ui'
+import { updateReservationStatus } from '@/admin/actions/reservation'
 import {
   isValidReservationStatus,
   type ReservationStatus,
-} from '@/lib/validations/enums'
+} from '@/shared/lib/validations/enums'
 
 type ReservationStatusSelectProps = {
   reservationId: string

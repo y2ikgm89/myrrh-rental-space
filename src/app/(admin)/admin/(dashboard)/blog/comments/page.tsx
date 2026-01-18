@@ -9,11 +9,11 @@ import {
   getAdminComments,
   getCommentStats,
   type CommentFilters as CommentFiltersType,
-} from '@/actions/admin/blog-comment'
+} from '@/admin/actions/blog-comment'
 import { CommentFilters } from './_components/CommentFilters'
 import { CommentTable } from './_components/CommentTable'
 import { CommentStats } from './_components/CommentStats'
-import { Pagination } from '@/components/admin/ui'
+import { Pagination } from '@/admin/components/ui'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {

@@ -16,7 +16,7 @@
 
 import 'dotenv/config'
 import { PrismaPg } from '@prisma/adapter-pg'
-import { PrismaClient, Prisma } from '../src/generated/prisma/client/client'
+import { PrismaClient, Prisma } from '../src/shared/generated/prisma/client'
 import { Pool } from 'pg'
 import { hashPassword } from 'better-auth/crypto'
 

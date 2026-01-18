@@ -26,18 +26,18 @@ import {
   TableRow,
   Switch,
   Label,
-} from '@/components/admin/ui'
-import { CustomerStatusBadge, ReservationStatusBadge } from '@/components/admin/status-badges'
+} from '@/admin/components/ui'
+import { CustomerStatusBadge, ReservationStatusBadge } from '@/admin/components/status-badges'
 import {
   updateCustomerStatus,
   updateCustomerNotes,
   toggleCustomerActive,
-} from '@/actions/admin/customer'
-import type { CustomerWithReservations } from '@/actions/admin/customer'
+} from '@/admin/actions/customer'
+import type { CustomerWithReservations } from '@/admin/actions/customer'
 import {
   isValidCustomerStatus,
   type CustomerStatus,
-} from '@/lib/validations/enums'
+} from '@/shared/lib/validations/enums'
 
 type CustomerDetailProps = {
   customer: CustomerWithReservations

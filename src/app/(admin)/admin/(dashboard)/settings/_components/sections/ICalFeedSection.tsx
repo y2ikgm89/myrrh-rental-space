@@ -17,15 +17,15 @@ import {
   CardTitle,
   Input,
   Label,
-} from '@/components/admin/ui'
-import { Switch } from '@/components/admin/ui/switch'
+} from '@/admin/components/ui'
+import { Switch } from '@/admin/components/ui/switch'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/admin/ui/select'
+} from '@/admin/components/ui/select'
 import {
   Dialog,
   DialogContent,
@@ -34,7 +34,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/admin/ui/dialog'
+} from '@/admin/components/ui/dialog'
 import {
   getICalTokens,
   createICalToken,
@@ -42,8 +42,8 @@ import {
   updateICalFeedSettings,
   getICalFeedSettings,
   type ICalTokenWithRelations,
-} from '@/actions/admin/ical-tokens'
-import { getSpaces } from '@/actions/admin/space'
+} from '@/admin/actions/ical-tokens'
+import { getSpaces } from '@/admin/actions/space'
 import { Copy, Trash2, Plus, ExternalLink, Calendar } from 'lucide-react'
 
 // =============================================================================

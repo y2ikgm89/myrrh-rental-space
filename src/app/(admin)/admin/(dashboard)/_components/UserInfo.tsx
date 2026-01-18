@@ -5,7 +5,7 @@
  * Server Component
  */
 
-import { getSession } from '@/lib/auth'
+import { getSession } from '@/shared/lib/auth'
 import type { ReactElement } from 'react'
 
 export async function UserInfo(): Promise<ReactElement | null> {

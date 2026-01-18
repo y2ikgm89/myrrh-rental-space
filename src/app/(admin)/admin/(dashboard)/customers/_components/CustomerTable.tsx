@@ -9,9 +9,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/admin/ui'
-import { CustomerStatusBadge } from '@/components/admin/status-badges'
-import type { CustomerData } from '@/actions/admin/customer'
+} from '@/admin/components/ui'
+import { CustomerStatusBadge } from '@/admin/components/status-badges'
+import type { CustomerData } from '@/admin/actions/customer'
 
 // =============================================================================
 // Types

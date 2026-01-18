@@ -9,7 +9,7 @@
 
 import { describe, test, expect } from 'bun:test'
 import { z } from 'zod'
-import { LayoutWidth } from '@/types/prisma'
+import { LayoutWidth } from '@/shared/types/prisma'
 
 // page.ts で使用されているスキーマを再現
 const updatePageSeoSchema = z.object({

@@ -10,7 +10,7 @@ import {
   userCommentSchema,
   createCommentSchema,
   toCommentAuthor,
-} from '@/lib/validations/comment'
+} from '@/shared/lib/validations/comment'
 
 // 有効なゲストコメントデータ
 const VALID_GUEST_COMMENT = {

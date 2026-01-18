@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { getFaqCategories } from '@/actions/admin/faq'
+import { getFaqCategories } from '@/admin/actions/faq'
 import { FaqItemForm } from '../../_components/FaqItemForm'
 
 export const metadata: Metadata = {

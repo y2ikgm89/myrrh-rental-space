@@ -10,9 +10,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/admin/ui'
-import { publishBlogPost, unpublishBlogPost } from '@/actions/admin/blog'
-import { BlogPostStatus } from '@/generated/prisma/client/enums'
+} from '@/admin/components/ui'
+import { publishBlogPost, unpublishBlogPost } from '@/admin/actions/blog'
+import { BlogPostStatus } from '@/shared/generated/prisma/enums'
 
 type BlogActionCellProps = {
   postId: string

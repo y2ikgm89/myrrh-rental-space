@@ -6,7 +6,7 @@
 
 import { Suspense } from 'react'
 import { connection } from 'next/server'
-import { getSettings } from '@/actions/admin/settings'
+import { getSettings } from '@/admin/actions/settings'
 import { SettingsLayout } from '../_components/SettingsLayout'
 import { SettingsTabs } from '../_components/SettingsTabs'
 import { MaintenanceSection } from '../_components/sections/MaintenanceSection'

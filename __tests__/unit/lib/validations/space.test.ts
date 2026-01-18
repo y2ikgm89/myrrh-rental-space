@@ -5,7 +5,7 @@
  */
 
 import { describe, test, expect } from 'bun:test'
-import { spaceFormSchema, defaultSpaceFormValues } from '@/lib/validations/space'
+import { spaceFormSchema, defaultSpaceFormValues } from '@/admin/lib/validations/space'
 
 // 有効なスペースデータ
 const VALID_SPACE_INPUT = {
@@ -484,6 +484,8 @@ describe('defaultSpaceFormValues', () => {
       facilities: [],
       isPublished: false,
       termsId: null,
+      locationId: null,
+      categoryId: null,
     })
   })
 })

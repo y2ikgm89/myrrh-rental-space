@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import { format, isSameDay, isSameMonth, isToday } from 'date-fns'
-import { cn } from '@/lib/utils'
-import { getWeekdayHeaders, getWeekdayColorClass } from '@/lib/calendar'
-import type { CalendarEvent, CalendarDateRange } from '@/lib/calendar'
+import { cn } from '@/shared/lib/utils'
+import { getWeekdayHeaders, getWeekdayColorClass } from '@/admin/lib/calendar'
+import type { CalendarEvent, CalendarDateRange } from '@/admin/lib/calendar'
 import { EventBadge } from '../EventCell'
 
 interface MonthViewProps {

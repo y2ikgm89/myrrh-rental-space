@@ -21,8 +21,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/admin/ui'
-import { Role } from '@/generated/prisma/client/enums'
+} from '@/admin/components/ui'
+import { Role } from '@/shared/generated/prisma/enums'
 import {
   ROLE_PERMISSIONS,
   RESOURCE_LABELS,
@@ -30,7 +30,7 @@ import {
   ROLE_LABELS,
   type Resource,
   type Action,
-} from '@/lib/permissions-constants'
+} from '@/admin/lib/permissions-constants'
 import { Check, X } from 'lucide-react'
 
 // =============================================================================

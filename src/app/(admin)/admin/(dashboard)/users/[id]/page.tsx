@@ -1,12 +1,12 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { getUser } from '@/actions/admin/user'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/admin/ui/card'
-import { Button } from '@/components/admin/ui/button'
-import { Badge } from '@/components/admin/ui/badge'
+import { getUser } from '@/admin/actions/user'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/admin/components/ui/card'
+import { Button } from '@/admin/components/ui/button'
+import { Badge } from '@/admin/components/ui/badge'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { Role } from '@/generated/prisma/client/enums'
+import { Role } from '@/shared/generated/prisma/enums'
 import { UserActions } from '../_components/UserActions'
 
 export const metadata = {

@@ -16,13 +16,13 @@ import {
   CardTitle,
   Input,
   Label,
-} from '@/components/admin/ui'
+} from '@/admin/components/ui'
 import {
   updateTurnstileSettings,
   testTurnstileConnectionAction,
   clearTurnstileKeys,
-} from '@/actions/admin/api-keys'
-import type { TurnstileConfig } from '@/types/api-keys'
+} from '@/admin/actions/api-keys'
+import type { TurnstileConfig } from '@/admin/types/api-keys'
 import { StatusBanner } from '../shared'
 import { useRefreshOnSuccess } from '../hooks'
 

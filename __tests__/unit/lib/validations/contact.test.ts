@@ -5,7 +5,7 @@
  */
 
 import { describe, test, expect } from 'bun:test'
-import { contactSchema } from '@/lib/validations/contact'
+import { contactSchema } from '@/public/lib/validations/contact'
 
 // 有効なお問い合わせデータ
 const VALID_CONTACT_INPUT = {

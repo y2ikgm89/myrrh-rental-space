@@ -15,13 +15,13 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/admin/ui'
-import { ReservationStatusBadge } from '@/components/admin/status-badges'
-import type { CalendarEvent } from '@/lib/calendar'
+} from '@/admin/components/ui'
+import { ReservationStatusBadge } from '@/admin/components/status-badges'
+import type { CalendarEvent } from '@/admin/lib/calendar'
 import {
   isValidReservationStatus,
   type ReservationStatus,
-} from '@/lib/validations/enums'
+} from '@/shared/lib/validations/enums'
 
 interface EventDetailDialogProps {
   event: CalendarEvent | null

@@ -24,9 +24,10 @@
       }
     ],
     "paths": {
-      "@/*": [
-        "./src/*"
-      ]
+      "@/*": ["./src/*"],
+      "@/admin/*": ["./src/admin/*"],
+      "@/public/*": ["./src/public/*"],
+      "@/shared/*": ["./src/shared/*"]
     }
   },
   "include": [

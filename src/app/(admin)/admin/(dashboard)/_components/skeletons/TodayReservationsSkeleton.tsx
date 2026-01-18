@@ -2,7 +2,7 @@
  * 本日の予約スケルトン
  */
 
-import { Card, CardContent, CardHeader } from '@/components/admin/ui/card'
+import { Card, CardContent, CardHeader } from '@/admin/components/ui/card'
 
 export function TodayReservationsSkeleton() {
   return (

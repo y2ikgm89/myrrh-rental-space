@@ -11,7 +11,7 @@
  */
 
 import { Suspense } from 'react'
-import { AdminLayoutProvider } from '@/contexts/admin-layout-context'
+import { AdminLayoutProvider } from '@/admin/contexts/admin-layout-context'
 import { ResponsiveSidebar } from './_components/ResponsiveSidebar'
 import { TopBar } from './_components/TopBar'
 import { UserInfo, UserInfoSkeleton } from './_components/UserInfo'

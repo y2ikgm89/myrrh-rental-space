@@ -7,7 +7,7 @@
  */
 
 import { mock } from 'bun:test'
-import type { Prisma } from '@/generated/prisma/client'
+import type { Prisma } from '@/shared/generated/prisma/client'
 
 // 型定義
 type MockFunction<T = unknown> = ReturnType<typeof mock<() => Promise<T>>>

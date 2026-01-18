@@ -1,6 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/admin/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/admin/components/ui/card'
 import Link from 'next/link'
-import { Button } from '@/components/admin/ui/button'
+import { Button } from '@/admin/components/ui/button'
 import { UserForm } from '../_components/UserForm'
 
 export const metadata = {

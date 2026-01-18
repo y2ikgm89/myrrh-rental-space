@@ -9,9 +9,9 @@
 import { useQueryStates } from 'nuqs'
 import { useTransition, type ChangeEvent, type ReactElement } from 'react'
 import { tv } from 'tailwind-variants'
-import { Input, Button } from '@/components/site/ui'
-import { parseAsQuery, parseAsSortOrder } from '@/lib/nuqs'
-import { sortOrderSchema } from '@/lib/validations/search-params'
+import { Input, Button } from '@/public/components/ui'
+import { parseAsQuery, parseAsSortOrder } from '@/shared/lib/nuqs'
+import { sortOrderSchema } from '@/shared/lib/validations/search-params'
 
 const styles = tv({
   slots: {

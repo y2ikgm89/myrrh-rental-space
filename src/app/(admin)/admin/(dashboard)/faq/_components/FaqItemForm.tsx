@@ -19,15 +19,15 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/admin/ui'
-import { RichTextEditor } from '@/components/admin/editor'
+} from '@/admin/components/ui'
+import { RichTextEditor } from '@/admin/components/editor'
 import {
   faqItemFormSchema,
   defaultFaqItemFormValues,
   type FaqItemFormInput,
   type FaqItemWithCategory,
-} from '@/lib/validations/faq'
-import { createFaqItem, updateFaqItem } from '@/actions/admin/faq'
+} from '@/admin/lib/validations/faq'
+import { createFaqItem, updateFaqItem } from '@/admin/actions/faq'
 
 type Category = {
   id: string

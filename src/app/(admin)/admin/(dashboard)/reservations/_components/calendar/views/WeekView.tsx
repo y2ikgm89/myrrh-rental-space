@@ -2,15 +2,15 @@
 
 import { format, isSameDay, isToday } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/lib/utils'
 import {
   generateTimeSlots,
   layoutOverlappingEvents,
   getWeekdayColorClass,
   DEFAULT_BUSINESS_HOURS,
   PIXELS_PER_HOUR,
-} from '@/lib/calendar'
-import type { CalendarEvent, CalendarDateRange } from '@/lib/calendar'
+} from '@/admin/lib/calendar'
+import type { CalendarEvent, CalendarDateRange } from '@/admin/lib/calendar'
 import { EventCell } from '../EventCell'
 import { TimeColumn } from './TimeColumn'
 

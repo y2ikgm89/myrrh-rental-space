@@ -6,12 +6,13 @@
 
 import { useState } from 'react'
 import { Copy, Trash2, Eye, ExternalLink, FileText, Film, File, Image } from 'lucide-react'
-import type { MediaData } from '@/actions/admin/media'
+import type { MediaData } from '@/admin/actions/media'
 import { MediaDetailDialog } from './MediaDetailDialog'
-import { formatBytes, formatDate } from '@/lib/utils'
+import { formatDate } from '@/shared/lib/utils'
+import { formatBytes } from '@/admin/lib/utils'
 import { USAGE_LABELS } from './constants'
 import { useCopyUrl, useDeleteMedia } from './hooks'
-import { isValidMediaUsage } from '@/lib/validations/media'
+import { isValidMediaUsage } from '@/admin/lib/validations/media'
 import {
   Table,
   TableBody,
@@ -19,7 +20,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/admin/ui'
+} from '@/admin/components/ui'
 
 type Props = {
   items: MediaData[]

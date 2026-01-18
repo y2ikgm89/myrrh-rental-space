@@ -3,9 +3,9 @@
 import { useOptimistic, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { updateReservationStatus } from '@/actions/admin/reservation'
-import type { CalendarEvent } from '@/lib/calendar'
-import type { ReservationStatus } from '@/generated/prisma/client/enums'
+import { updateReservationStatus } from '@/admin/actions/reservation'
+import type { CalendarEvent } from '@/admin/lib/calendar'
+import type { ReservationStatus } from '@/shared/generated/prisma/enums'
 
 type OptimisticAction = {
   type: 'UPDATE_STATUS'

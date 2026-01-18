@@ -12,8 +12,8 @@ import {
   userHasResourceAccess,
   ROLE_PERMISSIONS,
   ADMIN_ROLES,
-} from '@/lib/permissions'
-import { Role } from '@/generated/prisma/client/enums'
+} from '@/admin/lib/permissions'
+import { Role } from '@/shared/generated/prisma/enums'
 import {
   SUPER_ADMIN_USER,
   ADMIN_USER,

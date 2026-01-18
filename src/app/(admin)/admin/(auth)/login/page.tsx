@@ -4,7 +4,7 @@
 
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
-import { getSession } from '@/lib/auth'
+import { getSession } from '@/shared/lib/auth'
 import { LoginForm } from './LoginForm'
 import type { ReactElement } from 'react'
 

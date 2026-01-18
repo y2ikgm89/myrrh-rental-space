@@ -6,8 +6,8 @@
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { Search, X } from 'lucide-react'
-import { Input, Button } from '@/components/admin/ui'
-import { getFormString } from '@/lib/utils'
+import { Input, Button } from '@/admin/components/ui'
+import { getFormString } from '@/shared/lib/utils'
 
 interface StatusOption {
   value: string

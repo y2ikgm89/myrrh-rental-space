@@ -5,7 +5,7 @@
 
 generator client {
   provider = "prisma-client"
-  output   = "../src/generated/prisma/client"
+  output   = "../src/shared/generated/prisma"
 }
 
 datasource db {
@@ -18,10 +18,10 @@ datasource db {
 
 enum Role {
   SUPER_ADMIN // 全権限（システム設定、ユーザー管理、監査ログ）
-  ADMIN       // コンテンツ管理全般
-  EDITOR      // 割り当てページ編集のみ
-  VIEWER      // 閲覧のみ
-  USER        // 公開ユーザー（非管理者）
+  ADMIN // コンテンツ管理全般
+  EDITOR // 割り当てページ編集のみ
+  VIEWER // 閲覧のみ
+  USER // 公開ユーザー（非管理者）
 }
 
 enum ReservationStatus {
@@ -47,8 +47,8 @@ enum CustomerStatus {
 
 enum NavigationType {
   HEADER_DESKTOP // デスクトップ用ヘッダーメニュー
-  HEADER_MOBILE  // モバイル用ヘッダーメニュー
-  FOOTER         // フッターメニュー
+  HEADER_MOBILE // モバイル用ヘッダーメニュー
+  FOOTER // フッターメニュー
 }
 
 enum SocialPlatform {
@@ -72,13 +72,13 @@ enum LayoutWidth {
 }
 
 enum HomepageSectionType {
-  HERO       // ヒーローセクション
+  HERO // ヒーローセクション
   SPACE_LIST // スペース一覧
-  NEWS       // お知らせ一覧
-  BLOG       // ブログ一覧
-  FAQ        // FAQ
-  CTA        // Call to Action
-  CUSTOM     // カスタム（Lexicalフルコンテンツ）
+  NEWS // お知らせ一覧
+  BLOG // ブログ一覧
+  FAQ // FAQ
+  CTA // Call to Action
+  CUSTOM // カスタム（Lexicalフルコンテンツ）
 }
 
 enum BlogPostStatus {
@@ -94,11 +94,11 @@ enum NewsStatus {
 }
 
 enum TermsType {
-  TERMS_OF_USE     // 利用規約
-  PRIVACY_POLICY   // プライバシーポリシー
-  CANCELLATION     // キャンセルポリシー
-  PAYMENT          // 支払い規約
-  CUSTOM           // カスタム規約
+  TERMS_OF_USE // 利用規約
+  PRIVACY_POLICY // プライバシーポリシー
+  CANCELLATION // キャンセルポリシー
+  PAYMENT // 支払い規約
+  CUSTOM // カスタム規約
 }
 
 enum TermsStatus {
@@ -141,15 +141,15 @@ model User {
 model Account {
   id                    String    @id @default(uuid())
   userId                String
-  accountId             String    // Better Auth: ユーザーID or プロバイダーのアカウントID
-  providerId            String    // Better Auth: "credential" or "google" etc.
+  accountId             String // Better Auth: ユーザーID or プロバイダーのアカウントID
+  providerId            String // Better Auth: "credential" or "google" etc.
   accessToken           String?   @db.Text
   refreshToken          String?   @db.Text
   idToken               String?   @db.Text
   accessTokenExpiresAt  DateTime?
   refreshTokenExpiresAt DateTime?
   scope                 String?
-  password              String?   // Better Auth: credential provider のパスワード（scrypt hash）
+  password              String? // Better Auth: credential provider のパスワード（scrypt hash）
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
@@ -188,12 +188,12 @@ model Verification {
 }
 
 model LoginToken {
-  id        String   @id @default(uuid())
-  token     String   @unique
+  id        String    @id @default(uuid())
+  token     String    @unique
   createdBy String
   usedAt    DateTime?
   expiresAt DateTime
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   @@index([token])
   @@index([expiresAt])
@@ -205,36 +205,85 @@ model LoginToken {
 // Business Models
 // ==============================================
 
-model Space {
+model Location {
   id            String   @id @default(uuid())
-  name          String
-  description   String   @db.Text
-  address       String
-  access        String?  @db.Text
-  capacity      Int
-  area          Decimal? @db.Decimal(10, 2)
-  hourlyPrice   Decimal  @db.Decimal(10, 2)
-  dailyPrice    Decimal? @db.Decimal(10, 2)
-  mainImageUrl  String
-  imageUrls     Json     @default("[]")
-  facilities    Json     @default("[]")
-  businessHours Json?
+  name          String // 例: 本館、渋谷店
+  description   String?  @db.Text
+  address       String // 住所
+  access        String?  @db.Text // アクセス情報
+  imageUrl      String // 建物画像（必須）
+  imageUrls     Json     @default("[]") // 追加画像
+  businessHours Json? // 営業時間
+  sortOrder     Int      @default(0)
   isPublished   Boolean  @default(false)
-  publishedAt   DateTime?
   isActive      Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  // Relations
+  spaces Space[]
+
+  @@index([isPublished, isActive])
+  @@index([sortOrder])
+  @@map("locations")
+}
+
+model SpaceCategory {
+  id          String   @id @default(uuid())
+  name        String // 例: 会議室、スタジオ、セミナー室
+  description String?  @db.Text
+  icon        String? // アイコン名（任意）
+  color       String? // テーマカラー（任意）
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  spaces Space[]
+
+  @@index([sortOrder])
+  @@map("space_categories")
+}
+
+model Space {
+  id            String    @id @default(uuid())
+  name          String
+  description   String    @db.Text
+  address       String
+  access        String?   @db.Text
+  capacity      Int
+  area          Decimal?  @db.Decimal(10, 2)
+  hourlyPrice   Decimal   @db.Decimal(10, 2)
+  dailyPrice    Decimal?  @db.Decimal(10, 2)
+  mainImageUrl  String
+  imageUrls     Json      @default("[]")
+  facilities    Json      @default("[]")
+  businessHours Json?
+  isPublished   Boolean   @default(false)
+  publishedAt   DateTime?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
   // 規約設定
   termsId String? // 任意の規約参照
+
+  // 場所・カテゴリー設定
+  locationId String? // 場所（建物）参照
+  categoryId String? // カテゴリー参照
 
   // Relations
   reservations Reservation[]
   icalTokens   ICalToken[]
-  terms        Terms?        @relation(fields: [termsId], references: [id], onDelete: SetNull)
+  terms        Terms?         @relation(fields: [termsId], references: [id], onDelete: SetNull)
+  location     Location?      @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  category     SpaceCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   @@index([isPublished, isActive])
   @@index([termsId])
+  @@index([locationId])
+  @@index([categoryId])
   @@map("spaces")
 }
 
@@ -248,13 +297,13 @@ model Reservation {
   status        ReservationStatus @default(PENDING)
   totalPrice    Decimal?          @db.Decimal(10, 2)
   notes         String?           @db.Text
-  termsAgreedAt DateTime?         // 規約同意日時（レガシー互換）
+  termsAgreedAt DateTime? // 規約同意日時（レガシー互換）
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
   // Google Calendar Sync
-  googleCalendarEventId      String?   // 共有カレンダーのイベントID
-  googleCalendarOAuthEventId String?   // OAuth連携（管理者個人）のイベントID
+  googleCalendarEventId      String? // 共有カレンダーのイベントID
+  googleCalendarOAuthEventId String? // OAuth連携（管理者個人）のイベントID
   calendarSyncedAt           DateTime? // 最終同期日時
   calendarSyncError          String?   @db.Text // 同期エラーメッセージ
 
@@ -318,15 +367,15 @@ model Inquiry {
 }
 
 model News {
-  id                 String      @id @default(uuid())
+  id                 String       @id @default(uuid())
   title              String
-  content            String      @db.Text              // HTMLコンテンツ（レンダリング用）
-  status             NewsStatus  @default(DRAFT)
+  content            String       @db.Text // HTMLコンテンツ（レンダリング用）
+  status             NewsStatus   @default(DRAFT)
   publishedAt        DateTime?
   contentWidth       LayoutWidth?
-  contentWidthCustom Int?                              // CUSTOMの場合の幅（px）
-  createdAt          DateTime    @default(now())
-  updatedAt          DateTime    @updatedAt
+  contentWidthCustom Int? // CUSTOMの場合の幅（px）
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
 
   // Relations
   versions NewsVersion[]
@@ -337,12 +386,12 @@ model News {
 
 /// Newsのバージョン履歴
 model NewsVersion {
-  id          String   @id @default(uuid())
-  newsId      String
-  version     Int                                    // 自動インクリメント（News内でユニーク）
-  content     String   @db.Text                      // HTMLスナップショット
-  createdAt   DateTime @default(now())
-  createdBy   String?                                // 作成者ID（User.id）
+  id        String   @id @default(uuid())
+  newsId    String
+  version   Int // 自動インクリメント（News内でユニーク）
+  content   String   @db.Text // HTMLスナップショット
+  createdAt DateTime @default(now())
+  createdBy String? // 作成者ID（User.id）
 
   // Relations
   news News @relation(fields: [newsId], references: [id], onDelete: Cascade)
@@ -358,8 +407,8 @@ model AnnouncementBar {
   type      String    @default("info") // info, warning, promo
   linkUrl   String?
   linkText  String?
-  bgColor   String?   // カスタム背景色 (hex)
-  textColor String?   // カスタム文字色 (hex)
+  bgColor   String? // カスタム背景色 (hex)
+  textColor String? // カスタム文字色 (hex)
   isActive  Boolean   @default(true)
   priority  Int       @default(0)
   startAt   DateTime?
@@ -381,7 +430,7 @@ model BlogPost {
   title              String
   slug               String         @unique
   excerpt            String         @db.Text
-  content            String         @db.Text              // HTMLコンテンツ（レンダリング用）
+  content            String         @db.Text // HTMLコンテンツ（レンダリング用）
   thumbnailUrl       String
   ogpImageUrl        String?
   categoryId         String
@@ -395,7 +444,7 @@ model BlogPost {
   authorId           String
   viewCount          Int            @default(0)
   contentWidth       LayoutWidth?
-  contentWidthCustom Int?                                 // CUSTOMの場合の幅（px）
+  contentWidthCustom Int? // CUSTOMの場合の幅（px）
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
 
@@ -413,12 +462,12 @@ model BlogPost {
 
 /// BlogPostのバージョン履歴
 model BlogPostVersion {
-  id          String   @id @default(uuid())
-  postId      String
-  version     Int                                    // 自動インクリメント（Post内でユニーク）
-  content     String   @db.Text                      // HTMLスナップショット
-  createdAt   DateTime @default(now())
-  createdBy   String?                                // 作成者ID（User.id）
+  id        String   @id @default(uuid())
+  postId    String
+  version   Int // 自動インクリメント（Post内でユニーク）
+  content   String   @db.Text // HTMLスナップショット
+  createdAt DateTime @default(now())
+  createdBy String? // 作成者ID（User.id）
 
   // Relations
   post BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
@@ -455,30 +504,30 @@ model BlogTag {
 }
 
 model BlogComment {
-  id              String    @id @default(uuid())
+  id              String  @id @default(uuid())
   postId          String
-  parentCommentId String?   // Self-reference for nested comments
+  parentCommentId String? // Self-reference for nested comments
 
   // Content
-  content         String    @db.Text
+  content String @db.Text
 
   // Author info (either userId OR guest info)
-  userId          String?   // For logged-in users
-  guestName       String?   // For guest comments
-  guestEmail      String?   // For guest comments
+  userId     String? // For logged-in users
+  guestName  String? // For guest comments
+  guestEmail String? // For guest comments
 
   // Spam prevention metadata
-  ipAddress       String?   // For rate limiting (hashed)
-  contentHash     String?   // For duplicate detection
+  ipAddress   String? // For rate limiting (hashed)
+  contentHash String? // For duplicate detection
 
   // Status
-  isDeleted       Boolean   @default(false)
-  deletedAt       DateTime?
-  deletedBy       String?   // userId of admin who deleted
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  deletedBy String? // userId of admin who deleted
 
   // Timestamps
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
   post          BlogPost      @relation(fields: [postId], references: [id], onDelete: Cascade)
@@ -503,31 +552,30 @@ model BlogComment {
 // ==============================================
 
 model Page {
-  id              String    @id @default(uuid())
-  slug            String    @unique
-  title           String
-  description     String?   @db.Text
-  content         String    @db.Text              // HTMLコンテンツ（レンダリング用）
-  metaDescription String?
-  metaKeywords    String?
-  ogpTitle        String?
-  ogpDescription  String?
-  ogpImageUrl     String?
-  isPublished     Boolean   @default(true)
-  publishedAt     DateTime?
-  isActive        Boolean   @default(true)
-  isSystemPage    Boolean   @default(false)       // システムページ（SEO/OGPのみ編集可、コンテンツ編集不可）
-  contentWidth    LayoutWidth?
-  contentWidthCustom Int?                         // CUSTOMの場合の幅（px）
-  showSidebar     Boolean?                        // null=デフォルト使用、true/false=明示的指定
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id                 String       @id @default(uuid())
+  slug               String       @unique
+  title              String
+  description        String?      @db.Text
+  content            String       @db.Text // HTMLコンテンツ（レンダリング用）
+  metaDescription    String?
+  metaKeywords       String?
+  ogpTitle           String?
+  ogpDescription     String?
+  ogpImageUrl        String?
+  isPublished        Boolean      @default(true)
+  publishedAt        DateTime?
+  isActive           Boolean      @default(true)
+  isSystemPage       Boolean      @default(false) // システムページ（SEO/OGPのみ編集可、コンテンツ編集不可）
+  contentWidth       LayoutWidth?
+  contentWidthCustom Int? // CUSTOMの場合の幅（px）
+  showSidebar        Boolean? // null=デフォルト使用、true/false=明示的指定
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
 
   @@index([isPublished, isActive])
   @@index([isSystemPage])
   @@map("pages")
 }
-
 
 model NavigationItem {
   id         String         @id @default(uuid())
@@ -570,14 +618,14 @@ model SocialLink {
 // ==============================================
 
 model FaqCategory {
-  id          String    @id @default(uuid())
+  id          String   @id @default(uuid())
   name        String
-  slug        String    @unique
-  description String?   @db.Text
-  order       Int       @default(0)
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  slug        String   @unique
+  description String?  @db.Text
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   // Relations
   items FaqItem[]
@@ -588,14 +636,14 @@ model FaqCategory {
 }
 
 model FaqItem {
-  id         String      @id @default(uuid())
+  id         String   @id @default(uuid())
   categoryId String
   question   String
-  answer     String      @db.Text  // Lexical HTML (リッチテキスト)
-  order      Int         @default(0)
-  isActive   Boolean     @default(true)
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+  answer     String   @db.Text // Lexical HTML (リッチテキスト)
+  order      Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   // Relations
   category FaqCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
@@ -623,84 +671,84 @@ model Settings {
   footerCopyright    String?
 
   // Business Info (事業者情報)
-  businessName         String?           // 会社名・屋号
-  businessNameKana     String?           // 会社名・屋号（カナ）
-  representativeName   String?           // 代表者名
-  businessType         String?           // 事業形態（個人事業主/法人）
-  industryType         String?           // 業種
-  establishedDate      DateTime?         // 設立日
-  registrationNumber   String?           // 法人番号/登録番号
-  invoiceNumber        String?           // インボイス登録番号
-  businessDescription  String? @db.Text  // 事業概要
+  businessName        String? // 会社名・屋号
+  businessNameKana    String? // 会社名・屋号（カナ）
+  representativeName  String? // 代表者名
+  businessType        String? // 事業形態（個人事業主/法人）
+  industryType        String? // 業種
+  establishedDate     DateTime? // 設立日
+  registrationNumber  String? // 法人番号/登録番号
+  invoiceNumber       String? // インボイス登録番号
+  businessDescription String?   @db.Text // 事業概要
 
   // Contact Info
-  phoneNumber          String?
-  faxNumber            String?
-  email                String?
-  address              String? @db.Text
-  postalCode           String?           // 郵便番号
-  prefecture           String?           // 都道府県
-  city                 String?           // 市区町村
-  streetAddress        String?           // 番地以降
-  buildingName         String?           // 建物名
+  phoneNumber   String?
+  faxNumber     String?
+  email         String?
+  address       String? @db.Text
+  postalCode    String? // 郵便番号
+  prefecture    String? // 都道府県
+  city          String? // 市区町村
+  streetAddress String? // 番地以降
+  buildingName  String? // 建物名
 
   // Business Hours (営業時間)
-  businessHours        Json?             // 曜日ごとの営業時間
-  regularHolidays      Json?             // 定休日（曜日）
-  specialHolidays      Json?             // 特別休業日（日付リスト）
-  holidayNotice        String? @db.Text  // 休業日のお知らせ
+  businessHours   Json? // 曜日ごとの営業時間
+  regularHolidays Json? // 定休日（曜日）
+  specialHolidays Json? // 特別休業日（日付リスト）
+  holidayNotice   String? @db.Text // 休業日のお知らせ
 
   // Legacy field - keeping for backwards compatibility
   defaultBusinessHours Json?
 
   // Email Settings
-  senderEmail                        String?
-  senderName                         String?
-  replyToEmail                       String?
-  reservationConfirmationTemplateId  String?
-  reservationCancelledTemplateId     String?
-  reservationUpdatedTemplateId       String?
-  adminNotificationTemplateId        String?
+  senderEmail                       String?
+  senderName                        String?
+  replyToEmail                      String?
+  reservationConfirmationTemplateId String?
+  reservationCancelledTemplateId    String?
+  reservationUpdatedTemplateId      String?
+  adminNotificationTemplateId       String?
 
   // SEO Settings
-  defaultMetaDescription  String?
-  defaultMetaKeywords     String?
-  defaultOgpTitle         String?
-  defaultOgpDescription   String?
+  defaultMetaDescription String?
+  defaultMetaKeywords    String?
+  defaultOgpTitle        String?
+  defaultOgpDescription  String?
 
   // Layout Settings (レイアウト設定)
   containerWidth       LayoutWidth?
-  containerWidthCustom Int?                      // CUSTOMの場合の幅（px）
+  containerWidthCustom Int? // CUSTOMの場合の幅（px）
   contentWidth         LayoutWidth?
-  contentWidthCustom   Int?                      // CUSTOMの場合の幅（px）
+  contentWidthCustom   Int? // CUSTOMの場合の幅（px）
 
   // Sidebar Settings (サイドバー設定)
-  sidebarEnabled       Boolean @default(true)   // サイドバー全体の有効/無効
-  sidebarWidgets       Json    @default("{\"search\":true,\"recent\":true,\"popular\":true,\"categories\":true,\"tags\":true}") // ウィジェット個別設定
-  sidebarRecentCount   Int     @default(5)      // 新着記事の表示件数
-  sidebarPopularCount  Int     @default(5)      // 人気記事の表示件数
+  sidebarEnabled      Boolean @default(true) // サイドバー全体の有効/無効
+  sidebarWidgets      Json    @default("{\"search\":true,\"recent\":true,\"popular\":true,\"categories\":true,\"tags\":true}") // ウィジェット個別設定
+  sidebarRecentCount  Int     @default(5) // 新着記事の表示件数
+  sidebarPopularCount Int     @default(5) // 人気記事の表示件数
 
   // Analytics Settings
-  analyticsType           String?   // "ga4" | "gtm" | null
-  googleAnalyticsId       String?   // GA4 Measurement ID (G-XXXXXXXXXX)
-  googleTagManagerId      String?   // GTM Container ID (GTM-XXXXXXX)
-  googleSearchConsoleId   String?   // GSC verification meta tag
-  bingWebmasterToolsId    String?   // Bing verification meta tag
-  gaPropertyId            String?   // GA4 Property ID for Data API
+  analyticsType         String? // "ga4" | "gtm" | null
+  googleAnalyticsId     String? // GA4 Measurement ID (G-XXXXXXXXXX)
+  googleTagManagerId    String? // GTM Container ID (GTM-XXXXXXX)
+  googleSearchConsoleId String? // GSC verification meta tag
+  bingWebmasterToolsId  String? // Bing verification meta tag
+  gaPropertyId          String? // GA4 Property ID for Data API
 
   // Reservation Settings
-  defaultTimeSlot                 Int?     @default(60)
-  minReservationDuration          Int?     @default(60)
-  maxReservationDuration          Int?     @default(480)
-  cancellationPolicy              String?  @db.Text
+  defaultTimeSlot                  Int?    @default(60)
+  minReservationDuration           Int?    @default(60)
+  maxReservationDuration           Int?    @default(480)
+  cancellationPolicy               String? @db.Text
   sendReservationConfirmationEmail Boolean @default(true)
   sendAdminNotificationEmail       Boolean @default(true)
 
   // Terms Agreement Settings
-  termsAgreementEnabled     Boolean @default(true)  // 規約同意チェック有効
-  termsAgreementText        String? // カスタム同意文言（null=デフォルト）
-  requireTermsAgreement     Boolean @default(true)  // 利用規約への同意必須
-  requirePrivacyAgreement   Boolean @default(true)  // プライバシーポリシーへの同意必須
+  termsAgreementEnabled   Boolean @default(true) // 規約同意チェック有効
+  termsAgreementText      String? // カスタム同意文言（null=デフォルト）
+  requireTermsAgreement   Boolean @default(true) // 利用規約への同意必須
+  requirePrivacyAgreement Boolean @default(true) // プライバシーポリシーへの同意必須
 
   // Notification Settings
   notifyNewReservation       Boolean @default(true)
@@ -710,43 +758,43 @@ model Settings {
   notificationEmailAddresses String?
 
   // Other Settings
-  timezone           String?  @default("Asia/Tokyo")
-  language           String?  @default("ja")
-  maintenanceMode    Boolean  @default(false)
-  maintenanceMessage String?  @db.Text
+  timezone           String? @default("Asia/Tokyo")
+  language           String? @default("ja")
+  maintenanceMode    Boolean @default(false)
+  maintenanceMessage String? @db.Text
 
   // Stripe Payment Settings
-  stripeEnabled          Boolean  @default(false)
-  stripeTestMode         Boolean  @default(true)
+  stripeEnabled          Boolean   @default(false)
+  stripeTestMode         Boolean   @default(true)
   stripePublishableKey   String?
-  stripeSecretKey        String?  @db.Text  // 暗号化して保存
-  stripeWebhookSecret    String?  @db.Text  // 暗号化して保存
+  stripeSecretKey        String?   @db.Text // 暗号化して保存
+  stripeWebhookSecret    String?   @db.Text // 暗号化して保存
   stripeAccountId        String?
-  stripeCurrency         String   @default("jpy")
+  stripeCurrency         String    @default("jpy")
   stripeLastTestedAt     DateTime?
   stripeConnectionStatus String?
 
   // Cookie Consent Settings
-  cookieConsentEnabled    Boolean  @default(false)
-  cookieConsentMessage    String?  @db.Text
+  cookieConsentEnabled    Boolean @default(false)
+  cookieConsentMessage    String? @db.Text
   cookieConsentAcceptText String?
   cookieConsentRejectText String?
   cookieConsentPolicyUrl  String?
 
   // Announcement Bar Carousel Settings
-  announcementBarAnimation        String  @default("fade") // fade, slideX, slideY
-  announcementBarDuration         Int     @default(5000)   // ミリ秒
-  announcementBarAutoPlay         Boolean @default(true)
-  announcementBarPauseOnHover     Boolean @default(true)
-  announcementBarShowArrows       Boolean @default(true)
-  announcementBarShowIndicator    Boolean @default(true)
-  announcementBarDesignStyle      String  @default("solid") // solid, gradient, outlined, glass, minimal, striped
+  announcementBarAnimation         String  @default("fade") // fade, slideX, slideY
+  announcementBarDuration          Int     @default(5000) // ミリ秒
+  announcementBarAutoPlay          Boolean @default(true)
+  announcementBarPauseOnHover      Boolean @default(true)
+  announcementBarShowArrows        Boolean @default(true)
+  announcementBarShowIndicator     Boolean @default(true)
+  announcementBarDesignStyle       String  @default("solid") // solid, gradient, outlined, glass, minimal, striped
   // Announcement Bar Common Color Settings
-  announcementBarBgColor          String? // 共通背景色（カスタム）
-  announcementBarTextColor        String? // 共通文字色（カスタム）
+  announcementBarBgColor           String? // 共通背景色（カスタム）
+  announcementBarTextColor         String? // 共通文字色（カスタム）
   // Striped Design Settings
-  announcementBarStripeColor      String? // ストライプ色（カスタム）
-  announcementBarStripeAnimation  Boolean @default(false) // ストライプアニメーション
+  announcementBarStripeColor       String? // ストライプ色（カスタム）
+  announcementBarStripeAnimation   Boolean @default(false) // ストライプアニメーション
   // Gradient Design Settings
   announcementBarGradientAnimation Boolean @default(false) // グラデーションアニメーション
   // Glass Design Settings
@@ -759,13 +807,13 @@ model Settings {
   // Resend Email Service
   resendApiKey           String?   @db.Text // Encrypted
   resendLastTestedAt     DateTime?
-  resendConnectionStatus String?            // 'connected' | 'error'
+  resendConnectionStatus String? // 'connected' | 'error'
 
   // Cloudflare Turnstile (Bot Protection)
-  turnstileSiteKey           String?          // Public key (not encrypted)
-  turnstileSecretKey         String?   @db.Text // Encrypted
-  turnstileLastTestedAt      DateTime?
-  turnstileConnectionStatus  String?
+  turnstileSiteKey          String? // Public key (not encrypted)
+  turnstileSecretKey        String?   @db.Text // Encrypted
+  turnstileLastTestedAt     DateTime?
+  turnstileConnectionStatus String?
 
   // Google Maps API
   googleMapsApiKey           String?   @db.Text // Encrypted
@@ -782,40 +830,40 @@ model Settings {
 
   // サービスアカウント連携（共有カレンダー用）
   googleCalendarEnabled            Boolean   @default(false)
-  googleCalendarServiceAccountJson String?   @db.Text  // 暗号化されたJSON認証情報
-  googleCalendarId                 String?             // 共有カレンダーID
+  googleCalendarServiceAccountJson String?   @db.Text // 暗号化されたJSON認証情報
+  googleCalendarId                 String? // 共有カレンダーID
   googleCalendarLastTestedAt       DateTime?
-  googleCalendarConnectionStatus   String?             // 'connected' | 'error'
+  googleCalendarConnectionStatus   String? // 'connected' | 'error'
 
   // OAuth連携（管理者個人カレンダー用）
-  googleCalendarOAuthEnabled       Boolean   @default(false)
+  googleCalendarOAuthEnabled Boolean @default(false)
   // ※ access_token/refresh_tokenはAccountテーブルに保存
 
   // 予約者向けiCal設定
-  icalAttachmentEnabled            Boolean   @default(true)  // メールにiCal添付
-  addToCalendarLinksEnabled        Boolean   @default(true)  // Add to Calendarリンク表示
+  icalAttachmentEnabled     Boolean @default(true) // メールにiCal添付
+  addToCalendarLinksEnabled Boolean @default(true) // Add to Calendarリンク表示
 
   // iCalフィード設定（外部カレンダー購読用）
-  icalFeedEnabled                  Boolean   @default(false) // iCalフィード公開
-  icalFeedIncludeCustomerInfo      Boolean   @default(false) // 顧客情報を含む
+  icalFeedEnabled             Boolean @default(false) // iCalフィード公開
+  icalFeedIncludeCustomerInfo Boolean @default(false) // 顧客情報を含む
 
   // ==============================================
   // Google Calendar 双方向同期（Phase 4）
   // ==============================================
 
   // 同期方式設定
-  googleCalendarTwoWaySyncEnabled  Boolean   @default(false) // 双方向同期有効
-  googleCalendarSyncMethod         String    @default("polling") // "polling" | "webhook" | "both"
-  googleCalendarPollingIntervalMin Int       @default(5)     // ポーリング間隔（分）
+  googleCalendarTwoWaySyncEnabled  Boolean @default(false) // 双方向同期有効
+  googleCalendarSyncMethod         String  @default("polling") // "polling" | "webhook" | "both"
+  googleCalendarPollingIntervalMin Int     @default(5) // ポーリング間隔（分）
 
   // 同期状態
-  googleCalendarSyncToken          String?   @db.Text        // 増分同期用トークン
-  googleCalendarLastSyncedAt       DateTime?                 // 最終同期日時
+  googleCalendarSyncToken    String?   @db.Text // 増分同期用トークン
+  googleCalendarLastSyncedAt DateTime? // 最終同期日時
 
   // Webhook設定（Push Notifications）
-  googleCalendarWebhookChannelId   String?                   // Webhook チャンネルID
-  googleCalendarWebhookResourceId  String?                   // Webhook リソースID
-  googleCalendarWebhookExpiration  DateTime?                 // Webhook 有効期限
+  googleCalendarWebhookChannelId  String? // Webhook チャンネルID
+  googleCalendarWebhookResourceId String? // Webhook リソースID
+  googleCalendarWebhookExpiration DateTime? // Webhook 有効期限
 
   @@map("settings")
 }
@@ -826,17 +874,17 @@ model Settings {
 
 /// iCalフィード公開用トークン
 model ICalToken {
-  id          String    @id @default(uuid())
-  token       String    @unique             // 公開URL用トークン（32バイトBase64URL）
-  name        String                        // トークン名（識別用）
-  spaceId     String?                       // null = 全予約、指定時 = 特定スペースのみ
-  createdBy   String                        // 作成した管理者ID
-  expiresAt   DateTime?                     // null = 無期限
-  createdAt   DateTime  @default(now())
-  lastUsedAt  DateTime?                     // 最終アクセス日時
+  id         String    @id @default(uuid())
+  token      String    @unique // 公開URL用トークン（32バイトBase64URL）
+  name       String // トークン名（識別用）
+  spaceId    String? // null = 全予約、指定時 = 特定スペースのみ
+  createdBy  String // 作成した管理者ID
+  expiresAt  DateTime? // null = 無期限
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime? // 最終アクセス日時
 
-  space       Space?    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
-  user        User      @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  space Space? @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  user  User   @relation(fields: [createdBy], references: [id], onDelete: Cascade)
 
   @@index([token])
   @@index([spaceId])
@@ -853,10 +901,10 @@ model ICalToken {
 model HomepageSection {
   id        String              @id @default(uuid())
   type      HomepageSectionType
-  title     String?                           // セクション見出し（表示用）
+  title     String? // セクション見出し（表示用）
   config    Json                @default("{}") // タイプ別設定（JSON Schema で型安全）
-  content   String?             @db.Text       // Lexical HTML（CUSTOM, FAQ等で使用）
-  order     Int                 @default(0)    // 表示順序（DnDで変更可能）
+  content   String?             @db.Text // Lexical HTML（CUSTOM, FAQ等で使用）
+  order     Int                 @default(0) // 表示順序（DnDで変更可能）
   isActive  Boolean             @default(true) // ON/OFF制御
   createdAt DateTime            @default(now())
   updatedAt DateTime            @updatedAt
@@ -873,9 +921,9 @@ model HomepageSection {
 /// 権限定義（resource:action の組み合わせ）
 model Permission {
   id          String   @id @default(uuid())
-  resource    String   // 'space', 'blog', 'news', 'page', 'user', 'settings' 等
-  action      String   // 'create', 'read', 'update', 'delete', 'publish' 等
-  description String?  // 説明（UI表示用）
+  resource    String // 'space', 'blog', 'news', 'page', 'user', 'settings' 等
+  action      String // 'create', 'read', 'update', 'delete', 'publish' 等
+  description String? // 説明（UI表示用）
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -937,15 +985,15 @@ enum MediaUsage {
 
 /// 監査ログ（書き込み操作 + セキュリティイベント）
 model AuditLog {
-  id          String      @id @default(uuid())
-  userId      String?     // 実行ユーザー（null = システム or 未認証）
-  action      AuditAction // 操作種別
-  resource    String      // 対象リソース種別 ('space', 'blog' 等)
-  resourceId  String?     // 対象リソースID
-  oldValue    Json?       // 変更前の値（UPDATE時）
-  newValue    Json?       // 変更後の値 or 作成値
-  metadata    Json?       // 追加情報（IPアドレス、UserAgent等）
-  createdAt   DateTime    @default(now())
+  id         String      @id @default(uuid())
+  userId     String? // 実行ユーザー（null = システム or 未認証）
+  action     AuditAction // 操作種別
+  resource   String // 対象リソース種別 ('space', 'blog' 等)
+  resourceId String? // 対象リソースID
+  oldValue   Json? // 変更前の値（UPDATE時）
+  newValue   Json? // 変更後の値 or 作成値
+  metadata   Json? // 追加情報（IPアドレス、UserAgent等）
+  createdAt  DateTime    @default(now())
 
   // Relations
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -964,29 +1012,29 @@ model AuditLog {
 
 /// メディアファイル管理
 model Media {
-  id          String     @id @default(uuid())
-  filename    String                          // 元のファイル名
-  storagePath String                          // Supabase Storage パス
-  url         String                          // 公開URL
-  bucket      String                          // Supabase バケット名
-  mimeType    String                          // MIME type
-  size        Int                             // ファイルサイズ（bytes）
-  width       Int?                            // 画像幅（px）
-  height      Int?                            // 画像高さ（px）
+  id          String @id @default(uuid())
+  filename    String // 元のファイル名
+  storagePath String // Supabase Storage パス
+  url         String // 公開URL
+  bucket      String // Supabase バケット名
+  mimeType    String // MIME type
+  size        Int // ファイルサイズ（bytes）
+  width       Int? // 画像幅（px）
+  height      Int? // 画像高さ（px）
 
   // 分類・検索用
-  type        MediaType                       // メディア種別
-  usage       MediaUsage  @default(GENERAL)   // 用途
-  alt         String?                         // 代替テキスト
-  title       String?                         // タイトル
-  description String?     @db.Text            // 説明
-  tags        Json        @default("[]")      // タグ配列
+  type        MediaType // メディア種別
+  usage       MediaUsage @default(GENERAL) // 用途
+  alt         String? // 代替テキスト
+  title       String? // タイトル
+  description String?    @db.Text // 説明
+  tags        Json       @default("[]") // タグ配列
 
   // 管理情報
-  uploadedBy  String                          // アップロードユーザーID
-  isActive    Boolean     @default(true)      // ソフトデリート
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  uploadedBy String // アップロードユーザーID
+  isActive   Boolean  @default(true) // ソフトデリート
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   // Relations
   uploader User @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
@@ -1005,9 +1053,9 @@ model Media {
 /// ログイン試行記録（レートリミット用）
 model LoginAttempt {
   id         String   @id @default(uuid())
-  identifier String   // IPアドレス or メールのハッシュ
-  email      String   // 試行されたメールアドレス
-  success    Boolean  // 成功/失敗
+  identifier String // IPアドレス or メールのハッシュ
+  email      String // 試行されたメールアドレス
+  success    Boolean // 成功/失敗
   createdAt  DateTime @default(now())
 
   @@index([identifier, createdAt])
@@ -1023,16 +1071,16 @@ model LoginAttempt {
 model Terms {
   id        String    @id @default(uuid())
   type      TermsType
-  title     String                    // 表示タイトル（例: "利用規約"）
-  slug      String    @unique         // URL用スラッグ（例: "terms-of-use"）
-  isActive  Boolean   @default(true)  // 現在有効な規約か
+  title     String // 表示タイトル（例: "利用規約"）
+  slug      String    @unique // URL用スラッグ（例: "terms-of-use"）
+  isActive  Boolean   @default(true) // 現在有効な規約か
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
   // Relations
   versions   TermsVersion[]
-  spaces     Space[]           // この規約を使用するスペース
-  agreements TermsAgreement[]  // 同意記録
+  spaces     Space[] // この規約を使用するスペース
+  agreements TermsAgreement[] // 同意記録
 
   @@index([type, isActive])
   @@index([slug])
@@ -1043,14 +1091,14 @@ model Terms {
 model TermsVersion {
   id               String      @id @default(uuid())
   termsId          String
-  version          Int                           // 自動インクリメント（Terms内でユニーク）
-  content          String      @db.Text          // Lexical HTML（リッチテキスト）
+  version          Int // 自動インクリメント（Terms内でユニーク）
+  content          String      @db.Text // Lexical HTML（リッチテキスト）
   status           TermsStatus @default(DRAFT)
-  publishedAt      DateTime?                     // 公開日時
-  publishedBy      String?                       // 公開者ID（User.id）
-  isCurrentVersion Boolean     @default(false)   // 現在の有効バージョン
+  publishedAt      DateTime? // 公開日時
+  publishedBy      String? // 公開者ID（User.id）
+  isCurrentVersion Boolean     @default(false) // 現在の有効バージョン
   createdAt        DateTime    @default(now())
-  createdBy        String                        // 作成者ID（User.id）
+  createdBy        String // 作成者ID（User.id）
 
   // Relations
   terms      Terms            @relation(fields: [termsId], references: [id], onDelete: Cascade)
@@ -1064,11 +1112,11 @@ model TermsVersion {
 
 /// 規約同意記録（監査証跡）
 model TermsAgreement {
-  id            String   @id @default(uuid())
+  id            String  @id @default(uuid())
   termsId       String
-  versionId     String                    // 同意した規約バージョンID
-  reservationId String?                   // 予約ID（予約時の同意の場合）
-  userId        String?                   // ユーザーID（ログイン済みの場合）
+  versionId     String // 同意した規約バージョンID
+  reservationId String? // 予約ID（予約時の同意の場合）
+  userId        String? // ユーザーID（ログイン済みの場合）
 
   // 同意者情報（ゲストユーザー用）
   guestName  String? // ゲスト氏名
@@ -1076,8 +1124,8 @@ model TermsAgreement {
 
   // 監査情報
   agreedAt  DateTime @default(now()) // 同意日時
-  ipAddress String?                  // IPアドレス（ハッシュ化）
-  userAgent String?                  // ブラウザ情報
+  ipAddress String? // IPアドレス（ハッシュ化）
+  userAgent String? // ブラウザ情報
 
   // Relations
   terms       Terms        @relation(fields: [termsId], references: [id], onDelete: Cascade)

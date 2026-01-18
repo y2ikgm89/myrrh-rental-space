@@ -9,7 +9,7 @@ import {
   credentialsSchema,
   loginTokenSchema,
   loginTokenResponseSchema,
-} from '@/lib/validations/auth'
+} from '@/admin/lib/validations/auth'
 
 describe('credentialsSchema', () => {
   const validCredentials = {

@@ -5,7 +5,7 @@
  */
 
 import { CommentItem } from './CommentItem'
-import type { CommentData } from '@/lib/validations/comment'
+import type { CommentData } from '@/shared/lib/validations/comment'
 
 type Props = {
   comments: CommentData[]

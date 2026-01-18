@@ -16,15 +16,15 @@ import {
   CardTitle,
   Input,
   Label,
-} from '@/components/admin/ui'
-import { Switch } from '@/components/admin/ui/switch'
-import { Textarea } from '@/components/admin/ui/textarea'
+} from '@/admin/components/ui'
+import { Switch } from '@/admin/components/ui/switch'
+import { Textarea } from '@/admin/components/ui/textarea'
 import {
   updateGoogleCalendarSettings,
   testGoogleCalendarConnectionAction,
   clearGoogleCalendarServiceAccount,
   type SettingsData,
-} from '@/actions/admin/settings'
+} from '@/admin/actions/settings'
 import { useRefreshOnSuccess } from '../hooks'
 
 // =============================================================================

@@ -8,8 +8,8 @@
 
 import { useState, useEffect, type FormEvent, type ReactElement } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { signIn } from '@/lib/auth-client'
-import { credentialsSchema, loginTokenSchema } from '@/lib/validations/auth'
+import { signIn } from '@/shared/lib/auth-client'
+import { credentialsSchema, loginTokenSchema } from '@/admin/lib/validations/auth'
 
 const STORAGE_KEY = 'myrrh_admin_email'
 

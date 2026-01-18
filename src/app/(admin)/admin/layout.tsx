@@ -6,7 +6,7 @@
  */
 
 import type { Metadata } from 'next'
-import { Toaster } from '@/components/admin/ui'
+import { Toaster } from '@/admin/components/ui'
 import type { ReactElement, ReactNode } from 'react'
 
 export const metadata: Metadata = {

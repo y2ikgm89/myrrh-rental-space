@@ -9,15 +9,15 @@
 import { useTransition, type ChangeEvent, type ReactElement } from 'react'
 import { useQueryStates } from 'nuqs'
 import { tv } from 'tailwind-variants'
-import { Button, Input } from '@/components/site/ui'
+import { Button, Input } from '@/public/components/ui'
 import {
   parseAsCommaSeparated,
   parseAsPage,
   parseAsQuery,
   parseAsSortOrder,
-} from '@/lib/nuqs'
-import type { BlogCategory, BlogTag } from '@/generated/prisma/client/client'
-import { sortOrderSchema } from '@/lib/validations/search-params'
+} from '@/shared/lib/nuqs'
+import type { BlogCategory, BlogTag } from '@/shared/generated/prisma/client'
+import { sortOrderSchema } from '@/shared/lib/validations/search-params'
 
 const styles = tv({
   slots: {

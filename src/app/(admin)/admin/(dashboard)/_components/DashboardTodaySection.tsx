@@ -2,8 +2,8 @@
  * 本日の予約セクション
  */
 
-import { getTodayReservations } from '@/actions/admin/dashboard'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/admin/ui/card'
+import { getTodayReservations } from '@/admin/actions/dashboard'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/admin/components/ui/card'
 import {
   Table,
   TableBody,
@@ -11,8 +11,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/admin/ui/table'
-import { ReservationStatusBadge } from '@/components/admin/status-badges'
+} from '@/admin/components/ui/table'
+import { ReservationStatusBadge } from '@/admin/components/status-badges'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 

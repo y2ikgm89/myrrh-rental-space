@@ -24,9 +24,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/admin/ui'
-import { deleteTerms, toggleTermsActive } from '@/actions/admin/terms'
-import type { TermsWithVersion } from '@/lib/validations/terms'
+} from '@/admin/components/ui'
+import { deleteTerms, toggleTermsActive } from '@/admin/actions/terms'
+import type { TermsWithVersion } from '@/shared/lib/validations/terms'
 
 const styles = tv({
   slots: {

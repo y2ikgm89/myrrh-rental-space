@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { generateICalFeed, type CalendarEvent } from '@/lib/ical'
+import { prisma } from '@/shared/lib/prisma'
+import { generateICalFeed, type CalendarEvent } from '@/admin/lib/ical'
 import { format } from 'date-fns'
-import { ACTIVE_RESERVATION_STATUSES } from '@/lib/validations/enums'
+import { ACTIVE_RESERVATION_STATUSES } from '@/shared/lib/validations/enums'
 
 /**
  * iCalフィード配信エンドポイント

@@ -34,20 +34,20 @@ import {
   arrayMove,
   CSS,
   type DragEndEvent,
-} from '@/components/admin/ui'
+} from '@/admin/components/ui'
 import {
   spaceFormSchema,
   defaultSpaceFormValues,
   type SpaceFormInput,
   type SpaceWithStats,
-} from '@/lib/validations/space'
-import { createSpace, updateSpace } from '@/actions/admin/space'
-import { cn } from '@/lib/utils'
-import { RichTextEditor } from '@/components/admin/editor'
+} from '@/admin/lib/validations/space'
+import { createSpace, updateSpace } from '@/admin/actions/space'
+import { cn } from '@/shared/lib/utils'
+import { RichTextEditor } from '@/admin/components/editor'
 import {
   useSingleMediaPicker,
   useMultipleMediaPicker,
-} from '@/hooks/use-media-picker'
+} from '@/admin/hooks/use-media-picker'
 
 type TermsOption = {
   id: string
@@ -55,10 +55,25 @@ type TermsOption = {
   type: string
 }
 
+type LocationOption = {
+  id: string
+  name: string
+  address: string
+}
+
+type CategoryOption = {
+  id: string
+  name: string
+  icon: string | null
+  color: string | null
+}
+
 type SpaceFormProps = {
   space?: SpaceWithStats
   mode: 'create' | 'edit'
   availableTerms?: TermsOption[]
+  availableLocations?: LocationOption[]
+  availableCategories?: CategoryOption[]
 }
 
 // =============================================================================
@@ -154,7 +169,13 @@ function SortableImageItem({ id, url, index, onRemove, disabled }: SortableImage
 // Main Component
 // =============================================================================
 
-export function SpaceForm({ space, mode, availableTerms = [] }: SpaceFormProps) {
+export function SpaceForm({
+  space,
+  mode,
+  availableTerms = [],
+  availableLocations = [],
+  availableCategories = [],
+}: SpaceFormProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [imageUrls, setImageUrls] = useState<string[]>(space?.imageUrls || [])
@@ -220,12 +241,16 @@ export function SpaceForm({ space, mode, availableTerms = [] }: SpaceFormProps) 
           facilities: space.facilities,
           isPublished: space.isPublished,
           termsId: space.termsId,
+          locationId: space.locationId,
+          categoryId: space.categoryId,
         }
       : defaultSpaceFormValues,
   })
 
   const isPublished = useWatch({ control, name: 'isPublished' })
   const termsId = useWatch({ control, name: 'termsId' })
+  const locationId = useWatch({ control, name: 'locationId' })
+  const categoryId = useWatch({ control, name: 'categoryId' })
   const mainImageUrl = useWatch({ control, name: 'mainImageUrl' })
 
   const onSubmit = async (data: SpaceFormInput) => {
@@ -243,6 +268,9 @@ export function SpaceForm({ space, mode, availableTerms = [] }: SpaceFormProps) 
         access: data.access || undefined,
         area: data.area || undefined,
         dailyPrice: data.dailyPrice || undefined,
+        termsId: data.termsId || undefined,
+        locationId: data.locationId || undefined,
+        categoryId: data.categoryId || undefined,
       }
 
       if (mode === 'create') {
@@ -580,6 +608,68 @@ export function SpaceForm({ space, mode, availableTerms = [] }: SpaceFormProps) 
           )}
         </CardContent>
       </Card>
+
+      {/* 場所・カテゴリー設定 */}
+      {(availableLocations.length > 0 || availableCategories.length > 0) && (
+        <Card>
+          <CardHeader>
+            <CardTitle>場所・カテゴリー設定</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {availableLocations.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="locationId">場所（建物・施設）</Label>
+                <Select
+                  value={locationId || ''}
+                  onValueChange={(value) => setValue('locationId', value || null)}
+                  disabled={isPending}
+                >
+                  <SelectTrigger id="locationId">
+                    <SelectValue placeholder="場所を選択（任意）" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">なし</SelectItem>
+                    {availableLocations.map((loc) => (
+                      <SelectItem key={loc.id} value={loc.id}>
+                        {loc.name}（{loc.address}）
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  スペースが所属する建物・施設を選択します
+                </p>
+              </div>
+            )}
+            {availableCategories.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="categoryId">カテゴリー（用途）</Label>
+                <Select
+                  value={categoryId || ''}
+                  onValueChange={(value) => setValue('categoryId', value || null)}
+                  disabled={isPending}
+                >
+                  <SelectTrigger id="categoryId">
+                    <SelectValue placeholder="カテゴリーを選択（任意）" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">なし</SelectItem>
+                    {availableCategories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.icon && <span className="mr-1">{cat.icon}</span>}
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  スペースの用途（会議室、スタジオなど）を選択します
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* 利用規約設定 */}
       {availableTerms.length > 0 && (

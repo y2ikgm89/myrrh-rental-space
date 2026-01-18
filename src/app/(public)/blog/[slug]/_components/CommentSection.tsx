@@ -5,10 +5,10 @@
  */
 
 import { connection } from 'next/server'
-import { getCommentsByPostId } from '@/actions/blog-comment'
+import { getCommentsByPostId } from '@/public/actions/blog-comment'
 import { CommentList } from './CommentList'
 import { CommentForm } from './CommentForm'
-import type { CommentData } from '@/lib/validations/comment'
+import type { CommentData } from '@/shared/lib/validations/comment'
 
 type Props = {
   postId: string

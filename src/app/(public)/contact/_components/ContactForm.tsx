@@ -2,16 +2,16 @@
 
 import { useState, useTransition, type ReactElement, type FormEvent } from 'react'
 import { tv } from 'tailwind-variants'
-import { Button } from '@/components/site/ui/Button'
-import { Input } from '@/components/site/ui/Input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/site/ui/Card'
-import { submitContact } from '@/actions/contact'
+import { Button } from '@/public/components/ui/Button'
+import { Input } from '@/public/components/ui/Input'
+import { Card, CardContent, CardHeader, CardTitle } from '@/public/components/ui/Card'
+import { submitContact } from '@/public/actions/contact'
 import {
   contactSchema,
   type ContactInput,
   type ContactActionResult,
-} from '@/lib/validations/contact'
-import { cn } from '@/lib/utils'
+} from '@/public/lib/validations/contact'
+import { cn } from '@/shared/lib/utils'
 
 const formStyles = tv({
   slots: {

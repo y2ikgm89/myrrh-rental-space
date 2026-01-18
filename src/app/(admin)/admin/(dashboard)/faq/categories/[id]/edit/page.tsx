@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
-import { getFaqCategoryById } from '@/actions/admin/faq'
+import { getFaqCategoryById } from '@/admin/actions/faq'
 import { FaqCategoryForm } from '../../../_components/FaqCategoryForm'
 
 export const metadata: Metadata = {

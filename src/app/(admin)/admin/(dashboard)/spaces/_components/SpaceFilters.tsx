@@ -9,7 +9,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/admin/ui'
+} from '@/admin/components/ui'
 
 export function SpaceFilters() {
   const router = useRouter()

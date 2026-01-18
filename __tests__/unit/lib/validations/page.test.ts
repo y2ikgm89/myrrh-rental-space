@@ -14,7 +14,7 @@ import {
   canDeletePage,
   SYSTEM_PAGES,
   SYSTEM_PAGE_SLUGS,
-} from '@/lib/validations/page'
+} from '@/shared/lib/validations/page'
 
 // 有効なSEO更新データ
 const VALID_SEO_INPUT = {

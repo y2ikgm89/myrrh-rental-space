@@ -15,7 +15,7 @@ import {
   getTermsForSpaceSchema,
   agreeToTermsSchema,
   TERMS_TYPES,
-} from '@/lib/validations/terms'
+} from '@/shared/lib/validations/terms'
 
 // 有効な規約作成データ
 const VALID_CREATE_TERMS = {

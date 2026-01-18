@@ -1,10 +1,12 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { connection } from 'next/server'
-import { getSpaceById } from '@/actions/admin/space'
-import { getActiveTermsForSelect } from '@/actions/admin/terms'
+import { getSpaceById } from '@/admin/actions/space'
+import { getActiveTermsForSelect } from '@/admin/actions/terms'
+import { getPublishedLocations } from '@/admin/actions/location'
+import { getActiveSpaceCategories } from '@/admin/actions/space-category'
 import { SpaceForm } from '../../_components/SpaceForm'
-import { Button } from '@/components/admin/ui'
+import { Button } from '@/admin/components/ui'
 import type { Metadata } from 'next'
 
 type Params = Promise<{ id: string }>
@@ -31,14 +33,19 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function EditSpacePage({ params }: PageProps) {
   await connection()
   const { id } = await params
-  const [space, availableTerms] = await Promise.all([
+  const [space, availableTerms, locationsResult, categoriesResult] = await Promise.all([
     getSpaceById(id),
     getActiveTermsForSelect(),
+    getPublishedLocations(),
+    getActiveSpaceCategories(),
   ])
 
   if (!space) {
     notFound()
   }
+
+  const availableLocations = locationsResult.success ? locationsResult.data : []
+  const availableCategories = categoriesResult.success ? categoriesResult.data : []
 
   return (
     <div className="space-y-6">
@@ -54,7 +61,13 @@ export default async function EditSpacePage({ params }: PageProps) {
       </div>
 
       {/* フォーム */}
-      <SpaceForm space={space} mode="edit" availableTerms={availableTerms} />
+      <SpaceForm
+        space={space}
+        mode="edit"
+        availableTerms={availableTerms}
+        availableLocations={availableLocations}
+        availableCategories={availableCategories}
+      />
     </div>
   )
 }

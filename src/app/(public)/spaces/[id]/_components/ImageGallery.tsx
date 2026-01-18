@@ -9,7 +9,7 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import { tv } from 'tailwind-variants'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/lib/utils'
 import type { ReactElement } from 'react'
 
 const styles = tv({

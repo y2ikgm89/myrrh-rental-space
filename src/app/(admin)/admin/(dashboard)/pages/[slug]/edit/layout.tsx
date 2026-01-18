@@ -6,7 +6,7 @@
  */
 
 import type { ReactElement, ReactNode } from 'react'
-import { Z_INDEX } from '@/lib/styles/z-index'
+import { Z_INDEX } from '@/admin/lib/styles/z-index'
 
 export default function PageEditorLayout({
   children,

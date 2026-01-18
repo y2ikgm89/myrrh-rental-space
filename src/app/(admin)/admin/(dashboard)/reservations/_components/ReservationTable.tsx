@@ -7,10 +7,10 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/admin/ui'
-import { ReservationStatusBadge } from '@/components/admin/status-badges'
+} from '@/admin/components/ui'
+import { ReservationStatusBadge } from '@/admin/components/status-badges'
 import { ReservationStatusSelect } from './ReservationStatusSelect'
-import type { ReservationWithRelations } from '@/actions/admin/reservation'
+import type { ReservationWithRelations } from '@/admin/actions/reservation'
 
 // =============================================================================
 // Types

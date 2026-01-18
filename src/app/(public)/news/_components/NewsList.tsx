@@ -6,7 +6,7 @@
 
 import { tv } from 'tailwind-variants'
 import { NewsCard } from './NewsCard'
-import type { News } from '@/generated/prisma/client/client'
+import type { News } from '@/shared/generated/prisma/client'
 import type { ReactElement } from 'react'
 
 const styles = tv({

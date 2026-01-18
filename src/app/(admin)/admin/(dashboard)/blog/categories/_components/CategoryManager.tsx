@@ -41,17 +41,17 @@ import {
   arrayMove,
   CSS,
   type DragEndEvent,
-} from '@/components/admin/ui'
-import { DragHandle } from '@/components/admin/ui/sortable'
+} from '@/admin/components/ui'
+import { DragHandle } from '@/admin/components/ui/sortable'
 import {
   getBlogCategories,
   createBlogCategory,
   updateBlogCategory,
   deleteBlogCategory,
   updateBlogCategoryOrder,
-} from '@/actions/admin/blog'
-import type { BlogCategoryData, BlogCategoryInput } from '@/actions/admin/blog'
-import { cn } from '@/lib/utils'
+} from '@/admin/actions/blog'
+import type { BlogCategoryData, BlogCategoryInput } from '@/admin/actions/blog'
+import { cn } from '@/shared/lib/utils'
 
 // =============================================================================
 // Types & Schema

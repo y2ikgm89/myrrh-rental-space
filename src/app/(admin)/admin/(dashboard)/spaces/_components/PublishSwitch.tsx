@@ -3,8 +3,8 @@
 import { useRouter } from 'next/navigation'
 import { useTransition } from 'react'
 import { toast } from 'sonner'
-import { Switch } from '@/components/admin/ui'
-import { updateSpacePublish } from '@/actions/admin/space'
+import { Switch } from '@/admin/components/ui'
+import { updateSpacePublish } from '@/admin/actions/space'
 
 type PublishSwitchProps = {
   spaceId: string

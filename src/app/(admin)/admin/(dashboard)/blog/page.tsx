@@ -1,10 +1,10 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { getBlogPosts, getBlogCategories } from '@/actions/admin/blog'
+import { getBlogPosts, getBlogCategories } from '@/admin/actions/blog'
 import { BlogFilters } from './_components/BlogFilters'
 import { BlogTable } from './_components/BlogTable'
-import { Button, Pagination } from '@/components/admin/ui'
-import { parseBlogPostStatusFilter } from '@/lib/validations/enums'
+import { Button, Pagination } from '@/admin/components/ui'
+import { parseBlogPostStatusFilter } from '@/shared/lib/validations/enums'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {

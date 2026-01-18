@@ -1,11 +1,11 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { Calendar } from 'lucide-react'
-import { getReservations } from '@/actions/admin/reservation'
+import { Calendar, Plus } from 'lucide-react'
+import { getReservations } from '@/admin/actions/reservation'
 import { ReservationFilters } from './_components/ReservationFilters'
 import { ReservationTable } from './_components/ReservationTable'
-import { Pagination, Button } from '@/components/admin/ui'
-import { parseReservationStatusFilter } from '@/lib/validations/enums'
+import { Pagination, Button } from '@/admin/components/ui'
+import { parseReservationStatusFilter } from '@/shared/lib/validations/enums'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -56,12 +56,20 @@ export default async function ReservationsPage({ searchParams }: PageProps) {
             予約の確認・ステータス変更・キャンセル処理を行います
           </p>
         </div>
-        <Button variant="outline" asChild>
-          <Link href="/admin/reservations/calendar">
-            <Calendar className="mr-2 h-4 w-4" />
-            カレンダー表示
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild>
+            <Link href="/admin/reservations/new">
+              <Plus className="mr-2 h-4 w-4" />
+              新規予約
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/admin/reservations/calendar">
+              <Calendar className="mr-2 h-4 w-4" />
+              カレンダー表示
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* フィルター */}

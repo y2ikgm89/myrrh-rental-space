@@ -8,8 +8,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/admin/ui'
-import { formatDateLabel } from '@/lib/calendar'
+} from '@/admin/components/ui'
+import { formatDateLabel } from '@/admin/lib/calendar'
 import type { CalendarState } from './hooks'
 
 interface CalendarToolbarProps {

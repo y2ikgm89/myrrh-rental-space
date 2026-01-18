@@ -8,7 +8,7 @@
 
 import { useState, useRef, useEffect, type ReactElement } from 'react'
 import { Copy, Check, RefreshCw } from 'lucide-react'
-import { loginTokenResponseSchema } from '@/lib/validations/auth'
+import { loginTokenResponseSchema } from '@/admin/lib/validations/auth'
 
 export function LoginTokenGenerator(): ReactElement {
   const [loginUrl, setLoginUrl] = useState<string | null>(null)

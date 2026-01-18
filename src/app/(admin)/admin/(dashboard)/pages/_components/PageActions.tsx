@@ -17,14 +17,14 @@ import {
   ExternalLink,
   Loader2,
 } from 'lucide-react'
-import { Button } from '@/components/admin/ui'
+import { Button } from '@/admin/components/ui'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/admin/ui/dropdown-menu'
+} from '@/admin/components/ui/dropdown-menu'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,8 +34,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/admin/ui/alert-dialog'
-import { deletePage, togglePagePublished } from '@/actions/admin/page'
+} from '@/admin/components/ui/alert-dialog'
+import { deletePage, togglePagePublished } from '@/admin/actions/page'
 
 type PageActionsProps = {
   slug: string

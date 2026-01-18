@@ -9,8 +9,8 @@ import {
   SelectTrigger,
   SelectValue,
   Input,
-} from '@/components/admin/ui'
-import type { BlogCategoryData } from '@/actions/admin/blog'
+} from '@/admin/components/ui'
+import type { BlogCategoryData } from '@/admin/actions/blog'
 
 type BlogFiltersProps = {
   categories: BlogCategoryData[]

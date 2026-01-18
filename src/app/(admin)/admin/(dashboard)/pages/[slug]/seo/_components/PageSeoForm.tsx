@@ -23,14 +23,14 @@ import {
   Input,
   Textarea,
   Label,
-} from '@/components/admin/ui'
-import { useSingleMediaPicker } from '@/hooks/use-media-picker'
+} from '@/admin/components/ui'
+import { useSingleMediaPicker } from '@/admin/hooks/use-media-picker'
 import {
   updatePageSeoSchema,
   type UpdatePageSeoInput,
   type PageData,
-} from '@/lib/validations/page'
-import { updatePageSeo } from '@/actions/admin/page'
+} from '@/admin/lib/validations/page'
+import { updatePageSeo } from '@/admin/actions/page'
 
 interface PageSeoFormProps {
   page: PageData

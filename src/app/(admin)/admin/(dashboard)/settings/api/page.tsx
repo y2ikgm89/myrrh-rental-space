@@ -12,8 +12,8 @@ import {
   getTurnstileConfig,
   getGoogleMapsConfig,
   getCustomApiKeys,
-} from '@/actions/admin/api-keys'
-import { getSettings } from '@/actions/admin/settings'
+} from '@/admin/actions/api-keys'
+import { getSettings } from '@/admin/actions/settings'
 import { SettingsLayout } from '../_components/SettingsLayout'
 import { SettingsTabs } from '../_components/SettingsTabs'
 import {

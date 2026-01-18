@@ -39,26 +39,26 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
-} from '@/components/admin/ui'
+} from '@/admin/components/ui'
 import {
   getAnnouncementBars,
   createAnnouncementBar,
   updateAnnouncementBar,
   deleteAnnouncementBar,
   toggleAnnouncementBarActive,
-} from '@/actions/admin/announcement-bar'
-import type { AnnouncementBarData, AnnouncementBarInput } from '@/actions/admin/announcement-bar'
+} from '@/admin/actions/announcement-bar'
+import type { AnnouncementBarData, AnnouncementBarInput } from '@/admin/actions/announcement-bar'
 import {
   updateAnnouncementBarCarouselSettings,
   type AnnouncementBarCarouselSettingsInput,
-} from '@/actions/admin/settings'
-import { cn } from '@/lib/utils'
+} from '@/admin/actions/settings'
+import { cn } from '@/shared/lib/utils'
 import {
   TYPE_STYLES,
   getStripedStyle,
   type DesignStyle,
   type AnimationType,
-} from '@/lib/announcement-bar-utils'
+} from '@/public/lib/announcement-bar-utils'
 
 // =============================================================================
 // Constants

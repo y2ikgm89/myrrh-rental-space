@@ -5,8 +5,8 @@
  */
 
 import { tv } from 'tailwind-variants'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/site/ui'
-import { ContentRenderer } from '@/components/site/ContentRenderer'
+import { Card, CardContent, CardHeader, CardTitle } from '@/public/components/ui'
+import { ContentRenderer } from '@/public/components/ContentRenderer'
 import type { ReactElement } from 'react'
 
 const styles = tv({
@@ -25,6 +25,19 @@ const styles = tv({
   },
 })()
 
+interface LocationInfo {
+  id: string
+  name: string
+  address: string
+}
+
+interface CategoryInfo {
+  id: string
+  name: string
+  icon: string | null
+  color: string | null
+}
+
 interface SpaceInfoProps {
   name: string
   description: string
@@ -33,6 +46,8 @@ interface SpaceInfoProps {
   capacity: number
   area: number | null
   facilities: string[]
+  location?: LocationInfo | null
+  category?: CategoryInfo | null
 }
 
 export async function SpaceInfo({
@@ -43,12 +58,29 @@ export async function SpaceInfo({
   capacity,
   area,
   facilities,
+  location,
+  category,
 }: SpaceInfoProps): Promise<ReactElement> {
   return (
     <div className={styles.section()}>
       {/* タイトルと説明 */}
       <div>
         <h1 className={styles.title()}>{name}</h1>
+        {/* カテゴリータグ */}
+        {category && (
+          <div className="mt-2">
+            <span
+              className="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium"
+              style={{
+                backgroundColor: category.color ? `${category.color}20` : undefined,
+                color: category.color || undefined,
+              }}
+            >
+              {category.icon && <span className="mr-1">{category.icon}</span>}
+              {category.name}
+            </span>
+          </div>
+        )}
         <div className="mt-4">
           <ContentRenderer html={description} />
         </div>
@@ -61,6 +93,29 @@ export async function SpaceInfo({
         </CardHeader>
         <CardContent>
           <div className={styles.infoGrid()}>
+            {/* 場所（建物・施設） */}
+            {location && (
+              <div className={styles.infoItem()}>
+                <svg
+                  className={styles.infoIcon()}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008Zm0 3h.008v.008h-.008v-.008Zm0 3h.008v.008h-.008v-.008Z"
+                  />
+                </svg>
+                <div>
+                  <p className={styles.infoLabel()}>施設</p>
+                  <p className={styles.infoValue()}>{location.name}</p>
+                </div>
+              </div>
+            )}
+
             {/* 住所 */}
             <div className={styles.infoItem()}>
               <svg

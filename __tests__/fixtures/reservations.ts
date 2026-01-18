@@ -2,7 +2,7 @@
  * 予約テストデータ
  */
 
-import { ReservationStatus, CustomerStatus } from '@/generated/prisma/client/enums'
+import { ReservationStatus, CustomerStatus } from '@/shared/generated/prisma/enums'
 
 export interface TestSpace {
   id: string

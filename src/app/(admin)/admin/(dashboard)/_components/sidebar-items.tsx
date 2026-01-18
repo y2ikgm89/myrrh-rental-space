@@ -18,7 +18,7 @@ import {
   Settings,
   Image as ImageIcon,
 } from 'lucide-react'
-import type { SidebarItem } from '@/types/admin-layout'
+import type { SidebarItem } from '@/admin/types/admin-layout'
 
 export const SIDEBAR_ITEMS: SidebarItem[] = [
   // ダッシュボード

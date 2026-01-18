@@ -1,10 +1,10 @@
 import type { Metadata } from 'next'
 import type { ReactElement } from 'react'
 import { connection } from 'next/server'
-import { Container } from '@/components/site/ui/Container'
+import { Container } from '@/public/components/ui/Container'
 import { ContactForm } from './_components/ContactForm'
-import { getPublicSettings } from '@/actions/public/settings'
-import { generatePageMetadata } from '@/lib/page-metadata'
+import { getPublicSettings } from '@/public/actions/settings'
+import { generatePageMetadata } from '@/public/lib/page-metadata'
 
 export async function generateMetadata(): Promise<Metadata> {
   return generatePageMetadata('contact', {

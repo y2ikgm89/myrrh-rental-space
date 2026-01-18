@@ -18,11 +18,11 @@ import {
   CardTitle,
   Input,
   Label,
-} from '@/components/admin/ui'
-import { Switch } from '@/components/admin/ui/switch'
-import { updateSidebarSettings } from '@/actions/admin/settings'
-import type { SettingsData } from '@/actions/admin/settings'
-import type { SidebarWidgets } from '@/lib/validations/sidebar'
+} from '@/admin/components/ui'
+import { Switch } from '@/admin/components/ui/switch'
+import { updateSidebarSettings } from '@/admin/actions/settings'
+import type { SettingsData } from '@/admin/actions/settings'
+import type { SidebarWidgets } from '@/admin/lib/validations/sidebar'
 
 // =============================================================================
 // Types

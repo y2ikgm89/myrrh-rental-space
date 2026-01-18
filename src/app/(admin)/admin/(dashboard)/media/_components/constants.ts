@@ -2,7 +2,7 @@
  * メディア管理 - 共通定数
  */
 
-import { MediaType, MediaUsage } from '@/lib/validations/media'
+import { MediaType, MediaUsage } from '@/admin/lib/validations/media'
 
 // =============================================================================
 // Type-safe option types

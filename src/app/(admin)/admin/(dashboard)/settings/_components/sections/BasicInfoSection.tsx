@@ -17,9 +17,9 @@ import {
   Input,
   Label,
   Textarea,
-} from '@/components/admin/ui'
-import { updateBasicInfo } from '@/actions/admin/settings'
-import type { SettingsData } from '@/actions/admin/settings'
+} from '@/admin/components/ui'
+import { updateBasicInfo } from '@/admin/actions/settings'
+import type { SettingsData } from '@/admin/actions/settings'
 import { useRefreshOnSuccess } from '../hooks'
 
 interface BasicInfoSectionProps {

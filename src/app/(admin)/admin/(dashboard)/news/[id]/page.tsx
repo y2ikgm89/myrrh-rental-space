@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { getNewsById } from '@/actions/admin/news'
+import { getNewsById } from '@/admin/actions/news'
 import { NewsInlineEditor } from '../_components/NewsInlineEditor'
 import type { Metadata } from 'next'
 

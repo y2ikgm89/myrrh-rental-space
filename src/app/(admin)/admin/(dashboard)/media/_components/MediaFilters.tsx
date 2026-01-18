@@ -7,7 +7,7 @@
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Search, Grid, List, Upload } from 'lucide-react'
-import { Button } from '@/components/admin/ui'
+import { Button } from '@/admin/components/ui'
 import { MediaUploadDialog } from './MediaUploadDialog'
 import { TYPE_OPTIONS, USAGE_FILTER_OPTIONS } from './constants'
 

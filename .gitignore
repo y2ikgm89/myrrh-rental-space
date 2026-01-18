@@ -83,7 +83,7 @@ playwright-report/
 playwright/.cache/
 pnpm-debug.log*
 prisma/migrations/*.sql
-src/generated/
+src/shared/generated/
 test-results/
 yarn-debug.log*
 yarn-debug.log*

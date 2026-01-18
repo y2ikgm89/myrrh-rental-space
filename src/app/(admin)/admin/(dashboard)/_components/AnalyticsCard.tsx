@@ -5,9 +5,9 @@
  * Server Componentとして動作
  */
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/admin/ui/card'
-import { getAnalyticsStats, isAnalyticsApiAvailable } from '@/lib/analytics/ga-data-api'
-import { getAnalyticsConfig } from '@/lib/analytics/config'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/admin/components/ui/card'
+import { getAnalyticsStats, isAnalyticsApiAvailable } from '@/public/lib/analytics/ga-data-api'
+import { getAnalyticsConfig } from '@/public/lib/analytics/config'
 import Link from 'next/link'
 
 /**

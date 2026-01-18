@@ -6,7 +6,7 @@
 
 import { useTransition } from 'react'
 import { toast } from 'sonner'
-import { deleteMedia, type MediaData } from '@/actions/admin/media'
+import { deleteMedia, type MediaData } from '@/admin/actions/media'
 
 /**
  * URLコピー機能

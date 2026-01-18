@@ -10,8 +10,8 @@
 
 import { NextResponse, type NextRequest } from 'next/server'
 import { getSessionCookie } from 'better-auth/cookies'
-import { prisma } from '@/lib/prisma'
-import { loginTokenSchema } from '@/lib/validations/auth'
+import { prisma } from '@/shared/lib/prisma'
+import { loginTokenSchema } from '@/admin/lib/validations/auth'
 
 // 環境変数の検証（起動時にチェック）
 const ADMIN_LOGIN_TOKEN: string = (() => {

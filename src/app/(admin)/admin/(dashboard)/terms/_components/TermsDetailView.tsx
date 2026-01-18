@@ -29,15 +29,15 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
-} from '@/components/admin/ui'
+} from '@/admin/components/ui'
 import { TermsForm } from './TermsForm'
 import { TermsVersionForm } from './TermsVersionForm'
 import {
   publishTermsVersion,
   archiveTermsVersion,
   deleteTermsVersion,
-} from '@/actions/admin/terms'
-import type { TermsDetail } from '@/lib/validations/terms'
+} from '@/admin/actions/terms'
+import type { TermsDetail } from '@/shared/lib/validations/terms'
 
 interface TermsDetailViewProps {
   terms: TermsDetail

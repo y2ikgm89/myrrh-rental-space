@@ -9,8 +9,8 @@
 
 import { Menu } from 'lucide-react'
 import Link from 'next/link'
-import { useAdminLayout } from '@/contexts/admin-layout-context'
-import { Button } from '@/components/admin/ui'
+import { useAdminLayout } from '@/admin/contexts/admin-layout-context'
+import { Button } from '@/admin/components/ui'
 import { LogoutButton } from './LogoutButton'
 
 type TopBarProps = {

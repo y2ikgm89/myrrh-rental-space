@@ -1,8 +1,8 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { getTermsList } from '@/actions/admin/terms'
+import { getTermsList } from '@/admin/actions/terms'
 import { TermsList } from './_components/TermsList'
-import { Button } from '@/components/admin/ui'
+import { Button } from '@/admin/components/ui'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {

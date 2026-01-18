@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { getSpaceById } from '@/actions/admin/space'
+import { getSpaceById } from '@/admin/actions/space'
 import { SpaceDetail } from './_components/SpaceDetail'
-import { Button } from '@/components/admin/ui'
+import { Button } from '@/admin/components/ui'
 import type { Metadata } from 'next'
 
 type Params = Promise<{ id: string }>

@@ -22,18 +22,18 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/admin/ui'
-import { ReservationStatusBadge } from '@/components/admin/status-badges'
+} from '@/admin/components/ui'
+import { ReservationStatusBadge } from '@/admin/components/status-badges'
 import {
   updateReservationStatus,
   updateReservationNotes,
   deleteReservation,
-} from '@/actions/admin/reservation'
-import type { ReservationWithRelations } from '@/actions/admin/reservation'
+} from '@/admin/actions/reservation'
+import type { ReservationWithRelations } from '@/admin/actions/reservation'
 import {
   isValidReservationStatus,
   type ReservationStatus,
-} from '@/lib/validations/enums'
+} from '@/shared/lib/validations/enums'
 
 type ReservationDetailProps = {
   reservation: ReservationWithRelations

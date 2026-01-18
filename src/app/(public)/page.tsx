@@ -9,10 +9,10 @@
 
 import type { Metadata } from 'next'
 import { connection } from 'next/server'
-import { HomepageSections } from '@/components/site/sections'
-import { WebSiteJsonLd } from '@/components/seo/JsonLd'
-import { generateHomeMetadata, getWebSiteJsonLdData } from '@/lib/seo'
-import { getPublicHomepageSections } from '@/actions/admin/homepage-settings'
+import { HomepageSections } from '@/public/components/sections'
+import { WebSiteJsonLd } from '@/public/components/seo/JsonLd'
+import { generateHomeMetadata, getWebSiteJsonLdData } from '@/public/lib/seo'
+import { getPublicHomepageSections } from '@/public/actions/homepage'
 import type { ReactElement } from 'react'
 
 /**

@@ -16,13 +16,13 @@ import {
   CardTitle,
   Input,
   Label,
-} from '@/components/admin/ui'
+} from '@/admin/components/ui'
 import {
   updateResendSettings,
   testResendConnectionAction,
   clearResendKeys,
-} from '@/actions/admin/api-keys'
-import type { ResendConfig } from '@/types/api-keys'
+} from '@/admin/actions/api-keys'
+import type { ResendConfig } from '@/admin/types/api-keys'
 import { StatusBanner } from '../shared'
 import { useRefreshOnSuccess } from '../hooks'
 

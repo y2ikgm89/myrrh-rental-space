@@ -3,14 +3,14 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Button } from '@/components/admin/ui/button'
+import { Button } from '@/admin/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/admin/ui/dropdown-menu'
+} from '@/admin/components/ui/dropdown-menu'
 import {
   Dialog,
   DialogContent,
@@ -18,9 +18,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/admin/ui/dialog'
-import { deleteUser, updateUserRole, type UserData } from '@/actions/admin/user'
-import { Role } from '@/generated/prisma/client/enums'
+} from '@/admin/components/ui/dialog'
+import { deleteUser, updateUserRole, type UserData } from '@/admin/actions/user'
+import { Role } from '@/shared/generated/prisma/enums'
 import Link from 'next/link'
 
 type Props = {

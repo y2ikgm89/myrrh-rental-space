@@ -1,4 +1,4 @@
-import { getBlogCategories } from '@/actions/admin/blog'
+import { getBlogCategories } from '@/admin/actions/blog'
 import { CategoryManager } from './_components/CategoryManager'
 
 export default async function BlogCategoriesPage() {

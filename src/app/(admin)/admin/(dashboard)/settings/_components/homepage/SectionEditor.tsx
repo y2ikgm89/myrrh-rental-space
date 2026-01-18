@@ -23,13 +23,13 @@ import {
   Label,
   Switch,
   Textarea,
-} from '@/components/admin/ui'
+} from '@/admin/components/ui'
 import { ArrowLeft, Save, ImagePlus } from 'lucide-react'
-import { useSingleMediaPicker } from '@/hooks/use-media-picker'
+import { useSingleMediaPicker } from '@/admin/hooks/use-media-picker'
 import {
   updateHomepageSection,
   type HomepageSectionData,
-} from '@/actions/admin/homepage-settings'
+} from '@/admin/actions/homepage-settings'
 import {
   HomepageSectionType,
   sectionTypeLabels,
@@ -59,12 +59,12 @@ import {
   type NewsConfigInput,
   type BlogConfigInput,
   type FaqConfigInput,
-} from '@/lib/validations/homepage-section'
+} from '@/admin/lib/validations/homepage-section'
 import dynamic from 'next/dynamic'
-import { EDITOR_PROSE_CLASSES } from '@/lib/styles/prose'
+import { EDITOR_PROSE_CLASSES } from '@/shared/lib/styles/prose'
 
 const LexicalEditor = dynamic(
-  () => import('@/components/admin/editor/lexical/LexicalEditor').then((mod) => ({ default: mod.LexicalEditor })),
+  () => import('@/admin/components/editor/lexical/LexicalEditor').then((mod) => ({ default: mod.LexicalEditor })),
   {
     ssr: false,
     loading: () => (

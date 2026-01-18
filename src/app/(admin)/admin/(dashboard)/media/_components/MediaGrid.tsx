@@ -6,12 +6,12 @@
 
 import { useState } from 'react'
 import { Check, Copy, Trash2, Eye, FileText, Film, File } from 'lucide-react'
-import type { MediaData } from '@/actions/admin/media'
+import type { MediaData } from '@/admin/actions/media'
 import { MediaDetailDialog } from './MediaDetailDialog'
-import { formatBytes } from '@/lib/utils'
+import { formatBytes } from '@/admin/lib/utils'
 import { TYPE_CONFIG } from './constants'
 import { useCopyUrl, useDeleteMedia } from './hooks'
-import { isValidMediaType, MediaType } from '@/lib/validations/media'
+import { isValidMediaType, MediaType } from '@/admin/lib/validations/media'
 
 type Props = {
   items: MediaData[]

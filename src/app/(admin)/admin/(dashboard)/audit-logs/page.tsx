@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
-import { loadAdminAuditLogSearchParams } from '@/lib/nuqs'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/admin/ui/card'
-import { Badge } from '@/components/admin/ui/badge'
+import { loadAdminAuditLogSearchParams } from '@/shared/lib/nuqs'
+import { Card, CardContent, CardHeader, CardTitle } from '@/admin/components/ui/card'
+import { Badge } from '@/admin/components/ui/badge'
 import {
   Table,
   TableBody,
@@ -9,12 +9,12 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/admin/ui/table'
-import { Pagination } from '@/components/admin/ui'
-import { getAuditLogs, getAuditLogStats } from '@/actions/admin/audit-log'
+} from '@/admin/components/ui/table'
+import { Pagination } from '@/admin/components/ui'
+import { getAuditLogs, getAuditLogStats } from '@/admin/actions/audit-log'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { AuditAction, getAuditActionFilterOrAll } from '@/lib/validations/enums'
+import { AuditAction, getAuditActionFilterOrAll } from '@/shared/lib/validations/enums'
 import { AuditLogFilters } from './_components/AuditLogFilters'
 
 export const metadata = {

@@ -2,16 +2,16 @@
  * メディアリストラッパー（Server Component）
  */
 
-import { getMediaList } from '@/actions/admin/media'
+import { getMediaList } from '@/admin/actions/media'
 import { MediaGrid } from './MediaGrid'
 import { MediaTable } from './MediaTable'
-import { Pagination } from '@/components/admin/ui'
+import { Pagination } from '@/admin/components/ui'
 import {
   parseMediaTypeFilter,
   parseMediaUsageFilter,
   type MediaFilters,
   type MediaPagination,
-} from '@/lib/validations/media'
+} from '@/admin/lib/validations/media'
 
 type Props = {
   searchParams: {

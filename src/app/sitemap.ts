@@ -5,8 +5,8 @@
  */
 
 import type { MetadataRoute } from 'next'
-import { prisma } from '@/lib/prisma'
-import { BlogPostStatus, NewsStatus } from '@/generated/prisma/client/enums'
+import { prisma } from '@/shared/lib/prisma'
+import { BlogPostStatus, NewsStatus } from '@/shared/generated/prisma/enums'
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://example.com'
 

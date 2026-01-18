@@ -1,10 +1,10 @@
 import { Suspense } from 'react'
-import { getUsers, getUserStats } from '@/actions/admin/user'
-import { loadAdminUserSearchParams } from '@/lib/nuqs'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/admin/ui/card'
-import { Button } from '@/components/admin/ui/button'
-import { Input } from '@/components/admin/ui/input'
-import { Badge } from '@/components/admin/ui/badge'
+import { getUsers, getUserStats } from '@/admin/actions/user'
+import { loadAdminUserSearchParams } from '@/shared/lib/nuqs'
+import { Card, CardContent, CardHeader, CardTitle } from '@/admin/components/ui/card'
+import { Button } from '@/admin/components/ui/button'
+import { Input } from '@/admin/components/ui/input'
+import { Badge } from '@/admin/components/ui/badge'
 import {
   Table,
   TableBody,
@@ -12,20 +12,20 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/admin/ui/table'
+} from '@/admin/components/ui/table'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/admin/ui/select'
+} from '@/admin/components/ui/select'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { Role, getRoleFilterOrAll } from '@/lib/validations/enums'
+import { Role, getRoleFilterOrAll } from '@/shared/lib/validations/enums'
 import { UserActions } from './_components/UserActions'
-import { Pagination } from '@/components/admin/ui'
+import { Pagination } from '@/admin/components/ui'
 // URLパラメータのバリデーション用型
 type SortBy = 'name' | 'email' | 'role' | 'createdAt'
 type SortOrder = 'asc' | 'desc'

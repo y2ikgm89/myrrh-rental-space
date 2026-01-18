@@ -8,11 +8,11 @@
  */
 
 import { useState, useTransition, useRef } from 'react'
-import { useSession } from '@/lib/auth-client'
+import { useSession } from '@/shared/lib/auth-client'
 import { Send, Loader2 } from 'lucide-react'
-import { Turnstile } from '@/components/Turnstile'
-import { createComment } from '@/actions/blog-comment'
-import { cn, getFormString, getFormStringOrNull } from '@/lib/utils'
+import { Turnstile } from '@/public/components/Turnstile'
+import { createComment } from '@/public/actions/blog-comment'
+import { cn, getFormString, getFormStringOrNull } from '@/shared/lib/utils'
 
 type Props = {
   postId: string

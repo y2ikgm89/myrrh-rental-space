@@ -91,16 +91,22 @@ Next.js 16 / React 19 / TypeScript 5.9 / Bun 1.3 / Prisma 7 / PostgreSQL (Supaba
 
 ### 構造
 
+**管理/公開/共有 完全分離アーキテクチャ** (Plan 042)
+
 | パス | 用途 |
 |------|------|
-| `src/app/(public)/` | 公開ページ |
-| `src/app/admin/` | 管理画面 |
+| `src/admin/` | 管理画面専用（components, actions, hooks, contexts, lib, types） |
+| `src/public/` | 公開ページ専用（components, actions, emails, lib, types） |
+| `src/shared/` | 共有（prisma, auth, utils, email, storage など） |
+| `src/app/(public)/` | 公開ページルート |
+| `src/app/(admin)/admin/` | 管理画面ルート |
 | `src/app/api/` | API Routes |
-| `src/components/` | UI |
-| `src/actions/` | Server Actions |
-| `src/lib/` | Prisma, Auth, utils |
-| `src/types/` | 型定義 |
 | `docs/requirements/` | 機能要件（機能単位） |
 | `docs/architecture/` | アーキテクチャ（設計判断・構成図） |
 | `docs/plans/` | 実装計画（README.md=履歴、NNN-title.md=詳細） |
 | `.claude/plans/` | Claude Code内部一時計画（.gitignore、必ずdocs/plans/へコピー） |
+
+**パスエイリアス**:
+- `@/admin/*` → `src/admin/*`
+- `@/public/*` → `src/public/*`
+- `@/shared/*` → `src/shared/*`

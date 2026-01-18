@@ -6,8 +6,8 @@
  */
 
 import { describe, test, expect, beforeEach, mock, spyOn } from 'bun:test'
-import { Role, AuditAction } from '@/generated/prisma/client/enums'
-import type { User } from '@/lib/auth'
+import { Role, AuditAction } from '@/shared/generated/prisma/enums'
+import type { User } from '@/shared/lib/auth'
 import {
   SUPER_ADMIN_USER,
   ADMIN_USER,
@@ -26,17 +26,17 @@ const mockLogUserAction = mock(() => Promise.resolve())
 const mockLogPermissionDenied = mock(() => Promise.resolve())
 
 // モジュールモック
-mock.module('@/lib/auth', () => ({
+mock.module('@/shared/lib/auth', () => ({
   getSession: mockGetSession,
 }))
 
-mock.module('@/lib/permissions', () => ({
+mock.module('@/admin/lib/permissions', () => ({
   hasPermission: mockHasPermission,
   userHasResourceAccess: mockUserHasResourceAccess,
   canAccessAdmin: mockCanAccessAdmin,
 }))
 
-mock.module('@/lib/audit', () => ({
+mock.module('@/admin/lib/audit', () => ({
   logUserAction: mockLogUserAction,
   logPermissionDenied: mockLogPermissionDenied,
 }))
@@ -51,7 +51,7 @@ const {
   createFailure,
   isActionSuccess,
   isActionFailure,
-} = await import('@/types/server-actions')
+} = await import('@/admin/types/server-actions')
 
 describe('createSuccess / createFailure', () => {
   test('createSuccess: データなし', () => {

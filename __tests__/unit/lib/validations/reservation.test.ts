@@ -10,7 +10,7 @@ import {
   reservationWithTermsSchema,
   customerInfoSchema,
   reservationDateTimeSchema,
-} from '@/lib/validations/reservation'
+} from '@/public/lib/validations/reservation'
 import {
   VALID_RESERVATION_INPUT,
   VALID_RESERVATION_WITH_TERMS_INPUT,

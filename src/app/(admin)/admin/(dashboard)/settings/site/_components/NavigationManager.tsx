@@ -51,8 +51,8 @@ import {
   arrayMove,
   CSS,
   type DragEndEvent,
-} from '@/components/admin/ui'
-import { DragHandle } from '@/components/admin/ui/sortable'
+} from '@/admin/components/ui'
+import { DragHandle } from '@/admin/components/ui/sortable'
 import {
   getNavigationItems,
   createNavigationItem,
@@ -64,15 +64,15 @@ import {
   updateSocialLink,
   deleteSocialLink,
   updateSocialLinkOrder,
-} from '@/actions/admin/navigation'
+} from '@/admin/actions/navigation'
 import type {
   NavigationItemData,
   NavigationItemInput,
   SocialLinkData,
   SocialLinkInput,
-} from '@/actions/admin/navigation'
-import type { NavigationType, SocialPlatform } from '@/generated/prisma/client/enums'
-import { cn } from '@/lib/utils'
+} from '@/admin/actions/navigation'
+import type { NavigationType, SocialPlatform } from '@/shared/generated/prisma/enums'
+import { cn } from '@/shared/lib/utils'
 
 // =============================================================================
 // Navigation Form Schema

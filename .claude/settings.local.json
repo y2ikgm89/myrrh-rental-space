@@ -44,7 +44,14 @@
       "mcp__plugin_serena_serena__search_for_pattern",
       "mcp__context7__query-docs",
       "Skill(claude-code-harness:setup)",
-      "Skill(claude-code-harness:review)"
+      "Skill(claude-code-harness:review)",
+      "Skill(claude-code-harness:codex-review)",
+      "mcp__codex__codex",
+      "mcp__codex__codex-reply",
+      "Skill(review)",
+      "Skill(claude-code-harness:\\\\core:harness-review)",
+      "mcp__plugin_serena_serena__find_symbol",
+      "Skill(claude-code-harness:impl)"
     ],
     "deny": [
       "Bash(rm:*)",

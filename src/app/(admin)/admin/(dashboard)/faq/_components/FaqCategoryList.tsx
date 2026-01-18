@@ -18,9 +18,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/admin/ui'
-import { deleteFaqCategory, deleteFaqItem, toggleFaqItemActive } from '@/actions/admin/faq'
-import type { FaqCategoryWithItems } from '@/lib/validations/faq'
+} from '@/admin/components/ui'
+import { deleteFaqCategory, deleteFaqItem, toggleFaqItemActive } from '@/admin/actions/faq'
+import type { FaqCategoryWithItems } from '@/admin/lib/validations/faq'
 
 const styles = tv({
   slots: {

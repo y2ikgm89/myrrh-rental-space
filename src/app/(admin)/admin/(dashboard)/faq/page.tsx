@@ -1,8 +1,8 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { getFaqCategories } from '@/actions/admin/faq'
+import { getFaqCategories } from '@/admin/actions/faq'
 import { FaqCategoryList } from './_components/FaqCategoryList'
-import { Button } from '@/components/admin/ui'
+import { Button } from '@/admin/components/ui'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {

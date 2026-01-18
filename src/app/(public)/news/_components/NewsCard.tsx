@@ -6,8 +6,8 @@
 
 import Link from 'next/link'
 import { tv } from 'tailwind-variants'
-import { Card, CardContent } from '@/components/site/ui'
-import type { News } from '@/generated/prisma/client/client'
+import { Card, CardContent } from '@/public/components/ui'
+import type { News } from '@/shared/generated/prisma/client'
 import type { ReactElement } from 'react'
 
 const styles = tv({

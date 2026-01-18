@@ -8,7 +8,7 @@
 import Link from 'next/link'
 import type { LucideIcon } from 'lucide-react'
 import { ChevronRight } from 'lucide-react'
-import { Card, CardHeader, CardTitle, CardDescription } from '@/components/admin/ui/card'
+import { Card, CardHeader, CardTitle, CardDescription } from '@/admin/components/ui/card'
 
 export interface SettingsCardProps {
   title: string

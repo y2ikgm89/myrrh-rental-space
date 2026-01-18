@@ -4,9 +4,10 @@
  * 各種KPIカードを表示
  */
 
-import { getDashboardStats } from '@/actions/admin/dashboard'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/admin/ui/card'
-import { formatCurrency, formatChange, getChangeColor } from '@/lib/utils'
+import { getDashboardStats } from '@/admin/actions/dashboard'
+import { Card, CardContent, CardHeader, CardTitle } from '@/admin/components/ui/card'
+import { formatCurrency } from '@/shared/lib/utils'
+import { formatChange, getChangeColor } from '@/admin/lib/utils'
 
 export async function DashboardStatsSection() {
   const stats = await getDashboardStats()

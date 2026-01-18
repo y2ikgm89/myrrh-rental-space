@@ -20,10 +20,10 @@ import {
   EditorHeader,
   useKeyboardShortcuts,
   useBeforeUnload,
-} from '@/components/admin/editor/inline'
+} from '@/admin/components/editor/inline'
 
 const LexicalEditor = dynamic(
-  () => import('@/components/admin/editor/lexical').then((mod) => ({ default: mod.LexicalEditor })),
+  () => import('@/admin/components/editor/lexical').then((mod) => ({ default: mod.LexicalEditor })),
   {
     ssr: false,
     loading: () => (
@@ -33,16 +33,16 @@ const LexicalEditor = dynamic(
     ),
   }
 )
-import { NewsSidePanel } from '@/components/admin/editor/inline/NewsSidePanel'
+import { NewsSidePanel } from '@/admin/components/editor/inline/NewsSidePanel'
 import {
   createNews,
   updateNews,
   deleteNews,
   publishNews,
   unpublishNews,
-} from '@/actions/admin/news'
-import type { NewsData } from '@/actions/admin/news'
-import { NewsStatus } from '@/generated/prisma/client/enums'
+} from '@/admin/actions/news'
+import type { NewsData } from '@/admin/actions/news'
+import { NewsStatus } from '@/shared/generated/prisma/enums'
 import {
   Button,
   Dialog,
@@ -52,8 +52,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/admin/ui'
-import { EDITOR_PROSE_CLASSES } from '@/lib/styles/prose'
+} from '@/admin/components/ui'
+import { EDITOR_PROSE_CLASSES } from '@/shared/lib/styles/prose'
 
 // =============================================================================
 // Schema

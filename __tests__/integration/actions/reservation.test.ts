@@ -11,12 +11,12 @@ import { describe, test, expect, mock, beforeEach } from 'bun:test'
 import {
   reservationSchema,
   reservationWithTermsSchema,
-} from '@/lib/validations/reservation'
+} from '@/public/lib/validations/reservation'
 import {
   extractFieldErrors,
   createValidationError,
   withValidation,
-} from '@/lib/action-helpers'
+} from '@/shared/lib/action-helpers'
 
 // テスト用の未来日付を生成
 const getFutureDate = (daysAhead: number): string => {

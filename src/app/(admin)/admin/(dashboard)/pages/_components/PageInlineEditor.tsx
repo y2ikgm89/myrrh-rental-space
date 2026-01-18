@@ -21,9 +21,9 @@ import {
   SidePanel,
   useKeyboardShortcuts,
   useBeforeUnload,
-} from '@/components/admin/editor/inline'
-import { updatePage } from '@/actions/admin/page'
-import type { PageData } from '@/lib/validations/page'
+} from '@/admin/components/editor/inline'
+import { updatePage } from '@/admin/actions/page'
+import type { PageData } from '@/admin/lib/validations/page'
 
 /**
  * フォーム用スキーマ（Lexicalエディター用）

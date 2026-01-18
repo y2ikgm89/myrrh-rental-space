@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import type { ReactElement, ReactNode } from 'react'
 import { Noto_Sans_JP } from 'next/font/google'
 import { NuqsAdapter } from 'nuqs/adapters/next/app'
-import { getAnalyticsConfig } from '@/lib/analytics/config'
+import { getAnalyticsConfig } from '@/public/lib/analytics/config'
 import './globals.css'
 
 const notoSansJP = Noto_Sans_JP({

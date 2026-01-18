@@ -13,18 +13,18 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import { Plus, Loader2 } from 'lucide-react'
-import { Button } from '@/components/admin/ui'
+import { Button } from '@/admin/components/ui'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/admin/ui/dialog'
-import { Input } from '@/components/admin/ui/input'
-import { Label } from '@/components/admin/ui/label'
-import { Textarea } from '@/components/admin/ui/textarea'
-import { createPage } from '@/actions/admin/page'
+} from '@/admin/components/ui/dialog'
+import { Input } from '@/admin/components/ui/input'
+import { Label } from '@/admin/components/ui/label'
+import { Textarea } from '@/admin/components/ui/textarea'
+import { createPage } from '@/admin/actions/page'
 
 const formSchema = z.object({
   slug: z

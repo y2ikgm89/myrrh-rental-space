@@ -10,9 +10,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/admin/ui'
-import { publishNews, unpublishNews } from '@/actions/admin/news'
-import { NewsStatus } from '@/generated/prisma/client/enums'
+} from '@/admin/components/ui'
+import { publishNews, unpublishNews } from '@/admin/actions/news'
+import { NewsStatus } from '@/shared/generated/prisma/enums'
 
 type NewsActionCellProps = {
   newsId: string

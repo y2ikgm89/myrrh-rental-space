@@ -7,11 +7,11 @@
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import dynamic from 'next/dynamic'
-import { Button, Label } from '@/components/admin/ui'
-import { EDITOR_PROSE_CLASSES } from '@/lib/styles/prose'
+import { Button, Label } from '@/admin/components/ui'
+import { EDITOR_PROSE_CLASSES } from '@/shared/lib/styles/prose'
 
 const LexicalEditor = dynamic(
-  () => import('@/components/admin/editor/lexical/LexicalEditor').then((mod) => ({ default: mod.LexicalEditor })),
+  () => import('@/admin/components/editor/lexical/LexicalEditor').then((mod) => ({ default: mod.LexicalEditor })),
   {
     ssr: false,
     loading: () => (
@@ -24,8 +24,8 @@ const LexicalEditor = dynamic(
 import {
   createTermsVersion,
   updateTermsVersion,
-} from '@/actions/admin/terms'
-import type { TermsVersionDetail } from '@/lib/validations/terms'
+} from '@/admin/actions/terms'
+import type { TermsVersionDetail } from '@/shared/lib/validations/terms'
 
 interface TermsVersionFormProps {
   termsId: string

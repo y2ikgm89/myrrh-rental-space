@@ -8,14 +8,14 @@
  */
 
 import { useState } from 'react'
-import { useSession } from '@/lib/auth-client'
+import { useSession } from '@/shared/lib/auth-client'
 import { formatDistanceToNow } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { MessageCircle, ChevronDown, ChevronUp, Trash2, User } from 'lucide-react'
-import { cn, escapeHtml } from '@/lib/utils'
-import { deleteComment } from '@/actions/blog-comment'
+import { cn, escapeHtml } from '@/shared/lib/utils'
+import { deleteComment } from '@/public/actions/blog-comment'
 import { CommentForm } from './CommentForm'
-import type { CommentData } from '@/lib/validations/comment'
+import type { CommentData } from '@/shared/lib/validations/comment'
 
 type Props = {
   comment: CommentData

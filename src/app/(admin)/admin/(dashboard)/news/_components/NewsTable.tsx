@@ -9,10 +9,10 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/admin/ui'
-import { NewsStatusBadge } from '@/components/admin/status-badges'
+} from '@/admin/components/ui'
+import { NewsStatusBadge } from '@/admin/components/status-badges'
 import { NewsActionCell } from './NewsActionCell'
-import type { NewsData } from '@/actions/admin/news'
+import type { NewsData } from '@/admin/actions/news'
 
 // =============================================================================
 // Types

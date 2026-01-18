@@ -9,8 +9,8 @@
 
 import { describe, test, expect } from 'bun:test'
 import { z } from 'zod'
-import { NewsStatus } from '@/generated/prisma/client/enums'
-import { LayoutWidth } from '@/types/prisma'
+import { NewsStatus } from '@/shared/generated/prisma/enums'
+import { LayoutWidth } from '@/shared/types/prisma'
 
 // news.ts 内で定義されているスキーマを再現
 const createNewsSchema = z.object({

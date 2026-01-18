@@ -5,8 +5,8 @@
  */
 
 import { NextResponse } from 'next/server'
-import { getSession } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { getSession } from '@/shared/lib/auth'
+import { prisma } from '@/shared/lib/prisma'
 import { randomBytes } from 'crypto'
 
 /**

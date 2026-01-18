@@ -9,9 +9,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/admin/ui'
+} from '@/admin/components/ui'
 import { PublishSwitch } from './PublishSwitch'
-import type { SpaceWithStats } from '@/lib/validations/space'
+import type { SpaceWithStats } from '@/admin/lib/validations/space'
 
 // =============================================================================
 // Types

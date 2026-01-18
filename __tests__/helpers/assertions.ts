@@ -10,7 +10,7 @@ import type {
   ActionResult,
   ActionSuccess,
   ActionFailure,
-} from '@/types/server-actions'
+} from '@/admin/types/server-actions'
 
 /**
  * ActionResultが成功であることを検証

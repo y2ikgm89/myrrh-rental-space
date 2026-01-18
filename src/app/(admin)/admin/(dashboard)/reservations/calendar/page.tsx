@@ -4,11 +4,11 @@ import { List } from 'lucide-react'
 import {
   getReservationsForCalendar,
   getSpacesForCalendar,
-} from '@/actions/admin/reservation'
-import { getCalendarDateRange, getValidCalendarView } from '@/lib/calendar'
-import { getReservationStatusFilterOrAll } from '@/lib/validations/enums'
+} from '@/admin/actions/reservation'
+import { getCalendarDateRange, getValidCalendarView } from '@/admin/lib/calendar'
+import { getReservationStatusFilterOrAll } from '@/shared/lib/validations/enums'
 import { CalendarViewWrapper } from '../_components/calendar'
-import { Button } from '@/components/admin/ui'
+import { Button } from '@/admin/components/ui'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {

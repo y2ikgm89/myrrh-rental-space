@@ -12,9 +12,9 @@ import {
   Label,
   Textarea,
   Switch,
-} from '@/components/admin/ui'
-import { updateBusinessHoursSettings } from '@/actions/admin/settings'
-import type { SettingsData, BusinessHours, BusinessHoursDay } from '@/actions/admin/settings'
+} from '@/admin/components/ui'
+import { updateBusinessHoursSettings } from '@/admin/actions/settings'
+import type { SettingsData, BusinessHours, BusinessHoursDay } from '@/admin/actions/settings'
 import { useRefreshOnSuccess } from './hooks'
 
 interface BusinessHoursSectionProps {

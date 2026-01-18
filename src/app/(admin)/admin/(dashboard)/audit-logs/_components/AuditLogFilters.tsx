@@ -1,17 +1,17 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Button } from '@/components/admin/ui/button'
-import { Input } from '@/components/admin/ui/input'
+import { Button } from '@/admin/components/ui/button'
+import { Input } from '@/admin/components/ui/input'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/admin/ui/select'
-import { AuditAction } from '@/generated/prisma/client/enums'
-import { getFormString } from '@/lib/utils'
+} from '@/admin/components/ui/select'
+import { AuditAction } from '@/shared/generated/prisma/enums'
+import { getFormString } from '@/shared/lib/utils'
 
 type Props = {
   action: string

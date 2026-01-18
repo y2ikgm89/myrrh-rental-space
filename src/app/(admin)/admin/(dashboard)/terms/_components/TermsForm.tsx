@@ -21,10 +21,10 @@ import {
   SelectTrigger,
   SelectValue,
   Checkbox,
-} from '@/components/admin/ui'
-import { createTerms, updateTerms } from '@/actions/admin/terms'
-import { TERMS_TYPES, type TermsDetail } from '@/lib/validations/terms'
-import { TermsType } from '@/generated/prisma/client/enums'
+} from '@/admin/components/ui'
+import { createTerms, updateTerms } from '@/admin/actions/terms'
+import { TERMS_TYPES, type TermsDetail } from '@/shared/lib/validations/terms'
+import { TermsType } from '@/shared/generated/prisma/enums'
 
 interface TermsFormProps {
   terms?: TermsDetail

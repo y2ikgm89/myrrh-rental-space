@@ -8,12 +8,12 @@
  */
 
 import { describe, test, expect, mock, beforeEach } from 'bun:test'
-import { contactSchema } from '@/lib/validations/contact'
+import { contactSchema } from '@/public/lib/validations/contact'
 import {
   extractFieldErrors,
   createValidationError,
   withValidation,
-} from '@/lib/action-helpers'
+} from '@/shared/lib/action-helpers'
 
 // 有効なお問い合わせデータ
 const VALID_CONTACT_INPUT = {

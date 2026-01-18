@@ -4,18 +4,18 @@ import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Button } from '@/components/admin/ui/button'
-import { Input } from '@/components/admin/ui/input'
-import { Label } from '@/components/admin/ui/label'
+import { Button } from '@/admin/components/ui/button'
+import { Input } from '@/admin/components/ui/input'
+import { Label } from '@/admin/components/ui/label'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/admin/ui/select'
-import { createUser, updateUser, type UserData } from '@/actions/admin/user'
-import { Role } from '@/generated/prisma/client/enums'
+} from '@/admin/components/ui/select'
+import { createUser, updateUser, type UserData } from '@/admin/actions/user'
+import { Role } from '@/shared/generated/prisma/enums'
 import { useState } from 'react'
 
 // ロールラベル（クライアント用ローカル定義）

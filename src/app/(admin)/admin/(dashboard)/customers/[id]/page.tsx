@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { getCustomerById } from '@/actions/admin/customer'
+import { getCustomerById } from '@/admin/actions/customer'
 import { CustomerDetail } from './_components/CustomerDetail'
 import type { Metadata } from 'next'
 

@@ -8,11 +8,12 @@ import { useState, useTransition, useRef } from 'react'
 import { X, Copy, ExternalLink, Trash2, Save, Loader2, FileText, Film, File } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
-import { updateMedia, deleteMedia, type MediaData } from '@/actions/admin/media'
-import { formatBytes, formatDate } from '@/lib/utils'
-import { Button } from '@/components/admin/ui'
+import { updateMedia, deleteMedia, type MediaData } from '@/admin/actions/media'
+import { formatDate } from '@/shared/lib/utils'
+import { formatBytes } from '@/admin/lib/utils'
+import { Button } from '@/admin/components/ui'
 import { USAGE_OPTIONS } from './constants'
-import { isValidMediaUsage } from '@/lib/validations/media'
+import { isValidMediaUsage } from '@/admin/lib/validations/media'
 
 type Props = {
   item: MediaData | null

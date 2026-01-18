@@ -3,16 +3,16 @@
 import { useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { format } from 'date-fns'
-import type { CalendarView, CalendarEvent, SpaceOption } from '@/lib/calendar'
+import type { CalendarView, CalendarEvent, SpaceOption } from '@/admin/lib/calendar'
 import {
   getCalendarDateRange,
   navigateNext,
   navigatePrevious,
   getEventsForDay,
   getValidCalendarView,
-} from '@/lib/calendar'
-import { getReservationStatusFilterOrAll } from '@/lib/validations/enums'
-import type { ReservationStatus } from '@/generated/prisma/client/enums'
+} from '@/admin/lib/calendar'
+import { getReservationStatusFilterOrAll } from '@/shared/lib/validations/enums'
+import type { ReservationStatus } from '@/shared/generated/prisma/enums'
 
 interface UseCalendarStateOptions {
   events: CalendarEvent[]

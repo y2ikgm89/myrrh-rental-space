@@ -14,15 +14,15 @@
  */
 
 import { Suspense } from 'react'
-import { Header } from '@/components/layouts/Header'
-import { Footer } from '@/components/layouts/Footer'
-import { AnalyticsProvider } from '@/components/analytics'
-import { CookieConsentBanner } from '@/components/site/CookieConsentBanner'
-import { AnnouncementBarWrapper } from '@/components/site/AnnouncementBarWrapper'
-import { SkipLink, AriaLiveRegion } from '@/components/a11y'
-import { AriaLiveProvider } from '@/contexts'
-import { getCookieConsentSettings } from '@/lib/settings'
-import { getAnalyticsConfig } from '@/lib/analytics/config'
+import { Header } from '@/public/components/layouts/Header'
+import { Footer } from '@/public/components/layouts/Footer'
+import { AnalyticsProvider } from '@/public/components/analytics'
+import { CookieConsentBanner } from '@/public/components/CookieConsentBanner'
+import { AnnouncementBarWrapper } from '@/public/components/AnnouncementBarWrapper'
+import { SkipLink, AriaLiveRegion } from '@/public/components/a11y'
+import { AriaLiveProvider } from '@/shared/contexts'
+import { getCookieConsentSettings } from '@/shared/lib/settings'
+import { getAnalyticsConfig } from '@/public/lib/analytics/config'
 import type { ReactElement, ReactNode } from 'react'
 
 /**

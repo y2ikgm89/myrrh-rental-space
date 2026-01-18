@@ -15,14 +15,14 @@ import {
   Textarea,
   Label,
   Switch,
-} from '@/components/admin/ui'
+} from '@/admin/components/ui'
 import {
   faqCategoryFormSchema,
   defaultFaqCategoryFormValues,
   type FaqCategoryFormInput,
   type FaqCategoryWithItems,
-} from '@/lib/validations/faq'
-import { createFaqCategory, updateFaqCategory } from '@/actions/admin/faq'
+} from '@/admin/lib/validations/faq'
+import { createFaqCategory, updateFaqCategory } from '@/admin/actions/faq'
 
 type FaqCategoryFormProps = {
   category?: FaqCategoryWithItems

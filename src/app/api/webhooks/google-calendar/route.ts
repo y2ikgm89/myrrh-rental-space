@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { syncFromCalendar } from '@/lib/calendar-sync'
-import { isTwoWaySyncEnabled, getTwoWaySyncSettings } from '@/lib/google-calendar'
+import { prisma } from '@/shared/lib/prisma'
+import { syncFromCalendar } from '@/shared/lib/calendar-sync'
+import { isTwoWaySyncEnabled, getTwoWaySyncSettings } from '@/shared/lib/google-calendar'
 
 /**
  * Google Calendar Push Notification Webhook

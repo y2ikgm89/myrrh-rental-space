@@ -33,7 +33,7 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    "src/generated/**",
+    "src/shared/generated/**",
     "__tests__/**",
   ]),
 ]);

@@ -6,7 +6,7 @@
  */
 
 import { describe, test, expect, beforeEach, mock } from 'bun:test'
-import { ReservationStatus } from '@/generated/prisma/client/enums'
+import { ReservationStatus } from '@/shared/generated/prisma/enums'
 import { OVERLAP_TEST_CASES, TEST_SPACE } from '../../fixtures/reservations'
 
 // Prismaモックの設定
@@ -18,12 +18,12 @@ const mockPrisma = {
 }
 
 // prismaモジュールをモック
-mock.module('@/lib/prisma', () => ({
+mock.module('@/shared/lib/prisma', () => ({
   prisma: mockPrisma,
 }))
 
 // モック設定後にインポート
-const { checkReservationOverlap } = await import('@/lib/reservation-utils')
+const { checkReservationOverlap } = await import('@/public/lib/reservation-utils')
 
 describe('checkReservationOverlap', () => {
   beforeEach(() => {

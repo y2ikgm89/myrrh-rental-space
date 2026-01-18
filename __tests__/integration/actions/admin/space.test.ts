@@ -8,7 +8,7 @@
  */
 
 import { describe, test, expect } from 'bun:test'
-import { spaceFormSchema, type SpaceFormData } from '@/lib/validations/space'
+import { spaceFormSchema, type SpaceFormData } from '@/admin/lib/validations/space'
 
 // 有効なUUID
 const VALID_UUID = '550e8400-e29b-41d4-a716-446655440000'

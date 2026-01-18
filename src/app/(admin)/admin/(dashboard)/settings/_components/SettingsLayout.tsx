@@ -7,7 +7,7 @@
 
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
-import { Button } from '@/components/admin/ui'
+import { Button } from '@/admin/components/ui'
 
 interface SettingsLayoutProps {
   title: string

@@ -12,8 +12,8 @@ import {
   isValidRole,
   getSessionUser,
   getRoleFromSession,
-} from '@/lib/auth'
-import { Role } from '@/generated/prisma/client/enums'
+} from '@/shared/lib/auth'
+import { Role } from '@/shared/generated/prisma/enums'
 
 // モックセッション型
 type MockSessionUser = {

@@ -4,7 +4,7 @@ import { useCalendarState, useEventActions } from './hooks'
 import { CalendarToolbar } from './CalendarToolbar'
 import { MonthView, WeekView, DayView } from './views'
 import { EventDetailDialog } from './EventDetailDialog'
-import type { CalendarEvent, SpaceOption } from '@/lib/calendar'
+import type { CalendarEvent, SpaceOption } from '@/admin/lib/calendar'
 
 interface CalendarViewWrapperProps {
   initialEvents: CalendarEvent[]

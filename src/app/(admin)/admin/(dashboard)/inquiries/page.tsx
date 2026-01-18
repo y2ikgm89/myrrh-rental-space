@@ -1,9 +1,9 @@
 import { Suspense } from 'react'
-import { getInquiries } from '@/actions/admin/inquiry'
+import { getInquiries } from '@/admin/actions/inquiry'
 import { InquiryFilters } from './_components/InquiryFilters'
 import { InquiryTable } from './_components/InquiryTable'
-import { Pagination } from '@/components/admin/ui'
-import { parseInquiryStatusFilter } from '@/lib/validations/enums'
+import { Pagination } from '@/admin/components/ui'
+import { parseInquiryStatusFilter } from '@/shared/lib/validations/enums'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {

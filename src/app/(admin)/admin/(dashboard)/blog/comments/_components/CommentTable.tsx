@@ -20,14 +20,14 @@ import {
   TableRow,
   Button,
   Checkbox,
-} from '@/components/admin/ui'
+} from '@/admin/components/ui'
 import {
   deleteCommentAdmin,
   deleteCommentsAdmin,
   restoreCommentAdmin,
   type AdminCommentData,
-} from '@/actions/admin/blog-comment'
-import { cn } from '@/lib/utils'
+} from '@/admin/actions/blog-comment'
+import { cn } from '@/shared/lib/utils'
 
 type Props = {
   comments: AdminCommentData[]

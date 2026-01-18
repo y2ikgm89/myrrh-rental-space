@@ -2,7 +2,7 @@
  * 最近の予約/お問い合わせスケルトン
  */
 
-import { Card, CardContent, CardHeader } from '@/components/admin/ui/card'
+import { Card, CardContent, CardHeader } from '@/admin/components/ui/card'
 
 export function RecentItemsSkeleton() {
   return (

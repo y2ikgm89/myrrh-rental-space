@@ -9,8 +9,8 @@
 import { useQueryState } from 'nuqs'
 import { useTransition, type ReactElement } from 'react'
 import { tv } from 'tailwind-variants'
-import { Button } from '@/components/site/ui'
-import { parseAsPage } from '@/lib/nuqs'
+import { Button } from '@/public/components/ui'
+import { parseAsPage } from '@/shared/lib/nuqs'
 
 const styles = tv({
   slots: {

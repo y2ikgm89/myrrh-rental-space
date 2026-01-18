@@ -20,10 +20,10 @@ import {
   EditorHeader,
   useKeyboardShortcuts,
   useBeforeUnload,
-} from '@/components/admin/editor/inline'
+} from '@/admin/components/editor/inline'
 
 const LexicalEditor = dynamic(
-  () => import('@/components/admin/editor/lexical').then((mod) => ({ default: mod.LexicalEditor })),
+  () => import('@/admin/components/editor/lexical').then((mod) => ({ default: mod.LexicalEditor })),
   {
     ssr: false,
     loading: () => (
@@ -33,17 +33,17 @@ const LexicalEditor = dynamic(
     ),
   }
 )
-import { BlogSidePanel } from '@/components/admin/editor/inline/BlogSidePanel'
+import { BlogSidePanel } from '@/admin/components/editor/inline/BlogSidePanel'
 import {
   createBlogPost,
   updateBlogPost,
   deleteBlogPost,
   publishBlogPost,
   unpublishBlogPost,
-} from '@/actions/admin/blog'
-import type { BlogPostData, BlogCategoryData } from '@/actions/admin/blog'
-import type { BlogCategoryOption } from '@/components/admin/editor/inline/types'
-import { BlogPostStatus } from '@/generated/prisma/client/enums'
+} from '@/admin/actions/blog'
+import type { BlogPostData, BlogCategoryData } from '@/admin/actions/blog'
+import type { BlogCategoryOption } from '@/admin/components/editor/inline/types'
+import { BlogPostStatus } from '@/shared/generated/prisma/enums'
 import {
   Button,
   Dialog,
@@ -53,8 +53,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/admin/ui'
-import { EDITOR_PROSE_CLASSES } from '@/lib/styles/prose'
+} from '@/admin/components/ui'
+import { EDITOR_PROSE_CLASSES } from '@/shared/lib/styles/prose'
 
 // =============================================================================
 // Schema

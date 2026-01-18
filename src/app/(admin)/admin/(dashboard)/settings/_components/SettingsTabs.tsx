@@ -14,7 +14,7 @@ import {
   TabsList,
   TabsTrigger,
   TabsContent,
-} from '@/components/admin/ui/tabs'
+} from '@/admin/components/ui/tabs'
 import type { ReactNode } from 'react'
 
 // =============================================================================

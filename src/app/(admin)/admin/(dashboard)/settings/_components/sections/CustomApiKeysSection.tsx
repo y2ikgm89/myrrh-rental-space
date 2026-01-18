@@ -17,7 +17,7 @@ import {
   Input,
   Label,
   Textarea,
-} from '@/components/admin/ui'
+} from '@/admin/components/ui'
 import {
   Dialog,
   DialogContent,
@@ -26,13 +26,13 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/admin/ui/dialog'
+} from '@/admin/components/ui/dialog'
 import { Plus, Trash2 } from 'lucide-react'
 import {
   addCustomApiKey,
   deleteCustomApiKey,
-} from '@/actions/admin/api-keys'
-import type { CustomApiKeyData } from '@/types/api-keys'
+} from '@/admin/actions/api-keys'
+import type { CustomApiKeyData } from '@/admin/types/api-keys'
 import { useRefreshOnSuccess } from '../hooks'
 
 // =============================================================================

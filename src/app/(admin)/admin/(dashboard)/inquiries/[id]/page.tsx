@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { getInquiryById } from '@/actions/admin/inquiry'
+import { getInquiryById } from '@/admin/actions/inquiry'
 import { InquiryDetail } from './_components/InquiryDetail'
 import type { Metadata } from 'next'
 

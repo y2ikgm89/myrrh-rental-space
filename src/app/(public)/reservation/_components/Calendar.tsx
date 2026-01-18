@@ -2,7 +2,7 @@
 
 import { useState, type ReactElement } from 'react'
 import { tv } from 'tailwind-variants'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/lib/utils'
 
 const calendarStyles = tv({
   slots: {

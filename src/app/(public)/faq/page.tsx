@@ -11,11 +11,11 @@
 import { Suspense } from 'react'
 import { cacheLife, cacheTag } from 'next/cache'
 import type { Metadata } from 'next'
-import { Container, Section, SectionTitle } from '@/components/site/ui'
-import { FAQPageJsonLd, BreadcrumbJsonLd } from '@/components/seo/JsonLd'
+import { Container, Section, SectionTitle } from '@/public/components/ui'
+import { FAQPageJsonLd, BreadcrumbJsonLd } from '@/public/components/seo/JsonLd'
 import { FAQAccordion } from './_components/FAQAccordion'
-import { prisma } from '@/lib/prisma'
-import { generatePageMetadata } from '@/lib/page-metadata'
+import { prisma } from '@/shared/lib/prisma'
+import { generatePageMetadata } from '@/public/lib/page-metadata'
 import type { ReactElement } from 'react'
 
 export async function generateMetadata(): Promise<Metadata> {

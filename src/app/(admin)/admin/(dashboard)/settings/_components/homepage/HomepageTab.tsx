@@ -41,7 +41,7 @@ import {
   Card,
   CardContent,
   Switch,
-} from '@/components/admin/ui'
+} from '@/admin/components/ui'
 import {
   GripVertical,
   Plus,
@@ -66,12 +66,12 @@ import {
   createHomepageSection,
   initializeDefaultSections,
   type HomepageSectionData,
-} from '@/actions/admin/homepage-settings'
+} from '@/admin/actions/homepage-settings'
 import {
   sectionTypeLabels,
   defaultSectionConfigs,
   HomepageSectionType,
-} from '@/lib/validations/homepage-section'
+} from '@/admin/lib/validations/homepage-section'
 import { SectionEditor } from './SectionEditor'
 
 // =============================================================================

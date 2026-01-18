@@ -19,9 +19,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/admin/ui'
-import { updateSpacePublish, deleteSpace } from '@/actions/admin/space'
-import type { SpaceWithStats } from '@/lib/validations/space'
+} from '@/admin/components/ui'
+import { updateSpacePublish, deleteSpace } from '@/admin/actions/space'
+import type { SpaceWithStats } from '@/admin/lib/validations/space'
 
 type SpaceDetailProps = {
   space: SpaceWithStats

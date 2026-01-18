@@ -9,9 +9,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/admin/ui'
-import { InquiryStatusBadge } from '@/components/admin/status-badges'
-import type { InquiryData } from '@/actions/admin/inquiry'
+} from '@/admin/components/ui'
+import { InquiryStatusBadge } from '@/admin/components/status-badges'
+import type { InquiryData } from '@/admin/actions/inquiry'
 
 // =============================================================================
 // Types

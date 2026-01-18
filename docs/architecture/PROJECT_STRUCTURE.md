@@ -1,6 +1,33 @@
 # プロジェクト構造
 
-> **Note**: このドキュメントにはプロジェクトのディレクトリ構成とファイル命名規則が記載されています。最終更新: **2026-01-10**
+> **Note**: このドキュメントにはプロジェクトのディレクトリ構成とファイル命名規則が記載されています。最終更新: **2026-01-17**
+
+---
+
+## アーキテクチャ概要
+
+**管理/公開/共有 完全分離アーキテクチャ** (Plan 042)
+
+管理画面と公開ページのコンポーネント・ライブラリを完全に分離し、
+顧客ごとのカスタマイズとAIによる変更影響把握を容易にする設計。
+
+### 分離ルール
+
+| カテゴリ | 配置先 | 理由 |
+|---------|--------|------|
+| **管理画面専用** | `src/admin/` | 管理UIは独立してカスタマイズ |
+| **公開ページ専用** | `src/public/` | サイトデザインは独立してカスタマイズ |
+| **真に共有が必要** | `src/shared/` | DB接続、認証、暗号化など |
+
+### パスエイリアス
+
+```json
+{
+  "@/admin/*": "src/admin/*",
+  "@/public/*": "src/public/*",
+  "@/shared/*": "src/shared/*"
+}
+```
 
 ---
 
@@ -23,231 +50,161 @@ myrrh-rental-space/
 │   ├── schema.prisma        # Prismaスキーマ
 │   ├── seed.ts              # シードデータ
 │   └── migrations/          # マイグレーションファイル
+│
 ├── src/
 │   ├── proxy.ts             # Next.js 16 Proxy（認証・認可）
-│   ├── app/                 # Next.js App Router
-│   │   ├── layout.tsx       # ルートレイアウト
-│   │   ├── globals.css      # グローバルスタイル（Tailwind 4設定含む）
-│   │   ├── favicon.ico
-│   │   ├── sitemap.ts       # 動的サイトマップ生成
-│   │   ├── robots.ts        # robots.txt 生成
-│   │   ├── loading.tsx      # ルートローディング
-│   │   ├── not-found.tsx    # 404ページ
-│   │   ├── global-error.tsx # グローバルエラーハンドラー
-│   │   ├── (public)/        # 公開ページグループ
-│   │   │   ├── layout.tsx   # 公開ページレイアウト
-│   │   │   ├── page.tsx     # ホームページ
-│   │   │   ├── loading.tsx
-│   │   │   ├── error.tsx
-│   │   │   ├── not-found.tsx
-│   │   │   ├── about/
-│   │   │   │   └── page.tsx
-│   │   │   ├── faq/
-│   │   │   │   └── page.tsx
-│   │   │   ├── contact/
-│   │   │   │   ├── page.tsx
-│   │   │   │   └── _components/
-│   │   │   ├── reservation/
-│   │   │   │   ├── page.tsx
-│   │   │   │   └── _components/
-│   │   │   ├── spaces/
-│   │   │   │   ├── page.tsx
-│   │   │   │   └── [id]/
-│   │   │   │       ├── page.tsx
-│   │   │   │       └── _components/
-│   │   │   ├── news/
-│   │   │   │   ├── page.tsx
-│   │   │   │   └── [id]/
-│   │   │   │       ├── page.tsx
-│   │   │   │       └── _components/
-│   │   │   ├── blog/
-│   │   │   │   ├── page.tsx
-│   │   │   │   └── [slug]/
-│   │   │   │       └── page.tsx
-│   │   │   ├── privacy/
-│   │   │   │   └── page.tsx
-│   │   │   └── terms/
-│   │   │       └── page.tsx
-│   │   ├── admin/           # 管理画面
-│   │   │   ├── layout.tsx   # 管理画面レイアウト（サイドバー含む）
-│   │   │   ├── page.tsx     # ダッシュボード
-│   │   │   ├── loading.tsx
-│   │   │   ├── error.tsx
-│   │   │   ├── not-found.tsx
-│   │   │   ├── _components/ # 管理画面共通コンポーネント
-│   │   │   │   ├── AnalyticsCard.tsx
-│   │   │   │   └── LogoutButton.tsx
-│   │   │   ├── login/
-│   │   │   │   ├── page.tsx
-│   │   │   │   └── login-form.tsx
-│   │   │   ├── spaces/
-│   │   │   │   ├── page.tsx
-│   │   │   │   ├── new/
-│   │   │   │   │   └── page.tsx
-│   │   │   │   ├── [id]/
-│   │   │   │   │   ├── page.tsx
-│   │   │   │   │   ├── edit/
-│   │   │   │   │   │   └── page.tsx
-│   │   │   │   │   └── _components/
-│   │   │   │   └── _components/
-│   │   │   ├── reservations/
-│   │   │   │   ├── page.tsx
-│   │   │   │   └── _components/
-│   │   │   ├── customers/
-│   │   │   │   ├── page.tsx
-│   │   │   │   ├── [id]/
-│   │   │   │   │   └── page.tsx
-│   │   │   │   └── _components/
-│   │   │   ├── inquiries/
-│   │   │   │   ├── page.tsx
-│   │   │   │   └── _components/
-│   │   │   ├── news/
-│   │   │   │   ├── page.tsx
-│   │   │   │   └── _components/
-│   │   │   ├── blog/
-│   │   │   │   ├── page.tsx
-│   │   │   │   ├── new/
-│   │   │   │   │   └── page.tsx
-│   │   │   │   ├── [id]/
-│   │   │   │   │   └── page.tsx
-│   │   │   │   ├── comments/
-│   │   │   │   │   ├── page.tsx
-│   │   │   │   │   └── _components/
-│   │   │   │   └── _components/
-│   │   │   ├── pages/
-│   │   │   │   ├── page.tsx
-│   │   │   │   ├── [slug]/
-│   │   │   │   │   └── page.tsx
-│   │   │   │   └── _components/
-│   │   │   ├── settings/
-│   │   │   │   ├── page.tsx  # タブベースの設定画面
-│   │   │   │   └── _components/
-│   │   │   │       ├── sections/  # タブセクション
-│   │   │   │       └── tabs/      # タブコンポーネント
-│   │   │   └── users/
-│   │   │       ├── page.tsx
-│   │   │       └── _components/
-│   │   └── api/             # API Routes
-│   │       └── health/
-│   │           └── route.ts
-│   ├── components/          # コンポーネント（完全分離アーキテクチャ）
-│   │   │
-│   │   │   # 【重要】管理画面と公開ページは完全に別物
-│   │   │   # - UI コンポーネントは一切共有しない
-│   │   │   # - 共有するのはロジック（actions/, lib/, types/）のみ
-│   │   │
-│   │   ├── admin/           # 管理画面専用（shadcn/ui ベース）
+│   │
+│   ├── admin/               # 管理画面専用
+│   │   ├── actions/         # 管理用 Server Actions
+│   │   │   ├── blog.ts
+│   │   │   ├── customer.ts
+│   │   │   ├── dashboard.ts
+│   │   │   ├── export.ts
+│   │   │   ├── homepage-settings.ts
+│   │   │   ├── inquiry.ts
+│   │   │   ├── navigation.ts
+│   │   │   ├── news.ts
+│   │   │   ├── page.ts
+│   │   │   ├── reservation.ts
+│   │   │   ├── settings.ts
+│   │   │   ├── space.ts
+│   │   │   ├── terms.ts
+│   │   │   ├── upload.ts
+│   │   │   └── user.ts
+│   │   ├── components/      # 管理専用コンポーネント（shadcn/ui ベース）
 │   │   │   ├── ui/          # shadcn/ui コンポーネント
 │   │   │   │   ├── button.tsx
 │   │   │   │   ├── input.tsx
 │   │   │   │   ├── card.tsx
 │   │   │   │   ├── table.tsx
-│   │   │   │   ├── badge.tsx
-│   │   │   │   ├── dialog.tsx
-│   │   │   │   ├── checkbox.tsx
-│   │   │   │   ├── dropdown-menu.tsx
-│   │   │   │   ├── label.tsx
-│   │   │   │   ├── textarea.tsx
-│   │   │   │   └── index.ts     # 一括export
-│   │   │   ├── editor/      # Tiptapエディタ
-│   │   │   │   ├── RichTextEditor.tsx
-│   │   │   │   ├── EditorToolbar.tsx
-│   │   │   │   ├── EditorContent.tsx
-│   │   │   │   ├── ImageUploadDialog.tsx
-│   │   │   │   ├── VideoDialog.tsx
-│   │   │   │   └── index.ts
-│   │   │   ├── image-upload.tsx
-│   │   │   └── ExportButton.tsx
-│   │   │
-│   │   ├── site/            # 公開ページ専用（tailwind-variants ベース）
-│   │   │   ├── ui/          # カスタム UI コンポーネント（tv で定義）
+│   │   │   │   └── ...
+│   │   │   ├── editor/      # Lexicalエディタ
+│   │   │   │   ├── lexical/
+│   │   │   │   ├── inline/
+│   │   │   │   └── shared/
+│   │   │   ├── media-picker/ # メディア選択UI
+│   │   │   └── status-badges.tsx
+│   │   ├── contexts/        # 管理画面用Context
+│   │   │   └── admin-layout-context.tsx
+│   │   ├── hooks/           # 管理画面用Hooks
+│   │   │   ├── use-media-picker.tsx
+│   │   │   └── use-calendar-state.ts
+│   │   ├── lib/             # 管理専用ライブラリ
+│   │   │   ├── permissions.ts
+│   │   │   ├── audit.ts
+│   │   │   ├── stripe.ts
+│   │   │   ├── google-calendar.ts
+│   │   │   ├── calendar-sync.ts
+│   │   │   ├── ical.ts
+│   │   │   ├── validations/
+│   │   │   ├── settings/
+│   │   │   ├── api-keys/
+│   │   │   ├── calendar/
+│   │   │   └── errors/
+│   │   └── types/           # 管理専用型定義
+│   │       ├── server-actions.ts
+│   │       ├── admin-layout.ts
+│   │       ├── api-keys.ts
+│   │       ├── editor-panel.ts
+│   │       └── media-picker.ts
+│   │
+│   ├── public/              # 公開ページ専用
+│   │   ├── actions/         # 公開用 Server Actions
+│   │   │   ├── contact.ts
+│   │   │   ├── reservation.ts
+│   │   │   ├── blog-comment.ts
+│   │   │   ├── sidebar.ts
+│   │   │   └── terms.ts
+│   │   ├── components/      # 公開専用コンポーネント（tailwind-variants ベース）
+│   │   │   ├── ui/          # カスタム UI コンポーネント
 │   │   │   │   ├── Button.tsx
 │   │   │   │   ├── Input.tsx
 │   │   │   │   ├── Card.tsx
-│   │   │   │   ├── Section.tsx
-│   │   │   │   ├── SectionTitle.tsx
-│   │   │   │   ├── Checkbox.tsx
-│   │   │   │   └── index.ts
+│   │   │   │   └── ...
 │   │   │   ├── layouts/     # 公開ページレイアウト
-│   │   │   │   ├── Header.tsx         # DB からメニュー取得
-│   │   │   │   └── Footer.tsx         # DB からメニュー/SNS 取得（実装はlayouts/Footer.tsx）
+│   │   │   │   ├── Header.tsx
+│   │   │   │   ├── Footer.tsx
+│   │   │   │   └── MobileMenu.tsx
 │   │   │   ├── sections/    # ページセクション
-│   │   │   │   └── Hero.tsx
-│   │   │   ├── BlogContentRenderer.tsx
-│   │   │   ├── PostListWidgetRenderer.tsx
-│   │   │   └── SafeHtml.tsx
-│   │   │
-│   │   ├── layouts/         # 共通レイアウト
-│   │   │   ├── Header.tsx   # ルートヘッダー
-│   │   │   ├── Footer.tsx   # ルートフッター
-│   │   │   └── MobileMenu.tsx
-│   │   │
-│   │   ├── analytics/       # アナリティクス
-│   │   │   └── GoogleAnalytics.tsx
-│   │   │
-│   │   ├── seo/             # SEOコンポーネント
-│   │   │   └── JsonLd.tsx
-│   │   │
-│   │   └── turnstile.tsx    # Cloudflare Turnstile
+│   │   │   │   ├── Hero.tsx
+│   │   │   │   ├── BlogSection.tsx
+│   │   │   │   ├── NewsSection.tsx
+│   │   │   │   └── FAQSection.tsx
+│   │   │   ├── sidebar/     # サイドバー
+│   │   │   ├── a11y/        # アクセシビリティ
+│   │   │   ├── analytics/   # アナリティクス
+│   │   │   ├── seo/         # SEO
+│   │   │   └── Turnstile.tsx
+│   │   ├── emails/          # React Emailテンプレート
+│   │   │   ├── reservation-confirmation.tsx
+│   │   │   └── ...
+│   │   ├── lib/             # 公開専用ライブラリ
+│   │   │   ├── blog-queries.ts
+│   │   │   ├── page-metadata.ts
+│   │   │   ├── layout-settings.ts
+│   │   │   ├── reservation-utils.ts
+│   │   │   ├── seo/
+│   │   │   ├── a11y/
+│   │   │   ├── nuqs/
+│   │   │   └── analytics/
+│   │   └── types/           # 公開専用型定義
 │   │
-│   ├── actions/             # Server Actions
-│   │   ├── contact.ts
-│   │   ├── reservation.ts
-│   │   ├── blog-comment.ts
-│   │   └── admin/
-│   │       ├── blog.ts
-│   │       ├── blog-comment.ts
-│   │       ├── customer.ts
-│   │       ├── dashboard.ts
-│   │       ├── export.ts
-│   │       ├── homepage-hero.ts
-│   │       ├── inquiry.ts
-│   │       ├── navigation.ts
-│   │       ├── news.ts
-│   │       ├── page.ts
-│   │       ├── reservation.ts
-│   │       ├── space.ts
-│   │       ├── upload.ts
-│   │       └── user.ts
+│   ├── shared/              # 共有ライブラリ
+│   │   ├── generated/       # 自動生成ファイル
+│   │   │   └── prisma/      # Prisma Client
+│   │   ├── lib/             # 共有ユーティリティ
+│   │   │   ├── prisma.ts    # Prisma Client
+│   │   │   ├── auth.ts      # Better Auth設定
+│   │   │   ├── auth-client.ts
+│   │   │   ├── crypto.ts    # 暗号化
+│   │   │   ├── utils.ts     # 汎用ユーティリティ
+│   │   │   ├── email.ts     # メール設定
+│   │   │   ├── email-service.ts # Resendサービス
+│   │   │   ├── supabase.ts  # Supabase Client
+│   │   │   ├── storage.ts   # Supabase Storage
+│   │   │   ├── turnstile.ts # Turnstile検証
+│   │   │   ├── rate-limit.ts
+│   │   │   ├── action-helpers.ts
+│   │   │   └── json-validators.ts
+│   │   └── types/           # 共有型定義
+│   │       ├── prisma.ts    # Prisma WhereInput型
+│   │       └── better-auth.d.ts
 │   │
-│   ├── lib/                 # ユーティリティ・ライブラリ
-│   │   ├── prisma.ts        # Prisma Client（Driver Adapters使用）
-│   │   ├── auth.ts          # Auth.js設定
-│   │   ├── supabase.ts      # Supabase Client
-│   │   ├── storage.ts       # Supabase Storage
-│   │   ├── email.ts         # メール設定
-│   │   ├── email-service.ts # Resendメールサービス
-│   │   ├── turnstile.ts     # Turnstile検証
-│   │   ├── crypto.ts        # 暗号化ユーティリティ
-│   │   ├── stripe.ts        # Stripe設定
-│   │   ├── blog-queries.ts  # ブログクエリヘルパー
-│   │   ├── utils.ts         # 汎用ユーティリティ（cn関数等）
-│   │   ├── validations/     # Zodスキーマ
-│   │   │   ├── auth.ts
-│   │   │   ├── contact.ts
-│   │   │   ├── comment.ts
-│   │   │   ├── page.ts
-│   │   │   ├── reservation.ts
-│   │   │   ├── search-params.ts
-│   │   │   ├── space.ts
-│   │   │   └── stripe.ts
-│   │   ├── nuqs/            # URL State Management
-│   │   │   ├── index.ts
-│   │   │   ├── parsers.ts
-│   │   │   └── search-params.ts
-│   │   └── analytics/       # アナリティクス
-│   │       ├── config.ts
-│   │       └── ga-data-api.ts
-│   │
-│   ├── emails/              # React Emailテンプレート
-│   │   └── ...
-│   │
-│   ├── generated/           # 自動生成ファイル
-│   │   └── prisma/
-│   │       └── client/      # Prisma Client（カスタム出力パス）
-│   │
-│   └── types/               # TypeScript型定義
-│       └── ...
+│   └── app/                 # Next.js App Router
+│       ├── layout.tsx       # ルートレイアウト
+│       ├── globals.css      # グローバルスタイル（Tailwind 4設定含む）
+│       ├── favicon.ico
+│       ├── sitemap.ts       # 動的サイトマップ生成
+│       ├── robots.ts        # robots.txt 生成
+│       ├── (public)/        # 公開ページグループ
+│       │   ├── layout.tsx
+│       │   ├── page.tsx     # ホームページ
+│       │   ├── about/
+│       │   ├── contact/
+│       │   ├── reservation/
+│       │   ├── spaces/
+│       │   ├── news/
+│       │   ├── blog/
+│       │   └── ...
+│       ├── (admin)/admin/   # 管理画面（Route Group）
+│       │   ├── layout.tsx
+│       │   ├── page.tsx     # ダッシュボード
+│       │   ├── (dashboard)/
+│       │   │   ├── spaces/
+│       │   │   ├── reservations/
+│       │   │   ├── customers/
+│       │   │   ├── blog/
+│       │   │   ├── news/
+│       │   │   ├── pages/
+│       │   │   ├── settings/
+│       │   │   ├── users/
+│       │   │   └── ...
+│       │   └── login/
+│       └── api/             # API Routes
+│           ├── auth/
+│           ├── cron/
+│           ├── webhooks/
+│           └── ...
 │
 ├── public/                  # 静的ファイル
 │   └── images/
@@ -259,9 +216,10 @@ myrrh-rental-space/
     ├── operations/
     ├── requirements/
     ├── security/
-    ├── plans/
-    └── issues/
+    └── plans/
 ```
+
+---
 
 ## 主要ファイルの役割
 
@@ -270,9 +228,10 @@ myrrh-rental-space/
 | ファイル | 役割 |
 |---------|------|
 | `package.json` | 依存関係とスクリプト |
-| `tsconfig.json` | TypeScript設定 |
+| `tsconfig.json` | TypeScript設定（パスエイリアス含む） |
 | `next.config.ts` | Next.js設定（TypeScript形式、React Compiler有効） |
 | `prisma/schema.prisma` | データベーススキーマ定義 |
+| `components.json` | shadcn/ui設定（`@/admin/components/ui`） |
 | `cloudbuild.yaml` | Google Cloud Build設定 |
 | `Dockerfile` | Cloud Run用コンテナ定義 |
 
@@ -287,13 +246,9 @@ myrrh-rental-space/
 | パス | 役割 |
 |------|------|
 | `src/app/` | Next.js App Router のページとルート |
-| `src/components/admin/` | 管理画面専用（shadcn/ui ベース） |
-| `src/components/site/` | 公開ページ専用（tailwind-variants ベース） |
-| `src/components/layouts/` | ルートレベル共通レイアウト |
-| `src/actions/` | Server Actions |
-| `src/lib/` | ユーティリティ・ライブラリ |
-| `src/generated/` | 自動生成ファイル（Prisma Client） |
-| `src/emails/` | React Emailテンプレート |
+| `src/admin/` | 管理画面専用（components, actions, hooks, contexts, lib, types） |
+| `src/public/` | 公開ページ専用（components, actions, emails, lib, types） |
+| `src/shared/` | 共有（prisma, auth, utils, email, storage, generated/prisma） |
 
 ---
 
@@ -381,29 +336,31 @@ import { NextRequest } from 'next/server'
 
 // 2. サードパーティライブラリ
 import { z } from 'zod'
-import { PrismaClient } from '@/generated/prisma/client'
+import { PrismaClient } from '@/shared/generated/prisma/client'
 
 // 3. 内部モジュール（@/エイリアス）
-import { prisma } from '@/lib/prisma'
-import { Button } from '@/components/admin/ui'
+import { prisma } from '@/shared/lib/prisma'
+import { Button } from '@/admin/components/ui'
 
 // 4. 相対インポート
 import { formatDate } from './utils'
 
 // 5. 型のみのインポート
-import type { Reservation } from '@/types/reservation'
+import type { Reservation } from '@/shared/types/prisma'
 ```
 
 ---
 
 ## 更新履歴
 
+- **2026-01-17**: 管理/公開/共有 完全分離アーキテクチャ (Plan 042) に対応
+  - `src/admin/`, `src/public/`, `src/shared/` 構造に全面改訂
+  - パスエイリアス説明追加
+  - 旧構造（`src/components/`, `src/lib/`, `src/types/`等）を削除
 - **2026-01-10**: 実際のプロジェクト構造と照合して全面改訂
   - `next.config.ts`（TypeScript形式）に修正
   - `proxy.ts`の説明追加
   - Tailwind CSS 4対応（globals.css内設定）
-  - 実際のディレクトリ構造に更新
-  - 不要なディレクトリ（hooks/, config/, constants/）を削除
 - **2026-01-08**: キャッシング戦略の最新APIを反映
 
 ---

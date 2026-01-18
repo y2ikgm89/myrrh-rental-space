@@ -8,10 +8,10 @@
  */
 
 import type { Metadata } from 'next'
-import { Container, Section, SectionTitle } from '@/components/site/ui'
-import { LocalBusinessJsonLd, BreadcrumbJsonLd } from '@/components/seo/JsonLd'
-import { getPublicBusinessSettings } from '@/lib/settings'
-import { generatePageMetadata } from '@/lib/page-metadata'
+import { Container, Section, SectionTitle } from '@/public/components/ui'
+import { LocalBusinessJsonLd, BreadcrumbJsonLd } from '@/public/components/seo/JsonLd'
+import { getPublicBusinessSettings } from '@/shared/lib/settings'
+import { generatePageMetadata } from '@/public/lib/page-metadata'
 import type { ReactElement } from 'react'
 
 export async function generateMetadata(): Promise<Metadata> {

@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
   Input,
-} from '@/components/admin/ui'
+} from '@/admin/components/ui'
 
 export function NewsFilters() {
   const router = useRouter()

@@ -6,8 +6,8 @@
 
 import Link from 'next/link'
 import { tv } from 'tailwind-variants'
-import { buttonVariants, Card, CardContent, CardHeader, CardTitle } from '@/components/site/ui'
-import { cn } from '@/lib/utils'
+import { buttonVariants, Card, CardContent, CardHeader, CardTitle } from '@/public/components/ui'
+import { cn, formatPrice } from '@/shared/lib/utils'
 import type { ReactElement } from 'react'
 
 const styles = tv({
@@ -29,10 +29,6 @@ interface ReservationCTAProps {
   spaceName: string
   hourlyPrice: number
   dailyPrice: number | null
-}
-
-function formatPrice(value: number): string {
-  return `¥${value.toLocaleString('ja-JP')}`
 }
 
 export function ReservationCTA({

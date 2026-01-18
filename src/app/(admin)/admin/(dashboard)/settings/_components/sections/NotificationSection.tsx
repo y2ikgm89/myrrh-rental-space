@@ -16,9 +16,9 @@ import {
   CardTitle,
   Label,
   Switch,
-} from '@/components/admin/ui'
-import { updateNotificationSettings } from '@/actions/admin/settings'
-import type { SettingsData } from '@/actions/admin/settings'
+} from '@/admin/components/ui'
+import { updateNotificationSettings } from '@/admin/actions/settings'
+import type { SettingsData } from '@/admin/actions/settings'
 import { useRefreshOnSuccess } from '../hooks'
 
 interface NotificationSectionProps {

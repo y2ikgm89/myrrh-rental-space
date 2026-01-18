@@ -8,16 +8,16 @@ import { useState, useTransition } from 'react'
 import { X, Upload, File, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
-import { uploadMedia } from '@/actions/admin/media'
-import { formatBytes } from '@/lib/utils'
-import { Button } from '@/components/admin/ui'
+import { uploadMedia } from '@/admin/actions/media'
+import { formatBytes } from '@/admin/lib/utils'
+import { Button } from '@/admin/components/ui'
 import { USAGE_OPTIONS } from './constants'
 import {
   validateFile,
   inferMediaType,
   isValidMediaUsage,
   MediaUsage,
-} from '@/lib/validations/media'
+} from '@/admin/lib/validations/media'
 
 type Props = {
   isOpen: boolean

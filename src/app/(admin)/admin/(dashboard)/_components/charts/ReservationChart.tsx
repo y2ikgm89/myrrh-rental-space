@@ -17,8 +17,8 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/admin/ui'
-import type { ChartDataPoint } from '@/actions/admin/dashboard'
+import { Card, CardContent, CardHeader, CardTitle } from '@/admin/components/ui'
+import type { ChartDataPoint } from '@/admin/actions/dashboard'
 
 type ReservationChartProps = {
   data: ChartDataPoint[]

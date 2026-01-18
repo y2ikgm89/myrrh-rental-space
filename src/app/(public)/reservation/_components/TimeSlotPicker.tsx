@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useTransition, useRef, type ReactElement } from 'react'
 import { tv } from 'tailwind-variants'
-import { getAvailableTimeSlots } from '@/actions/reservation'
-import type { TimeSlot } from '@/lib/validations/reservation'
-import { cn } from '@/lib/utils'
+import { getAvailableTimeSlots } from '@/public/actions/reservation'
+import type { TimeSlot } from '@/public/lib/validations/reservation'
+import { cn } from '@/shared/lib/utils'
 
 const timeSlotStyles = tv({
   slots: {

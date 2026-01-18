@@ -8,23 +8,23 @@ import {
 } from 'react'
 import Link from 'next/link'
 import { tv } from 'tailwind-variants'
-import { Button } from '@/components/site/ui/Button'
-import { Checkbox } from '@/components/site/ui/Checkbox'
-import { Input } from '@/components/site/ui/Input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/site/ui/Card'
-import { TermsAgreementDialog } from '@/components/site/TermsAgreementDialog'
+import { Button } from '@/public/components/ui/Button'
+import { Checkbox } from '@/public/components/ui/Checkbox'
+import { Input } from '@/public/components/ui/Input'
+import { Card, CardContent, CardHeader, CardTitle } from '@/public/components/ui/Card'
+import { TermsAgreementDialog } from '@/public/components/TermsAgreementDialog'
 import { Calendar } from './Calendar'
 import { TimeSlotPicker } from './TimeSlotPicker'
-import { createReservation } from '@/actions/reservation'
+import { createReservation } from '@/public/actions/reservation'
 import {
   reservationSchema,
   reservationWithTermsSchema,
   type ReservationInput,
   type ReservationWithTermsInput,
   type ReservationActionResult,
-} from '@/lib/validations/reservation'
-import type { TermsWithVersion } from '@/lib/validations/terms'
-import { cn } from '@/lib/utils'
+} from '@/public/lib/validations/reservation'
+import type { TermsWithVersion } from '@/shared/lib/validations/terms'
+import { cn } from '@/shared/lib/utils'
 
 const formStyles = tv({
   slots: {

@@ -16,22 +16,22 @@ import {
   CardTitle,
   Input,
   Label,
-} from '@/components/admin/ui'
-import { Switch } from '@/components/admin/ui/switch'
+} from '@/admin/components/ui'
+import { Switch } from '@/admin/components/ui/switch'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/admin/ui/select'
+} from '@/admin/components/ui/select'
 import {
   updateStripeSettings,
   testStripeConnectionAction,
   clearStripeKeys,
-} from '@/actions/admin/settings'
-import type { SettingsData } from '@/actions/admin/settings'
-import { SUPPORTED_CURRENCIES } from '@/lib/stripe'
+} from '@/admin/actions/settings'
+import type { SettingsData } from '@/admin/actions/settings'
+import { SUPPORTED_CURRENCIES } from '@/admin/lib/stripe'
 import { useRefreshOnSuccess } from '../hooks'
 
 // =============================================================================
