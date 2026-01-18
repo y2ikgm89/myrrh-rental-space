@@ -1,9 +1,11 @@
 import { Suspense } from 'react'
-import { getCustomers } from '@/actions/admin/customer'
+import Link from 'next/link'
+import { Plus } from 'lucide-react'
+import { getCustomers } from '@/admin/actions/customer'
 import { CustomerFilters } from './_components/CustomerFilters'
 import { CustomerTable } from './_components/CustomerTable'
-import { Pagination } from '@/components/admin/ui'
-import { parseCustomerStatusFilter } from '@/lib/validations/enums'
+import { Pagination, Button } from '@/admin/components/ui'
+import { parseCustomerStatusFilter } from '@/shared/lib/validations/enums'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -51,6 +53,12 @@ export default async function CustomersPage({ searchParams }: PageProps) {
             顧客情報の確認・ステータス管理を行います
           </p>
         </div>
+        <Button asChild>
+          <Link href="/admin/customers/new">
+            <Plus className="mr-2 h-4 w-4" />
+            新規顧客
+          </Link>
+        </Button>
       </div>
 
       {/* フィルター */}

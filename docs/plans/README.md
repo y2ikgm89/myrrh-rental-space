@@ -2,11 +2,202 @@
 
 ## 進行中の計画
 
-なし
+*現在進行中の計画はありません*
 
 ---
 
 ## 完了した計画
+
+### 046-customer-creation.md (2026-01-18) ✅
+
+顧客管理 - 新規顧客作成機能
+
+**概要**:
+管理画面の顧客管理に新規顧客作成機能を追加。
+電話予約や来店予約時に顧客を事前登録できるようにする。
+
+**完了フェーズ**:
+- ✅ Phase 1: createCustomer Server Action
+- ✅ Phase 2: CustomerForm コンポーネント
+- ✅ Phase 3: 新規顧客ページ (/admin/customers/new)
+- ✅ Phase 4: 顧客一覧に「新規顧客」ボタン追加
+- ✅ Phase 5: 検証（type-check/lint/build 成功）
+
+**新規ファイル**:
+- `src/app/(admin)/admin/(dashboard)/customers/new/page.tsx` - 新規顧客ページ
+- `src/app/(admin)/admin/(dashboard)/customers/_components/CustomerForm.tsx` - 顧客作成フォーム
+
+**変更ファイル**:
+- `src/admin/actions/customer.ts` - createCustomer Server Action 追加
+- `src/app/(admin)/admin/(dashboard)/customers/page.tsx` - 新規顧客ボタン追加
+
+---
+
+### 045-admin-reservation-creation.md (2026-01-18) ✅
+
+管理者用予約作成機能（電話予約対応）
+
+**概要**:
+電話予約など、管理者が手動で予約を入力する必要がある場合に対応する機能。
+予約一覧ページに「新規予約」ボタンを追加し、顧客検索・スペース選択・日時指定で予約を作成。
+
+**完了フェーズ**:
+- ✅ Phase 1: 基盤（バリデーション、Server Action、ボタン追加）
+- ✅ Phase 2: フォームUI（予約作成ページ・フォーム）
+- ✅ Phase 3: 顧客選択（CustomerSelector、searchCustomers API）
+- ✅ Phase 4: 空き時間選択（TimeSlotSelector）
+- ✅ Phase 5: 検証（type-check/lint/build 成功）
+
+**新規ファイル**:
+- `src/admin/lib/validations/admin-reservation.ts` - 管理者用予約バリデーションスキーマ
+- `src/app/(admin)/admin/(dashboard)/reservations/new/page.tsx` - 予約作成ページ
+- `src/app/(admin)/admin/(dashboard)/reservations/_components/ReservationForm.tsx` - 予約作成フォーム（2カラムレイアウト）
+- `src/app/(admin)/admin/(dashboard)/reservations/_components/CustomerSelector.tsx` - 顧客検索・新規入力コンポーネント
+- `src/app/(admin)/admin/(dashboard)/reservations/_components/TimeSlotSelector.tsx` - 空き時間選択コンポーネント
+
+**変更ファイル**:
+- `src/admin/actions/reservation.ts` - createAdminReservation, getSpacesForReservation 追加
+- `src/admin/actions/customer.ts` - searchCustomers 追加
+- `src/app/(admin)/admin/(dashboard)/reservations/page.tsx` - 新規予約ボタン追加
+
+**機能詳細**:
+- 顧客検索・選択（デバウンス付きリアルタイム検索）
+- 新規顧客作成（予約と同時に顧客レコード作成）
+- 料金自動計算 + 手動調整
+- ステータス選択（PENDING / CONFIRMED）
+- メモ入力・メール送信設定
+- Google Calendar / iCal 同期
+
+---
+
+### 044-space-management-tab-integration.md (2026-01-18) ✅
+
+スペース管理タブ統合 - UI/UX改善
+
+**概要**:
+スペース管理・場所管理・カテゴリー管理の3つの独立ページを、1つのスペース管理ページ内に3タブとして統合。
+サイドバーの簡素化と関連機能の集約により、操作性・視認性を向上。
+
+**完了フェーズ**:
+- ✅ Phase 1: タブ統合コンポーネント作成（SpaceManagementTabs, 各TabContent）
+- ✅ Phase 2: ページ統合（spaces/page.tsx をタブ統合ページに更新）
+- ✅ Phase 3: サイドバー・リダイレクト（場所/カテゴリー項目削除、リダイレクト設定）
+- ✅ Phase 4: 検証（type-check/lint/build成功）
+
+**新規ファイル**:
+- `src/app/(admin)/admin/(dashboard)/spaces/_components/SpaceManagementTabs.tsx`
+- `src/app/(admin)/admin/(dashboard)/spaces/_components/SpaceTabContent.tsx`
+- `src/app/(admin)/admin/(dashboard)/spaces/_components/LocationTabContent.tsx`
+- `src/app/(admin)/admin/(dashboard)/spaces/_components/CategoryTabContent.tsx`
+
+**変更ファイル**:
+- `src/app/(admin)/admin/(dashboard)/spaces/page.tsx` - タブ統合ページに更新
+- `src/app/(admin)/admin/(dashboard)/_components/sidebar-items.tsx` - 場所/カテゴリー削除
+- `src/app/(admin)/admin/(dashboard)/locations/page.tsx` - リダイレクト化
+- `src/app/(admin)/admin/(dashboard)/space-categories/page.tsx` - リダイレクト化
+
+**UI/UX改善効果**:
+- サイドバー項目数: 16項目 → 14項目（-2）
+- 関連機能: 3つの別ページ → 1ページ3タブ
+- 操作性: ページ遷移不要、タブ切り替えのみ
+
+---
+
+### 043-space-location-category.md (2026-01-18) ✅
+
+スペースの場所・用途カテゴリー機能
+
+**概要**:
+スペース管理に「場所（Location）」と「用途カテゴリー（SpaceCategory）」の2つの分類軸を追加。
+複数建物・店舗への対応と、用途別分類を実現。
+
+**完了フェーズ**:
+- ✅ Phase 1: DBスキーマ・マイグレーション・バリデーション・Server Actions
+- ✅ Phase 2: 管理画面UI - Location（CRUD、並び替え、公開/非公開切り替え）
+- ✅ Phase 3: 管理画面UI - SpaceCategory（CRUD、並び替え、アイコン・色選択）
+- ✅ Phase 4: Space管理への統合（SpaceFormに場所・カテゴリー選択追加）
+- ✅ Phase 5: 公開サイト対応（SpaceInfo に場所・カテゴリー表示）
+- ✅ Phase 6: 検証・ドキュメント（type-check/lint/build成功、テスト通過）
+
+**新規ファイル**:
+- `src/admin/lib/validations/location.ts` - Locationバリデーションスキーマ
+- `src/admin/lib/validations/space-category.ts` - SpaceCategoryバリデーションスキーマ
+- `src/admin/actions/location.ts` - Location Server Actions（CRUD + 並び替え）
+- `src/admin/actions/space-category.ts` - SpaceCategory Server Actions（CRUD + 並び替え）
+- `src/app/(admin)/admin/(dashboard)/locations/` - Location管理ページ一式
+- `src/app/(admin)/admin/(dashboard)/space-categories/` - SpaceCategory管理ページ一式
+
+**変更ファイル**:
+- `prisma/schema.prisma` - Location, SpaceCategoryモデル追加、Space拡張
+- `src/admin/lib/permissions.ts` - locations, spaceCategoriesリソース追加
+- `src/admin/lib/validations/space.ts` - locationId, categoryIdフィールド追加
+- `src/app/(admin)/admin/(dashboard)/spaces/_components/SpaceForm.tsx` - 場所・カテゴリー選択UI追加
+- `src/app/(admin)/admin/(dashboard)/spaces/new/page.tsx` - 場所・カテゴリーオプション取得
+- `src/app/(admin)/admin/(dashboard)/spaces/[id]/edit/page.tsx` - 同上
+- `src/app/(admin)/admin/(dashboard)/_components/sidebar-items.tsx` - サイドバーにメニュー追加
+- `src/app/(public)/spaces/[id]/page.tsx` - location/category include追加
+- `src/app/(public)/spaces/[id]/_components/SpaceInfo.tsx` - 場所・カテゴリー表示
+
+**マイグレーション**: `20260118_add_location_and_space_category`
+
+---
+
+### 042-complete-separation-architecture.md (2026-01-18) ✅
+
+管理/公開 完全分離アーキテクチャ
+
+**概要**:
+管理ページと公開ページのコンポーネント・ライブラリを完全に分離し、
+顧客ごとのカスタマイズとAIによる変更影響把握を容易にする。
+
+**完了フェーズ**:
+- ✅ Phase 1: ディレクトリ構造作成 + tsconfig パスエイリアス設定
+- ✅ Phase 2: shared/ への移動（13 lib ファイル + Prisma generated）
+- ✅ Phase 3: admin/ への移動（17 項目: components, actions, hooks, contexts, lib）
+- ✅ Phase 4: public/ への移動（68 ファイル: components, actions, emails, lib）
+- ✅ Phase 5: types/ 分離（shared/types, admin/types）
+- ✅ Phase 6: 旧ディレクトリ削除 + 最終検証（type-check/lint/build 成功）
+- ✅ Phase 7: ドキュメント更新
+- ✅ Phase 8: admin/public 相互参照の完全解消
+- ✅ Phase 9: ユーティリティ関数分離（重複コード統一）
+
+**Phase 8 詳細**:
+- shared/への追加移動: server-actions型、layout型、calendar-sync、google-calendar、nuqs、errors、styles、validations、aria-live-context
+- public/actions/作成: homepage、blog、news、settings、reservation
+- クロスリファレンス検証: admin→public 0件、public→admin 0件
+- 検証: type-check/lint/build すべて成功
+
+**Phase 9 詳細**:
+- ユーティリティ関数分離: formatCurrency/formatPrice/formatDate → shared、formatChange/getChangeColor/formatBytes → admin専用
+- 公開ページの重複formatPrice関数を削除（3ファイル）
+- audit.tsからマイグレーションコメント削除（クリーン実装）
+- 検証: type-check/lint/build すべて成功
+
+**最終アーキテクチャ**:
+```
+src/
+├── admin/          # 管理画面すべて（publicを参照しない）
+│   ├── actions/
+│   ├── components/
+│   ├── contexts/
+│   ├── hooks/
+│   ├── lib/
+│   └── types/
+├── public/         # 公開ページすべて（adminを参照しない）
+│   ├── actions/
+│   ├── components/
+│   ├── emails/
+│   ├── lib/
+│   └── types/
+├── shared/         # 共有コード（admin/public両方から参照可）
+│   ├── contexts/
+│   ├── generated/prisma/
+│   ├── lib/
+│   └── types/
+└── app/            # ルート（変更なし）
+```
+
+---
 
 ### 041-admin-cleanup-refactoring.md (2026-01-17) ✅ Phase 1-5
 
