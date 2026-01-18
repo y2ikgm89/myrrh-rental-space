@@ -8,6 +8,21 @@ import type { LocationFormInput, LocationWithStats, GetLocationsResult } from '@
 import { getSession, getRoleFromSession } from '@/shared/lib/auth'
 import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'
 import { logPermissionDenied } from '@/admin/lib/audit'
+import { parseBusinessHours, type BusinessHours } from '@/shared/types'
+
+// =============================================================================
+// Prisma JSON Helpers (server-only)
+// =============================================================================
+
+/**
+ * BusinessHoursをPrisma JSONに変換
+ */
+function businessHoursToJson(
+  value: BusinessHours | null | undefined
+): Prisma.InputJsonValue | typeof Prisma.JsonNull {
+  if (value === null || value === undefined) return Prisma.JsonNull
+  return value as Prisma.InputJsonValue
+}
 
 // =============================================================================
 // Helper Functions
@@ -80,7 +95,7 @@ export async function getLocations(options?: {
     access: loc.access,
     imageUrl: loc.imageUrl,
     imageUrls: Array.isArray(loc.imageUrls) ? (loc.imageUrls as string[]) : [],
-    businessHours: loc.businessHours as Record<string, unknown> | null,
+    businessHours: parseBusinessHours(loc.businessHours),
     sortOrder: loc.sortOrder,
     isPublished: loc.isPublished,
     isActive: loc.isActive,
@@ -125,7 +140,7 @@ export async function getLocationById(id: string): Promise<ActionResult<Location
     access: location.access,
     imageUrl: location.imageUrl,
     imageUrls: Array.isArray(location.imageUrls) ? (location.imageUrls as string[]) : [],
-    businessHours: location.businessHours as Record<string, unknown> | null,
+    businessHours: parseBusinessHours(location.businessHours),
     sortOrder: location.sortOrder,
     isPublished: location.isPublished,
     isActive: location.isActive,
@@ -188,9 +203,7 @@ export const createLocation = withPermission<[input: LocationFormInput], { id: s
       access: data.access || null,
       imageUrl: data.imageUrl,
       imageUrls: data.imageUrls,
-      businessHours: data.businessHours
-        ? (data.businessHours as Prisma.InputJsonValue)
-        : Prisma.JsonNull,
+      businessHours: businessHoursToJson(data.businessHours ?? null),
       sortOrder: data.sortOrder,
       isPublished: data.isPublished,
     },
@@ -236,9 +249,7 @@ export const updateLocation = withPermission<[id: string, input: LocationFormInp
       access: data.access || null,
       imageUrl: data.imageUrl,
       imageUrls: data.imageUrls,
-      businessHours: data.businessHours
-        ? (data.businessHours as Prisma.InputJsonValue)
-        : Prisma.JsonNull,
+      businessHours: businessHoursToJson(data.businessHours ?? null),
       sortOrder: data.sortOrder,
       isPublished: data.isPublished,
     },

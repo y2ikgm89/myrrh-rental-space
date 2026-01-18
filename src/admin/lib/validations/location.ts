@@ -1,8 +1,37 @@
 import { z } from 'zod'
+import {
+  type BusinessHours,
+  type DayOfWeek,
+  DAYS_OF_WEEK,
+  isBusinessHours,
+} from '@/shared/types'
 
 /**
  * 場所（Location）バリデーションスキーマ
  */
+
+/**
+ * TimeSlotスキーマ
+ */
+const timeSlotSchema = z.object({
+  open: z.string().regex(/^\d{2}:\d{2}$/, '開店時刻は HH:MM 形式で入力してください'),
+  close: z.string().regex(/^\d{2}:\d{2}$/, '閉店時刻は HH:MM 形式で入力してください'),
+})
+
+/**
+ * BusinessHoursスキーマ
+ * 各曜日に対してTimeSlot | nullを許容
+ */
+const businessHoursSchema = z
+  .object(
+    Object.fromEntries(
+      DAYS_OF_WEEK.map((day) => [day, timeSlotSchema.nullable()])
+    ) as Record<DayOfWeek, z.ZodNullable<typeof timeSlotSchema>>
+  )
+  .refine(
+    (value): value is BusinessHours => isBusinessHours(value),
+    '無効な営業時間形式です'
+  )
 
 const imageUrlsSchema = z
   .array(z.string().url('有効なURLを入力してください'))
@@ -33,7 +62,7 @@ export const locationFormSchema = z.object({
     .min(1, '建物画像URLを入力してください')
     .url('有効なURLを入力してください'),
   imageUrls: imageUrlsSchema,
-  businessHours: z.record(z.string(), z.unknown()).optional().nullable(),
+  businessHours: businessHoursSchema.optional().nullable(),
   sortOrder: z.number().int().min(0).default(0),
   isPublished: z.boolean().default(false),
 })
@@ -62,7 +91,7 @@ export type LocationWithStats = {
   access: string | null
   imageUrl: string
   imageUrls: string[]
-  businessHours: Record<string, unknown> | null
+  businessHours: BusinessHours | null
   sortOrder: number
   isPublished: boolean
   isActive: boolean

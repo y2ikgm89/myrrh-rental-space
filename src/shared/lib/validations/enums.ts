@@ -59,67 +59,87 @@ export const ACTIVE_RESERVATION_STATUSES: readonly ReservationStatus[] = [
 ]
 
 // =============================================================================
+// Valid Value Sets (for O(1) lookup performance)
+// =============================================================================
+
+const VALID_ROLES = new Set<string>(Object.values(Role))
+const VALID_RESERVATION_STATUSES = new Set<string>(Object.values(ReservationStatus))
+const VALID_INQUIRY_STATUSES = new Set<string>(Object.values(InquiryStatus))
+const VALID_CUSTOMER_STATUSES = new Set<string>(Object.values(CustomerStatus))
+const VALID_NAVIGATION_TYPES = new Set<string>(Object.values(NavigationType))
+const VALID_SOCIAL_PLATFORMS = new Set<string>(Object.values(SocialPlatform))
+const VALID_LAYOUT_WIDTHS = new Set<string>(Object.values(LayoutWidth))
+const VALID_HOMEPAGE_SECTION_TYPES = new Set<string>(Object.values(HomepageSectionType))
+const VALID_BLOG_POST_STATUSES = new Set<string>(Object.values(BlogPostStatus))
+const VALID_NEWS_STATUSES = new Set<string>(Object.values(NewsStatus))
+const VALID_AUDIT_ACTIONS = new Set<string>(Object.values(AuditAction))
+const VALID_MEDIA_TYPES = new Set<string>(Object.values(MediaType))
+const VALID_MEDIA_USAGES = new Set<string>(Object.values(MediaUsage))
+const VALID_TERMS_TYPES = new Set<string>(Object.values(TermsType))
+const VALID_TERMS_STATUSES = new Set<string>(Object.values(TermsStatus))
+
+// =============================================================================
 // Type Guards
 // =============================================================================
 
-export function isValidRole(value: string): value is Role {
-  return Object.values(Role).includes(value as Role)
+export function isValidRole(value: unknown): value is Role {
+  return typeof value === 'string' && VALID_ROLES.has(value)
 }
 
-export function isValidReservationStatus(value: string): value is ReservationStatus {
-  return Object.values(ReservationStatus).includes(value as ReservationStatus)
+export function isValidReservationStatus(value: unknown): value is ReservationStatus {
+  return typeof value === 'string' && VALID_RESERVATION_STATUSES.has(value)
 }
 
-export function isValidInquiryStatus(value: string): value is InquiryStatus {
-  return Object.values(InquiryStatus).includes(value as InquiryStatus)
+export function isValidInquiryStatus(value: unknown): value is InquiryStatus {
+  return typeof value === 'string' && VALID_INQUIRY_STATUSES.has(value)
 }
 
-export function isValidCustomerStatus(value: string): value is CustomerStatus {
-  return Object.values(CustomerStatus).includes(value as CustomerStatus)
+export function isValidCustomerStatus(value: unknown): value is CustomerStatus {
+  return typeof value === 'string' && VALID_CUSTOMER_STATUSES.has(value)
 }
 
-export function isValidNavigationType(value: string): value is NavigationType {
-  return Object.values(NavigationType).includes(value as NavigationType)
+export function isValidNavigationType(value: unknown): value is NavigationType {
+  return typeof value === 'string' && VALID_NAVIGATION_TYPES.has(value)
 }
 
-export function isValidSocialPlatform(value: string): value is SocialPlatform {
-  return Object.values(SocialPlatform).includes(value as SocialPlatform)
+export function isValidSocialPlatform(value: unknown): value is SocialPlatform {
+  return typeof value === 'string' && VALID_SOCIAL_PLATFORMS.has(value)
 }
 
-export function isValidLayoutWidth(value: string): value is LayoutWidth {
-  return Object.values(LayoutWidth).includes(value as LayoutWidth)
+export function isValidLayoutWidth(value: unknown): value is LayoutWidth {
+  return typeof value === 'string' && VALID_LAYOUT_WIDTHS.has(value)
 }
 
-export function isValidHomepageSectionType(value: string): value is HomepageSectionType {
-  return Object.values(HomepageSectionType).includes(value as HomepageSectionType)
+export function isValidHomepageSectionType(value: unknown): value is HomepageSectionType {
+  return typeof value === 'string' && VALID_HOMEPAGE_SECTION_TYPES.has(value)
 }
 
-export function isValidBlogPostStatus(value: string): value is BlogPostStatus {
-  return Object.values(BlogPostStatus).includes(value as BlogPostStatus)
+export function isValidBlogPostStatus(value: unknown): value is BlogPostStatus {
+  return typeof value === 'string' && VALID_BLOG_POST_STATUSES.has(value)
 }
 
-export function isValidNewsStatus(value: string): value is NewsStatus {
-  return Object.values(NewsStatus).includes(value as NewsStatus)
+export function isValidNewsStatus(value: unknown): value is NewsStatus {
+  return typeof value === 'string' && VALID_NEWS_STATUSES.has(value)
 }
 
-export function isValidAuditAction(value: string): value is AuditAction {
-  return Object.values(AuditAction).includes(value as AuditAction)
+export function isValidAuditAction(value: unknown): value is AuditAction {
+  return typeof value === 'string' && VALID_AUDIT_ACTIONS.has(value)
 }
 
-export function isValidMediaType(value: string): value is MediaType {
-  return Object.values(MediaType).includes(value as MediaType)
+export function isValidMediaType(value: unknown): value is MediaType {
+  return typeof value === 'string' && VALID_MEDIA_TYPES.has(value)
 }
 
-export function isValidMediaUsage(value: string): value is MediaUsage {
-  return Object.values(MediaUsage).includes(value as MediaUsage)
+export function isValidMediaUsage(value: unknown): value is MediaUsage {
+  return typeof value === 'string' && VALID_MEDIA_USAGES.has(value)
 }
 
-export function isValidTermsType(value: string): value is TermsType {
-  return Object.values(TermsType).includes(value as TermsType)
+export function isValidTermsType(value: unknown): value is TermsType {
+  return typeof value === 'string' && VALID_TERMS_TYPES.has(value)
 }
 
-export function isValidTermsStatus(value: string): value is TermsStatus {
-  return Object.values(TermsStatus).includes(value as TermsStatus)
+export function isValidTermsStatus(value: unknown): value is TermsStatus {
+  return typeof value === 'string' && VALID_TERMS_STATUSES.has(value)
 }
 
 // =============================================================================

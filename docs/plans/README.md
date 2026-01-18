@@ -8,6 +8,72 @@
 
 ## 完了した計画
 
+### 049-type-safety-improvements.md (2026-01-19) ✅
+
+型安全性改善 - 公式ベストプラクティス準拠
+
+**概要**:
+プロジェクト全体の型定義と型安全性を調査し、公式ベストプラクティスに準拠した最新推奨でクリーンな実装に改善。
+
+**完了フェーズ**:
+- ✅ Phase 1: JSONフィールド型定義（BusinessHours型、型ガード、Prisma変換ヘルパー）
+- ✅ Phase 2: FormDataヘルパー（型安全なgetFormString/Number/Boolean/File関数群）
+- ⏭️ Phase 3: エラーハンドリング統一（既存ActionResult<T>で十分、スキップ）
+- ✅ Phase 4: 型ガード改善（15個の型ガードからasアサーション削除、Set-based O(1) lookup）
+- ✅ Phase 5: 検証（type-check/lint/build成功）
+
+**新規ファイル**:
+- `src/shared/types/json-fields.ts` - BusinessHours型、TimeSlot、DayOfWeek、型ガード
+- `src/shared/lib/form-data.ts` - 型安全なFormDataヘルパー関数群
+- `src/shared/lib/index.ts` - バレルエクスポート
+
+**変更ファイル**:
+- `src/shared/types/index.ts` - JSON fields型のエクスポート追加
+- `src/shared/lib/validations/enums.ts` - 15個の型ガードをSet-based検証に改善
+- `src/admin/lib/validations/location.ts` - BusinessHours型使用
+- `src/admin/actions/location.ts` - parseBusinessHours()、businessHoursToJson()使用
+
+**改善効果**:
+- `Record<string, unknown>` → 具体的なBusinessHours型
+- `as Enum` アサーション → Set-based O(1) 型ガード
+- FormData直接アクセス → 型安全なヘルパー関数
+
+---
+
+### 048-staff-invitation-flow.md (2026-01-19) ✅
+
+スタッフ招待フロー（セキュアなパスワード設定）
+
+**概要**:
+管理者が直接パスワードを設定する方式から、招待メールによるスタッフ自身でのパスワード設定フローに移行。
+セキュリティを強化し、パスワード共有の必要性を排除。
+
+**完了フェーズ**:
+- ✅ Phase 1: 招待トークン・メール送信基盤（StaffInvitationモデル、Server Actions、メールテンプレート）
+- ✅ Phase 2: パスワード設定画面（/admin/setup/[token]）
+- ✅ Phase 3: 登録フォーム変更（招待フローへ移行）
+- ✅ Phase 4: 検証（type-check/lint/build成功）
+
+**新規ファイル**:
+- `prisma/migrations/20260118153836_add_staff_invitation/` - DBマイグレーション
+- `src/admin/actions/staff-invitation.ts` - 招待Server Actions
+- `src/admin/lib/validations/staff-invitation.ts` - Zodバリデーションスキーマ
+- `src/public/emails/staff-invitation.tsx` - 招待メールテンプレート
+- `src/app/(admin)/admin/(auth)/setup/[token]/` - パスワード設定ページ
+- `src/app/(admin)/admin/(dashboard)/staff/` - スタッフ管理ページ一式
+
+**変更ファイル**:
+- `prisma/schema.prisma` - StaffInvitationモデル追加
+- `src/shared/lib/email-service.ts` - sendStaffInvitationEmail関数追加
+
+**フロー**:
+1. 管理者: メールアドレス入力 → 「招待を送信」
+2. システム: 招待トークン生成 → 招待メール送信
+3. スタッフ: メール受信 → URLクリック → パスワード設定
+4. 完了: 設定したパスワードでログイン可能
+
+---
+
 ### 046-customer-creation.md (2026-01-18) ✅
 
 顧客管理 - 新規顧客作成機能
