@@ -11,6 +11,7 @@ import {
 import { ReservationStatusBadge } from '@/admin/components/status-badges'
 import { ReservationStatusSelect } from './ReservationStatusSelect'
 import type { ReservationWithRelations } from '@/admin/actions/reservation'
+import { formatPrice } from '@/shared/lib/utils'
 
 // =============================================================================
 // Types
@@ -38,14 +39,6 @@ function formatTime(date: Date): string {
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(date))
-}
-
-function formatPrice(price: number | null): string {
-  if (price === null) return '-'
-  return new Intl.NumberFormat('ja-JP', {
-    style: 'currency',
-    currency: 'JPY',
-  }).format(price)
 }
 
 // =============================================================================

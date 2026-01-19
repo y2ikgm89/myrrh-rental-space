@@ -161,3 +161,57 @@ export function formatDate(
 
   return d.toLocaleDateString('ja-JP', options)
 }
+
+/**
+ * 日付を短縮形式でフォーマット（管理画面用）
+ *
+ * @example
+ * formatDateShort(new Date())      // → '2024/01/15'
+ * formatDateShort('2024-01-15')    // → '2024/01/15'
+ */
+export function formatDateShort(date: Date | string | null | undefined): string {
+  if (!date) return '-'
+  const d = typeof date === 'string' ? new Date(date) : date
+  return new Intl.DateTimeFormat('ja-JP', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(d)
+}
+
+/**
+ * 日時を短縮形式でフォーマット（管理画面用）
+ *
+ * @example
+ * formatDateTimeShort(new Date())  // → '2024/01/15 14:30'
+ */
+export function formatDateTimeShort(date: Date | string | null | undefined): string {
+  if (!date) return '-'
+  const d = typeof date === 'string' ? new Date(date) : date
+  return new Intl.DateTimeFormat('ja-JP', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(d)
+}
+
+/**
+ * 日時を詳細形式でフォーマット（曜日付き、管理画面用）
+ *
+ * @example
+ * formatDateTimeFull(new Date())   // → '2024/01/15(月) 14:30'
+ */
+export function formatDateTimeFull(date: Date | string | null | undefined): string {
+  if (!date) return '-'
+  const d = typeof date === 'string' ? new Date(date) : date
+  return new Intl.DateTimeFormat('ja-JP', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(d)
+}

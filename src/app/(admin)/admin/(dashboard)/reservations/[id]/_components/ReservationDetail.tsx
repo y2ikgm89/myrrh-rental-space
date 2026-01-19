@@ -28,28 +28,10 @@ import {
   isValidReservationStatus,
   type ReservationStatus,
 } from '@/shared/lib/validations/enums'
+import { formatDateTimeFull, formatPrice } from '@/shared/lib/utils'
 
 type ReservationDetailProps = {
   reservation: ReservationWithRelations
-}
-
-function formatDateTime(date: Date): string {
-  return new Intl.DateTimeFormat('ja-JP', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    weekday: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(date))
-}
-
-function formatPrice(price: number | null): string {
-  if (price === null) return '-'
-  return new Intl.NumberFormat('ja-JP', {
-    style: 'currency',
-    currency: 'JPY',
-  }).format(price)
 }
 
 export function ReservationDetail({ reservation }: ReservationDetailProps) {
@@ -143,25 +125,25 @@ export function ReservationDetail({ reservation }: ReservationDetailProps) {
             <div>
               <div className="text-sm text-muted-foreground">開始日時</div>
               <div className="font-medium">
-                {formatDateTime(reservation.startTime)}
+                {formatDateTimeFull(reservation.startTime)}
               </div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground">終了日時</div>
               <div className="font-medium">
-                {formatDateTime(reservation.endTime)}
+                {formatDateTimeFull(reservation.endTime)}
               </div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground">作成日時</div>
               <div className="font-medium">
-                {formatDateTime(reservation.createdAt)}
+                {formatDateTimeFull(reservation.createdAt)}
               </div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground">更新日時</div>
               <div className="font-medium">
-                {formatDateTime(reservation.updatedAt)}
+                {formatDateTimeFull(reservation.updatedAt)}
               </div>
             </div>
           </div>

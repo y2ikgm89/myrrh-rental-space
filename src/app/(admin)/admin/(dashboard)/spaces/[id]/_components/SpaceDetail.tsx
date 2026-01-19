@@ -16,26 +16,10 @@ import {
 } from '@/admin/components/ui'
 import { updateSpacePublish, deleteSpace } from '@/admin/actions/space'
 import type { SpaceWithStats } from '@/admin/lib/validations/space'
+import { formatDateTimeShort, formatCurrency } from '@/shared/lib/utils'
 
 type SpaceDetailProps = {
   space: SpaceWithStats
-}
-
-function formatDateTime(date: Date): string {
-  return new Intl.DateTimeFormat('ja-JP', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(date))
-}
-
-function formatPrice(price: number): string {
-  return new Intl.NumberFormat('ja-JP', {
-    style: 'currency',
-    currency: 'JPY',
-  }).format(price)
 }
 
 export function SpaceDetail({ space }: SpaceDetailProps) {
@@ -148,7 +132,7 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
             <div>
               <div className="text-sm text-muted-foreground">時間料金</div>
               <div className="text-xl font-bold">
-                {formatPrice(space.hourlyPrice)}
+                {formatCurrency(space.hourlyPrice)}
                 <span className="text-sm font-normal text-muted-foreground">
                   /時間
                 </span>
@@ -158,7 +142,7 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
               <div>
                 <div className="text-sm text-muted-foreground">日額料金</div>
                 <div className="text-xl font-bold">
-                  {formatPrice(space.dailyPrice)}
+                  {formatCurrency(space.dailyPrice)}
                   <span className="text-sm font-normal text-muted-foreground">
                     /日
                   </span>
@@ -240,20 +224,20 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
             <div>
               <div className="text-sm text-muted-foreground">作成日時</div>
               <div className="font-medium">
-                {formatDateTime(space.createdAt)}
+                {formatDateTimeShort(space.createdAt)}
               </div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground">更新日時</div>
               <div className="font-medium">
-                {formatDateTime(space.updatedAt)}
+                {formatDateTimeShort(space.updatedAt)}
               </div>
             </div>
             {space.publishedAt && (
               <div>
                 <div className="text-sm text-muted-foreground">公開日時</div>
                 <div className="font-medium">
-                  {formatDateTime(space.publishedAt)}
+                  {formatDateTimeShort(space.publishedAt)}
                 </div>
               </div>
             )}

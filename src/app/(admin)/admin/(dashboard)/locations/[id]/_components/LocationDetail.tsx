@@ -16,19 +16,10 @@ import {
 } from '@/admin/components/ui'
 import { toggleLocationPublish, deleteLocation } from '@/admin/actions/location'
 import type { LocationWithStats } from '@/admin/lib/validations/location'
+import { formatDateTimeShort } from '@/shared/lib/utils'
 
 type LocationDetailProps = {
   location: LocationWithStats
-}
-
-function formatDateTime(date: Date): string {
-  return new Intl.DateTimeFormat('ja-JP', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(date))
 }
 
 export function LocationDetail({ location }: LocationDetailProps) {
@@ -194,13 +185,13 @@ export function LocationDetail({ location }: LocationDetailProps) {
             <div>
               <div className="text-sm text-muted-foreground">作成日時</div>
               <div className="font-medium">
-                {formatDateTime(location.createdAt)}
+                {formatDateTimeShort(location.createdAt)}
               </div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground">更新日時</div>
               <div className="font-medium">
-                {formatDateTime(location.updatedAt)}
+                {formatDateTimeShort(location.updatedAt)}
               </div>
             </div>
             <div>
