@@ -1,11 +1,77 @@
 /**
- * ナビゲーション設定ページ（リダイレクト）
+ * ナビゲーション管理ページ
  *
- * サイト設定ページのナビゲーションタブにリダイレクト
+ * ヘッダー・フッターのナビゲーションメニューとSNSリンクを管理
+ *
+ * Next.js 16 PPR対応:
+ * - 静的シェル: ローディングUI
+ * - 動的コンテンツ: ナビゲーションデータ（Suspenseでラップ）
  */
 
-import { redirect } from 'next/navigation'
+import { Suspense } from 'react'
+import { connection } from 'next/server'
+import { getNavigationItems, getSocialLinks } from '@/admin/actions/navigation'
+import { NavigationManager } from '../site/_components/NavigationManager'
+import type { ReactElement } from 'react'
 
-export default function NavigationSettingsPage(): never {
-  redirect('/admin/settings/site?tab=navigation')
+/**
+ * 動的コンテンツ: ナビゲーション管理
+ */
+async function NavigationContent(): Promise<ReactElement> {
+  await connection()
+
+  const [desktopItems, mobileItems, footerItems, socialLinks] = await Promise.all([
+    getNavigationItems('HEADER_DESKTOP'),
+    getNavigationItems('HEADER_MOBILE'),
+    getNavigationItems('FOOTER'),
+    getSocialLinks(),
+  ])
+
+  return (
+    <NavigationManager
+      initialDesktopItems={desktopItems}
+      initialMobileItems={mobileItems}
+      initialFooterItems={footerItems}
+      initialSocialLinks={socialLinks}
+    />
+  )
+}
+
+/**
+ * ローディングUI
+ */
+function NavigationLoading(): ReactElement {
+  return (
+    <div className="space-y-6">
+      {/* ヘッダー */}
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="h-8 w-48 animate-pulse rounded bg-gray-200" />
+          <div className="mt-2 h-5 w-72 animate-pulse rounded bg-gray-200" />
+        </div>
+        <div className="h-10 w-24 animate-pulse rounded bg-gray-200" />
+      </div>
+
+      {/* タブ */}
+      <div className="flex gap-1 h-10 bg-muted rounded-lg p-1">
+        <div className="h-8 w-28 animate-pulse rounded-md bg-gray-300" />
+        <div className="h-8 w-24 animate-pulse rounded-md bg-gray-200" />
+        <div className="h-8 w-20 animate-pulse rounded-md bg-gray-200" />
+        <div className="h-8 w-24 animate-pulse rounded-md bg-gray-200" />
+      </div>
+
+      {/* テーブル */}
+      <div className="animate-pulse space-y-4">
+        <div className="h-64 rounded bg-gray-200" />
+      </div>
+    </div>
+  )
+}
+
+export default function NavigationSettingsPage(): ReactElement {
+  return (
+    <Suspense fallback={<NavigationLoading />}>
+      <NavigationContent />
+    </Suspense>
+  )
 }

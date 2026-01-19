@@ -1,7 +1,8 @@
 /**
  * サイト設定ページ
  *
- * 一般設定・SEO設定・レイアウト・ナビゲーション・お知らせバーをタブで切り替え
+ * 一般設定・SEO設定・レイアウトをタブで切り替え
+ * ナビゲーションとお知らせバーは独立ページに分離
  *
  * Next.js 16 PPR対応:
  * - 静的シェル: ローディングUI
@@ -11,11 +12,9 @@
 import { Suspense } from 'react'
 import { connection } from 'next/server'
 import Link from 'next/link'
-import { ChevronRight, FileText } from 'lucide-react'
+import { ChevronRight, FileText, Navigation, Megaphone } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription } from '@/admin/components/ui/card'
-import { getSettings, getAnnouncementBarCarouselSettings } from '@/admin/actions/settings'
-import { getNavigationItems, getSocialLinks } from '@/admin/actions/navigation'
-import { getAnnouncementBars } from '@/admin/actions/announcement-bar'
+import { getSettings } from '@/admin/actions/settings'
 import { SettingsLayout } from '../_components/SettingsLayout'
 import { SettingsTabs } from '../_components/SettingsTabs'
 import {
@@ -25,8 +24,6 @@ import {
   SidebarSection,
   LayoutSection,
 } from '../_components/sections'
-import { NavigationManager } from './_components/NavigationManager'
-import { AnnouncementBarManager } from './_components/AnnouncementBarManager'
 import type { ReactElement } from 'react'
 
 /**
@@ -35,22 +32,13 @@ import type { ReactElement } from 'react'
 async function SiteSettingsContent(): Promise<ReactElement> {
   await connection()
 
-  const [settings, desktopItems, mobileItems, footerItems, socialLinks, { items: announcementBars }, carouselSettings] =
-    await Promise.all([
-      getSettings(),
-      getNavigationItems('HEADER_DESKTOP'),
-      getNavigationItems('HEADER_MOBILE'),
-      getNavigationItems('FOOTER'),
-      getSocialLinks(),
-      getAnnouncementBars(),
-      getAnnouncementBarCarouselSettings(),
-    ])
+  const settings = await getSettings()
 
   if (!settings) {
     return (
       <SettingsLayout
         title="サイト設定"
-        description="一般設定・SEO設定・レイアウト・ナビゲーション・お知らせバー"
+        description="一般設定・SEO設定・レイアウト"
       >
         <div className="text-center py-8 text-muted-foreground">
           設定を読み込めませんでした
@@ -85,58 +73,76 @@ async function SiteSettingsContent(): Promise<ReactElement> {
         </div>
       ),
     },
-    {
-      value: 'navigation',
-      label: 'ナビゲーション',
-      content: (
-        <NavigationManager
-          initialDesktopItems={desktopItems}
-          initialMobileItems={mobileItems}
-          initialFooterItems={footerItems}
-          initialSocialLinks={socialLinks}
-        />
-      ),
-    },
-    {
-      value: 'announcement-bar',
-      label: 'お知らせバー',
-      content: (
-        <AnnouncementBarManager
-          initialBars={announcementBars}
-          initialCarouselSettings={carouselSettings}
-        />
-      ),
-    },
   ]
 
   return (
     <SettingsLayout
       title="サイト設定"
-      description="一般設定・SEO設定・レイアウト・ナビゲーション・お知らせバー"
+      description="一般設定・SEO設定・レイアウト"
     >
       <SettingsTabs tabs={tabs} defaultTab="general" />
 
-      {/* 監査ログへのリンクカード */}
+      {/* 関連ページへのリンク */}
       <div className="mt-8 pt-4 border-t">
-        <h2 className="text-sm font-medium text-muted-foreground mb-4">関連機能</h2>
-        <Link href="/admin/audit-logs" className="block group max-w-sm">
-          <Card className="transition-colors hover:bg-muted/50">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <FileText className="h-5 w-5" />
+        <h2 className="text-sm font-medium text-muted-foreground mb-4">関連設定</h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Link href="/admin/settings/navigation" className="block group">
+            <Card className="transition-colors hover:bg-muted/50">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      <Navigation className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">ナビゲーション</CardTitle>
+                      <CardDescription>メニュー・SNSリンク管理</CardDescription>
+                    </div>
                   </div>
-                  <div>
-                    <CardTitle className="text-base">監査ログ</CardTitle>
-                    <CardDescription>システム操作の履歴確認</CardDescription>
-                  </div>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
                 </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
-              </div>
-            </CardHeader>
-          </Card>
-        </Link>
+              </CardHeader>
+            </Card>
+          </Link>
+
+          <Link href="/admin/settings/announcement-bar" className="block group">
+            <Card className="transition-colors hover:bg-muted/50">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      <Megaphone className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">お知らせバー</CardTitle>
+                      <CardDescription>サイト上部のお知らせ</CardDescription>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
+                </div>
+              </CardHeader>
+            </Card>
+          </Link>
+
+          <Link href="/admin/audit-logs" className="block group">
+            <Card className="transition-colors hover:bg-muted/50">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      <FileText className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">監査ログ</CardTitle>
+                      <CardDescription>システム操作の履歴確認</CardDescription>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
+                </div>
+              </CardHeader>
+            </Card>
+          </Link>
+        </div>
       </div>
     </SettingsLayout>
   )
@@ -149,15 +155,13 @@ function SiteSettingsLoading(): ReactElement {
   return (
     <SettingsLayout
       title="サイト設定"
-      description="一般設定・SEO設定・レイアウト・ナビゲーション・お知らせバー"
+      description="一般設定・SEO設定・レイアウト"
     >
       <div className="animate-pulse space-y-6">
         <div className="flex gap-1 h-10 bg-muted rounded-lg p-1">
           <div className="h-8 w-16 bg-gray-300 rounded-md" />
           <div className="h-8 w-12 bg-gray-200 rounded-md" />
           <div className="h-8 w-20 bg-gray-200 rounded-md" />
-          <div className="h-8 w-28 bg-gray-200 rounded-md" />
-          <div className="h-8 w-24 bg-gray-200 rounded-md" />
         </div>
         <div className="h-48 bg-gray-200 rounded" />
         <div className="h-48 bg-gray-200 rounded" />
