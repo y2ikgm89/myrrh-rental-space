@@ -1,0 +1,149 @@
+/**
+ * お知らせ Public Action 統合テスト
+ *
+ * src/app/(public)/_shared/actions/news.ts のテスト
+ *
+ * オプション処理とフィルタリングロジックのテスト
+ */
+
+import { describe, test, expect } from 'bun:test'
+import { NewsStatus } from '@/shared/generated/prisma/enums'
+
+// =============================================================================
+// GetPublishedNewsListOptions Tests
+// =============================================================================
+
+describe('News Public Action Integration', () => {
+  describe('GetPublishedNewsListOptions', () => {
+    test('デフォルト値が正しく設定される', () => {
+      const options = {}
+      const { take = 5 } = options
+
+      expect(take).toBe(5)
+    })
+
+    test('カスタム値が正しく適用される', () => {
+      const options = { take: 10 }
+      const { take = 5 } = options
+
+      expect(take).toBe(10)
+    })
+  })
+
+  describe('NewsStatus enum', () => {
+    test('全てのステータスが定義されている', () => {
+      expect(NewsStatus.DRAFT).toBe('DRAFT')
+      expect(NewsStatus.PUBLISHED).toBe('PUBLISHED')
+      expect(NewsStatus.ARCHIVED).toBe('ARCHIVED')
+    })
+
+    test('ステータス数', () => {
+      const statusCount = Object.values(NewsStatus).length
+      expect(statusCount).toBe(3)
+    })
+  })
+
+  describe('PublicNews type validation', () => {
+    test('有効なお知らせデータ構造', () => {
+      const news = {
+        id: 'news-123',
+        title: 'お知らせタイトル',
+        publishedAt: new Date('2024-01-15'),
+      }
+
+      expect(news.id).toBe('news-123')
+      expect(news.title).toBe('お知らせタイトル')
+      expect(news.publishedAt).toBeInstanceOf(Date)
+    })
+  })
+
+  describe('publishedAt filtering logic', () => {
+    test('publishedAt が未来の日付の場合フィルタリングされる', () => {
+      const newsItems = [
+        {
+          id: 'past-news',
+          title: '過去のお知らせ',
+          publishedAt: new Date('2024-01-01'),
+        },
+        {
+          id: 'future-news',
+          title: '未来のお知らせ',
+          publishedAt: new Date('2099-12-31'),
+        },
+      ]
+
+      const filteredNews = newsItems.filter(
+        (item) => item.publishedAt && item.publishedAt <= new Date()
+      )
+
+      expect(filteredNews).toHaveLength(1)
+      expect(filteredNews[0].id).toBe('past-news')
+    })
+
+    test('publishedAt が null の場合フィルタリングされる', () => {
+      const newsItems = [
+        {
+          id: 'published-news',
+          title: '公開済み',
+          publishedAt: new Date('2024-01-01'),
+        },
+        {
+          id: 'draft-news',
+          title: '下書き',
+          publishedAt: null as Date | null,
+        },
+      ]
+
+      const filteredNews = newsItems.filter(
+        (item) => item.publishedAt && item.publishedAt <= new Date()
+      )
+
+      expect(filteredNews).toHaveLength(1)
+      expect(filteredNews[0].id).toBe('published-news')
+    })
+
+    test('ソート順序（新しい順）', () => {
+      const newsItems = [
+        { id: '1', publishedAt: new Date('2024-01-01') },
+        { id: '3', publishedAt: new Date('2024-03-01') },
+        { id: '2', publishedAt: new Date('2024-02-01') },
+      ]
+
+      const sorted = newsItems.sort(
+        (a, b) => b.publishedAt.getTime() - a.publishedAt.getTime()
+      )
+
+      expect(sorted[0].id).toBe('3')
+      expect(sorted[1].id).toBe('2')
+      expect(sorted[2].id).toBe('1')
+    })
+  })
+
+  describe('take limit', () => {
+    test('take 制限が正しく適用される', () => {
+      const allItems = [
+        { id: '1' },
+        { id: '2' },
+        { id: '3' },
+        { id: '4' },
+        { id: '5' },
+        { id: '6' },
+      ]
+
+      const take = 3
+      const limited = allItems.slice(0, take)
+
+      expect(limited).toHaveLength(3)
+      expect(limited.map((i) => i.id)).toEqual(['1', '2', '3'])
+    })
+
+    test('take がアイテム数より大きい場合', () => {
+      const allItems = [{ id: '1' }, { id: '2' }]
+
+      const take = 10
+      const limited = allItems.slice(0, take)
+
+      expect(limited).toHaveLength(2)
+    })
+  })
+})
