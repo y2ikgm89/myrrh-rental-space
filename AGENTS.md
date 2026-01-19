@@ -27,7 +27,7 @@ A reservation and management system for rental spaces. Provides a highly designe
 - Install deps: `bun install`
 - Setup environment: `cp .env.example .env.local` (then edit `.env.local`)
 - Start PostgreSQL (Docker Desktop): `docker-compose up -d postgres`
-- Database migration: `bunx prisma migrate dev`
+- Database migration: `bunx --bun prisma migrate dev`
 - Start dev server: `bun run dev` (runs on `http://localhost:3000`)
   - **Note**: Next.js 16 uses Turbopack by default for both development and production builds
   - **Project policy**: This project uses Turbopack only. Webpack is not used.
@@ -39,7 +39,7 @@ A reservation and management system for rental spaces. Provides a highly designe
 - Run tests: `bun run test`
 - Test watch mode: `bun run test:watch`
 - Test coverage: `bun run test:coverage`
-- Prisma Studio: `bunx prisma studio`
+- Prisma Studio: `bunx --bun prisma studio`
 
 ## Code style
 
@@ -68,7 +68,7 @@ A reservation and management system for rental spaces. Provides a highly designe
   - `src/app/` - App Router routes
   - Path aliases: `@/admin/*`, `@/public/*`, `@/shared/*`
   - See `docs/architecture/PROJECT_STRUCTURE.md` for details
-- Prisma: Create migration after schema changes with `bunx prisma migrate dev --name <migration_name>`, deploy with `bunx prisma migrate deploy`, view DB with `bunx prisma studio`
+- Prisma: Create migration after schema changes with `bunx --bun prisma migrate dev --name <migration_name>`, deploy with `bunx --bun prisma migrate deploy`, view DB with `bunx --bun prisma studio`
 - Environment variables: Use `.env.local` for development (don't commit), Google Secret Manager for production, see `.env.example` for required variables
 - Debugging: Server Components log to server console, Client Components use browser dev tools, enable Prisma query logs with `DEBUG=prisma:*`
 - Performance: Use Next.js `Image` component, lazy-load large libraries with `dynamic`, use appropriate cache strategies in Server Components

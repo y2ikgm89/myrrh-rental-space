@@ -21,7 +21,7 @@ COPY prisma ./prisma/
 RUN bun install --frozen-lockfile
 
 # Generate Prisma Client
-RUN bunx prisma generate --schema=./prisma/schema.prisma
+RUN bunx --bun prisma generate --schema=./prisma/schema.prisma
 
 # ---------------------------------------------
 # Stage 2: Builder

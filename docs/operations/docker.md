@@ -62,14 +62,14 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Prismaクライアントを生成
-RUN bunx prisma generate
+RUN bunx --bun prisma generate
 
 # Next.jsアプリケーションをビルド
 RUN bun run build
 ```
 
 **設計のポイント**:
-- **Prismaクライアント生成**: ビルド前にPrismaクライアントを生成（`bunx prisma generate`）
+- **Prismaクライアント生成**: ビルド前にPrismaクライアントを生成（`bunx --bun prisma generate`）
 - **Next.jsビルド**: `bun run build`でNext.jsアプリケーションをビルド
 - **重要**: `next.config.js`で`output: 'standalone'`が設定されている必要がある
 
@@ -133,7 +133,7 @@ FROM oven/bun:1.3.5 AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN bunx prisma generate
+RUN bunx --bun prisma generate
 RUN bun run build
 
 # Stage 3: 本番実行
@@ -373,7 +373,7 @@ docker-compose ps
 
 # マイグレーション実行（別ターミナル）
 # Prisma 7 では --config フラグで prisma.config.ts を指定
-bunx prisma migrate dev --name init --config prisma/prisma.config.ts
+bunx --bun prisma migrate dev --name init --config prisma/prisma.config.ts
 
 # 開発サーバー起動（別ターミナル）
 bun run dev
@@ -425,7 +425,7 @@ docker-compose down -v
 docker-compose up -d postgres
 
 # マイグレーションを再実行
-bunx prisma migrate dev --name reset --config prisma/prisma.config.ts
+bunx --bun prisma migrate dev --name reset --config prisma/prisma.config.ts
 ```
 
 ### 本番ビルド
@@ -535,7 +535,7 @@ export default defineConfig({
 
 **マイグレーションコマンド**:
 ```bash
-bunx prisma migrate dev --name <migration-name> --config prisma/prisma.config.ts
+bunx --bun prisma migrate dev --name <migration-name> --config prisma/prisma.config.ts
 ```
 
 ### Next.js Standalone Output

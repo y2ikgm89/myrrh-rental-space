@@ -660,10 +660,10 @@ await prisma.$transaction(async (tx) => {
 
 ```bash
 # 開発環境: マイグレーション作成と適用
-bunx prisma migrate dev --name add_indexes_to_reservations
+bunx --bun prisma migrate dev --name add_indexes_to_reservations
 
 # 本番環境: マイグレーション適用のみ
-bunx prisma migrate deploy
+bunx --bun prisma migrate deploy
 ```
 
 #### データ移行時の注意事項

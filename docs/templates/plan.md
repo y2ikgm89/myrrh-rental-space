@@ -29,7 +29,7 @@
 
 ## マイグレーション
 
-不要（または `bunx prisma migrate dev --name xxx`）
+不要（または `bunx --bun prisma migrate dev --name xxx`）
 
 ## 環境変数
 

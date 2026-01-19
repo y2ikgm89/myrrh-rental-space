@@ -1,11 +1,49 @@
 # Prisma 7 ガイド
 
-> **最終更新**: 2026-01-12（prisma-client ジェネレーター + Turbopack 互換確認）
+> **最終更新**: 2026-01-19（Bunランタイム推奨設定を追加）
 > **Prisma バージョン**: 7.2.0
 
 ## 概要
 
 このドキュメントには、Prisma 7でのインポート方法、移行手順、ベストプラクティスが記載されています。
+
+---
+
+## Bunランタイムでの使用
+
+このプロジェクトはBunランタイムで実行されます。Prisma CLIコマンドは`bunx --bun`を使用することで、Bunランタイムで実行されます。
+
+### CLIコマンド
+
+```bash
+# マイグレーション（開発環境）
+bunx --bun prisma migrate dev --name <name>
+
+# マイグレーション（本番環境）
+bunx --bun prisma migrate deploy
+
+# Prismaクライアント生成
+bunx --bun prisma generate
+
+# Prisma Studio
+bunx --bun prisma studio
+```
+
+> **注意**: `bunx --bun`を使用することで、PrismaがBunのランタイムで実行され、Node.jsとの互換性問題を回避できます。
+
+### オプション：runtime設定
+
+Bun公式ドキュメントでは、generator設定に`runtime = "bun"`を追加することが推奨されています：
+
+```prisma
+generator client {
+  provider = "prisma-client"
+  output   = "../src/shared/generated/prisma"
+  runtime  = "bun"  // オプション：Bunランタイム最適化
+}
+```
+
+ただし、このプロジェクトではdriver adapters（`@prisma/adapter-pg`）を使用しているため、この設定は必須ではありません。
 
 ---
 
@@ -367,7 +405,7 @@ import type { StockStatus } from '@/generated/prisma/client'
 - [x] `prisma/schema.prisma`でカスタム出力パスが設定されているか確認
 - [x] すべての`@prisma/client`インポートを`@/generated/prisma/client`に変更
 - [x] 実際のコードファイルのインポートを更新
-- [x] `bunx prisma generate`を実行してクライアントを生成
+- [x] `bunx --bun prisma generate`を実行してクライアントを生成
 - [x] `src/generated/prisma/client/index.ts` を作成（モジュール解決用）
 - [x] 型エラーがないか確認（`bun run type-check`）
 - [x] ドキュメント内のインポート例を更新

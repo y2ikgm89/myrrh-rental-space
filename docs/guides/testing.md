@@ -217,7 +217,7 @@ coverageSkipTestFiles = true
 
 ```bash
 # テスト用データベースにマイグレーション実行
-DATABASE_URL="your-test-database-url" bunx prisma migrate deploy
+DATABASE_URL="your-test-database-url" bunx --bun prisma migrate deploy
 ```
 
 ### テスト用環境変数
@@ -293,7 +293,7 @@ volumes:
 docker-compose -f docker-compose.test.yml up -d test-db
 
 # マイグレーション実行
-docker-compose -f docker-compose.test.yml run --rm test-app bunx prisma migrate deploy
+docker-compose -f docker-compose.test.yml run --rm test-app bunx --bun prisma migrate deploy
 
 # テスト実行
 docker-compose -f docker-compose.test.yml run --rm test-app bun run test
@@ -320,7 +320,7 @@ CI/CD環境では、テスト用データベースを自動セットアップし
 - name: Run database migrations
   run: |
     DATABASE_URL="postgresql://test:test@localhost:5433/test_db" \
-    bunx prisma migrate deploy
+    bunx --bun prisma migrate deploy
 
 - name: Run tests
   run: |
@@ -810,7 +810,7 @@ jobs:
       - name: Set up test database
         run: |
           DATABASE_URL="postgresql://test:test@localhost:5432/test_db" \
-          bunx prisma migrate deploy
+          bunx --bun prisma migrate deploy
         env:
           DATABASE_URL: postgresql://test:test@localhost:5432/test_db
       
@@ -1144,7 +1144,7 @@ afterEach(async () => {
 **テスト用データベースのリセット**:
 ```bash
 # テスト用データベースをリセット
-DATABASE_URL="your-test-database-url" bunx prisma migrate reset --force
+DATABASE_URL="your-test-database-url" bunx --bun prisma migrate reset --force
 ```
 
 ### シードデータの管理
@@ -1156,7 +1156,7 @@ DATABASE_URL="your-test-database-url" bunx prisma migrate reset --force
 **使用方法**:
 ```bash
 # テスト用シードデータを投入
-DATABASE_URL="your-test-database-url" bunx prisma db seed --script prisma/seed-test.ts
+DATABASE_URL="your-test-database-url" bunx --bun prisma db seed --script prisma/seed-test.ts
 ```
 
 ---

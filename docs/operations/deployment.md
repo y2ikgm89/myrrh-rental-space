@@ -70,7 +70,7 @@ cp .env.example .env.local
 
 ```bash
 # 開発環境（Docker Desktop PostgreSQL）
-bunx prisma migrate dev
+bunx --bun prisma migrate dev
 ```
 
 ### 本番環境
@@ -95,7 +95,7 @@ bunx prisma migrate dev
 
 ```bash
 # 本番環境
-bunx prisma migrate deploy
+bunx --bun prisma migrate deploy
 ```
 
 ### 4. Row Level Security (RLS)設定
@@ -254,7 +254,7 @@ gcloud run jobs execute prisma-migrate --region asia-northeast1
 
 ```bash
 export DATABASE_URL="your-production-database-url"
-bunx prisma migrate deploy
+bunx --bun prisma migrate deploy
 ```
 
 ---
@@ -306,7 +306,7 @@ jobs:
       - name: Set up test database
         run: |
           DATABASE_URL="postgresql://test:test@localhost:5432/test_db" \
-          bunx prisma migrate deploy
+          bunx --bun prisma migrate deploy
         env:
           DATABASE_URL: postgresql://test:test@localhost:5432/test_db
       

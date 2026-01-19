@@ -55,10 +55,10 @@ docker compose ps
 
 ```bash
 # スキーマをデータベースに反映
-bunx prisma migrate dev
+bunx --bun prisma migrate dev
 
 # Prisma Client を生成
-bunx prisma generate
+bunx --bun prisma generate
 ```
 
 ### 6. 開発サーバーの起動
@@ -78,8 +78,8 @@ http://localhost:3000 でアクセスできます。
 | `bun start` | 本番サーバー起動 |
 | `bun run lint` | ESLint 実行 |
 | `bun run type-check` | TypeScript 型チェック |
-| `bunx prisma studio` | Prisma Studio（DB GUI）起動 |
-| `bunx prisma migrate dev` | マイグレーション実行 |
+| `bunx --bun prisma studio` | Prisma Studio（DB GUI）起動 |
+| `bunx --bun prisma migrate dev` | マイグレーション実行 |
 | `docker compose up -d` | DB コンテナ起動 |
 | `docker compose down` | DB コンテナ停止 |
 

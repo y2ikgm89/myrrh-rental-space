@@ -82,7 +82,7 @@
 bun dev                    # 開発サーバー
 bun run test               # テスト実行
 bun run type-check && bun run lint && bun run build  # 検証
-bunx prisma migrate dev --name <name>  # DBマイグレーション
+bunx --bun prisma migrate dev --name <name>  # DBマイグレーション
 ```
 
 ### 技術スタック

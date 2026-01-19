@@ -29,8 +29,8 @@
 | 本番ビルド | ✅ | `bun run build`でNext.jsアプリケーションをビルド |
 | 本番サーバー | ✅ | `bun run start`でNext.jsアプリケーションを起動 |
 | Prisma | ✅ | BunのNode.js互換性により完全動作 |
-| Prismaマイグレーション | ✅ | `bunx prisma migrate`で実行可能 |
-| Prisma Studio | ✅ | `bunx prisma studio`で実行可能 |
+| Prismaマイグレーション | ✅ | `bunx --bun prisma migrate`で実行可能 |
+| Prisma Studio | ✅ | `bunx --bun prisma studio`で実行可能 |
 | Next.js | ✅ | Next.js 16.1.1がBunで完全動作 |
 | Better Auth | ✅ | Bunで完全動作 |
 | Turbopack | ✅ | Next.js 16のデフォルトバンドラー（Bunと統合） |
@@ -49,7 +49,7 @@ bun install
 cp .env.example .env.local
 
 # データベースマイグレーション
-bunx prisma migrate dev
+bunx --bun prisma migrate dev
 
 # 開発サーバー起動
 bun run dev
@@ -80,11 +80,11 @@ bun run test:coverage # カバレッジレポート
 bun run lint         # ESLint実行
 bun run type-check   # TypeScript型チェック
 
-# Prisma
-bunx prisma migrate dev    # マイグレーション作成・適用
-bunx prisma migrate deploy # 本番環境マイグレーション
-bunx prisma studio         # Prisma Studio起動
-bunx prisma generate       # Prismaクライアント生成
+# Prisma（bunx --bun推奨）
+bunx --bun prisma migrate dev    # マイグレーション作成・適用
+bunx --bun prisma migrate deploy # 本番環境マイグレーション
+bunx --bun prisma studio         # Prisma Studio起動
+bunx --bun prisma generate       # Prismaクライアント生成
 ```
 
 ---
@@ -102,7 +102,7 @@ RUN bun install --frozen-lockfile
 
 # ステージ2: ビルド
 FROM oven/bun:1.3.5 AS builder
-RUN bunx prisma generate
+RUN bunx --bun prisma generate
 RUN bun run build
 
 # ステージ3: 本番実行
@@ -168,10 +168,10 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 **マイグレーション**:
 ```bash
 # 開発環境
-bunx prisma migrate dev
+bunx --bun prisma migrate dev
 
 # 本番環境
-bunx prisma migrate deploy
+bunx --bun prisma migrate deploy
 ```
 
 ### Next.jsとBun
@@ -222,7 +222,7 @@ Next.js 16では、Turbopackがデフォルトのバンドラーとして使用�
 
 **解決策**:
 ```bash
-bunx prisma generate
+bunx --bun prisma generate
 ```
 
 ### Next.js関連
