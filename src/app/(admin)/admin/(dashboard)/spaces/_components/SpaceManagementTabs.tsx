@@ -58,7 +58,7 @@ export function SpaceManagementTabs({
 
   return (
     <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-      <TabsList className="mb-6">
+      <TabsList className="mb-2">
         <TabsTrigger value="spaces">スペース</TabsTrigger>
         <TabsTrigger value="locations">場所</TabsTrigger>
         <TabsTrigger value="categories">カテゴリー</TabsTrigger>

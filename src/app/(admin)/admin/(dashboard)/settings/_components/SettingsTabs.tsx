@@ -54,7 +54,7 @@ export function SettingsTabs({ tabs, defaultTab }: SettingsTabsProps) {
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-      <TabsList className="mb-6">
+      <TabsList className="mb-2">
         {tabs.map((tab) => (
           <TabsTrigger key={tab.value} value={tab.value}>
             {tab.label}
