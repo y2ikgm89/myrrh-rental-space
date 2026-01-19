@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -288,7 +287,6 @@ export function AnnouncementBarManager({
   initialBars,
   initialCarouselSettings,
 }: AnnouncementBarManagerProps) {
-  const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [bars, setBars] = useState<AnnouncementBarData[]>(initialBars)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -481,19 +479,6 @@ export function AnnouncementBarManager({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">お知らせバー管理</h1>
-          <p className="text-muted-foreground">
-            サイト上部に表示するお知らせバーを管理します
-          </p>
-        </div>
-        <Button variant="outline" onClick={() => router.push('/admin/settings')}>
-          戻る
-        </Button>
-      </div>
-
       <Tabs defaultValue="bars" className="space-y-4">
         <TabsList>
           <TabsTrigger value="bars">お知らせ一覧</TabsTrigger>

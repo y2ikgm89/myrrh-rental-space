@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -389,7 +388,6 @@ export function NavigationManager({
   initialFooterItems,
   initialSocialLinks,
 }: NavigationManagerProps) {
-  const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
   // Navigation Items State
@@ -744,19 +742,6 @@ export function NavigationManager({
 
   return (
     <div className="space-y-6">
-      {/* ヘッダー */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">ナビゲーション管理</h1>
-          <p className="text-muted-foreground">
-            デスクトップ・モバイル別のメニューとSNSリンクを管理します
-          </p>
-        </div>
-        <Button variant="outline" onClick={() => router.push('/admin/settings')}>
-          設定に戻る
-        </Button>
-      </div>
-
       {/* タブナビゲーション */}
       <Tabs defaultValue="desktop">
         <TabsList className="grid w-full grid-cols-4">

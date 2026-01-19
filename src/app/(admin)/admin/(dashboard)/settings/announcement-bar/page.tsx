@@ -12,6 +12,7 @@ import { Suspense } from 'react'
 import { connection } from 'next/server'
 import { getAnnouncementBars } from '@/admin/actions/announcement-bar'
 import { getAnnouncementBarCarouselSettings } from '@/admin/actions/settings'
+import { SettingsLayout } from '../_components/SettingsLayout'
 import { AnnouncementBarManager } from '../site/_components/AnnouncementBarManager'
 import type { ReactElement } from 'react'
 
@@ -40,15 +41,6 @@ async function AnnouncementBarContent(): Promise<ReactElement> {
 function AnnouncementBarLoading(): ReactElement {
   return (
     <div className="space-y-6">
-      {/* ヘッダー */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="h-8 w-48 animate-pulse rounded bg-gray-200" />
-          <div className="mt-2 h-5 w-96 animate-pulse rounded bg-gray-200" />
-        </div>
-        <div className="h-10 w-24 animate-pulse rounded bg-gray-200" />
-      </div>
-
       {/* タブ */}
       <div className="flex gap-1 h-10 bg-muted rounded-lg p-1">
         <div className="h-8 w-32 animate-pulse rounded-md bg-gray-300" />
@@ -65,8 +57,13 @@ function AnnouncementBarLoading(): ReactElement {
 
 export default function AnnouncementBarPage(): ReactElement {
   return (
-    <Suspense fallback={<AnnouncementBarLoading />}>
-      <AnnouncementBarContent />
-    </Suspense>
+    <SettingsLayout
+      title="お知らせバー管理"
+      description="サイト上部に表示するお知らせバーを管理します"
+    >
+      <Suspense fallback={<AnnouncementBarLoading />}>
+        <AnnouncementBarContent />
+      </Suspense>
+    </SettingsLayout>
   )
 }
