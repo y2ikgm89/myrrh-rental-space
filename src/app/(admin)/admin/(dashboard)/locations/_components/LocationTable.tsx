@@ -9,8 +9,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  PublishSwitch,
 } from '@/admin/components/ui'
-import { PublishSwitch } from './PublishSwitch'
+import { toggleLocationPublish } from '@/admin/actions/location'
 import type { LocationWithStats } from '@/admin/lib/validations/location'
 
 // =============================================================================
@@ -80,8 +81,9 @@ export function LocationTable({ locations }: LocationTableProps) {
               </TableCell>
               <TableCell className="text-center">
                 <PublishSwitch
-                  locationId={location.id}
+                  id={location.id}
                   isPublished={location.isPublished}
+                  onToggle={toggleLocationPublish}
                 />
               </TableCell>
               <TableCell className="text-right">

@@ -9,8 +9,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  PublishSwitch,
 } from '@/admin/components/ui'
-import { PublishSwitch } from './PublishSwitch'
+import { updateSpacePublish } from '@/admin/actions/space'
 import type { SpaceWithStats } from '@/admin/lib/validations/space'
 
 // =============================================================================
@@ -96,8 +97,9 @@ export function SpaceTable({ spaces }: SpaceTableProps) {
               </TableCell>
               <TableCell className="text-center">
                 <PublishSwitch
-                  spaceId={space.id}
+                  id={space.id}
                   isPublished={space.isPublished}
+                  onToggle={updateSpacePublish}
                 />
               </TableCell>
               <TableCell className="text-right">

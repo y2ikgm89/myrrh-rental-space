@@ -2,11 +2,142 @@
 
 ## 進行中の計画
 
-*現在進行中の計画はありません*
+なし
 
 ---
 
 ## 完了した計画
+
+### 053-admin-code-cleanup.md (2026-01-19) ✅
+
+管理画面コード整理（A+B レベル）
+
+**概要**:
+管理画面の分析に基づき、重複コードの統一とバグ修正を実施。
+
+**完了フェーズ**:
+- [x] Phase 1: PublishSwitch 統一（spaces/locations → _shared/components/ui/）
+- [x] Phase 2: NewsFilters デバウンスバグ修正（useRef + useEffect パターン）
+- [x] Phase 3: BaseFilters 基底コンポーネント作成
+- [x] Phase 4: SidePanelShell コンポーネント作成（BlogSidePanel/NewsSidePanel シェル統合）
+- [x] Phase 5: 検証（type-check/lint 成功）
+
+**新規ファイル**:
+- `_shared/components/ui/PublishSwitch.tsx` - 汎用公開切り替えスイッチ
+- `_shared/components/table/BaseFilters.tsx` - フィルター基底コンポーネント
+- `_shared/components/table/index.ts` - バレルエクスポート
+- `_shared/components/editor/inline/SidePanelShell.tsx` - サイドパネルシェル
+
+**変更ファイル**:
+- `spaces/_components/SpaceTable.tsx` - PublishSwitch 使用変更
+- `locations/_components/LocationTable.tsx` - PublishSwitch 使用変更
+- `news/_components/NewsFilters.tsx` - BaseFilters 使用に移行
+- `_shared/components/editor/inline/BlogSidePanel.tsx` - SidePanelShell 使用
+- `_shared/components/editor/inline/NewsSidePanel.tsx` - SidePanelShell 使用
+- `_shared/components/editor/inline/index.ts` - SidePanelShell エクスポート
+
+**削除ファイル**:
+- `spaces/_components/PublishSwitch.tsx`
+- `locations/_components/PublishSwitch.tsx`
+
+**改善効果**:
+- コード削減: 重複 PublishSwitch 2ファイル → 1ファイル
+- バグ修正: NewsFilters デバウンス問題解消
+- パターン統一: フィルター基底で今後の実装が容易に
+- 保守性向上: サイドパネル Shell で重複削減
+
+---
+
+### 052-hardcode-config-centralization.md (2026-01-19) ✅
+
+ハードコード改善 - 設定一元管理
+
+**概要**:
+ハードコードされた値を環境変数バリデーション層と定数ファイルに集約し、型安全で保守しやすい構成に改善。
+
+**完了フェーズ**:
+- [x] Phase 1: 環境変数バリデーション基盤（`@t3-oss/env-nextjs`）
+- [x] Phase 2: 定数ファイル作成（SITE_DEFAULTS, SESSION_CONFIG, PAGINATION_DEFAULTS, URL helpers）
+- [x] Phase 3: URL フォールバック移行（18箇所 → 統一ヘルパー）
+- [x] Phase 4: サービス名移行（`'Myrrh Rental Space'` → `SITE_DEFAULTS.name`）
+- [x] Phase 5: 数値定数移行（SESSION_CONFIG 適用）
+- [x] Phase 6: 検証（type-check/lint/build 成功）
+
+**新規ファイル**:
+- `src/shared/lib/env/server.ts` - サーバー専用環境変数バリデーション
+- `src/shared/lib/env/client.ts` - クライアント環境変数バリデーション
+- `src/shared/lib/env/index.ts` - 統合エクスポート
+- `src/shared/lib/constants/defaults.ts` - サイトデフォルト値
+- `src/shared/lib/constants/session.ts` - セッション設定
+- `src/shared/lib/constants/pagination.ts` - ページネーション設定
+- `src/shared/lib/constants/urls.ts` - URL ヘルパー関数
+- `src/shared/lib/constants/index.ts` - バレルエクスポート
+
+**変更ファイル**:
+- `next.config.ts` - ビルド時環境変数検証のためのインポート追加
+- `src/app/sitemap.ts`, `src/app/robots.ts` - getBaseUrl() 使用
+- `src/app/(public)/_shared/lib/seo/` - getBaseUrl(), SITE_DEFAULTS 使用
+- `src/shared/lib/auth.ts` - SESSION_CONFIG, getAppUrl() 使用
+- `src/shared/lib/email-service.ts` - getAdminUrl(), SITE_DEFAULTS 使用
+- 各公開ページ（blog, news, spaces, p, about） - getBaseUrl(), SITE_DEFAULTS 使用
+- `src/app/layout.tsx` - SITE_DEFAULTS 使用
+
+---
+
+### 051-header-logo-branding.md (2026-01-19) ✅
+
+ヘッダー/フッター ブランディング統合
+
+**概要**:
+サイト設定のサイト名・ロゴが公開ページと管理画面のヘッダー・フッターに反映されるよう統合。
+シンプルな2択トグル（ロゴ使用 ON/OFF）で制御。デフォルトはロゴ優先。
+
+**完了フェーズ**:
+- [x] Phase 1: DB スキーマ拡張（useHeaderLogo, useFooterLogo, footerLogoUrl）
+- [x] Phase 2: 設定 UI 拡張（トグルスイッチ）
+- [x] Phase 3: 公開ページヘッダー改修（HeaderBranding コンポーネント）
+- [x] Phase 4: 公開ページフッター改修（FooterBranding コンポーネント）
+- [x] Phase 5: 管理画面ヘッダー改修（TopBar ブランディング）
+- [x] Phase 6: 検証（type-check/lint/build 成功）
+
+**新規ファイル**:
+- `prisma/migrations/20260119005448_add_logo_display_settings/` - マイグレーション
+- `src/app/(public)/_shared/components/layouts/HeaderBranding.tsx` - ヘッダーブランディング
+- `src/app/(public)/_shared/components/layouts/FooterBranding.tsx` - フッターブランディング
+
+**変更ファイル**:
+- `prisma/schema.prisma` - useHeaderLogo, useFooterLogo, footerLogoUrl 追加
+- `src/app/(admin)/admin/(dashboard)/_shared/actions/settings.ts` - 新フィールド対応
+- `src/app/(admin)/admin/(dashboard)/settings/_components/sections/BasicInfoSection.tsx` - トグル UI
+- `src/app/(public)/_shared/components/layouts/Header.tsx` - HeaderBranding 統合
+- `src/app/(public)/_shared/components/layouts/Footer.tsx` - FooterBranding 統合
+- `src/app/(admin)/admin/(dashboard)/_components/TopBar.tsx` - ブランディング追加
+- `src/app/(admin)/admin/(dashboard)/layout.tsx` - 設定取得・Props 渡し
+
+---
+
+### 050-colocation-refactor.md (2026-01-19) ✅
+
+Next.js コロケーションパターン統合
+
+**概要**:
+`src/admin/` と `src/public/` を App Router 配下の `_shared/` ディレクトリに移動し、Next.js 公式のコロケーションパターンに準拠した構造に統合。
+
+**完了フェーズ**:
+- ✅ Phase 1: 管理画面の `_shared/` 作成・ファイル移動・パスエイリアス更新・ビルド検証
+- ✅ Phase 2: 公開ページの `_shared/` 作成・ファイル移動・パスエイリアス更新・ビルド検証
+- ✅ Phase 3: 旧ディレクトリ削除・最終ビルド検証
+- ✅ Phase 4: ドキュメント更新
+
+**変更ファイル**:
+- `tsconfig.json` - パスエイリアス更新
+- `CLAUDE.md` - 構造セクション更新
+
+**新しい構造**:
+- `src/app/(admin)/admin/(dashboard)/_shared/` - 管理画面専用コード
+- `src/app/(public)/_shared/` - 公開ページ専用コード
+
+---
 
 ### 049-type-safety-improvements.md (2026-01-19) ✅
 
