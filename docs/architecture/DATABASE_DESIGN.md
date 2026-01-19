@@ -8,7 +8,7 @@
 
 ### Users（認証ユーザー）
 - `id`, `email`, `name`, `role` (admin, user), `createdAt`, `updatedAt`
-- Auth.jsのセッション管理と統合
+- Better Auth のセッション管理と統合
 
 ### Spaces（レンタルスペース）
 - **基本フィールド**:

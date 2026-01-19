@@ -32,7 +32,7 @@
 | Prismaマイグレーション | ✅ | `bunx prisma migrate`で実行可能 |
 | Prisma Studio | ✅ | `bunx prisma studio`で実行可能 |
 | Next.js | ✅ | Next.js 16.1.1がBunで完全動作 |
-| Auth.js | ✅ | Bunで完全動作 |
+| Better Auth | ✅ | Bunで完全動作 |
 | Turbopack | ✅ | Next.js 16のデフォルトバンドラー（Bunと統合） |
 
 ---
@@ -130,7 +130,7 @@ BunはNode.js互換性があるため、以下のライブラリが動作しま�
 
 - **Prisma**: Node.js互換性により完全動作
 - **Next.js**: Bunで完全動作（Next.js 16.1.1対応）
-- **Auth.js**: Bunで完全動作
+- **Better Auth**: Bunで完全動作
 - **その他のNode.jsパッケージ**: ほとんどのパッケージが動作
 
 ### PrismaとBun

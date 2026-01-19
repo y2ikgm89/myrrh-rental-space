@@ -34,7 +34,7 @@ graph TB
     end
 
     subgraph Auth["認証システム"]
-        AuthJS["Auth.js 5"]
+        BetterAuth["Better Auth"]
         JWT["JWT Session"]
         PrismaAdapter["Prisma Adapter"]
     end
@@ -77,7 +77,7 @@ sequenceDiagram
     participant Browser as ブラウザ
     participant NextJS as Next.js App
     participant Middleware as Middleware
-    participant Auth as Auth.js
+    participant Auth as Better Auth
     participant Prisma as Prisma ORM
     participant DB as Supabase DB
     participant Storage as Supabase Storage
@@ -113,7 +113,7 @@ sequenceDiagram
     participant User as ユーザー
     participant Client as Client Component
     participant ServerAction as Server Action
-    participant Auth as Auth.js
+    participant Auth as Better Auth
     participant Prisma as Prisma
     participant DB as Database
 
@@ -204,8 +204,8 @@ graph TB
 
 ### 認証
 
-- **Auth.js 5**: 認証システム
-- **JWT**: セッション管理
+- **Better Auth**: 認証システム
+- **Cookie-based Session**: セッション管理（scrypt ハッシュ）
 - **Prisma Adapter**: データベース統合
 
 ### ストレージ
@@ -284,10 +284,10 @@ graph LR
 - BunランタイムはNode.js互換性があるため、Prismaと互換
 - 詳細は[`PRISMA_7.md`](./PRISMA_7.md)と[`BEST_PRACTICES.md`](./BEST_PRACTICES.md)を参照
 
-**2. Auth.js 5とPrisma Adapter**
-- `@auth/prisma-adapter`の最新版を使用
-- Prisma 7.2使用時は互換性を確認
-- JWTセッションストラテジー推奨（パフォーマンス向上）
+**2. Better AuthとPrisma**
+- Better Auth のビルトイン Prisma Adapter を使用
+- Prisma 7.2 と完全互換
+- Cookie-based セッション管理（scrypt ハッシュ）
 
 **3. Three.js/Pixi.jsのSSR**
 - SSR/SSG時は動的インポートでクライアントサイドのみロード
@@ -335,7 +335,7 @@ graph LR
 |--------|--------|------|------|
 | React/Next.js セキュリティ脆弱性（CVE-2025-55182） | **重大** | React 19.2.3、Next.js 16.1.1に即座にアップグレード | ⚠️ **即座に対応必須** |
 | Prisma Edge Runtime非対応 | 高 | Node.js Runtimeを明示的に指定 | ✅ 対策済み |
-| Auth.js 5とPrisma Adapterの互換性 | 中 | 最新安定版を使用、バージョン固定 | ✅ 対策済み |
+| Better AuthとPrismaの互換性 | 低 | Better Auth ビルトイン Adapter 使用 | ✅ 対策済み |
 | Three.js/Pixi.jsのSSR問題 | 中 | 動的インポートでクライアントサイドのみ | ✅ 対策済み |
 | Supabase接続プーリング | 低 | 適切な接続URL設定 | ✅ 対策済み |
 | Cloud RunでのBun実行 | 低 | Dockerイメージ内でBunを使用 | ✅ 実装済み |
@@ -388,7 +388,7 @@ src/
 #### 共有するもの（ロジック層）
 
 - **データベース**: Prisma Client (`src/lib/prisma.ts`)
-- **認証**: Auth.js (`src/lib/auth.ts`)
+- **認証**: Better Auth (`src/shared/lib/auth.ts`)
 - **Server Actions**: `src/actions/` 配下
 - **型定義**: `src/types/` 配下
 - **バリデーション**: Zod スキーマ (`src/lib/validations/`)
@@ -423,7 +423,7 @@ src/
 |------|------|----------|
 | データ取得 | Server Components | async コンポーネントで直接 Prisma |
 | データ変更 | Server Actions | `'use server'` + `revalidatePath` |
-| 認証 | Auth.js 5 | `proxy.ts` + `auth()` |
+| 認証 | Better Auth | `proxy.ts` + `verifySession()` |
 | SEO | Metadata API | `generateMetadata` + `sitemap.ts` |
 | フォーム | React 19 | `useActionState` + `useFormStatus` |
 | バリデーション | Zod 4 | Server/Client 共通スキーマ |
@@ -533,14 +533,14 @@ function ReservationForm() {
 - **Middleware**: ルートレベルの保護
 - **Server Actions**: 関数レベルの権限チェック
 - **RLS**: データベースレベルのセキュリティ
-- **Auth.js 5**: 業界標準の認証ライブラリを使用
+- **Better Auth**: モダンな認証ライブラリを使用
 
 ### データ保護
 
 - **入力検証**: Zodスキーマでクライアント・サーバー両方で検証
 - **SQLインジェクション対策**: Prisma ORM（パラメータ化クエリ）
 - **XSS対策**: React自動エスケープ
-- **CSRF対策**: Auth.js内蔵機能
+- **CSRF対策**: Better Auth 内蔵機能
 
 ### 環境変数管理
 
@@ -786,7 +786,7 @@ Server Actionsでのエラーハンドリングを統一し、エラーレスポ
 1. **フェーズ1**: プロジェクトセットアップ
    - Next.js + TypeScript + Tailwind CSS
    - Prisma + Supabase接続
-   - 基本認証（Auth.js）
+   - 基本認証（Better Auth）
 
 2. **フェーズ2**: データベース設計
    - Prismaスキーマ作成
@@ -840,7 +840,7 @@ Server Actionsでのエラーハンドリングを統一し、エラーレスポ
 
 - [Next.js 16 Documentation](https://nextjs.org/docs)
 - [Prisma Documentation](https://www.prisma.io/docs)
-- [Auth.js Documentation](https://authjs.dev)
+- [Better Auth Documentation](https://www.better-auth.com)
 - [Supabase Documentation](https://supabase.com/docs)
 - [Google Cloud Run Documentation](https://cloud.google.com/run/docs)
 

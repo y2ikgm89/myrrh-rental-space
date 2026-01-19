@@ -58,8 +58,8 @@ cp .env.example .env.local
 
 **必須環境変数**（開発環境）:
 - `DATABASE_URL`: Docker Desktop PostgreSQL接続URL（例: `postgresql://postgres:postgres@localhost:5432/myrrh_rental_space_dev`）
-- `NEXTAUTH_SECRET`: Auth.js用シークレット（`openssl rand -base64 32`で生成）
-- `NEXTAUTH_URL`: アプリケーションURL（開発: `http://localhost:3000`）
+- `BETTER_AUTH_SECRET`: Better Auth用シークレット（`openssl rand -base64 32`で生成）
+- `BETTER_AUTH_URL`: アプリケーションURL（開発: `http://localhost:3000`）
 - `SUPABASE_URL`: 開発用SupabaseプロジェクトURL（Storage/Realtime機能テスト用）
 - `SUPABASE_ANON_KEY`: 開発用Supabase匿名キー
 - `SUPABASE_SERVICE_ROLE_KEY`: 開発用Supabaseサービスロールキー

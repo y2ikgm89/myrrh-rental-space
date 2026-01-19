@@ -118,7 +118,7 @@ Turbopackは、Rustで書かれた次世代のJavaScript/TypeScriptバンドラ�
 - **TypeScript**: 完全対応（✅ 問題なし）
 - **Tailwind CSS**: 完全対応（✅ 問題なし）
 - **Prisma**: ビルドプロセスとは独立（✅ 問題なし）
-- **Auth.js**: ビルドプロセスとは独立（✅ 問題なし）
+- **Better Auth**: ビルドプロセスとは独立（✅ 問題なし）
 
 #### ファイルシステムキャッシュ
 

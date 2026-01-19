@@ -505,7 +505,7 @@ docker run -p 3000:3000 --env-file .env.local myrrh-rental-space:latest
 - **利点**: 
   - 開発環境と本番環境のランタイム統一
   - Bunの高速なパフォーマンスを本番環境でも活用
-  - Prisma、Next.js、Auth.jsすべてBunで動作
+  - Prisma、Next.js、Better Auth すべてBunで動作
 
 ### Prisma 7 マイグレーション
 

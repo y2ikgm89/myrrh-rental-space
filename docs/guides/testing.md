@@ -229,9 +229,9 @@ DATABASE_URL="your-test-database-url" bunx prisma migrate deploy
 # データベース
 DATABASE_URL="postgresql://user:password@localhost:5432/test_db"
 
-# Auth.js
-NEXTAUTH_SECRET="test-secret-key"
-NEXTAUTH_URL="http://localhost:3000"
+# Better Auth
+BETTER_AUTH_SECRET="test-secret-key"
+BETTER_AUTH_URL="http://localhost:3000"
 
 # Supabase（テスト用プロジェクトまたはモック）
 SUPABASE_URL="https://test-project.supabase.co"

@@ -4,8 +4,8 @@
 
 ### 認証方式
 
-- **Auth.js 5** (v5.0.0-beta.30)
-- **JWTセッション**: ステートレス認証
+- **Better Auth** (v1.4.13)
+- **Cookie-based Session**: scrypt ハッシュ
 - **Cookie設定**: `HttpOnly`, `Secure`, `SameSite=Lax`
 
 ### ロールベースアクセス制御（RBAC）
