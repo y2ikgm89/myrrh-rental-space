@@ -11,6 +11,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useTransition, useRef, useEffect, type ReactNode } from 'react'
+import { Search } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -149,13 +150,15 @@ export function BaseFilters({
       {children}
 
       {/* 検索 */}
-      <div className="flex-1">
+      <div className="relative flex-1">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           type="search"
           placeholder={searchPlaceholder}
           defaultValue={currentSearch}
           onChange={handleSearchChange}
           disabled={isPending}
+          className="pl-9"
         />
       </div>
 

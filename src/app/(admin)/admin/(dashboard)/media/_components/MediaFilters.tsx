@@ -7,7 +7,7 @@
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Search, Grid, List, Upload } from 'lucide-react'
-import { Button } from '@/admin/components/ui'
+import { Button, Input } from '@/admin/components/ui'
 import { MediaUploadDialog } from './MediaUploadDialog'
 import { TYPE_OPTIONS, USAGE_FILTER_OPTIONS } from './constants'
 
@@ -72,13 +72,13 @@ export function MediaFilters() {
         <div className="flex flex-wrap gap-2 items-center">
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
               type="search"
               placeholder="検索..."
               defaultValue={currentSearch}
               onChange={handleSearchChange}
-              className="h-9 w-48 rounded-md border bg-background pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-48 pl-9"
             />
           </div>
 
