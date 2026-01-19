@@ -19,6 +19,10 @@ import {
 
 // モック関数の定義
 const mockGetSession = mock(() => null)
+const mockGetSessionUser = mock((session: unknown) => {
+  if (!session || typeof session !== 'object' || !('user' in session)) return null
+  return (session as { user: unknown }).user
+})
 const mockHasPermission = mock(() => true)
 const mockUserHasResourceAccess = mock(() => true)
 const mockCanAccessAdmin = mock(() => true)
@@ -28,6 +32,7 @@ const mockLogPermissionDenied = mock(() => Promise.resolve())
 // モジュールモック
 mock.module('@/shared/lib/auth', () => ({
   getSession: mockGetSession,
+  getSessionUser: mockGetSessionUser,
 }))
 
 mock.module('@/admin/lib/permissions', () => ({

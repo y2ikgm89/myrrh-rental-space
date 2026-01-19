@@ -5,6 +5,9 @@
 # テストファイルのプリロード
 preload = ["./__tests__/setup.ts"]
 
+# E2E テスト（Playwright）を除外
+root = "./__tests__"
+
 # カバレッジ設定
 coverage = false
 coverageReporter = ["text", "lcov"]
