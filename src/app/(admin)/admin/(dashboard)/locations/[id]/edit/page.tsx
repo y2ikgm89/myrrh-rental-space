@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 import { connection } from 'next/server'
 import { getLocationById } from '@/admin/actions/location'
 import { LocationForm } from '../../_components/LocationForm'
@@ -43,7 +44,10 @@ export default async function EditLocationPage({ params }: PageProps) {
       {/* ヘッダー */}
       <div className="flex items-center gap-4">
         <Button variant="outline" size="sm" asChild>
-          <Link href={`/admin/locations/${location.id}`}>← 戻る</Link>
+          <Link href={`/admin/locations/${location.id}`}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            戻る
+          </Link>
         </Button>
         <div>
           <h1 className="text-2xl font-bold">{location.name} の編集</h1>

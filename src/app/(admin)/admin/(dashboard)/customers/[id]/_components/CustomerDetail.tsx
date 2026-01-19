@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
+import { ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   Button,
@@ -44,7 +44,6 @@ type CustomerDetailProps = {
 }
 
 export function CustomerDetail({ customer }: CustomerDetailProps) {
-  const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [notes, setNotes] = useState(customer.notes || '')
 
@@ -90,8 +89,11 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
             })}
           </p>
         </div>
-        <Button variant="outline" onClick={() => router.push('/admin/customers')}>
-          一覧に戻る
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/admin/customers">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            一覧に戻る
+          </Link>
         </Button>
       </div>
 

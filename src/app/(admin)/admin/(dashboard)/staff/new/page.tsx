@@ -7,6 +7,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/admin/components/ui/card'
 import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/admin/components/ui/button'
 import { InviteForm } from '../_components/InviteForm'
 
@@ -22,8 +23,11 @@ export default function InviteStaffPage() {
           <h1 className="text-2xl font-bold">スタッフを招待</h1>
           <p className="text-muted-foreground">メールでスタッフを招待します</p>
         </div>
-        <Button variant="outline" asChild>
-          <Link href="/admin/staff">戻る</Link>
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/admin/staff">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            一覧に戻る
+          </Link>
         </Button>
       </div>
 

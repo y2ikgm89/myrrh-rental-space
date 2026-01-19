@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 import { getUser } from '@/admin/actions/user'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/admin/components/ui/card'
 import { Button } from '@/admin/components/ui/button'
@@ -33,8 +34,11 @@ export default async function StaffDetailPage({ params }: Props) {
           <p className="text-muted-foreground">{user.email}</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" asChild>
-            <Link href="/admin/staff">戻る</Link>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/admin/staff">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              一覧に戻る
+            </Link>
           </Button>
           <Button asChild>
             <Link href={`/admin/staff/${user.id}/edit`}>編集</Link>

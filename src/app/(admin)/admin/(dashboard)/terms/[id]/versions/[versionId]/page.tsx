@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { getTermsById, getTermsVersionById } from '@/admin/actions/terms'
@@ -76,8 +77,11 @@ export default async function VersionPreviewPage({
           </h1>
           <p className="text-muted-foreground">{terms.title}</p>
         </div>
-        <Button variant="outline" asChild>
-          <Link href={`/admin/terms/${id}`}>戻る</Link>
+        <Button variant="outline" size="sm" asChild>
+          <Link href={`/admin/terms/${id}`}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            戻る
+          </Link>
         </Button>
       </div>
 

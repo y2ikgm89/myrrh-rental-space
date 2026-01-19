@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 import { getTermsById } from '@/admin/actions/terms'
 import { TermsDetailView } from '../_components/TermsDetailView'
 import { Button } from '@/admin/components/ui'
@@ -33,8 +34,11 @@ export default async function TermsDetailPage({ params }: TermsDetailPageProps) 
             規約の編集とバージョン管理
           </p>
         </div>
-        <Button variant="outline" asChild>
-          <Link href="/admin/terms">一覧に戻る</Link>
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/admin/terms">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            一覧に戻る
+          </Link>
         </Button>
       </div>
 

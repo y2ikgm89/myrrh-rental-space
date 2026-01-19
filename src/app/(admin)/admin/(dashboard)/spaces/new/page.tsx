@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 import { connection } from 'next/server'
 import { SpaceForm } from '../_components/SpaceForm'
 import { Button } from '@/admin/components/ui'
@@ -27,7 +28,10 @@ export default async function NewSpacePage() {
       {/* ヘッダー */}
       <div className="flex items-center gap-4">
         <Button variant="outline" size="sm" asChild>
-          <Link href="/admin/spaces">← 戻る</Link>
+          <Link href="/admin/spaces">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            一覧に戻る
+          </Link>
         </Button>
         <div>
           <h1 className="text-2xl font-bold">スペース新規作成</h1>

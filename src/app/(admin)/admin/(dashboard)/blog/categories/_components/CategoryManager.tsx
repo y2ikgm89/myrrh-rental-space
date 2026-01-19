@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { useForm } from 'react-hook-form'
+import { ArrowLeft } from 'lucide-react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
@@ -176,7 +177,6 @@ type CategoryManagerProps = {
 }
 
 export function CategoryManager({ initialCategories }: CategoryManagerProps) {
-  const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [categories, setCategories] = useState<BlogCategoryData[]>(initialCategories)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -330,8 +330,11 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => router.push('/admin/blog')}>
-            ブログ一覧に戻る
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/admin/blog">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              一覧に戻る
+            </Link>
           </Button>
           <Button onClick={openCreateDialog}>新規作成</Button>
         </div>

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 import { LocationForm } from '../_components/LocationForm'
 import { Button } from '@/admin/components/ui'
 import type { Metadata } from 'next'
@@ -13,7 +14,10 @@ export default function NewLocationPage() {
       {/* ヘッダー */}
       <div className="flex items-center gap-4">
         <Button variant="outline" size="sm" asChild>
-          <Link href="/admin/locations">← 戻る</Link>
+          <Link href="/admin/locations">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            一覧に戻る
+          </Link>
         </Button>
         <div>
           <h1 className="text-2xl font-bold">場所新規作成</h1>

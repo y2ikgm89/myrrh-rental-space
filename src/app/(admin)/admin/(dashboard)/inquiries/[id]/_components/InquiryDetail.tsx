@@ -2,8 +2,10 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
+import { ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   Button,
@@ -75,8 +77,11 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
           </p>
         </div>
         <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={() => router.push('/admin/inquiries')}>
-            一覧に戻る
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/admin/inquiries">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              一覧に戻る
+            </Link>
           </Button>
           <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
             <DialogTrigger asChild>

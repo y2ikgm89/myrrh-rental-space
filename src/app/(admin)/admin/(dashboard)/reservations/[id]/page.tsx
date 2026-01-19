@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 import { getReservationById } from '@/admin/actions/reservation'
 import { ReservationDetail } from './_components/ReservationDetail'
 import { Button } from '@/admin/components/ui'
@@ -38,7 +39,10 @@ export default async function ReservationDetailPage({ params }: PageProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="outline" size="sm" asChild>
-            <Link href="/admin/reservations">← 一覧に戻る</Link>
+            <Link href="/admin/reservations">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              一覧に戻る
+            </Link>
           </Button>
           <div>
             <h1 className="text-2xl font-bold">予約詳細</h1>

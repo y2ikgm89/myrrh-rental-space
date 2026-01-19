@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 import { getUser } from '@/admin/actions/user'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/admin/components/ui/card'
 import { Button } from '@/admin/components/ui/button'
@@ -28,8 +29,11 @@ export default async function EditStaffPage({ params }: Props) {
           <h1 className="text-2xl font-bold">スタッフ編集</h1>
           <p className="text-muted-foreground">{user.name || user.email}</p>
         </div>
-        <Button variant="outline" asChild>
-          <Link href={`/admin/staff/${user.id}`}>戻る</Link>
+        <Button variant="outline" size="sm" asChild>
+          <Link href={`/admin/staff/${user.id}`}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            戻る
+          </Link>
         </Button>
       </div>
 

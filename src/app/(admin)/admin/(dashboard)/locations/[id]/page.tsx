@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 import { getLocationById } from '@/admin/actions/location'
 import { LocationDetail } from './_components/LocationDetail'
 import { Button } from '@/admin/components/ui'
@@ -42,7 +43,10 @@ export default async function LocationDetailPage({ params }: PageProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="outline" size="sm" asChild>
-            <Link href="/admin/locations">← 戻る</Link>
+            <Link href="/admin/locations">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              一覧に戻る
+            </Link>
           </Button>
           <div>
             <h1 className="text-2xl font-bold">{location.name}</h1>

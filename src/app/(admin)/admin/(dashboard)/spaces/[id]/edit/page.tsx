@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 import { connection } from 'next/server'
 import { getSpaceById } from '@/admin/actions/space'
 import { getActiveTermsForSelect } from '@/admin/actions/terms'
@@ -52,7 +53,10 @@ export default async function EditSpacePage({ params }: PageProps) {
       {/* ヘッダー */}
       <div className="flex items-center gap-4">
         <Button variant="outline" size="sm" asChild>
-          <Link href={`/admin/spaces/${space.id}`}>← 戻る</Link>
+          <Link href={`/admin/spaces/${space.id}`}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            戻る
+          </Link>
         </Button>
         <div>
           <h1 className="text-2xl font-bold">{space.name} の編集</h1>
