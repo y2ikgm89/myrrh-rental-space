@@ -3,6 +3,7 @@ import { ReservationConfirmationEmail } from '@/public/emails/reservation-confir
 import { ReservationCancelledEmail } from '@/public/emails/reservation-cancelled'
 import { ContactConfirmationEmail } from '@/public/emails/contact-confirmation'
 import { AdminNotificationEmail } from '@/public/emails/admin-notification'
+import { StaffInvitationEmail } from '@/public/emails/staff-invitation'
 import { prisma } from './prisma'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
@@ -11,6 +12,7 @@ import {
   generateAddToCalendarLinks,
   generateICalContent,
 } from '@/admin/lib/ical'
+import { getAdminUrl, SITE_DEFAULTS } from './constants'
 
 // =============================================================================
 // Types
@@ -34,6 +36,13 @@ type ContactEmailData = {
   email: string
   subject: string
   message: string
+}
+
+type StaffInvitationEmailData = {
+  to: string
+  staffName: string
+  setupUrl: string
+  expiresAt: Date
 }
 
 // =============================================================================
@@ -60,11 +69,6 @@ function formatPrice(price: number | null): string {
     style: 'currency',
     currency: 'JPY',
   }).format(price)
-}
-
-function getAdminUrl(path: string): string {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-  return `${baseUrl}/admin${path}`
 }
 
 // =============================================================================
@@ -436,6 +440,45 @@ ${getAdminUrl(`/reservations/${data.reservationId}`)}
     return { success: true }
   } catch (error) {
     console.error('Failed to send calendar sync rejection email:', error)
+    return { success: false, error: 'メール送信に失敗しました' }
+  }
+}
+
+// =============================================================================
+// Staff Invitation Emails
+// =============================================================================
+
+/**
+ * スタッフ招待メールを送信
+ */
+export async function sendStaffInvitationEmail(
+  data: StaffInvitationEmailData
+): Promise<{ success: boolean; error?: string }> {
+  if (!isEmailEnabled()) {
+    console.warn('Email disabled: RESEND_API_KEY not set')
+    return { success: true }
+  }
+
+  const resend = getResendClient()
+  if (!resend) {
+    return { success: true }
+  }
+
+  try {
+    await resend.emails.send({
+      from: getFromAddress(),
+      to: data.to,
+      subject: `【スタッフ招待】${SITE_DEFAULTS.name}`,
+      react: StaffInvitationEmail({
+        staffName: data.staffName,
+        setupUrl: data.setupUrl,
+        expiresAt: data.expiresAt,
+      }),
+    })
+
+    return { success: true }
+  } catch (error) {
+    console.error('Failed to send staff invitation email:', error)
     return { success: false, error: 'メール送信に失敗しました' }
   }
 }

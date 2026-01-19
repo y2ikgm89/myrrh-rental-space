@@ -91,12 +91,12 @@ Next.js 16 / React 19 / TypeScript 5.9 / Bun 1.3 / Prisma 7 / PostgreSQL (Supaba
 
 ### 構造
 
-**管理/公開/共有 完全分離アーキテクチャ** (Plan 042)
+**Next.js コロケーションパターン** (Plan 050)
 
 | パス | 用途 |
 |------|------|
-| `src/admin/` | 管理画面専用（components, actions, hooks, contexts, lib, types） |
-| `src/public/` | 公開ページ専用（components, actions, emails, lib, types） |
+| `src/app/(admin)/admin/(dashboard)/_shared/` | 管理画面専用（components, actions, hooks, contexts, lib, types） |
+| `src/app/(public)/_shared/` | 公開ページ専用（components, actions, emails, lib, types） |
 | `src/shared/` | 共有（prisma, auth, utils, email, storage など） |
 | `src/app/(public)/` | 公開ページルート |
 | `src/app/(admin)/admin/` | 管理画面ルート |
@@ -107,6 +107,6 @@ Next.js 16 / React 19 / TypeScript 5.9 / Bun 1.3 / Prisma 7 / PostgreSQL (Supaba
 | `.claude/plans/` | Claude Code内部一時計画（.gitignore、必ずdocs/plans/へコピー） |
 
 **パスエイリアス**:
-- `@/admin/*` → `src/admin/*`
-- `@/public/*` → `src/public/*`
+- `@/admin/*` → `src/app/(admin)/admin/(dashboard)/_shared/*`
+- `@/public/*` → `src/app/(public)/_shared/*`
 - `@/shared/*` → `src/shared/*`

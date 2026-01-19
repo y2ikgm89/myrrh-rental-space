@@ -98,3 +98,4 @@ tmpclaude-*-cwd
 
 # Playwright MCP screenshots
 .playwright-mcp/
+nul

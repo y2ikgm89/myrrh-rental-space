@@ -24,7 +24,7 @@ import {
 } from '@/admin/components/ui'
 import { createTerms, updateTerms } from '@/admin/actions/terms'
 import { TERMS_TYPES, type TermsDetail } from '@/shared/lib/validations/terms'
-import { TermsType } from '@/shared/generated/prisma/enums'
+import { TermsType, isValidTermsType } from '@/shared/lib/validations/enums'
 
 interface TermsFormProps {
   terms?: TermsDetail
@@ -150,9 +150,11 @@ export function TermsForm({ terms }: TermsFormProps) {
             <Label htmlFor="type">規約タイプ *</Label>
             <Select
               value={formData.type}
-              onValueChange={(value) =>
-                setFormData((prev) => ({ ...prev, type: value as TermsType }))
-              }
+              onValueChange={(value) => {
+                if (isValidTermsType(value)) {
+                  setFormData((prev) => ({ ...prev, type: value }))
+                }
+              }}
               disabled={isPending}
             >
               <SelectTrigger id="type">

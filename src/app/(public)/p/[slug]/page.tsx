@@ -21,9 +21,10 @@ import { prisma } from '@/shared/lib/prisma'
 import { getPageLayoutSettings } from '@/public/lib/layout-settings'
 import { getContainerStyles, getContentStyles } from '@/shared/lib/styles/layout-mapper'
 import { SYSTEM_PAGE_SLUGS } from '@/shared/lib/validations/page'
+import { getBaseUrl } from '@/shared/lib/constants'
 import type { ReactElement } from 'react'
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://example.com'
+const BASE_URL = getBaseUrl()
 
 // =============================================================================
 // Styles

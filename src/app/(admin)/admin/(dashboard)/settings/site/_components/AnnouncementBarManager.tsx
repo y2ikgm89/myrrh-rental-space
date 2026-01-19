@@ -56,6 +56,8 @@ import { cn } from '@/shared/lib/utils'
 import {
   TYPE_STYLES,
   getStripedStyle,
+  validateAnimation,
+  validateDesignStyle,
   type DesignStyle,
   type AnimationType,
 } from '@/public/lib/announcement-bar-utils'
@@ -296,13 +298,13 @@ export function AnnouncementBarManager({
 
   // カルーセル設定のステート
   const [carouselSettings, setCarouselSettings] = useState({
-    announcementBarAnimation: initialCarouselSettings.announcementBarAnimation as AnimationType,
+    announcementBarAnimation: validateAnimation(initialCarouselSettings.announcementBarAnimation ?? 'fade'),
     announcementBarDuration: initialCarouselSettings.announcementBarDuration,
     announcementBarAutoPlay: initialCarouselSettings.announcementBarAutoPlay,
     announcementBarPauseOnHover: initialCarouselSettings.announcementBarPauseOnHover,
     announcementBarShowArrows: initialCarouselSettings.announcementBarShowArrows,
     announcementBarShowIndicator: initialCarouselSettings.announcementBarShowIndicator,
-    announcementBarDesignStyle: initialCarouselSettings.announcementBarDesignStyle as DesignStyle,
+    announcementBarDesignStyle: validateDesignStyle(initialCarouselSettings.announcementBarDesignStyle ?? 'solid'),
     announcementBarBgColor: initialCarouselSettings.announcementBarBgColor || '',
     announcementBarTextColor: initialCarouselSettings.announcementBarTextColor || '',
     announcementBarStripeColor: initialCarouselSettings.announcementBarStripeColor || '',

@@ -5,8 +5,9 @@
  */
 
 import type { MetadataRoute } from 'next'
+import { getBaseUrl } from '@/shared/lib/constants'
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://example.com'
+const BASE_URL = getBaseUrl()
 
 export default function robots(): MetadataRoute.Robots {
   return {

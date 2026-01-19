@@ -10,7 +10,7 @@ import { Button, Pagination } from '@/admin/components/ui'
 // =============================================================================
 
 type SearchParams = Promise<{
-  published?: string
+  status?: string
   search?: string
   page?: string
   tab?: string
@@ -27,9 +27,9 @@ interface SpaceTabContentProps {
 async function SpaceList({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams
   const isPublished =
-    params.published === 'true'
+    params.status === 'true'
       ? true
-      : params.published === 'false'
+      : params.status === 'false'
         ? false
         : 'ALL'
   const search = params.search

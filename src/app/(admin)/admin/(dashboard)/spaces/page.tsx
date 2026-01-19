@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 }
 
 type SearchParams = Promise<{
-  published?: string
+  status?: string
   search?: string
   page?: string
   includeInactive?: string

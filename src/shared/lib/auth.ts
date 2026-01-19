@@ -19,6 +19,7 @@ import { prismaAdapter } from 'better-auth/adapters/prisma'
 import { nextCookies } from 'better-auth/next-js'
 import { prisma, Role } from './prisma'
 import { AuditAction } from '@/shared/generated/prisma/enums'
+import { SESSION_CONFIG, getAppUrl } from './constants'
 
 /**
  * 監査ログを記録（非同期、失敗無視）
@@ -52,11 +53,11 @@ function createAuth() {
       provider: 'postgresql',
     }),
     session: {
-      expiresIn: 60 * 60 * 24 * 30, // 30 days
-      updateAge: 60 * 60 * 24, // 1 day (session refresh interval)
+      expiresIn: SESSION_CONFIG.expiresIn,
+      updateAge: SESSION_CONFIG.updateAge,
       cookieCache: {
         enabled: true,
-        maxAge: 60 * 5, // 5 minutes
+        maxAge: SESSION_CONFIG.cookieCacheMaxAge,
       },
     },
     emailAndPassword: {
@@ -96,7 +97,7 @@ function createAuth() {
       }),
     },
     plugins: [nextCookies()],
-    trustedOrigins: [process.env.BETTER_AUTH_URL ?? 'http://localhost:3000'],
+    trustedOrigins: [process.env.BETTER_AUTH_URL ?? getAppUrl()],
   })
 }
 
@@ -152,10 +153,15 @@ function isValidSessionUser(user: unknown): user is Session['user'] {
 }
 
 /**
+ * 有効なRoleのSet（O(1) lookup用）
+ */
+const VALID_ROLES = new Set<string>(Object.values(Role))
+
+/**
  * role が有効な Role enum 値か検証
  */
 export function isValidRole(role: string): role is Role {
-  return Object.values(Role).includes(role as Role)
+  return VALID_ROLES.has(role)
 }
 
 /**

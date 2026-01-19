@@ -52,6 +52,7 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@react-email/components": "^1.0.4",
     "@supabase/supabase-js": "^2.89.0",
+    "@t3-oss/env-nextjs": "^0.13.10",
     "@tailwindcss/typography": "^0.5.19",
     "bcrypt": "^6.0.0",
     "better-auth": "^1.4.13",

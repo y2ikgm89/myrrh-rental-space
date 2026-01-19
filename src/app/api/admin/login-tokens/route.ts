@@ -7,6 +7,7 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/shared/lib/auth'
 import { prisma } from '@/shared/lib/prisma'
+import { getAppUrl } from '@/shared/lib/constants'
 import { randomBytes } from 'crypto'
 
 /**
@@ -40,8 +41,7 @@ export async function POST(): Promise<NextResponse> {
     })
 
     // ログインURLを生成
-    const baseUrl = process.env.BETTER_AUTH_URL ?? 'http://localhost:3000'
-    const loginUrl = `${baseUrl}/admin/login?token=${token}`
+    const loginUrl = `${getAppUrl()}/admin/login?token=${token}`
 
     return NextResponse.json({
       token: loginToken.token,

@@ -21,6 +21,7 @@ import { Container } from '@/public/components/ui'
 import { ReservationForm } from './_components'
 import { getTermsAgreementSettings } from '@/public/actions/settings'
 import { getTermsForSpace } from '@/public/actions/terms'
+import { serializeTermsWithVersion } from '@/shared/lib/validations/terms'
 import { generatePageMetadata } from '@/public/lib/page-metadata'
 import type { ReactElement } from 'react'
 
@@ -36,14 +37,25 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * スペース情報を取得（キャッシュ付き）
+ * スペース情報（シリアライズ済み）
  */
-async function getSpaceForReservation(spaceId: string) {
+interface SerializedSpace {
+  id: string
+  name: string
+  hourlyPrice: number
+  mainImageUrl: string | null
+}
+
+/**
+ * スペース情報を取得（キャッシュ付き）
+ * Prismaオブジェクトをプレーンオブジェクトに変換して返す
+ */
+async function getSpaceForReservation(spaceId: string): Promise<SerializedSpace | null> {
   'use cache'
   cacheLife('hours')
   cacheTag('spaces', `space-${spaceId}`)
 
-  return await prisma.space.findUnique({
+  const space = await prisma.space.findUnique({
     where: {
       id: spaceId,
       isPublished: true,
@@ -56,6 +68,17 @@ async function getSpaceForReservation(spaceId: string) {
       mainImageUrl: true,
     },
   })
+
+  if (!space) return null
+
+  // Prismaオブジェクトをプレーンオブジェクトに変換（シンボルプロパティを除去）
+  // Number()でプリミティブ値に変換（Decimal/numberどちらでも動作）
+  return {
+    id: space.id,
+    name: space.name,
+    hourlyPrice: Number(space.hourlyPrice),
+    mainImageUrl: space.mainImageUrl,
+  }
 }
 
 /**
@@ -117,9 +140,9 @@ async function ReservationContent({
       <ReservationForm
         spaceId={space.id}
         spaceName={space.name}
-        hourlyPrice={Number(space.hourlyPrice)}
+        hourlyPrice={space.hourlyPrice}
         termsSettings={termsSettings}
-        spaceTerms={spaceTerms}
+        spaceTerms={serializeTermsWithVersion(spaceTerms)}
       />
     </>
   )

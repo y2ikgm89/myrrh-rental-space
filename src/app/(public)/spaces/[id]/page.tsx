@@ -18,9 +18,10 @@ import { SpaceInfo } from './_components/SpaceInfo'
 import { ImageGallery } from './_components/ImageGallery'
 import { ReservationCTA } from './_components/ReservationCTA'
 import { parseStringArray } from '@/shared/lib/json-validators'
+import { getBaseUrl } from '@/shared/lib/constants'
 import type { ReactElement } from 'react'
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://example.com'
+const BASE_URL = getBaseUrl()
 
 interface PageProps {
   params: Promise<{ id: string }>

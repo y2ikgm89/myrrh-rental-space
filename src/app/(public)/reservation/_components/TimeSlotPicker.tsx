@@ -83,14 +83,23 @@ export function TimeSlotPicker({
       onSelectStartTime(time)
       onSelectEndTime('') // 終了時間をリセット
     } else {
-      // 開始時間より後の時間のみ選択可能
       if (startTime && time > startTime) {
-        // 終了時間は次の時間枠（例: 10:00 を選んだら 11:00 まで）
+        // 開始時間より後の時間を選択 → 終了時間として設定
         const [hourStr] = time.split(':')
         const endHour = parseInt(hourStr, 10) + 1
         const endTimeStr = `${endHour.toString().padStart(2, '0')}:00`
         onSelectEndTime(endTimeStr)
+      } else if (startTime && time < startTime) {
+        // 開始時間より前の時間を選択 → スワップ
+        // 現在の開始時間+1を終了時間とし、クリックした時間を新しい開始時間に
+        // 例: 14:00選択済み → 10:00クリック → 10:00-15:00の範囲になる
+        const [oldStartHourStr] = startTime.split(':')
+        const newEndHour = parseInt(oldStartHourStr, 10) + 1
+        const newEndTimeStr = `${newEndHour.toString().padStart(2, '0')}:00`
+        onSelectStartTime(time)
+        onSelectEndTime(newEndTimeStr)
       }
+      // time === startTime の場合は何もしない（同じ時間をクリック）
     }
   }
 

@@ -72,6 +72,7 @@ import type {
   SocialLinkInput,
 } from '@/admin/actions/navigation'
 import type { NavigationType, SocialPlatform } from '@/shared/generated/prisma/enums'
+import { isValidSocialPlatform } from '@/shared/lib/validations/enums'
 import { cn } from '@/shared/lib/utils'
 
 // =============================================================================
@@ -961,9 +962,11 @@ export function NavigationManager({
                 <Label htmlFor="social-platform">プラットフォーム</Label>
                 <Select
                   value={socialPlatform}
-                  onValueChange={(value) =>
-                    socialForm.setValue('platform', value as SocialPlatform)
-                  }
+                  onValueChange={(value) => {
+                    if (isValidSocialPlatform(value)) {
+                      socialForm.setValue('platform', value)
+                    }
+                  }}
                   disabled={isPending}
                 >
                   <SelectTrigger>

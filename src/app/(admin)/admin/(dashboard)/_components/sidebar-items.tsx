@@ -53,8 +53,8 @@ export const SIDEBAR_ITEMS: SidebarItem[] = [
   },
   // システム管理
   {
-    label: 'ユーザー管理',
-    href: '/admin/users',
+    label: 'スタッフ管理',
+    href: '/admin/staff',
     icon: <Shield className="h-5 w-5" />,
   },
   {

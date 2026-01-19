@@ -14,10 +14,13 @@ import {
   Textarea,
 } from '@/admin/components/ui'
 import { cn } from '@/shared/lib/utils'
+import { useKanaInput } from '@/shared/hooks'
 
 const customerFormSchema = z.object({
   lastName: z.string().min(1, '姓は必須です').max(50, '姓は50文字以内で入力してください'),
   firstName: z.string().min(1, '名は必須です').max(50, '名は50文字以内で入力してください'),
+  lastNameKana: z.string().max(50, 'セイは50文字以内で入力してください').optional().or(z.literal('')),
+  firstNameKana: z.string().max(50, 'メイは50文字以内で入力してください').optional().or(z.literal('')),
   email: z.string().email('有効なメールアドレスを入力してください'),
   phoneNumber: z.string().max(20, '電話番号は20文字以内で入力してください').optional().or(z.literal('')),
   address: z.string().max(500, '住所は500文字以内で入力してください').optional().or(z.literal('')),
@@ -32,6 +35,10 @@ type FormState = {
   customerId?: string
 } | null
 
+// TODO: FormData直接アクセスを @/shared/lib/form-data のヘルパー関数で置き換え可能
+// - getFormStringRequired: lastName, firstName, email
+// - getFormString: lastNameKana, firstNameKana
+// - getFormStringOrDefault: phoneNumber, address, notes
 async function submitAction(
   _prevState: FormState,
   formData: FormData
@@ -39,6 +46,8 @@ async function submitAction(
   const input: CreateCustomerInput = {
     lastName: formData.get('lastName') as string,
     firstName: formData.get('firstName') as string,
+    lastNameKana: (formData.get('lastNameKana') as string) || undefined,
+    firstNameKana: (formData.get('firstNameKana') as string) || undefined,
     email: formData.get('email') as string,
     phoneNumber: (formData.get('phoneNumber') as string) || '',
     address: (formData.get('address') as string) || '',
@@ -64,17 +73,28 @@ export function CustomerForm(): ReactElement {
 
   const {
     register,
+    setValue,
     formState: { errors },
   } = useForm<CustomerFormData>({
     resolver: zodResolver(customerFormSchema),
     defaultValues: {
       lastName: '',
       firstName: '',
+      lastNameKana: '',
+      firstNameKana: '',
       email: '',
       phoneNumber: '',
       address: '',
       notes: '',
     },
+  })
+
+  // IME 自動カナ入力
+  const lastNameKanaInput = useKanaInput({
+    onKanaChange: (kana) => setValue('lastNameKana', kana),
+  })
+  const firstNameKanaInput = useKanaInput({
+    onKanaChange: (kana) => setValue('firstNameKana', kana),
   })
 
   useEffect(() => {
@@ -106,6 +126,10 @@ export function CustomerForm(): ReactElement {
                 placeholder="山田"
                 aria-invalid={!!errors.lastName}
                 aria-describedby={errors.lastName ? 'lastName-error' : undefined}
+                onCompositionStart={lastNameKanaInput.inputProps.onCompositionStart}
+                onCompositionUpdate={lastNameKanaInput.inputProps.onCompositionUpdate}
+                onCompositionEnd={lastNameKanaInput.inputProps.onCompositionEnd}
+                onInput={lastNameKanaInput.inputProps.onInput}
               />
               {errors.lastName && (
                 <p id="lastName-error" className="text-xs text-destructive">
@@ -123,12 +147,46 @@ export function CustomerForm(): ReactElement {
                 placeholder="太郎"
                 aria-invalid={!!errors.firstName}
                 aria-describedby={errors.firstName ? 'firstName-error' : undefined}
+                onCompositionStart={firstNameKanaInput.inputProps.onCompositionStart}
+                onCompositionUpdate={firstNameKanaInput.inputProps.onCompositionUpdate}
+                onCompositionEnd={firstNameKanaInput.inputProps.onCompositionEnd}
+                onInput={firstNameKanaInput.inputProps.onInput}
               />
               {errors.firstName && (
                 <p id="firstName-error" className="text-xs text-destructive">
                   {errors.firstName.message}
                 </p>
               )}
+            </div>
+          </div>
+
+          {/* カナ（リアルタイム自動入力） */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="lastNameKana">
+                セイ
+                <span className="text-xs text-muted-foreground ml-2">（自動入力）</span>
+              </Label>
+              <Input
+                id="lastNameKana"
+                name="lastNameKana"
+                placeholder="ヤマダ"
+                value={lastNameKanaInput.kana}
+                onChange={(e) => lastNameKanaInput.setKana(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="firstNameKana">
+                メイ
+                <span className="text-xs text-muted-foreground ml-2">（自動入力）</span>
+              </Label>
+              <Input
+                id="firstNameKana"
+                name="firstNameKana"
+                placeholder="タロウ"
+                value={firstNameKanaInput.kana}
+                onChange={(e) => firstNameKanaInput.setKana(e.target.value)}
+              />
             </div>
           </div>
 

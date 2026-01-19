@@ -51,7 +51,13 @@
       "Skill(review)",
       "Skill(claude-code-harness:\\\\core:harness-review)",
       "mcp__plugin_serena_serena__find_symbol",
-      "Skill(claude-code-harness:impl)"
+      "Skill(claude-code-harness:impl)",
+      "mcp__plugin_serena_serena__create_text_file",
+      "mcp__plugin_serena_serena__insert_after_symbol",
+      "mcp__plugin_serena_serena__replace_content",
+      "mcp__ide__getDiagnostics",
+      "mcp__plugin_serena_serena__find_referencing_symbols",
+      "mcp__plugin_serena_serena__replace_symbol_body"
     ],
     "deny": [
       "Bash(rm:*)",

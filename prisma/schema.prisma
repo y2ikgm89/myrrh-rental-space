@@ -201,6 +201,23 @@ model LoginToken {
   @@map("login_tokens")
 }
 
+model StaffInvitation {
+  id        String    @id @default(uuid())
+  email     String
+  token     String    @unique
+  role      Role      @default(USER)
+  name      String? // オプションで名前を指定
+  usedAt    DateTime? // 使用済み = パスワード設定完了
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  createdBy String
+
+  @@index([token])
+  @@index([email])
+  @@index([expiresAt])
+  @@map("staff_invitations")
+}
+
 // ==============================================
 // Business Models
 // ==============================================
@@ -327,6 +344,8 @@ model Customer {
   id                 String         @id @default(uuid())
   lastName           String
   firstName          String
+  lastNameKana       String?        // 姓カナ（任意）
+  firstNameKana      String?        // 名カナ（任意）
   email              String         @unique
   phoneNumber        String?
   address            String?        @db.Text
@@ -668,7 +687,12 @@ model Settings {
   faviconUrl         String?
   defaultOgpImageUrl String?
   headerLogoUrl      String?
+  footerLogoUrl      String?
   footerCopyright    String?
+
+  // Logo Display Settings
+  useHeaderLogo Boolean @default(true)
+  useFooterLogo Boolean @default(true)
 
   // Business Info (事業者情報)
   businessName        String? // 会社名・屋号

@@ -21,9 +21,10 @@ import { cn } from '@/shared/lib/utils'
 import { getNewsLayoutSettings } from '@/public/lib/layout-settings'
 import { getContainerStyles, getContentStyles } from '@/shared/lib/styles/layout-mapper'
 import { NewsStatus } from '@/shared/generated/prisma/enums'
+import { getBaseUrl } from '@/shared/lib/constants'
 import type { ReactElement } from 'react'
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://example.com'
+const BASE_URL = getBaseUrl()
 
 interface PageProps {
   params: Promise<{ id: string }>

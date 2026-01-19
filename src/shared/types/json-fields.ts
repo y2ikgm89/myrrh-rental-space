@@ -47,6 +47,11 @@ export const DAYS_OF_WEEK: readonly DayOfWeek[] = [
 ] as const
 
 /**
+ * 曜日Set（O(1) lookup用）
+ */
+const DAYS_OF_WEEK_SET = new Set<string>(DAYS_OF_WEEK)
+
+/**
  * 曜日別営業時間
  * nullは定休日を表す
  */
@@ -76,7 +81,7 @@ function isTimeSlot(value: unknown): value is TimeSlot {
  * DayOfWeek型であるか判定
  */
 function isDayOfWeek(value: unknown): value is DayOfWeek {
-  return DAYS_OF_WEEK.includes(value as DayOfWeek)
+  return typeof value === 'string' && DAYS_OF_WEEK_SET.has(value)
 }
 
 /**

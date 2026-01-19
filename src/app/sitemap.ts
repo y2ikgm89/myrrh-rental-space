@@ -7,8 +7,9 @@
 import type { MetadataRoute } from 'next'
 import { prisma } from '@/shared/lib/prisma'
 import { BlogPostStatus, NewsStatus } from '@/shared/generated/prisma/enums'
+import { getBaseUrl } from '@/shared/lib/constants'
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://example.com'
+const BASE_URL = getBaseUrl()
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // 静的ページ

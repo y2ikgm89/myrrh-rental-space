@@ -139,6 +139,51 @@ export interface TermsWithVersion {
   } | null
 }
 
+
+/**
+ * 規約とその現在バージョンの型（Client Component向けシリアライズ版）
+ * DateをISO文字列に、Prisma enumを文字列に変換したもの
+ */
+export interface SerializedTermsWithVersion {
+  id: string
+  type: string // Prisma enumをプレーン文字列に変換
+  title: string
+  slug: string
+  isActive: boolean
+  currentVersion: {
+    id: string
+    version: number
+    content: string
+    publishedAt: string // ISO 8601形式
+  } | null
+}
+
+/**
+ * TermsWithVersionをシリアライズ（Server → Client Component受け渡し用）
+ * Prisma enumとDateをプレーン値に変換
+ */
+export function serializeTermsWithVersion(
+  terms: TermsWithVersion | null
+): SerializedTermsWithVersion | null {
+  if (!terms) return null
+
+  return {
+    id: terms.id,
+    type: String(terms.type), // Prisma enumをプレーン文字列に変換
+    title: terms.title,
+    slug: terms.slug,
+    isActive: terms.isActive,
+    currentVersion: terms.currentVersion
+      ? {
+          id: terms.currentVersion.id,
+          version: terms.currentVersion.version,
+          content: terms.currentVersion.content,
+          publishedAt: terms.currentVersion.publishedAt.toISOString(),
+        }
+      : null,
+  }
+}
+
 /**
  * 規約詳細（管理画面用）
  */

@@ -24,6 +24,11 @@ import type { ReactNode } from 'react'
 type TabValue = 'spaces' | 'locations' | 'categories'
 
 const TAB_VALUES: [TabValue, ...TabValue[]] = ['spaces', 'locations', 'categories']
+const TAB_VALUES_SET = new Set<string>(TAB_VALUES)
+
+function isValidTabValue(value: string): value is TabValue {
+  return TAB_VALUES_SET.has(value)
+}
 
 interface SpaceManagementTabsProps {
   spacesContent: ReactNode
@@ -46,8 +51,8 @@ export function SpaceManagementTabs({
   )
 
   const handleTabChange = (value: string) => {
-    if (TAB_VALUES.includes(value as TabValue)) {
-      setActiveTab(value as TabValue)
+    if (isValidTabValue(value)) {
+      setActiveTab(value)
     }
   }
 

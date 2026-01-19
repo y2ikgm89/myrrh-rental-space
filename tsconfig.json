@@ -25,8 +25,8 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "@/admin/*": ["./src/admin/*"],
-      "@/public/*": ["./src/public/*"],
+      "@/admin/*": ["./src/app/(admin)/admin/(dashboard)/_shared/*"],
+      "@/public/*": ["./src/app/(public)/_shared/*"],
       "@/shared/*": ["./src/shared/*"]
     }
   },

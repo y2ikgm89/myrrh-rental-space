@@ -25,9 +25,10 @@ import { getBlogLayoutSettings } from '@/public/lib/layout-settings'
 import { getContainerStyles, getContentStyles } from '@/shared/lib/styles/layout-mapper'
 import { BlogPostStatus } from '@/shared/generated/prisma/enums'
 import { CommentSection } from './_components'
+import { getBaseUrl, SITE_DEFAULTS } from '@/shared/lib/constants'
 import type { ReactElement } from 'react'
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://example.com'
+const BASE_URL = getBaseUrl()
 
 // =============================================================================
 // Styles
@@ -298,7 +299,7 @@ export default async function BlogDetailPage({
         url={`${BASE_URL}/blog/${post.slug}`}
         datePublished={post.publishedAt?.toISOString() || post.updatedAt.toISOString()}
         dateModified={post.updatedAt.toISOString()}
-        author={{ name: 'Myrrh Rental Space' }}
+        author={{ name: SITE_DEFAULTS.name }}
       />
 
       <div className={`${styles.container()} ${containerStyles.className}`} style={containerStyles.style}>

@@ -11,19 +11,43 @@
  */
 
 import { Suspense } from 'react'
+import { cacheLife, cacheTag } from 'next/cache'
 import { AdminLayoutProvider } from '@/admin/contexts/admin-layout-context'
 import { ResponsiveSidebar } from './_components/ResponsiveSidebar'
 import { TopBar } from './_components/TopBar'
 import { UserInfo, UserInfoSkeleton } from './_components/UserInfo'
+import { prisma } from '@/shared/lib/prisma'
 import type { ReactElement, ReactNode } from 'react'
 
 const ADMIN_LOGIN_TOKEN = process.env.ADMIN_LOGIN_TOKEN || ''
 
-export default function DashboardLayout({
+async function getAdminBrandingSettings() {
+  'use cache'
+  cacheLife('hours')
+  cacheTag('settings')
+
+  const settings = await prisma.settings.findFirst({
+    select: {
+      siteName: true,
+      headerLogoUrl: true,
+      useHeaderLogo: true,
+    },
+  })
+
+  return {
+    siteName: settings?.siteName ?? null,
+    headerLogoUrl: settings?.headerLogoUrl ?? null,
+    useHeaderLogo: settings?.useHeaderLogo ?? true,
+  }
+}
+
+export default async function DashboardLayout({
   children,
 }: {
   children: ReactNode
-}): ReactElement {
+}): Promise<ReactElement> {
+  const brandingSettings = await getAdminBrandingSettings()
+
   return (
     <AdminLayoutProvider>
       <div className="min-h-screen bg-gray-100">
@@ -39,7 +63,12 @@ export default function DashboardLayout({
         {/* メインコンテンツエリア */}
         <div className="lg:pl-64 transition-[padding] duration-300">
           {/* トップバー */}
-          <TopBar token={ADMIN_LOGIN_TOKEN} />
+          <TopBar
+            token={ADMIN_LOGIN_TOKEN}
+            siteName={brandingSettings.siteName}
+            headerLogoUrl={brandingSettings.headerLogoUrl}
+            useHeaderLogo={brandingSettings.useHeaderLogo}
+          />
 
           {/* コンテンツ */}
           <main className="p-4 lg:p-6">{children}</main>

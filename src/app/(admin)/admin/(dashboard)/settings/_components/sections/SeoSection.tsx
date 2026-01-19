@@ -28,6 +28,16 @@ interface SeoSectionProps {
 
 type AnalyticsType = 'ga4' | 'gtm' | null
 
+const VALID_ANALYTICS_TYPES = new Set<string>(['ga4', 'gtm'])
+
+function isValidAnalyticsType(value: unknown): value is 'ga4' | 'gtm' {
+  return typeof value === 'string' && VALID_ANALYTICS_TYPES.has(value)
+}
+
+function parseAnalyticsType(value: unknown): AnalyticsType {
+  return isValidAnalyticsType(value) ? value : null
+}
+
 export function SeoSection({ settings }: SeoSectionProps) {
   const { handleResult } = useRefreshOnSuccess()
   const [isPending, startTransition] = useTransition()
@@ -38,7 +48,7 @@ export function SeoSection({ settings }: SeoSectionProps) {
     defaultOgpTitle: settings.defaultOgpTitle || '',
     defaultOgpDescription: settings.defaultOgpDescription || '',
     // Analytics settings
-    analyticsType: (settings.analyticsType as AnalyticsType) || null,
+    analyticsType: parseAnalyticsType(settings.analyticsType),
     googleAnalyticsId: settings.googleAnalyticsId || '',
     googleTagManagerId: settings.googleTagManagerId || '',
     gaPropertyId: settings.gaPropertyId || '',

@@ -6,7 +6,9 @@ import {
   type ReactElement,
   type FormEvent,
 } from 'react'
-import Link from 'next/link'
+import { useKanaInput } from '@/shared/hooks'
+import { TermsPreviewDialog } from '@/public/components/TermsPreviewDialog'
+import { getPageContent, type PageContentResult } from '@/public/actions/settings'
 import { tv } from 'tailwind-variants'
 import { Button } from '@/public/components/ui/Button'
 import { Checkbox } from '@/public/components/ui/Checkbox'
@@ -23,7 +25,7 @@ import {
   type ReservationWithTermsInput,
   type ReservationActionResult,
 } from '@/public/lib/validations/reservation'
-import type { TermsWithVersion } from '@/shared/lib/validations/terms'
+import type { SerializedTermsWithVersion } from '@/shared/lib/validations/terms'
 import { cn } from '@/shared/lib/utils'
 
 const formStyles = tv({
@@ -63,21 +65,31 @@ const formStyles = tv({
 
 const styles = formStyles()
 
-const linkClasses = 'text-primary hover:underline'
+// =============================================================================
+// TermsLinkLabel Component
+// =============================================================================
 
-function renderTermsLabel(settings: TermsSettings): React.ReactNode {
+interface TermsLinkLabelProps {
+  settings: TermsSettings
+  onTermsClick: () => void
+  onPrivacyClick: () => void
+}
+
+function TermsLinkLabel({ settings, onTermsClick, onPrivacyClick }: TermsLinkLabelProps): React.ReactNode {
   const { requireTerms, requirePrivacy } = settings
+
+  const linkClasses = 'text-primary hover:underline cursor-pointer font-medium'
 
   if (requireTerms && requirePrivacy) {
     return (
       <>
-        <Link href="/terms" target="_blank" className={linkClasses}>
+        <button type="button" onClick={onTermsClick} className={linkClasses}>
           利用規約
-        </Link>
+        </button>
         と
-        <Link href="/privacy" target="_blank" className={linkClasses}>
+        <button type="button" onClick={onPrivacyClick} className={linkClasses}>
           プライバシーポリシー
-        </Link>
+        </button>
         に同意します
       </>
     )
@@ -86,9 +98,9 @@ function renderTermsLabel(settings: TermsSettings): React.ReactNode {
   if (requireTerms) {
     return (
       <>
-        <Link href="/terms" target="_blank" className={linkClasses}>
+        <button type="button" onClick={onTermsClick} className={linkClasses}>
           利用規約
-        </Link>
+        </button>
         に同意します
       </>
     )
@@ -97,9 +109,9 @@ function renderTermsLabel(settings: TermsSettings): React.ReactNode {
   if (requirePrivacy) {
     return (
       <>
-        <Link href="/privacy" target="_blank" className={linkClasses}>
+        <button type="button" onClick={onPrivacyClick} className={linkClasses}>
           プライバシーポリシー
-        </Link>
+        </button>
         に同意します
       </>
     )
@@ -120,8 +132,8 @@ interface ReservationFormProps {
   spaceName: string
   hourlyPrice: number
   termsSettings: TermsSettings
-  /** スペース固有の規約（設定されている場合） */
-  spaceTerms: TermsWithVersion | null
+  /** スペース固有の規約（設定されている場合、シリアライズ済み） */
+  spaceTerms: SerializedTermsWithVersion | null
 }
 
 type FormStep = 'datetime' | 'info' | 'confirm'
@@ -129,6 +141,8 @@ type FormStep = 'datetime' | 'info' | 'confirm'
 interface FormState {
   lastName: string
   firstName: string
+  lastNameKana: string
+  firstNameKana: string
   email: string
   phoneNumber: string
   notes: string
@@ -140,6 +154,8 @@ interface FormState {
 const initialFormState: FormState = {
   lastName: '',
   firstName: '',
+  lastNameKana: '',
+  firstNameKana: '',
   email: '',
   phoneNumber: '',
   notes: '',
@@ -165,12 +181,25 @@ export function ReservationForm({
   const [result, setResult] = useState<ReservationActionResult | null>(null)
   const [isPending, startTransition] = useTransition()
 
+  // カナ自動入力フック（IMEで漢字入力時に読みを自動取得）
+  const lastNameKanaInput = useKanaInput({
+    onKanaChange: (kana) => setFormState((prev) => ({ ...prev, lastNameKana: kana })),
+  })
+  const firstNameKanaInput = useKanaInput({
+    onKanaChange: (kana) => setFormState((prev) => ({ ...prev, firstNameKana: kana })),
+  })
+
   // ステップ管理
   const [currentStep, setCurrentStep] = useState<FormStep>('datetime')
 
-  // 規約ダイアログ状態
+  // スペース固有規約ダイアログ状態
   const [isTermsDialogOpen, setIsTermsDialogOpen] = useState(false)
   const [isTermsAgreeing, setIsTermsAgreeing] = useState(false)
+
+  // 規約プレビューダイアログ状態
+  const [previewDialogType, setPreviewDialogType] = useState<'terms' | 'privacy' | null>(null)
+  const [previewContent, setPreviewContent] = useState<PageContentResult>(null)
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false)
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -230,6 +259,21 @@ export function ReservationForm({
     }))
   }
 
+  // 規約プレビューダイアログを開く
+  const handleOpenPreviewDialog = async (type: 'terms' | 'privacy'): Promise<void> => {
+    setPreviewDialogType(type)
+    setIsPreviewLoading(true)
+    const content = await getPageContent(type)
+    setPreviewContent(content)
+    setIsPreviewLoading(false)
+  }
+
+  // 規約プレビューダイアログを閉じる
+  const handleClosePreviewDialog = (): void => {
+    setPreviewDialogType(null)
+    setPreviewContent(null)
+  }
+
   // スペース規約に同意済みかどうか
   const hasAgreedToSpaceTerms =
     !spaceTerms || // 規約がない場合は同意不要
@@ -268,6 +312,9 @@ export function ReservationForm({
       endTime,
       lastName: formState.lastName,
       firstName: formState.firstName,
+      // カナ（IMEで自動取得、空の場合は送信しない）
+      lastNameKana: formState.lastNameKana || undefined,
+      firstNameKana: formState.firstNameKana || undefined,
       email: formState.email,
       phoneNumber: formState.phoneNumber,
       notes: formState.notes || undefined,
@@ -507,6 +554,7 @@ export function ReservationForm({
                     aria-describedby={
                       fieldErrors.lastName ? 'lastName-error' : undefined
                     }
+                    {...lastNameKanaInput.inputProps}
                   />
                   {fieldErrors.lastName && (
                     <p id="lastName-error" className={styles.errorText()}>
@@ -530,6 +578,7 @@ export function ReservationForm({
                     aria-describedby={
                       fieldErrors.firstName ? 'firstName-error' : undefined
                     }
+                    {...firstNameKanaInput.inputProps}
                   />
                   {fieldErrors.firstName && (
                     <p id="firstName-error" className={styles.errorText()}>
@@ -668,7 +717,13 @@ export function ReservationForm({
                       htmlFor="agreedToTerms"
                       className="text-sm text-foreground cursor-pointer leading-relaxed"
                     >
-                      {termsSettings.text || renderTermsLabel(termsSettings)}
+                      {termsSettings.text || (
+                        <TermsLinkLabel
+                          settings={termsSettings}
+                          onTermsClick={() => handleOpenPreviewDialog('terms')}
+                          onPrivacyClick={() => handleOpenPreviewDialog('privacy')}
+                        />
+                      )}
                       <span className={styles.required()}>*</span>
                     </label>
                   </div>
@@ -692,7 +747,11 @@ export function ReservationForm({
                 </Button>
                 <Button
                   type="submit"
-                  disabled={isPending || !hasAgreedToSpaceTerms}
+                  disabled={
+                    isPending ||
+                    !hasAgreedToSpaceTerms ||
+                    (termsSettings.enabled && !formState.agreedToTerms)
+                  }
                   className="flex-1"
                 >
                   {isPending ? '送信中...' : '予約を確定する'}
@@ -714,6 +773,17 @@ export function ReservationForm({
           loading={isTermsAgreeing}
         />
       )}
+
+      {/* 規約プレビューダイアログ */}
+      <TermsPreviewDialog
+        open={previewDialogType !== null}
+        onOpenChange={(open) => {
+          if (!open) handleClosePreviewDialog()
+        }}
+        title={previewContent?.title || (previewDialogType === 'terms' ? '利用規約' : 'プライバシーポリシー')}
+        content={previewContent?.content || ''}
+        loading={isPreviewLoading}
+      />
     </div>
   )
 }

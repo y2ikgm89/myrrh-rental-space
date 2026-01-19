@@ -1,9 +1,10 @@
 'use client'
 
 /**
- * 権限マトリクスセクション
+ * 権限設定セクション
  *
- * ロール別のリソースアクセス権限を表示
+ * SaaS標準のシンプルなロール説明UI
+ * 各ロールの「できること」「できないこと」を明確に表示
  */
 
 import Link from 'next/link'
@@ -15,190 +16,282 @@ import {
   CardHeader,
   CardTitle,
   Badge,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
 } from '@/admin/components/ui'
-import { Role } from '@/shared/generated/prisma/enums'
 import {
-  ROLE_PERMISSIONS,
-  RESOURCE_LABELS,
-  ACTION_LABELS,
-  ROLE_LABELS,
-  type Resource,
-  type Action,
-} from '@/admin/lib/permissions-constants'
-import { Check, X } from 'lucide-react'
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/admin/components/ui/accordion'
+import { Shield, Settings, Edit, Eye, Check, X, ChevronRight } from 'lucide-react'
 
 // =============================================================================
-// Constants
+// Types & Constants
 // =============================================================================
 
-const RESOURCES: Resource[] = [
-  'space',
-  'reservation',
-  'customer',
-  'inquiry',
-  'blog',
-  'news',
-  'page',
-  'faq',
-  'settings',
-  'user',
-  'auditLog',
-  'navigation',
-  'announcementBar',
+type StaffRole = 'SUPER_ADMIN' | 'ADMIN' | 'EDITOR' | 'VIEWER'
+
+interface RoleConfig {
+  id: StaffRole
+  label: string
+  icon: typeof Shield
+  color: string
+  bgColor: string
+  borderColor: string
+  description: string
+  capabilities: string[]
+  restrictions: string[]
+}
+
+const ROLE_CONFIGS: RoleConfig[] = [
+  {
+    id: 'SUPER_ADMIN',
+    label: 'スーパー管理者',
+    icon: Shield,
+    color: 'text-red-700',
+    bgColor: 'bg-red-50',
+    borderColor: 'border-red-200',
+    description: 'システム全体を管理できる最上位の権限',
+    capabilities: [
+      'すべての機能へのフルアクセス',
+      'スタッフの追加・削除・権限変更',
+      '監査ログの閲覧',
+      'システム設定の変更',
+      'API キーの管理',
+    ],
+    restrictions: [],
+  },
+  {
+    id: 'ADMIN',
+    label: '管理者',
+    icon: Settings,
+    color: 'text-blue-700',
+    bgColor: 'bg-blue-50',
+    borderColor: 'border-blue-200',
+    description: '日常的なコンテンツ管理を担当',
+    capabilities: [
+      'スペース・予約・顧客の管理',
+      'ブログ・ニュース・ページの作成・編集・公開',
+      'FAQ・お問い合わせの管理',
+      'サイト設定（ナビゲーション・告知バー等）',
+    ],
+    restrictions: [
+      'スタッフの追加・削除',
+      '監査ログの閲覧',
+      'システム設定の一部',
+    ],
+  },
+  {
+    id: 'EDITOR',
+    label: '編集者',
+    icon: Edit,
+    color: 'text-amber-700',
+    bgColor: 'bg-amber-50',
+    borderColor: 'border-amber-200',
+    description: '割り当てられたコンテンツのみ編集可能',
+    capabilities: [
+      '割り当てられたページの編集',
+      'ブログ記事・ニュースの作成・編集',
+      'コンテンツのプレビュー',
+    ],
+    restrictions: [
+      'コンテンツの公開・削除',
+      '予約・顧客情報の編集',
+      'システム設定へのアクセス',
+    ],
+  },
+  {
+    id: 'VIEWER',
+    label: '閲覧者',
+    icon: Eye,
+    color: 'text-gray-700',
+    bgColor: 'bg-gray-50',
+    borderColor: 'border-gray-200',
+    description: 'データの閲覧のみ可能',
+    capabilities: [
+      'ダッシュボードの閲覧',
+      '予約・顧客データの確認',
+      'コンテンツの閲覧',
+    ],
+    restrictions: [
+      'すべての編集・削除操作',
+      '設定変更',
+      'データのエクスポート',
+    ],
+  },
 ]
 
-const ACTIONS: Action[] = ['create', 'read', 'update', 'delete', 'publish', 'manage']
+// =============================================================================
+// Sub Components
+// =============================================================================
 
-const ADMIN_ROLES: Role[] = [Role.SUPER_ADMIN, Role.ADMIN, Role.EDITOR, Role.VIEWER]
+function RoleCard({ config }: { config: RoleConfig }) {
+  const Icon = config.icon
 
-const ROLE_DESCRIPTIONS: Record<Role, string> = {
-  SUPER_ADMIN: 'システム全体の管理権限。ユーザー管理、監査ログ、全設定へのアクセス。',
-  ADMIN: 'コンテンツ管理全般。ユーザー管理と監査ログ以外の全機能。',
-  EDITOR: '割り当てられたページのみ編集可能。新規作成・削除は不可。',
-  VIEWER: '閲覧のみ。編集・削除などの操作は不可。',
-  USER: '公開サイトのユーザーアカウント。管理画面へのアクセス権限なし。',
+  return (
+    <Card className={`${config.borderColor} border-l-4`}>
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-3">
+          <div className={`p-2 rounded-lg ${config.bgColor}`}>
+            <Icon className={`h-5 w-5 ${config.color}`} />
+          </div>
+          <div>
+            <CardTitle className="text-lg">{config.label}</CardTitle>
+            <CardDescription className="text-sm mt-0.5">
+              {config.description}
+            </CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* できること */}
+        <div>
+          <h4 className="text-sm font-medium text-green-700 mb-2 flex items-center gap-1.5">
+            <Check className="h-4 w-4" />
+            できること
+          </h4>
+          <ul className="space-y-1.5">
+            {config.capabilities.map((item, i) => (
+              <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                <span className="text-green-500 mt-0.5">•</span>
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* 制限 */}
+        {config.restrictions.length > 0 && (
+          <div>
+            <h4 className="text-sm font-medium text-red-700 mb-2 flex items-center gap-1.5">
+              <X className="h-4 w-4" />
+              制限
+            </h4>
+            <ul className="space-y-1.5">
+              {config.restrictions.map((item, i) => (
+                <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                  <span className="text-red-400 mt-0.5">•</span>
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
 }
 
-const ROLE_VARIANTS: Record<Role, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-  SUPER_ADMIN: 'destructive',
-  ADMIN: 'default',
-  EDITOR: 'secondary',
-  VIEWER: 'outline',
-  USER: 'outline',
+function QuickTips() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">ロール選択のヒント</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+            <Badge variant="destructive" className="mt-0.5">推奨</Badge>
+            <div>
+              <p className="text-sm font-medium">オーナー・責任者</p>
+              <p className="text-xs text-muted-foreground">
+                → スーパー管理者（最小限に）
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+            <Badge variant="default" className="mt-0.5">推奨</Badge>
+            <div>
+              <p className="text-sm font-medium">運営担当スタッフ</p>
+              <p className="text-xs text-muted-foreground">
+                → 管理者
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+            <Badge variant="secondary" className="mt-0.5">推奨</Badge>
+            <div>
+              <p className="text-sm font-medium">ライター・コンテンツ担当</p>
+              <p className="text-xs text-muted-foreground">
+                → 編集者
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+            <Badge variant="outline" className="mt-0.5">推奨</Badge>
+            <div>
+              <p className="text-sm font-medium">確認のみ必要な方</p>
+              <p className="text-xs text-muted-foreground">
+                → 閲覧者
+              </p>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
 }
 
 // =============================================================================
-// Component
+// Main Component
 // =============================================================================
 
 export function PermissionsSection() {
   return (
     <div className="space-y-6">
-      {/* ロール説明 */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {ADMIN_ROLES.map((role) => (
-          <Card key={role}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Badge variant={ROLE_VARIANTS[role]}>{ROLE_LABELS[role]}</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                {ROLE_DESCRIPTIONS[role]}
-              </p>
-            </CardContent>
-          </Card>
+      {/* ヘッダー */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">権限設定</h2>
+          <p className="text-sm text-muted-foreground">
+            スタッフに割り当てるロールの権限を確認できます
+          </p>
+        </div>
+        <Button asChild>
+          <Link href="/admin/staff">
+            スタッフ管理
+            <ChevronRight className="h-4 w-4 ml-1" />
+          </Link>
+        </Button>
+      </div>
+
+      {/* ロールカード */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {ROLE_CONFIGS.map((config) => (
+          <RoleCard key={config.id} config={config} />
         ))}
       </div>
 
-      {/* 権限マトリクス */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>権限マトリクス</CardTitle>
-              <CardDescription>
-                各ロールが持つリソースへのアクセス権限
-              </CardDescription>
-            </div>
-            <Button variant="outline" asChild>
-              <Link href="/admin/users">ユーザー管理</Link>
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[150px]">リソース</TableHead>
-                  <TableHead className="w-[100px]">アクション</TableHead>
-                  {ADMIN_ROLES.map((role) => (
-                    <TableHead key={role} className="text-center w-[100px]">
-                      {ROLE_LABELS[role]}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {RESOURCES.map((resource) =>
-                  ACTIONS.map((action, actionIndex) => {
-                    // このリソース×アクションの組み合わせが存在するかチェック
-                    const hasAnyPermission = ADMIN_ROLES.some((role) =>
-                      ROLE_PERMISSIONS[role].includes(`${resource}:${action}`)
-                    )
-
-                    if (!hasAnyPermission) return null
-
-                    return (
-                      <TableRow key={`${resource}-${action}`}>
-                        {actionIndex === 0 ? (
-                          <TableCell
-                            rowSpan={ACTIONS.filter((a) =>
-                              ADMIN_ROLES.some((r) =>
-                                ROLE_PERMISSIONS[r].includes(`${resource}:${a}`)
-                              )
-                            ).length}
-                            className="font-medium align-top"
-                          >
-                            {RESOURCE_LABELS[resource]}
-                          </TableCell>
-                        ) : null}
-                        <TableCell className="text-muted-foreground">
-                          {ACTION_LABELS[action]}
-                        </TableCell>
-                        {ADMIN_ROLES.map((role) => {
-                          const hasPermission = ROLE_PERMISSIONS[role].includes(
-                            `${resource}:${action}`
-                          )
-                          return (
-                            <TableCell key={role} className="text-center">
-                              {hasPermission ? (
-                                <Check className="h-4 w-4 text-green-600 mx-auto" />
-                              ) : (
-                                <X className="h-4 w-4 text-muted-foreground/30 mx-auto" />
-                              )}
-                            </TableCell>
-                          )
-                        })}
-                      </TableRow>
-                    )
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+      {/* ヒント */}
+      <QuickTips />
 
       {/* 補足情報 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>補足情報</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <h3 className="font-medium mb-2">EDITOR ロールについて</h3>
-            <p className="text-sm text-muted-foreground">
-              EDITORロールは、割り当てられたページのみ編集可能です。
-              ユーザー詳細ページで「割り当てページ」を設定してください。
-            </p>
-          </div>
-          <div>
-            <h3 className="font-medium mb-2">USER ロールについて</h3>
-            <p className="text-sm text-muted-foreground">
-              USERロールは公開サイトのユーザーアカウントです。管理画面へのアクセス権限はありません。
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <Accordion type="single" collapsible>
+        <AccordionItem value="details">
+          <AccordionTrigger className="text-sm">
+            権限の詳細について
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="space-y-3 text-sm text-muted-foreground">
+              <p>
+                <strong className="text-foreground">編集者の割り当てページ：</strong>
+                編集者ロールのスタッフには、編集可能なページを個別に割り当てることができます。
+                スタッフ詳細ページの「割り当てページ」セクションで設定してください。
+              </p>
+              <p>
+                <strong className="text-foreground">セキュリティの推奨事項：</strong>
+                スーパー管理者権限は必要最小限のスタッフのみに付与してください。
+                日常業務には管理者または編集者ロールで十分です。
+              </p>
+              <p>
+                <strong className="text-foreground">監査ログ：</strong>
+                スーパー管理者のみがアクセスできる監査ログでは、
+                すべてのスタッフの操作履歴を確認できます。
+              </p>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </div>
   )
 }

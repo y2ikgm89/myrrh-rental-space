@@ -12,12 +12,13 @@ import { Container, Section, SectionTitle } from '@/public/components/ui'
 import { LocalBusinessJsonLd, BreadcrumbJsonLd } from '@/public/components/seo/JsonLd'
 import { getPublicBusinessSettings } from '@/shared/lib/settings'
 import { generatePageMetadata } from '@/public/lib/page-metadata'
+import { SITE_DEFAULTS } from '@/shared/lib/constants'
 import type { ReactElement } from 'react'
 
 export async function generateMetadata(): Promise<Metadata> {
   return generatePageMetadata('about', {
     title: '私たちについて',
-    description: 'Myrrh Rental Spaceは、ビジネスからプライベートまで、様々な用途に対応したレンタルスペースを提供しています。',
+    description: `${SITE_DEFAULTS.name}は、ビジネスからプライベートまで、様々な用途に対応したレンタルスペースを提供しています。`,
   })
 }
 
@@ -26,7 +27,7 @@ export default async function AboutPage(): Promise<ReactElement> {
 
   // 設定が取得できなかった場合はデフォルト値を使用
   const safeSettings = settings ?? {
-    siteName: 'Myrrh Rental Space',
+    siteName: SITE_DEFAULTS.name,
     siteDescription: null,
     businessName: null,
     businessNameKana: null,
@@ -49,7 +50,7 @@ export default async function AboutPage(): Promise<ReactElement> {
     <>
       {/* JSON-LD構造化データ */}
       <LocalBusinessJsonLd
-        name={safeSettings.businessName || safeSettings.siteName || 'Myrrh Rental Space'}
+        name={safeSettings.businessName || safeSettings.siteName || SITE_DEFAULTS.name}
         description={safeSettings.businessDescription || safeSettings.siteDescription || undefined}
         telephone={safeSettings.phoneNumber || undefined}
         email={safeSettings.email || undefined}

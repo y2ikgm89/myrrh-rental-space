@@ -3,6 +3,7 @@ import type { ReactElement, ReactNode } from 'react'
 import { Noto_Sans_JP } from 'next/font/google'
 import { NuqsAdapter } from 'nuqs/adapters/next/app'
 import { getAnalyticsConfig } from '@/public/lib/analytics/config'
+import { SITE_DEFAULTS } from '@/shared/lib/constants'
 import './globals.css'
 
 const notoSansJP = Noto_Sans_JP({
@@ -13,10 +14,10 @@ const notoSansJP = Noto_Sans_JP({
 
 export const metadata: Metadata = {
   title: {
-    default: 'Myrrh Rental Space',
-    template: '%s | Myrrh Rental Space',
+    default: SITE_DEFAULTS.name,
+    template: `%s | ${SITE_DEFAULTS.name}`,
   },
-  description: 'レンタルスペースの予約・管理サービス',
+  description: SITE_DEFAULTS.description,
 }
 
 // Analytics設定は 'use cache' ディレクティブでキャッシュされるため、静的レンダリングが可能

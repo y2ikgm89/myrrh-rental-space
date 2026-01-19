@@ -16,6 +16,7 @@ import {
   CardTitle,
   Input,
   Label,
+  Switch,
   Textarea,
 } from '@/admin/components/ui'
 import { updateBasicInfo } from '@/admin/actions/settings'
@@ -35,7 +36,10 @@ export function BasicInfoSection({ settings }: BasicInfoSectionProps) {
     faviconUrl: settings.faviconUrl || '',
     defaultOgpImageUrl: settings.defaultOgpImageUrl || '',
     headerLogoUrl: settings.headerLogoUrl || '',
+    footerLogoUrl: settings.footerLogoUrl || '',
     footerCopyright: settings.footerCopyright || '',
+    useHeaderLogo: settings.useHeaderLogo,
+    useFooterLogo: settings.useFooterLogo,
   })
 
   const handleSave = () => {
@@ -46,7 +50,10 @@ export function BasicInfoSection({ settings }: BasicInfoSectionProps) {
         faviconUrl: formData.faviconUrl || null,
         defaultOgpImageUrl: formData.defaultOgpImageUrl || null,
         headerLogoUrl: formData.headerLogoUrl || null,
+        footerLogoUrl: formData.footerLogoUrl || null,
         footerCopyright: formData.footerCopyright || null,
+        useHeaderLogo: formData.useHeaderLogo,
+        useFooterLogo: formData.useFooterLogo,
       })
       handleResult(result)
     })
@@ -94,7 +101,7 @@ export function BasicInfoSection({ settings }: BasicInfoSectionProps) {
           />
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="headerLogoUrl">ヘッダーロゴURL</Label>
             <Input
@@ -104,7 +111,52 @@ export function BasicInfoSection({ settings }: BasicInfoSectionProps) {
               placeholder="/images/logo.svg"
               disabled={isPending}
             />
+            <div className="flex items-center justify-between pt-1">
+              <Label htmlFor="useHeaderLogo" className="text-sm text-muted-foreground">
+                ヘッダーでロゴを使用
+              </Label>
+              <Switch
+                id="useHeaderLogo"
+                checked={formData.useHeaderLogo}
+                onCheckedChange={(checked) =>
+                  setFormData((prev) => ({ ...prev, useHeaderLogo: checked }))
+                }
+                disabled={isPending}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              OFF時またはロゴ未設定時はサイト名をテキスト表示
+            </p>
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="footerLogoUrl">フッターロゴURL</Label>
+            <Input
+              id="footerLogoUrl"
+              value={formData.footerLogoUrl}
+              onChange={(e) => setFormData({ ...formData, footerLogoUrl: e.target.value })}
+              placeholder="/images/logo-footer.svg"
+              disabled={isPending}
+            />
+            <div className="flex items-center justify-between pt-1">
+              <Label htmlFor="useFooterLogo" className="text-sm text-muted-foreground">
+                フッターでロゴを使用
+              </Label>
+              <Switch
+                id="useFooterLogo"
+                checked={formData.useFooterLogo}
+                onCheckedChange={(checked) =>
+                  setFormData((prev) => ({ ...prev, useFooterLogo: checked }))
+                }
+                disabled={isPending}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              OFF時またはロゴ未設定時はサイト名をテキスト表示
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="faviconUrl">ファビコンURL</Label>
             <Input

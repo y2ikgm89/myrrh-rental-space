@@ -1,4 +1,6 @@
 import type { NextConfig } from 'next'
+// 環境変数バリデーション（ビルド時検証）
+import '@/shared/lib/env'
 
 // Windows環境ではstandalone出力でエラーが発生するため、Docker環境でのみ有効化
 const isDockerBuild = process.env.DOCKER_BUILD === 'true'

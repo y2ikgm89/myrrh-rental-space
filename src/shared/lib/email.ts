@@ -1,7 +1,8 @@
 import { Resend } from 'resend'
+import { SITE_DEFAULTS } from './constants'
 
 export const EMAIL_FROM = process.env.EMAIL_FROM || 'noreply@example.com'
-export const EMAIL_FROM_NAME = process.env.EMAIL_FROM_NAME || 'Myrrh Rental Space'
+export const EMAIL_FROM_NAME = process.env.EMAIL_FROM_NAME || SITE_DEFAULTS.name
 
 /**
  * Check if email functionality is enabled

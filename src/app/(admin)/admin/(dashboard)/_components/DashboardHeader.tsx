@@ -8,7 +8,6 @@
 import { connection } from 'next/server'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { LoginTokenGenerator } from './LoginTokenGenerator'
 
 export async function DashboardHeader() {
   // 非決定論的操作（new Date()）を行う前にconnection()を呼び出し
@@ -16,14 +15,11 @@ export async function DashboardHeader() {
   const today = new Date()
 
   return (
-    <div className="flex items-center justify-between">
-      <div>
-        <h1 className="text-2xl font-bold">ダッシュボード</h1>
-        <p className="text-muted-foreground">
-          {format(today, 'yyyy年M月d日 (EEEE)', { locale: ja })}
-        </p>
-      </div>
-      <LoginTokenGenerator />
+    <div>
+      <h1 className="text-2xl font-bold">ダッシュボード</h1>
+      <p className="text-muted-foreground">
+        {format(today, 'yyyy年M月d日 (EEEE)', { locale: ja })}
+      </p>
     </div>
   )
 }

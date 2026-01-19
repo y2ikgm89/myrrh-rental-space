@@ -5,8 +5,11 @@
  *
  * モバイル用トップバー
  * ハンバーガーボタンでサイドバーを開閉
+ * ブランディング表示（ロゴ/サイト名）対応
  */
 
+import { useState } from 'react'
+import Image from 'next/image'
 import { Menu } from 'lucide-react'
 import Link from 'next/link'
 import { useAdminLayout } from '@/admin/contexts/admin-layout-context'
@@ -15,14 +18,41 @@ import { LogoutButton } from './LogoutButton'
 
 type TopBarProps = {
   token: string
+  siteName: string | null
+  headerLogoUrl: string | null
+  useHeaderLogo: boolean
 }
 
-export function TopBar({ token }: TopBarProps) {
+export function TopBar({ token, siteName, headerLogoUrl, useHeaderLogo }: TopBarProps) {
   const { toggleSidebar, isMobile } = useAdminLayout()
+  const [logoError, setLogoError] = useState(false)
+
+  const displayName = siteName || '管理画面'
+
+  // ブランディング表示: ロゴまたはテキスト
+  const renderBranding = () => {
+    // テキスト表示の条件: ロゴ無効 or ロゴURL無し or ロゴ読込失敗
+    if (!useHeaderLogo || !headerLogoUrl || logoError) {
+      return <span className="text-lg font-semibold text-gray-900">{displayName}</span>
+    }
+
+    // ロゴ表示
+    return (
+      <Image
+        src={headerLogoUrl}
+        alt={displayName}
+        width={120}
+        height={32}
+        className="h-8 w-auto object-contain"
+        onError={() => setLogoError(true)}
+        priority
+      />
+    )
+  }
 
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b bg-white px-4 shadow-sm lg:px-6">
-      {/* 左: ハンバーガー + タイトル */}
+      {/* 左: ハンバーガー + ブランディング */}
       <div className="flex items-center gap-3">
         {isMobile && (
           <Button
@@ -36,7 +66,9 @@ export function TopBar({ token }: TopBarProps) {
             <Menu className="h-5 w-5" />
           </Button>
         )}
-        <h1 className="text-lg font-semibold text-gray-900">管理画面</h1>
+        <Link href="/admin" className="flex items-center">
+          {renderBranding()}
+        </Link>
       </div>
 
       {/* 右: アクション */}
