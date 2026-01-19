@@ -1,31 +1,32 @@
 # プロジェクト構造
 
-> **Note**: このドキュメントにはプロジェクトのディレクトリ構成とファイル命名規則が記載されています。最終更新: **2026-01-17**
+> **Note**: このドキュメントにはプロジェクトのディレクトリ構成とファイル命名規則が記載されています。最終更新: **2026-01-19**
 
 ---
 
 ## アーキテクチャ概要
 
-**管理/公開/共有 完全分離アーキテクチャ** (Plan 042)
+**Next.js コロケーションパターン** (Plan 050)
 
-管理画面と公開ページのコンポーネント・ライブラリを完全に分離し、
-顧客ごとのカスタマイズとAIによる変更影響把握を容易にする設計。
+App Router のルートグループ配下に `_shared/` ディレクトリを配置し、
+関連コードをページ近くに配置するNext.js公式推奨パターン。
 
 ### 分離ルール
 
 | カテゴリ | 配置先 | 理由 |
 |---------|--------|------|
-| **管理画面専用** | `src/admin/` | 管理UIは独立してカスタマイズ |
-| **公開ページ専用** | `src/public/` | サイトデザインは独立してカスタマイズ |
+| **管理画面専用** | `src/app/(admin)/admin/(dashboard)/_shared/` | 管理UIコードをページ近くに配置 |
+| **公開ページ専用** | `src/app/(public)/_shared/` | 公開サイトコードをページ近くに配置 |
 | **真に共有が必要** | `src/shared/` | DB接続、認証、暗号化など |
 
 ### パスエイリアス
 
 ```json
 {
-  "@/admin/*": "src/admin/*",
-  "@/public/*": "src/public/*",
-  "@/shared/*": "src/shared/*"
+  "@/*": "./src/*",
+  "@/admin/*": "./src/app/(admin)/admin/(dashboard)/_shared/*",
+  "@/public/*": "./src/app/(public)/_shared/*",
+  "@/shared/*": "./src/shared/*"
 }
 ```
 
@@ -54,102 +55,7 @@ myrrh-rental-space/
 ├── src/
 │   ├── proxy.ts             # Next.js 16 Proxy（認証・認可）
 │   │
-│   ├── admin/               # 管理画面専用
-│   │   ├── actions/         # 管理用 Server Actions
-│   │   │   ├── blog.ts
-│   │   │   ├── customer.ts
-│   │   │   ├── dashboard.ts
-│   │   │   ├── export.ts
-│   │   │   ├── homepage-settings.ts
-│   │   │   ├── inquiry.ts
-│   │   │   ├── navigation.ts
-│   │   │   ├── news.ts
-│   │   │   ├── page.ts
-│   │   │   ├── reservation.ts
-│   │   │   ├── settings.ts
-│   │   │   ├── space.ts
-│   │   │   ├── terms.ts
-│   │   │   ├── upload.ts
-│   │   │   └── user.ts
-│   │   ├── components/      # 管理専用コンポーネント（shadcn/ui ベース）
-│   │   │   ├── ui/          # shadcn/ui コンポーネント
-│   │   │   │   ├── button.tsx
-│   │   │   │   ├── input.tsx
-│   │   │   │   ├── card.tsx
-│   │   │   │   ├── table.tsx
-│   │   │   │   └── ...
-│   │   │   ├── editor/      # Lexicalエディタ
-│   │   │   │   ├── lexical/
-│   │   │   │   ├── inline/
-│   │   │   │   └── shared/
-│   │   │   ├── media-picker/ # メディア選択UI
-│   │   │   └── status-badges.tsx
-│   │   ├── contexts/        # 管理画面用Context
-│   │   │   └── admin-layout-context.tsx
-│   │   ├── hooks/           # 管理画面用Hooks
-│   │   │   ├── use-media-picker.tsx
-│   │   │   └── use-calendar-state.ts
-│   │   ├── lib/             # 管理専用ライブラリ
-│   │   │   ├── permissions.ts
-│   │   │   ├── audit.ts
-│   │   │   ├── stripe.ts
-│   │   │   ├── google-calendar.ts
-│   │   │   ├── calendar-sync.ts
-│   │   │   ├── ical.ts
-│   │   │   ├── validations/
-│   │   │   ├── settings/
-│   │   │   ├── api-keys/
-│   │   │   ├── calendar/
-│   │   │   └── errors/
-│   │   └── types/           # 管理専用型定義
-│   │       ├── server-actions.ts
-│   │       ├── admin-layout.ts
-│   │       ├── api-keys.ts
-│   │       ├── editor-panel.ts
-│   │       └── media-picker.ts
-│   │
-│   ├── public/              # 公開ページ専用
-│   │   ├── actions/         # 公開用 Server Actions
-│   │   │   ├── contact.ts
-│   │   │   ├── reservation.ts
-│   │   │   ├── blog-comment.ts
-│   │   │   ├── sidebar.ts
-│   │   │   └── terms.ts
-│   │   ├── components/      # 公開専用コンポーネント（tailwind-variants ベース）
-│   │   │   ├── ui/          # カスタム UI コンポーネント
-│   │   │   │   ├── Button.tsx
-│   │   │   │   ├── Input.tsx
-│   │   │   │   ├── Card.tsx
-│   │   │   │   └── ...
-│   │   │   ├── layouts/     # 公開ページレイアウト
-│   │   │   │   ├── Header.tsx
-│   │   │   │   ├── Footer.tsx
-│   │   │   │   └── MobileMenu.tsx
-│   │   │   ├── sections/    # ページセクション
-│   │   │   │   ├── Hero.tsx
-│   │   │   │   ├── BlogSection.tsx
-│   │   │   │   ├── NewsSection.tsx
-│   │   │   │   └── FAQSection.tsx
-│   │   │   ├── sidebar/     # サイドバー
-│   │   │   ├── a11y/        # アクセシビリティ
-│   │   │   ├── analytics/   # アナリティクス
-│   │   │   ├── seo/         # SEO
-│   │   │   └── Turnstile.tsx
-│   │   ├── emails/          # React Emailテンプレート
-│   │   │   ├── reservation-confirmation.tsx
-│   │   │   └── ...
-│   │   ├── lib/             # 公開専用ライブラリ
-│   │   │   ├── blog-queries.ts
-│   │   │   ├── page-metadata.ts
-│   │   │   ├── layout-settings.ts
-│   │   │   ├── reservation-utils.ts
-│   │   │   ├── seo/
-│   │   │   ├── a11y/
-│   │   │   ├── nuqs/
-│   │   │   └── analytics/
-│   │   └── types/           # 公開専用型定義
-│   │
-│   ├── shared/              # 共有ライブラリ
+│   ├── shared/              # 共有ライブラリ（@/shared/*）
 │   │   ├── generated/       # 自動生成ファイル
 │   │   │   └── prisma/      # Prisma Client
 │   │   ├── lib/             # 共有ユーティリティ
@@ -165,10 +71,12 @@ myrrh-rental-space/
 │   │   │   ├── turnstile.ts # Turnstile検証
 │   │   │   ├── rate-limit.ts
 │   │   │   ├── action-helpers.ts
-│   │   │   └── json-validators.ts
-│   │   └── types/           # 共有型定義
-│   │       ├── prisma.ts    # Prisma WhereInput型
-│   │       └── better-auth.d.ts
+│   │   │   ├── constants/   # 定数・設定
+│   │   │   ├── env/         # 環境変数バリデーション
+│   │   │   └── validations/ # 共有バリデーション
+│   │   ├── types/           # 共有型定義
+│   │   ├── hooks/           # 共有フック
+│   │   └── contexts/        # 共有コンテキスト
 │   │
 │   └── app/                 # Next.js App Router
 │       ├── layout.tsx       # ルートレイアウト
@@ -176,9 +84,23 @@ myrrh-rental-space/
 │       ├── favicon.ico
 │       ├── sitemap.ts       # 動的サイトマップ生成
 │       ├── robots.ts        # robots.txt 生成
+│       │
 │       ├── (public)/        # 公開ページグループ
 │       │   ├── layout.tsx
 │       │   ├── page.tsx     # ホームページ
+│       │   ├── _shared/     # 公開ページ専用コード（@/public/*）
+│       │   │   ├── actions/     # 公開用 Server Actions
+│       │   │   ├── components/  # 公開専用コンポーネント（tailwind-variants ベース）
+│       │   │   │   ├── ui/          # カスタム UI コンポーネント
+│       │   │   │   ├── layouts/     # Header, Footer, MobileMenu
+│       │   │   │   ├── sections/    # Hero, BlogSection, NewsSection, FAQSection
+│       │   │   │   ├── sidebar/     # ブログサイドバー
+│       │   │   │   ├── a11y/        # アクセシビリティ
+│       │   │   │   ├── analytics/   # アナリティクス
+│       │   │   │   └── seo/         # SEO
+│       │   │   ├── emails/      # React Emailテンプレート
+│       │   │   ├── lib/         # 公開専用ライブラリ
+│       │   │   └── types/       # 公開専用型定義
 │       │   ├── about/
 │       │   ├── contact/
 │       │   ├── reservation/
@@ -186,25 +108,45 @@ myrrh-rental-space/
 │       │   ├── news/
 │       │   ├── blog/
 │       │   └── ...
+│       │
 │       ├── (admin)/admin/   # 管理画面（Route Group）
-│       │   ├── layout.tsx
-│       │   ├── page.tsx     # ダッシュボード
-│       │   ├── (dashboard)/
-│       │   │   ├── spaces/
-│       │   │   ├── reservations/
-│       │   │   ├── customers/
-│       │   │   ├── blog/
-│       │   │   ├── news/
-│       │   │   ├── pages/
-│       │   │   ├── settings/
-│       │   │   ├── users/
-│       │   │   └── ...
-│       │   └── login/
+│       │   ├── (auth)/      # 認証関連ページ
+│       │   │   ├── login/
+│       │   │   └── setup/
+│       │   └── (dashboard)/ # ダッシュボード
+│       │       ├── layout.tsx
+│       │       ├── page.tsx     # ダッシュボードトップ
+│       │       ├── _shared/     # 管理画面専用コード（@/admin/*）
+│       │       │   ├── actions/     # 管理用 Server Actions
+│       │       │   ├── components/  # 管理専用コンポーネント（shadcn/ui ベース）
+│       │       │   │   ├── ui/          # shadcn/ui コンポーネント
+│       │       │   │   ├── editor/      # Lexicalエディタ
+│       │       │   │   ├── media-picker/ # メディア選択UI
+│       │       │   │   └── table/       # テーブル関連（BaseFilters等）
+│       │       │   ├── contexts/    # 管理画面用Context
+│       │       │   ├── hooks/       # 管理画面用Hooks
+│       │       │   ├── lib/         # 管理専用ライブラリ
+│       │       │   └── types/       # 管理専用型定義
+│       │       ├── _components/ # ダッシュボード共通コンポーネント
+│       │       ├── spaces/
+│       │       ├── reservations/
+│       │       ├── customers/
+│       │       ├── blog/
+│       │       ├── news/
+│       │       ├── pages/
+│       │       ├── settings/
+│       │       ├── staff/
+│       │       └── ...
+│       │
 │       └── api/             # API Routes
 │           ├── auth/
 │           ├── cron/
 │           ├── webhooks/
 │           └── ...
+│
+├── __tests__/               # テストファイル
+│   ├── unit/                # ユニットテスト
+│   └── integration/         # 統合テスト
 │
 ├── public/                  # 静的ファイル
 │   └── images/
@@ -216,6 +158,7 @@ myrrh-rental-space/
     ├── operations/
     ├── requirements/
     ├── security/
+    ├── templates/
     └── plans/
 ```
 
@@ -243,12 +186,12 @@ myrrh-rental-space/
 
 ### アプリケーションコード
 
-| パス | 役割 |
-|------|------|
-| `src/app/` | Next.js App Router のページとルート |
-| `src/admin/` | 管理画面専用（components, actions, hooks, contexts, lib, types） |
-| `src/public/` | 公開ページ専用（components, actions, emails, lib, types） |
-| `src/shared/` | 共有（prisma, auth, utils, email, storage, generated/prisma） |
+| パス | エイリアス | 役割 |
+|------|------------|------|
+| `src/app/` | `@/*` | Next.js App Router のページとルート |
+| `src/app/(admin)/admin/(dashboard)/_shared/` | `@/admin/*` | 管理画面専用（components, actions, hooks, contexts, lib, types） |
+| `src/app/(public)/_shared/` | `@/public/*` | 公開ページ専用（components, actions, emails, lib, types） |
+| `src/shared/` | `@/shared/*` | 共有（prisma, auth, utils, email, storage, constants, env） |
 
 ---
 
@@ -353,6 +296,11 @@ import type { Reservation } from '@/shared/types/prisma'
 
 ## 更新履歴
 
+- **2026-01-19**: Next.js コロケーションパターン (Plan 050) に対応
+  - `src/admin/`, `src/public/` を `src/app/` 配下の `_shared/` に移動
+  - パスエイリアス更新（新しい配置先を反映）
+  - ディレクトリ構成図を全面改訂
+  - テストディレクトリ構造を追加
 - **2026-01-17**: 管理/公開/共有 完全分離アーキテクチャ (Plan 042) に対応
   - `src/admin/`, `src/public/`, `src/shared/` 構造に全面改訂
   - パスエイリアス説明追加
