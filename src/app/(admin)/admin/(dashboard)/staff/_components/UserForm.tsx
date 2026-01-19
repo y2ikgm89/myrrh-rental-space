@@ -176,7 +176,7 @@ export function UserForm({ mode, user }: Props) {
 
       <div className="flex gap-4">
         <Button type="submit" disabled={isPending}>
-          {isPending ? '保存中...' : isEdit ? '更新' : '作成'}
+          {isPending ? (isEdit ? '更新中...' : '作成中...') : isEdit ? '更新' : '作成'}
         </Button>
         <Button
           type="button"

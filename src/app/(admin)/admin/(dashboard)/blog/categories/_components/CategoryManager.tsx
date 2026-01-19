@@ -23,11 +23,9 @@ import {
   TableRow,
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   Textarea,
   DndContext,
   closestCenter,
@@ -41,6 +39,7 @@ import {
   verticalListSortingStrategy,
   arrayMove,
   CSS,
+  DeleteConfirmDialog,
   type DragEndEvent,
 } from '@/admin/components/ui'
 import { DragHandle } from '@/admin/components/ui/sortable'
@@ -124,44 +123,24 @@ function SortableCategoryRow({ category, onEdit, onDelete, isPending }: Sortable
           >
             編集
           </Button>
-          <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-            <DialogTrigger asChild>
-              <Button
-                variant="destructive"
-                size="sm"
-                disabled={isPending || category._count.posts > 0}
-              >
-                削除
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>カテゴリを削除しますか？</DialogTitle>
-                <DialogDescription>
-                  この操作は取り消せません。本当に削除してもよろしいですか？
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setDeleteDialogOpen(false)}
-                  disabled={isPending}
-                >
-                  キャンセル
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={() => {
-                    onDelete(category.id)
-                    setDeleteDialogOpen(false)
-                  }}
-                  disabled={isPending}
-                >
-                  {isPending ? '削除中...' : '削除する'}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <Button
+            variant="destructive"
+            size="sm"
+            disabled={isPending || category._count.posts > 0}
+            onClick={() => setDeleteDialogOpen(true)}
+          >
+            削除
+          </Button>
+          <DeleteConfirmDialog
+            open={deleteDialogOpen}
+            onOpenChange={setDeleteDialogOpen}
+            itemName={category.name}
+            onConfirm={() => {
+              onDelete(category.id)
+              setDeleteDialogOpen(false)
+            }}
+            isPending={isPending}
+          />
         </div>
       </TableCell>
     </TableRow>
@@ -462,7 +441,9 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
               </Button>
               <Button type="submit" disabled={isPending}>
                 {isPending
-                  ? '保存中...'
+                  ? editingCategory
+                    ? '更新中...'
+                    : '作成中...'
                   : editingCategory
                     ? '更新'
                     : '作成'}

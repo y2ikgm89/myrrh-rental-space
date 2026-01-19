@@ -310,7 +310,7 @@ export function NewsInlineEditor({ news, mode = 'edit' }: NewsInlineEditorProps)
                         onClick={handleDelete}
                         disabled={isPending}
                       >
-                        {isPending ? '削除中...' : '削除する'}
+                        {isPending ? '削除中...' : '削除'}
                       </Button>
                     </DialogFooter>
                   </DialogContent>

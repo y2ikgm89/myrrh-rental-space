@@ -192,7 +192,7 @@ export function TermsForm({ terms }: TermsFormProps) {
 
           <div className="flex gap-2 pt-4">
             <Button type="submit" disabled={isPending}>
-              {isPending ? '保存中...' : isEditing ? '更新' : '作成'}
+              {isPending ? (isEditing ? '更新中...' : '作成中...') : isEditing ? '更新' : '作成'}
             </Button>
             <Button
               type="button"

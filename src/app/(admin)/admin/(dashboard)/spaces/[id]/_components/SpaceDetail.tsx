@@ -12,13 +12,7 @@ import {
   Button,
   Badge,
   Switch,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  DeleteConfirmDialog,
 } from '@/admin/components/ui'
 import { updateSpacePublish, deleteSpace } from '@/admin/actions/space'
 import type { SpaceWithStats } from '@/admin/lib/validations/space'
@@ -273,37 +267,21 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
           <CardTitle className="text-destructive">危険な操作</CardTitle>
         </CardHeader>
         <CardContent>
-          <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="destructive" disabled={isPending}>
-                スペースを削除
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>スペースを削除しますか？</DialogTitle>
-                <DialogDescription>
-                  この操作により、スペースは非アクティブ状態になります。
-                  有効な予約がある場合は削除できません。
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsDeleteDialogOpen(false)}
-                >
-                  キャンセル
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={handleDelete}
-                  disabled={isPending}
-                >
-                  削除する
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <Button
+            variant="destructive"
+            disabled={isPending}
+            onClick={() => setIsDeleteDialogOpen(true)}
+          >
+            スペースを削除
+          </Button>
+          <DeleteConfirmDialog
+            open={isDeleteDialogOpen}
+            onOpenChange={setIsDeleteDialogOpen}
+            itemName={space.name}
+            description="この操作により、スペースは非アクティブ状態になります。有効な予約がある場合は削除できません。"
+            onConfirm={handleDelete}
+            isPending={isPending}
+          />
         </CardContent>
       </Card>
     </div>

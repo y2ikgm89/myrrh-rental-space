@@ -480,10 +480,12 @@ export function LocationForm({ location, mode }: LocationFormProps) {
         </Button>
         <Button type="submit" disabled={isPending}>
           {isPending
-            ? '保存中...'
+            ? mode === 'create'
+              ? '作成中...'
+              : '更新中...'
             : mode === 'create'
-              ? '作成する'
-              : '更新する'}
+              ? '作成'
+              : '更新'}
         </Button>
       </div>
 

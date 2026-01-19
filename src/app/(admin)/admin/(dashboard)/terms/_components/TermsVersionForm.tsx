@@ -99,7 +99,9 @@ export function TermsVersionForm({
         )}
         <Button type="submit" disabled={isPending}>
           {isPending
-            ? '保存中...'
+            ? isEditing
+              ? '更新中...'
+              : '作成中...'
             : isEditing
               ? 'バージョンを更新'
               : 'バージョンを作成'}

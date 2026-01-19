@@ -268,7 +268,7 @@ export function CustomerForm(): ReactElement {
             <Button
               type="button"
               variant="outline"
-              onClick={() => router.push('/admin/customers')}
+              onClick={() => router.back()}
             >
               キャンセル
             </Button>

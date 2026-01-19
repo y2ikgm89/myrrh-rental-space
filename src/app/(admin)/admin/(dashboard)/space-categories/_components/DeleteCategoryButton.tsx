@@ -79,7 +79,7 @@ export function DeleteCategoryButton({ category }: DeleteCategoryButtonProps) {
             disabled={isPending || hasSpaces}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {isPending ? '削除中...' : '削除する'}
+            {isPending ? '削除中...' : '削除'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

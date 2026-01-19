@@ -57,7 +57,8 @@
       "mcp__plugin_serena_serena__replace_content",
       "mcp__ide__getDiagnostics",
       "mcp__plugin_serena_serena__find_referencing_symbols",
-      "mcp__plugin_serena_serena__replace_symbol_body"
+      "mcp__plugin_serena_serena__replace_symbol_body",
+      "Skill(claude-code-harness:\\\\core:skill-list)"
     ],
     "deny": [
       "Bash(rm:*)",

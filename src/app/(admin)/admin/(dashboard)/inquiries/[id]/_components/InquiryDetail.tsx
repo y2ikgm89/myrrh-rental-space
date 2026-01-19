@@ -18,13 +18,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  DeleteConfirmDialog,
 } from '@/admin/components/ui'
 import { InquiryStatusBadge } from '@/admin/components/status-badges'
 import { updateInquiryStatus, deleteInquiry } from '@/admin/actions/inquiry'
@@ -83,37 +77,20 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
               一覧に戻る
             </Link>
           </Button>
-          <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="destructive" disabled={isPending}>
-                削除
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>お問い合わせを削除しますか？</DialogTitle>
-                <DialogDescription>
-                  この操作は取り消せません。本当に削除してもよろしいですか？
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsDeleteDialogOpen(false)}
-                  disabled={isPending}
-                >
-                  キャンセル
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={handleDelete}
-                  disabled={isPending}
-                >
-                  {isPending ? '削除中...' : '削除する'}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <Button
+            variant="destructive"
+            disabled={isPending}
+            onClick={() => setIsDeleteDialogOpen(true)}
+          >
+            削除
+          </Button>
+          <DeleteConfirmDialog
+            open={isDeleteDialogOpen}
+            onOpenChange={setIsDeleteDialogOpen}
+            itemName={inquiry.subject}
+            onConfirm={handleDelete}
+            isPending={isPending}
+          />
         </div>
       </div>
 

@@ -926,7 +926,7 @@ export function NavigationManager({
                 キャンセル
               </Button>
               <Button type="submit" disabled={isPending}>
-                {isPending ? '保存中...' : editingNavItem ? '更新' : '作成'}
+                {isPending ? (editingNavItem ? '更新中...' : '作成中...') : editingNavItem ? '更新' : '作成'}
               </Button>
             </DialogFooter>
           </form>
@@ -1024,7 +1024,7 @@ export function NavigationManager({
                 キャンセル
               </Button>
               <Button type="submit" disabled={isPending}>
-                {isPending ? '保存中...' : editingSocialLink ? '更新' : '作成'}
+                {isPending ? (editingSocialLink ? '更新中...' : '作成中...') : editingSocialLink ? '更新' : '作成'}
               </Button>
             </DialogFooter>
           </form>

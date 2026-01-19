@@ -12,13 +12,7 @@ import {
   Button,
   Badge,
   Switch,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  DeleteConfirmDialog,
 } from '@/admin/components/ui'
 import { toggleLocationPublish, deleteLocation } from '@/admin/actions/location'
 import type { LocationWithStats } from '@/admin/lib/validations/location'
@@ -227,37 +221,21 @@ export function LocationDetail({ location }: LocationDetailProps) {
           <CardTitle className="text-destructive">危険な操作</CardTitle>
         </CardHeader>
         <CardContent>
-          <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="destructive" disabled={isPending}>
-                場所を削除
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>場所を削除しますか？</DialogTitle>
-                <DialogDescription>
-                  この操作により、場所は非アクティブ状態になります。
-                  紐づいているスペースがある場合は削除できません。
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsDeleteDialogOpen(false)}
-                >
-                  キャンセル
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={handleDelete}
-                  disabled={isPending}
-                >
-                  削除する
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <Button
+            variant="destructive"
+            disabled={isPending}
+            onClick={() => setIsDeleteDialogOpen(true)}
+          >
+            場所を削除
+          </Button>
+          <DeleteConfirmDialog
+            open={isDeleteDialogOpen}
+            onOpenChange={setIsDeleteDialogOpen}
+            itemName={location.name}
+            description="この操作により、場所は非アクティブ状態になります。紐づいているスペースがある場合は削除できません。"
+            onConfirm={handleDelete}
+            isPending={isPending}
+          />
         </CardContent>
       </Card>
     </div>

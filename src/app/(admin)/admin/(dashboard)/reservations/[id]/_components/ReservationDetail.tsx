@@ -15,13 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
   Input,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  DeleteConfirmDialog,
 } from '@/admin/components/ui'
 import { ReservationStatusBadge } from '@/admin/components/status-badges'
 import {
@@ -228,36 +222,20 @@ export function ReservationDetail({ reservation }: ReservationDetailProps) {
           <CardTitle className="text-destructive">危険な操作</CardTitle>
         </CardHeader>
         <CardContent>
-          <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="destructive" disabled={isPending}>
-                予約を削除
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>予約を削除しますか？</DialogTitle>
-                <DialogDescription>
-                  この操作は取り消せません。予約データは完全に削除されます。
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsDeleteDialogOpen(false)}
-                >
-                  キャンセル
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={handleDelete}
-                  disabled={isPending}
-                >
-                  削除する
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <Button
+            variant="destructive"
+            disabled={isPending}
+            onClick={() => setIsDeleteDialogOpen(true)}
+          >
+            予約を削除
+          </Button>
+          <DeleteConfirmDialog
+            open={isDeleteDialogOpen}
+            onOpenChange={setIsDeleteDialogOpen}
+            description="予約データは完全に削除されます。この操作は取り消せません。"
+            onConfirm={handleDelete}
+            isPending={isPending}
+          />
         </CardContent>
       </Card>
     </div>

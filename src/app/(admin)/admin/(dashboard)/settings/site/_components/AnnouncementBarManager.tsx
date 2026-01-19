@@ -1095,7 +1095,7 @@ export function AnnouncementBarManager({
               onClick={handleDelete}
               disabled={isPending}
             >
-              {isPending ? '削除中...' : '削除する'}
+              {isPending ? '削除中...' : '削除'}
             </Button>
           </DialogFooter>
         </DialogContent>

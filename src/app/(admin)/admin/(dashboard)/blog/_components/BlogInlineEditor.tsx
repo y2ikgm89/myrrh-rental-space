@@ -361,7 +361,7 @@ export function BlogInlineEditor({ post, categories, mode = 'edit' }: BlogInline
                         onClick={handleDelete}
                         disabled={isPending}
                       >
-                        {isPending ? '削除中...' : '削除する'}
+                        {isPending ? '削除中...' : '削除'}
                       </Button>
                     </DialogFooter>
                   </DialogContent>

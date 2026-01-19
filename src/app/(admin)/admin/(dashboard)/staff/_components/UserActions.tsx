@@ -18,7 +18,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/admin/components/ui/dialog'
+  DeleteConfirmDialog,
+} from '@/admin/components/ui'
 import { deleteUser, updateUserRole, type UserData } from '@/admin/actions/user'
 import { Role } from '@/shared/generated/prisma/enums'
 import Link from 'next/link'
@@ -96,32 +97,13 @@ export function UserActions({ user }: Props) {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>ユーザーを削除</DialogTitle>
-            <DialogDescription>
-              {user.name || user.email} を削除しますか？この操作は取り消せません。
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDeleteDialogOpen(false)}
-              disabled={isDeleting}
-            >
-              キャンセル
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={isDeleting}
-            >
-              {isDeleting ? '削除中...' : '削除'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        itemName={user.name || user.email}
+        onConfirm={handleDelete}
+        isPending={isDeleting}
+      />
 
       <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
         <DialogContent>
