@@ -8,6 +8,32 @@
 
 ## 完了した計画
 
+### 054-filter-form-unification.md (2026-01-19) ✅
+
+フィルター・フォームパターン統一
+
+**概要**:
+Plan 053 で作成した BaseFilters を全フィルターに展開し、useFormAction フックを作成してフォームパターンを統一。
+
+**完了フェーズ**:
+- [x] Phase A1: シンプルフィルター移行（5個）- CustomerFilters, SpaceFilters, ReservationFilters, InquiryFilters, LocationFilters
+- [x] Phase A2: 拡張フィルター移行（2個）- BlogFilters, CategoryFilters
+- [x] Phase B1: useFormAction フック作成
+- [x] Phase B2: シンプルフォーム移行（2個）- FaqCategoryForm, FaqItemForm
+- [x] Phase B3: 中規模フォーム移行（1個）- UserForm
+
+**新規ファイル**:
+- `_shared/hooks/useFormAction.ts` - フォーム送信統一フック
+- `_shared/hooks/index.ts` - hooks バレルエクスポート
+
+**改善効果**:
+- コード削減: ~550行
+- バグ修正: InquiryFilters, SpaceFilters のデバウンス問題解消
+- パターン統一: フォーム実装の高速化
+- BaseFilters 拡張: statusParamName, preserveParams, statusOptions=[]
+
+---
+
 ### 053-admin-code-cleanup.md (2026-01-19) ✅
 
 管理画面コード整理（A+B レベル）

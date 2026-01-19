@@ -34,8 +34,12 @@ type BaseFiltersProps = {
   basePath: string
   /** ステータスオプション */
   statusOptions?: StatusOption[]
+  /** ステータスパラメータ名（デフォルト: 'status'） */
+  statusParamName?: string
   /** 検索プレースホルダー */
   searchPlaceholder?: string
+  /** 保持するパラメータ（例: { tab: 'locations' }） */
+  preserveParams?: Record<string, string>
   /** 追加フィルター（カテゴリなど） */
   children?: ReactNode
 }
@@ -59,7 +63,9 @@ const DEBOUNCE_MS = 300
 export function BaseFilters({
   basePath,
   statusOptions = DEFAULT_STATUS_OPTIONS,
+  statusParamName = 'status',
   searchPlaceholder = 'タイトル、本文で検索...',
+  preserveParams,
   children,
 }: BaseFiltersProps) {
   const router = useRouter()
@@ -67,7 +73,7 @@ export function BaseFilters({
   const [isPending, startTransition] = useTransition()
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const currentStatus = searchParams.get('status') || 'ALL'
+  const currentStatus = searchParams.get(statusParamName) || 'ALL'
   const currentSearch = searchParams.get('search') || ''
 
   // アンマウント時にタイムアウトをクリーンアップ
@@ -88,6 +94,13 @@ export function BaseFilters({
     }
     // ページを1にリセット
     params.delete('page')
+
+    // 保持するパラメータを設定
+    if (preserveParams) {
+      for (const [paramKey, paramValue] of Object.entries(preserveParams)) {
+        params.set(paramKey, paramValue)
+      }
+    }
 
     startTransition(() => {
       router.push(`${basePath}?${params.toString()}`)
@@ -110,25 +123,27 @@ export function BaseFilters({
 
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-      {/* ステータスフィルター */}
-      <div className="w-full sm:w-48">
-        <Select
-          value={currentStatus}
-          onValueChange={(value) => updateParams('status', value)}
-          disabled={isPending}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="ステータス" />
-          </SelectTrigger>
-          <SelectContent>
-            {statusOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {/* ステータスフィルター（オプションがある場合のみ表示） */}
+      {statusOptions.length > 0 && (
+        <div className="w-full sm:w-48">
+          <Select
+            value={currentStatus}
+            onValueChange={(value) => updateParams(statusParamName, value)}
+            disabled={isPending}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="ステータス" />
+            </SelectTrigger>
+            <SelectContent>
+              {statusOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {/* 追加フィルター（カテゴリなど） */}
       {children}

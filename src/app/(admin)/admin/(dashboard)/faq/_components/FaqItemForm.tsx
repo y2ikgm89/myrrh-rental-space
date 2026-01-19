@@ -1,10 +1,6 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useTransition } from 'react'
-import { useForm, useWatch } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -21,10 +17,10 @@ import {
   SelectValue,
 } from '@/admin/components/ui'
 import { RichTextEditor } from '@/admin/components/editor'
+import { useFormAction } from '@/admin/hooks'
 import {
   faqItemFormSchema,
   defaultFaqItemFormValues,
-  type FaqItemFormInput,
   type FaqItemWithCategory,
 } from '@/admin/lib/validations/faq'
 import { createFaqItem, updateFaqItem } from '@/admin/actions/faq'
@@ -48,57 +44,44 @@ export function FaqItemForm({
   defaultCategoryId,
 }: FaqItemFormProps) {
   const router = useRouter()
-  const [isPending, startTransition] = useTransition()
+
+  const { form, isPending, onSubmit } = useFormAction(
+    faqItemFormSchema,
+    async (data) => {
+      if (mode === 'create') {
+        return createFaqItem(data)
+      }
+      return updateFaqItem(item!.id, data)
+    },
+    {
+      redirectTo: '/admin/faq',
+      defaultValues: item
+        ? {
+            categoryId: item.categoryId,
+            question: item.question,
+            answer: item.answer,
+            order: item.order,
+            isActive: item.isActive,
+          }
+        : {
+            ...defaultFaqItemFormValues,
+            categoryId: defaultCategoryId || '',
+          },
+    }
+  )
 
   const {
     register,
-    handleSubmit,
     formState: { errors },
     setValue,
-    control,
-  } = useForm<FaqItemFormInput>({
-    resolver: zodResolver(faqItemFormSchema),
-    defaultValues: item
-      ? {
-          categoryId: item.categoryId,
-          question: item.question,
-          answer: item.answer,
-          order: item.order,
-          isActive: item.isActive,
-        }
-      : {
-          ...defaultFaqItemFormValues,
-          categoryId: defaultCategoryId || '',
-        },
-  })
+    watch,
+  } = form
 
-  const isActive = useWatch({ control, name: 'isActive' })
-  const categoryId = useWatch({ control, name: 'categoryId' })
-
-  const onSubmit = async (data: FaqItemFormInput) => {
-    startTransition(async () => {
-      if (mode === 'create') {
-        const result = await createFaqItem(data)
-        if (result.success) {
-          toast.success(result.message)
-          router.push('/admin/faq')
-        } else {
-          toast.error(result.error)
-        }
-      } else if (item) {
-        const result = await updateFaqItem(item.id, data)
-        if (result.success) {
-          toast.success(result.message)
-          router.push('/admin/faq')
-        } else {
-          toast.error(result.error)
-        }
-      }
-    })
-  }
+  const isActive = watch('isActive')
+  const categoryId = watch('categoryId')
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={onSubmit} className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>質問情報</CardTitle>

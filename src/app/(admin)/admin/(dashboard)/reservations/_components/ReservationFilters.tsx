@@ -1,98 +1,20 @@
 'use client'
 
-import { useRouter, useSearchParams } from 'next/navigation'
-import { useTransition, useRef, useEffect } from 'react'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Input,
-} from '@/admin/components/ui'
+import { BaseFilters, type StatusOption } from '@/admin/components/table'
+
+const STATUS_OPTIONS: StatusOption[] = [
+  { value: 'ALL', label: 'すべて' },
+  { value: 'PENDING', label: '確認待ち' },
+  { value: 'CONFIRMED', label: '確定' },
+  { value: 'CANCELLED', label: 'キャンセル' },
+]
 
 export function ReservationFilters() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const [isPending, startTransition] = useTransition()
-  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const currentStatus = searchParams.get('status') || 'ALL'
-  const currentSearch = searchParams.get('search') || ''
-
-  // アンマウント時にタイムアウトをクリーンアップ
-  useEffect(() => {
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current)
-      }
-    }
-  }, [])
-
-  function updateParams(key: string, value: string) {
-    const params = new URLSearchParams(searchParams.toString())
-    if (value && value !== 'ALL') {
-      params.set(key, value)
-    } else {
-      params.delete(key)
-    }
-    // ページを1にリセット
-    params.delete('page')
-
-    startTransition(() => {
-      router.push(`/admin/reservations?${params.toString()}`)
-    })
-  }
-
-  function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const value = e.target.value
-
-    // 既存のタイムアウトをクリア
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current)
-    }
-
-    // デバウンス処理（300ms）
-    searchTimeoutRef.current = setTimeout(() => {
-      updateParams('search', value)
-    }, 300)
-  }
-
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-      {/* ステータスフィルター */}
-      <div className="w-full sm:w-48">
-        <Select
-          value={currentStatus}
-          onValueChange={(value) => updateParams('status', value)}
-          disabled={isPending}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="ステータス" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">すべて</SelectItem>
-            <SelectItem value="PENDING">保留中</SelectItem>
-            <SelectItem value="CONFIRMED">確認済み</SelectItem>
-            <SelectItem value="CANCELLED">キャンセル</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* 検索 */}
-      <div className="flex-1">
-        <Input
-          type="search"
-          placeholder="顧客名、スペース名で検索..."
-          defaultValue={currentSearch}
-          onChange={handleSearchChange}
-          disabled={isPending}
-        />
-      </div>
-
-      {isPending && (
-        <div className="text-sm text-muted-foreground">読み込み中...</div>
-      )}
-    </div>
+    <BaseFilters
+      basePath="/admin/reservations"
+      statusOptions={STATUS_OPTIONS}
+      searchPlaceholder="顧客名、スペース名で検索..."
+    />
   )
 }

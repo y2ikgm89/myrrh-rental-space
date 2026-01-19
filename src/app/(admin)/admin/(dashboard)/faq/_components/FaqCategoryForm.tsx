@@ -1,10 +1,6 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useTransition } from 'react'
-import { useForm, useWatch } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { toast } from 'sonner'
 import {
   Button,
   Card,
@@ -16,10 +12,10 @@ import {
   Label,
   Switch,
 } from '@/admin/components/ui'
+import { useFormAction } from '@/admin/hooks'
 import {
   faqCategoryFormSchema,
   defaultFaqCategoryFormValues,
-  type FaqCategoryFormInput,
   type FaqCategoryWithItems,
 } from '@/admin/lib/validations/faq'
 import { createFaqCategory, updateFaqCategory } from '@/admin/actions/faq'
@@ -31,50 +27,37 @@ type FaqCategoryFormProps = {
 
 export function FaqCategoryForm({ category, mode }: FaqCategoryFormProps) {
   const router = useRouter()
-  const [isPending, startTransition] = useTransition()
+
+  const { form, isPending, onSubmit } = useFormAction(
+    faqCategoryFormSchema,
+    async (data) => {
+      if (mode === 'create') {
+        return createFaqCategory(data)
+      }
+      return updateFaqCategory(category!.id, data)
+    },
+    {
+      redirectTo: '/admin/faq',
+      defaultValues: category
+        ? {
+            name: category.name,
+            slug: category.slug,
+            description: category.description,
+            order: category.order,
+            isActive: category.isActive,
+          }
+        : defaultFaqCategoryFormValues,
+    }
+  )
 
   const {
     register,
-    handleSubmit,
     formState: { errors },
     setValue,
-    control,
-  } = useForm<FaqCategoryFormInput>({
-    resolver: zodResolver(faqCategoryFormSchema),
-    defaultValues: category
-      ? {
-          name: category.name,
-          slug: category.slug,
-          description: category.description,
-          order: category.order,
-          isActive: category.isActive,
-        }
-      : defaultFaqCategoryFormValues,
-  })
+    watch,
+  } = form
 
-  const isActive = useWatch({ control, name: 'isActive' })
-
-  const onSubmit = async (data: FaqCategoryFormInput) => {
-    startTransition(async () => {
-      if (mode === 'create') {
-        const result = await createFaqCategory(data)
-        if (result.success) {
-          toast.success(result.message)
-          router.push('/admin/faq')
-        } else {
-          toast.error(result.error)
-        }
-      } else if (category) {
-        const result = await updateFaqCategory(category.id, data)
-        if (result.success) {
-          toast.success(result.message)
-          router.push('/admin/faq')
-        } else {
-          toast.error(result.error)
-        }
-      }
-    })
-  }
+  const isActive = watch('isActive')
 
   // 名前からスラッグを自動生成
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -91,7 +74,7 @@ export function FaqCategoryForm({ category, mode }: FaqCategoryFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={onSubmit} className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>カテゴリ情報</CardTitle>
