@@ -3,8 +3,10 @@
 /**
  * useFormAction - フォーム送信の統一フック
  *
- * react-hook-form + Zod + useTransition + toast を統合
- * 公式ベストプラクティスに準拠
+ * react-hook-form + Zod 4 + useTransition + toast を統合
+ * 公式ベストプラクティス: standardSchemaResolver 使用（Zod 4 の Standard Schema 対応）
+ *
+ * @see https://github.com/react-hook-form/resolvers/issues/768
  */
 
 import { useRouter } from 'next/navigation'
@@ -15,9 +17,9 @@ import {
   type UseFormReturn,
   type DefaultValues,
   type Path,
-  type Resolver,
 } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
+import type { StandardSchemaV1 } from '@standard-schema/spec'
 import { toast } from 'sonner'
 import type { ActionResult } from '@/shared/types/server-actions'
 
@@ -25,13 +27,9 @@ import type { ActionResult } from '@/shared/types/server-actions'
 // Types
 // =============================================================================
 
-/** Zod スキーマの最小型（Zod 4 互換） */
-type ZodSchema<T> = {
-  _output: T
-  parse: (data: unknown) => T
-  safeParse: (data: unknown) => { success: boolean; data?: T; error?: unknown }
-}
-
+/**
+ * useFormAction のオプション
+ */
 type UseFormActionOptions<TInput extends FieldValues, TOutput> = {
   /** フォームの初期値 */
   defaultValues?: DefaultValues<TInput>
@@ -91,16 +89,16 @@ export function useFormAction<
   TInput extends FieldValues,
   TOutput = void,
 >(
-  schema: ZodSchema<TInput>,
+  schema: StandardSchemaV1<TInput, TInput>,
   action: (data: TInput) => Promise<ActionResult<TOutput>>,
   options?: UseFormActionOptions<TInput, TOutput>
 ): UseFormActionReturn<TInput, TOutput> {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
-  // zodResolver に渡すために unknown キャスト（Zod 4 型互換性のため）
+  // Zod 4 は Standard Schema 仕様を実装しているため、standardSchemaResolver を使用
   const form = useForm<TInput>({
-    resolver: zodResolver(schema as unknown as Parameters<typeof zodResolver>[0]) as Resolver<TInput>,
+    resolver: standardSchemaResolver(schema),
     defaultValues: options?.defaultValues,
   })
 
