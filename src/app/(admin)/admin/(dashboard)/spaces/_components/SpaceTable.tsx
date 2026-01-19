@@ -13,6 +13,8 @@ import {
 } from '@/admin/components/ui'
 import { updateSpacePublish } from '@/admin/actions/space'
 import type { SpaceWithStats } from '@/admin/lib/validations/space'
+import { formatCurrency } from '@/shared/lib/utils'
+import { EmptyState } from '../../_shared/components/EmptyState'
 
 // =============================================================================
 // Types
@@ -23,29 +25,16 @@ type SpaceTableProps = {
 }
 
 // =============================================================================
-// Helper Functions
-// =============================================================================
-
-function formatPrice(price: number): string {
-  return new Intl.NumberFormat('ja-JP', {
-    style: 'currency',
-    currency: 'JPY',
-  }).format(price)
-}
-
-// =============================================================================
 // SpaceTable Component (Server Component)
 // =============================================================================
 
 export function SpaceTable({ spaces }: SpaceTableProps) {
   if (spaces.length === 0) {
     return (
-      <div className="rounded-lg border bg-white p-12 text-center">
-        <p className="text-muted-foreground">スペースがありません</p>
-        <Button asChild className="mt-4">
-          <Link href="/admin/spaces/new">新規作成</Link>
-        </Button>
-      </div>
+      <EmptyState
+        message="スペースがありません"
+        action={{ label: '新規作成', href: '/admin/spaces/new' }}
+      />
     )
   }
 
@@ -93,7 +82,7 @@ export function SpaceTable({ spaces }: SpaceTableProps) {
                 <Badge variant="secondary">{space.capacity}名</Badge>
               </TableCell>
               <TableCell className="text-right">
-                {formatPrice(space.hourlyPrice)}
+                {formatCurrency(space.hourlyPrice)}
               </TableCell>
               <TableCell className="text-center">
                 <PublishSwitch

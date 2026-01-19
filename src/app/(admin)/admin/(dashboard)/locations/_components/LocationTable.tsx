@@ -13,6 +13,7 @@ import {
 } from '@/admin/components/ui'
 import { toggleLocationPublish } from '@/admin/actions/location'
 import type { LocationWithStats } from '@/admin/lib/validations/location'
+import { EmptyState } from '../../_shared/components/EmptyState'
 
 // =============================================================================
 // Types
@@ -29,12 +30,10 @@ type LocationTableProps = {
 export function LocationTable({ locations }: LocationTableProps) {
   if (locations.length === 0) {
     return (
-      <div className="rounded-lg border bg-white p-12 text-center">
-        <p className="text-muted-foreground">場所がありません</p>
-        <Button asChild className="mt-4">
-          <Link href="/admin/locations/new">新規作成</Link>
-        </Button>
-      </div>
+      <EmptyState
+        message="場所がありません"
+        action={{ label: '新規作成', href: '/admin/locations/new' }}
+      />
     )
   }
 
