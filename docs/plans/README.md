@@ -8,6 +8,30 @@
 
 ## 完了した計画
 
+### Test Infrastructure & Coverage Improvement (2026-01-19) ✅
+
+テスト基盤改善とカバレッジ向上
+
+**概要**:
+テスト実行環境の問題を修正し、Public Actions の統合テストを追加。
+
+**完了内容**:
+- [x] Zod 4 + @hookform/resolvers 互換性修正（standardSchemaResolver 使用）
+- [x] VALID_ROLES 初期化順序エラー修正（getSessionUser モック追加）
+- [x] E2E テスト除外設定（bunfig.toml: root = "./__tests__"）
+- [x] 環境変数バリデーションスキップ設定（SKIP_ENV_VALIDATION）
+- [x] Public Actions 統合テスト追加（4ファイル、+54テスト）
+
+**新規テストファイル**:
+- `__tests__/integration/actions/blog.test.ts` - ブログアクション
+- `__tests__/integration/actions/homepage.test.ts` - ホームページセクション
+- `__tests__/integration/actions/news.test.ts` - お知らせアクション
+- `__tests__/integration/actions/sidebar.test.ts` - サイドバーデータ
+
+**結果**: 924 tests pass
+
+---
+
 ### 054-filter-form-unification.md (2026-01-19) ✅
 
 フィルター・フォームパターン統一
