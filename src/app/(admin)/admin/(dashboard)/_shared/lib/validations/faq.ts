@@ -5,6 +5,7 @@
  */
 
 import { z } from 'zod'
+import { seoOgpFieldsSchema, defaultSeoOgpValues } from '@/shared/lib/validations/seo'
 
 // =============================================================================
 // FaqCategory Schemas
@@ -46,19 +47,21 @@ export const defaultFaqCategoryFormValues: FaqCategoryFormInput = {
 // FaqItem Schemas
 // =============================================================================
 
-export const faqItemFormSchema = z.object({
-  categoryId: z.string().uuid('カテゴリを選択してください'),
-  question: z
-    .string()
-    .min(1, '質問を入力してください')
-    .max(500, '質問は500文字以内で入力してください'),
-  answer: z
-    .string()
-    .min(1, '回答を入力してください')
-    .max(10000, '回答は10000文字以内で入力してください'),
-  order: z.number().int().min(0),
-  isActive: z.boolean(),
-})
+export const faqItemFormSchema = z
+  .object({
+    categoryId: z.string().uuid('カテゴリを選択してください'),
+    question: z
+      .string()
+      .min(1, '質問を入力してください')
+      .max(500, '質問は500文字以内で入力してください'),
+    answer: z
+      .string()
+      .min(1, '回答を入力してください')
+      .max(10000, '回答は10000文字以内で入力してください'),
+    order: z.number().int().min(0),
+    isPublished: z.boolean(),
+  })
+  .merge(seoOgpFieldsSchema)
 
 export type FaqItemFormInput = z.infer<typeof faqItemFormSchema>
 
@@ -67,7 +70,8 @@ export const defaultFaqItemFormValues: FaqItemFormInput = {
   question: '',
   answer: '',
   order: 0,
-  isActive: true,
+  isPublished: true,
+  ...defaultSeoOgpValues,
 }
 
 // =============================================================================
@@ -92,9 +96,16 @@ export type FaqItemData = {
   question: string
   answer: string
   order: number
-  isActive: boolean
+  isPublished: boolean
+  publishedAt: Date | null
   createdAt: Date
   updatedAt: Date
+  // SEO/OGP
+  metaDescription: string | null
+  metaKeywords: string | null
+  ogpTitle: string | null
+  ogpDescription: string | null
+  ogpImageUrl: string | null
 }
 
 export type FaqItemWithCategory = FaqItemData & {

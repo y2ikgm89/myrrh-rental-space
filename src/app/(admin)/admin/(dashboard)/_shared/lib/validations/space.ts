@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { seoOgpFieldsSchema, defaultSeoOgpValues } from '@/shared/lib/validations/seo'
 
 /**
  * スペースフォーム用バリデーションスキーマ
@@ -24,55 +25,55 @@ const facilitiesSchema = z
 /**
  * スペース作成・編集フォームスキーマ
  */
-export const spaceFormSchema = z.object({
-  name: z
-    .string()
-    .min(1, '名前を入力してください')
-    .max(100, '名前は100文字以内で入力してください'),
-  description: z
-    .string()
-    .min(1, '説明を入力してください')
-    .min(10, '説明は10文字以上で入力してください'),
-  address: z
-    .string()
-    .min(1, '住所を入力してください'),
-  access: z
-    .string()
-    .max(500, 'アクセス情報は500文字以内で入力してください')
-    .optional()
-    .or(z.literal('')),
-  capacity: z
-    .number()
-    .int('整数を入力してください')
-    .min(1, '定員は1以上で入力してください')
-    .max(1000, '定員は1000以下で入力してください'),
-  area: z
-    .number()
-    .positive('正の数を入力してください')
-    .max(10000, '面積は10000以下で入力してください')
-    .optional()
-    .nullable(),
-  hourlyPrice: z
-    .number()
-    .min(0, '時間料金は0以上で入力してください')
-    .max(1000000, '時間料金は1000000以下で入力してください'),
-  dailyPrice: z
-    .number()
-    .min(0, '日額料金は0以上で入力してください')
-    .max(10000000, '日額料金は10000000以下で入力してください')
-    .optional()
-    .nullable(),
-  mainImageUrl: z
-    .string()
-    .min(1, 'メイン画像URLを入力してください')
-    .url('有効なURLを入力してください'),
-  imageUrls: imageUrlsSchema,
-  facilities: facilitiesSchema,
-  isPublished: z.boolean().default(false),
-  termsId: z.string().uuid('利用規約IDが無効です').optional().nullable(),
-  locationId: z.string().uuid('場所IDが無効です').optional().nullable(),
-  categoryId: z.string().uuid('カテゴリーIDが無効です').optional().nullable(),
-})
+export const spaceFormSchema = z
+  .object({
+    name: z
+      .string()
+      .min(1, '名前を入力してください')
+      .max(100, '名前は100文字以内で入力してください'),
+    description: z
+      .string()
+      .min(1, '説明を入力してください')
+      .min(10, '説明は10文字以上で入力してください'),
+    address: z.string().min(1, '住所を入力してください'),
+    access: z
+      .string()
+      .max(500, 'アクセス情報は500文字以内で入力してください')
+      .optional()
+      .or(z.literal('')),
+    capacity: z
+      .number()
+      .int('整数を入力してください')
+      .min(1, '定員は1以上で入力してください')
+      .max(1000, '定員は1000以下で入力してください'),
+    area: z
+      .number()
+      .positive('正の数を入力してください')
+      .max(10000, '面積は10000以下で入力してください')
+      .optional()
+      .nullable(),
+    hourlyPrice: z
+      .number()
+      .min(0, '時間料金は0以上で入力してください')
+      .max(1000000, '時間料金は1000000以下で入力してください'),
+    dailyPrice: z
+      .number()
+      .min(0, '日額料金は0以上で入力してください')
+      .max(10000000, '日額料金は10000000以下で入力してください')
+      .optional()
+      .nullable(),
+    mainImageUrl: z
+      .string()
+      .min(1, 'メイン画像URLを入力してください')
+      .url('有効なURLを入力してください'),
+    imageUrls: imageUrlsSchema,
+    facilities: facilitiesSchema,
+    isPublished: z.boolean().default(false),
+    termsId: z.string().uuid('利用規約IDが無効です').optional().nullable(),
+    locationId: z.string().uuid('場所IDが無効です').optional().nullable(),
+    categoryId: z.string().uuid('カテゴリーIDが無効です').optional().nullable(),
+  })
+  .merge(seoOgpFieldsSchema)
 
 /**
  * フォーム入力値の型
@@ -118,6 +119,7 @@ export const defaultSpaceFormValues: SpaceFormInput = {
   termsId: null,
   locationId: null,
   categoryId: null,
+  ...defaultSeoOgpValues,
 }
 
 // =============================================================================
@@ -149,6 +151,12 @@ export type SpaceWithStats = {
   termsId: string | null
   locationId: string | null
   categoryId: string | null
+  // SEO/OGP
+  metaDescription: string | null
+  metaKeywords: string | null
+  ogpTitle: string | null
+  ogpDescription: string | null
+  ogpImageUrl: string | null
   _count: {
     reservations: number
   }

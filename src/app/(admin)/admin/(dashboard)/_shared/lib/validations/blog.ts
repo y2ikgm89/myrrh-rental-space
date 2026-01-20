@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { LayoutWidth } from '@/shared/types/prisma'
 import { BlogPostStatus } from '@/shared/generated/prisma/enums'
+import { seoOgpFieldsSchema, seoOgpFieldsFormSchema } from '@/shared/lib/validations/seo'
 
 // =============================================================================
 // Blog Post Schemas
@@ -9,66 +10,57 @@ import { BlogPostStatus } from '@/shared/generated/prisma/enums'
 /**
  * ブログ記事作成スキーマ
  */
-export const createBlogPostSchema = z.object({
-  title: z.string().min(1, 'タイトルは必須です').max(200, 'タイトルは200文字以内'),
-  slug: z.string().min(1, 'スラッグは必須です').max(200).regex(/^[a-z0-9-]+$/, 'スラッグは小文字英数字とハイフンのみ'),
-  excerpt: z.string().min(1, '抜粋は必須です').max(500, '抜粋は500文字以内'),
-  content: z.string().default(''),
-  thumbnailUrl: z.string().min(1, 'サムネイルURLは必須です'),
-  ogpImageUrl: z.string().nullable().optional(),
-  categoryId: z.string().uuid('カテゴリを選択してください'),
-  tags: z.array(z.string()).default([]),
-  metaDescription: z.string().max(160).nullable().optional(),
-  metaKeywords: z.string().nullable().optional(),
-  ogpTitle: z.string().max(60).nullable().optional(),
-  ogpDescription: z.string().max(160).nullable().optional(),
-})
+export const createBlogPostSchema = z
+  .object({
+    title: z.string().min(1, 'タイトルは必須です').max(200, 'タイトルは200文字以内'),
+    slug: z.string().min(1, 'スラッグは必須です').max(200).regex(/^[a-z0-9-]+$/, 'スラッグは小文字英数字とハイフンのみ'),
+    excerpt: z.string().min(1, '抜粋は必須です').max(500, '抜粋は500文字以内'),
+    content: z.string().default(''),
+    thumbnailUrl: z.string().min(1, 'サムネイルURLは必須です'),
+    categoryId: z.string().uuid('カテゴリを選択してください'),
+    tags: z.array(z.string()).default([]),
+  })
+  .merge(seoOgpFieldsSchema)
 
 export type CreateBlogPostInput = z.infer<typeof createBlogPostSchema>
 
 /**
  * ブログ記事更新スキーマ
  */
-export const updateBlogPostSchema = z.object({
-  title: z.string().min(1, 'タイトルは必須です').max(200, 'タイトルは200文字以内'),
-  slug: z.string().min(1, 'スラッグは必須です').max(200).regex(/^[a-z0-9-]+$/, 'スラッグは小文字英数字とハイフンのみ'),
-  excerpt: z.string().min(1, '抜粋は必須です').max(500, '抜粋は500文字以内'),
-  content: z.string().min(1, '本文は必須です'),
-  thumbnailUrl: z.string().min(1, 'サムネイルURLは必須です'),
-  ogpImageUrl: z.string().nullable().optional(),
-  categoryId: z.string().uuid('カテゴリを選択してください'),
-  tags: z.array(z.string()).default([]),
-  metaDescription: z.string().max(160).nullable().optional(),
-  metaKeywords: z.string().nullable().optional(),
-  ogpTitle: z.string().max(60).nullable().optional(),
-  ogpDescription: z.string().max(160).nullable().optional(),
-  contentWidth: z.nativeEnum(LayoutWidth).nullable().optional(),
-  contentWidthCustom: z.number().int().min(320).max(1920).nullable().optional(),
-})
+export const updateBlogPostSchema = z
+  .object({
+    title: z.string().min(1, 'タイトルは必須です').max(200, 'タイトルは200文字以内'),
+    slug: z.string().min(1, 'スラッグは必須です').max(200).regex(/^[a-z0-9-]+$/, 'スラッグは小文字英数字とハイフンのみ'),
+    excerpt: z.string().min(1, '抜粋は必須です').max(500, '抜粋は500文字以内'),
+    content: z.string().min(1, '本文は必須です'),
+    thumbnailUrl: z.string().min(1, 'サムネイルURLは必須です'),
+    categoryId: z.string().uuid('カテゴリを選択してください'),
+    tags: z.array(z.string()).default([]),
+    contentWidth: z.nativeEnum(LayoutWidth).nullable().optional(),
+    contentWidthCustom: z.number().int().min(320).max(1920).nullable().optional(),
+  })
+  .merge(seoOgpFieldsSchema)
 
 export type UpdateBlogPostInput = z.infer<typeof updateBlogPostSchema>
 
 /**
  * ブログ記事フォームスキーマ（コンポーネント用）
  */
-export const blogFormSchema = z.object({
-  title: z.string().min(1, 'タイトルは必須です').max(200, 'タイトルは200文字以内'),
-  slug: z.string().min(1, 'スラッグは必須です').max(200).regex(/^[a-z0-9-]+$/, 'スラッグは小文字英数字とハイフンのみ'),
-  excerpt: z.string().min(1, '抜粋は必須です').max(500, '抜粋は500文字以内'),
-  content: z.string().min(1, '本文は必須です'),
-  thumbnailUrl: z.string().min(1, 'サムネイルURLは必須です'),
-  ogpImageUrl: z.string().optional(),
-  categoryId: z.string().min(1, 'カテゴリを選択してください'),
-  tags: z.string().optional(),
-  metaDescription: z.string().max(160).optional(),
-  metaKeywords: z.string().optional(),
-  ogpTitle: z.string().max(60).optional(),
-  ogpDescription: z.string().max(160).optional(),
-  status: z.nativeEnum(BlogPostStatus),
-  publishedAt: z.string().optional(),
-  contentWidth: z.string().optional(),
-  contentWidthCustom: z.string().optional(),
-})
+export const blogFormSchema = z
+  .object({
+    title: z.string().min(1, 'タイトルは必須です').max(200, 'タイトルは200文字以内'),
+    slug: z.string().min(1, 'スラッグは必須です').max(200).regex(/^[a-z0-9-]+$/, 'スラッグは小文字英数字とハイフンのみ'),
+    excerpt: z.string().min(1, '抜粋は必須です').max(500, '抜粋は500文字以内'),
+    content: z.string().min(1, '本文は必須です'),
+    thumbnailUrl: z.string().min(1, 'サムネイルURLは必須です'),
+    categoryId: z.string().min(1, 'カテゴリを選択してください'),
+    tags: z.string().optional(),
+    status: z.nativeEnum(BlogPostStatus),
+    publishedAt: z.string().optional(),
+    contentWidth: z.string().optional(),
+    contentWidthCustom: z.string().optional(),
+  })
+  .merge(seoOgpFieldsFormSchema)
 
 export type BlogFormData = z.infer<typeof blogFormSchema>
 

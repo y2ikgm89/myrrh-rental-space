@@ -21,6 +21,10 @@ export type FilterParams = {
   perPage: number
 }
 
+export type FilterParamsWithCategory = FilterParams & {
+  categoryId: string
+}
+
 export type UseFilterParamsOptions = {
   /** デバウンス時間（ミリ秒） */
   debounceMs?: number
@@ -28,6 +32,64 @@ export type UseFilterParamsOptions = {
   defaultStatus?: string
   /** デフォルトの1ページあたりの件数 */
   defaultPerPage?: number
+  /** カテゴリフィルターを含めるか */
+  withCategory?: boolean
+}
+
+// ============================================================
+// Internal: Debounce Hook
+// ============================================================
+
+function useDebouncedCallback(
+  callback: (value: string) => void,
+  delayMs: number
+): (value: string) => void {
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+    }
+  }, [])
+
+  return useCallback(
+    (value: string) => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+      timeoutRef.current = setTimeout(() => {
+        callback(value)
+      }, delayMs)
+    },
+    [callback, delayMs]
+  )
+}
+
+// ============================================================
+// Return Types
+// ============================================================
+
+type BaseFilterReturn = {
+  params: FilterParams
+  setSearch: (value: string) => void
+  setSearchDebounced: (value: string) => void
+  setStatus: (value: string) => void
+  setPage: (value: number) => void
+  setPerPage: (value: number) => void
+  reset: () => void
+}
+
+type CategoryFilterReturn = {
+  params: FilterParamsWithCategory
+  setSearch: (value: string) => void
+  setSearchDebounced: (value: string) => void
+  setStatus: (value: string) => void
+  setCategory: (value: string) => void
+  setPage: (value: number) => void
+  setPerPage: (value: number) => void
+  reset: () => void
 }
 
 // ============================================================
@@ -39,58 +101,51 @@ export type UseFilterParamsOptions = {
  *
  * @example
  * const { params, setSearch, setStatus, setPage } = useFilterParams()
+ * const { params, setCategory } = useFilterParams({ withCategory: true })
  */
-export function useFilterParams(options: UseFilterParamsOptions = {}) {
+export function useFilterParams(
+  options: UseFilterParamsOptions & { withCategory: true }
+): CategoryFilterReturn
+export function useFilterParams(
+  options?: UseFilterParamsOptions & { withCategory?: false }
+): BaseFilterReturn
+export function useFilterParams(
+  options: UseFilterParamsOptions = {}
+): BaseFilterReturn | CategoryFilterReturn {
   const {
     debounceMs = 300,
     defaultStatus = '',
     defaultPerPage = 10,
+    withCategory = false,
   } = options
 
-  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // パーサー定義
+  const baseParsers = {
+    search: parseAsString.withDefault(''),
+    status: parseAsString.withDefault(defaultStatus),
+    page: parseAsInteger.withDefault(1),
+    perPage: parseAsInteger.withDefault(defaultPerPage),
+  }
 
-  const [params, setParams] = useQueryStates(
-    {
-      search: parseAsString.withDefault(''),
-      status: parseAsString.withDefault(defaultStatus),
-      page: parseAsInteger.withDefault(1),
-      perPage: parseAsInteger.withDefault(defaultPerPage),
-    },
-    {
-      history: 'push',
-      shallow: false,
-    }
-  )
+  const parsers = withCategory
+    ? { ...baseParsers, categoryId: parseAsString.withDefault('') }
+    : baseParsers
 
-  // クリーンアップ
-  useEffect(() => {
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current)
-      }
-    }
-  }, [])
+  const [params, setParams] = useQueryStates(parsers, {
+    history: 'push',
+    shallow: false,
+  })
 
-  // 検索（デバウンス付き）
-  const setSearchDebounced = useCallback(
-    (value: string) => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current)
-      }
-      searchTimeoutRef.current = setTimeout(() => {
-        void setParams({ search: value || null, page: 1 })
-      }, debounceMs)
-    },
-    [setParams, debounceMs]
-  )
-
-  // 即時検索（デバウンスなし）
+  // 即時検索
   const setSearch = useCallback(
     (value: string) => {
       void setParams({ search: value || null, page: 1 })
     },
     [setParams]
   )
+
+  // 検索（デバウンス付き）
+  const setSearchDebounced = useDebouncedCallback(setSearch, debounceMs)
 
   // ステータス変更
   const setStatus = useCallback(
@@ -99,6 +154,16 @@ export function useFilterParams(options: UseFilterParamsOptions = {}) {
       void setParams({ status: statusValue, page: 1 })
     },
     [setParams]
+  )
+
+  // カテゴリ変更（withCategory=trueの場合のみ）
+  const setCategory = useCallback(
+    (value: string) => {
+      if (!withCategory) return
+      const categoryValue = value === 'ALL' ? null : value || null
+      void setParams({ categoryId: categoryValue, page: 1 } as typeof params)
+    },
+    [setParams, withCategory]
   )
 
   // ページ変更
@@ -124,10 +189,12 @@ export function useFilterParams(options: UseFilterParamsOptions = {}) {
       status: null,
       page: 1,
       perPage: defaultPerPage,
-    })
-  }, [setParams, defaultPerPage])
+      ...(withCategory ? { categoryId: null } : {}),
+    } as Parameters<typeof setParams>[0])
+  }, [setParams, defaultPerPage, withCategory])
 
-  return {
+  // 戻り値を構築
+  const base = {
     params: {
       ...params,
       status: params.status || 'ALL',
@@ -139,115 +206,38 @@ export function useFilterParams(options: UseFilterParamsOptions = {}) {
     setPerPage,
     reset,
   }
+
+  if (withCategory) {
+    const categoryParams = params as { categoryId?: string }
+    return {
+      ...base,
+      params: {
+        ...base.params,
+        categoryId: categoryParams.categoryId || 'ALL',
+      } as FilterParamsWithCategory,
+      setCategory,
+    }
+  }
+
+  return base as {
+    params: FilterParams
+    setSearch: (value: string) => void
+    setSearchDebounced: (value: string) => void
+    setStatus: (value: string) => void
+    setPage: (value: number) => void
+    setPerPage: (value: number) => void
+    reset: () => void
+  }
 }
 
 /**
- * 拡張フィルターパラメータhooks（カテゴリ付き）
+ * カテゴリ付きフィルターパラメータhooks（後方互換用）
  *
  * @example
  * const { params, setCategory } = useFilterParamsWithCategory()
  */
-export function useFilterParamsWithCategory(options: UseFilterParamsOptions = {}) {
-  const {
-    debounceMs = 300,
-    defaultStatus = '',
-    defaultPerPage = 10,
-  } = options
-
-  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const [params, setParams] = useQueryStates(
-    {
-      search: parseAsString.withDefault(''),
-      status: parseAsString.withDefault(defaultStatus),
-      categoryId: parseAsString.withDefault(''),
-      page: parseAsInteger.withDefault(1),
-      perPage: parseAsInteger.withDefault(defaultPerPage),
-    },
-    {
-      history: 'push',
-      shallow: false,
-    }
-  )
-
-  // クリーンアップ
-  useEffect(() => {
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current)
-      }
-    }
-  }, [])
-
-  // 検索（デバウンス付き）
-  const setSearchDebounced = useCallback(
-    (value: string) => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current)
-      }
-      searchTimeoutRef.current = setTimeout(() => {
-        void setParams({ search: value || null, page: 1 })
-      }, debounceMs)
-    },
-    [setParams, debounceMs]
-  )
-
-  // 即時検索
-  const setSearch = useCallback(
-    (value: string) => {
-      void setParams({ search: value || null, page: 1 })
-    },
-    [setParams]
-  )
-
-  // ステータス変更
-  const setStatus = useCallback(
-    (value: string) => {
-      const statusValue = value === 'ALL' ? null : value || null
-      void setParams({ status: statusValue, page: 1 })
-    },
-    [setParams]
-  )
-
-  // カテゴリ変更
-  const setCategory = useCallback(
-    (value: string) => {
-      const categoryValue = value === 'ALL' ? null : value || null
-      void setParams({ categoryId: categoryValue, page: 1 })
-    },
-    [setParams]
-  )
-
-  // ページ変更
-  const setPage = useCallback(
-    (value: number) => {
-      void setParams({ page: value })
-    },
-    [setParams]
-  )
-
-  // リセット
-  const reset = useCallback(() => {
-    void setParams({
-      search: null,
-      status: null,
-      categoryId: null,
-      page: 1,
-      perPage: defaultPerPage,
-    })
-  }, [setParams, defaultPerPage])
-
-  return {
-    params: {
-      ...params,
-      status: params.status || 'ALL',
-      categoryId: params.categoryId || 'ALL',
-    },
-    setSearch,
-    setSearchDebounced,
-    setStatus,
-    setCategory,
-    setPage,
-    reset,
-  }
+export function useFilterParamsWithCategory(
+  options: Omit<UseFilterParamsOptions, 'withCategory'> = {}
+) {
+  return useFilterParams({ ...options, withCategory: true })
 }
