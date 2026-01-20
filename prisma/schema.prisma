@@ -6,7 +6,8 @@
 generator client {
   provider = "prisma-client"
   output   = "../src/shared/generated/prisma"
-  runtime  = "bun"
+  engineType = "client"
+  runtime = "bun"
 }
 
 datasource db {
@@ -88,11 +89,12 @@ enum BlogPostStatus {
   ARCHIVED
 }
 
-enum NewsStatus {
-  DRAFT
-  PUBLISHED
-  ARCHIVED
-}
+// NewsStatus enum は isPublished (Boolean) に置き換え - 削除予定
+// enum NewsStatus {
+//   DRAFT
+//   PUBLISHED
+//   ARCHIVED
+// }
 
 enum TermsType {
   TERMS_OF_USE // 利用規約
@@ -136,6 +138,8 @@ model User {
   mediaFiles      Media[]
   termsAgreements TermsAgreement[]
 
+  // OR検索用インデックス
+  @@index([name])
   @@map("user")
 }
 
@@ -284,6 +288,15 @@ model Space {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  // SEO設定
+  metaDescription String?
+  metaKeywords    String?
+
+  // OGP設定
+  ogpTitle       String?
+  ogpDescription String?
+  ogpImageUrl    String?
+
   // 規約設定
   termsId String? // 任意の規約参照
 
@@ -298,6 +311,9 @@ model Space {
   location     Location?      @relation(fields: [locationId], references: [id], onDelete: SetNull)
   category     SpaceCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
+  // OR検索用インデックス
+  @@index([name])
+  @@index([address])
   @@index([isPublished, isActive])
   @@index([termsId])
   @@index([locationId])
@@ -364,6 +380,8 @@ model Customer {
   reservations Reservation[]
 
   @@index([lastName])
+  @@index([firstName])
+  @@index([phoneNumber])
   @@index([status])
   @@index([isActive])
   @@index([lastReservationAt])
@@ -390,17 +408,28 @@ model News {
   id                 String       @id @default(uuid())
   title              String
   content            String       @db.Text // HTMLコンテンツ（レンダリング用）
-  status             NewsStatus   @default(DRAFT)
+  isPublished        Boolean      @default(false)
   publishedAt        DateTime?
   contentWidth       LayoutWidth?
   contentWidthCustom Int? // CUSTOMの場合の幅（px）
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
 
+  // SEO設定
+  metaDescription String?
+  metaKeywords    String?
+
+  // OGP設定
+  ogpTitle       String?
+  ogpDescription String?
+  ogpImageUrl    String?
+
   // Relations
   versions NewsVersion[]
 
-  @@index([status, publishedAt])
+  // OR検索用インデックス
+  @@index([title])
+  @@index([isPublished, publishedAt])
   @@map("news")
 }
 
@@ -474,6 +503,8 @@ model BlogPost {
   comments BlogComment[]
   versions BlogPostVersion[]
 
+  // OR検索用インデックス
+  @@index([title])
   @@index([status, publishedAt])
   @@index([categoryId, status, publishedAt])
   @@index([viewCount])
@@ -656,20 +687,30 @@ model FaqCategory {
 }
 
 model FaqItem {
-  id         String   @id @default(uuid())
-  categoryId String
-  question   String
-  answer     String   @db.Text // Lexical HTML (リッチテキスト)
-  order      Int      @default(0)
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id          String    @id @default(uuid())
+  categoryId  String
+  question    String
+  answer      String    @db.Text // Lexical HTML (リッチテキスト)
+  order       Int       @default(0)
+  isPublished Boolean   @default(true)
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // SEO設定
+  metaDescription String?
+  metaKeywords    String?
+
+  // OGP設定
+  ogpTitle       String?
+  ogpDescription String?
+  ogpImageUrl    String?
 
   // Relations
   category FaqCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@index([categoryId, order])
-  @@index([isActive])
+  @@index([isPublished])
   @@map("faq_items")
 }
 
@@ -889,6 +930,7 @@ model Settings {
   googleCalendarWebhookChannelId  String? // Webhook チャンネルID
   googleCalendarWebhookResourceId String? // Webhook リソースID
   googleCalendarWebhookExpiration DateTime? // Webhook 有効期限
+  googleCalendarWebhookToken      String? // Webhook 認証トークン (x-goog-channel-token)
 
   @@map("settings")
 }

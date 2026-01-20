@@ -12,7 +12,6 @@ const STATUS_OPTIONS: StatusOption[] = [
 export function ReservationFilters() {
   return (
     <BaseFilters
-      basePath="/admin/reservations"
       statusOptions={STATUS_OPTIONS}
       searchPlaceholder="顧客名、スペース名で検索..."
     />

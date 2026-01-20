@@ -6,12 +6,13 @@
  * 管理画面の一覧ページで共通するフィルターUI
  * - ステータスセレクト
  * - 検索入力（デバウンス付き）
- * - isPending 状態表示
+ *
+ * @description nuqs を使用した型安全な URL パラメータ管理
  */
 
-import { useRouter, useSearchParams } from 'next/navigation'
-import { useTransition, useRef, useEffect, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { Search } from 'lucide-react'
+import { useFilterParams } from '@/shared/hooks'
 import {
   Select,
   SelectContent,
@@ -31,16 +32,10 @@ type StatusOption = {
 }
 
 type BaseFiltersProps = {
-  /** 現在のパス（例: '/admin/news'） */
-  basePath: string
   /** ステータスオプション */
   statusOptions?: StatusOption[]
-  /** ステータスパラメータ名（デフォルト: 'status'） */
-  statusParamName?: string
   /** 検索プレースホルダー */
   searchPlaceholder?: string
-  /** 保持するパラメータ（例: { tab: 'locations' }） */
-  preserveParams?: Record<string, string>
   /** 追加フィルター（カテゴリなど） */
   children?: ReactNode
 }
@@ -55,83 +50,23 @@ const DEFAULT_STATUS_OPTIONS: StatusOption[] = [
   { value: 'DRAFT', label: '下書き' },
 ]
 
-const DEBOUNCE_MS = 300
-
 // =============================================================================
 // BaseFilters Component
 // =============================================================================
 
 export function BaseFilters({
-  basePath,
   statusOptions = DEFAULT_STATUS_OPTIONS,
-  statusParamName = 'status',
   searchPlaceholder = 'タイトル、本文で検索...',
-  preserveParams,
   children,
 }: BaseFiltersProps) {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const [isPending, startTransition] = useTransition()
-  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const currentStatus = searchParams.get(statusParamName) || 'ALL'
-  const currentSearch = searchParams.get('search') || ''
-
-  // アンマウント時にタイムアウトをクリーンアップ
-  useEffect(() => {
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current)
-      }
-    }
-  }, [])
-
-  function updateParams(key: string, value: string) {
-    const params = new URLSearchParams(searchParams.toString())
-    if (value && value !== 'ALL') {
-      params.set(key, value)
-    } else {
-      params.delete(key)
-    }
-    // ページを1にリセット
-    params.delete('page')
-
-    // 保持するパラメータを設定
-    if (preserveParams) {
-      for (const [paramKey, paramValue] of Object.entries(preserveParams)) {
-        params.set(paramKey, paramValue)
-      }
-    }
-
-    startTransition(() => {
-      router.push(`${basePath}?${params.toString()}`)
-    })
-  }
-
-  function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const value = e.target.value
-
-    // 既存のタイムアウトをクリア
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current)
-    }
-
-    // デバウンス処理
-    searchTimeoutRef.current = setTimeout(() => {
-      updateParams('search', value)
-    }, DEBOUNCE_MS)
-  }
+  const { params, setSearchDebounced, setStatus } = useFilterParams()
 
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
       {/* ステータスフィルター（オプションがある場合のみ表示） */}
       {statusOptions.length > 0 && (
         <div className="w-full sm:w-48">
-          <Select
-            value={currentStatus}
-            onValueChange={(value) => updateParams(statusParamName, value)}
-            disabled={isPending}
-          >
+          <Select value={params.status} onValueChange={setStatus}>
             <SelectTrigger>
               <SelectValue placeholder="ステータス" />
             </SelectTrigger>
@@ -155,16 +90,11 @@ export function BaseFilters({
         <Input
           type="search"
           placeholder={searchPlaceholder}
-          defaultValue={currentSearch}
-          onChange={handleSearchChange}
-          disabled={isPending}
+          defaultValue={params.search}
+          onChange={(e) => setSearchDebounced(e.target.value)}
           className="pl-9"
         />
       </div>
-
-      {isPending && (
-        <div className="text-sm text-muted-foreground">読み込み中...</div>
-      )}
     </div>
   )
 }

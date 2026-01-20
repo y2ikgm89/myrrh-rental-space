@@ -11,7 +11,6 @@ const PUBLISH_STATUS_OPTIONS = [
 export function SpaceFilters() {
   return (
     <BaseFilters
-      basePath="/admin/spaces"
       statusOptions={PUBLISH_STATUS_OPTIONS}
       searchPlaceholder="名前・住所で検索..."
     />

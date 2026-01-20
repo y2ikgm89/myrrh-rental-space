@@ -1,9 +1,8 @@
 'use server'
 
 import { prisma } from '@/shared/lib/prisma'
-import { revalidatePath } from 'next/cache'
-import { CustomerStatus, ReservationStatus } from '@/shared/lib/validations/enums'
-import { z } from 'zod'
+import { revalidateTag } from 'next/cache'
+import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
 import {
   createSuccess,
   createFailure,
@@ -11,115 +10,40 @@ import {
   type ActionResult,
 } from '@/admin/types/server-actions'
 import type { CustomerWhereInput } from '@/shared/types/prisma'
-import { getSession, getRoleFromSession } from '@/shared/lib/auth'
-import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'
-import { logPermissionDenied } from '@/admin/lib/audit'
+import { checkReadPermissionFor } from '@/admin/lib/permissions'
 
-// =============================================================================
-// Types
-// =============================================================================
+// Types and schemas from centralized validation file
+import {
+  customerFormSchema,
+  updateCustomerStatusSchema,
+  updateCustomerNotesSchema,
+  type CustomerFormInput,
+  type CustomerData,
+  type CustomerWithReservations,
+  type GetCustomersResult,
+  type CustomerFilters,
+  type CustomerPagination,
+} from '@/admin/lib/validations/customer'
+import { CustomerStatus } from '@/shared/lib/validations/enums'
 
-export type CustomerData = {
-  id: string
-  lastName: string
-  firstName: string
-  lastNameKana: string | null
-  firstNameKana: string | null
-  email: string
-  phoneNumber: string | null
-  address: string | null
-  status: CustomerStatus
-  notes: string | null
-  totalReservations: number
-  totalSpent: number | null
-  lastReservationAt: Date | null
-  firstReservationAt: Date | null
-  isActive: boolean
-  createdAt: Date
-  updatedAt: Date
-}
-
-export type CustomerWithReservations = CustomerData & {
-  reservations: {
-    id: string
-    startTime: Date
-    endTime: Date
-    status: ReservationStatus
-    totalPrice: number | null
-    space: {
-      id: string
-      name: string
-    }
-  }[]
-}
-
-export type GetCustomersResult = {
-  customers: CustomerData[]
-  total: number
-  page: number
-  limit: number
-  totalPages: number
-}
-
-export type CustomerFilters = {
-  status?: CustomerStatus | 'ALL'
-  search?: string
-  isActive?: boolean
-}
-
-export type CustomerPagination = {
-  page?: number
-  limit?: number
-  sortBy?: 'createdAt' | 'lastName' | 'totalReservations' | 'lastReservationAt'
-  sortOrder?: 'asc' | 'desc'
-}
-
-// =============================================================================
-// Schemas
-// =============================================================================
-
-const createCustomerSchema = z.object({
-  lastName: z.string().min(1, '姓は必須です').max(50, '姓は50文字以内で入力してください'),
-  firstName: z.string().min(1, '名は必須です').max(50, '名は50文字以内で入力してください'),
-  lastNameKana: z.string().max(50, 'セイは50文字以内で入力してください').optional().or(z.literal('')),
-  firstNameKana: z.string().max(50, 'メイは50文字以内で入力してください').optional().or(z.literal('')),
-  email: z.string().email('有効なメールアドレスを入力してください'),
-  phoneNumber: z.string().max(20, '電話番号は20文字以内で入力してください').optional().or(z.literal('')),
-  address: z.string().max(500, '住所は500文字以内で入力してください').optional().or(z.literal('')),
-  notes: z.string().max(2000, 'メモは2000文字以内で入力してください').optional().or(z.literal('')),
-})
-
-export type CreateCustomerInput = z.infer<typeof createCustomerSchema>
-
-const updateStatusSchema = z.object({
-  id: z.string().uuid(),
-  status: z.enum(['NEW', 'REGULAR', 'VIP', 'INACTIVE', 'BLACKLIST']),
-})
-
-const updateNotesSchema = z.object({
-  id: z.string().uuid(),
-  notes: z.string().max(2000).nullable(),
-})
+// Re-export types for consumers
+export type { CustomerFormInput as CreateCustomerInput } from '@/admin/lib/validations/customer'
+export type {
+  CustomerData,
+  CustomerWithReservations,
+  GetCustomersResult,
+  CustomerFilters,
+  CustomerPagination,
+} from '@/admin/lib/validations/customer'
 
 // =============================================================================
 // Helper Functions
 // =============================================================================
 
 /**
- * 読み取り権限チェックヘルパー
+ * 読み取り権限チェック（共通ヘルパー使用）
  */
-async function checkReadPermission(): Promise<boolean> {
-  const session = await getSession()
-  if (!session?.user) return false
-  const role = getRoleFromSession(session)
-  if (!role) return false
-  if (!canAccessAdmin(role)) return false
-  if (!hasPermission(role, 'customer', 'read')) {
-    void logPermissionDenied(session.user.id, 'customer', 'read')
-    return false
-  }
-  return true
-}
+const checkReadPermission = checkReadPermissionFor('customer')
 
 // =============================================================================
 // Actions
@@ -165,18 +89,18 @@ export async function getCustomers(
     ]
   }
 
-  // 総件数を取得
-  const total = await prisma.customer.count({ where })
-
-  // 顧客一覧を取得
-  const customers = await prisma.customer.findMany({
-    where,
-    orderBy: {
-      [sortBy]: sortOrder,
-    },
-    skip: (page - 1) * limit,
-    take: limit,
-  })
+  // 総件数と顧客一覧を並列取得（N+1解消）
+  const [total, customers] = await prisma.$transaction([
+    prisma.customer.count({ where }),
+    prisma.customer.findMany({
+      where,
+      orderBy: {
+        [sortBy]: sortOrder,
+      },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+  ])
 
   // Decimal型をnumber型に変換
   const formattedCustomers: CustomerData[] = customers.map((c) => ({
@@ -196,11 +120,11 @@ export async function getCustomers(
 /**
  * 顧客を新規作成
  */
-export const createCustomer = withPermission<[input: CreateCustomerInput], { id: string }>(
+export const createCustomer = withPermission<[input: CustomerFormInput], { id: string }>(
   'customer',
   'create'
 )(async (_user, input): Promise<ActionResult<{ id: string }>> => {
-  const parsed = createCustomerSchema.safeParse(input)
+  const parsed = customerFormSchema.safeParse(input)
   if (!parsed.success) {
     return createFailure(parsed.error.issues[0]?.message ?? '入力が不正です')
   }
@@ -232,7 +156,7 @@ export const createCustomer = withPermission<[input: CreateCustomerInput], { id:
     },
   })
 
-  revalidatePath('/admin/customers')
+  revalidateTag(CACHE_TAGS.CUSTOMERS, 'default')
 
   return createSuccess('顧客を作成しました', { id: customer.id })
 })
@@ -288,7 +212,7 @@ export const updateCustomerStatus = withPermission<[id: string, status: Customer
   'customer',
   'update'
 )(async (_user, id, status): Promise<ActionResult<void>> => {
-  const parsed = updateStatusSchema.safeParse({ id, status })
+  const parsed = updateCustomerStatusSchema.safeParse({ id, status })
   if (!parsed.success) {
     return createFailure('入力が不正です')
   }
@@ -306,8 +230,8 @@ export const updateCustomerStatus = withPermission<[id: string, status: Customer
     data: { status },
   })
 
-  revalidatePath('/admin/customers')
-  revalidatePath(`/admin/customers/${id}`)
+  revalidateTag(CACHE_TAGS.CUSTOMERS, 'default')
+  revalidateTag(getCacheTag.customers.detail(id), 'default')
 
   return createSuccess('ステータスを更新しました')
 })
@@ -319,7 +243,7 @@ export const updateCustomerNotes = withPermission<[id: string, notes: string | n
   'customer',
   'update'
 )(async (_user, id, notes): Promise<ActionResult<void>> => {
-  const parsed = updateNotesSchema.safeParse({ id, notes })
+  const parsed = updateCustomerNotesSchema.safeParse({ id, notes })
   if (!parsed.success) {
     return createFailure('入力が不正です')
   }
@@ -337,8 +261,8 @@ export const updateCustomerNotes = withPermission<[id: string, notes: string | n
     data: { notes },
   })
 
-  revalidatePath('/admin/customers')
-  revalidatePath(`/admin/customers/${id}`)
+  revalidateTag(CACHE_TAGS.CUSTOMERS, 'default')
+  revalidateTag(getCacheTag.customers.detail(id), 'default')
 
   return createSuccess('メモを更新しました')
 })
@@ -363,8 +287,8 @@ export const toggleCustomerActive = withPermission<[id: string], void>(
     data: { isActive: !customer.isActive },
   })
 
-  revalidatePath('/admin/customers')
-  revalidatePath(`/admin/customers/${id}`)
+  revalidateTag(CACHE_TAGS.CUSTOMERS, 'default')
+  revalidateTag(getCacheTag.customers.detail(id), 'default')
 
   return createSuccess('アクティブ状態を変更しました')
 })

@@ -2,12 +2,26 @@
 
 /**
  * メディア管理 Server Actions
+ *
+ * 管理画面でのメディアファイル操作を提供するServer Actions。
+ * 画像のアップロード、更新、削除、一覧取得などを行います。
+ *
+ * ## 主な機能
+ * - メディアアップロード（画像バリデーション付き）
+ * - メディア一覧取得（フィルタ・ページネーション対応）
+ * - メディア更新（メタデータ編集）
+ * - メディア削除（単一・一括）
+ *
+ * @module admin/actions/media
  */
 
-import { revalidatePath } from 'next/cache'
+import { revalidateTag } from 'next/cache'
+import { CACHE_TAGS } from '@/shared/lib/constants'
+import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
 import { prisma, Role, Prisma } from '@/shared/lib/prisma'
 import { STORAGE_BUCKETS } from '@/shared/lib/supabase'
 import { uploadFile, deleteFile, deleteFiles } from '@/shared/lib/storage'
+import { parseStringArray } from '@/shared/lib/json-validators'
 import {
   withPermission,
   createSuccess,
@@ -24,8 +38,42 @@ import {
   type MediaPagination,
   type MediaUpdateInput,
 } from '@/admin/lib/validations/media'
-import { getSession, getSessionUser } from '@/shared/lib/auth'
-import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'
+import { checkReadPermissionFor } from '@/admin/lib/permissions'
+
+// =============================================================================
+// FormData Helper Functions
+// =============================================================================
+
+/**
+ * FormDataから安全に文字列値を取得
+ */
+function getFormString(formData: FormData, key: string): string | null {
+  const value = formData.get(key)
+  return typeof value === 'string' ? value : null
+}
+
+/**
+ * FormDataから安全にFileを取得
+ */
+function getFormFile(formData: FormData, key: string): File | null {
+  const value = formData.get(key)
+  return value instanceof File ? value : null
+}
+
+/**
+ * FormDataから安全にJSON配列を取得
+ */
+function getFormStringArray(formData: FormData, key: string): string[] {
+  const value = getFormString(formData, key)
+  if (!value) return []
+  try {
+    const parsed: unknown = JSON.parse(value)
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter((item): item is string => typeof item === 'string')
+  } catch {
+    return []
+  }
+}
 
 // =============================================================================
 // Types
@@ -65,13 +113,7 @@ export type GetMediaResult = {
 // Helper Functions
 // =============================================================================
 
-async function checkReadPermission(): Promise<boolean> {
-  const session = await getSession()
-  const user = getSessionUser(session)
-  if (!user) return false
-  if (!canAccessAdmin(user.role)) return false
-  return hasPermission(user.role, 'media', 'read')
-}
+const checkReadPermission = checkReadPermissionFor('media')
 
 type MediaWithUploader = Prisma.MediaGetPayload<{
   include: { uploader: { select: { id: true; name: true } } }
@@ -91,7 +133,7 @@ function transformMedia(media: MediaWithUploader): MediaData {
     alt: media.alt,
     title: media.title,
     description: media.description,
-    tags: media.tags as string[],
+    tags: parseStringArray(media.tags),
     createdAt: media.createdAt,
     updatedAt: media.updatedAt,
     uploader: {
@@ -194,21 +236,19 @@ export const uploadMedia = withPermission<[FormData], { id: string; url: string 
   'media',
   'create'
 )(async (user, formData: FormData) => {
-  const file = formData.get('file') as File | null
+  const file = getFormFile(formData, 'file')
   if (!file) {
     return createFailure('ファイルが選択されていません')
   }
 
-  // Parse metadata from form
-  const typeValue = formData.get('type') as string | null
-  const usageValue = formData.get('usage') as string | null
+  // Parse metadata from form (型安全なヘルパー関数を使用)
   const metadata = {
-    type: typeValue || undefined,
-    usage: usageValue || undefined,
-    alt: (formData.get('alt') as string) || undefined,
-    title: (formData.get('title') as string) || undefined,
-    description: (formData.get('description') as string) || undefined,
-    tags: formData.get('tags') ? JSON.parse(formData.get('tags') as string) : [],
+    type: getFormString(formData, 'type') || undefined,
+    usage: getFormString(formData, 'usage') || undefined,
+    alt: getFormString(formData, 'alt') || undefined,
+    title: getFormString(formData, 'title') || undefined,
+    description: getFormString(formData, 'description') || undefined,
+    tags: getFormStringArray(formData, 'tags'),
   }
 
   // Validate metadata
@@ -266,7 +306,7 @@ export const uploadMedia = withPermission<[FormData], { id: string; url: string 
       },
     })
 
-    revalidatePath('/admin/media')
+    revalidateTag(CACHE_TAGS.MEDIA, 'default')
 
     return createSuccess('アップロードしました', { id: media.id, url: media.url })
   } catch (error) {
@@ -274,7 +314,11 @@ export const uploadMedia = withPermission<[FormData], { id: string; url: string 
     if (uploadedPath) {
       await deleteFile(uploadedPath, STORAGE_BUCKETS.MEDIA)
     }
-    console.error('Media upload error:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'uploadMedia', filename: file.name },
+    })
     return createFailure('アップロードに失敗しました')
   }
 })
@@ -315,8 +359,8 @@ export const updateMedia = withPermission<[string, MediaUpdateInput], void>(
     },
   })
 
-  revalidatePath('/admin/media')
-  revalidatePath(`/admin/media/${id}`)
+  revalidateTag(CACHE_TAGS.MEDIA, 'default')
+  revalidateTag(`${CACHE_TAGS.MEDIA}-${id}`, 'default')
 
   return createSuccess('更新しました')
 })
@@ -340,7 +384,11 @@ export const deleteMedia = withPermission<[string], void>(
     // Delete from storage
     const deleteResult = await deleteFile(media.storagePath, STORAGE_BUCKETS.MEDIA)
     if (!deleteResult.success) {
-      console.warn('Storage delete warning:', deleteResult.error)
+      logError(new Error(deleteResult.error || 'Storage delete failed'), {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.LOW,
+        context: { operation: 'deleteMedia', mediaId: id, storagePath: media.storagePath },
+      })
       // Continue with soft delete even if storage delete fails
     }
 
@@ -350,11 +398,15 @@ export const deleteMedia = withPermission<[string], void>(
       data: { isActive: false },
     })
 
-    revalidatePath('/admin/media')
+    revalidateTag(CACHE_TAGS.MEDIA, 'default')
 
     return createSuccess('削除しました')
   } catch (error) {
-    console.error('Media delete error:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'deleteMedia', mediaId: id },
+    })
     return createFailure('削除に失敗しました')
   }
 })
@@ -372,7 +424,8 @@ export const bulkDeleteMedia = withPermission<[string[]], { deleted: number }>(
 
   const mediaItems = await prisma.media.findMany({
     where: { id: { in: ids }, isActive: true },
-  }) as Array<{ id: string; storagePath: string }>
+    select: { id: true, storagePath: true },
+  })
 
   if (mediaItems.length === 0) {
     return createFailure('削除対象が見つかりません')
@@ -380,7 +433,7 @@ export const bulkDeleteMedia = withPermission<[string[]], { deleted: number }>(
 
   try {
     // Delete from storage
-    const paths = mediaItems.map((m: { storagePath: string }) => m.storagePath)
+    const paths = mediaItems.map((m) => m.storagePath)
     await deleteFiles(paths, STORAGE_BUCKETS.MEDIA)
 
     // Soft delete
@@ -389,13 +442,17 @@ export const bulkDeleteMedia = withPermission<[string[]], { deleted: number }>(
       data: { isActive: false },
     })
 
-    revalidatePath('/admin/media')
+    revalidateTag(CACHE_TAGS.MEDIA, 'default')
 
     return createSuccess(`${mediaItems.length}件のメディアを削除しました`, {
       deleted: mediaItems.length,
     })
   } catch (error) {
-    console.error('Bulk delete error:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'bulkDeleteMedia', count: ids.length },
+    })
     return createFailure('一括削除に失敗しました')
   }
 })

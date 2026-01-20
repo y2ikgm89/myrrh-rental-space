@@ -1,95 +1,41 @@
 'use server'
 
 import { prisma } from '@/shared/lib/prisma'
-import { revalidatePath } from 'next/cache'
+import { revalidateTag } from 'next/cache'
+import { CACHE_TAGS } from '@/shared/lib/constants'
 import { Role } from '@/shared/generated/prisma/enums'
 import type { Prisma } from '@/shared/generated/prisma/client'
-import { z } from 'zod'
 import bcrypt from 'bcrypt'
 import { createSuccess, createFailure, withPermission, withRole, type ActionResult } from '@/admin/types/server-actions'
-import { getSession, getRoleFromSession, type User } from '@/shared/lib/auth'
-import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'
-import { logRoleChange, logPermissionDenied } from '@/admin/lib/audit'
+import { type User } from '@/shared/lib/auth'
+import { checkReadPermissionFor } from '@/admin/lib/permissions'
+import { logRoleChange } from '@/admin/lib/audit'
 
-// =============================================================================
-// Types
-// =============================================================================
+// Types and schemas from centralized validation file
+import {
+  createUserSchema,
+  updateUserSchema,
+  type UserData,
+  type UserListParams,
+  type UserListResult,
+  type CreateUserInput,
+  type UpdateUserInput,
+} from '@/admin/lib/validations/user'
 
-export type UserData = {
-  id: string
-  email: string
-  name: string
-  role: Role
-  emailVerified: boolean
-  image: string | null
-  createdAt: Date
-  updatedAt: Date
-  _count: {
-    reservations: number
-    blogPosts: number
-  }
-}
-
-export type UserListParams = {
-  page?: number
-  perPage?: number
-  search?: string
-  role?: Role | 'ALL'
-  sortBy?: 'name' | 'email' | 'role' | 'createdAt'
-  sortOrder?: 'asc' | 'desc'
-}
-
-export type UserListResult = {
-  users: UserData[]
-  total: number
-  page: number
-  perPage: number
-  totalPages: number
-}
-
-// =============================================================================
-// Schemas
-// =============================================================================
-
-type RoleValue = 'SUPER_ADMIN' | 'ADMIN' | 'EDITOR' | 'VIEWER' | 'USER'
-const ROLE_VALUES: readonly RoleValue[] = ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'VIEWER', 'USER']
-
-const createUserSchema = z.object({
-  email: z.string().email('有効なメールアドレスを入力してください'),
-  password: z.string().min(8, 'パスワードは8文字以上必要です'),
-  name: z.string().min(1, '名前は必須です').max(100),
-  role: z.enum(ROLE_VALUES),
-})
-
-const updateUserSchema = z.object({
-  email: z.string().email('有効なメールアドレスを入力してください'),
-  name: z.string().min(1, '名前は必須です').max(100),
-  role: z.enum(ROLE_VALUES),
-  password: z.string().min(8, 'パスワードは8文字以上必要です').optional().or(z.literal('')),
-})
-
-export type CreateUserInput = z.infer<typeof createUserSchema>
-export type UpdateUserInput = z.infer<typeof updateUserSchema>
+// Re-export types for consumers
+export type {
+  UserData,
+  UserListParams,
+  UserListResult,
+  CreateUserInput,
+  UpdateUserInput,
+} from '@/admin/lib/validations/user'
 
 // =============================================================================
 // Helper Functions
 // =============================================================================
 
-/**
- * 読み取り権限チェック（既存パターン維持）
- */
-async function checkReadPermission(): Promise<boolean> {
-  const session = await getSession()
-  if (!session?.user) return false
-  const role = getRoleFromSession(session)
-  if (!role) return false
-  if (!canAccessAdmin(role)) return false
-  if (!hasPermission(role, 'user', 'read')) {
-    void logPermissionDenied(session.user.id, 'user', 'read')
-    return false
-  }
-  return true
-}
+const checkReadPermission = checkReadPermissionFor('user')
 
 // =============================================================================
 // Actions
@@ -240,7 +186,7 @@ export const createUser = withPermission<[CreateUserInput], { id: string }>(
     },
   })
 
-  revalidatePath('/admin/staff')
+  revalidateTag(CACHE_TAGS.STAFF, 'default')
 
   return createSuccess('ユーザーを作成しました', { id: user.id })
 })
@@ -298,8 +244,8 @@ export const updateUser = withPermission<[string, UpdateUserInput], void>(
     data: updateData,
   })
 
-  revalidatePath('/admin/staff')
-  revalidatePath(`/admin/staff/${id}`)
+  revalidateTag(CACHE_TAGS.STAFF, 'default')
+  revalidateTag(`${CACHE_TAGS.STAFF}-${id}`, 'default')
 
   return createSuccess('ユーザーを更新しました')
 })
@@ -343,7 +289,7 @@ export const deleteUser = withPermission<[string], void>(
     where: { id },
   })
 
-  revalidatePath('/admin/staff')
+  revalidateTag(CACHE_TAGS.STAFF, 'default')
 
   return createSuccess('ユーザーを削除しました')
 })
@@ -371,8 +317,8 @@ export const updateUserRole = withRole<[string, Role], void>(Role.SUPER_ADMIN)(
     // ロール変更を監査ログに記録（withRoleは自動監査なし）
     void logRoleChange(user.id, id, oldRole, role)
 
-    revalidatePath('/admin/staff')
-    revalidatePath(`/admin/staff/${id}`)
+    revalidateTag(CACHE_TAGS.STAFF, 'default')
+    revalidateTag(`${CACHE_TAGS.STAFF}-${id}`, 'default')
 
     return createSuccess('ロールを更新しました')
   }

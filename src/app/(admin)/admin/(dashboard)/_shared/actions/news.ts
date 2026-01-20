@@ -1,99 +1,41 @@
 'use server'
 
 import { prisma } from '@/shared/lib/prisma'
-import { revalidatePath, revalidateTag } from 'next/cache'
-import { z } from 'zod'
+import { revalidateTag } from 'next/cache'
+import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
 import { createSuccess, createFailure, withPermission } from '@/admin/types/server-actions'
 import type { NewsWhereInput } from '@/shared/types/prisma'
-import { getSession, getRoleFromSession } from '@/shared/lib/auth'
-import { LayoutWidth } from '@/shared/types/prisma'
-import { NewsStatus } from '@/shared/generated/prisma/enums'
-import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'
-import { logPermissionDenied } from '@/admin/lib/audit'
+import { checkReadPermissionFor } from '@/admin/lib/permissions'
 
-// =============================================================================
-// Types
-// =============================================================================
+// Types and schemas from centralized validation file
+import {
+  createNewsSchema,
+  updateNewsSchema,
+  type NewsData,
+  type NewsVersionData,
+  type GetNewsListResult,
+  type NewsFilters,
+  type NewsPagination,
+  type CreateNewsInput,
+  type UpdateNewsInput,
+} from '@/admin/lib/validations/news'
 
-export type NewsData = {
-  id: string
-  title: string
-  content: string
-  status: NewsStatus
-  publishedAt: Date | null
-  createdAt: Date
-  updatedAt: Date
-  contentWidth: LayoutWidth | null
-  contentWidthCustom: number | null
-}
-
-export type NewsVersionData = {
-  id: string
-  newsId: string
-  version: number
-  content: string
-  createdAt: Date
-  createdBy: string | null
-}
-
-export type GetNewsListResult = {
-  news: NewsData[]
-  total: number
-  page: number
-  limit: number
-  totalPages: number
-}
-
-export type NewsFilters = {
-  status?: 'ALL' | 'PUBLISHED' | 'DRAFT' | 'ARCHIVED'
-  search?: string
-}
-
-export type NewsPagination = {
-  page?: number
-  limit?: number
-  sortBy?: 'createdAt' | 'publishedAt'
-  sortOrder?: 'asc' | 'desc'
-}
-
-// =============================================================================
-// Schemas
-// =============================================================================
-
-const createNewsSchema = z.object({
-  title: z.string().min(1, 'タイトルは必須です').max(200, 'タイトルは200文字以内で入力してください'),
-  content: z.string().default(''),
-})
-
-const updateNewsSchema = z.object({
-  title: z.string().min(1, 'タイトルは必須です').max(200, 'タイトルは200文字以内で入力してください'),
-  content: z.string().min(1, '本文は必須です'),
-  contentWidth: z.nativeEnum(LayoutWidth).nullable().optional(),
-  contentWidthCustom: z.number().int().min(320).max(1920).nullable().optional(),
-})
-
-export type CreateNewsInput = z.infer<typeof createNewsSchema>
-export type UpdateNewsInput = z.infer<typeof updateNewsSchema>
+// Re-export types for consumers
+export type {
+  NewsData,
+  NewsVersionData,
+  GetNewsListResult,
+  NewsFilters,
+  NewsPagination,
+  CreateNewsInput,
+  UpdateNewsInput,
+} from '@/admin/lib/validations/news'
 
 // =============================================================================
 // Helper Functions
 // =============================================================================
 
-/**
- * 読み取り権限チェック
- */
-async function checkReadPermission(): Promise<boolean> {
-  const session = await getSession()
-  if (!session?.user) return false
-  const role = getRoleFromSession(session)
-  if (!role) return false
-  if (!canAccessAdmin(role)) return false
-  if (!hasPermission(role, 'news', 'read')) {
-    void logPermissionDenied(session.user.id, 'news', 'read')
-    return false
-  }
-  return true
-}
+const checkReadPermission = checkReadPermissionFor('news')
 
 // =============================================================================
 // Actions
@@ -124,11 +66,9 @@ export async function getNewsList(
   const where: NewsWhereInput = {}
 
   if (status === 'PUBLISHED') {
-    where.status = NewsStatus.PUBLISHED
+    where.isPublished = true
   } else if (status === 'DRAFT') {
-    where.status = NewsStatus.DRAFT
-  } else if (status === 'ARCHIVED') {
-    where.status = NewsStatus.ARCHIVED
+    where.isPublished = false
   }
 
   if (search) {
@@ -138,18 +78,18 @@ export async function getNewsList(
     ]
   }
 
-  // 総件数を取得
-  const total = await prisma.news.count({ where })
-
-  // お知らせ一覧を取得
-  const news = await prisma.news.findMany({
-    where,
-    orderBy: {
-      [sortBy]: sortOrder,
-    },
-    skip: (page - 1) * limit,
-    take: limit,
-  })
+  // 総件数とお知らせ一覧を並列取得（N+1解消）
+  const [total, news] = await prisma.$transaction([
+    prisma.news.count({ where }),
+    prisma.news.findMany({
+      where,
+      orderBy: {
+        [sortBy]: sortOrder,
+      },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+  ])
 
   return {
     news,
@@ -196,13 +136,11 @@ export const createNews = withPermission<[CreateNewsInput], { id: string }>(
     data: {
       title,
       content,
-      status: NewsStatus.DRAFT,
+      isPublished: false,
     },
   })
 
-  revalidatePath('/admin/news')
-  revalidatePath('/news')
-  revalidateTag('news', { expire: 0 })
+  revalidateTag(CACHE_TAGS.NEWS, 'default')
 
   return createSuccess('お知らせを作成しました', { id: news.id })
 })
@@ -227,7 +165,17 @@ export const updateNews = withPermission<[string, UpdateNewsInput], void>(
     return createFailure('お知らせが見つかりません')
   }
 
-  const { title, content, contentWidth, contentWidthCustom } = parsed.data
+  const {
+    title,
+    content,
+    contentWidth,
+    contentWidthCustom,
+    metaDescription,
+    metaKeywords,
+    ogpTitle,
+    ogpDescription,
+    ogpImageUrl,
+  } = parsed.data
 
   await prisma.news.update({
     where: { id },
@@ -236,15 +184,18 @@ export const updateNews = withPermission<[string, UpdateNewsInput], void>(
       content,
       contentWidth: contentWidth ?? null,
       contentWidthCustom: contentWidthCustom ?? null,
+      // SEO フィールド
+      metaDescription: metaDescription ?? null,
+      metaKeywords: metaKeywords ?? null,
+      // OGP フィールド
+      ogpTitle: ogpTitle ?? null,
+      ogpDescription: ogpDescription ?? null,
+      ogpImageUrl: ogpImageUrl ?? null,
     },
   })
 
-  revalidatePath('/admin/news')
-  revalidatePath(`/admin/news/${id}`)
-  revalidatePath('/news')
-  revalidatePath(`/news/${id}`)
-  revalidateTag('news', { expire: 0 })
-  revalidateTag(`news-${id}`, { expire: 0 })
+  revalidateTag(CACHE_TAGS.NEWS, 'default')
+  revalidateTag(getCacheTag.news.detail(id), 'default')
 
   return createSuccess('お知らせを保存しました')
 })
@@ -268,8 +219,7 @@ export const deleteNews = withPermission<[string], void>(
     where: { id },
   })
 
-  revalidatePath('/admin/news')
-  revalidatePath('/news')
+  revalidateTag(CACHE_TAGS.NEWS, 'default')
 
   return createSuccess('お知らせを削除しました')
 })
@@ -302,7 +252,7 @@ export const publishNews = withPermission<[string], void>(
     prisma.news.update({
       where: { id },
       data: {
-        status: NewsStatus.PUBLISHED,
+        isPublished: true,
         publishedAt: news.publishedAt ?? new Date(),
       },
     }),
@@ -316,12 +266,8 @@ export const publishNews = withPermission<[string], void>(
     }),
   ])
 
-  revalidatePath('/admin/news')
-  revalidatePath(`/admin/news/${id}`)
-  revalidatePath('/news')
-  revalidatePath(`/news/${id}`)
-  revalidateTag('news', { expire: 0 })
-  revalidateTag(`news-${id}`, { expire: 0 })
+  revalidateTag(CACHE_TAGS.NEWS, 'default')
+  revalidateTag(getCacheTag.news.detail(id), 'default')
 
   return createSuccess(`公開しました（バージョン ${nextVersion}）`)
 })
@@ -344,13 +290,12 @@ export const unpublishNews = withPermission<[string], void>(
   await prisma.news.update({
     where: { id },
     data: {
-      status: NewsStatus.DRAFT,
+      isPublished: false,
     },
   })
 
-  revalidatePath('/admin/news')
-  revalidatePath(`/admin/news/${id}`)
-  revalidatePath('/news')
+  revalidateTag(CACHE_TAGS.NEWS, 'default')
+  revalidateTag(getCacheTag.news.detail(id), 'default')
 
   return createSuccess('下書きに戻しました')
 })
@@ -428,14 +373,12 @@ export const restoreNewsVersion = withPermission<[string, number], void>(
     where: { id: newsId },
     data: {
       content: versionData.content,
-      status: NewsStatus.DRAFT,
+      isPublished: false,
     },
   })
 
-  revalidatePath('/admin/news')
-  revalidatePath(`/admin/news/${newsId}`)
-  revalidatePath('/news')
-  revalidatePath(`/news/${newsId}`)
+  revalidateTag(CACHE_TAGS.NEWS, 'default')
+  revalidateTag(getCacheTag.news.detail(newsId), 'default')
 
   return createSuccess(`バージョン ${version} を復元しました（下書き状態）`)
 })
@@ -465,7 +408,7 @@ export async function getPublishedNewsList(
 
   const newsItems = await prisma.news.findMany({
     where: {
-      status: NewsStatus.PUBLISHED,
+      isPublished: true,
       publishedAt: { not: null },
     },
     select: {

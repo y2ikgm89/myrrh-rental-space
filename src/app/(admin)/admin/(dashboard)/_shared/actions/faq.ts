@@ -1,16 +1,15 @@
 'use server'
 
 import { prisma } from '@/shared/lib/prisma'
-import { revalidatePath, revalidateTag } from 'next/cache'
+import { revalidateTag } from 'next/cache'
+import { CACHE_TAGS } from '@/shared/lib/constants'
 import {
   createSuccess,
   createFailure,
   withPermission,
   type ActionResult,
 } from '@/admin/types/server-actions'
-import { getSession, getRoleFromSession } from '@/shared/lib/auth'
-import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'
-import { logPermissionDenied } from '@/admin/lib/audit'
+import { checkReadPermissionFor } from '@/admin/lib/permissions'
 import {
   faqCategoryFormSchema,
   faqItemFormSchema,
@@ -40,7 +39,7 @@ export type FaqItemListResult = {
 export type FaqItemFilters = {
   categoryId?: string
   search?: string
-  isActive?: boolean
+  isPublished?: boolean
 }
 
 export type FaqItemPagination = {
@@ -52,22 +51,7 @@ export type FaqItemPagination = {
 // Helper Functions
 // =============================================================================
 
-/**
- * 読み取り権限チェック（権限なしの場合は空結果を返すための軽量チェック）
- */
-async function checkReadPermission(): Promise<boolean> {
-  const session = await getSession()
-  if (!session?.user) return false
-
-  const role = getRoleFromSession(session)
-  if (!role) return false
-  if (!canAccessAdmin(role)) return false
-  if (!hasPermission(role, 'faq', 'read')) {
-    void logPermissionDenied(session.user.id, 'faq', 'read')
-    return false
-  }
-  return true
-}
+const checkReadPermission = checkReadPermissionFor('faq')
 
 // =============================================================================
 // FaqCategory Read Actions
@@ -84,7 +68,7 @@ export async function getFaqCategories(): Promise<FaqCategoryListResult> {
   const categories = await prisma.faqCategory.findMany({
     include: {
       items: {
-        where: { isActive: true },
+        where: { isPublished: true },
         orderBy: { order: 'asc' },
       },
     },
@@ -152,8 +136,7 @@ export const createFaqCategory = withPermission<
     },
   })
 
-  revalidatePath('/admin/faq')
-  revalidateTag('faq', { expire: 0 })
+  revalidateTag(CACHE_TAGS.FAQ, 'default')
 
   return createSuccess('カテゴリを作成しました', { id: category.id })
 })
@@ -195,8 +178,7 @@ export const updateFaqCategory = withPermission<
     data: parsed.data,
   })
 
-  revalidatePath('/admin/faq')
-  revalidateTag('faq', { expire: 0 })
+  revalidateTag(CACHE_TAGS.FAQ, 'default')
 
   return createSuccess('カテゴリを更新しました')
 })
@@ -225,8 +207,7 @@ export const deleteFaqCategory = withPermission<[id: string], void>(
     where: { id },
   })
 
-  revalidatePath('/admin/faq')
-  revalidateTag('faq', { expire: 0 })
+  revalidateTag(CACHE_TAGS.FAQ, 'default')
 
   return createSuccess('カテゴリを削除しました')
 })
@@ -247,8 +228,7 @@ export const reorderFaqCategories = withPermission<[orderedIds: string[]], void>
     )
   )
 
-  revalidatePath('/admin/faq')
-  revalidateTag('faq', { expire: 0 })
+  revalidateTag(CACHE_TAGS.FAQ, 'default')
 
   return createSuccess('順序を更新しました')
 })
@@ -268,12 +248,12 @@ export async function getFaqItems(
     return { items: [], total: 0, page: 1, limit: 20, totalPages: 0 }
   }
 
-  const { categoryId, search, isActive } = filters
+  const { categoryId, search, isPublished } = filters
   const { page = 1, limit = 20 } = pagination
 
   type WhereInput = {
     categoryId?: string
-    isActive?: boolean
+    isPublished?: boolean
     OR?: Array<{
       question?: { contains: string; mode: 'insensitive' }
       answer?: { contains: string; mode: 'insensitive' }
@@ -286,8 +266,8 @@ export async function getFaqItems(
     where.categoryId = categoryId
   }
 
-  if (typeof isActive === 'boolean') {
-    where.isActive = isActive
+  if (typeof isPublished === 'boolean') {
+    where.isPublished = isPublished
   }
 
   if (search) {
@@ -297,23 +277,25 @@ export async function getFaqItems(
     ]
   }
 
-  const total = await prisma.faqItem.count({ where })
-
-  const items = await prisma.faqItem.findMany({
-    where,
-    include: {
-      category: {
-        select: {
-          id: true,
-          name: true,
-          slug: true,
+  // 総件数と項目一覧を並列取得（N+1解消）
+  const [total, items] = await prisma.$transaction([
+    prisma.faqItem.count({ where }),
+    prisma.faqItem.findMany({
+      where,
+      include: {
+        category: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
         },
       },
-    },
-    orderBy: [{ category: { order: 'asc' } }, { order: 'asc' }],
-    skip: (page - 1) * limit,
-    take: limit,
-  })
+      orderBy: [{ category: { order: 'asc' } }, { order: 'asc' }],
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+  ])
 
   return {
     items,
@@ -384,8 +366,7 @@ export const createFaqItem = withPermission<
     },
   })
 
-  revalidatePath('/admin/faq')
-  revalidateTag('faq', { expire: 0 })
+  revalidateTag(CACHE_TAGS.FAQ, 'default')
 
   return createSuccess('質問を作成しました', { id: item.id })
 })
@@ -424,8 +405,7 @@ export const updateFaqItem = withPermission<
     data: parsed.data,
   })
 
-  revalidatePath('/admin/faq')
-  revalidateTag('faq', { expire: 0 })
+  revalidateTag(CACHE_TAGS.FAQ, 'default')
 
   return createSuccess('質問を更新しました')
 })
@@ -449,8 +429,7 @@ export const deleteFaqItem = withPermission<[id: string], void>(
     where: { id },
   })
 
-  revalidatePath('/admin/faq')
-  revalidateTag('faq', { expire: 0 })
+  revalidateTag(CACHE_TAGS.FAQ, 'default')
 
   return createSuccess('質問を削除しました')
 })
@@ -471,8 +450,7 @@ export const reorderFaqItems = withPermission<
     )
   )
 
-  revalidatePath('/admin/faq')
-  revalidateTag('faq', { expire: 0 })
+  revalidateTag(CACHE_TAGS.FAQ, 'default')
 
   return createSuccess('順序を更新しました')
 })
@@ -480,7 +458,7 @@ export const reorderFaqItems = withPermission<
 /**
  * FAQ項目の公開状態を切り替え
  */
-export const toggleFaqItemActive = withPermission<[id: string], void>(
+export const toggleFaqItemPublished = withPermission<[id: string], void>(
   'faq',
   'update'
 )(async (user, id): Promise<ActionResult<void>> => {
@@ -494,11 +472,10 @@ export const toggleFaqItemActive = withPermission<[id: string], void>(
 
   await prisma.faqItem.update({
     where: { id },
-    data: { isActive: !item.isActive },
+    data: { isPublished: !item.isPublished },
   })
 
-  revalidatePath('/admin/faq')
-  revalidateTag('faq', { expire: 0 })
+  revalidateTag(CACHE_TAGS.FAQ, 'default')
 
   return createSuccess('公開状態を変更しました')
 })

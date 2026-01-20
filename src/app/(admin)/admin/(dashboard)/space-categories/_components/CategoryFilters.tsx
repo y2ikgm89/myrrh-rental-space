@@ -1,51 +1,78 @@
 'use client'
 
-import { BaseFilters } from '@/admin/components/table'
-import { Checkbox, Label } from '@/admin/components/ui'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { useTransition } from 'react'
+import { Search } from 'lucide-react'
+import { useQueryStates, parseAsString, parseAsInteger, parseAsBoolean } from 'nuqs'
+import { useCallback, useRef, useEffect } from 'react'
+import { Checkbox, Label, Input } from '@/admin/components/ui'
 
 export function CategoryFilters() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const [isPending, startTransition] = useTransition()
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const includeInactive = searchParams.get('includeInactive') === 'true'
-
-  const handleIncludeInactiveChange = (checked: boolean) => {
-    const params = new URLSearchParams(searchParams.toString())
-    if (checked) {
-      params.set('includeInactive', 'true')
-    } else {
-      params.delete('includeInactive')
+  const [params, setParams] = useQueryStates(
+    {
+      search: parseAsString.withDefault(''),
+      includeInactive: parseAsBoolean.withDefault(false),
+      page: parseAsInteger.withDefault(1),
+      tab: parseAsString.withDefault('categories'),
+    },
+    {
+      history: 'push',
+      shallow: false,
     }
-    params.delete('page')
-    // タブパラメータを保持
-    params.set('tab', 'categories')
-    startTransition(() => {
-      router.push(`/admin/spaces?${params.toString()}`)
-    })
-  }
+  )
+
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  const setSearchDebounced = useCallback(
+    (value: string) => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+      searchTimeoutRef.current = setTimeout(() => {
+        void setParams({ search: value || null, page: 1 })
+      }, 300)
+    },
+    [setParams]
+  )
+
+  const handleIncludeInactiveChange = useCallback(
+    (checked: boolean) => {
+      void setParams({ includeInactive: checked || null, page: 1 })
+    },
+    [setParams]
+  )
 
   return (
-    <BaseFilters
-      basePath="/admin/spaces"
-      statusOptions={[]}
-      searchPlaceholder="名前・説明で検索..."
-      preserveParams={{ tab: 'categories' }}
-    >
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
       {/* 非アクティブを含める */}
       <div className="flex items-center gap-2">
         <Checkbox
           id="includeInactive"
-          checked={includeInactive}
+          checked={params.includeInactive}
           onCheckedChange={handleIncludeInactiveChange}
-          disabled={isPending}
         />
         <Label htmlFor="includeInactive" className="text-sm cursor-pointer">
           非アクティブを含める
         </Label>
       </div>
-    </BaseFilters>
+
+      {/* 検索 */}
+      <div className="relative flex-1">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          type="search"
+          placeholder="名前・説明で検索..."
+          defaultValue={params.search}
+          onChange={(e) => setSearchDebounced(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+    </div>
   )
 }

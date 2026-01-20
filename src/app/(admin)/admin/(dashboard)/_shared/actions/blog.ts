@@ -2,162 +2,47 @@
 
 import { prisma } from '@/shared/lib/prisma'
 import { revalidateTag } from 'next/cache'
-import { z } from 'zod'
-import { getSession, getRoleFromSession } from '@/shared/lib/auth'
+import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
 import { createSuccess, createFailure, withPermission } from '@/admin/types/server-actions'
 import type { BlogPostWhereInput } from '@/shared/types/prisma'
 import { parseStringArray } from '@/shared/lib/json-validators'
-import { LayoutWidth } from '@/shared/types/prisma'
 import { BlogPostStatus } from '@/shared/generated/prisma/enums'
-import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'
-import { logPermissionDenied } from '@/admin/lib/audit'
+import { checkReadPermissionFor } from '@/admin/lib/permissions'
 
-// =============================================================================
-// Types
-// =============================================================================
+// Types and schemas from centralized validation file
+import {
+  createBlogPostSchema,
+  updateBlogPostSchema,
+  blogCategorySchema,
+  type BlogPostData,
+  type BlogPostVersionData,
+  type BlogCategoryData,
+  type GetBlogPostsResult,
+  type BlogPostFilters,
+  type BlogPostPagination,
+  type CreateBlogPostInput,
+  type UpdateBlogPostInput,
+  type BlogCategoryInput,
+} from '@/admin/lib/validations/blog'
 
-export type BlogPostData = {
-  id: string
-  title: string
-  slug: string
-  excerpt: string
-  content: string
-  thumbnailUrl: string
-  ogpImageUrl: string | null
-  categoryId: string
-  tags: string[]
-  metaDescription: string | null
-  metaKeywords: string | null
-  ogpTitle: string | null
-  ogpDescription: string | null
-  publishedAt: Date | null
-  status: BlogPostStatus
-  viewCount: number
-  createdAt: Date
-  updatedAt: Date
-  contentWidth: LayoutWidth | null
-  contentWidthCustom: number | null
-  category: {
-    id: string
-    name: string
-    slug: string
-  }
-  author: {
-    id: string
-    name: string | null
-    email: string
-  }
-}
-
-export type BlogPostVersionData = {
-  id: string
-  postId: string
-  version: number
-  content: string
-  createdAt: Date
-  createdBy: string | null
-}
-
-export type BlogCategoryData = {
-  id: string
-  name: string
-  slug: string
-  description: string | null
-  order: number
-  createdAt: Date
-  updatedAt: Date
-  _count: {
-    posts: number
-  }
-}
-
-export type GetBlogPostsResult = {
-  posts: BlogPostData[]
-  total: number
-  page: number
-  limit: number
-  totalPages: number
-}
-
-export type BlogPostFilters = {
-  status?: 'ALL' | 'PUBLISHED' | 'DRAFT' | 'ARCHIVED'
-  categoryId?: string
-  search?: string
-}
-
-export type BlogPostPagination = {
-  page?: number
-  limit?: number
-  sortBy?: 'createdAt' | 'publishedAt' | 'viewCount'
-  sortOrder?: 'asc' | 'desc'
-}
-
-// =============================================================================
-// Schemas
-// =============================================================================
-
-const createBlogPostSchema = z.object({
-  title: z.string().min(1, 'タイトルは必須です').max(200, 'タイトルは200文字以内'),
-  slug: z.string().min(1, 'スラッグは必須です').max(200).regex(/^[a-z0-9-]+$/, 'スラッグは小文字英数字とハイフンのみ'),
-  excerpt: z.string().min(1, '抜粋は必須です').max(500, '抜粋は500文字以内'),
-  content: z.string().default(''),
-  thumbnailUrl: z.string().min(1, 'サムネイルURLは必須です'),
-  ogpImageUrl: z.string().nullable().optional(),
-  categoryId: z.string().uuid('カテゴリを選択してください'),
-  tags: z.array(z.string()).default([]),
-  metaDescription: z.string().max(160).nullable().optional(),
-  metaKeywords: z.string().nullable().optional(),
-  ogpTitle: z.string().max(60).nullable().optional(),
-  ogpDescription: z.string().max(160).nullable().optional(),
-})
-
-const updateBlogPostSchema = z.object({
-  title: z.string().min(1, 'タイトルは必須です').max(200, 'タイトルは200文字以内'),
-  slug: z.string().min(1, 'スラッグは必須です').max(200).regex(/^[a-z0-9-]+$/, 'スラッグは小文字英数字とハイフンのみ'),
-  excerpt: z.string().min(1, '抜粋は必須です').max(500, '抜粋は500文字以内'),
-  content: z.string().min(1, '本文は必須です'),
-  thumbnailUrl: z.string().min(1, 'サムネイルURLは必須です'),
-  ogpImageUrl: z.string().nullable().optional(),
-  categoryId: z.string().uuid('カテゴリを選択してください'),
-  tags: z.array(z.string()).default([]),
-  metaDescription: z.string().max(160).nullable().optional(),
-  metaKeywords: z.string().nullable().optional(),
-  ogpTitle: z.string().max(60).nullable().optional(),
-  ogpDescription: z.string().max(160).nullable().optional(),
-  contentWidth: z.nativeEnum(LayoutWidth).nullable().optional(),
-  contentWidthCustom: z.number().int().min(320).max(1920).nullable().optional(),
-})
-
-const blogCategorySchema = z.object({
-  name: z.string().min(1, 'カテゴリ名は必須です').max(50, 'カテゴリ名は50文字以内'),
-  slug: z.string().min(1, 'スラッグは必須です').max(50).regex(/^[a-z0-9-]+$/, 'スラッグは小文字英数字とハイフンのみ'),
-  description: z.string().max(200).nullable().optional(),
-  order: z.number().int().min(0).default(0),
-})
-
-export type CreateBlogPostInput = z.infer<typeof createBlogPostSchema>
-export type UpdateBlogPostInput = z.infer<typeof updateBlogPostSchema>
-export type BlogCategoryInput = z.infer<typeof blogCategorySchema>
+// Re-export types for consumers
+export type {
+  BlogPostData,
+  BlogPostVersionData,
+  BlogCategoryData,
+  GetBlogPostsResult,
+  BlogPostFilters,
+  BlogPostPagination,
+  CreateBlogPostInput,
+  UpdateBlogPostInput,
+  BlogCategoryInput,
+} from '@/admin/lib/validations/blog'
 
 // =============================================================================
 // Helper Functions
 // =============================================================================
 
-/**
- * 読み取り権限チェック共通ヘルパー
- */
-async function checkReadPermission(): Promise<boolean> {
-  const session = await getSession()
-  if (!session?.user) return false
-  const role = getRoleFromSession(session)
-  if (!role) return false
-  if (!canAccessAdmin(role)) return false
-  if (!hasPermission(role, 'blog', 'read')) {
-    void logPermissionDenied(session.user.id, 'blog', 'read')
-    return false
-  }
-  return true
-}
+const checkReadPermission = checkReadPermissionFor('blog')
 
 // =============================================================================
 // Blog Post Actions
@@ -207,34 +92,34 @@ export async function getBlogPosts(
     ]
   }
 
-  // 総件数を取得
-  const total = await prisma.blogPost.count({ where })
-
-  // ブログ記事一覧を取得
-  const posts = await prisma.blogPost.findMany({
-    where,
-    include: {
-      category: {
-        select: {
-          id: true,
-          name: true,
-          slug: true,
+  // 総件数と記事一覧を並列取得（N+1解消）
+  const [total, posts] = await prisma.$transaction([
+    prisma.blogPost.count({ where }),
+    prisma.blogPost.findMany({
+      where,
+      include: {
+        category: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+        author: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
         },
       },
-      author: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
+      orderBy: {
+        [sortBy]: sortOrder,
       },
-    },
-    orderBy: {
-      [sortBy]: sortOrder,
-    },
-    skip: (page - 1) * limit,
-    take: limit,
-  })
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+  ])
 
   // tags の型変換
   const formattedPosts: BlogPostData[] = posts.map((post) => ({
@@ -316,7 +201,7 @@ export const createBlogPost = withPermission<[CreateBlogPostInput], { id: string
       },
     })
 
-    revalidateTag('blog', 'default')
+    revalidateTag(CACHE_TAGS.BLOG, 'default')
 
     return createSuccess('ブログ記事を作成しました', { id: post.id })
   }
@@ -367,11 +252,11 @@ export const updateBlogPost = withPermission<[string, UpdateBlogPostInput], void
       },
     })
 
-    revalidateTag('blog', 'default')
+    revalidateTag(CACHE_TAGS.BLOG, 'default')
     // slug 変更時は両方を無効化
-    revalidateTag(`blog-${oldSlug}`, 'default')
+    revalidateTag(getCacheTag.blog.detail(oldSlug), 'default')
     if (parsed.data.slug !== oldSlug) {
-      revalidateTag(`blog-${parsed.data.slug}`, 'default')
+      revalidateTag(getCacheTag.blog.detail(parsed.data.slug), 'default')
     }
 
     return createSuccess('ブログ記事を保存しました')
@@ -397,8 +282,8 @@ export const deleteBlogPost = withPermission<[string], void>(
       where: { id },
     })
 
-    revalidateTag('blog', 'default')
-    revalidateTag(`blog-${post.slug}`, 'default')
+    revalidateTag(CACHE_TAGS.BLOG, 'default')
+    revalidateTag(getCacheTag.blog.detail(post.slug), 'default')
 
     return createSuccess('ブログ記事を削除しました')
   }
@@ -446,8 +331,8 @@ export const publishBlogPost = withPermission<[string], void>(
       }),
     ])
 
-    revalidateTag('blog', 'default')
-    revalidateTag(`blog-${post.slug}`, 'default')
+    revalidateTag(CACHE_TAGS.BLOG, 'default')
+    revalidateTag(getCacheTag.blog.detail(post.slug), 'default')
 
     return createSuccess(`公開しました（バージョン ${nextVersion}）`)
   }
@@ -475,8 +360,8 @@ export const unpublishBlogPost = withPermission<[string], void>(
       },
     })
 
-    revalidateTag('blog', 'default')
-    revalidateTag(`blog-${post.slug}`, 'default')
+    revalidateTag(CACHE_TAGS.BLOG, 'default')
+    revalidateTag(getCacheTag.blog.detail(post.slug), 'default')
 
     return createSuccess('下書きに戻しました')
   }
@@ -570,8 +455,8 @@ export const restoreBlogPostVersion = withPermission<[string, number], void>(
       },
     })
 
-    revalidateTag('blog', 'default')
-    revalidateTag(`blog-${post.slug}`, 'default')
+    revalidateTag(CACHE_TAGS.BLOG, 'default')
+    revalidateTag(getCacheTag.blog.detail(post.slug), 'default')
 
     return createSuccess(`バージョン ${version} を復元しました（下書き状態）`)
   }
@@ -648,7 +533,7 @@ export const createBlogCategory = withPermission<[BlogCategoryInput], { id: stri
     })
 
     // カテゴリ変更時はブログ一覧のキャッシュも無効化
-    revalidateTag('blog', 'default')
+    revalidateTag(CACHE_TAGS.BLOG, 'default')
 
     return createSuccess('カテゴリを作成しました', { id: category.id })
   }
@@ -691,7 +576,7 @@ export const updateBlogCategory = withPermission<[string, BlogCategoryInput], vo
     })
 
     // カテゴリ変更時はブログ一覧のキャッシュも無効化
-    revalidateTag('blog', 'default')
+    revalidateTag(CACHE_TAGS.BLOG, 'default')
 
     return createSuccess('カテゴリを更新しました')
   }
@@ -726,7 +611,7 @@ export const deleteBlogCategory = withPermission<[string], void>(
     })
 
     // カテゴリ変更時はブログ一覧のキャッシュも無効化
-    revalidateTag('blog', 'default')
+    revalidateTag(CACHE_TAGS.BLOG, 'default')
 
     return createSuccess('カテゴリを削除しました')
   }
@@ -749,7 +634,7 @@ export const updateBlogCategoryOrder = withPermission<[{ id: string; order: numb
     )
 
     // カテゴリ順序変更時はブログ一覧のキャッシュも無効化
-    revalidateTag('blog', 'default')
+    revalidateTag(CACHE_TAGS.BLOG, 'default')
 
     return createSuccess('順序を更新しました')
   }

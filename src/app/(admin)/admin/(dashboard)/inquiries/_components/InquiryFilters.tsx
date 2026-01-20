@@ -1,3 +1,5 @@
+'use client'
+
 import { BaseFilters } from '@/admin/components/table'
 
 const STATUS_OPTIONS = [
@@ -11,7 +13,6 @@ const STATUS_OPTIONS = [
 export function InquiryFilters() {
   return (
     <BaseFilters
-      basePath="/admin/inquiries"
       statusOptions={STATUS_OPTIONS}
       searchPlaceholder="名前、メール、件名、本文で検索..."
     />

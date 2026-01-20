@@ -9,45 +9,20 @@ import {
   SelectValue,
 } from '@/admin/components/ui'
 import type { BlogCategoryData } from '@/admin/actions/blog'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { useTransition } from 'react'
+import { useFilterParamsWithCategory } from '@/shared/hooks'
 
 type BlogFiltersProps = {
   categories: BlogCategoryData[]
 }
 
 export function BlogFilters({ categories }: BlogFiltersProps) {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const [isPending, startTransition] = useTransition()
-
-  const currentCategory = searchParams.get('categoryId') || 'ALL'
-
-  const handleCategoryChange = (value: string) => {
-    const params = new URLSearchParams(searchParams.toString())
-    if (value && value !== 'ALL') {
-      params.set('categoryId', value)
-    } else {
-      params.delete('categoryId')
-    }
-    params.delete('page')
-    startTransition(() => {
-      router.push(`/admin/blog?${params.toString()}`)
-    })
-  }
+  const { params, setCategory } = useFilterParamsWithCategory()
 
   return (
-    <BaseFilters
-      basePath="/admin/blog"
-      searchPlaceholder="タイトル、本文で検索..."
-    >
+    <BaseFilters searchPlaceholder="タイトル、本文で検索...">
       {/* カテゴリフィルター */}
       <div className="w-full sm:w-48">
-        <Select
-          value={currentCategory}
-          onValueChange={handleCategoryChange}
-          disabled={isPending}
-        >
+        <Select value={params.categoryId} onValueChange={setCategory}>
           <SelectTrigger>
             <SelectValue placeholder="カテゴリ" />
           </SelectTrigger>

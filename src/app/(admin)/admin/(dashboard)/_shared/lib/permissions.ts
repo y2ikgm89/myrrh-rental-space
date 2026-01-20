@@ -9,7 +9,8 @@
 
 import { cache } from 'react'
 import { prisma, Role } from '@/shared/lib/prisma'
-import type { User } from '@/shared/lib/auth'
+import { getSession, getRoleFromSession, type User } from '@/shared/lib/auth'
+import { logPermissionDenied } from '@/admin/lib/audit'
 
 // =============================================================================
 // Types
@@ -247,7 +248,8 @@ export function userHasResourceAccess(
     return false // IDなしはリスト表示等のため許可
   }
 
-  const assignedPages = (user.assignedPages as string[]) ?? []
+  // assignedPagesはUser型で string[] | undefined として定義済み
+  const assignedPages = user.assignedPages ?? []
   return assignedPages.includes(resourceId)
 }
 
@@ -259,6 +261,42 @@ export function userHasResourceAccess(
  */
 export function canAccessAdmin(role: Role): boolean {
   return ADMIN_ROLES.includes(role)
+}
+
+// =============================================================================
+// 読み取り権限チェックヘルパー（Server Actions用）
+// =============================================================================
+
+/**
+ * リソース別の読み取り権限チェック関数を生成
+ *
+ * @param resource リソース種別
+ * @returns 読み取り権限チェック関数
+ *
+ * @example
+ * // アクションファイル内での使用
+ * const checkReadPermission = checkReadPermissionFor('space')
+ *
+ * export async function getSpaces() {
+ *   if (!(await checkReadPermission())) {
+ *     return { spaces: [], total: 0, page: 1, limit: 10, totalPages: 0 }
+ *   }
+ *   // ...
+ * }
+ */
+export function checkReadPermissionFor(resource: Resource): () => Promise<boolean> {
+  return async (): Promise<boolean> => {
+    const session = await getSession()
+    if (!session?.user) return false
+    const role = getRoleFromSession(session)
+    if (!role) return false
+    if (!canAccessAdmin(role)) return false
+    if (!hasPermission(role, resource, 'read')) {
+      void logPermissionDenied(session.user.id, resource, 'read')
+      return false
+    }
+    return true
+  }
 }
 
 // =============================================================================

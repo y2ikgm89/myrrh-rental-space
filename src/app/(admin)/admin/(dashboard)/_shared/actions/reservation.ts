@@ -1,7 +1,32 @@
 'use server'
 
+/**
+ * 予約管理 Server Actions（管理側）
+ *
+ * 管理画面での予約操作を提供するServer Actions。
+ * 一覧取得、ステータス更新、削除、管理者による予約作成などを行います。
+ *
+ * ## 主な機能
+ * - 予約一覧取得（フィルタ・ページネーション対応）
+ * - 予約詳細取得
+ * - ステータス更新（確定・キャンセル）
+ * - 予約メモ更新
+ * - 予約削除
+ * - カレンダー表示用データ取得
+ * - 管理者による予約作成（電話予約等）
+ *
+ * ## 権限チェック
+ * - すべての操作でロールベースの権限チェックを実施
+ * - 権限不足時は監査ログに記録
+ *
+ * @module admin/actions/reservation
+ */
+
 import { prisma } from '@/shared/lib/prisma'
-import { revalidatePath } from 'next/cache'
+import { ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
+import { fireAndForget } from '@/shared/lib/async-utils'
+import { revalidateTag } from 'next/cache'
+import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
 import { ReservationStatus } from '@/shared/generated/prisma/enums'
 import { z } from 'zod'
 import {
@@ -11,10 +36,8 @@ import {
 } from '@/shared/lib/email-service'
 import { createSuccess, createFailure, withPermission, type ActionResult } from '@/admin/types/server-actions'
 import type { ReservationWhereInput } from '@/shared/types/prisma'
-import { getSession, getRoleFromSession } from '@/shared/lib/auth'
 import { syncReservationToCalendar, updateCalendarSync, deleteCalendarSync, type ReservationSyncData } from '@/shared/lib/calendar-sync'
-import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'
-import { logPermissionDenied } from '@/admin/lib/audit'
+import { checkReadPermissionFor } from '@/admin/lib/permissions'
 import { checkReservationOverlap } from '@/public/lib/reservation-utils'
 import { adminReservationSchema, type AdminReservationInput } from '@/admin/lib/validations/admin-reservation'
 import { extractFieldErrors } from '@/shared/lib/action-helpers'
@@ -88,21 +111,7 @@ const updateNotesSchema = z.object({
 // Helper Functions
 // =============================================================================
 
-/**
- * 読み取り権限チェックヘルパー
- */
-async function checkReadPermission(): Promise<boolean> {
-  const session = await getSession()
-  if (!session?.user) return false
-  const role = getRoleFromSession(session)
-  if (!role) return false
-  if (!canAccessAdmin(role)) return false
-  if (!hasPermission(role, 'reservation', 'read')) {
-    void logPermissionDenied(session.user.id, 'reservation', 'read')
-    return false
-  }
-  return true
-}
+const checkReadPermission = checkReadPermissionFor('reservation')
 
 // =============================================================================
 // Actions
@@ -172,35 +181,35 @@ export async function getReservations(
     ]
   }
 
-  // 総件数を取得
-  const total = await prisma.reservation.count({ where })
-
-  // 予約一覧を取得
-  const reservations = await prisma.reservation.findMany({
-    where,
-    include: {
-      space: {
-        select: {
-          id: true,
-          name: true,
+  // 総件数と予約一覧を並列取得（N+1解消）
+  const [total, reservations] = await prisma.$transaction([
+    prisma.reservation.count({ where }),
+    prisma.reservation.findMany({
+      where,
+      include: {
+        space: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        customer: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phoneNumber: true,
+          },
         },
       },
-      customer: {
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          email: true,
-          phoneNumber: true,
-        },
+      orderBy: {
+        [sortBy]: sortOrder,
       },
-    },
-    orderBy: {
-      [sortBy]: sortOrder,
-    },
-    skip: (page - 1) * limit,
-    take: limit,
-  })
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+  ])
 
   // Decimal型をnumber型に変換
   const formattedReservations: ReservationWithRelations[] = reservations.map((r) => ({
@@ -320,33 +329,73 @@ export const updateReservationStatus = withPermission<[string, ReservationStatus
     // カレンダーイベント更新 or 新規作成（バックグラウンド）
     if (reservation.googleCalendarEventId) {
       // 既存イベントを更新
-      updateCalendarSync(calendarData, reservation.googleCalendarEventId).catch((err) => {
-        console.error('Calendar update failed:', err)
-      })
+      fireAndForget(
+        updateCalendarSync(calendarData, reservation.googleCalendarEventId),
+        {
+          operation: 'updateCalendarSync',
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.LOW,
+          context: { reservationId: id },
+        }
+      )
     } else {
       // イベントがない場合は新規作成（初回同期失敗時のフォールバック）
-      syncReservationToCalendar(calendarData).catch((err) => {
-        console.error('Calendar create failed:', err)
-      })
+      fireAndForget(
+        syncReservationToCalendar(calendarData),
+        {
+          operation: 'syncReservationToCalendar',
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.LOW,
+          context: { reservationId: id },
+        }
+      )
     }
-    await sendReservationConfirmationEmail(emailData)
-    await sendReservationAdminNotification(emailData, previousStatus === 'PENDING' ? 'new' : 'update')
+    // メール送信（バックグラウンド）
+    fireAndForget(
+      Promise.all([
+        sendReservationConfirmationEmail(emailData),
+        sendReservationAdminNotification(emailData, previousStatus === 'PENDING' ? 'new' : 'update'),
+      ]),
+      {
+        operation: 'sendConfirmationEmails',
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.MEDIUM,
+        context: { reservationId: id },
+      }
+    )
   }
 
   // キャンセル時: キャンセルメール送信 + カレンダー削除
   if (status === 'CANCELLED' && previousStatus !== 'CANCELLED') {
     // カレンダーイベント削除（バックグラウンド）
     if (reservation.googleCalendarEventId) {
-      deleteCalendarSync(id, reservation.googleCalendarEventId).catch((err) => {
-        console.error('Calendar delete failed:', err)
-      })
+      fireAndForget(
+        deleteCalendarSync(id, reservation.googleCalendarEventId),
+        {
+          operation: 'deleteCalendarSync',
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.LOW,
+          context: { reservationId: id },
+        }
+      )
     }
-    await sendReservationCancelledEmail(emailData)
-    await sendReservationAdminNotification(emailData, 'cancel')
+    // メール送信（バックグラウンド）
+    fireAndForget(
+      Promise.all([
+        sendReservationCancelledEmail(emailData),
+        sendReservationAdminNotification(emailData, 'cancel'),
+      ]),
+      {
+        operation: 'sendCancellationEmails',
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.MEDIUM,
+        context: { reservationId: id },
+      }
+    )
   }
 
-  revalidatePath('/admin/reservations')
-  revalidatePath(`/admin/reservations/${id}`)
+  revalidateTag(CACHE_TAGS.RESERVATIONS, 'default')
+  revalidateTag(getCacheTag.reservations.detail(id), 'default')
 
   return createSuccess('ステータスを更新しました')
 })
@@ -376,8 +425,8 @@ export const updateReservationNotes = withPermission<[string, string | null]>(
     data: { notes },
   })
 
-  revalidatePath('/admin/reservations')
-  revalidatePath(`/admin/reservations/${id}`)
+  revalidateTag(CACHE_TAGS.RESERVATIONS, 'default')
+  revalidateTag(getCacheTag.reservations.detail(id), 'default')
 
   return createSuccess('メモを更新しました')
 })
@@ -399,16 +448,22 @@ export const deleteReservation = withPermission<[string]>(
 
   // カレンダーからイベントを削除（バックグラウンド、DB削除前に開始）
   if (reservation.googleCalendarEventId) {
-    deleteCalendarSync(id, reservation.googleCalendarEventId).catch((err) => {
-      console.error('Calendar delete failed on reservation delete:', err)
-    })
+    fireAndForget(
+      deleteCalendarSync(id, reservation.googleCalendarEventId),
+      {
+        operation: 'deleteCalendarSync',
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.LOW,
+        context: { reservationId: id, trigger: 'deleteReservation' },
+      }
+    )
   }
 
   await prisma.reservation.delete({
     where: { id },
   })
 
-  revalidatePath('/admin/reservations')
+  revalidateTag(CACHE_TAGS.RESERVATIONS, 'default')
 
   return createSuccess('予約を削除しました')
 })
@@ -737,13 +792,19 @@ export const createAdminReservation = withPermission<[AdminReservationInput]>(
     }
 
     // メール送信 + カレンダー同期（バックグラウンド）
-    Promise.all([
-      sendReservationConfirmationEmail(emailData),
-      sendReservationAdminNotification(emailData, 'new'),
-      syncReservationToCalendar(calendarData),
-    ]).catch((err) => {
-      console.error('Failed to send reservation emails or sync calendar:', err)
-    })
+    fireAndForget(
+      Promise.all([
+        sendReservationConfirmationEmail(emailData),
+        sendReservationAdminNotification(emailData, 'new'),
+        syncReservationToCalendar(calendarData),
+      ]),
+      {
+        operation: 'createAdminReservationPostTasks',
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.MEDIUM,
+        context: { reservationId: result.id },
+      }
+    )
   } else {
     // メール送信しない場合でもカレンダー同期は行う
     const calendarData: ReservationSyncData = {
@@ -757,13 +818,19 @@ export const createAdminReservation = withPermission<[AdminReservationInput]>(
       notes: notes ?? undefined,
       totalPrice: calculatedPrice,
     }
-    syncReservationToCalendar(calendarData).catch((err) => {
-      console.error('Failed to sync calendar:', err)
-    })
+    fireAndForget(
+      syncReservationToCalendar(calendarData),
+      {
+        operation: 'syncReservationToCalendar',
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.LOW,
+        context: { reservationId: result.id, trigger: 'createAdminReservation' },
+      }
+    )
   }
 
-  revalidatePath('/admin/reservations')
-  revalidatePath('/admin/reservations/calendar')
+  revalidateTag(CACHE_TAGS.RESERVATIONS, 'default')
+  revalidateTag(getCacheTag.reservations.calendar(), 'default')
 
   return createSuccess('予約を作成しました', { id: result.id })
 })
