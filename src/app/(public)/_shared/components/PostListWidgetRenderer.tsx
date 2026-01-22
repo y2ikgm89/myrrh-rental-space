@@ -14,6 +14,7 @@ import {
   getRelatedPosts,
   type BlogPostSummary,
 } from '@/public/lib/blog-queries'
+import { logger } from '@/shared/lib/logger'
 
 type WidgetType = 'recent' | 'popular' | 'related'
 
@@ -56,7 +57,7 @@ export async function PostListWidgetRenderer({
         posts = await getRecentPosts(count)
     }
   } catch (error) {
-    console.error('[PostListWidget] Failed to fetch posts:', error)
+    logger.error('PostListWidget: Failed to fetch posts', { error: error instanceof Error ? error.message : String(error) })
     return null
   }
 
@@ -92,6 +93,7 @@ export async function PostListWidgetRenderer({
                   fill
                   sizes="80px"
                   className="object-cover transition-transform group-hover:scale-105"
+                  loading="lazy"
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-2xl text-muted-foreground">

@@ -111,6 +111,7 @@ export function ImageGallery({
                 fill
                 sizes="(max-width: 640px) 25vw, (max-width: 1024px) 16vw, 100px"
                 className={styles.thumbnail()}
+                loading="lazy"
               />
             </button>
           ))}

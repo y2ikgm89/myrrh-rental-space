@@ -12,22 +12,21 @@ import { tv } from 'tailwind-variants'
 import { cn, formatPrice } from '@/shared/lib/utils'
 import { Container, Card, CardContent, CardFooter } from '@/public/components/ui'
 import { prisma } from '@/shared/lib/prisma'
-import type { Space } from '@/shared/generated/prisma/client'
+import { logger } from '@/shared/lib/logger'
 import type { SpaceListConfig } from '@/shared/lib/validations/homepage-section'
 import type { ReactElement } from 'react'
 
 /**
- * シリアライズ可能なSpace型
- *
- * Prisma Decimal型はJSON シリアライズ不可のため、
- * Server→Client Component間の受け渡し用に number に変換した型
+ * SpaceCard表示用の最小フィールド型
+ * DBから必要なフィールドのみを取得してパフォーマンス最適化
  */
-type SerializedSpace = Omit<Space, 'area' | 'hourlyPrice' | 'dailyPrice'> & {
-  area: number | null
+type SpaceCardData = {
+  id: string
+  name: string
+  description: string
   hourlyPrice: number
-  dailyPrice: number | null
-  locationId: string | null
-  categoryId: string | null
+  mainImageUrl: string
+  capacity: number
 }
 
 const spaceListVariants = tv({
@@ -75,7 +74,7 @@ function truncateDescription(text: string, maxLength: number = 80): string {
 }
 
 interface SpaceCardProps {
-  space: SerializedSpace
+  space: SpaceCardData
   priority?: boolean
 }
 
@@ -110,7 +109,7 @@ function SpaceCard({ space, priority = false }: SpaceCardProps): ReactElement {
 async function getSpaces(
   maxItems: number,
   showOnlyPublished: boolean
-): Promise<SerializedSpace[]> {
+): Promise<SpaceCardData[]> {
   'use cache'
   cacheLife('minutes')
   cacheTag('spaces')
@@ -129,40 +128,29 @@ async function getSpaces(
       orderBy: {
         createdAt: 'desc',
       },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        hourlyPrice: true,
+        mainImageUrl: true,
+        capacity: true,
+      },
     })
 
-    // Prisma オブジェクトをプレーンオブジェクトに変換
-    // Symbol プロパティを除去して Client Components に渡せるようにする
+    // Decimal型をnumberに変換
     return spaces.map((space) => ({
       id: space.id,
       name: space.name,
       description: space.description,
-      address: space.address,
-      access: space.access,
-      capacity: space.capacity,
-      area: space.area,
-      hourlyPrice: space.hourlyPrice,
-      dailyPrice: space.dailyPrice,
+      hourlyPrice: Number(space.hourlyPrice),
       mainImageUrl: space.mainImageUrl,
-      imageUrls: space.imageUrls,
-      facilities: space.facilities,
-      businessHours: space.businessHours,
-      isPublished: space.isPublished,
-      publishedAt: space.publishedAt,
-      isActive: space.isActive,
-      createdAt: space.createdAt,
-      updatedAt: space.updatedAt,
-      termsId: space.termsId,
-      locationId: space.locationId,
-      categoryId: space.categoryId,
-      // SEO/OGP フィールド
-      metaDescription: space.metaDescription,
-      metaKeywords: space.metaKeywords,
-      ogpTitle: space.ogpTitle,
-      ogpDescription: space.ogpDescription,
-      ogpImageUrl: space.ogpImageUrl,
+      capacity: space.capacity,
     }))
-  } catch {
+  } catch (error) {
+    logger.error('SpaceListSection: Failed to fetch spaces', {
+      error: error instanceof Error ? error.message : String(error),
+    })
     return []
   }
 }

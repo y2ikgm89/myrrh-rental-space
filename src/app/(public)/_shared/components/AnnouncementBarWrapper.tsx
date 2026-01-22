@@ -3,16 +3,22 @@
  *
  * DBから有効なお知らせバーとカルーセル設定を取得して表示
  * Next.js 16 PPR対応: unstable_cache でキャッシュされた関数を使用
+ * AnnouncementBarCarouselを動的インポートでMotionライブラリを遅延読み込み
  */
 
+import dynamic from 'next/dynamic'
 import {
   getActiveAnnouncementBarsCached,
   getAnnouncementBarCarouselSettingsCached,
 } from '@/shared/lib/settings'
-import { AnnouncementBarCarousel } from './AnnouncementBarCarousel'
 import type { CarouselSettings } from './AnnouncementBarCarousel'
 import type { ReactElement } from 'react'
 import { validateAnimation, validateDesignStyle } from '@/public/lib/announcement-bar-utils'
+
+const AnnouncementBarCarousel = dynamic(
+  () => import('./AnnouncementBarCarousel').then((mod) => mod.AnnouncementBarCarousel),
+  { ssr: true }
+)
 
 export async function AnnouncementBarWrapper(): Promise<ReactElement | null> {
   const [bars, dbSettings] = await Promise.all([
