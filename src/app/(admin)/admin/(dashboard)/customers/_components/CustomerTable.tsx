@@ -1,6 +1,4 @@
 import Link from 'next/link'
-import { format } from 'date-fns'
-import { ja } from 'date-fns/locale'
 import {
   Button,
   Table,
@@ -10,7 +8,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/admin/components/ui'
+import { EmptyState } from '@/admin/components/EmptyState'
 import { CustomerStatusBadge } from '@/admin/components/status-badges'
+import { formatDateShort } from '@/shared/lib/utils'
 import type { CustomerData } from '@/admin/actions/customer'
 
 // =============================================================================
@@ -28,9 +28,10 @@ type CustomerTableProps = {
 export function CustomerTable({ customers }: CustomerTableProps) {
   if (customers.length === 0) {
     return (
-      <div className="rounded-lg border bg-white p-12 text-center">
-        <p className="text-muted-foreground">顧客がいません</p>
-      </div>
+      <EmptyState
+        message="顧客がいません"
+        action={{ label: '新規顧客', href: '/admin/customers/new' }}
+      />
     )
   }
 
@@ -73,7 +74,7 @@ export function CustomerTable({ customers }: CustomerTableProps) {
               </TableCell>
               <TableCell className="text-muted-foreground">
                 {customer.lastReservationAt
-                  ? format(new Date(customer.lastReservationAt), 'yyyy/MM/dd', { locale: ja })
+                  ? formatDateShort(customer.lastReservationAt)
                   : '-'}
               </TableCell>
               <TableCell>

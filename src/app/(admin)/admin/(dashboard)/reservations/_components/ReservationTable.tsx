@@ -12,7 +12,7 @@ import { ReservationStatusBadge } from '@/admin/components/status-badges'
 import { ReservationStatusSelect } from './ReservationStatusSelect'
 import type { ReservationWithRelations } from '@/admin/actions/reservation'
 import { formatPrice } from '@/shared/lib/utils'
-import { EmptyState } from '../../_shared/components/EmptyState'
+import { EmptyState } from '@/admin/components/EmptyState'
 
 // =============================================================================
 // Types
@@ -48,7 +48,12 @@ function formatTime(date: Date): string {
 
 export function ReservationTable({ reservations }: ReservationTableProps) {
   if (reservations.length === 0) {
-    return <EmptyState message="予約がありません" />
+    return (
+      <EmptyState
+        message="予約がありません"
+        action={{ label: '新規予約', href: '/admin/reservations/new' }}
+      />
+    )
   }
 
   return (
