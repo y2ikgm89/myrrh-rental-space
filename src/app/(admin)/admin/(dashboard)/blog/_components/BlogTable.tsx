@@ -1,8 +1,4 @@
-import Link from 'next/link'
-import { format } from 'date-fns'
-import { ja } from 'date-fns/locale'
 import {
-  Button,
   Badge,
   Table,
   TableBody,
@@ -11,8 +7,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/admin/components/ui'
+import { EmptyState } from '@/admin/components/EmptyState'
 import { BlogPostStatusBadge } from '@/admin/components/status-badges'
 import { BlogActionCell } from './BlogActionCell'
+import { formatDateTimeShort } from '@/shared/lib/utils'
 import type { BlogPostData } from '@/admin/actions/blog'
 
 // =============================================================================
@@ -30,12 +28,10 @@ type BlogTableProps = {
 export function BlogTable({ posts }: BlogTableProps) {
   if (posts.length === 0) {
     return (
-      <div className="rounded-lg border bg-white p-12 text-center">
-        <p className="text-muted-foreground">ブログ記事がありません</p>
-        <Button asChild className="mt-4">
-          <Link href="/admin/blog/new">新規作成</Link>
-        </Button>
-      </div>
+      <EmptyState
+        message="ブログ記事がありません"
+        action={{ label: '新規作成', href: '/admin/blog/new' }}
+      />
     )
   }
 
@@ -46,9 +42,9 @@ export function BlogTable({ posts }: BlogTableProps) {
           <TableRow>
             <TableHead>ステータス</TableHead>
             <TableHead>タイトル</TableHead>
-            <TableHead>カテゴリ</TableHead>
-            <TableHead className="text-right">PV</TableHead>
-            <TableHead>公開日時</TableHead>
+            <TableHead className="hidden md:table-cell">カテゴリ</TableHead>
+            <TableHead className="hidden text-right lg:table-cell">PV</TableHead>
+            <TableHead className="hidden md:table-cell">公開日時</TableHead>
             <TableHead>操作</TableHead>
           </TableRow>
         </TableHeader>
@@ -66,16 +62,14 @@ export function BlogTable({ posts }: BlogTableProps) {
                   </div>
                 </div>
               </TableCell>
-              <TableCell>
+              <TableCell className="hidden md:table-cell">
                 <Badge variant="outline">{post.category.name}</Badge>
               </TableCell>
-              <TableCell className="text-right text-muted-foreground">
+              <TableCell className="hidden text-right text-muted-foreground lg:table-cell">
                 {post.viewCount.toLocaleString()}
               </TableCell>
-              <TableCell className="text-muted-foreground">
-                {post.publishedAt
-                  ? format(new Date(post.publishedAt), 'yyyy/MM/dd HH:mm', { locale: ja })
-                  : '-'}
+              <TableCell className="hidden text-muted-foreground md:table-cell">
+                {post.publishedAt ? formatDateTimeShort(post.publishedAt) : '-'}
               </TableCell>
               <TableCell>
                 <BlogActionCell postId={post.id} status={post.status} />

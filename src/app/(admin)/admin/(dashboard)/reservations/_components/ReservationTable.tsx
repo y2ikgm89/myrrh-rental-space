@@ -63,8 +63,8 @@ export function ReservationTable({ reservations }: ReservationTableProps) {
           <TableRow>
             <TableHead>予約日時</TableHead>
             <TableHead>スペース</TableHead>
-            <TableHead>顧客</TableHead>
-            <TableHead className="text-right">料金</TableHead>
+            <TableHead className="hidden lg:table-cell">顧客</TableHead>
+            <TableHead className="hidden text-right md:table-cell">料金</TableHead>
             <TableHead>ステータス</TableHead>
             <TableHead className="text-right">操作</TableHead>
           </TableRow>
@@ -81,7 +81,7 @@ export function ReservationTable({ reservations }: ReservationTableProps) {
                 </div>
               </TableCell>
               <TableCell>{reservation.space.name}</TableCell>
-              <TableCell>
+              <TableCell className="hidden lg:table-cell">
                 <div>
                   <div className="font-medium">
                     {reservation.customer.lastName} {reservation.customer.firstName}
@@ -91,7 +91,7 @@ export function ReservationTable({ reservations }: ReservationTableProps) {
                   </div>
                 </div>
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="hidden text-right md:table-cell">
                 {formatPrice(reservation.totalPrice)}
               </TableCell>
               <TableCell>

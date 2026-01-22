@@ -1,8 +1,4 @@
-import Link from 'next/link'
-import { format } from 'date-fns'
-import { ja } from 'date-fns/locale'
 import {
-  Button,
   Table,
   TableBody,
   TableCell,
@@ -10,8 +6,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/admin/components/ui'
+import { EmptyState } from '@/admin/components/EmptyState'
 import { NewsStatusBadge } from '@/admin/components/status-badges'
 import { NewsActionCell } from './NewsActionCell'
+import { formatDateTimeShort } from '@/shared/lib/utils'
 import type { NewsData } from '@/admin/actions/news'
 
 // =============================================================================
@@ -29,12 +27,10 @@ type NewsTableProps = {
 export function NewsTable({ news }: NewsTableProps) {
   if (news.length === 0) {
     return (
-      <div className="rounded-lg border bg-white p-12 text-center">
-        <p className="text-muted-foreground">お知らせがありません</p>
-        <Button asChild className="mt-4">
-          <Link href="/admin/news/new">新規作成</Link>
-        </Button>
-      </div>
+      <EmptyState
+        message="お知らせがありません"
+        action={{ label: '新規作成', href: '/admin/news/new' }}
+      />
     )
   }
 
@@ -45,8 +41,8 @@ export function NewsTable({ news }: NewsTableProps) {
           <TableRow>
             <TableHead>ステータス</TableHead>
             <TableHead>タイトル</TableHead>
-            <TableHead>公開日時</TableHead>
-            <TableHead>作成日時</TableHead>
+            <TableHead className="hidden md:table-cell">公開日時</TableHead>
+            <TableHead className="hidden lg:table-cell">作成日時</TableHead>
             <TableHead>操作</TableHead>
           </TableRow>
         </TableHeader>
@@ -54,21 +50,19 @@ export function NewsTable({ news }: NewsTableProps) {
           {news.map((item) => (
             <TableRow key={item.id}>
               <TableCell>
-                <NewsStatusBadge status={item.status} />
+                <NewsStatusBadge isPublished={item.isPublished} />
               </TableCell>
               <TableCell>
                 <div className="max-w-xs truncate font-medium">{item.title}</div>
               </TableCell>
-              <TableCell className="text-muted-foreground">
-                {item.publishedAt
-                  ? format(new Date(item.publishedAt), 'yyyy/MM/dd HH:mm', { locale: ja })
-                  : '-'}
+              <TableCell className="hidden text-muted-foreground md:table-cell">
+                {item.publishedAt ? formatDateTimeShort(item.publishedAt) : '-'}
               </TableCell>
-              <TableCell className="text-muted-foreground">
-                {format(new Date(item.createdAt), 'yyyy/MM/dd HH:mm', { locale: ja })}
+              <TableCell className="hidden text-muted-foreground lg:table-cell">
+                {formatDateTimeShort(item.createdAt)}
               </TableCell>
               <TableCell>
-                <NewsActionCell newsId={item.id} status={item.status} />
+                <NewsActionCell newsId={item.id} isPublished={item.isPublished} />
               </TableCell>
             </TableRow>
           ))}

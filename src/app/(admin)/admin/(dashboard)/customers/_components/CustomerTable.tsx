@@ -42,10 +42,10 @@ export function CustomerTable({ customers }: CustomerTableProps) {
           <TableRow>
             <TableHead>ステータス</TableHead>
             <TableHead>お名前</TableHead>
-            <TableHead>メールアドレス</TableHead>
-            <TableHead>電話番号</TableHead>
-            <TableHead className="text-right">予約数</TableHead>
-            <TableHead>最終予約</TableHead>
+            <TableHead className="hidden lg:table-cell">メールアドレス</TableHead>
+            <TableHead className="hidden md:table-cell">電話番号</TableHead>
+            <TableHead className="hidden text-right md:table-cell">予約数</TableHead>
+            <TableHead className="hidden lg:table-cell">最終予約</TableHead>
             <TableHead>操作</TableHead>
           </TableRow>
         </TableHeader>
@@ -58,7 +58,7 @@ export function CustomerTable({ customers }: CustomerTableProps) {
               <TableCell className="font-medium">
                 {customer.lastName} {customer.firstName}
               </TableCell>
-              <TableCell>
+              <TableCell className="hidden lg:table-cell">
                 <a
                   href={`mailto:${customer.email}`}
                   className="text-primary hover:underline"
@@ -66,13 +66,13 @@ export function CustomerTable({ customers }: CustomerTableProps) {
                   {customer.email}
                 </a>
               </TableCell>
-              <TableCell className="text-muted-foreground">
+              <TableCell className="hidden text-muted-foreground md:table-cell">
                 {customer.phoneNumber || '-'}
               </TableCell>
-              <TableCell className="text-right text-muted-foreground">
+              <TableCell className="hidden text-right text-muted-foreground md:table-cell">
                 {customer.totalReservations}
               </TableCell>
-              <TableCell className="text-muted-foreground">
+              <TableCell className="hidden text-muted-foreground lg:table-cell">
                 {customer.lastReservationAt
                   ? formatDateShort(customer.lastReservationAt)
                   : '-'}

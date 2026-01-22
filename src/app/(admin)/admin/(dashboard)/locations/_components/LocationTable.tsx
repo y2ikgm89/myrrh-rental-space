@@ -13,7 +13,7 @@ import {
 } from '@/admin/components/ui'
 import { toggleLocationPublish } from '@/admin/actions/location'
 import type { LocationWithStats } from '@/admin/lib/validations/location'
-import { EmptyState } from '../../_shared/components/EmptyState'
+import { EmptyState } from '@/admin/components/EmptyState'
 
 // =============================================================================
 // Types
@@ -43,9 +43,9 @@ export function LocationTable({ locations }: LocationTableProps) {
         <TableHeader>
           <TableRow>
             <TableHead>場所名</TableHead>
-            <TableHead>住所</TableHead>
+            <TableHead className="hidden lg:table-cell">住所</TableHead>
             <TableHead className="text-center">公開状態</TableHead>
-            <TableHead className="text-right">スペース数</TableHead>
+            <TableHead className="hidden text-right md:table-cell">スペース数</TableHead>
             <TableHead className="text-right">操作</TableHead>
           </TableRow>
         </TableHeader>
@@ -75,7 +75,7 @@ export function LocationTable({ locations }: LocationTableProps) {
                   </div>
                 </div>
               </TableCell>
-              <TableCell>
+              <TableCell className="hidden lg:table-cell">
                 <div className="text-sm">{location.address}</div>
               </TableCell>
               <TableCell className="text-center">
@@ -85,7 +85,7 @@ export function LocationTable({ locations }: LocationTableProps) {
                   onToggle={toggleLocationPublish}
                 />
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="hidden text-right md:table-cell">
                 <Badge variant="secondary">{location._count.spaces}件</Badge>
               </TableCell>
               <TableCell className="text-right">

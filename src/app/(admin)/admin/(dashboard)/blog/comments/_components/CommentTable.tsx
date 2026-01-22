@@ -21,6 +21,7 @@ import {
   Button,
   Checkbox,
 } from '@/admin/components/ui'
+import { EmptyState } from '@/admin/components/EmptyState'
 import {
   deleteCommentAdmin,
   deleteCommentsAdmin,
@@ -103,11 +104,7 @@ export function CommentTable({ comments }: Props) {
   }
 
   if (comments.length === 0) {
-    return (
-      <div className="rounded-lg border bg-white p-12 text-center">
-        <p className="text-muted-foreground">コメントがありません</p>
-      </div>
-    )
+    return <EmptyState message="コメントがありません" />
   }
 
   return (
@@ -155,9 +152,9 @@ export function CommentTable({ comments }: Props) {
               />
             </TableHead>
             <TableHead className="min-w-[200px]">コメント</TableHead>
-            <TableHead>投稿者</TableHead>
-            <TableHead>記事</TableHead>
-            <TableHead>投稿日時</TableHead>
+            <TableHead className="hidden lg:table-cell">投稿者</TableHead>
+            <TableHead className="hidden md:table-cell">記事</TableHead>
+            <TableHead className="hidden md:table-cell">投稿日時</TableHead>
             <TableHead>ステータス</TableHead>
             <TableHead className="w-24">操作</TableHead>
           </TableRow>
@@ -184,7 +181,7 @@ export function CommentTable({ comments }: Props) {
                   </span>
                 )}
               </TableCell>
-              <TableCell>
+              <TableCell className="hidden lg:table-cell">
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center">
                     <User className="w-3 h-3 text-muted-foreground" />
@@ -201,7 +198,7 @@ export function CommentTable({ comments }: Props) {
                   </div>
                 </div>
               </TableCell>
-              <TableCell>
+              <TableCell className="hidden md:table-cell">
                 <Link
                   href={`/blog/${comment.postSlug}`}
                   target="_blank"
@@ -213,7 +210,7 @@ export function CommentTable({ comments }: Props) {
                   <ExternalLink className="w-3 h-3 flex-shrink-0" />
                 </Link>
               </TableCell>
-              <TableCell>
+              <TableCell className="hidden md:table-cell">
                 <span className="text-sm text-muted-foreground">
                   {formatDistanceToNow(new Date(comment.createdAt), {
                     addSuffix: true,

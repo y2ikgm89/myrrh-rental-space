@@ -46,9 +46,9 @@ export function MediaTable({ items }: Props) {
             <TableRow>
               <TableHead className="w-16">種別</TableHead>
               <TableHead>ファイル名</TableHead>
-              <TableHead className="w-24">サイズ</TableHead>
-              <TableHead className="w-24">用途</TableHead>
-              <TableHead className="w-32">アップロード日</TableHead>
+              <TableHead className="hidden w-24 md:table-cell">サイズ</TableHead>
+              <TableHead className="hidden w-24 lg:table-cell">用途</TableHead>
+              <TableHead className="hidden w-32 md:table-cell">アップロード日</TableHead>
               <TableHead className="w-32">操作</TableHead>
             </TableRow>
           </TableHeader>
@@ -64,7 +64,7 @@ export function MediaTable({ items }: Props) {
                   <TableCell>
                     <div className="flex items-center gap-3">
                       {item.type === 'IMAGE' && (
-                        // eslint-disable-next-line @next/next/no-img-element
+                        
                         <img
                           src={item.url}
                           alt={item.alt || item.filename}
@@ -81,15 +81,15 @@ export function MediaTable({ items }: Props) {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="hidden text-muted-foreground md:table-cell">
                     {formatBytes(item.size)}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden lg:table-cell">
                     <span className="text-sm">
                       {isValidMediaUsage(item.usage) ? USAGE_LABELS[item.usage] : item.usage}
                     </span>
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
+                  <TableCell className="hidden text-muted-foreground text-sm md:table-cell">
                     {formatDate(item.createdAt)}
                   </TableCell>
                   <TableCell>

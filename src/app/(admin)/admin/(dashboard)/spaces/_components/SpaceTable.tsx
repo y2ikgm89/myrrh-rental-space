@@ -14,7 +14,7 @@ import {
 import { updateSpacePublish } from '@/admin/actions/space'
 import type { SpaceWithStats } from '@/admin/lib/validations/space'
 import { formatCurrency } from '@/shared/lib/utils'
-import { EmptyState } from '../../_shared/components/EmptyState'
+import { EmptyState } from '@/admin/components/EmptyState'
 
 // =============================================================================
 // Types
@@ -44,11 +44,11 @@ export function SpaceTable({ spaces }: SpaceTableProps) {
         <TableHeader>
           <TableRow>
             <TableHead>スペース名</TableHead>
-            <TableHead>住所</TableHead>
-            <TableHead className="text-right">定員</TableHead>
-            <TableHead className="text-right">時間料金</TableHead>
+            <TableHead className="hidden lg:table-cell">住所</TableHead>
+            <TableHead className="hidden text-right md:table-cell">定員</TableHead>
+            <TableHead className="hidden text-right md:table-cell">時間料金</TableHead>
             <TableHead className="text-center">公開状態</TableHead>
-            <TableHead className="text-right">予約数</TableHead>
+            <TableHead className="hidden text-right lg:table-cell">予約数</TableHead>
             <TableHead className="text-right">操作</TableHead>
           </TableRow>
         </TableHeader>
@@ -75,13 +75,13 @@ export function SpaceTable({ spaces }: SpaceTableProps) {
                   </div>
                 </div>
               </TableCell>
-              <TableCell>
+              <TableCell className="hidden lg:table-cell">
                 <div className="text-sm">{space.address}</div>
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="hidden text-right md:table-cell">
                 <Badge variant="secondary">{space.capacity}名</Badge>
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="hidden text-right md:table-cell">
                 {formatCurrency(space.hourlyPrice)}
               </TableCell>
               <TableCell className="text-center">
@@ -91,7 +91,7 @@ export function SpaceTable({ spaces }: SpaceTableProps) {
                   onToggle={updateSpacePublish}
                 />
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="hidden text-right lg:table-cell">
                 <Badge variant="secondary">{space._count.reservations}件</Badge>
               </TableCell>
               <TableCell className="text-right">

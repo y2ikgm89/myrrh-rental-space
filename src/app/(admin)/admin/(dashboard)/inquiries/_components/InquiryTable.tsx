@@ -1,6 +1,4 @@
 import Link from 'next/link'
-import { format } from 'date-fns'
-import { ja } from 'date-fns/locale'
 import {
   Button,
   Table,
@@ -10,7 +8,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/admin/components/ui'
+import { EmptyState } from '@/admin/components/EmptyState'
 import { InquiryStatusBadge } from '@/admin/components/status-badges'
+import { formatDateTimeShort } from '@/shared/lib/utils'
 import type { InquiryData } from '@/admin/actions/inquiry'
 
 // =============================================================================
@@ -27,11 +27,7 @@ type InquiryTableProps = {
 
 export function InquiryTable({ inquiries }: InquiryTableProps) {
   if (inquiries.length === 0) {
-    return (
-      <div className="rounded-lg border bg-white p-12 text-center">
-        <p className="text-muted-foreground">お問い合わせがありません</p>
-      </div>
-    )
+    return <EmptyState message="お問い合わせがありません" />
   }
 
   return (
@@ -41,9 +37,9 @@ export function InquiryTable({ inquiries }: InquiryTableProps) {
           <TableRow>
             <TableHead>ステータス</TableHead>
             <TableHead>件名</TableHead>
-            <TableHead>お名前</TableHead>
-            <TableHead>メールアドレス</TableHead>
-            <TableHead>受付日時</TableHead>
+            <TableHead className="hidden md:table-cell">お名前</TableHead>
+            <TableHead className="hidden lg:table-cell">メールアドレス</TableHead>
+            <TableHead className="hidden md:table-cell">受付日時</TableHead>
             <TableHead>操作</TableHead>
           </TableRow>
         </TableHeader>
@@ -58,8 +54,8 @@ export function InquiryTable({ inquiries }: InquiryTableProps) {
                   {inquiry.subject}
                 </div>
               </TableCell>
-              <TableCell className="font-medium">{inquiry.name}</TableCell>
-              <TableCell>
+              <TableCell className="hidden font-medium md:table-cell">{inquiry.name}</TableCell>
+              <TableCell className="hidden lg:table-cell">
                 <a
                   href={`mailto:${inquiry.email}`}
                   className="text-primary hover:underline"
@@ -67,8 +63,8 @@ export function InquiryTable({ inquiries }: InquiryTableProps) {
                   {inquiry.email}
                 </a>
               </TableCell>
-              <TableCell className="text-muted-foreground">
-                {format(new Date(inquiry.createdAt), 'yyyy/MM/dd HH:mm', { locale: ja })}
+              <TableCell className="hidden text-muted-foreground md:table-cell">
+                {formatDateTimeShort(inquiry.createdAt)}
               </TableCell>
               <TableCell>
                 <Button asChild variant="outline" size="sm">
