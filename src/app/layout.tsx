@@ -4,6 +4,7 @@ import { Noto_Sans_JP } from 'next/font/google'
 import { NuqsAdapter } from 'nuqs/adapters/next/app'
 import { getAnalyticsConfig } from '@/public/lib/analytics/config'
 import { SITE_DEFAULTS } from '@/shared/lib/constants'
+import { clientEnv } from '@/shared/lib/env/client'
 import './globals.css'
 
 const notoSansJP = Noto_Sans_JP({
@@ -33,6 +34,15 @@ export default async function RootLayout({
   return (
     <html lang="ja">
       <head>
+        {/* Preconnect hints for external resources */}
+        <link
+          rel="preconnect"
+          href={new URL(clientEnv.NEXT_PUBLIC_SUPABASE_URL).origin}
+          crossOrigin="anonymous"
+        />
+        <link rel="dns-prefetch" href="https://challenges.cloudflare.com" />
+        <link rel="dns-prefetch" href="https://js.stripe.com" />
+
         {/* Google Search Console verification */}
         {config.googleSearchConsoleId && (
           <meta

@@ -76,9 +76,10 @@ function truncateDescription(text: string, maxLength: number = 80): string {
 
 interface SpaceCardProps {
   space: SerializedSpace
+  priority?: boolean
 }
 
-function SpaceCard({ space }: SpaceCardProps): ReactElement {
+function SpaceCard({ space, priority = false }: SpaceCardProps): ReactElement {
   return (
     <Link href={`/spaces/${space.id}`}>
       <Card className="h-full overflow-hidden transition-shadow hover:shadow-lg">
@@ -89,6 +90,8 @@ function SpaceCard({ space }: SpaceCardProps): ReactElement {
             fill
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             className={image()}
+            priority={priority}
+            loading={priority ? 'eager' : 'lazy'}
           />
         </div>
         <CardContent className="p-4">
@@ -152,6 +155,12 @@ async function getSpaces(
       termsId: space.termsId,
       locationId: space.locationId,
       categoryId: space.categoryId,
+      // SEO/OGP フィールド
+      metaDescription: space.metaDescription,
+      metaKeywords: space.metaKeywords,
+      ogpTitle: space.ogpTitle,
+      ogpDescription: space.ogpDescription,
+      ogpImageUrl: space.ogpImageUrl,
     }))
   } catch {
     return []
@@ -179,8 +188,8 @@ export async function SpaceListSection({
         {spaces.length > 0 ? (
           <>
             <div className={grid()}>
-              {spaces.map((space) => (
-                <SpaceCard key={space.id} space={space} />
+              {spaces.map((space, index) => (
+                <SpaceCard key={space.id} space={space} priority={index === 0} />
               ))}
             </div>
             <div className={moreLink()}>

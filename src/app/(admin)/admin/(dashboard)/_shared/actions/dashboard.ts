@@ -4,6 +4,7 @@ import { connection } from 'next/server'
 import { prisma } from '@/shared/lib/prisma'
 import { verifyAdminSession } from '@/shared/lib/auth'
 import type { ReservationStatus, InquiryStatus } from '@/shared/generated/prisma/enums'
+import { toDateString } from '@/shared/lib/serialize'
 
 // =============================================================================
 // Types
@@ -163,7 +164,12 @@ export async function getRecentReservations(limit = 5): Promise<RecentReservatio
   const reservations = await prisma.reservation.findMany({
     take: limit,
     orderBy: { createdAt: 'desc' },
-    include: {
+    select: {
+      id: true,
+      startTime: true,
+      endTime: true,
+      status: true,
+      totalPrice: true,
       space: { select: { name: true } },
       customer: { select: { lastName: true, firstName: true } },
     },
@@ -189,6 +195,14 @@ export async function getRecentInquiries(limit = 5): Promise<RecentInquiry[]> {
   const inquiries = await prisma.inquiry.findMany({
     take: limit,
     orderBy: { createdAt: 'desc' },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      subject: true,
+      status: true,
+      createdAt: true,
+    },
   })
 
   return inquiries.map((i) => ({
@@ -218,7 +232,12 @@ export async function getTodayReservations(): Promise<RecentReservation[]> {
       status: { not: 'CANCELLED' },
     },
     orderBy: { startTime: 'asc' },
-    include: {
+    select: {
+      id: true,
+      startTime: true,
+      endTime: true,
+      status: true,
+      totalPrice: true,
       space: { select: { name: true } },
       customer: { select: { lastName: true, firstName: true } },
     },
@@ -278,13 +297,13 @@ export async function getReservationChartData(): Promise<ChartDataPoint[]> {
   const dataMap = new Map<string, { reservations: number; revenue: number }>()
   for (let i = 29; i >= 0; i--) {
     const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000)
-    const dateStr = date.toISOString().split('T')[0]
+    const dateStr = toDateString(date)
     dataMap.set(dateStr, { reservations: 0, revenue: 0 })
   }
 
   // DB集計結果をマージ
   for (const stat of dailyStats) {
-    const dateStr = stat.date.toISOString().split('T')[0]
+    const dateStr = toDateString(stat.date)
     if (dataMap.has(dateStr)) {
       dataMap.set(dateStr, {
         reservations: Number(stat.reservations),
