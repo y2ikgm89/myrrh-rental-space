@@ -222,6 +222,7 @@ export type SpaceListConfigInput = z.input<typeof spaceListConfigSchema>
 export type NewsConfigInput = z.input<typeof newsConfigSchema>
 export type BlogConfigInput = z.input<typeof blogConfigSchema>
 export type FaqConfigInput = z.input<typeof faqConfigSchema>
+export type InstagramConfigInput = z.input<typeof instagramConfigSchema>
 
 export type SectionConfig =
   | HeroConfig
@@ -291,6 +292,13 @@ export function isCustomConfig(config: unknown): config is CustomConfig {
 }
 
 /**
+ * InstagramConfig型ガード
+ */
+export function isInstagramConfig(config: unknown): config is InstagramConfig {
+  return instagramConfigSchema.safeParse(config).success
+}
+
+/**
  * セクションタイプに応じたconfig取得（型安全）
  * バリデーション失敗時はデフォルト値を返す
  */
@@ -304,6 +312,7 @@ export function getSafeConfig<T extends HomepageSectionType>(
   : T extends typeof HomepageSectionType.FAQ ? FaqConfig
   : T extends typeof HomepageSectionType.CTA ? CtaConfig
   : T extends typeof HomepageSectionType.CUSTOM ? CustomConfig
+  : T extends typeof HomepageSectionType.INSTAGRAM ? InstagramConfig
   : SectionConfig {
   const result = validateSectionConfig(type, config)
   if (result.success) {

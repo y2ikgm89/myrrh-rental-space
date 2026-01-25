@@ -40,6 +40,7 @@ import {
   faqConfigSchema,
   ctaConfigSchema,
   customConfigSchema,
+  instagramConfigSchema,
   defaultSectionConfigs,
   isHeroConfig,
   isSpaceListConfig,
@@ -48,6 +49,7 @@ import {
   isFaqConfig,
   isCtaConfig,
   isCustomConfig,
+  isInstagramConfig,
   type HeroConfig,
   type SpaceListConfig,
   type NewsConfig,
@@ -55,10 +57,12 @@ import {
   type FaqConfig,
   type CtaConfig,
   type CustomConfig,
+  type InstagramConfig,
   type SpaceListConfigInput,
   type NewsConfigInput,
   type BlogConfigInput,
   type FaqConfigInput,
+  type InstagramConfigInput,
 } from '@/admin/lib/validations/homepage-section'
 import dynamic from 'next/dynamic'
 import { EDITOR_PROSE_CLASSES } from '@/shared/lib/styles/prose'
@@ -667,8 +671,65 @@ function CustomConfigForm({
             onChange={setEditorContent}
             placeholder="セクションのコンテンツを入力..."
             className={EDITOR_PROSE_CLASSES}
-            minHeight="300px"
+            height="300px"
           />
+        </div>
+      </div>
+
+      <Button type="submit" disabled={isPending}>
+        <Save className="h-4 w-4 mr-2" />
+        {isPending ? '保存中...' : '保存'}
+      </Button>
+    </form>
+  )
+}
+
+// =============================================================================
+// Instagram Config Form
+// =============================================================================
+
+function InstagramConfigForm({
+  config,
+  onSave,
+  isPending,
+}: {
+  config: InstagramConfig
+  onSave: (config: InstagramConfig) => void
+  isPending: boolean
+}) {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<InstagramConfigInput, unknown, InstagramConfig>({
+    resolver: zodResolver(instagramConfigSchema),
+    defaultValues: config,
+  })
+
+  return (
+    <form onSubmit={handleSubmit(onSave)} className="space-y-6">
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="instagram-title">セクションタイトル</Label>
+          <Input
+            id="instagram-title"
+            {...register('title')}
+            placeholder="Instagram"
+            disabled={isPending}
+          />
+          {errors.title && (
+            <p className="text-sm text-destructive">{errors.title.message}</p>
+          )}
+        </div>
+
+        <div className="rounded-lg border bg-muted/50 p-4">
+          <p className="text-sm text-muted-foreground">
+            フィードの詳細設定（表示件数、レイアウト、カラム数など）は
+            <a href="/admin/settings/api" className="ml-1 text-primary hover:underline">
+              API設定 &gt; Instagram
+            </a>
+            で管理できます。
+          </p>
         </div>
       </div>
 
@@ -770,6 +831,14 @@ export function SectionEditor({ section, onBack, onSave }: SectionEditorProps) {
             config={getValidConfig(isCustomConfig, HomepageSectionType.CUSTOM)}
             content={section.content}
             onSave={(c, content) => handleConfigSave(c, content)}
+            isPending={isPending}
+          />
+        )
+      case HomepageSectionType.INSTAGRAM:
+        return (
+          <InstagramConfigForm
+            config={getValidConfig(isInstagramConfig, HomepageSectionType.INSTAGRAM)}
+            onSave={(c) => handleConfigSave(c)}
             isPending={isPending}
           />
         )

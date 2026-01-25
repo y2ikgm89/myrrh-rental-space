@@ -7,16 +7,7 @@
 import type { ReactElement } from 'react'
 import { HomepageSectionType } from '@/shared/lib/validations/enums'
 import type { HomepageSectionData } from '@/public/actions/homepage'
-import {
-  getSafeConfig,
-  type HeroConfig,
-  type SpaceListConfig,
-  type NewsConfig,
-  type BlogConfig,
-  type FaqConfig,
-  type CtaConfig,
-  type CustomConfig,
-} from '@/shared/lib/validations/homepage-section'
+import { getSafeConfig } from '@/shared/lib/validations/homepage-section'
 import { HeroSection } from './HeroSection'
 import { SpaceListSection } from './SpaceListSection'
 import { NewsSectionRenderer } from './NewsSectionRenderer'
@@ -24,6 +15,7 @@ import { BlogSectionRenderer } from './BlogSectionRenderer'
 import { FAQSectionRenderer } from './FAQSectionRenderer'
 import { CTASectionRenderer } from './CTASectionRenderer'
 import { CustomSection } from './CustomSection'
+import { InstagramSectionRenderer } from './InstagramSectionRenderer'
 
 interface SectionRendererProps {
   section: HomepageSectionData
@@ -32,12 +24,12 @@ interface SectionRendererProps {
 export function SectionRenderer({ section }: SectionRendererProps): ReactElement | null {
   switch (section.type) {
     case HomepageSectionType.HERO: {
-      const config = getSafeConfig(HomepageSectionType.HERO, section.config) as HeroConfig
+      const config = getSafeConfig(HomepageSectionType.HERO, section.config)
       return <HeroSection config={config} />
     }
 
     case HomepageSectionType.SPACE_LIST: {
-      const config = getSafeConfig(HomepageSectionType.SPACE_LIST, section.config) as SpaceListConfig
+      const config = getSafeConfig(HomepageSectionType.SPACE_LIST, section.config)
       return (
         <SpaceListSection
           title={section.title}
@@ -47,7 +39,7 @@ export function SectionRenderer({ section }: SectionRendererProps): ReactElement
     }
 
     case HomepageSectionType.NEWS: {
-      const config = getSafeConfig(HomepageSectionType.NEWS, section.config) as NewsConfig
+      const config = getSafeConfig(HomepageSectionType.NEWS, section.config)
       return (
         <NewsSectionRenderer
           title={section.title}
@@ -57,7 +49,7 @@ export function SectionRenderer({ section }: SectionRendererProps): ReactElement
     }
 
     case HomepageSectionType.BLOG: {
-      const config = getSafeConfig(HomepageSectionType.BLOG, section.config) as BlogConfig
+      const config = getSafeConfig(HomepageSectionType.BLOG, section.config)
       return (
         <BlogSectionRenderer
           title={section.title}
@@ -67,7 +59,7 @@ export function SectionRenderer({ section }: SectionRendererProps): ReactElement
     }
 
     case HomepageSectionType.FAQ: {
-      const config = getSafeConfig(HomepageSectionType.FAQ, section.config) as FaqConfig
+      const config = getSafeConfig(HomepageSectionType.FAQ, section.config)
       return (
         <FAQSectionRenderer
           title={section.title}
@@ -77,16 +69,26 @@ export function SectionRenderer({ section }: SectionRendererProps): ReactElement
     }
 
     case HomepageSectionType.CTA: {
-      const config = getSafeConfig(HomepageSectionType.CTA, section.config) as CtaConfig
+      const config = getSafeConfig(HomepageSectionType.CTA, section.config)
       return <CTASectionRenderer config={config} />
     }
 
     case HomepageSectionType.CUSTOM: {
-      const config = getSafeConfig(HomepageSectionType.CUSTOM, section.config) as CustomConfig
+      const config = getSafeConfig(HomepageSectionType.CUSTOM, section.config)
       return (
         <CustomSection
           title={section.title}
           content={section.content}
+          config={config}
+        />
+      )
+    }
+
+    case HomepageSectionType.INSTAGRAM: {
+      const config = getSafeConfig(HomepageSectionType.INSTAGRAM, section.config)
+      return (
+        <InstagramSectionRenderer
+          title={section.title}
           config={config}
         />
       )
