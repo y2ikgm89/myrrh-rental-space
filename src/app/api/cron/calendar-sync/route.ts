@@ -1,3 +1,17 @@
+/**
+ * カレンダー同期 Cron API
+ *
+ * Vercel Cronまたは外部スケジューラーから定期的に呼び出され、
+ * Google Calendarとの双方向同期を実行します。
+ *
+ * ## 機能
+ * - カレンダーイベントの同期（ポーリング方式）
+ * - Webhookの自動更新
+ * - 同期失敗時のエラー通知
+ *
+ * @module api/cron/calendar-sync
+ */
+
 import { connection } from 'next/server'
 import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
@@ -8,6 +22,8 @@ import {
   renewWebhookIfNeeded,
 } from '@/shared/lib/google-calendar'
 import { sendWebhookRenewalNotification } from '@/shared/lib/email-service'
+import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
+import { fireAndForget } from '@/shared/lib/async-utils'
 
 /**
  * カレンダー同期用Cronエンドポイント
@@ -30,11 +46,24 @@ export async function GET() {
 
     // 本番環境ではCRON_SECRETを必須とする
     if (!cronSecret && process.env.NODE_ENV === 'production') {
-      console.error('CRON_SECRET is not set in production environment')
+      logError(new Error('CRON_SECRET is not set in production environment'), {
+        category: ErrorCategory.AUTHORIZATION,
+        severity: ErrorSeverity.CRITICAL,
+        context: { operation: 'calendarSyncCron' },
+      })
       return NextResponse.json(
         { error: 'Server configuration error' },
         { status: 500 }
       )
+    }
+
+    // 開発環境で認証をスキップする場合は警告ログ
+    if (!cronSecret && process.env.NODE_ENV !== 'production') {
+      logError(new Error('CRON_SECRET is not set - authentication skipped in development'), {
+        category: ErrorCategory.AUTHORIZATION,
+        severity: ErrorSeverity.LOW,
+        context: { operation: 'calendarSyncCron', environment: process.env.NODE_ENV },
+      })
     }
 
     if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
@@ -67,44 +96,67 @@ export async function GET() {
       const renewalResult = await renewWebhookIfNeeded()
       if (renewalResult.renewed) {
         webhookRenewed = true
-        console.log(
-          'Webhook renewed successfully. New expiration:',
-          renewalResult.newExpiration
+        // 成功メール通知（バックグラウンド）
+        fireAndForget(
+          sendWebhookRenewalNotification({
+            success: true,
+            newExpiration: renewalResult.newExpiration,
+          }),
+          {
+            operation: 'sendWebhookRenewalNotificationSuccess',
+            category: ErrorCategory.EXTERNAL_API,
+            severity: ErrorSeverity.LOW,
+          }
         )
-        // 成功メール通知（非同期）
-        sendWebhookRenewalNotification({
-          success: true,
-          newExpiration: renewalResult.newExpiration,
-        }).catch((err) => {
-          console.error('Failed to send webhook renewal notification:', err)
-        })
       } else if (!renewalResult.success) {
         // 更新失敗時のメール通知
-        console.error('Webhook renewal failed:', renewalResult.error)
-        sendWebhookRenewalNotification({
-          success: false,
-          error: renewalResult.error,
-        }).catch((err) => {
-          console.error('Failed to send webhook renewal notification:', err)
+        logError(new Error(renewalResult.error || 'Webhook renewal failed'), {
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.MEDIUM,
+          context: { operation: 'renewWebhookIfNeeded' },
         })
+        fireAndForget(
+          sendWebhookRenewalNotification({
+            success: false,
+            error: renewalResult.error,
+          }),
+          {
+            operation: 'sendWebhookRenewalNotificationFailure',
+            category: ErrorCategory.EXTERNAL_API,
+            severity: ErrorSeverity.LOW,
+          }
+        )
       }
     } catch (renewalError) {
       // Webhook更新エラーはログ記録のみ（同期処理は継続）
-      console.error('Webhook renewal error:', renewalError)
-      sendWebhookRenewalNotification({
-        success: false,
-        error:
-          renewalError instanceof Error ? renewalError.message : 'Unknown error',
-      }).catch((err) => {
-        console.error('Failed to send webhook renewal notification:', err)
+      logError(normalizeError(renewalError), {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.MEDIUM,
+        context: { operation: 'renewWebhookIfNeeded', phase: 'catch' },
       })
+      fireAndForget(
+        sendWebhookRenewalNotification({
+          success: false,
+          error:
+            renewalError instanceof Error ? renewalError.message : 'Unknown error',
+        }),
+        {
+          operation: 'sendWebhookRenewalNotificationError',
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.LOW,
+        }
+      )
     }
 
     // 同期実行
     const result = await syncFromCalendar()
 
     if (!result.success) {
-      console.error('Calendar sync failed:', result.errors)
+      logError(new Error('Calendar sync failed'), {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.MEDIUM,
+        context: { operation: 'syncFromCalendar', errors: result.errors },
+      })
       return NextResponse.json(
         {
           success: false,
@@ -124,7 +176,11 @@ export async function GET() {
       timestamp: new Date().toISOString(),
     })
   } catch (error) {
-    console.error('Calendar sync cron error:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.UNKNOWN,
+      severity: ErrorSeverity.HIGH,
+      context: { operation: 'calendarSyncCron' },
+    })
     return NextResponse.json(
       {
         success: false,

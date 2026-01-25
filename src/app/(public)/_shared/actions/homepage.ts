@@ -7,10 +7,11 @@
  */
 
 import { prisma } from '@/shared/lib/prisma'
+import { cacheLife, cacheTag } from 'next/cache'
+import { CACHE_TAGS } from '@/shared/lib/constants'
 import { HomepageSectionType } from '@/shared/lib/validations/enums'
 import {
-  validateSectionConfig,
-  defaultSectionConfigs,
+  getSafeConfig,
   type SectionConfig,
 } from '@/shared/lib/validations/homepage-section'
 
@@ -30,30 +31,19 @@ export type HomepageSectionData = {
   updatedAt: Date
 }
 
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
-/**
- * PrismaのJson型をSectionConfigに変換（ランタイムバリデーション付き）
- */
-function parseSectionConfig(type: HomepageSectionType, config: unknown): SectionConfig {
-  const result = validateSectionConfig(type, config)
-  if (result.success) {
-    return result.data as SectionConfig
-  }
-  // バリデーション失敗時はデフォルト設定にフォールバック
-  return defaultSectionConfigs[type]
-}
 
 // =============================================================================
 // Read Actions
 // =============================================================================
 
 /**
- * 公開用: アクティブなセクションを取得
+ * 公開用: アクティブなセクションを取得（キャッシュ付き）
  */
 export async function getPublicHomepageSections(): Promise<HomepageSectionData[]> {
+  'use cache'
+  cacheLife('minutes')
+  cacheTag(CACHE_TAGS.HOMEPAGE_SECTIONS)
+
   const sections = await prisma.homepageSection.findMany({
     where: { isActive: true },
     orderBy: { order: 'asc' },
@@ -61,6 +51,6 @@ export async function getPublicHomepageSections(): Promise<HomepageSectionData[]
 
   return sections.map((section) => ({
     ...section,
-    config: parseSectionConfig(section.type, section.config),
+    config: getSafeConfig(section.type, section.config),
   }))
 }

@@ -7,32 +7,39 @@
  */
 
 import { prisma } from '@/shared/lib/prisma'
-import { revalidatePath } from 'next/cache'
-import { createSuccess, createFailure, withAuth } from '@/admin/types/server-actions'
+import { revalidateTag } from 'next/cache'
+import { CACHE_TAGS } from '@/shared/lib/constants'
+import { createSuccess, createFailure } from '@/admin/types/server-actions'
+import { withAuth } from '@/admin/lib/server-action-helpers'
 import { encrypt, safeDecrypt } from '@/shared/lib/crypto'
 import { verifyAdminSession } from '@/shared/lib/auth'
 import {
   resendSettingsSchema,
   turnstileSettingsSchema,
   googleMapsSettingsSchema,
+  cloudflareSettingsSchema,
   customApiKeySchema,
   type ResendSettingsInput,
   type TurnstileSettingsInput,
   type GoogleMapsSettingsInput,
+  type CloudflareSettingsInput,
   type CustomApiKeyInput,
 } from '@/admin/lib/validations/api-keys'
 import {
   maskResendKey,
   maskTurnstileKey,
   maskGoogleMapsKey,
+  maskCloudflareToken,
   testResendConnection,
   testTurnstileConnection,
   testGoogleMapsConnection,
+  testCloudflareConnection,
 } from '@/admin/lib/api-keys'
 import type {
   ResendConfig,
   TurnstileConfig,
   GoogleMapsConfig,
+  CloudflareConfig,
   CustomApiKeyData,
   CustomApiKeysMap,
 } from '@/admin/types/api-keys'
@@ -42,15 +49,52 @@ import type {
 // =============================================================================
 
 /**
+ * ConnectionStatus型ガード
+ */
+type ConnectionStatus = 'connected' | 'error'
+
+function isConnectionStatus(value: unknown): value is ConnectionStatus {
+  return value === 'connected' || value === 'error'
+}
+
+function parseConnectionStatus(value: unknown): ConnectionStatus | null {
+  return isConnectionStatus(value) ? value : null
+}
+
+/**
+ * CustomApiKeyStoredの型ガード
+ * 必須フィールドの存在と型を検証
+ */
+function isCustomApiKeyStored(value: unknown): value is import('@/admin/types/api-keys').CustomApiKeyStored {
+  if (typeof value !== 'object' || value === null) return false
+  const obj = value as Record<string, unknown>
+  return (
+    typeof obj.name === 'string' &&
+    typeof obj.keyName === 'string' &&
+    typeof obj.keyValue === 'string' &&
+    typeof obj.createdAt === 'string' &&
+    typeof obj.updatedAt === 'string'
+  )
+}
+
+/**
  * unknownからCustomApiKeysMapを安全にパースする
  * PrismaのJSONフィールドから取得した値を型安全に扱う
  */
 function parseCustomApiKeysMap(value: unknown): CustomApiKeysMap {
   if (value === null || value === undefined) return {}
-  if (typeof value !== 'object') return {}
-  // Prisma JSONフィールドはRecord<string, unknown>として来る
-  // CustomApiKeyStoredの構造検証は各フィールドアクセス時に行う
-  return value as CustomApiKeysMap
+  if (typeof value !== 'object' || Array.isArray(value)) return {}
+
+  const result: CustomApiKeysMap = {}
+  const entries = Object.entries(value as Record<string, unknown>)
+
+  for (const [key, entry] of entries) {
+    if (isCustomApiKeyStored(entry)) {
+      result[key] = entry
+    }
+  }
+
+  return result
 }
 
 // =============================================================================
@@ -77,8 +121,7 @@ export async function getResendConfig(): Promise<ResendConfig> {
       ? maskResendKey(safeDecrypt(settings.resendApiKey) || '****')
       : null,
     lastTestedAt: settings?.resendLastTestedAt || null,
-    connectionStatus:
-      (settings?.resendConnectionStatus as 'connected' | 'error') || null,
+    connectionStatus: parseConnectionStatus(settings?.resendConnectionStatus),
   }
 }
 
@@ -104,8 +147,7 @@ export async function getTurnstileConfig(): Promise<TurnstileConfig> {
       ? maskTurnstileKey(safeDecrypt(settings.turnstileSecretKey) || '****')
       : null,
     lastTestedAt: settings?.turnstileLastTestedAt || null,
-    connectionStatus:
-      (settings?.turnstileConnectionStatus as 'connected' | 'error') || null,
+    connectionStatus: parseConnectionStatus(settings?.turnstileConnectionStatus),
   }
 }
 
@@ -129,8 +171,7 @@ export async function getGoogleMapsConfig(): Promise<GoogleMapsConfig> {
       ? maskGoogleMapsKey(safeDecrypt(settings.googleMapsApiKey) || '****')
       : null,
     lastTestedAt: settings?.googleMapsLastTestedAt || null,
-    connectionStatus:
-      (settings?.googleMapsConnectionStatus as 'connected' | 'error') || null,
+    connectionStatus: parseConnectionStatus(settings?.googleMapsConnectionStatus),
   }
 }
 
@@ -195,7 +236,7 @@ export const updateResendSettings = withAuth(
       update: updateData,
     })
 
-    revalidatePath('/admin/settings')
+    revalidateTag(CACHE_TAGS.SETTINGS, 'default')
     return createSuccess('Resend設定を更新しました')
   }
 )
@@ -221,7 +262,7 @@ export const testResendConnectionAction = withAuth(
         },
       })
 
-      revalidatePath('/admin/settings')
+      revalidateTag(CACHE_TAGS.SETTINGS, 'default')
       return createSuccess(result.message || '接続に成功しました', {
         message: result.message || '',
       })
@@ -241,7 +282,7 @@ export const testResendConnectionAction = withAuth(
       },
     })
 
-    revalidatePath('/admin/settings')
+    revalidateTag(CACHE_TAGS.SETTINGS, 'default')
     return createFailure(result.error || '接続テストに失敗しました')
   }
 )
@@ -259,7 +300,7 @@ export const clearResendKeys = withAuth(async () => {
     },
   })
 
-  revalidatePath('/admin/settings')
+  revalidateTag(CACHE_TAGS.SETTINGS, 'default')
   return createSuccess('Resendキーをクリアしました')
 })
 
@@ -297,7 +338,7 @@ export const updateTurnstileSettings = withAuth(
       update: updateData,
     })
 
-    revalidatePath('/admin/settings')
+    revalidateTag(CACHE_TAGS.SETTINGS, 'default')
     return createSuccess('Turnstile設定を更新しました')
   }
 )
@@ -323,7 +364,7 @@ export const testTurnstileConnectionAction = withAuth(
         },
       })
 
-      revalidatePath('/admin/settings')
+      revalidateTag(CACHE_TAGS.SETTINGS, 'default')
       return createSuccess(result.message || '検証に成功しました', {
         message: result.message || '',
         note: result.metadata?.note as string | undefined,
@@ -344,7 +385,7 @@ export const testTurnstileConnectionAction = withAuth(
       },
     })
 
-    revalidatePath('/admin/settings')
+    revalidateTag(CACHE_TAGS.SETTINGS, 'default')
     return createFailure(result.error || '接続テストに失敗しました')
   }
 )
@@ -363,7 +404,7 @@ export const clearTurnstileKeys = withAuth(async () => {
     },
   })
 
-  revalidatePath('/admin/settings')
+  revalidateTag(CACHE_TAGS.SETTINGS, 'default')
   return createSuccess('Turnstileキーをクリアしました')
 })
 
@@ -397,7 +438,7 @@ export const updateGoogleMapsSettings = withAuth(
       update: updateData,
     })
 
-    revalidatePath('/admin/settings')
+    revalidateTag(CACHE_TAGS.SETTINGS, 'default')
     return createSuccess('Google Maps設定を更新しました')
   }
 )
@@ -423,7 +464,7 @@ export const testGoogleMapsConnectionAction = withAuth(
         },
       })
 
-      revalidatePath('/admin/settings')
+      revalidateTag(CACHE_TAGS.SETTINGS, 'default')
       return createSuccess(result.message || '接続に成功しました', {
         message: result.message || '',
       })
@@ -443,7 +484,7 @@ export const testGoogleMapsConnectionAction = withAuth(
       },
     })
 
-    revalidatePath('/admin/settings')
+    revalidateTag(CACHE_TAGS.SETTINGS, 'default')
     return createFailure(result.error || '接続テストに失敗しました')
   }
 )
@@ -461,8 +502,139 @@ export const clearGoogleMapsKeys = withAuth(async () => {
     },
   })
 
-  revalidatePath('/admin/settings')
+  revalidateTag(CACHE_TAGS.SETTINGS, 'default')
   return createSuccess('Google Mapsキーをクリアしました')
+})
+
+// =============================================================================
+// UPDATE Actions - Cloudflare CDN
+// =============================================================================
+
+/**
+ * Cloudflare設定を取得
+ */
+export async function getCloudflareConfig(): Promise<CloudflareConfig> {
+  await verifyAdminSession()
+
+  const settings = await prisma.settings.findUnique({
+    where: { id: 'singleton' },
+    select: {
+      cloudflareZoneId: true,
+      cloudflareApiToken: true,
+      cloudflareLastTestedAt: true,
+      cloudflareConnectionStatus: true,
+    },
+  })
+
+  return {
+    zoneId: settings?.cloudflareZoneId || null,
+    apiTokenMasked: settings?.cloudflareApiToken
+      ? maskCloudflareToken(safeDecrypt(settings.cloudflareApiToken) || '****')
+      : null,
+    lastTestedAt: settings?.cloudflareLastTestedAt || null,
+    connectionStatus: parseConnectionStatus(settings?.cloudflareConnectionStatus),
+  }
+}
+
+/**
+ * Cloudflare設定を更新
+ */
+export const updateCloudflareSettings = withAuth(
+  async (_user, data: CloudflareSettingsInput) => {
+    const parsed = cloudflareSettingsSchema.safeParse(data)
+    if (!parsed.success) {
+      return createFailure(parsed.error.issues[0].message)
+    }
+
+    const updateData: Record<string, unknown> = {}
+
+    if (parsed.data.cloudflareZoneId !== undefined) {
+      updateData.cloudflareZoneId = parsed.data.cloudflareZoneId
+    }
+
+    if (parsed.data.cloudflareApiToken) {
+      try {
+        updateData.cloudflareApiToken = encrypt(parsed.data.cloudflareApiToken)
+      } catch {
+        return createFailure('API Tokenの暗号化に失敗しました')
+      }
+    }
+
+    await prisma.settings.upsert({
+      where: { id: 'singleton' },
+      create: { id: 'singleton', ...updateData },
+      update: updateData,
+    })
+
+    revalidateTag(CACHE_TAGS.SETTINGS, 'default')
+    return createSuccess('Cloudflare設定を更新しました')
+  }
+)
+
+/**
+ * Cloudflare接続テスト
+ */
+export const testCloudflareConnectionAction = withAuth(
+  async (_user, zoneId: string, apiToken: string) => {
+    const result = await testCloudflareConnection(zoneId, apiToken)
+
+    if (result.success) {
+      await prisma.settings.upsert({
+        where: { id: 'singleton' },
+        create: {
+          id: 'singleton',
+          cloudflareLastTestedAt: new Date(),
+          cloudflareConnectionStatus: 'connected',
+        },
+        update: {
+          cloudflareLastTestedAt: new Date(),
+          cloudflareConnectionStatus: 'connected',
+        },
+      })
+
+      revalidateTag(CACHE_TAGS.SETTINGS, 'default')
+      return createSuccess(result.message || '接続に成功しました', {
+        message: result.message || '',
+        zoneName: result.metadata?.zoneName as string | undefined,
+        plan: result.metadata?.plan as string | undefined,
+      })
+    }
+
+    // エラー時もステータス更新
+    await prisma.settings.upsert({
+      where: { id: 'singleton' },
+      create: {
+        id: 'singleton',
+        cloudflareLastTestedAt: new Date(),
+        cloudflareConnectionStatus: 'error',
+      },
+      update: {
+        cloudflareLastTestedAt: new Date(),
+        cloudflareConnectionStatus: 'error',
+      },
+    })
+
+    revalidateTag(CACHE_TAGS.SETTINGS, 'default')
+    return createFailure(result.error || '接続テストに失敗しました')
+  }
+)
+
+/**
+ * Cloudflareキーをクリア
+ */
+export const clearCloudflareKeys = withAuth(async () => {
+  await prisma.settings.update({
+    where: { id: 'singleton' },
+    data: {
+      cloudflareZoneId: null,
+      cloudflareApiToken: null,
+      cloudflareLastTestedAt: null,
+      cloudflareConnectionStatus: null,
+    },
+  })
+
+  revalidateTag(CACHE_TAGS.SETTINGS, 'default')
+  return createSuccess('Cloudflare設定をクリアしました')
 })
 
 // =============================================================================
@@ -511,7 +683,7 @@ export const addCustomApiKey = withAuth(async (_user, data: CustomApiKeyInput) =
     update: { customApiKeys: updated },
   })
 
-  revalidatePath('/admin/settings')
+  revalidateTag(CACHE_TAGS.SETTINGS, 'default')
   return createSuccess('APIキーを追加しました')
 })
 
@@ -537,7 +709,7 @@ export const deleteCustomApiKey = withAuth(async (_user, id: string) => {
     data: { customApiKeys: existing },
   })
 
-  revalidatePath('/admin/settings')
+  revalidateTag(CACHE_TAGS.SETTINGS, 'default')
   return createSuccess('APIキーを削除しました')
 })
 

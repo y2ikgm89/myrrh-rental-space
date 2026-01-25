@@ -3,7 +3,7 @@
 import { prisma } from '@/shared/lib/prisma'
 import { BlogPostStatus } from '@/shared/generated/prisma/enums'
 import { cacheLife, cacheTag } from 'next/cache'
-import type { SidebarWidgets } from '@/shared/lib/validations/sidebar'
+import { sidebarWidgetsSchema, type SidebarWidgets } from '@/shared/lib/validations/sidebar'
 
 // =============================================================================
 // Types
@@ -70,93 +70,95 @@ export async function getSidebarData(): Promise<SidebarData> {
   const recentCount = settings?.sidebarRecentCount ?? 5
   const popularCount = settings?.sidebarPopularCount ?? 5
 
-  // 新着記事を取得
-  const recentPosts = await prisma.blogPost.findMany({
-    where: {
-      status: BlogPostStatus.PUBLISHED,
-      publishedAt: { not: null },
-    },
-    select: {
-      id: true,
-      title: true,
-      slug: true,
-      publishedAt: true,
-      thumbnailUrl: true,
-    },
-    orderBy: {
-      publishedAt: 'desc',
-    },
-    take: recentCount,
-  })
-
-  // 人気記事を取得
-  const popularPosts = await prisma.blogPost.findMany({
-    where: {
-      status: BlogPostStatus.PUBLISHED,
-      publishedAt: { not: null },
-    },
-    select: {
-      id: true,
-      title: true,
-      slug: true,
-      viewCount: true,
-      thumbnailUrl: true,
-    },
-    orderBy: {
-      viewCount: 'desc',
-    },
-    take: popularCount,
-  })
-
-  // カテゴリー一覧 + 記事数を取得
-  const categories = await prisma.blogCategory.findMany({
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      order: true,
-      _count: {
-        select: {
-          posts: {
-            where: {
-              status: BlogPostStatus.PUBLISHED,
-              publishedAt: { not: null },
+  // 全クエリを並列実行（パフォーマンス最適化）
+  const [recentPosts, popularPosts, categories, tags, publishedPosts] = await Promise.all([
+    // 新着記事
+    prisma.blogPost.findMany({
+      where: {
+        status: BlogPostStatus.PUBLISHED,
+        publishedAt: { not: null },
+      },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        publishedAt: true,
+        thumbnailUrl: true,
+      },
+      orderBy: {
+        publishedAt: 'desc',
+      },
+      take: recentCount,
+    }),
+    // 人気記事
+    prisma.blogPost.findMany({
+      where: {
+        status: BlogPostStatus.PUBLISHED,
+        publishedAt: { not: null },
+      },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        viewCount: true,
+        thumbnailUrl: true,
+      },
+      orderBy: {
+        viewCount: 'desc',
+      },
+      take: popularCount,
+    }),
+    // カテゴリー一覧 + 記事数
+    prisma.blogCategory.findMany({
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        order: true,
+        _count: {
+          select: {
+            posts: {
+              where: {
+                status: BlogPostStatus.PUBLISHED,
+                publishedAt: { not: null },
+              },
             },
           },
         },
       },
-    },
-    orderBy: {
-      order: 'asc',
-    },
-  })
-
-  // タグ一覧を取得
-  const tags = await prisma.blogTag.findMany({
-    select: {
-      name: true,
-      slug: true,
-    },
-  })
-
-  // 公開済み記事のタグをすべて取得し、カウントを集計（N+1回避）
-  const publishedPosts = await prisma.blogPost.findMany({
-    where: {
-      status: BlogPostStatus.PUBLISHED,
-      publishedAt: { not: null },
-    },
-    select: {
-      tags: true,
-    },
-  })
+      orderBy: {
+        order: 'asc',
+      },
+    }),
+    // タグ一覧
+    prisma.blogTag.findMany({
+      select: {
+        name: true,
+        slug: true,
+      },
+    }),
+    // 公開済み記事のタグ（カウント用）
+    prisma.blogPost.findMany({
+      where: {
+        status: BlogPostStatus.PUBLISHED,
+        publishedAt: { not: null },
+      },
+      select: {
+        tags: true,
+      },
+    }),
+  ])
 
   // タグごとの記事数をカウント
   const tagCountMap = new Map<string, number>()
   for (const post of publishedPosts) {
-    const postTags = post.tags as string[] | null
-    if (postTags && Array.isArray(postTags)) {
-      for (const tagName of postTags) {
-        tagCountMap.set(tagName, (tagCountMap.get(tagName) ?? 0) + 1)
+    // Prisma JsonValueは unknown 型なので Array.isArray で型ガード
+    const postTags = post.tags
+    if (Array.isArray(postTags)) {
+      for (const tag of postTags) {
+        if (typeof tag === 'string') {
+          tagCountMap.set(tag, (tagCountMap.get(tag) ?? 0) + 1)
+        }
       }
     }
   }
@@ -227,11 +229,11 @@ export async function getSidebarSettings(): Promise<{
     tags: true,
   }
 
-  // sidebarWidgets が null または無効な JSON の場合はデフォルト値を使用
-  let widgets: SidebarWidgets = defaultWidgets
-  if (settings?.sidebarWidgets && typeof settings.sidebarWidgets === 'object') {
-    widgets = { ...defaultWidgets, ...(settings.sidebarWidgets as object) }
-  }
+  // sidebarWidgets をZodスキーマでパース（安全な型変換）
+  const parseResult = sidebarWidgetsSchema.safeParse(settings?.sidebarWidgets)
+  const widgets: SidebarWidgets = parseResult.success
+    ? { ...defaultWidgets, ...parseResult.data }
+    : defaultWidgets
 
   return {
     enabled: settings?.sidebarEnabled ?? true,

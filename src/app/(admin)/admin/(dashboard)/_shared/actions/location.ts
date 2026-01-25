@@ -2,47 +2,51 @@
 
 import { prisma, Prisma } from '@/shared/lib/prisma'
 import { revalidateTag } from 'next/cache'
-import { createSuccess, createFailure, withPermission, type ActionResult } from '@/admin/types/server-actions'
+import { CACHE_TAGS } from '@/shared/lib/constants'
+import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+import { withPermission } from '@/admin/lib/server-action-helpers'
 import { locationFormSchema } from '@/admin/lib/validations/location'
 import type { LocationFormInput, LocationWithStats, GetLocationsResult } from '@/admin/lib/validations/location'
-import { getSession, getRoleFromSession } from '@/shared/lib/auth'
-import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'
-import { logPermissionDenied } from '@/admin/lib/audit'
-import { parseBusinessHours, type BusinessHours } from '@/shared/types'
+import { checkReadPermissionFor } from '@/admin/lib/permissions'
+import { parseBusinessHours, isBusinessHours, type BusinessHours } from '@/shared/types'
+import { parseStringArray } from '@/shared/lib/json-validators'
+import { createValidationError } from '@/shared/lib/action-helpers'
 
 // =============================================================================
 // Prisma JSON Helpers (server-only)
 // =============================================================================
 
 /**
- * BusinessHoursをPrisma JSONに変換
+ * BusinessHoursをPrisma JSON互換のプレーンオブジェクトに変換
+ *
+ * BusinessHours型は特定のキー（曜日）を持つ型であり、
+ * PrismaのInputJsonValueは汎用的なインデックスシグネチャを持つ型のため、
+ * 直接の型互換性がない。
+ *
+ * この関数では型ガードで検証後、プレーンオブジェクトに変換することで
+ * 型アサーションなしにPrismaに渡せる形式を作成する。
  */
 function businessHoursToJson(
   value: BusinessHours | null | undefined
 ): Prisma.InputJsonValue | typeof Prisma.JsonNull {
   if (value === null || value === undefined) return Prisma.JsonNull
-  return value as Prisma.InputJsonValue
+  if (!isBusinessHours(value)) return Prisma.JsonNull
+
+  // プレーンオブジェクトに変換（型互換性のため）
+  const result: Record<string, { open: string; close: string } | null> = {}
+  const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const
+  for (const day of days) {
+    const slot = value[day]
+    result[day] = slot ? { open: slot.open, close: slot.close } : null
+  }
+  return result
 }
 
 // =============================================================================
 // Helper Functions
 // =============================================================================
 
-/**
- * 読み取り権限チェック
- */
-async function checkReadPermission(): Promise<boolean> {
-  const session = await getSession()
-  if (!session?.user) return false
-  const role = getRoleFromSession(session)
-  if (!role) return false
-  if (!canAccessAdmin(role)) return false
-  if (!hasPermission(role, 'location', 'read')) {
-    void logPermissionDenied(session.user.id, 'location', 'read')
-    return false
-  }
-  return true
-}
+const checkReadPermission = checkReadPermissionFor('location')
 
 // =============================================================================
 // Read Operations
@@ -94,7 +98,7 @@ export async function getLocations(options?: {
     address: loc.address,
     access: loc.access,
     imageUrl: loc.imageUrl,
-    imageUrls: Array.isArray(loc.imageUrls) ? (loc.imageUrls as string[]) : [],
+    imageUrls: parseStringArray(loc.imageUrls),
     businessHours: parseBusinessHours(loc.businessHours),
     sortOrder: loc.sortOrder,
     isPublished: loc.isPublished,
@@ -139,7 +143,7 @@ export async function getLocationById(id: string): Promise<ActionResult<Location
     address: location.address,
     access: location.access,
     imageUrl: location.imageUrl,
-    imageUrls: Array.isArray(location.imageUrls) ? (location.imageUrls as string[]) : [],
+    imageUrls: parseStringArray(location.imageUrls),
     businessHours: parseBusinessHours(location.businessHours),
     sortOrder: location.sortOrder,
     isPublished: location.isPublished,
@@ -188,9 +192,7 @@ export const createLocation = withPermission<[input: LocationFormInput], { id: s
   const parsed = locationFormSchema.safeParse(input)
 
   if (!parsed.success) {
-    return createFailure(
-      parsed.error.issues.map((e) => e.message).join(', ')
-    )
+    return createValidationError(parsed.error)
   }
 
   const data = parsed.data
@@ -209,7 +211,7 @@ export const createLocation = withPermission<[input: LocationFormInput], { id: s
     },
   })
 
-  revalidateTag('locations', { expire: 0 })
+  revalidateTag(CACHE_TAGS.LOCATIONS, 'default')
 
   return createSuccess('場所を作成しました', { id: location.id })
 })
@@ -228,9 +230,7 @@ export const updateLocation = withPermission<[id: string, input: LocationFormInp
   const parsed = locationFormSchema.safeParse(input)
 
   if (!parsed.success) {
-    return createFailure(
-      parsed.error.issues.map((e) => e.message).join(', ')
-    )
+    return createValidationError(parsed.error)
   }
 
   const existing = await prisma.location.findUnique({ where: { id } })
@@ -255,7 +255,7 @@ export const updateLocation = withPermission<[id: string, input: LocationFormInp
     },
   })
 
-  revalidateTag('locations', { expire: 0 })
+  revalidateTag(CACHE_TAGS.LOCATIONS, 'default')
 
   return createSuccess('場所を更新しました', { id })
 })
@@ -277,7 +277,7 @@ export const toggleLocationPublish = withPermission<[id: string, isPublished: bo
     data: { isPublished },
   })
 
-  revalidateTag('locations', { expire: 0 })
+  revalidateTag(CACHE_TAGS.LOCATIONS, 'default')
 
   return createSuccess('公開状態を更新しました', { id, isPublished })
 })
@@ -298,7 +298,7 @@ export const updateLocationOrder = withPermission<[items: { id: string; sortOrde
     )
   )
 
-  revalidateTag('locations', { expire: 0 })
+  revalidateTag(CACHE_TAGS.LOCATIONS, 'default')
 
   return createSuccess('並び順を更新しました', { updated: items.length })
 })
@@ -334,7 +334,7 @@ export const deleteLocation = withPermission<[id: string], { id: string }>(
     data: { isActive: false },
   })
 
-  revalidateTag('locations', { expire: 0 })
+  revalidateTag(CACHE_TAGS.LOCATIONS, 'default')
 
   return createSuccess('場所を削除しました', { id })
 })
@@ -363,7 +363,7 @@ export const hardDeleteLocation = withPermission<[id: string], { id: string }>(
 
   await prisma.location.delete({ where: { id } })
 
-  revalidateTag('locations', { expire: 0 })
+  revalidateTag(CACHE_TAGS.LOCATIONS, 'default')
 
   return createSuccess('場所を完全に削除しました', { id })
 })

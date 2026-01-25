@@ -46,19 +46,20 @@ const pool = new Pool({
   connectionTimeoutMillis: 10000,
   // アイドル接続のタイムアウト（デフォルト: 10秒）
   idleTimeoutMillis: 10000,
-  // 最大接続数（環境に応じて調整）
-  // 本番環境: 20接続、開発環境: 5接続
-  // 例: 本番 - 20インスタンス × 20接続 = 400接続（Supabase制限内）
-  max: process.env.NODE_ENV === 'production' ? 20 : 5,
+  // 最大接続数（環境変数で設定可能、デフォルト: 本番3、開発5）
+  // Cloud Run等のサーバーレス環境では控えめな値を推奨
+  max: process.env.DATABASE_POOL_MAX
+    ? Number(process.env.DATABASE_POOL_MAX)
+    : process.env.NODE_ENV === 'production'
+      ? 3
+      : 5,
 })
 
 // Prisma アダプター
 const adapter = new PrismaPg(pool)
 
-// グローバル変数の型定義
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined
-}
+// グローバル変数（型は src/shared/types/global.d.ts で定義）
+const globalForPrisma = globalThis
 
 /**
  * Base Prisma Client インスタンス

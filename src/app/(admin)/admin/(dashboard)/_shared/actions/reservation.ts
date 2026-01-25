@@ -34,13 +34,16 @@ import {
   sendReservationCancelledEmail,
   sendReservationAdminNotification,
 } from '@/shared/lib/email-service'
-import { createSuccess, createFailure, withPermission, type ActionResult } from '@/admin/types/server-actions'
+import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+import { withPermission } from '@/admin/lib/server-action-helpers'
 import type { ReservationWhereInput } from '@/shared/types/prisma'
 import { syncReservationToCalendar, updateCalendarSync, deleteCalendarSync, type ReservationSyncData } from '@/shared/lib/calendar-sync'
 import { checkReadPermissionFor } from '@/admin/lib/permissions'
-import { checkReservationOverlap } from '@/public/lib/reservation-utils'
+import { checkReservationOverlap } from '@/shared/lib/reservation'
 import { adminReservationSchema, type AdminReservationInput } from '@/admin/lib/validations/admin-reservation'
 import { extractFieldErrors } from '@/shared/lib/action-helpers'
+import { calculateReservationPrice, parseDurationDiscountRules, getDiscountCombinationModeOrDefault } from '@/shared/lib/pricing'
+import { incrementCouponUsage, validateCouponCode } from '@/admin/actions/coupon'
 
 // =============================================================================
 // Types
@@ -54,6 +57,10 @@ export type ReservationWithRelations = {
   endTime: Date
   status: ReservationStatus
   totalPrice: number | null
+  basePrice: number | null
+  couponId: string | null
+  couponDiscountAmount: number | null
+  durationDiscountAmount: number | null
   notes: string | null
   createdAt: Date
   updatedAt: Date
@@ -68,6 +75,11 @@ export type ReservationWithRelations = {
     email: string
     phoneNumber: string | null
   }
+  coupon?: {
+    id: string
+    code: string
+    name: string
+  } | null
 }
 
 export type GetReservationsResult = {
@@ -215,6 +227,9 @@ export async function getReservations(
   const formattedReservations: ReservationWithRelations[] = reservations.map((r) => ({
     ...r,
     totalPrice: r.totalPrice ? Number(r.totalPrice) : null,
+    basePrice: r.basePrice ? Number(r.basePrice) : null,
+    couponDiscountAmount: r.couponDiscountAmount ? Number(r.couponDiscountAmount) : null,
+    durationDiscountAmount: r.durationDiscountAmount ? Number(r.durationDiscountAmount) : null,
   }))
 
   return {
@@ -255,6 +270,13 @@ export async function getReservationById(
           phoneNumber: true,
         },
       },
+      coupon: {
+        select: {
+          id: true,
+          code: true,
+          name: true,
+        },
+      },
     },
   })
 
@@ -265,6 +287,9 @@ export async function getReservationById(
   return {
     ...reservation,
     totalPrice: reservation.totalPrice ? Number(reservation.totalPrice) : null,
+    basePrice: reservation.basePrice ? Number(reservation.basePrice) : null,
+    couponDiscountAmount: reservation.couponDiscountAmount ? Number(reservation.couponDiscountAmount) : null,
+    durationDiscountAmount: reservation.durationDiscountAmount ? Number(reservation.durationDiscountAmount) : null,
   }
 }
 
@@ -652,6 +677,9 @@ export const createAdminReservation = withPermission<[AdminReservationInput]>(
     customerId,
     customerData,
     totalPrice,
+    couponCode,
+    manualDiscountAmount,
+    manualDiscountReason,
     status,
     notes,
     sendEmail,
@@ -682,13 +710,81 @@ export const createAdminReservation = withPermission<[AdminReservationInput]>(
     return createFailure('選択された時間帯は既に予約されています。別の時間帯をお選びください。')
   }
 
-  // 料金計算（手動設定がなければ自動計算）
+  // 時間計算
   const hours = (endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60 * 60)
-  const calculatedPrice = totalPrice ?? Number(space.hourlyPrice) * hours
+  const hourlyPrice = Number(space.hourlyPrice)
+  const basePrice = Math.floor(hourlyPrice * hours)
+
+  // 割引設定を取得
+  const settings = await prisma.settings.findUnique({
+    where: { id: 'singleton' },
+    select: {
+      durationDiscountEnabled: true,
+      durationDiscountRules: true,
+      discountCombinationMode: true,
+    },
+  })
+
+  // クーポン検証
+  let validatedCoupon: {
+    id: string
+    code: string
+    name: string
+    type: 'PERCENTAGE' | 'FIXED_AMOUNT'
+    discountValue: number
+    maxDiscountAmount: number | null
+    canCombineWithDurationDiscount: boolean
+  } | null = null
+
+  if (couponCode && couponCode.trim()) {
+    const couponResult = await validateCouponCode(couponCode, basePrice)
+    if (!couponResult.success) {
+      return createFailure(couponResult.error)
+    }
+    validatedCoupon = couponResult.data?.coupon ?? null
+  }
+
+  // 料金計算
+  const priceCalculation = calculateReservationPrice({
+    hourlyPrice,
+    hours,
+    durationRules: parseDurationDiscountRules(settings?.durationDiscountRules),
+    durationDiscountEnabled: settings?.durationDiscountEnabled ?? false,
+    coupon: validatedCoupon,
+    combinationMode: getDiscountCombinationModeOrDefault(settings?.discountCombinationMode),
+    showWarning: false,
+  })
+
+  // 最終料金（手動設定があればそれを優先、なければ自動計算）
+  const calculatedPrice = totalPrice ?? priceCalculation.totalPrice
+
+  // 割引情報
+  const couponId = priceCalculation.appliedCoupon?.id ?? null
+  const couponDiscountAmount = priceCalculation.couponDiscount > 0 ? priceCalculation.couponDiscount : null
+  const durationDiscountAmount = priceCalculation.durationDiscount > 0 ? priceCalculation.durationDiscount : null
 
   // トランザクションで顧客と予約を作成
-  const result = await prisma.$transaction(async (tx) => {
-    let resolvedCustomerId = customerId
+  // 型定義: 予約 + 顧客情報（includeで取得）
+  type ReservationWithCustomer = Awaited<ReturnType<typeof prisma.reservation.create>> & {
+    customer: {
+      firstName: string
+      lastName: string
+      email: string
+    }
+  }
+  let result: ReservationWithCustomer
+  try {
+    result = await prisma.$transaction(async (tx) => {
+      // 重複チェック（トランザクション内で再検証 - Race Condition防止）
+      const overlapCheckTx = await checkReservationOverlap(
+        { spaceId, startTime: startDateTime, endTime: endDateTime },
+        tx
+      )
+      if (overlapCheckTx.hasOverlap) {
+        throw new Error('OVERLAP_DETECTED')
+      }
+
+      let resolvedCustomerId = customerId
 
     // 新規顧客の場合は作成
     if (!resolvedCustomerId && customerData) {
@@ -725,7 +821,7 @@ export const createAdminReservation = withPermission<[AdminReservationInput]>(
       throw new Error('顧客IDが解決できませんでした')
     }
 
-    // 予約を作成
+    // 予約を作成（割引情報を含む）
     const reservation = await tx.reservation.create({
       data: {
         spaceId,
@@ -733,7 +829,13 @@ export const createAdminReservation = withPermission<[AdminReservationInput]>(
         startTime: startDateTime,
         endTime: endDateTime,
         totalPrice: calculatedPrice,
-        notes: notes || null,
+        basePrice: basePrice,
+        couponId: couponId,
+        couponDiscountAmount: couponDiscountAmount,
+        durationDiscountAmount: durationDiscountAmount,
+        notes: manualDiscountAmount && manualDiscountReason
+          ? `${notes || ''}\n【手動割引】¥${manualDiscountAmount.toLocaleString()} - ${manualDiscountReason}`.trim()
+          : notes || null,
         status,
       },
       include: {
@@ -746,6 +848,11 @@ export const createAdminReservation = withPermission<[AdminReservationInput]>(
         },
       },
     })
+
+    // クーポン使用回数をインクリメント
+    if (couponId) {
+      await incrementCouponUsage(couponId)
+    }
 
     // 顧客の予約統計を更新
     const customer = await tx.customer.findUnique({
@@ -761,8 +868,15 @@ export const createAdminReservation = withPermission<[AdminReservationInput]>(
       },
     })
 
-    return reservation
-  })
+      return reservation
+    })
+  } catch (error) {
+    // 重複エラー（Race Condition検出時）
+    if (error instanceof Error && error.message === 'OVERLAP_DETECTED') {
+      return createFailure('選択された時間帯は既に予約されています。別の時間帯をお選びください。')
+    }
+    throw error // その他のエラーは再スロー
+  }
 
   // メール送信（オプション）
   if (sendEmail) {
