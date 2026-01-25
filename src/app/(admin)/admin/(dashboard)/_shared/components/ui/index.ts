@@ -138,6 +138,19 @@ export {
   TooltipProvider,
 } from './tooltip'
 
+// Collapsible
+export { Collapsible, CollapsibleTrigger, CollapsibleContent } from './collapsible'
+
+// Radio Group
+export { RadioGroup, RadioGroupItem } from './radio-group'
+
+// Separator
+export { Separator } from './separator'
+
+// Selection Box
+export { SelectionBox } from './selection-box'
+export type { SelectionBoxProps, SelectionBoxOption } from './selection-box'
+
 // Shared Components
 export { DeleteConfirmDialog } from '../DeleteConfirmDialog'
 export { EmptyState } from '../EmptyState'
