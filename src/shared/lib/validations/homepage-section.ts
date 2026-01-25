@@ -122,6 +122,15 @@ export const customConfigSchema = z.object({
   containerClass: z.string().max(200).optional(), // 追加CSSクラス
 })
 
+/**
+ * Instagram セクション設定
+ * - 管理画面で設定したInstagramフィードを表示
+ */
+export const instagramConfigSchema = z.object({
+  title: z.string().max(100, 'タイトルは100文字以内です').default('Instagram'),
+  // フィードの詳細設定は管理画面のInstagram設定で管理
+})
+
 // =============================================================================
 // 統合スキーマ
 // =============================================================================
@@ -138,6 +147,7 @@ export const sectionConfigSchemas: Record<
   | typeof faqConfigSchema
   | typeof ctaConfigSchema
   | typeof customConfigSchema
+  | typeof instagramConfigSchema
 > = {
   [HomepageSectionType.HERO]: heroConfigSchema,
   [HomepageSectionType.SPACE_LIST]: spaceListConfigSchema,
@@ -146,6 +156,7 @@ export const sectionConfigSchemas: Record<
   [HomepageSectionType.FAQ]: faqConfigSchema,
   [HomepageSectionType.CTA]: ctaConfigSchema,
   [HomepageSectionType.CUSTOM]: customConfigSchema,
+  [HomepageSectionType.INSTAGRAM]: instagramConfigSchema,
 }
 
 /**
@@ -202,6 +213,7 @@ export type BlogConfig = z.infer<typeof blogConfigSchema>
 export type FaqConfig = z.infer<typeof faqConfigSchema>
 export type CtaConfig = z.infer<typeof ctaConfigSchema>
 export type CustomConfig = z.infer<typeof customConfigSchema>
+export type InstagramConfig = z.infer<typeof instagramConfigSchema>
 
 // Input types (フォーム入力用、optional fieldsを含む)
 // React Hook Form + zodResolverで使用する際の推奨パターン
@@ -219,6 +231,7 @@ export type SectionConfig =
   | FaqConfig
   | CtaConfig
   | CustomConfig
+  | InstagramConfig
 
 export type CreateHomepageSectionInput = z.infer<typeof createHomepageSectionSchema>
 export type UpdateHomepageSectionInput = z.infer<typeof updateHomepageSectionSchema>
@@ -343,6 +356,9 @@ export const defaultSectionConfigs: Record<HomepageSectionType, SectionConfig> =
   [HomepageSectionType.CUSTOM]: {
     containerClass: '',
   },
+  [HomepageSectionType.INSTAGRAM]: {
+    title: 'Instagram',
+  },
 }
 
 /**
@@ -356,6 +372,7 @@ export const sectionTypeLabels: Record<HomepageSectionType, string> = {
   [HomepageSectionType.FAQ]: 'よくあるご質問',
   [HomepageSectionType.CTA]: 'CTA（行動喚起）',
   [HomepageSectionType.CUSTOM]: 'カスタム',
+  [HomepageSectionType.INSTAGRAM]: 'Instagram',
 }
 
 /**

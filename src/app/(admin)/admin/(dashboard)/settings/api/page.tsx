@@ -11,8 +11,10 @@ import {
   getResendConfig,
   getTurnstileConfig,
   getGoogleMapsConfig,
+  getCloudflareConfig,
   getCustomApiKeys,
 } from '@/admin/actions/api-keys'
+import { getInstagramConfig } from '@/admin/actions/instagram'
 import { getSettings } from '@/admin/actions/settings'
 import { SettingsLayout } from '../_components/SettingsLayout'
 import { SettingsTabs } from '../_components/SettingsTabs'
@@ -20,10 +22,12 @@ import {
   ResendSection,
   TurnstileSection,
   GoogleMapsSection,
+  CloudflareSection,
   CustomApiKeysSection,
   GoogleCalendarSection,
   ICalFeedSection,
   TwoWaySyncSection,
+  InstagramSection,
 } from '../_components/sections'
 import type { ReactElement } from 'react'
 
@@ -33,13 +37,15 @@ import type { ReactElement } from 'react'
 async function ApiSettingsContent(): Promise<ReactElement> {
   await connection()
 
-  const [resendConfig, turnstileConfig, googleMapsConfig, customApiKeys, settings] =
+  const [resendConfig, turnstileConfig, googleMapsConfig, cloudflareConfig, customApiKeys, settings, instagramConfig] =
     await Promise.all([
       getResendConfig(),
       getTurnstileConfig(),
       getGoogleMapsConfig(),
+      getCloudflareConfig(),
       getCustomApiKeys(),
       getSettings(),
+      getInstagramConfig(),
     ])
 
   const tabs = [
@@ -59,9 +65,19 @@ async function ApiSettingsContent(): Promise<ReactElement> {
       content: <GoogleMapsSection config={googleMapsConfig} />,
     },
     {
+      value: 'cloudflare',
+      label: 'Cloudflare',
+      content: <CloudflareSection config={cloudflareConfig} />,
+    },
+    {
       value: 'custom',
       label: 'カスタム',
       content: <CustomApiKeysSection keys={customApiKeys} />,
+    },
+    {
+      value: 'instagram',
+      label: 'Instagram',
+      content: <InstagramSection config={instagramConfig} />,
     },
     ...(settings
       ? [

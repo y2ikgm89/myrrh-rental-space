@@ -57,6 +57,7 @@ import {
   HelpCircle,
   MousePointerClick,
   Wand2,
+  Instagram,
 } from 'lucide-react'
 import {
   getHomepageSections,
@@ -73,6 +74,7 @@ import {
   HomepageSectionType,
 } from '@/admin/lib/validations/homepage-section'
 import { SectionEditor } from './SectionEditor'
+import { logger } from '@/shared/lib/logger'
 
 // =============================================================================
 // Icons Mapping
@@ -86,6 +88,7 @@ const sectionTypeIcons: Record<HomepageSectionType, typeof Sparkles> = {
   [HomepageSectionType.FAQ]: HelpCircle,
   [HomepageSectionType.CTA]: MousePointerClick,
   [HomepageSectionType.CUSTOM]: Wand2,
+  [HomepageSectionType.INSTAGRAM]: Instagram,
 }
 
 // =============================================================================
@@ -304,7 +307,7 @@ export function HomepageTab() {
       const data = await getHomepageSections()
       setSections(data)
     } catch (error) {
-      console.error('Failed to load sections:', error)
+      logger.error('Failed to load sections', { error: error instanceof Error ? error.message : String(error) })
       toast.error('セクションの読み込みに失敗しました')
     } finally {
       setIsLoading(false)
