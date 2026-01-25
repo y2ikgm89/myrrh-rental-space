@@ -1,8 +1,10 @@
 /**
  * Lexical Editor
  *
- * Lexicalベースのリッチテキストエディタ
- * Next.js 16 / React 19 / React Compiler対応
+ * @description リッチテキストエディタのメインコンポーネント
+ *
+ * 非制御コンポーネント設計: EditorStateを親で管理せず、
+ * onChangeでHTML形式のコンテンツを返す
  */
 
 'use client'
@@ -14,155 +16,246 @@ import { ContentEditable } from '@lexical/react/LexicalContentEditable'
 import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin'
 import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin'
 import { ListPlugin } from '@lexical/react/LexicalListPlugin'
-import { LinkPlugin as LexicalLinkPlugin } from '@lexical/react/LexicalLinkPlugin'
-import { TablePlugin as LexicalTablePlugin } from '@lexical/react/LexicalTablePlugin'
+import { LinkPlugin } from '@lexical/react/LexicalLinkPlugin'
 import { TabIndentationPlugin } from '@lexical/react/LexicalTabIndentationPlugin'
 import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
+import { AutoLinkPlugin } from '@lexical/react/LexicalAutoLinkPlugin'
+import { CheckListPlugin } from '@lexical/react/LexicalCheckListPlugin'
+import { ClickableLinkPlugin } from '@lexical/react/LexicalClickableLinkPlugin'
+import { MarkdownShortcutPlugin } from '@lexical/react/LexicalMarkdownShortcutPlugin'
+
+import { EDITOR_TRANSFORMERS } from './MarkdownTransformers'
 import { $generateHtmlFromNodes, $generateNodesFromDOM } from '@lexical/html'
-import { $getRoot, $insertNodes, type EditorState } from 'lexical'
+import { TablePlugin } from '@lexical/react/LexicalTablePlugin'
+import { TableCellNode, TableNode, TableRowNode } from '@lexical/table'
+import { HorizontalRulePlugin } from '@lexical/react/LexicalHorizontalRulePlugin'
+import { HorizontalRuleNode } from '@lexical/react/LexicalHorizontalRuleNode'
+import { $getRoot, $insertNodes, type EditorState, type LexicalEditor as LexicalEditorType } from 'lexical'
 import { HeadingNode, QuoteNode } from '@lexical/rich-text'
-import { ListNode, ListItemNode } from '@lexical/list'
+import { ListItemNode, ListNode } from '@lexical/list'
 import { LinkNode, AutoLinkNode } from '@lexical/link'
 import { CodeNode, CodeHighlightNode } from '@lexical/code'
-import { TableNode, TableCellNode, TableRowNode } from '@lexical/table'
-import { tv } from 'tailwind-variants'
+import { MarkNode } from '@lexical/mark'
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 
-import { editorTheme } from './theme'
-import type { LexicalEditorProps } from './types'
-import {
-  ImageNode,
-  YouTubeNode,
-  PostListWidgetNode,
-  CalloutNode,
-  FAQNode,
-  ButtonNode,
-  CardNode,
-  DividerNode,
-  ReservationWidgetNode,
-} from './nodes'
+import { ImageNode } from './nodes/ImageNode'
+import { YouTubeNode } from './nodes/YouTubeNode'
+import { XNode } from './nodes/XNode'
+import { LayoutContainerNode } from './nodes/LayoutContainerNode'
+import { LayoutItemNode } from './nodes/LayoutItemNode'
 import {
   ToolbarPlugin,
-  FloatingToolbarPlugin,
   ImagePlugin,
-  useImageDialog,
   YouTubePlugin,
+  XPlugin,
+  LinkDialogPlugin,
+  TableInsertPlugin,
+  LayoutPlugin,
+  ComponentPickerPlugin,
+  DraggableBlockPlugin,
+  FloatingToolbarPlugin,
+  CommentPlugin,
+  useImageDialog,
   useYouTubeDialog,
-  PostListWidgetPlugin,
-  usePostListWidgetDialog,
+  useXDialog,
   useLinkDialog,
   useTableDialog,
-  CalloutPlugin,
-  useCalloutDialog,
-  FAQPlugin,
-  useFAQDialog,
-  ButtonPlugin,
-  useButtonDialog,
-  CardPlugin,
-  useCardDialog,
-  DividerPlugin,
-  useDividerDialog,
-  ReservationWidgetPlugin,
-  useReservationWidgetDialog,
-  MediaLibraryPlugin,
-  useMediaLibrary,
+  useLayoutDialog,
+  useComment,
 } from './plugins'
+import { editorTheme } from './theme'
+import type { LexicalEditorProps } from './types'
 
-const styles = tv({
-  slots: {
-    wrapper: 'border rounded-lg overflow-hidden bg-background',
-    editorContainer: 'relative',
-    // proseスタイルは外部から className プロップで注入される
-    // @see EDITOR_PROSE_CLASSES in src/lib/styles/prose.ts
-    contentEditable: 'outline-none p-4',
-    placeholder: 'absolute top-4 left-4 text-muted-foreground pointer-events-none',
-    characterCount: 'px-4 py-2 text-xs text-muted-foreground border-t text-right',
-  },
-  variants: {
-    disabled: {
-      true: {
-        wrapper: 'opacity-50 cursor-not-allowed',
-        contentEditable: 'pointer-events-none',
-      },
-    },
-  },
-})()
+// =============================================================================
+// AutoLink URL Matcher
+// =============================================================================
 
-function Placeholder({ text }: { text: string }) {
-  return <div className={styles.placeholder()}>{text}</div>
+const URL_MATCHER =
+  /((https?:\/\/(www\.)?)|(www\.))[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)/
+
+const EMAIL_MATCHER =
+  /(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))/
+
+const MATCHERS = [
+  (text: string) => {
+    const match = URL_MATCHER.exec(text)
+    if (match === null) {
+      return null
+    }
+    const fullMatch = match[0]
+    return {
+      index: match.index,
+      length: fullMatch.length,
+      text: fullMatch,
+      url: fullMatch.startsWith('http') ? fullMatch : `https://${fullMatch}`,
+    }
+  },
+  (text: string) => {
+    const match = EMAIL_MATCHER.exec(text)
+    if (match === null) {
+      return null
+    }
+    const fullMatch = match[0]
+    return {
+      index: match.index,
+      length: fullMatch.length,
+      text: fullMatch,
+      url: `mailto:${fullMatch}`,
+    }
+  },
+]
+
+// =============================================================================
+// URL Validation
+// =============================================================================
+
+/**
+ * URLの妥当性を検証する
+ *
+ * @param url - 検証対象のURL
+ * @returns 有効なURLの場合true
+ */
+function validateUrl(url: string): boolean {
+  // 空文字はfalse
+  if (!url) return false
+
+  // mailto: と tel: は許可
+  if (url.startsWith('mailto:') || url.startsWith('tel:')) {
+    return true
+  }
+
+  // 相対パスは許可
+  if (url.startsWith('/') || url.startsWith('#')) {
+    return true
+  }
+
+  // URL形式のチェック
+  try {
+    new URL(url)
+    return true
+  } catch {
+    // http:// や https:// が付いていない場合に補完して再チェック
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      try {
+        new URL(`https://${url}`)
+        return true
+      } catch {
+        return false
+      }
+    }
+    return false
+  }
 }
 
-type InitialContentPluginProps = {
+// =============================================================================
+// HTMLからノードへの変換プラグイン
+// =============================================================================
+
+function HtmlInitializerPlugin({
+  content,
+  editorRef,
+}: {
   content?: string
-}
-
-function InitialContentPlugin({ content }: InitialContentPluginProps) {
+  editorRef: React.MutableRefObject<LexicalEditorType | null>
+}) {
   const [editor] = useLexicalComposerContext()
-  const isInitializedRef = useRef(false)
+  const hasInitialized = useRef(false)
 
   useEffect(() => {
-    if (isInitializedRef.current || !content) {
-      return
+    editorRef.current = editor
+  }, [editor, editorRef])
+
+  useEffect(() => {
+    if (hasInitialized.current || !content) return
+
+    try {
+      editor.update(() => {
+        const parser = new DOMParser()
+        const dom = parser.parseFromString(content, 'text/html')
+        const nodes = $generateNodesFromDOM(editor, dom)
+        const root = $getRoot()
+        root.clear()
+        $insertNodes(nodes)
+      })
+    } catch (error) {
+      console.error('Failed to parse HTML content:', error)
     }
 
-    isInitializedRef.current = true
-
-    editor.update(() => {
-      const parser = new DOMParser()
-      const dom = parser.parseFromString(content, 'text/html')
-      const nodes = $generateNodesFromDOM(editor, dom)
-      const root = $getRoot()
-      root.clear()
-      $insertNodes(nodes)
-    })
+    hasInitialized.current = true
   }, [editor, content])
 
   return null
 }
 
-type CharacterCountPluginProps = {
-  limit?: number
-}
+// =============================================================================
+// 編集無効化プラグイン
+// =============================================================================
 
-function CharacterCountPlugin({ limit }: CharacterCountPluginProps) {
+function DisablePlugin({ disabled }: { disabled: boolean }) {
   const [editor] = useLexicalComposerContext()
-  const [count, setCount] = useState(0)
 
   useEffect(() => {
-    return editor.registerUpdateListener(({ editorState }) => {
-      editorState.read(() => {
-        const root = $getRoot()
-        const text = root.getTextContent()
-        setCount(text.length)
-      })
-    })
-  }, [editor])
+    editor.setEditable(!disabled)
+  }, [editor, disabled])
 
-  if (!limit) {
-    return null
-  }
-
-  const isOverLimit = count > limit
-
-  return (
-    <div
-      className={`${styles.characterCount()} ${
-        isOverLimit ? 'text-destructive' : ''
-      }`}
-    >
-      {count.toLocaleString()} / {limit.toLocaleString()}
-    </div>
-  )
+  return null
 }
 
-function OnChangeHandler({
-  onChange,
-}: {
-  onChange?: (html: string) => void
-}) {
-  const [editor] = useLexicalComposerContext()
+// =============================================================================
+// EditorInner - LexicalComposer内で使用
+// =============================================================================
 
-  const handleChange = (editorState: EditorState) => {
+function EditorInner({
+  content,
+  onChange,
+  disabled = false,
+  className,
+  showToolbar = true,
+  height = '300px',
+  placeholder = 'ここに内容を入力...',
+  onMarkClick,
+  onAddComment,
+}: LexicalEditorProps) {
+  const editorRef = useRef<LexicalEditorType | null>(null)
+  const [contentWrapperRef, setContentWrapperRef] = useState<HTMLDivElement | null>(null)
+
+  // 画像ダイアログ
+  const { isImageDialogOpen, openImageDialog, closeImageDialog } =
+    useImageDialog()
+
+  // YouTubeダイアログ
+  const { isYouTubeDialogOpen, openYouTubeDialog, closeYouTubeDialog } =
+    useYouTubeDialog()
+
+  // Xダイアログ
+  const { isXDialogOpen, openXDialog, closeXDialog } = useXDialog()
+
+  // リンクダイアログ
+  const { isLinkDialogOpen, openLinkDialog, closeLinkDialog } =
+    useLinkDialog()
+
+  // テーブルダイアログ
+  const { isTableDialogOpen, openTableDialog, closeTableDialog } =
+    useTableDialog()
+
+  // レイアウトダイアログ
+  const { isLayoutDialogOpen, openLayoutDialog, closeLayoutDialog } =
+    useLayoutDialog()
+
+  // コメント機能
+  const { canAddComment, addComment } = useComment()
+
+  // コメント追加ハンドラ
+  const handleAddComment = () => {
+    if (!canAddComment || !onAddComment) return
+    const payload = addComment()
+    if (payload) {
+      onAddComment(payload)
+    }
+  }
+
+  // コンテンツ変更ハンドラ
+  const handleChange = (editorState: EditorState, editor: LexicalEditorType) => {
     if (!onChange) return
 
     editorState.read(() => {
@@ -171,141 +264,93 @@ function OnChangeHandler({
     })
   }
 
-  return <OnChangePlugin onChange={handleChange} />
-}
-
-/**
- * Inner Editor Component
- * This component is rendered inside LexicalComposer and can use the context hooks
- */
-type EditorInnerProps = {
-  content?: string
-  onChange?: (html: string) => void
-  placeholder: string
-  disabled: boolean
-  /** proseスタイルクラス（EDITOR_PROSE_CLASSESなど） */
-  proseClassName?: string
-  characterLimit?: number
-  minHeight: string
-  showToolbar: boolean
-  showFloatingToolbar: boolean
-}
-
-function EditorInner({
-  content,
-  onChange,
-  placeholder,
-  disabled,
-  proseClassName,
-  characterLimit,
-  minHeight,
-  showToolbar,
-  showFloatingToolbar,
-}: EditorInnerProps) {
-  // These hooks must be called inside LexicalComposer
-  const { openImageDialog, ImageDialog } = useImageDialog()
-  const { openYouTubeDialog, YouTubeDialog } = useYouTubeDialog()
-  const { openPostListWidgetDialog, PostListWidgetDialog } = usePostListWidgetDialog()
-  const { openLinkDialog, LinkDialog } = useLinkDialog()
-  const { openTableDialog, TableDialog } = useTableDialog()
-  const { openCalloutDialog, CalloutDialog } = useCalloutDialog()
-  const { openFAQDialog, FAQDialog } = useFAQDialog()
-  const { openButtonDialog, ButtonDialog } = useButtonDialog()
-  const { openCardDialog, CardDialog } = useCardDialog()
-  const { openDividerDialog, DividerDialog } = useDividerDialog()
-  const { openReservationWidgetDialog, ReservationWidgetDialog } = useReservationWidgetDialog()
-  const { openMediaLibrary, MediaLibrary } = useMediaLibrary()
-
-  // proseクラスをcontentEditableに直接適用（公開ページと同じスタイルを実現）
-  const contentEditableClassName = proseClassName
-    ? `${styles.contentEditable()} ${proseClassName}`
-    : styles.contentEditable()
-
   return (
-    <div className={styles.wrapper({ disabled })}>
+    <div
+      className="flex flex-col rounded-lg border bg-background"
+      style={{ height }}
+    >
+      {/* ツールバー - 固定（スクロールしない） */}
       {showToolbar && (
-        <ToolbarPlugin
-          disabled={disabled}
-          onOpenMediaLibrary={openMediaLibrary}
-          onInsertImage={openImageDialog}
-          onInsertVideo={openYouTubeDialog}
-          onInsertLink={openLinkDialog}
-          onInsertTable={openTableDialog}
-          onInsertWidget={openPostListWidgetDialog}
-          onInsertCallout={openCalloutDialog}
-          onInsertFAQ={openFAQDialog}
-          onInsertButton={openButtonDialog}
-          onInsertCard={openCardDialog}
-          onInsertDivider={openDividerDialog}
-          onInsertReservationWidget={openReservationWidgetDialog}
-        />
+        <div className="shrink-0">
+          <ToolbarPlugin
+            onInsertImage={openImageDialog}
+            onInsertYouTube={openYouTubeDialog}
+            onInsertX={openXDialog}
+            onInsertLink={openLinkDialog}
+            onInsertTable={openTableDialog}
+            onInsertLayout={openLayoutDialog}
+          />
+        </div>
       )}
 
-      <div className={styles.editorContainer()}>
+      {/* コンテンツラッパー - スクロール可能 */}
+      <div ref={setContentWrapperRef} className="relative flex-1 overflow-y-auto">
         <RichTextPlugin
           contentEditable={
             <ContentEditable
-              className={contentEditableClassName}
-              style={{ minHeight }}
-              aria-placeholder={placeholder}
-              placeholder={<Placeholder text={placeholder} />}
+              className={`outline-none pl-8 pr-4 py-3 min-h-full ${className ?? ''}`}
             />
+          }
+          placeholder={
+            <div className="pointer-events-none absolute top-3 left-8 text-muted-foreground">
+              {placeholder}
+            </div>
           }
           ErrorBoundary={LexicalErrorBoundary}
         />
       </div>
 
-      <CharacterCountPlugin limit={characterLimit} />
-
-      {/* Plugins */}
-      <InitialContentPlugin content={content} />
-      <OnChangeHandler onChange={onChange} />
+      {/* 公式プラグイン */}
       <HistoryPlugin />
       <ListPlugin />
-      <LexicalLinkPlugin />
-      <LexicalTablePlugin />
+      <CheckListPlugin />
+      <TablePlugin />
+      <LinkPlugin validateUrl={validateUrl} />
+      <AutoLinkPlugin matchers={MATCHERS} />
+      <ClickableLinkPlugin />
       <TabIndentationPlugin />
-      <ImagePlugin />
-      <YouTubePlugin />
-      <PostListWidgetPlugin />
-      <CalloutPlugin />
-      <FAQPlugin />
-      <ButtonPlugin />
-      <CardPlugin />
-      <DividerPlugin />
-      <ReservationWidgetPlugin />
-      <MediaLibraryPlugin />
+      <MarkdownShortcutPlugin transformers={EDITOR_TRANSFORMERS} />
+      <HorizontalRulePlugin />
+      <OnChangePlugin onChange={handleChange} ignoreSelectionChange />
 
-      {showFloatingToolbar && <FloatingToolbarPlugin />}
+      {/* カスタムプラグイン */}
+      <HtmlInitializerPlugin content={content} editorRef={editorRef} />
+      <DisablePlugin disabled={disabled} />
+      <DraggableBlockPlugin anchorElem={contentWrapperRef} />
+      {contentWrapperRef && (
+        <FloatingToolbarPlugin
+          anchorElem={contentWrapperRef}
+          setIsLinkEditMode={(isEditMode) => {
+            if (isEditMode) openLinkDialog()
+          }}
+          onAddComment={onAddComment ? handleAddComment : undefined}
+        />
+      )}
+      <CommentPlugin onMarkClick={onMarkClick} />
+      <ComponentPickerPlugin
+        onInsertImage={openImageDialog}
+        onInsertYouTube={openYouTubeDialog}
+        onInsertX={openXDialog}
+        onInsertTable={openTableDialog}
+        onInsertLayout={openLayoutDialog}
+      />
 
-      {/* Dialogs */}
-      <ImageDialog />
-      <YouTubeDialog />
-      <PostListWidgetDialog />
-      <LinkDialog />
-      <TableDialog />
-      <CalloutDialog />
-      <FAQDialog />
-      <ButtonDialog />
-      <CardDialog />
-      <DividerDialog />
-      <ReservationWidgetDialog />
-      <MediaLibrary />
+      {/* ダイアログ */}
+      <ImagePlugin isOpen={isImageDialogOpen} onClose={closeImageDialog} />
+      <YouTubePlugin isOpen={isYouTubeDialogOpen} onClose={closeYouTubeDialog} />
+      <XPlugin isOpen={isXDialogOpen} onClose={closeXDialog} />
+      <LinkDialogPlugin isOpen={isLinkDialogOpen} onClose={closeLinkDialog} />
+      <TableInsertPlugin isOpen={isTableDialogOpen} onClose={closeTableDialog} />
+      <LayoutPlugin isOpen={isLayoutDialogOpen} onClose={closeLayoutDialog} />
     </div>
   )
 }
 
-export function LexicalEditor({
-  content,
-  onChange,
-  placeholder = '本文を入力...',
-  disabled = false,
-  className,
-  characterLimit,
-  minHeight = '300px',
-  showToolbar = true,
-  showFloatingToolbar = true,
-}: LexicalEditorProps) {
+// =============================================================================
+// LexicalEditor - メインコンポーネント
+// =============================================================================
+
+export function LexicalEditor(props: LexicalEditorProps) {
   const initialConfig = useMemo(
     () => ({
       namespace: 'LexicalEditor',
@@ -319,42 +364,27 @@ export function LexicalEditor({
         AutoLinkNode,
         CodeNode,
         CodeHighlightNode,
-        TableNode,
-        TableCellNode,
-        TableRowNode,
         ImageNode,
         YouTubeNode,
-        PostListWidgetNode,
-        CalloutNode,
-        FAQNode,
-        ButtonNode,
-        CardNode,
-        DividerNode,
-        ReservationWidgetNode,
+        XNode,
+        TableNode,
+        TableRowNode,
+        TableCellNode,
+        HorizontalRuleNode,
+        LayoutContainerNode,
+        LayoutItemNode,
+        MarkNode,
       ],
       onError: (error: Error) => {
-        console.error('Lexical Editor Error:', error)
+        console.error('Lexical Error:', error)
       },
-      editable: !disabled,
     }),
-    [disabled]
+    []
   )
 
   return (
     <LexicalComposer initialConfig={initialConfig}>
-      <EditorInner
-        content={content}
-        onChange={onChange}
-        placeholder={placeholder}
-        disabled={disabled}
-        proseClassName={className}
-        characterLimit={characterLimit}
-        minHeight={minHeight}
-        showToolbar={showToolbar}
-        showFloatingToolbar={showFloatingToolbar}
-      />
+      <EditorInner {...props} />
     </LexicalComposer>
   )
 }
-
-export default LexicalEditor

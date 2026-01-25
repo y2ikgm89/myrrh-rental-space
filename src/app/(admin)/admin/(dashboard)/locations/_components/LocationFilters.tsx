@@ -2,7 +2,7 @@
 
 import { Search } from 'lucide-react'
 import { useQueryStates, parseAsString, parseAsInteger } from 'nuqs'
-import { useCallback, useRef, useEffect } from 'react'
+import { useRef, useEffect } from 'react'
 import {
   Select,
   SelectContent,
@@ -42,25 +42,19 @@ export function LocationFilters() {
     }
   }, [])
 
-  const setSearchDebounced = useCallback(
-    (value: string) => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current)
-      }
-      searchTimeoutRef.current = setTimeout(() => {
-        void setParams({ search: value || null, page: 1 })
-      }, 300)
-    },
-    [setParams]
-  )
+  const setSearchDebounced = (value: string) => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
+    searchTimeoutRef.current = setTimeout(() => {
+      void setParams({ search: value || null, page: 1 })
+    }, 300)
+  }
 
-  const setPublished = useCallback(
-    (value: string) => {
-      const publishedValue = value === 'ALL' ? null : value || null
-      void setParams({ published: publishedValue, page: 1 })
-    },
-    [setParams]
-  )
+  const setPublished = (value: string) => {
+    const publishedValue = value === 'ALL' ? null : value || null
+    void setParams({ published: publishedValue, page: 1 })
+  }
 
   const currentPublished = params.published || 'ALL'
 

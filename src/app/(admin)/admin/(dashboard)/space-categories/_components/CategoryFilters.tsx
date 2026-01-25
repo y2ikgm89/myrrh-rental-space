@@ -2,7 +2,7 @@
 
 import { Search } from 'lucide-react'
 import { useQueryStates, parseAsString, parseAsInteger, parseAsBoolean } from 'nuqs'
-import { useCallback, useRef, useEffect } from 'react'
+import { useRef, useEffect } from 'react'
 import { Checkbox, Label, Input } from '@/admin/components/ui'
 
 export function CategoryFilters() {
@@ -29,24 +29,18 @@ export function CategoryFilters() {
     }
   }, [])
 
-  const setSearchDebounced = useCallback(
-    (value: string) => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current)
-      }
-      searchTimeoutRef.current = setTimeout(() => {
-        void setParams({ search: value || null, page: 1 })
-      }, 300)
-    },
-    [setParams]
-  )
+  const setSearchDebounced = (value: string) => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
+    searchTimeoutRef.current = setTimeout(() => {
+      void setParams({ search: value || null, page: 1 })
+    }, 300)
+  }
 
-  const handleIncludeInactiveChange = useCallback(
-    (checked: boolean) => {
-      void setParams({ includeInactive: checked || null, page: 1 })
-    },
-    [setParams]
-  )
+  const handleIncludeInactiveChange = (checked: boolean) => {
+    void setParams({ includeInactive: checked || null, page: 1 })
+  }
 
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center">

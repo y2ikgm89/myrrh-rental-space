@@ -1,312 +1,755 @@
 /**
  * Floating Toolbar Plugin
  *
- * テキスト選択時に表示されるフローティングツールバー
- * リンク挿入はダイアログで行う
+ * テキスト選択時にフローティングツールバーを表示
+ *
+ * @see https://github.com/facebook/lexical/blob/main/packages/lexical-playground/src/plugins/FloatingTextFormatToolbarPlugin/index.tsx
  */
 
 'use client'
 
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
   $getSelection,
   $isRangeSelection,
+  $isTextNode,
+  COMMAND_PRIORITY_LOW,
+  FORMAT_ELEMENT_COMMAND,
   FORMAT_TEXT_COMMAND,
   SELECTION_CHANGE_COMMAND,
+  type ElementFormatType,
+  type LexicalEditor,
+  type TextFormatType,
 } from 'lexical'
+import { $isCodeHighlightNode } from '@lexical/code'
 import { $isLinkNode, TOGGLE_LINK_COMMAND } from '@lexical/link'
+import {
+  $getSelectionStyleValueForProperty,
+  $patchStyleText,
+} from '@lexical/selection'
 import { mergeRegister } from '@lexical/utils'
-import { computePosition, flip, offset, shift } from '@floating-ui/dom'
-import { tv } from 'tailwind-variants'
 import {
+  AlignCenter,
+  AlignJustify,
+  AlignLeft,
+  AlignRight,
   Bold,
-  Italic,
-  Underline,
-  Strikethrough,
   Code,
-  Highlighter,
+  Italic,
   Link,
-  Link2Off,
+  MessageSquarePlus,
+  Minus,
+  Plus,
+  Strikethrough,
+  Subscript,
+  Superscript,
+  Underline,
 } from 'lucide-react'
+import { Button } from '@/admin/components/ui/button'
+import { Separator } from '@/admin/components/ui/separator'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  Button,
-  Input,
-  Label,
-  TooltipProvider,
-} from '@/admin/components/ui'
-import { Z_INDEX } from '@/admin/lib/styles/z-index'
-import { ToolbarButton } from './toolbar'
+  HighlightCompact,
+  getHighlightColorFromStyle,
+  applyHighlightToSelection,
+  type HighlightColor,
+} from './HighlightPlugin'
 import {
-  KEYBOARD_SHORTCUTS,
-  getShortcutDisplay,
-} from '../config/keyboard-shortcuts'
+  TextColorCompact,
+  getTextColorFromStyle,
+  applyTextColorToSelection,
+  type TextColor,
+} from './TextColorPlugin'
 
-const styles = tv({
-  slots: {
-    toolbar: [
-      'absolute flex items-center gap-0.5 p-1',
-      'bg-popover border rounded-lg shadow-lg',
-      'animate-in fade-in-0 zoom-in-95',
-    ],
-    divider: 'w-px h-5 bg-border mx-0.5',
-  },
-})()
+// =============================================================================
+// Font Size Constants (公式Playgroundパターン準拠)
+// =============================================================================
 
-function FloatingToolbar() {
-  const [editor] = useLexicalComposerContext()
-  const toolbarRef = useRef<HTMLDivElement>(null)
-  const isMountedRef = useRef(true)
-  const [isVisible, setIsVisible] = useState(false)
-  const [isBold, setIsBold] = useState(false)
-  const [isItalic, setIsItalic] = useState(false)
-  const [isUnderline, setIsUnderline] = useState(false)
-  const [isStrikethrough, setIsStrikethrough] = useState(false)
-  const [isCode, setIsCode] = useState(false)
-  const [isHighlight, setIsHighlight] = useState(false)
-  const [isLink, setIsLink] = useState(false)
+const MIN_FONT_SIZE = 8
+const MAX_FONT_SIZE = 72
+const DEFAULT_FONT_SIZE = 16
 
-  // リンクダイアログ状態
-  const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false)
-  const [linkUrl, setLinkUrl] = useState('')
+function calculateNextFontSize(
+  currentSize: number,
+  direction: 'increment' | 'decrement'
+): number {
+  let step: number
+  if (currentSize >= 48) {
+    step = 12
+  } else if (currentSize >= 24) {
+    step = 4
+  } else if (currentSize >= 14) {
+    step = 2
+  } else {
+    step = 1
+  }
+  const nextSize =
+    direction === 'increment' ? currentSize + step : currentSize - step
+  return Math.max(MIN_FONT_SIZE, Math.min(MAX_FONT_SIZE, nextSize))
+}
 
-  const updateToolbar = () => {
-    const selection = $getSelection()
-    if (!$isRangeSelection(selection) || selection.isCollapsed()) {
-      setIsVisible(false)
-      return
+// =============================================================================
+// Utilities (公式Playgroundパターン準拠)
+// =============================================================================
+
+/**
+ * DOM選択範囲の矩形を取得
+ * @see https://github.com/facebook/lexical/blob/main/packages/lexical-playground/src/utils/getDOMRangeRect.ts
+ */
+function getDOMRangeRect(
+  nativeSelection: Selection,
+  rootElement: HTMLElement
+): DOMRect {
+  const domRange = nativeSelection.getRangeAt(0)
+
+  if (nativeSelection.anchorNode === rootElement) {
+    let inner = rootElement
+    while (inner.firstElementChild instanceof HTMLElement) {
+      inner = inner.firstElementChild
     }
-
-    const nativeSelection = window.getSelection()
-    if (!nativeSelection || nativeSelection.rangeCount === 0) {
-      setIsVisible(false)
-      return
-    }
-
-    const range = nativeSelection.getRangeAt(0)
-    const rect = range.getBoundingClientRect()
-
-    if (rect.width === 0 || rect.height === 0) {
-      setIsVisible(false)
-      return
-    }
-
-    // Check text formats
-    setIsBold(selection.hasFormat('bold'))
-    setIsItalic(selection.hasFormat('italic'))
-    setIsUnderline(selection.hasFormat('underline'))
-    setIsStrikethrough(selection.hasFormat('strikethrough'))
-    setIsCode(selection.hasFormat('code'))
-    setIsHighlight(selection.hasFormat('highlight'))
-
-    // Check if link
-    const node = selection.anchor.getNode()
-    const parent = node.getParent()
-    setIsLink($isLinkNode(parent) || $isLinkNode(node))
-
-    // Position the toolbar
-    if (toolbarRef.current) {
-      const virtualEl = {
-        getBoundingClientRect: () => rect,
-      }
-
-      computePosition(virtualEl, toolbarRef.current, {
-        placement: 'top',
-        middleware: [offset(8), flip(), shift({ padding: 8 })],
-      }).then(({ x, y }) => {
-        // アンマウント後にDOMを更新しない
-        if (!isMountedRef.current) return
-        if (toolbarRef.current) {
-          toolbarRef.current.style.left = `${x}px`
-          toolbarRef.current.style.top = `${y}px`
-        }
-      })
-    }
-
-    setIsVisible(true)
+    return inner.getBoundingClientRect()
   }
 
-  // マウント状態を追跡
+  return domRange.getBoundingClientRect()
+}
+
+/**
+ * フローティング要素の位置を設定
+ * @see https://github.com/facebook/lexical/blob/main/packages/lexical-playground/src/utils/setFloatingElemPosition.ts
+ */
+function setFloatingElemPosition(
+  targetRect: DOMRect | null,
+  floatingElem: HTMLElement,
+  anchorElem: HTMLElement,
+  verticalGap: number = 10,
+  horizontalOffset: number = 5
+): void {
+  const scrollerElem = anchorElem.parentElement
+
+  if (targetRect === null || !scrollerElem) {
+    floatingElem.style.opacity = '0'
+    floatingElem.style.transform = 'translate(-10000px, -10000px)'
+    return
+  }
+
+  const floatingElemRect = floatingElem.getBoundingClientRect()
+  const anchorElementRect = anchorElem.getBoundingClientRect()
+  const editorScrollerRect = scrollerElem.getBoundingClientRect()
+
+  let top = targetRect.top - floatingElemRect.height - verticalGap
+  let left = targetRect.left - horizontalOffset
+
+  // 固定ツールバーに重なる場合は選択テキストの下に配置
+  if (top < anchorElementRect.top) {
+    top = targetRect.bottom + verticalGap
+  }
+
+  // 左端境界チェック
+  if (left < editorScrollerRect.left) {
+    left = editorScrollerRect.left + horizontalOffset
+  }
+
+  // 右端境界チェック
+  if (left + floatingElemRect.width > editorScrollerRect.right) {
+    left = editorScrollerRect.right - floatingElemRect.width - horizontalOffset
+  }
+
+  // アンカー要素からの相対位置に変換
+  top -= anchorElementRect.top
+  left -= anchorElementRect.left
+
+  floatingElem.style.opacity = '1'
+  floatingElem.style.transform = `translate(${left}px, ${top}px)`
+}
+
+// =============================================================================
+// Floating Toolbar Component (公式Playgroundパターン準拠)
+// =============================================================================
+
+type AlignmentType = 'left' | 'center' | 'right' | 'justify'
+
+const ALIGNMENT_TYPES = new Set<AlignmentType>(['left', 'center', 'right', 'justify'])
+
+function isAlignmentType(value: string): value is AlignmentType {
+  return ALIGNMENT_TYPES.has(value as AlignmentType)
+}
+
+const ALIGNMENT_OPTIONS = [
+  { type: 'left' as const, label: '左揃え', icon: AlignLeft },
+  { type: 'center' as const, label: '中央揃え', icon: AlignCenter },
+  { type: 'right' as const, label: '右揃え', icon: AlignRight },
+  { type: 'justify' as const, label: '両端揃え', icon: AlignJustify },
+]
+
+type FloatingToolbarProps = {
+  editor: LexicalEditor
+  anchorElem: HTMLElement
+  isBold: boolean
+  isItalic: boolean
+  isUnderline: boolean
+  isStrikethrough: boolean
+  isSubscript: boolean
+  isSuperscript: boolean
+  isCode: boolean
+  isLink: boolean
+  fontSize: number
+  elementFormat: AlignmentType
+  highlightColor: HighlightColor
+  textColor: TextColor
+  currentTextColorValue: string
+  setIsLinkEditMode: (isLinkEditMode: boolean) => void
+  onAddComment?: () => void
+}
+
+function FloatingToolbar({
+  editor,
+  anchorElem,
+  isBold,
+  isItalic,
+  isUnderline,
+  isStrikethrough,
+  isSubscript,
+  isSuperscript,
+  isCode,
+  isLink,
+  fontSize,
+  elementFormat,
+  highlightColor,
+  textColor,
+  currentTextColorValue,
+  setIsLinkEditMode,
+  onAddComment,
+}: FloatingToolbarProps): React.ReactElement {
+  const popupRef = useRef<HTMLDivElement>(null)
+
+  // ポジション更新コールバック
+  const updateFloatingToolbar = useCallback(() => {
+    const selection = $getSelection()
+    const popup = popupRef.current
+    const nativeSelection = window.getSelection()
+    const rootElement = editor.getRootElement()
+
+    if (!popup || !nativeSelection || !rootElement) {
+      return
+    }
+
+    if (
+      !$isRangeSelection(selection) ||
+      nativeSelection.rangeCount === 0 ||
+      selection.isCollapsed()
+    ) {
+      return
+    }
+
+    const rangeRect = getDOMRangeRect(nativeSelection, rootElement)
+    setFloatingElemPosition(rangeRect, popup, anchorElem)
+  }, [editor, anchorElem])
+
+  // マウスイベントハンドラ（ドラッグ選択対応 - 公式パターン）
   useEffect(() => {
-    isMountedRef.current = true
+    const popup = popupRef.current
+
+    function mouseMoveListener(e: MouseEvent) {
+      if (popup && (e.buttons === 1 || e.buttons === 3)) {
+        // ドラッグ中はポインターイベントを無効化
+        if (popup.style.pointerEvents !== 'none') {
+          popup.style.pointerEvents = 'none'
+        }
+      }
+    }
+
+    function mouseUpListener() {
+      if (popup && popup.style.pointerEvents !== 'auto') {
+        popup.style.pointerEvents = 'auto'
+      }
+    }
+
+    document.addEventListener('mousemove', mouseMoveListener)
+    document.addEventListener('mouseup', mouseUpListener)
+
     return () => {
-      isMountedRef.current = false
+      document.removeEventListener('mousemove', mouseMoveListener)
+      document.removeEventListener('mouseup', mouseUpListener)
     }
   }, [])
 
+  // スクロール・リサイズ時のポジション更新
   useEffect(() => {
+    const scrollerElem = anchorElem.parentElement
+
+    const update = () => {
+      editor.getEditorState().read(updateFloatingToolbar)
+    }
+
+    window.addEventListener('resize', update)
+    scrollerElem?.addEventListener('scroll', update)
+
+    return () => {
+      window.removeEventListener('resize', update)
+      scrollerElem?.removeEventListener('scroll', update)
+    }
+  }, [editor, updateFloatingToolbar, anchorElem])
+
+  // 選択変更・エディタ更新時のポジション更新
+  useEffect(() => {
+    editor.getEditorState().read(updateFloatingToolbar)
+
     return mergeRegister(
       editor.registerUpdateListener(({ editorState }) => {
-        editorState.read(() => {
-          updateToolbar()
-        })
+        editorState.read(updateFloatingToolbar)
       }),
       editor.registerCommand(
         SELECTION_CHANGE_COMMAND,
         () => {
-          updateToolbar()
+          updateFloatingToolbar()
           return false
         },
-        1
+        COMMAND_PRIORITY_LOW
       )
     )
-  }, [editor])
+  }, [editor, updateFloatingToolbar])
+
+  // フォーマットコマンドディスパッチ
+  const formatText = (format: TextFormatType) => {
+    editor.dispatchCommand(FORMAT_TEXT_COMMAND, format)
+  }
 
   const handleLinkClick = () => {
     if (isLink) {
-      // リンク解除
       editor.dispatchCommand(TOGGLE_LINK_COMMAND, null)
     } else {
-      // リンクダイアログを開く
-      setLinkUrl('')
-      setIsLinkDialogOpen(true)
+      setIsLinkEditMode(true)
     }
   }
 
-  const handleLinkSubmit = () => {
-    if (linkUrl.trim()) {
-      // URLの形式を整える
-      let url = linkUrl.trim()
-      if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('/')) {
-        url = `https://${url}`
+  // フォントサイズ変更ハンドラー
+  const applyFontSize = (newSize: number) => {
+    const clampedSize = Math.max(MIN_FONT_SIZE, Math.min(MAX_FONT_SIZE, newSize))
+    editor.update(() => {
+      const selection = $getSelection()
+      if ($isRangeSelection(selection)) {
+        $patchStyleText(selection, {
+          'font-size': `${clampedSize}px`,
+        })
       }
-      editor.dispatchCommand(TOGGLE_LINK_COMMAND, url)
-    }
-    setIsLinkDialogOpen(false)
-    setLinkUrl('')
+    })
   }
 
-  const handleLinkKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      handleLinkSubmit()
-    }
+  const handleFontSizeIncrement = () => {
+    const nextSize = calculateNextFontSize(fontSize, 'increment')
+    applyFontSize(nextSize)
   }
 
-  if (!isVisible) {
-    return null
+  const handleFontSizeDecrement = () => {
+    const nextSize = calculateNextFontSize(fontSize, 'decrement')
+    applyFontSize(nextSize)
+  }
+
+  // テキスト配置変更ハンドラー
+  const handleAlignmentChange = (format: ElementFormatType) => {
+    editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, format)
+  }
+
+  // ハイライト変更ハンドラー
+  const handleHighlightChange = (color: HighlightColor) => {
+    applyHighlightToSelection(editor, color)
+  }
+
+  // 文字色変更ハンドラー
+  const handleTextColorChange = (color: TextColor, customValue?: string) => {
+    applyTextColorToSelection(editor, color, customValue)
   }
 
   return (
-    <>
-      <TooltipProvider delayDuration={300}>
-        <div
-          ref={toolbarRef}
-          className={styles.toolbar()}
-          style={{ zIndex: Z_INDEX.editorFloating }}
+    <div
+      ref={popupRef}
+      className="absolute z-50 flex items-center gap-0.5 rounded-lg border bg-popover p-1 shadow-lg"
+      style={{
+        top: 0,
+        left: 0,
+        opacity: 0,
+        transform: 'translate(-10000px, -10000px)',
+      }}
+    >
+      <Button
+        type="button"
+        variant={isBold ? 'secondary' : 'ghost'}
+        size="icon"
+        className="h-8 w-8"
+        onClick={() => formatText('bold')}
+        aria-label="太字"
+        title="太字"
+      >
+        <Bold className="h-4 w-4" />
+      </Button>
+      <Button
+        type="button"
+        variant={isItalic ? 'secondary' : 'ghost'}
+        size="icon"
+        className="h-8 w-8"
+        onClick={() => formatText('italic')}
+        aria-label="斜体"
+        title="斜体"
+      >
+        <Italic className="h-4 w-4" />
+      </Button>
+      <Button
+        type="button"
+        variant={isUnderline ? 'secondary' : 'ghost'}
+        size="icon"
+        className="h-8 w-8"
+        onClick={() => formatText('underline')}
+        aria-label="下線"
+        title="下線"
+      >
+        <Underline className="h-4 w-4" />
+      </Button>
+      <Button
+        type="button"
+        variant={isStrikethrough ? 'secondary' : 'ghost'}
+        size="icon"
+        className="h-8 w-8"
+        onClick={() => formatText('strikethrough')}
+        aria-label="取り消し線"
+        title="取り消し線"
+      >
+        <Strikethrough className="h-4 w-4" />
+      </Button>
+      <Button
+        type="button"
+        variant={isSubscript ? 'secondary' : 'ghost'}
+        size="icon"
+        className="h-8 w-8"
+        onClick={() => formatText('subscript')}
+        aria-label="下付き"
+        title="下付き"
+      >
+        <Subscript className="h-4 w-4" />
+      </Button>
+      <Button
+        type="button"
+        variant={isSuperscript ? 'secondary' : 'ghost'}
+        size="icon"
+        className="h-8 w-8"
+        onClick={() => formatText('superscript')}
+        aria-label="上付き"
+        title="上付き"
+      >
+        <Superscript className="h-4 w-4" />
+      </Button>
+      <Button
+        type="button"
+        variant={isCode ? 'secondary' : 'ghost'}
+        size="icon"
+        className="h-8 w-8"
+        onClick={() => formatText('code')}
+        aria-label="コード"
+        title="コード"
+      >
+        <Code className="h-4 w-4" />
+      </Button>
+      <Button
+        type="button"
+        variant={isLink ? 'secondary' : 'ghost'}
+        size="icon"
+        className="h-8 w-8"
+        onClick={handleLinkClick}
+        aria-label="リンク"
+        title="リンク"
+      >
+        <Link className="h-4 w-4" />
+      </Button>
+      <HighlightCompact
+        highlightColor={highlightColor}
+        onColorSelect={handleHighlightChange}
+      />
+      <TextColorCompact
+        textColor={textColor}
+        currentColorValue={currentTextColorValue}
+        onColorSelect={handleTextColorChange}
+      />
+      {onAddComment && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={onAddComment}
+          aria-label="コメントを追加"
+          title="コメントを追加"
         >
-          <ToolbarButton
-            icon={Bold}
-            label={KEYBOARD_SHORTCUTS.bold.label}
-            shortcut={getShortcutDisplay('bold')}
-            isActive={isBold}
-            onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'bold')}
-          />
-          <ToolbarButton
-            icon={Italic}
-            label={KEYBOARD_SHORTCUTS.italic.label}
-            shortcut={getShortcutDisplay('italic')}
-            isActive={isItalic}
-            onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'italic')}
-          />
-          <ToolbarButton
-            icon={Underline}
-            label={KEYBOARD_SHORTCUTS.underline.label}
-            shortcut={getShortcutDisplay('underline')}
-            isActive={isUnderline}
-            onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'underline')}
-          />
-          <ToolbarButton
-            icon={Strikethrough}
-            label={KEYBOARD_SHORTCUTS.strikethrough.label}
-            shortcut={getShortcutDisplay('strikethrough')}
-            isActive={isStrikethrough}
-            onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'strikethrough')}
-          />
-
-          <div className={styles.divider()} />
-
-          <ToolbarButton
-            icon={Code}
-            label={KEYBOARD_SHORTCUTS.code.label}
-            shortcut={getShortcutDisplay('code')}
-            isActive={isCode}
-            onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'code')}
-          />
-          <ToolbarButton
-            icon={Highlighter}
-            label="ハイライト"
-            isActive={isHighlight}
-            onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'highlight')}
-          />
-
-          <div className={styles.divider()} />
-
-          <ToolbarButton
-            icon={isLink ? Link2Off : Link}
-            label={isLink ? 'リンク解除' : KEYBOARD_SHORTCUTS.link.label}
-            shortcut={isLink ? undefined : getShortcutDisplay('link')}
-            isActive={isLink}
-            onClick={handleLinkClick}
-          />
-        </div>
-      </TooltipProvider>
-
-      {/* リンク挿入ダイアログ */}
-      <Dialog open={isLinkDialogOpen} onOpenChange={setIsLinkDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>リンクを挿入</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="link-url">URL</Label>
-              <Input
-                id="link-url"
-                type="url"
-                placeholder="https://example.com"
-                value={linkUrl}
-                onChange={(e) => setLinkUrl(e.target.value)}
-                onKeyDown={handleLinkKeyDown}
-                autoFocus
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsLinkDialogOpen(false)}
-            >
-              キャンセル
-            </Button>
-            <Button type="button" onClick={handleLinkSubmit}>
-              挿入
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+          <MessageSquarePlus className="h-4 w-4" />
+        </Button>
+      )}
+      <Separator orientation="vertical" className="mx-0.5 h-5" />
+      <div className="flex items-center gap-0.5">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          onClick={handleFontSizeDecrement}
+          disabled={fontSize <= MIN_FONT_SIZE}
+          aria-label="フォントサイズを小さく"
+          title="フォントサイズを小さく"
+        >
+          <Minus className="h-3 w-3" />
+        </Button>
+        <span className="min-w-[2rem] text-center text-xs tabular-nums">
+          {fontSize}
+        </span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          onClick={handleFontSizeIncrement}
+          disabled={fontSize >= MAX_FONT_SIZE}
+          aria-label="フォントサイズを大きく"
+          title="フォントサイズを大きく"
+        >
+          <Plus className="h-3 w-3" />
+        </Button>
+      </div>
+      <Separator orientation="vertical" className="mx-0.5 h-5" />
+      <div className="flex items-center gap-0.5">
+        {ALIGNMENT_OPTIONS.map(({ type, label, icon: Icon }) => (
+          <Button
+            key={type}
+            type="button"
+            variant={elementFormat === type ? 'secondary' : 'ghost'}
+            size="icon"
+            className="h-7 w-7"
+            onClick={() => handleAlignmentChange(type)}
+            aria-label={label}
+            title={label}
+          >
+            <Icon className="h-3 w-3" />
+          </Button>
+        ))}
+      </div>
+    </div>
   )
 }
 
-// Client-side only check using useSyncExternalStore
-const emptySubscribe = () => () => {}
-const getSnapshot = () => true
-const getServerSnapshot = () => false
+// =============================================================================
+// useFloatingToolbar Hook (公式Playgroundパターン準拠)
+// =============================================================================
 
-export function FloatingToolbarPlugin() {
-  const isClient = useSyncExternalStore(emptySubscribe, getSnapshot, getServerSnapshot)
+function useFloatingToolbar(
+  editor: LexicalEditor,
+  anchorElem: HTMLElement,
+  setIsLinkEditMode: (isLinkEditMode: boolean) => void,
+  onAddComment?: () => void
+): React.ReactElement | null {
+  // 公式パターン: 個別のuseStateで各フォーマット状態を管理
+  const [isText, setIsText] = useState(false)
+  const [isBold, setIsBold] = useState(false)
+  const [isItalic, setIsItalic] = useState(false)
+  const [isUnderline, setIsUnderline] = useState(false)
+  const [isStrikethrough, setIsStrikethrough] = useState(false)
+  const [isSubscript, setIsSubscript] = useState(false)
+  const [isSuperscript, setIsSuperscript] = useState(false)
+  const [isCode, setIsCode] = useState(false)
+  const [isLink, setIsLink] = useState(false)
+  const [fontSize, setFontSize] = useState(DEFAULT_FONT_SIZE)
+  const [elementFormat, setElementFormat] = useState<AlignmentType>('left')
+  const [highlightColor, setHighlightColor] = useState<HighlightColor>('none')
+  const [textColor, setTextColor] = useState<TextColor>('none')
+  const [currentTextColorValue, setCurrentTextColorValue] = useState<string>('#000000')
 
-  if (!isClient) {
+  const updatePopup = useCallback(() => {
+    editor.getEditorState().read(() => {
+      // IME入力中は非表示（公式パターン）
+      if (editor.isComposing()) {
+        return
+      }
+
+      const selection = $getSelection()
+      const nativeSelection = window.getSelection()
+      const rootElement = editor.getRootElement()
+
+      if (
+        !nativeSelection ||
+        !$isRangeSelection(selection) ||
+        !rootElement ||
+        !rootElement.contains(nativeSelection.anchorNode)
+      ) {
+        setIsText(false)
+        return
+      }
+
+      const anchorNode = selection.anchor.getNode()
+
+      // コードハイライトノード内では非表示
+      if ($isCodeHighlightNode(anchorNode)) {
+        setIsText(false)
+        return
+      }
+
+      // 折りたたまれた選択（カーソルのみ）では非表示
+      if (selection.isCollapsed()) {
+        setIsText(false)
+        return
+      }
+
+      // テキストノードまたは段落ノードが選択されているか確認
+      const isTextSelected =
+        $isTextNode(anchorNode) || anchorNode.getType() === 'paragraph'
+
+      if (!isTextSelected) {
+        setIsText(false)
+        return
+      }
+
+      setIsText(true)
+
+      // フォーマット状態を更新
+      setIsBold(selection.hasFormat('bold'))
+      setIsItalic(selection.hasFormat('italic'))
+      setIsUnderline(selection.hasFormat('underline'))
+      setIsStrikethrough(selection.hasFormat('strikethrough'))
+      setIsSubscript(selection.hasFormat('subscript'))
+      setIsSuperscript(selection.hasFormat('superscript'))
+      setIsCode(selection.hasFormat('code'))
+
+      // リンク状態をチェック
+      const node = selection.anchor.getNode()
+      const parent = node.getParent()
+      setIsLink($isLinkNode(parent) || $isLinkNode(node))
+
+      // フォントサイズを取得
+      const currentFontSize = $getSelectionStyleValueForProperty(
+        selection,
+        'font-size',
+        `${DEFAULT_FONT_SIZE}px`
+      )
+      const sizeValue = parseInt(currentFontSize.replace(/px$/, ''), 10)
+      setFontSize(isNaN(sizeValue) ? DEFAULT_FONT_SIZE : sizeValue)
+
+      // テキスト配置を取得
+      const topElement = node.getTopLevelElementOrThrow()
+      const formatType = topElement.getFormatType()
+      setElementFormat(isAlignmentType(formatType) ? formatType : 'left')
+
+      // ハイライト色を取得
+      const bgColor = $getSelectionStyleValueForProperty(
+        selection,
+        'background-color',
+        'inherit'
+      )
+      setHighlightColor(getHighlightColorFromStyle(bgColor))
+
+      // 文字色を取得
+      const color = $getSelectionStyleValueForProperty(
+        selection,
+        'color',
+        'inherit'
+      )
+      setTextColor(getTextColorFromStyle(color))
+      // カスタム色の場合は値を保存
+      if (color && color !== 'inherit' && color !== 'transparent') {
+        setCurrentTextColorValue(color)
+      }
+    })
+  }, [editor])
+
+  // ドキュメント選択変更イベント
+  useEffect(() => {
+    document.addEventListener('selectionchange', updatePopup)
+    return () => {
+      document.removeEventListener('selectionchange', updatePopup)
+    }
+  }, [updatePopup])
+
+  // エディタ更新・選択変更コマンド
+  useEffect(() => {
+    return mergeRegister(
+      editor.registerUpdateListener(() => {
+        updatePopup()
+      }),
+      editor.registerCommand(
+        SELECTION_CHANGE_COMMAND,
+        () => {
+          updatePopup()
+          return false
+        },
+        COMMAND_PRIORITY_LOW
+      )
+    )
+  }, [editor, updatePopup])
+
+  if (!isText) {
     return null
   }
 
-  return createPortal(<FloatingToolbar />, document.body)
+  return createPortal(
+    <FloatingToolbar
+      editor={editor}
+      anchorElem={anchorElem}
+      isBold={isBold}
+      isItalic={isItalic}
+      isUnderline={isUnderline}
+      isStrikethrough={isStrikethrough}
+      isSubscript={isSubscript}
+      isSuperscript={isSuperscript}
+      isCode={isCode}
+      isLink={isLink}
+      fontSize={fontSize}
+      elementFormat={elementFormat}
+      highlightColor={highlightColor}
+      textColor={textColor}
+      currentTextColorValue={currentTextColorValue}
+      setIsLinkEditMode={setIsLinkEditMode}
+      onAddComment={onAddComment}
+    />,
+    anchorElem
+  )
+}
+
+// =============================================================================
+// Internal Plugin Component
+// =============================================================================
+
+function FloatingToolbarInner({
+  anchorElem,
+  setIsLinkEditMode,
+  onAddComment,
+}: {
+  anchorElem: HTMLElement
+  setIsLinkEditMode: (isLinkEditMode: boolean) => void
+  onAddComment?: () => void
+}) {
+  const [editor] = useLexicalComposerContext()
+  return useFloatingToolbar(editor, anchorElem, setIsLinkEditMode, onAddComment)
+}
+
+// =============================================================================
+// Plugin Component (公式エクスポートパターン)
+// =============================================================================
+
+export type FloatingToolbarPluginProps = {
+  anchorElem: HTMLElement
+  setIsLinkEditMode?: (isLinkEditMode: boolean) => void
+  /** コメント追加時のコールバック */
+  onAddComment?: () => void
+}
+
+export function FloatingToolbarPlugin({
+  anchorElem,
+  setIsLinkEditMode,
+  onAddComment,
+}: FloatingToolbarPluginProps): React.ReactElement | null {
+  const handleSetIsLinkEditMode = (isLinkEditMode: boolean) => {
+    setIsLinkEditMode?.(isLinkEditMode)
+  }
+
+  return (
+    <FloatingToolbarInner
+      anchorElem={anchorElem}
+      setIsLinkEditMode={handleSetIsLinkEditMode}
+      onAddComment={onAddComment}
+    />
+  )
 }

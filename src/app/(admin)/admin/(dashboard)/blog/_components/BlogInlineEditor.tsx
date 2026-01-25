@@ -11,16 +11,25 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
 import dynamic from 'next/dynamic'
 import {
-  InlineEditorLayout,
   EditorHeader,
+  useFullscreenMode,
   useKeyboardShortcuts,
   useBeforeUnload,
+  useEditorPanels,
+  UnifiedSidePanel,
 } from '@/admin/components/editor/inline'
+import { CommentPanel } from '@/admin/components/editor/comment-panel'
+import { blogContentTypeConfig } from '@/admin/components/editor/inline/content-types/blog-config'
+import {
+  blogFormSchema,
+  type BlogFormData,
+  type BlogPostData,
+  type BlogCategoryData,
+} from '@/admin/lib/validations/blog'
 
 const LexicalEditor = dynamic(
   () => import('@/admin/components/editor/lexical').then((mod) => ({ default: mod.LexicalEditor })),
@@ -33,15 +42,16 @@ const LexicalEditor = dynamic(
     ),
   }
 )
-import { BlogSidePanel } from '@/admin/components/editor/inline/BlogSidePanel'
 import {
   createBlogPost,
   updateBlogPost,
   deleteBlogPost,
   publishBlogPost,
   unpublishBlogPost,
+  createBlogCategory,
+  createBlogTag,
 } from '@/admin/actions/blog'
-import type { BlogPostData, BlogCategoryData } from '@/admin/actions/blog'
+import type { BlogTagData } from '@/admin/lib/validations/blog'
 import type { BlogCategoryOption } from '@/admin/components/editor/inline/types'
 import { BlogPostStatus } from '@/shared/generated/prisma/enums'
 import {
@@ -55,31 +65,10 @@ import {
   DialogTrigger,
 } from '@/admin/components/ui'
 import { EDITOR_PROSE_CLASSES } from '@/shared/lib/styles/prose'
+import { logger } from '@/shared/lib/logger'
+import { generateSlug } from '@/shared/lib/utils'
 
-// =============================================================================
-// Schema
-// =============================================================================
-
-const formSchema = z.object({
-  title: z.string().min(1, 'タイトルは必須です').max(200, 'タイトルは200文字以内'),
-  slug: z.string().min(1, 'スラッグは必須です').max(200).regex(/^[a-z0-9-]+$/, 'スラッグは小文字英数字とハイフンのみ'),
-  excerpt: z.string().min(1, '抜粋は必須です').max(500, '抜粋は500文字以内'),
-  content: z.string().min(1, '本文は必須です'),
-  thumbnailUrl: z.string().min(1, 'サムネイルURLは必須です'),
-  ogpImageUrl: z.string().optional(),
-  categoryId: z.string().min(1, 'カテゴリを選択してください'),
-  tags: z.string().optional(),
-  metaDescription: z.string().max(160).optional(),
-  metaKeywords: z.string().optional(),
-  ogpTitle: z.string().max(60).optional(),
-  ogpDescription: z.string().max(160).optional(),
-  status: z.nativeEnum(BlogPostStatus),
-  publishedAt: z.string().optional(),
-  contentWidth: z.string().optional(),
-  contentWidthCustom: z.string().optional(),
-})
-
-type FormData = z.infer<typeof formSchema>
+type FormData = BlogFormData
 
 // =============================================================================
 // Types
@@ -88,6 +77,7 @@ type FormData = z.infer<typeof formSchema>
 type BlogInlineEditorProps = {
   post?: BlogPostData
   categories: BlogCategoryData[]
+  tags: BlogTagData[]
   mode?: 'create' | 'edit'
 }
 
@@ -95,16 +85,41 @@ type BlogInlineEditorProps = {
 // Component
 // =============================================================================
 
-export function BlogInlineEditor({ post, categories, mode = 'edit' }: BlogInlineEditorProps) {
+export function BlogInlineEditor({ post, categories, tags: initialTags, mode = 'edit' }: BlogInlineEditorProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [hasEditorChanges, setHasEditorChanges] = useState(false)
 
-  const categoryOptions: BlogCategoryOption[] = categories.map((c) => ({
+  // 排他的パネル管理（設定/コメント）
+  const {
+    isSettingsPanelOpen,
+    isCommentsPanelOpen,
+    toggleSettings,
+    toggleComments,
+    closePanel,
+    activeMarkId,
+    selectMark,
+    pendingComment,
+    handleAddComment,
+    clearPendingComment,
+  } = useEditorPanels()
+
+  // カテゴリとタグの状態（エディタ内で新規作成した場合に更新）
+  const [currentCategories, setCurrentCategories] = useState(categories)
+  const [currentTags, setCurrentTags] = useState(initialTags)
+
+  const categoryOptions: BlogCategoryOption[] = currentCategories.map((c) => ({
     id: c.id,
     name: c.name,
+  }))
+
+  // タグオプション（TagInput用）
+  const tagOptions = currentTags.map((t) => ({
+    id: t.id,
+    name: t.name,
+    slug: t.slug,
+    _count: t._count,
   }))
 
   const {
@@ -116,7 +131,7 @@ export function BlogInlineEditor({ post, categories, mode = 'edit' }: BlogInline
     reset,
     formState: { errors, isDirty },
   } = useForm<FormData>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(blogFormSchema),
     defaultValues: post
       ? {
           title: post.title,
@@ -214,7 +229,7 @@ export function BlogInlineEditor({ post, categories, mode = 'edit' }: BlogInline
           }
         }
       } catch (error) {
-        console.error('保存中にエラーが発生しました:', error)
+        logger.error('保存中にエラーが発生しました', { error: error instanceof Error ? error.message : String(error) })
         toast.error('保存中にエラーが発生しました')
       }
     })
@@ -273,13 +288,7 @@ export function BlogInlineEditor({ post, categories, mode = 'edit' }: BlogInline
     router.push('/admin/blog')
   }
 
-  const handleToggleSidePanel = () => {
-    setIsSidePanelOpen((prev) => !prev)
-  }
 
-  const handleCloseSidePanel = () => {
-    setIsSidePanelOpen(false)
-  }
 
   const handleDelete = () => {
     if (!post) return
@@ -293,28 +302,89 @@ export function BlogInlineEditor({ post, categories, mode = 'edit' }: BlogInline
           toast.error(result.error)
         }
       } catch (error) {
-        console.error('削除中にエラーが発生しました:', error)
+        logger.error('削除中にエラーが発生しました', { error: error instanceof Error ? error.message : String(error) })
         toast.error('削除中にエラーが発生しました')
       }
     })
   }
 
+  // カテゴリ作成コールバック
+  const handleCreateCategory = async (name: string) => {
+    const slug = generateSlug(name, 'category')
+
+    const result = await createBlogCategory({
+      name,
+      slug,
+      description: null,
+      order: currentCategories.length,
+    })
+
+    if (result.success && result.data) {
+      const now = new Date()
+      const newCategory: BlogCategoryData = {
+        id: result.data.id,
+        name,
+        slug,
+        description: null,
+        order: currentCategories.length,
+        createdAt: now,
+        updatedAt: now,
+        _count: { posts: 0 },
+      }
+      setCurrentCategories((prev) => [...prev, newCategory])
+      toast.success('カテゴリを作成しました')
+      return { id: newCategory.id, name: newCategory.name, slug: newCategory.slug }
+    }
+    toast.error(!result.success ? result.error : 'カテゴリの作成に失敗しました')
+    return null
+  }
+
+  // タグ作成コールバック
+  const handleCreateTag = async (name: string) => {
+    const slug = generateSlug(name, 'tag')
+
+    const result = await createBlogTag({ name, slug })
+
+    if (result.success && result.data) {
+      const now = new Date()
+      const newTag: BlogTagData = {
+        id: result.data.id,
+        name,
+        slug,
+        createdAt: now,
+        updatedAt: now,
+        _count: { posts: 0 },
+      }
+      setCurrentTags((prev) => [...prev, newTag])
+      toast.success('タグを作成しました')
+      return { id: newTag.id, name: newTag.name, slug: newTag.slug, _count: newTag._count }
+    }
+    toast.error(!result.success ? result.error : 'タグの作成に失敗しました')
+    return null
+  }
+
+  useFullscreenMode()
   useKeyboardShortcuts({ onSave: handleSave })
   useBeforeUnload({ isDirty: isDirty || hasEditorChanges })
 
   const isFormDirty = isDirty || hasEditorChanges
 
+  // パネルの開閉状態（排他的なので常に1つのみ）
+  const isPanelOpen = isSettingsPanelOpen || isCommentsPanelOpen
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="h-screen">
-      <InlineEditorLayout>
-        <div className="flex flex-1 flex-col overflow-hidden">
+    <form onSubmit={handleSubmit(onSubmit)} className="h-screen flex">
+      <div
+        className="flex flex-1 flex-col overflow-hidden transition-[margin] duration-300"
+        style={{ marginRight: isPanelOpen ? '320px' : '0' }}
+      >
           <EditorHeader
             title={title}
             slug={`blog/${slug}`}
             isDirty={isFormDirty}
             isPending={isPending}
-            isSidePanelOpen={isSidePanelOpen}
-            onToggleSidePanel={handleToggleSidePanel}
+            isSidePanelOpen={isSettingsPanelOpen}
+            onToggleSidePanel={toggleSettings}
             onSave={handleSave}
             onPreview={handlePreview}
             onBack={handleBack}
@@ -327,6 +397,9 @@ export function BlogInlineEditor({ post, categories, mode = 'edit' }: BlogInline
                   }
                 : undefined
             }
+            showCommentButton={mode === 'edit' && !!post}
+            isCommentPanelOpen={isCommentsPanelOpen}
+            onToggleCommentPanel={toggleComments}
             extraActions={
               mode === 'edit' && post ? (
                 <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
@@ -378,23 +451,48 @@ export function BlogInlineEditor({ post, categories, mode = 'edit' }: BlogInline
               disabled={isPending}
               className={EDITOR_PROSE_CLASSES}
               showToolbar
-              minHeight="calc(100vh - 200px)"
+              height="calc(100vh - 200px)"
+              onMarkClick={mode === 'edit' && post ? selectMark : undefined}
+              onAddComment={mode === 'edit' && post ? handleAddComment : undefined}
             />
           </div>
         </div>
 
-        <BlogSidePanel
-          isOpen={isSidePanelOpen}
-          onClose={handleCloseSidePanel}
-          register={register}
-          control={control}
-          errors={errors}
-          setValue={setValue}
-          getValues={getValues}
-          categories={categoryOptions}
-          disabled={isPending}
+      <UnifiedSidePanel
+        isOpen={isSettingsPanelOpen}
+        onClose={closePanel}
+        config={blogContentTypeConfig}
+        register={register}
+        control={control}
+        errors={errors}
+        setValue={setValue}
+        getValues={getValues}
+        disabled={isPending}
+        extraProps={{
+          // カテゴリ
+          categories: categoryOptions,
+          onCreateCategory: handleCreateCategory,
+          // タグ
+          availableTags: tagOptions,
+          onCreateTag: handleCreateTag,
+          // 公開設定
+          statusValue: status,
+          onStatusChange: (value: string) => setValue('status', value as BlogPostStatus),
+        }}
+      />
+
+      {/* コメントパネル（編集モードのみ） */}
+      {mode === 'edit' && post && (
+        <CommentPanel
+          isOpen={isCommentsPanelOpen}
+          contentType="blog"
+          contentId={post.id}
+          activeMarkId={activeMarkId}
+          onClose={closePanel}
+          pendingComment={pendingComment}
+          onPendingCommentSubmit={clearPendingComment}
         />
-      </InlineEditorLayout>
+      )}
     </form>
   )
 }

@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import { toast } from 'sonner'
 import {
   Card,
@@ -26,6 +26,40 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+
+  // 画像モーダル用のstate
+  const allImages = [space.mainImageUrl, ...space.imageUrls]
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedIndex, setSelectedIndex] = useState(0)
+
+  const openModal = (index: number) => {
+    setSelectedIndex(index)
+    setIsModalOpen(true)
+  }
+
+  const handlePrev = () => {
+    setSelectedIndex((prev) => (prev === 0 ? allImages.length - 1 : prev - 1))
+  }
+
+  const handleNext = () => {
+    setSelectedIndex((prev) => (prev === allImages.length - 1 ? 0 : prev + 1))
+  }
+
+  useEffect(() => {
+    if (!isModalOpen) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsModalOpen(false)
+      else if (e.key === 'ArrowLeft') {
+        setSelectedIndex((prev) => (prev === 0 ? allImages.length - 1 : prev - 1))
+      } else if (e.key === 'ArrowRight') {
+        setSelectedIndex((prev) => (prev === allImages.length - 1 ? 0 : prev + 1))
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isModalOpen, allImages.length])
 
   const handlePublishChange = async (checked: boolean) => {
     startTransition(async () => {
@@ -159,42 +193,106 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
           <CardTitle>画像</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div>
-              <div className="text-sm text-muted-foreground mb-2">メイン画像</div>
-              <div className="relative h-64 w-full">
+          <div className="flex gap-3 flex-wrap">
+            {/* メイン画像 */}
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">メイン</span>
+              <button
+                type="button"
+                onClick={() => openModal(0)}
+                className="relative w-24 h-24 cursor-pointer hover:opacity-80 transition-opacity"
+              >
                 <Image
                   src={space.mainImageUrl}
                   alt={space.name}
                   fill
-                  className="rounded-lg object-cover"
-                  sizes="(max-width: 768px) 100vw, 50vw"
+                  className="rounded-lg object-cover ring-2 ring-primary"
+                  sizes="96px"
                 />
-              </div>
+              </button>
             </div>
-            {space.imageUrls.length > 0 && (
-              <div>
-                <div className="text-sm text-muted-foreground mb-2">
-                  追加画像（{space.imageUrls.length}枚）
-                </div>
-                <div className="grid gap-2 grid-cols-2 sm:grid-cols-4">
-                  {space.imageUrls.map((url: string, index: number) => (
-                    <div key={index} className="relative aspect-square">
-                      <Image
-                        src={url}
-                        alt={`${space.name} ${index + 1}`}
-                        fill
-                        className="rounded-lg object-cover"
-                        sizes="(max-width: 640px) 50vw, 25vw"
-                      />
-                    </div>
-                  ))}
-                </div>
+            {/* 追加画像 */}
+            {space.imageUrls.map((url: string, index: number) => (
+              <div key={index} className="flex flex-col gap-1">
+                <span className="text-xs text-muted-foreground">追加{index + 1}</span>
+                <button
+                  type="button"
+                  onClick={() => openModal(index + 1)}
+                  className="relative w-24 h-24 cursor-pointer hover:opacity-80 transition-opacity"
+                >
+                  <Image
+                    src={url}
+                    alt={`${space.name} ${index + 1}`}
+                    fill
+                    className="rounded-lg object-cover"
+                    sizes="96px"
+                  />
+                </button>
               </div>
-            )}
+            ))}
           </div>
         </CardContent>
       </Card>
+
+      {/* 画像モーダル */}
+      {isModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setIsModalOpen(false)}
+        >
+          {/* 閉じるボタン */}
+          <button
+            type="button"
+            className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors"
+            onClick={() => setIsModalOpen(false)}
+          >
+            <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
+          </button>
+
+          {/* 前へボタン */}
+          {allImages.length > 1 && (
+            <button
+              type="button"
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 transition-colors p-2"
+              onClick={(e) => { e.stopPropagation(); handlePrev() }}
+            >
+              <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+              </svg>
+            </button>
+          )}
+
+          {/* 画像 */}
+          <Image
+            src={allImages[selectedIndex]}
+            alt={`${space.name} - 画像${selectedIndex + 1}`}
+            width={1920}
+            height={1080}
+            className="max-w-full max-h-[90vh] object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+
+          {/* 次へボタン */}
+          {allImages.length > 1 && (
+            <button
+              type="button"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 transition-colors p-2"
+              onClick={(e) => { e.stopPropagation(); handleNext() }}
+            >
+              <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+              </svg>
+            </button>
+          )}
+
+          {/* カウンター */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white text-sm">
+            {selectedIndex + 1} / {allImages.length}
+          </div>
+        </div>
+      )}
 
       {/* 設備 */}
       {space.facilities.length > 0 && (

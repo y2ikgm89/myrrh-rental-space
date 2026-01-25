@@ -27,6 +27,8 @@ import {
   type AdminReservationInput,
 } from '@/admin/lib/validations/admin-reservation'
 import { createAdminReservation } from '@/admin/actions/reservation'
+import { formatCurrency } from '@/shared/lib/utils'
+import { CustomerSelector } from './CustomerSelector'
 
 type SpaceOption = {
   id: string
@@ -38,159 +40,17 @@ type ReservationFormProps = {
   spaces: SpaceOption[]
 }
 
-// =============================================================================
-// Placeholder Components (Phase 3/4で実装)
-// =============================================================================
+type SelectedCustomer = {
+  id: string
+  name: string
+  email: string
+}
 
-function CustomerSelector({
-  customerId: _customerId,
-  customerData,
-  onCustomerIdChange,
-  onCustomerDataChange,
-  disabled,
-}: {
-  customerId: string | undefined
-  customerData:
-    | { lastName: string; firstName: string; email: string; phoneNumber?: string }
-    | undefined
-  onCustomerIdChange: (id: string | undefined) => void
-  onCustomerDataChange: (
-    data:
-      | { lastName: string; firstName: string; email: string; phoneNumber?: string }
-      | undefined
-  ) => void
-  disabled?: boolean
-}) {
-  const [mode, setMode] = useState<'select' | 'new'>('new')
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>顧客情報</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* モード切り替え */}
-        <div className="space-y-2">
-          <Label>顧客選択方法</Label>
-          <div className="flex gap-4">
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                checked={mode === 'select'}
-                onChange={() => {
-                  setMode('select')
-                  onCustomerDataChange(undefined)
-                }}
-                disabled={disabled}
-              />
-              <span>既存顧客を検索</span>
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                checked={mode === 'new'}
-                onChange={() => {
-                  setMode('new')
-                  onCustomerIdChange(undefined)
-                }}
-                disabled={disabled}
-              />
-              <span>新規顧客として入力</span>
-            </label>
-          </div>
-        </div>
-
-        {/* 既存顧客検索（Placeholder） */}
-        {mode === 'select' && (
-          <div className="space-y-2">
-            <Label>顧客検索</Label>
-            <Input placeholder="名前・メール・電話番号で検索..." disabled />
-            <p className="text-sm text-muted-foreground">
-              ※ Phase 3で実装予定（検索・選択機能）
-            </p>
-          </div>
-        )}
-
-        {/* 新規顧客入力 */}
-        {mode === 'new' && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="lastName">姓 *</Label>
-                <Input
-                  id="lastName"
-                  value={customerData?.lastName || ''}
-                  onChange={(e) =>
-                    onCustomerDataChange({
-                      lastName: e.target.value,
-                      firstName: customerData?.firstName || '',
-                      email: customerData?.email || '',
-                      phoneNumber: customerData?.phoneNumber,
-                    })
-                  }
-                  placeholder="山田"
-                  disabled={disabled}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="firstName">名 *</Label>
-                <Input
-                  id="firstName"
-                  value={customerData?.firstName || ''}
-                  onChange={(e) =>
-                    onCustomerDataChange({
-                      lastName: customerData?.lastName || '',
-                      firstName: e.target.value,
-                      email: customerData?.email || '',
-                      phoneNumber: customerData?.phoneNumber,
-                    })
-                  }
-                  placeholder="太郎"
-                  disabled={disabled}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">メールアドレス *</Label>
-              <Input
-                id="email"
-                type="email"
-                value={customerData?.email || ''}
-                onChange={(e) =>
-                  onCustomerDataChange({
-                    lastName: customerData?.lastName || '',
-                    firstName: customerData?.firstName || '',
-                    email: e.target.value,
-                    phoneNumber: customerData?.phoneNumber,
-                  })
-                }
-                placeholder="example@example.com"
-                disabled={disabled}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="phoneNumber">電話番号</Label>
-              <Input
-                id="phoneNumber"
-                type="tel"
-                value={customerData?.phoneNumber || ''}
-                onChange={(e) =>
-                  onCustomerDataChange({
-                    lastName: customerData?.lastName || '',
-                    firstName: customerData?.firstName || '',
-                    email: customerData?.email || '',
-                    phoneNumber: e.target.value,
-                  })
-                }
-                placeholder="090-1234-5678"
-                disabled={disabled}
-              />
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  )
+type NewCustomerData = {
+  lastName: string
+  firstName: string
+  email: string
+  phoneNumber?: string
 }
 
 // =============================================================================
@@ -201,6 +61,10 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [manualPrice, setManualPrice] = useState<number | undefined>(undefined)
+
+  // CustomerSelector用の状態
+  const [isNewCustomer, setIsNewCustomer] = useState(true)
+  const [selectedCustomer, setSelectedCustomer] = useState<SelectedCustomer | null>(null)
 
   const {
     register,
@@ -220,10 +84,38 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
   const date = useWatch({ control, name: 'date' })
   const startTime = useWatch({ control, name: 'startTime' })
   const endTime = useWatch({ control, name: 'endTime' })
-  const customerId = useWatch({ control, name: 'customerId' })
-  const customerData = useWatch({ control, name: 'customerData' })
   const status = useWatch({ control, name: 'status' })
   const sendEmail = useWatch({ control, name: 'sendEmail' })
+
+  // CustomerSelector ハンドラー
+  const handleSelectCustomer = (customer: SelectedCustomer | null) => {
+    setSelectedCustomer(customer)
+    setValue('customerId', customer?.id)
+    if (customer) {
+      // 既存顧客選択時は新規顧客データをクリア
+      setValue('customerData', undefined)
+    }
+  }
+
+  const handleNewCustomerData = (data: NewCustomerData | null) => {
+    setValue('customerData', data ?? undefined)
+    if (data) {
+      // 新規顧客データ入力時はcustomerIdをクリア
+      setValue('customerId', undefined)
+    }
+  }
+
+  const handleToggleNewCustomer = (isNew: boolean) => {
+    setIsNewCustomer(isNew)
+    if (isNew) {
+      // 新規顧客モードに切り替えたらcustomerIdをクリア
+      setValue('customerId', undefined)
+      setSelectedCustomer(null)
+    } else {
+      // 既存顧客モードに切り替えたらcustomerDataをクリア
+      setValue('customerData', undefined)
+    }
+  }
 
   // 選択されたスペース情報
   const selectedSpace = spaces.find((s) => s.id === spaceId)
@@ -300,7 +192,7 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
                   <SelectContent>
                     {spaces.map((space) => (
                       <SelectItem key={space.id} value={space.id}>
-                        {space.name} - ¥{space.hourlyPrice.toLocaleString()}/時間
+                        {space.name} - {formatCurrency(space.hourlyPrice)}/時間
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -400,11 +292,11 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
               {displayPrice !== null ? (
                 <div className="space-y-2">
                   <div className="text-2xl font-bold">
-                    ¥{displayPrice.toLocaleString()}
+                    {formatCurrency(displayPrice)}
                   </div>
                   {!manualPrice && calculatedPrice !== null && (
                     <p className="text-sm text-muted-foreground">
-                      自動計算: {selectedSpace?.hourlyPrice.toLocaleString()}円/時間 ×{' '}
+                      自動計算: {formatCurrency(selectedSpace!.hourlyPrice)}/時間 ×{' '}
                       {((calculatedPrice / selectedSpace!.hourlyPrice) * 10) / 10}時間
                     </p>
                   )}
@@ -437,13 +329,21 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
 
         {/* 右カラム: 顧客情報 */}
         <div className="space-y-6">
-          <CustomerSelector
-            customerId={customerId}
-            customerData={customerData}
-            onCustomerIdChange={(id) => setValue('customerId', id)}
-            onCustomerDataChange={(data) => setValue('customerData', data)}
-            disabled={isPending}
-          />
+          <Card>
+            <CardHeader>
+              <CardTitle>顧客情報</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CustomerSelector
+                selectedCustomer={selectedCustomer}
+                onSelectCustomer={handleSelectCustomer}
+                onNewCustomerData={handleNewCustomerData}
+                isNewCustomer={isNewCustomer}
+                onToggleNewCustomer={handleToggleNewCustomer}
+                errors={errors.customerData ? { ...errors.customerData } as Record<string, string[] | undefined> : undefined}
+              />
+            </CardContent>
+          </Card>
         </div>
       </div>
 

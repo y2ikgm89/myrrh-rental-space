@@ -8,7 +8,7 @@
 'use client'
 
 import { useQueryStates, parseAsString, parseAsInteger } from 'nuqs'
-import { useCallback, useRef, useEffect } from 'react'
+import { useRef, useEffect } from 'react'
 
 // ============================================================
 // Types
@@ -45,6 +45,12 @@ function useDebouncedCallback(
   delayMs: number
 ): (value: string) => void {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const callbackRef = useRef(callback)
+
+  // Ref を effect 内で更新（レンダー中の更新は禁止）
+  useEffect(() => {
+    callbackRef.current = callback
+  })
 
   useEffect(() => {
     return () => {
@@ -54,17 +60,14 @@ function useDebouncedCallback(
     }
   }, [])
 
-  return useCallback(
-    (value: string) => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-      }
-      timeoutRef.current = setTimeout(() => {
-        callback(value)
-      }, delayMs)
-    },
-    [callback, delayMs]
-  )
+  return (value: string) => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+    }
+    timeoutRef.current = setTimeout(() => {
+      callbackRef.current(value)
+    }, delayMs)
+  }
 }
 
 // ============================================================
@@ -137,53 +140,38 @@ export function useFilterParams(
   })
 
   // 即時検索
-  const setSearch = useCallback(
-    (value: string) => {
-      void setParams({ search: value || null, page: 1 })
-    },
-    [setParams]
-  )
+  const setSearch = (value: string) => {
+    void setParams({ search: value || null, page: 1 })
+  }
 
   // 検索（デバウンス付き）
   const setSearchDebounced = useDebouncedCallback(setSearch, debounceMs)
 
   // ステータス変更
-  const setStatus = useCallback(
-    (value: string) => {
-      const statusValue = value === 'ALL' ? null : value || null
-      void setParams({ status: statusValue, page: 1 })
-    },
-    [setParams]
-  )
+  const setStatus = (value: string) => {
+    const statusValue = value === 'ALL' ? null : value || null
+    void setParams({ status: statusValue, page: 1 })
+  }
 
   // カテゴリ変更（withCategory=trueの場合のみ）
-  const setCategory = useCallback(
-    (value: string) => {
-      if (!withCategory) return
-      const categoryValue = value === 'ALL' ? null : value || null
-      void setParams({ categoryId: categoryValue, page: 1 } as typeof params)
-    },
-    [setParams, withCategory]
-  )
+  const setCategory = (value: string) => {
+    if (!withCategory) return
+    const categoryValue = value === 'ALL' ? null : value || null
+    void setParams({ categoryId: categoryValue, page: 1 } as typeof params)
+  }
 
   // ページ変更
-  const setPage = useCallback(
-    (value: number) => {
-      void setParams({ page: value })
-    },
-    [setParams]
-  )
+  const setPage = (value: number) => {
+    void setParams({ page: value })
+  }
 
   // 1ページあたりの件数変更
-  const setPerPage = useCallback(
-    (value: number) => {
-      void setParams({ perPage: value, page: 1 })
-    },
-    [setParams]
-  )
+  const setPerPage = (value: number) => {
+    void setParams({ perPage: value, page: 1 })
+  }
 
   // リセット
-  const reset = useCallback(() => {
+  const reset = () => {
     void setParams({
       search: null,
       status: null,
@@ -191,7 +179,7 @@ export function useFilterParams(
       perPage: defaultPerPage,
       ...(withCategory ? { categoryId: null } : {}),
     } as Parameters<typeof setParams>[0])
-  }, [setParams, defaultPerPage, withCategory])
+  }
 
   // 戻り値を構築
   const base = {

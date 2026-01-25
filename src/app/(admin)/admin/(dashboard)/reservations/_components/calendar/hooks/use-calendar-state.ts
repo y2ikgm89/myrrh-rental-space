@@ -1,6 +1,5 @@
 'use client'
 
-import { useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { format } from 'date-fns'
 import type { CalendarView, CalendarEvent, SpaceOption } from '@/admin/lib/calendar'
@@ -29,11 +28,8 @@ export function useCalendarState({ events, spaces }: UseCalendarStateOptions) {
   const spaceId = searchParams.get('spaceId') || undefined
   const status = getReservationStatusFilterOrAll(searchParams.get('status'))
 
-  // 日付計算（new Date()の参照安定化のためuseMemo維持）
-  const currentDate = useMemo(
-    () => (dateParam ? new Date(dateParam) : new Date()),
-    [dateParam]
-  )
+  // 日付計算
+  const currentDate = dateParam ? new Date(dateParam) : new Date()
 
   // 日付範囲計算
   const dateRange = getCalendarDateRange(currentDate, view)
