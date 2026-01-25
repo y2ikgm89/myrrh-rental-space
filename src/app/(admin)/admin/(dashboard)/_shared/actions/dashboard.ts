@@ -275,6 +275,9 @@ export async function getReservationChartData(): Promise<ChartDataPoint[]> {
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
 
   // DB側で日付ごとに集計
+  // NOTE: Prisma の tagged template literal ($queryRaw`...`) は
+  // 補間された値を自動的にパラメータ化するため、SQL Injection に対して安全
+  // @see https://www.prisma.io/docs/orm/prisma-client/using-raw-sql/raw-queries#queryraw
   type DailyStats = {
     date: Date
     reservations: bigint

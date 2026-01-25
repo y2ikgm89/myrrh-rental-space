@@ -5,8 +5,9 @@ import { revalidateTag } from 'next/cache'
 import { CACHE_TAGS } from '@/shared/lib/constants'
 import { Role } from '@/shared/generated/prisma/enums'
 import type { Prisma } from '@/shared/generated/prisma/client'
-import bcrypt from 'bcrypt'
-import { createSuccess, createFailure, withPermission, withRole, type ActionResult } from '@/admin/types/server-actions'
+import { hashPassword } from 'better-auth/crypto'
+import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+import { withPermission, withRole } from '@/admin/lib/server-action-helpers'
 import { type User } from '@/shared/lib/auth'
 import { checkReadPermissionFor } from '@/admin/lib/permissions'
 import { logRoleChange } from '@/admin/lib/audit'
@@ -167,8 +168,8 @@ export const createUser = withPermission<[CreateUserInput], { id: string }>(
     return createFailure('このメールアドレスは既に使用されています')
   }
 
-  // パスワードをハッシュ化（Better Auth scrypt format）
-  const hashedPassword = await bcrypt.hash(parsed.data.password, 13)
+  // パスワードをハッシュ化（Better Auth デフォルトの scrypt を使用）
+  const hashedPassword = await hashPassword(parsed.data.password)
 
   // Better Auth: UserとAccountを同時に作成
   const user = await prisma.user.create({
@@ -234,9 +235,9 @@ export const updateUser = withPermission<[string, UpdateUserInput], void>(
     role: parsed.data.role,
   }
 
-  // パスワードが入力された場合のみ更新
+  // パスワードが入力された場合のみ更新（Better Auth デフォルトの scrypt を使用）
   if (parsed.data.password && parsed.data.password.length >= 8) {
-    updateData.password = await bcrypt.hash(parsed.data.password, 13)
+    updateData.password = await hashPassword(parsed.data.password)
   }
 
   await prisma.user.update({

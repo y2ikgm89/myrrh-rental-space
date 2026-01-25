@@ -3,14 +3,27 @@
 /**
  * スタッフ招待 Server Actions
  *
- * 管理者がスタッフを招待し、スタッフ自身がパスワードを設定するフロー
+ * 管理者がスタッフを招待し、スタッフ自身がパスワードを設定するフロー。
+ * 招待メールを送信し、スタッフが専用リンクからパスワードを設定して
+ * アカウントを有効化します。
+ *
+ * ## 主な機能
+ * - スタッフ招待メール送信
+ * - 招待トークン検証
+ * - パスワード設定（アカウント作成）
+ * - 招待一覧取得
+ * - 招待削除・再送
+ *
+ * @module admin/actions/staff-invitation
  */
 
 import { randomBytes } from 'crypto'
 import { prisma } from '@/shared/lib/prisma'
-import { revalidatePath } from 'next/cache'
+import { revalidateTag } from 'next/cache'
+import { CACHE_TAGS } from '@/shared/lib/constants'
 import { sendStaffInvitationEmail } from '@/shared/lib/email-service'
-import { createSuccess, createFailure, withPermission, type ActionResult } from '@/admin/types/server-actions'
+import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+import { withPermission } from '@/admin/lib/server-action-helpers'
 import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'
 import { getSession, getRoleFromSession, type User } from '@/shared/lib/auth'
 import { logPermissionDenied } from '@/admin/lib/audit'
@@ -23,7 +36,8 @@ import {
   type InvitationData,
 } from '@/admin/lib/validations/staff-invitation'
 import { getAppUrl } from '@/shared/lib/constants'
-import bcrypt from 'bcrypt'
+import { logError, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
+import { hashPassword } from 'better-auth/crypto'
 
 // =============================================================================
 // Helper Functions
@@ -125,11 +139,15 @@ export const sendInvitation = withPermission<[CreateInvitationInput], Invitation
   if (!emailResult.success) {
     // メール送信失敗時は招待を削除
     await prisma.staffInvitation.delete({ where: { id: invitation.id } })
-    console.error('[StaffInvitation] Failed to send email:', emailResult.error)
+    logError(new Error(emailResult.error || 'Failed to send invitation email'), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'sendInvitation', email, invitationId: invitation.id },
+    })
     return createFailure('招待メールの送信に失敗しました。メール設定を確認してください。')
   }
 
-  revalidatePath('/admin/staff')
+  revalidateTag(CACHE_TAGS.STAFF, 'default')
   return createSuccess('招待メールを送信しました', {
     id: invitation.id,
     email: invitation.email,
@@ -200,8 +218,8 @@ export async function setupPassword(input: SetupPasswordInput): Promise<ActionRe
     return createFailure('この招待は有効期限が切れています')
   }
 
-  // パスワードハッシュ化
-  const hashedPassword = await bcrypt.hash(password, 10)
+  // パスワードハッシュ化（Better Auth デフォルトの scrypt を使用）
+  const hashedPassword = await hashPassword(password)
 
   // トランザクションでユーザー作成と招待消費を実行
   const result = await prisma.$transaction(async (tx) => {
@@ -234,7 +252,7 @@ export async function setupPassword(input: SetupPasswordInput): Promise<ActionRe
     return newUser
   })
 
-  revalidatePath('/admin/staff')
+  revalidateTag(CACHE_TAGS.STAFF, 'default')
   return createSuccess('アカウントを作成しました', { userId: result.id })
 }
 
@@ -287,7 +305,7 @@ export const deleteInvitation = withPermission<[string], void>(
     where: { id },
   })
 
-  revalidatePath('/admin/staff')
+  revalidateTag(CACHE_TAGS.STAFF, 'default')
   return createSuccess('招待を削除しました')
 })
 
@@ -333,10 +351,14 @@ export const resendInvitation = withPermission<[string], void>(
   })
 
   if (!emailResult.success) {
-    console.error('[StaffInvitation] Failed to resend email:', emailResult.error)
+    logError(new Error(emailResult.error || 'Failed to resend invitation email'), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'resendInvitation', invitationId: id, email: invitation.email },
+    })
     return createFailure('招待メールの再送に失敗しました')
   }
 
-  revalidatePath('/admin/staff')
+  revalidateTag(CACHE_TAGS.STAFF, 'default')
   return createSuccess('招待を再送しました')
 })

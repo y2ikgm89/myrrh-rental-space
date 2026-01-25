@@ -23,7 +23,7 @@
  */
 
 import { prisma } from '@/shared/lib/prisma'
-import { ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
+import { ErrorCategory, ErrorSeverity, ReservationOverlapError, isReservationOverlapError } from '@/shared/lib/errors'
 import { fireAndForget } from '@/shared/lib/async-utils'
 import { revalidateTag } from 'next/cache'
 import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
@@ -781,7 +781,7 @@ export const createAdminReservation = withPermission<[AdminReservationInput]>(
         tx
       )
       if (overlapCheckTx.hasOverlap) {
-        throw new Error('OVERLAP_DETECTED')
+        throw new ReservationOverlapError()
       }
 
       let resolvedCustomerId = customerId
@@ -872,7 +872,7 @@ export const createAdminReservation = withPermission<[AdminReservationInput]>(
     })
   } catch (error) {
     // 重複エラー（Race Condition検出時）
-    if (error instanceof Error && error.message === 'OVERLAP_DETECTED') {
+    if (isReservationOverlapError(error)) {
       return createFailure('選択された時間帯は既に予約されています。別の時間帯をお選びください。')
     }
     throw error // その他のエラーは再スロー
