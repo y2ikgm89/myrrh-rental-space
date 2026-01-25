@@ -1,11 +1,21 @@
 /**
  * ブログ記事詳細ページ
  *
- * ContentRendererコンポーネントでリッチテキストを安全に表示
+ * ブログ記事の詳細を表示するServer Component。
+ * ContentRendererコンポーネントでリッチテキストを安全に表示します。
  *
- * Next.js 16 PPR対応:
- * - use cache ディレクティブでデータ取得をキャッシュ
- * - generateStaticParams でビルド時に事前生成
+ * ## 機能
+ * - ブログ記事の詳細表示
+ * - サイドバー（設定による表示切替）
+ * - 前後の記事ナビゲーション
+ * - コメントセクション
+ * - 構造化データ（Article JSON-LD）の出力
+ *
+ * ## Next.js 16 PPR対応
+ * - `use cache` ディレクティブでデータ取得をキャッシュ
+ * - `generateStaticParams` でビルド時に事前生成
+ *
+ * @module blog/[slug]/page
  */
 
 import { cacheLife, cacheTag } from 'next/cache'
@@ -20,13 +30,19 @@ import { ArticleJsonLd } from '@/public/components/seo/JsonLd'
 import { BlogSidebar } from '@/public/components/sidebar'
 import { getSidebarSettings, getSidebarData } from '@/public/actions/sidebar'
 import { prisma } from '@/shared/lib/prisma'
+import { criticalFetch, ErrorCategory } from '@/shared/lib/errors'
+import { toPlainObject, toISOString, formatSerializedDate } from '@/shared/lib/serialize'
 import { parseStringArray } from '@/shared/lib/json-validators'
 import { getBlogLayoutSettings } from '@/public/lib/layout-settings'
 import { getContainerStyles, getContentStyles } from '@/shared/lib/styles/layout-mapper'
 import { BlogPostStatus } from '@/shared/generated/prisma/enums'
-import { CommentSection } from './_components'
-import { getBaseUrl, SITE_DEFAULTS } from '@/shared/lib/constants'
+import { CommentSection, BlogPreviewWrapper } from './_components'
+import { getBaseUrl, SITE_DEFAULTS, CACHE_LIFE, CACHE_TAGS } from '@/shared/lib/constants'
 import type { ReactElement } from 'react'
+
+// =============================================================================
+// Constants
+// =============================================================================
 
 const BASE_URL = getBaseUrl()
 
@@ -65,132 +81,199 @@ const styles = tv({
 })()
 
 // =============================================================================
+// Types
+// =============================================================================
+
+/** ページコンポーネントのProps */
+interface PageProps {
+  params: Promise<{ slug: string }>
+  searchParams: Promise<{ preview?: string }>
+}
+
+// =============================================================================
 // Helpers
 // =============================================================================
 
-function formatDate(value: Date | null): string {
+/**
+ * 日付を表示用にフォーマット
+ *
+ * @param value - 日付値（Date | string | null）
+ * @returns フォーマット済み日付文字列、値がない場合は「公開準備中」
+ */
+function formatDate(value: Date | string | null): string {
   if (!value) return '公開準備中'
-  return value.toLocaleDateString('ja-JP', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
+  return formatSerializedDate(value)
 }
 
 // =============================================================================
-// Data Fetching with Cache
+// Data Fetching
 // =============================================================================
-
-interface PageProps {
-  params: Promise<{ slug: string }>
-}
 
 /**
  * ブログ記事詳細を取得（キャッシュ付き）
+ *
+ * 公開中のブログ記事を取得し、シリアライズして返します。
+ *
+ * @param slug - 記事のスラッグ
+ * @returns ブログ記事、存在しない場合は null
+ * @throws criticalFetch 内でDBエラーをログ出力
  */
 async function getBlogPostBySlug(slug: string) {
   'use cache'
-  cacheLife('hours')
-  cacheTag('blog', `blog-${slug}`)
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT)
+  cacheTag(CACHE_TAGS.BLOG, `${CACHE_TAGS.BLOG}-${slug}`)
 
-  return await prisma.blogPost.findUnique({
-    where: {
-      slug,
-      status: BlogPostStatus.PUBLISHED,
-    },
-    select: {
-      id: true,
-      title: true,
-      slug: true,
-      excerpt: true,
-      content: true,
-      thumbnailUrl: true,
-      ogpImageUrl: true,
-      publishedAt: true,
-      updatedAt: true,
-      tags: true,
-      metaDescription: true,
-      metaKeywords: true,
-      ogpTitle: true,
-      ogpDescription: true,
-      categoryId: true,
-      category: {
-        select: {
-          name: true,
-          slug: true,
+  const result = await criticalFetch({
+    fetch: () =>
+      prisma.blogPost.findUnique({
+        where: {
+          slug,
+          status: BlogPostStatus.PUBLISHED,
         },
-      },
-    },
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          excerpt: true,
+          content: true,
+          thumbnailUrl: true,
+          ogpImageUrl: true,
+          publishedAt: true,
+          updatedAt: true,
+          tags: true,
+          metaDescription: true,
+          metaKeywords: true,
+          ogpTitle: true,
+          ogpDescription: true,
+          categoryId: true,
+          category: {
+            select: {
+              name: true,
+              slug: true,
+            },
+          },
+        },
+      }),
+    category: ErrorCategory.DATABASE,
+    operationName: 'getBlogPostBySlug',
+    context: { slug },
   })
+
+  return toPlainObject(result)
 }
 
 /**
  * メタデータ用ブログ記事情報を取得（キャッシュ付き）
+ *
+ * generateMetadata で使用する最小限の情報のみ取得します。
+ *
+ * @param slug - 記事のスラッグ
+ * @returns メタデータ用情報、存在しない場合は null
+ * @throws criticalFetch 内でDBエラーをログ出力
  */
 async function getBlogPostForMetadata(slug: string) {
   'use cache'
-  cacheLife('hours')
-  cacheTag('blog', `blog-${slug}`)
+  cacheLife(CACHE_LIFE.METADATA)
+  cacheTag(CACHE_TAGS.BLOG, `${CACHE_TAGS.BLOG}-${slug}`)
 
-  return await prisma.blogPost.findUnique({
-    where: { slug },
-    select: {
-      title: true,
-      excerpt: true,
-      thumbnailUrl: true,
-      ogpImageUrl: true,
-      metaDescription: true,
-      metaKeywords: true,
-      ogpTitle: true,
-      ogpDescription: true,
-    },
+  const result = await criticalFetch({
+    fetch: () =>
+      prisma.blogPost.findUnique({
+        where: { slug },
+        select: {
+          title: true,
+          excerpt: true,
+          thumbnailUrl: true,
+          ogpImageUrl: true,
+          metaDescription: true,
+          metaKeywords: true,
+          ogpTitle: true,
+          ogpDescription: true,
+        },
+      }),
+    category: ErrorCategory.DATABASE,
+    operationName: 'getBlogPostForMetadata',
+    context: { slug },
   })
+
+  return toPlainObject(result)
 }
 
 /**
  * 前後の記事を取得（キャッシュ付き）
+ *
+ * 現在の記事の前後にある公開記事を取得します。
+ * 公開日時でソートし、前後の記事を特定します。
+ *
+ * @param postId - 現在の記事ID
+ * @param publishedAt - 現在の記事の公開日時（Date | string | null）
+ * @returns 前後の記事情報
+ * @throws criticalFetch 内でDBエラーをログ出力
  */
-async function getAdjacentPosts(postId: string, publishedAt: Date | null) {
+async function getAdjacentPosts(
+  postId: string,
+  publishedAt: Date | string | null
+) {
   'use cache'
-  cacheLife('hours')
-  cacheTag('blog')
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT)
+  cacheTag(CACHE_TAGS.BLOG)
 
-  const [prevPost, nextPost] = await Promise.all([
-    prisma.blogPost.findFirst({
-      where: {
-        status: BlogPostStatus.PUBLISHED,
-        AND: [
-          { publishedAt: { not: null } },
-          publishedAt
-            ? { publishedAt: { lt: publishedAt } }
-            : { id: { lt: postId } },
-        ],
-      },
-      orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }],
-      select: { slug: true, title: true },
-    }),
-    prisma.blogPost.findFirst({
-      where: {
-        status: BlogPostStatus.PUBLISHED,
-        AND: [
-          { publishedAt: { not: null } },
-          publishedAt
-            ? { publishedAt: { gt: publishedAt } }
-            : { id: { gt: postId } },
-        ],
-      },
-      orderBy: [{ publishedAt: 'asc' }, { id: 'asc' }],
-      select: { slug: true, title: true },
-    }),
-  ])
+  // シリアライズ後の日付（string）を Date に変換
+  const pubDate = publishedAt ? new Date(publishedAt) : null
 
-  return { prevPost, nextPost }
+  const [prevPost, nextPost] = await criticalFetch({
+    fetch: () =>
+      Promise.all([
+        prisma.blogPost.findFirst({
+          where: {
+            status: BlogPostStatus.PUBLISHED,
+            AND: [
+              { publishedAt: { not: null } },
+              pubDate
+                ? { publishedAt: { lt: pubDate } }
+                : { id: { lt: postId } },
+            ],
+          },
+          orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }],
+          select: { slug: true, title: true },
+        }),
+        prisma.blogPost.findFirst({
+          where: {
+            status: BlogPostStatus.PUBLISHED,
+            AND: [
+              { publishedAt: { not: null } },
+              pubDate
+                ? { publishedAt: { gt: pubDate } }
+                : { id: { gt: postId } },
+            ],
+          },
+          orderBy: [{ publishedAt: 'asc' }, { id: 'asc' }],
+          select: { slug: true, title: true },
+        }),
+      ]),
+    category: ErrorCategory.DATABASE,
+    operationName: 'getAdjacentPosts',
+    context: { postId },
+  })
+
+  return {
+    prevPost: toPlainObject(prevPost),
+    nextPost: toPlainObject(nextPost),
+  }
 }
 
 // =============================================================================
 // Metadata
 // =============================================================================
 
+/**
+ * 動的メタデータ生成
+ *
+ * ブログ記事のタイトル、概要、OGP情報からメタデータを生成します。
+ *
+ * @param props - ページProps（params含む）
+ * @returns Next.js Metadata オブジェクト
+ */
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
@@ -227,14 +310,22 @@ export async function generateMetadata({
   }
 }
 
+// =============================================================================
+// Static Generation
+// =============================================================================
+
 /**
  * 静的パラメータ生成
- * 公開中のブログ記事をビルド時に事前生成
+ *
+ * ビルド時に公開中のブログ記事ページを事前生成します。
+ * 最大100件まで事前生成し、それ以降はオンデマンドで生成されます。
+ *
+ * @returns 記事スラッグの配列
  */
-export async function generateStaticParams() {
+export async function generateStaticParams(): Promise<Array<{ slug: string }>> {
   'use cache'
-  cacheLife('hours')
-  cacheTag('blog')
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT)
+  cacheTag(CACHE_TAGS.BLOG)
 
   try {
     const posts = await prisma.blogPost.findMany({
@@ -259,10 +350,26 @@ export async function generateStaticParams() {
 // Page Component
 // =============================================================================
 
+/**
+ * ブログ記事詳細ページコンポーネント
+ *
+ * ブログ記事の詳細を表示するServer Component。
+ * サイドバー、前後の記事ナビゲーション、コメントセクションも含みます。
+ *
+ * @param props - ページProps（params, searchParams含む）
+ * @returns ページのReact要素
+ */
 export default async function BlogDetailPage({
   params,
+  searchParams,
 }: PageProps): Promise<ReactElement> {
   const { slug } = await params
+  const { preview } = await searchParams
+
+  // プレビューモードの場合はクライアントコンポーネントを表示
+  if (preview === 'true') {
+    return <BlogPreviewWrapper slug={slug} />
+  }
 
   // プレースホルダーの場合は404
   if (slug === '__placeholder__') {
@@ -297,8 +404,8 @@ export default async function BlogDetailPage({
         description={post.excerpt || post.metaDescription || ''}
         image={post.thumbnailUrl}
         url={`${BASE_URL}/blog/${post.slug}`}
-        datePublished={post.publishedAt?.toISOString() || post.updatedAt.toISOString()}
-        dateModified={post.updatedAt.toISOString()}
+        datePublished={toISOString(post.publishedAt) || toISOString(post.updatedAt) || ''}
+        dateModified={toISOString(post.updatedAt) || ''}
         author={{ name: SITE_DEFAULTS.name }}
       />
 
@@ -330,7 +437,7 @@ export default async function BlogDetailPage({
                     {post.category.name}
                   </Link>
                   <span aria-hidden="true">•</span>
-                  <time dateTime={post.publishedAt?.toISOString()}>
+                  <time dateTime={toISOString(post.publishedAt)}>
                     {formatDate(post.publishedAt)}
                   </time>
                 </div>
@@ -419,7 +526,7 @@ export default async function BlogDetailPage({
                   </div>
                 }
               >
-                <CommentSection postId={post.id} postSlug={post.slug} />
+                <CommentSection postId={post.id} />
               </Suspense>
             </article>
           </main>

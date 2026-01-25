@@ -7,23 +7,40 @@
  * 公開ページと同じ見た目でコンテンツを編集
  */
 
-import { useState, useTransition } from 'react'
+import { useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
+import dynamic from 'next/dynamic'
 import {
-  InlineEditorLayout,
   EditorHeader,
-  EditorCanvas,
-  SidePanel,
-  useKeyboardShortcuts,
-  useBeforeUnload,
+  UnifiedSidePanel,
+  useEditorPanels,
+  InlineEditorShell,
 } from '@/admin/components/editor/inline'
+import { CommentPanel } from '@/admin/components/editor/comment-panel'
+import { EDITOR_PROSE_CLASSES } from '@/shared/lib/styles/prose'
+
+const LexicalEditor = dynamic(
+  () => import('@/admin/components/editor/lexical').then((mod) => ({ default: mod.LexicalEditor })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[500px] flex items-center justify-center bg-muted/50">
+        <div className="animate-pulse text-muted-foreground">エディタを読み込み中...</div>
+      </div>
+    ),
+  }
+)
+import { pageContentTypeConfig } from '@/admin/components/editor/inline/content-types/page-config'
 import { updatePage } from '@/admin/actions/page'
 import type { PageData } from '@/admin/lib/validations/page'
+import { logger } from '@/shared/lib/logger'
+import { usePreview } from '@/admin/hooks'
+import type { PagePreviewData } from '@/shared/types'
 
 /**
  * フォーム用スキーマ（Lexicalエディター用）
@@ -41,7 +58,7 @@ const formSchema = z.object({
   publishedAt: z.string().optional(),
   contentWidth: z.string().optional(),
   contentWidthCustom: z.string().optional(),
-  showSidebar: z.boolean().nullable().optional(),  // null=デフォルト（カスタムページは非表示）、true=表示、false=非表示
+  showSidebar: z.boolean().nullable().optional(),
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -53,13 +70,30 @@ type PageInlineEditorProps = {
 export function PageInlineEditor({ page }: PageInlineEditorProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false)
+
+  // 排他的パネル管理（設定/コメント）
+  const {
+    isSettingsPanelOpen,
+    isCommentsPanelOpen,
+    toggleSettings,
+    toggleComments,
+    closePanel,
+    activeMarkId,
+    selectMark,
+    pendingComment,
+    handleAddComment,
+    clearPendingComment,
+  } = useEditorPanels()
+
+  // プレビュー機能
+  const { saveAndOpenPreview } = usePreview('page')
 
   const {
     register,
     handleSubmit,
     control,
     setValue,
+    getValues,
     reset,
     formState: { errors, isDirty },
   } = useForm<FormData>({
@@ -85,6 +119,7 @@ export function PageInlineEditor({ page }: PageInlineEditorProps) {
 
   const title = useWatch({ control, name: 'title' })
   const content = useWatch({ control, name: 'content' })
+  const isPublished = useWatch({ control, name: 'isPublished' })
 
   const onSubmit = (data: FormData) => {
     startTransition(async () => {
@@ -106,7 +141,6 @@ export function PageInlineEditor({ page }: PageInlineEditorProps) {
         })
 
         if (result.success) {
-          // dirty状態をリセット
           reset(data)
           router.refresh()
           toast.success('ページを保存しました')
@@ -114,7 +148,7 @@ export function PageInlineEditor({ page }: PageInlineEditorProps) {
           toast.error(result.error)
         }
       } catch (error) {
-        console.error('保存中にエラーが発生しました:', error)
+        logger.error('保存中にエラーが発生しました', { error: error instanceof Error ? error.message : String(error) })
         toast.error('保存中にエラーが発生しました')
       }
     })
@@ -126,10 +160,20 @@ export function PageInlineEditor({ page }: PageInlineEditorProps) {
   }
 
   const handlePreview = () => {
-    if (isDirty) {
-      toast.info('プレビューには保存済みのコンテンツが表示されます')
+    const values = getValues()
+    const identifier = page.slug
+
+    // プレビューデータを構築
+    const previewData: PagePreviewData = {
+      title: values.title || '無題',
+      slug: identifier,
+      description: values.description || null,
+      content: values.content || '',
+      showSidebar: values.showSidebar ?? false,
     }
-    window.open(`/${page.slug}`, '_blank')
+
+    // プレビューを開く
+    saveAndOpenPreview(identifier, previewData, '/p')
   }
 
   const handleBack = () => {
@@ -139,64 +183,72 @@ export function PageInlineEditor({ page }: PageInlineEditorProps) {
     router.push('/admin/pages')
   }
 
-  const handleToggleSidePanel = () => {
-    setIsSidePanelOpen((prev) => !prev)
-  }
-
-  const handleCloseSidePanel = () => {
-    setIsSidePanelOpen(false)
-  }
-
   const handleContentChange = (html: string) => {
     setValue('content', html, { shouldDirty: true })
   }
 
-  const handleTitleChange = (newTitle: string) => {
-    setValue('title', newTitle, { shouldDirty: true })
-  }
-
-  // キーボードショートカット
-  useKeyboardShortcuts({ onSave: handleSave })
-
-  // 離脱警告
-  useBeforeUnload({ isDirty })
+  const isPanelOpen = isSettingsPanelOpen || isCommentsPanelOpen
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="h-screen">
-      <InlineEditorLayout>
-        <div className="flex flex-1 flex-col overflow-hidden">
-          <EditorHeader
-            title={title}
-            slug={page.slug}
-            isDirty={isDirty}
-            isPending={isPending}
-            isSidePanelOpen={isSidePanelOpen}
-            onToggleSidePanel={handleToggleSidePanel}
-            onSave={handleSave}
-            onPreview={handlePreview}
-            onBack={handleBack}
-          />
-
-          <EditorCanvas
-            title={title}
-            onTitleChange={handleTitleChange}
-            showTitle={true}
-            content={content}
-            onChange={handleContentChange}
-            disabled={isPending}
-          />
-        </div>
-
-        <SidePanel
-          isOpen={isSidePanelOpen}
-          onClose={handleCloseSidePanel}
-          register={register}
-          control={control}
-          errors={errors}
-          setValue={setValue}
-          disabled={isPending}
+    <InlineEditorShell
+      onSubmit={handleSubmit(onSubmit)}
+      onSave={handleSave}
+      isDirty={isDirty}
+      isPanelOpen={isPanelOpen}
+      header={
+        <EditorHeader
+          title={title}
+          slug={page.slug}
+          isDirty={isDirty}
+          isPending={isPending}
+          isSidePanelOpen={isSettingsPanelOpen}
+          onToggleSidePanel={toggleSettings}
+          onSave={handleSave}
+          onPreview={handlePreview}
+          onBack={handleBack}
+          showCommentButton
+          isCommentPanelOpen={isCommentsPanelOpen}
+          onToggleCommentPanel={toggleComments}
         />
-      </InlineEditorLayout>
-    </form>
+      }
+      panel={
+        <>
+          <UnifiedSidePanel
+            isOpen={isSettingsPanelOpen}
+            onClose={closePanel}
+            config={pageContentTypeConfig}
+            register={register}
+            control={control}
+            errors={errors}
+            setValue={setValue}
+            disabled={isPending}
+            extraProps={{
+              isPublishedValue: isPublished,
+              onIsPublishedChange: (value: boolean) => setValue('isPublished', value),
+            }}
+          />
+          <CommentPanel
+            isOpen={isCommentsPanelOpen}
+            contentType="page"
+            contentId={page.id}
+            activeMarkId={activeMarkId}
+            onClose={closePanel}
+            pendingComment={pendingComment}
+            onPendingCommentSubmit={clearPendingComment}
+          />
+        </>
+      }
+    >
+      <LexicalEditor
+        content={content}
+        onChange={handleContentChange}
+        disabled={isPending}
+        className={EDITOR_PROSE_CLASSES}
+        showToolbar
+        height="100%"
+        onMarkClick={selectMark}
+        onAddComment={handleAddComment}
+      />
+    </InlineEditorShell>
   )
 }

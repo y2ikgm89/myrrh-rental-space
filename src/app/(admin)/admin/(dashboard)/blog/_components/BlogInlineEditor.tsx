@@ -16,11 +16,9 @@ import { toast } from 'sonner'
 import dynamic from 'next/dynamic'
 import {
   EditorHeader,
-  useFullscreenMode,
-  useKeyboardShortcuts,
-  useBeforeUnload,
   useEditorPanels,
   UnifiedSidePanel,
+  InlineEditorShell,
 } from '@/admin/components/editor/inline'
 import { CommentPanel } from '@/admin/components/editor/comment-panel'
 import { blogContentTypeConfig } from '@/admin/components/editor/inline/content-types/blog-config'
@@ -40,7 +38,7 @@ const LexicalEditor = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="h-[500px] flex items-center justify-center border rounded-lg bg-muted/50">
+      <div className="h-[500px] flex items-center justify-center bg-muted/50">
         <div className="animate-pulse text-muted-foreground">エディタを読み込み中...</div>
       </div>
     ),
@@ -71,6 +69,8 @@ import {
 import { EDITOR_PROSE_CLASSES } from '@/shared/lib/styles/prose'
 import { logger } from '@/shared/lib/logger'
 import { generateSlug } from '@/shared/lib/utils'
+import { usePreview } from '@/admin/hooks'
+import type { BlogPreviewData } from '@/shared/types'
 
 type FormData = BlogFormData
 
@@ -108,6 +108,9 @@ export function BlogInlineEditor({ post, categories, tags: initialTags, mode = '
     handleAddComment,
     clearPendingComment,
   } = useEditorPanels()
+
+  // プレビュー機能
+  const { saveAndOpenPreview } = usePreview('blog')
 
   // カテゴリとタグの状態（エディタ内で新規作成した場合に更新）
   const [currentCategories, setCurrentCategories] = useState(categories)
@@ -273,15 +276,34 @@ export function BlogInlineEditor({ post, categories, tags: initialTags, mode = '
   }
 
   const handlePreview = () => {
-    if (mode === 'create') {
-      toast.info('記事を作成後にプレビューできます')
-      return
+    const values = getValues()
+    const identifier = mode === 'create' ? 'preview-new' : (values.slug || 'preview-new')
+
+    // 選択中のカテゴリを取得
+    const selectedCategory = currentCategories.find((c) => c.id === values.categoryId)
+
+    // タグをパース
+    const tags = values.tags
+      ? values.tags.split(',').map((t) => t.trim()).filter(Boolean)
+      : []
+
+    // プレビューデータを構築
+    const previewData: BlogPreviewData = {
+      title: values.title || '無題',
+      slug: identifier,
+      excerpt: values.excerpt || '',
+      content: values.content || '',
+      thumbnailUrl: values.thumbnailUrl || '/images/placeholder.jpg',
+      publishedAt: values.publishedAt || null,
+      tags,
+      category: {
+        name: selectedCategory?.name || 'カテゴリなし',
+        slug: selectedCategory?.slug || 'uncategorized',
+      },
     }
-    const isUnsaved = isDirty || hasEditorChanges
-    if (isUnsaved) {
-      toast.info('プレビューには保存済みのコンテンツが表示されます')
-    }
-    window.open(`/blog/${slug}`, '_blank')
+
+    // プレビューを開く
+    saveAndOpenPreview(identifier, previewData, '/blog')
   }
 
   const handleBack = () => {
@@ -291,8 +313,6 @@ export function BlogInlineEditor({ post, categories, tags: initialTags, mode = '
     }
     router.push('/admin/blog')
   }
-
-
 
   const handleDelete = () => {
     if (!post) return
@@ -314,11 +334,11 @@ export function BlogInlineEditor({ post, categories, tags: initialTags, mode = '
 
   // カテゴリ作成コールバック
   const handleCreateCategory = async (name: string) => {
-    const slug = generateSlug(name, 'category')
+    const categorySlug = generateSlug(name, 'category')
 
     const result = await createBlogCategory({
       name,
-      slug,
+      slug: categorySlug,
       description: null,
       order: currentCategories.length,
     })
@@ -328,7 +348,7 @@ export function BlogInlineEditor({ post, categories, tags: initialTags, mode = '
       const newCategory: BlogCategoryData = {
         id: result.data.id,
         name,
-        slug,
+        slug: categorySlug,
         description: null,
         order: currentCategories.length,
         createdAt: now,
@@ -345,16 +365,16 @@ export function BlogInlineEditor({ post, categories, tags: initialTags, mode = '
 
   // タグ作成コールバック
   const handleCreateTag = async (name: string) => {
-    const slug = generateSlug(name, 'tag')
+    const tagSlug = generateSlug(name, 'tag')
 
-    const result = await createBlogTag({ name, slug })
+    const result = await createBlogTag({ name, slug: tagSlug })
 
     if (result.success && result.data) {
       const now = new Date()
       const newTag: BlogTagData = {
         id: result.data.id,
         name,
-        slug,
+        slug: tagSlug,
         createdAt: now,
         updatedAt: now,
         _count: { posts: 0 },
@@ -367,140 +387,130 @@ export function BlogInlineEditor({ post, categories, tags: initialTags, mode = '
     return null
   }
 
-  useFullscreenMode()
-  useKeyboardShortcuts({ onSave: handleSave })
-  useBeforeUnload({ isDirty: isDirty || hasEditorChanges })
-
   const isFormDirty = isDirty || hasEditorChanges
-
-  // パネルの開閉状態（排他的なので常に1つのみ）
   const isPanelOpen = isSettingsPanelOpen || isCommentsPanelOpen
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="h-screen flex">
-      <div
-        className="flex flex-1 flex-col overflow-hidden transition-[margin] duration-300"
-        style={{ marginRight: isPanelOpen ? '320px' : '0' }}
-      >
-          <EditorHeader
-            title={title}
-            slug={`blog/${slug}`}
-            isDirty={isFormDirty}
-            isPending={isPending}
-            isSidePanelOpen={isSettingsPanelOpen}
-            onToggleSidePanel={toggleSettings}
-            onSave={handleSave}
-            onPreview={handlePreview}
-            onBack={handleBack}
-            publishActions={
-              mode === 'edit' && post
-                ? {
-                    status,
-                    onPublish: handlePublish,
-                    onUnpublish: handleUnpublish,
-                  }
-                : undefined
-            }
-            showCommentButton={mode === 'edit' && !!post}
-            isCommentPanelOpen={isCommentsPanelOpen}
-            onToggleCommentPanel={toggleComments}
-            extraActions={
-              mode === 'edit' && post ? (
-                <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                  <DialogTrigger asChild>
+    <InlineEditorShell
+      onSubmit={handleSubmit(onSubmit)}
+      onSave={handleSave}
+      isDirty={isFormDirty}
+      isPanelOpen={isPanelOpen}
+      header={
+        <EditorHeader
+          title={title}
+          slug={`blog/${slug}`}
+          isDirty={isFormDirty}
+          isPending={isPending}
+          isSidePanelOpen={isSettingsPanelOpen}
+          onToggleSidePanel={toggleSettings}
+          onSave={handleSave}
+          onPreview={handlePreview}
+          onBack={handleBack}
+          publishActions={
+            mode === 'edit' && post
+              ? {
+                  status,
+                  onPublish: handlePublish,
+                  onUnpublish: handleUnpublish,
+                }
+              : undefined
+          }
+          showCommentButton={mode === 'edit' && !!post}
+          isCommentPanelOpen={isCommentsPanelOpen}
+          onToggleCommentPanel={toggleComments}
+          extraActions={
+            mode === 'edit' && post ? (
+              <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    disabled={isPending}
+                  >
+                    削除
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>ブログ記事を削除しますか？</DialogTitle>
+                    <DialogDescription>
+                      この操作は取り消せません。本当に削除してもよろしいですか？
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
                     <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:text-destructive"
+                      variant="outline"
+                      onClick={() => setIsDeleteDialogOpen(false)}
                       disabled={isPending}
                     >
-                      削除
+                      キャンセル
                     </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>ブログ記事を削除しますか？</DialogTitle>
-                      <DialogDescription>
-                        この操作は取り消せません。本当に削除してもよろしいですか？
-                      </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                      <Button
-                        variant="outline"
-                        onClick={() => setIsDeleteDialogOpen(false)}
-                        disabled={isPending}
-                      >
-                        キャンセル
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        onClick={handleDelete}
-                        disabled={isPending}
-                      >
-                        {isPending ? '削除中...' : '削除'}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              ) : undefined
-            }
-          />
-
-          {/* Lexical Editor */}
-          <div className="flex-1 overflow-auto p-4">
-            <LexicalEditor
-              content={content}
-              onChange={handleHtmlChange}
-              disabled={isPending}
-              className={EDITOR_PROSE_CLASSES}
-              showToolbar
-              height="calc(100vh - 200px)"
-              onMarkClick={mode === 'edit' && post ? selectMark : undefined}
-              onAddComment={mode === 'edit' && post ? handleAddComment : undefined}
-            />
-          </div>
-        </div>
-
-      <UnifiedSidePanel
-        isOpen={isSettingsPanelOpen}
-        onClose={closePanel}
-        config={blogContentTypeConfig}
-        register={register}
-        control={control}
-        errors={errors}
-        setValue={setValue}
-        getValues={getValues}
-        disabled={isPending}
-        extraProps={{
-          // カテゴリ
-          categories: categoryOptions,
-          onCreateCategory: handleCreateCategory,
-          // タグ
-          availableTags: tagOptions,
-          onCreateTag: handleCreateTag,
-          // 公開設定
-          statusValue: status,
-          onStatusChange: (value: string) => {
-            if (isValidBlogPostStatus(value)) {
-              setValue('status', value)
-            }
-          },
-        }}
-      />
-
-      {/* コメントパネル（編集モードのみ） */}
-      {mode === 'edit' && post && (
-        <CommentPanel
-          isOpen={isCommentsPanelOpen}
-          contentType="blog"
-          contentId={post.id}
-          activeMarkId={activeMarkId}
-          onClose={closePanel}
-          pendingComment={pendingComment}
-          onPendingCommentSubmit={clearPendingComment}
+                    <Button
+                      variant="destructive"
+                      onClick={handleDelete}
+                      disabled={isPending}
+                    >
+                      {isPending ? '削除中...' : '削除'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            ) : undefined
+          }
         />
-      )}
-    </form>
+      }
+      panel={
+        <>
+          <UnifiedSidePanel
+            isOpen={isSettingsPanelOpen}
+            onClose={closePanel}
+            config={blogContentTypeConfig}
+            register={register}
+            control={control}
+            errors={errors}
+            setValue={setValue}
+            getValues={getValues}
+            disabled={isPending}
+            extraProps={{
+              categories: categoryOptions,
+              onCreateCategory: handleCreateCategory,
+              availableTags: tagOptions,
+              onCreateTag: handleCreateTag,
+              statusValue: status,
+              onStatusChange: (value: string) => {
+                if (isValidBlogPostStatus(value)) {
+                  setValue('status', value)
+                }
+              },
+            }}
+          />
+          {mode === 'edit' && post && (
+            <CommentPanel
+              isOpen={isCommentsPanelOpen}
+              contentType="blog"
+              contentId={post.id}
+              activeMarkId={activeMarkId}
+              onClose={closePanel}
+              pendingComment={pendingComment}
+              onPendingCommentSubmit={clearPendingComment}
+            />
+          )}
+        </>
+      }
+    >
+      <LexicalEditor
+        content={content}
+        onChange={handleHtmlChange}
+        disabled={isPending}
+        className={EDITOR_PROSE_CLASSES}
+        showToolbar
+        height="100%"
+        onMarkClick={mode === 'edit' && post ? selectMark : undefined}
+        onAddComment={mode === 'edit' && post ? handleAddComment : undefined}
+      />
+    </InlineEditorShell>
   )
 }

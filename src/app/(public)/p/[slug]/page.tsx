@@ -1,11 +1,19 @@
 /**
  * カスタムページ公開表示
  *
- * DBに保存されたカスタムページを表示
- * サイドバー表示設定に対応
+ * DBに保存されたカスタムページを表示するServer Component。
+ * サイドバー表示設定に対応しています。
  *
- * Next.js 16 PPR対応:
- * - use cache ディレクティブでデータ取得をキャッシュ
+ * ## 機能
+ * - カスタムページコンテンツの表示
+ * - サイドバー（ページ設定による表示切替）
+ * - 構造化データ（Breadcrumb JSON-LD）の出力
+ *
+ * ## Next.js 16 PPR対応
+ * - `use cache` ディレクティブでデータ取得をキャッシュ
+ * - `generateStaticParams` でビルド時に事前生成
+ *
+ * @module p/[slug]/page
  */
 
 import { cacheLife, cacheTag } from 'next/cache'
@@ -18,11 +26,18 @@ import { BreadcrumbJsonLd } from '@/public/components/seo/JsonLd'
 import { BlogSidebar } from '@/public/components/sidebar'
 import { getSidebarSettings, getSidebarData } from '@/public/actions/sidebar'
 import { prisma } from '@/shared/lib/prisma'
+import { criticalFetch, ErrorCategory } from '@/shared/lib/errors'
+import { toPlainObject } from '@/shared/lib/serialize'
 import { getPageLayoutSettings } from '@/public/lib/layout-settings'
 import { getContainerStyles, getContentStyles } from '@/shared/lib/styles/layout-mapper'
 import { SYSTEM_PAGE_SLUGS } from '@/shared/lib/validations/page'
-import { getBaseUrl } from '@/shared/lib/constants'
+import { getBaseUrl, CACHE_LIFE, CACHE_TAGS } from '@/shared/lib/constants'
+import { PagePreviewWrapper } from './_components'
 import type { ReactElement } from 'react'
+
+// =============================================================================
+// Constants
+// =============================================================================
 
 const BASE_URL = getBaseUrl()
 
@@ -30,6 +45,11 @@ const BASE_URL = getBaseUrl()
 // Styles
 // =============================================================================
 
+/**
+ * ページスタイル定義
+ *
+ * tailwind-variants を使用したスタイル管理
+ */
 const styles = tv({
   slots: {
     section: 'py-16 bg-background min-h-screen',
@@ -52,85 +72,124 @@ const styles = tv({
 // Types
 // =============================================================================
 
+/** ページコンポーネントのProps */
 interface PageProps {
   params: Promise<{ slug: string }>
+  searchParams: Promise<{ preview?: string }>
 }
 
 // =============================================================================
-// Data Fetching with Cache
+// Data Fetching
 // =============================================================================
 
 /**
  * カスタムページを取得（キャッシュ付き）
+ *
+ * 公開中のカスタムページを取得し、シリアライズして返します。
+ * システムページ（about, contact等）は除外されます。
+ *
+ * @param slug - ページのスラッグ
+ * @returns ページデータ、存在しない場合は null
+ * @throws criticalFetch 内でDBエラーをログ出力
  */
 async function getCustomPage(slug: string) {
   'use cache'
-  cacheLife('hours')
-  cacheTag('pages', `page-${slug}`)
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT)
+  cacheTag(CACHE_TAGS.PAGES, `${CACHE_TAGS.PAGES}-${slug}`)
 
   // システムページは除外
   if (SYSTEM_PAGE_SLUGS.includes(slug)) {
     return null
   }
 
-  return await prisma.page.findUnique({
-    where: {
-      slug,
-      isPublished: true,
-      isActive: true,
-    },
-    select: {
-      title: true,
-      slug: true,
-      description: true,
-      content: true,
-      metaDescription: true,
-      metaKeywords: true,
-      ogpTitle: true,
-      ogpDescription: true,
-      ogpImageUrl: true,
-      showSidebar: true,
-      contentWidth: true,
-      contentWidthCustom: true,
-    },
+  const result = await criticalFetch({
+    fetch: () =>
+      prisma.page.findUnique({
+        where: {
+          slug,
+          isPublished: true,
+          isActive: true,
+        },
+        select: {
+          title: true,
+          slug: true,
+          description: true,
+          content: true,
+          metaDescription: true,
+          metaKeywords: true,
+          ogpTitle: true,
+          ogpDescription: true,
+          ogpImageUrl: true,
+          showSidebar: true,
+          contentWidth: true,
+          contentWidthCustom: true,
+        },
+      }),
+    category: ErrorCategory.DATABASE,
+    operationName: 'getCustomPage',
+    context: { slug },
   })
+
+  return toPlainObject(result)
 }
 
 /**
  * メタデータ用ページ情報を取得（キャッシュ付き）
+ *
+ * generateMetadata で使用する最小限の情報のみ取得します。
+ *
+ * @param slug - ページのスラッグ
+ * @returns メタデータ用情報、存在しない場合は null
+ * @throws criticalFetch 内でDBエラーをログ出力
  */
 async function getPageForMetadata(slug: string) {
   'use cache'
-  cacheLife('hours')
-  cacheTag('pages', `page-${slug}`)
+  cacheLife(CACHE_LIFE.METADATA)
+  cacheTag(CACHE_TAGS.PAGES, `${CACHE_TAGS.PAGES}-${slug}`)
 
   // システムページは除外
   if (SYSTEM_PAGE_SLUGS.includes(slug)) {
     return null
   }
 
-  return await prisma.page.findUnique({
-    where: {
-      slug,
-      isPublished: true,
-      isActive: true,
-    },
-    select: {
-      title: true,
-      description: true,
-      metaDescription: true,
-      metaKeywords: true,
-      ogpTitle: true,
-      ogpDescription: true,
-      ogpImageUrl: true,
-    },
+  const result = await criticalFetch({
+    fetch: () =>
+      prisma.page.findUnique({
+        where: {
+          slug,
+          isPublished: true,
+          isActive: true,
+        },
+        select: {
+          title: true,
+          description: true,
+          metaDescription: true,
+          metaKeywords: true,
+          ogpTitle: true,
+          ogpDescription: true,
+          ogpImageUrl: true,
+        },
+      }),
+    category: ErrorCategory.DATABASE,
+    operationName: 'getPageForMetadata',
+    context: { slug },
   })
+
+  return toPlainObject(result)
 }
 
 // =============================================================================
 // Metadata
 // =============================================================================
 
+/**
+ * 動的メタデータ生成
+ *
+ * カスタムページのタイトル、説明、OGP情報からメタデータを生成します。
+ *
+ * @param props - ページProps（params含む）
+ * @returns Next.js Metadata オブジェクト
+ */
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params
 
@@ -164,13 +223,22 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 }
 
+// =============================================================================
+// Static Generation
+// =============================================================================
+
 /**
  * 静的パラメータ生成
+ *
+ * ビルド時に公開中のカスタムページを事前生成します。
+ * システムページは除外され、最大100件まで事前生成されます。
+ *
+ * @returns ページスラッグの配列
  */
-export async function generateStaticParams() {
+export async function generateStaticParams(): Promise<Array<{ slug: string }>> {
   'use cache'
-  cacheLife('hours')
-  cacheTag('pages')
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT)
+  cacheTag(CACHE_TAGS.PAGES)
 
   try {
     const pages = await prisma.page.findMany({
@@ -199,8 +267,23 @@ export async function generateStaticParams() {
 // Page Component
 // =============================================================================
 
-export default async function CustomPage({ params }: PageProps): Promise<ReactElement> {
+/**
+ * カスタムページコンポーネント
+ *
+ * DBに保存されたカスタムページを表示するServer Component。
+ * サイドバー表示はページ設定に応じて切り替わります。
+ *
+ * @param props - ページProps（params, searchParams含む）
+ * @returns ページのReact要素
+ */
+export default async function CustomPage({ params, searchParams }: PageProps): Promise<ReactElement> {
   const { slug } = await params
+  const { preview } = await searchParams
+
+  // プレビューモードの場合はクライアントコンポーネントを表示
+  if (preview === 'true') {
+    return <PagePreviewWrapper slug={slug} />
+  }
 
   // プレースホルダーの場合は404
   if (slug === '__placeholder__') {
