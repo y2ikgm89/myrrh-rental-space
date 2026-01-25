@@ -304,10 +304,8 @@ export function ComponentPickerPlugin({
             new ComponentPickerOption('画像', {
               icon: <ImageIcon className="h-4 w-4" />,
               keywords: ['image', 'photo', 'picture', 'gazou', 'img'],
-              category: 'media' as CategoryType,
-              onSelect: () => {
-                onInsertImage()
-              },
+              category: 'media',
+              onSelect: onInsertImage,
             }),
           ]
         : []),
@@ -316,10 +314,8 @@ export function ComponentPickerPlugin({
             new ComponentPickerOption('YouTube', {
               icon: <Youtube className="h-4 w-4" />,
               keywords: ['youtube', 'video', 'embed', 'douga', 'movie'],
-              category: 'media' as CategoryType,
-              onSelect: () => {
-                onInsertYouTube()
-              },
+              category: 'media',
+              onSelect: onInsertYouTube,
             }),
           ]
         : []),
@@ -328,10 +324,8 @@ export function ComponentPickerPlugin({
             new ComponentPickerOption('X (Twitter)', {
               icon: <Twitter className="h-4 w-4" />,
               keywords: ['x', 'twitter', 'tweet', 'embed', 'social', 'sns'],
-              category: 'media' as CategoryType,
-              onSelect: () => {
-                onInsertX()
-              },
+              category: 'media',
+              onSelect: onInsertX,
             }),
           ]
         : []),
@@ -340,10 +334,8 @@ export function ComponentPickerPlugin({
             new ComponentPickerOption('テーブル', {
               icon: <Table className="h-4 w-4" />,
               keywords: ['table', 'grid', 'hyou', 'excel'],
-              category: 'media' as CategoryType,
-              onSelect: () => {
-                onInsertTable()
-              },
+              category: 'media',
+              onSelect: onInsertTable,
             }),
           ]
         : []),
@@ -354,10 +346,8 @@ export function ComponentPickerPlugin({
             new ComponentPickerOption('カラム', {
               icon: <Columns className="h-4 w-4" />,
               keywords: ['column', 'layout', 'grid', 'karamu', '2column', '3column'],
-              category: 'layout' as CategoryType,
-              onSelect: () => {
-                onInsertLayout()
-              },
+              category: 'layout',
+              onSelect: onInsertLayout,
             }),
           ]
         : []),

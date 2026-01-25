@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useTransition, useRef, type ReactElement } from 'react'
 import { tv } from 'tailwind-variants'
-import { getAvailableTimeSlots } from '@/public/actions/reservation'
-import type { TimeSlot } from '@/public/lib/validations/reservation'
+import { getAvailableTimeSlots, type TimeSlot } from '@/shared/lib/reservation'
 import { cn } from '@/shared/lib/utils'
 import { Input } from '@/admin/components/ui/input'
 import { Label } from '@/admin/components/ui/label'
+import { logger } from '@/shared/lib/logger'
+import { toDateString } from '@/shared/lib/serialize'
 
 const timeSlotStyles = tv({
   slots: {
@@ -84,22 +85,33 @@ export function TimeSlotSelector({
     prevDateRef.current = date
     prevSpaceIdRef.current = spaceId
 
+    // レース条件防止: 古いリクエストの結果を無視
+    let isCurrent = true
+
     startTransition(async () => {
       try {
         const availableSlots = await getAvailableTimeSlots(spaceId, date)
-        setSlots(availableSlots)
+        if (isCurrent) {
+          setSlots(availableSlots)
+        }
       } catch (error) {
-        console.error('Failed to fetch time slots:', error)
-        setSlots([])
+        if (isCurrent) {
+          logger.error('Failed to fetch time slots', { error: error instanceof Error ? error.message : String(error) })
+          setSlots([])
+        }
       }
     })
+
+    return () => {
+      isCurrent = false
+    }
   }, [spaceId, date])
 
   // 選択状態を派生状態として計算
   const isSelecting: 'start' | 'end' = startTime && !endTime ? 'end' : 'start'
 
   // 日付の最小値（今日）を計算
-  const today = new Date().toISOString().split('T')[0]
+  const today = toDateString(new Date())
 
   const handleSlotClick = (time: string, available: boolean): void => {
     if (!available) return

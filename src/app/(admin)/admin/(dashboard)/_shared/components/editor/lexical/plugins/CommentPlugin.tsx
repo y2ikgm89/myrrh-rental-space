@@ -9,7 +9,7 @@
 
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
   $getNodeByKey,
@@ -110,22 +110,21 @@ export function useComment(): UseCommentReturn {
     return editor.registerUpdateListener(({ editorState }) => {
       editorState.read(() => {
         const selection = $getSelection()
-        if ($isRangeSelection(selection) && !selection.isCollapsed()) {
-          // テキストが選択されている場合はコメント追加可能
-          setCanAddComment(true)
-        } else {
-          setCanAddComment(false)
-        }
+        const isRangeSelected = $isRangeSelection(selection)
+
+        // テキストが選択されている場合はコメント追加可能
+        setCanAddComment(isRangeSelected && !selection.isCollapsed())
 
         // 現在のカーソル位置のマークIDを取得
-        if ($isRangeSelection(selection)) {
-          const anchorNode = selection.anchor.getNode()
-          if ($isTextNode(anchorNode)) {
-            const markIds = $getMarkIDs(anchorNode, selection.anchor.offset)
-            setActiveMarkIds(markIds ?? [])
-          } else {
-            setActiveMarkIds([])
-          }
+        if (!isRangeSelected) {
+          setActiveMarkIds([])
+          return
+        }
+
+        const anchorNode = selection.anchor.getNode()
+        if ($isTextNode(anchorNode)) {
+          const markIds = $getMarkIDs(anchorNode, selection.anchor.offset)
+          setActiveMarkIds(markIds ?? [])
         } else {
           setActiveMarkIds([])
         }
@@ -169,11 +168,11 @@ export function useCommentDialog(): UseCommentDialogReturn {
   const [isOpen, setIsOpen] = useState(false)
   const [pendingComment, setPendingComment] = useState<AddCommentPayload | null>(null)
 
-  const open = () => setIsOpen(true)
-  const close = () => {
+  const open = useCallback(() => setIsOpen(true), [])
+  const close = useCallback(() => {
     setIsOpen(false)
     setPendingComment(null)
-  }
+  }, [])
 
   return { isOpen, open, close, pendingComment, setPendingComment }
 }

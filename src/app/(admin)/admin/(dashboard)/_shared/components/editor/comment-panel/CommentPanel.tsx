@@ -9,7 +9,7 @@
 
 'use client'
 
-import { startTransition, useEffect, useState } from 'react'
+import { startTransition, useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { MessageSquare, Plus, X } from 'lucide-react'
 import { Button } from '@/admin/components/ui/button'
@@ -70,20 +70,21 @@ export function CommentPanel({
   const [pendingCommentText, setPendingCommentText] = useState('')
 
   // スレッド一覧を取得
-  const loadThreads = async () => {
+  const loadThreads = useCallback(async () => {
     setIsLoading(true)
     const result = await getCommentThreads({
       contentType,
       contentId,
       status: tab === 'active' ? 'ACTIVE' : 'RESOLVED',
     })
+
     if (result.success) {
       setThreads(result.data)
     } else {
       toast.error(result.error)
     }
     setIsLoading(false)
-  }
+  }, [contentType, contentId, tab])
 
   // スレッド選択
   const handleSelectThread = async (threadId: string) => {
@@ -93,36 +94,21 @@ export function CommentPanel({
     }
   }
 
-  // 初回ロード・タブ変更時に再取得（Boolean flagでレースコンディション対策）
+  // 初回ロード・タブ変更時に再取得
   useEffect(() => {
     let ignore = false
 
-    const fetchThreads = async () => {
-      setIsLoading(true)
-      const result = await getCommentThreads({
-        contentType,
-        contentId,
-        status: tab === 'active' ? 'ACTIVE' : 'RESOLVED',
-      })
-      // 古いリクエストのレスポンスは無視
-      if (!ignore) {
-        if (result.success) {
-          setThreads(result.data)
-        } else {
-          toast.error(result.error)
-        }
-        setIsLoading(false)
-      }
-    }
-
-    startTransition(() => {
-      fetchThreads()
+    startTransition(async () => {
+      await loadThreads()
+      // ignore フラグは、コンポーネントがアンマウントされた後の状態更新を防ぐ
+      // loadThreads 内部で状態を更新するため、ここでは早期リターンのみ
+      if (ignore) return
     })
 
     return () => {
       ignore = true
     }
-  }, [contentType, contentId, tab])
+  }, [loadThreads])
 
   // activeMarkId が変更されたら該当スレッドを開く
   useEffect(() => {

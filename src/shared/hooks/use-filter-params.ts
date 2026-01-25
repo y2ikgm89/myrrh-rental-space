@@ -48,6 +48,7 @@ function useDebouncedCallback(
   const callbackRef = useRef(callback)
 
   // Ref を effect 内で更新（レンダー中の更新は禁止）
+  // 依存配列なし: 毎レンダー後に最新の callback を ref に保持するため意図的
   useEffect(() => {
     callbackRef.current = callback
   })
@@ -207,15 +208,7 @@ export function useFilterParams(
     }
   }
 
-  return base as {
-    params: FilterParams
-    setSearch: (value: string) => void
-    setSearchDebounced: (value: string) => void
-    setStatus: (value: string) => void
-    setPage: (value: number) => void
-    setPerPage: (value: number) => void
-    reset: () => void
-  }
+  return base
 }
 
 /**

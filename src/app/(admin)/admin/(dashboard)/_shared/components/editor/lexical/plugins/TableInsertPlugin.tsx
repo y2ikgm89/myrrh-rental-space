@@ -6,7 +6,7 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { INSERT_TABLE_COMMAND } from '@lexical/table'
 import {
@@ -36,13 +36,8 @@ type TableInsertPluginProps = {
 export function useTableDialog() {
   const [isTableDialogOpen, setIsTableDialogOpen] = useState(false)
 
-  const openTableDialog = () => {
-    setIsTableDialogOpen(true)
-  }
-
-  const closeTableDialog = () => {
-    setIsTableDialogOpen(false)
-  }
+  const openTableDialog = useCallback(() => setIsTableDialogOpen(true), [])
+  const closeTableDialog = useCallback(() => setIsTableDialogOpen(false), [])
 
   return {
     isTableDialogOpen,
