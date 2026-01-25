@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
-import { useForm, useWatch } from 'react-hook-form'
+import { useForm, useWatch, type FieldErrors } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import { CalendarIcon } from 'lucide-react'
@@ -51,6 +51,43 @@ type NewCustomerData = {
   firstName: string
   email: string
   phoneNumber?: string
+}
+
+// =============================================================================
+// Helpers
+// =============================================================================
+
+/**
+ * 成功したActionResultからIDを抽出
+ * ActionResult<{ id: string }> の条件型ナローイング問題を回避
+ */
+function extractCreatedId(
+  result: { success: true; message: string } | { success: true; message: string; data: { id: string } }
+): string | null {
+  if ('data' in result && result.data && typeof result.data === 'object' && 'id' in result.data) {
+    return result.data.id
+  }
+  return null
+}
+
+/**
+ * FieldErrorsをCustomerSelector用の形式に変換
+ * react-hook-formのFieldErrorsは { field: { message?: string } }
+ * CustomerSelectorは { field: string[] | undefined } を期待
+ */
+function convertFieldErrors<T extends Record<string, unknown>>(
+  fieldErrors: FieldErrors<T> | undefined
+): Record<string, string[] | undefined> | undefined {
+  if (!fieldErrors) return undefined
+
+  const result: Record<string, string[] | undefined> = {}
+  for (const [key, error] of Object.entries(fieldErrors)) {
+    if (error && typeof error === 'object' && 'message' in error && error.message) {
+      result[key] = [String(error.message)]
+    }
+  }
+
+  return Object.keys(result).length > 0 ? result : undefined
 }
 
 // =============================================================================
@@ -146,11 +183,8 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
       const result = await createAdminReservation(submitData)
       if (result.success) {
         toast.success(result.message)
-        if ('data' in result && result.data && typeof result.data === 'object' && 'id' in result.data) {
-          router.push(`/admin/reservations/${(result.data as { id: string }).id}`)
-        } else {
-          router.push('/admin/reservations')
-        }
+        const createdId = extractCreatedId(result)
+        router.push(createdId ? `/admin/reservations/${createdId}` : '/admin/reservations')
       } else {
         toast.error(result.error || '予約の作成に失敗しました')
         if (result.fieldErrors) {
@@ -340,7 +374,7 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
                 onNewCustomerData={handleNewCustomerData}
                 isNewCustomer={isNewCustomer}
                 onToggleNewCustomer={handleToggleNewCustomer}
-                errors={errors.customerData ? { ...errors.customerData } as Record<string, string[] | undefined> : undefined}
+                errors={convertFieldErrors(errors.customerData)}
               />
             </CardContent>
           </Card>

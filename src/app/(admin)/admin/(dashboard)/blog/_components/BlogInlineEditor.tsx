@@ -30,6 +30,10 @@ import {
   type BlogPostData,
   type BlogCategoryData,
 } from '@/admin/lib/validations/blog'
+import {
+  isValidLayoutWidth,
+  isValidBlogPostStatus,
+} from '@/shared/lib/validations/enums'
 
 const LexicalEditor = dynamic(
   () => import('@/admin/components/editor/lexical').then((mod) => ({ default: mod.LexicalEditor })),
@@ -203,7 +207,7 @@ export function BlogInlineEditor({ post, categories, tags: initialTags, mode = '
           metaKeywords: data.metaKeywords || null,
           ogpTitle: data.ogpTitle || null,
           ogpDescription: data.ogpDescription || null,
-          contentWidth: (data.contentWidth || null) as 'XS' | 'SM' | 'MD' | 'LG' | 'XL' | 'FULL' | 'CUSTOM' | null,
+          contentWidth: data.contentWidth && isValidLayoutWidth(data.contentWidth) ? data.contentWidth : null,
           contentWidthCustom: data.contentWidthCustom
             ? parseInt(data.contentWidthCustom, 10)
             : null,
@@ -477,7 +481,11 @@ export function BlogInlineEditor({ post, categories, tags: initialTags, mode = '
           onCreateTag: handleCreateTag,
           // 公開設定
           statusValue: status,
-          onStatusChange: (value: string) => setValue('status', value as BlogPostStatus),
+          onStatusChange: (value: string) => {
+            if (isValidBlogPostStatus(value)) {
+              setValue('status', value)
+            }
+          },
         }}
       />
 
