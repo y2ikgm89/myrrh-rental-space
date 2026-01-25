@@ -41,6 +41,7 @@ import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext
 import { ImageNode } from './nodes/ImageNode'
 import { YouTubeNode } from './nodes/YouTubeNode'
 import { XNode } from './nodes/XNode'
+import { InstagramNode } from './nodes/InstagramNode'
 import { LayoutContainerNode } from './nodes/LayoutContainerNode'
 import { LayoutItemNode } from './nodes/LayoutItemNode'
 import {
@@ -48,6 +49,7 @@ import {
   ImagePlugin,
   YouTubePlugin,
   XPlugin,
+  InstagramPlugin,
   LinkDialogPlugin,
   TableInsertPlugin,
   LayoutPlugin,
@@ -58,6 +60,7 @@ import {
   useImageDialog,
   useYouTubeDialog,
   useXDialog,
+  useInstagramDialog,
   useLinkDialog,
   useTableDialog,
   useLayoutDialog,
@@ -230,6 +233,10 @@ function EditorInner({
   // Xダイアログ
   const { isXDialogOpen, openXDialog, closeXDialog } = useXDialog()
 
+  // Instagramダイアログ
+  const { isInstagramDialogOpen, openInstagramDialog, closeInstagramDialog } =
+    useInstagramDialog()
+
   // リンクダイアログ
   const { isLinkDialogOpen, openLinkDialog, closeLinkDialog } =
     useLinkDialog()
@@ -276,6 +283,7 @@ function EditorInner({
             onInsertImage={openImageDialog}
             onInsertYouTube={openYouTubeDialog}
             onInsertX={openXDialog}
+            onInsertInstagram={openInstagramDialog}
             onInsertLink={openLinkDialog}
             onInsertTable={openTableDialog}
             onInsertLayout={openLayoutDialog}
@@ -331,6 +339,7 @@ function EditorInner({
         onInsertImage={openImageDialog}
         onInsertYouTube={openYouTubeDialog}
         onInsertX={openXDialog}
+        onInsertInstagram={openInstagramDialog}
         onInsertTable={openTableDialog}
         onInsertLayout={openLayoutDialog}
       />
@@ -339,6 +348,7 @@ function EditorInner({
       <ImagePlugin isOpen={isImageDialogOpen} onClose={closeImageDialog} />
       <YouTubePlugin isOpen={isYouTubeDialogOpen} onClose={closeYouTubeDialog} />
       <XPlugin isOpen={isXDialogOpen} onClose={closeXDialog} />
+      <InstagramPlugin isOpen={isInstagramDialogOpen} onClose={closeInstagramDialog} />
       <LinkDialogPlugin isOpen={isLinkDialogOpen} onClose={closeLinkDialog} />
       <TableInsertPlugin isOpen={isTableDialogOpen} onClose={closeTableDialog} />
       <LayoutPlugin isOpen={isLayoutDialogOpen} onClose={closeLayoutDialog} />
@@ -367,6 +377,7 @@ export function LexicalEditor(props: LexicalEditorProps) {
         ImageNode,
         YouTubeNode,
         XNode,
+        InstagramNode,
         TableNode,
         TableRowNode,
         TableCellNode,

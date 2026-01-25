@@ -46,6 +46,7 @@ import {
   Heading3,
   Heading4,
   Image as ImageIcon,
+  Instagram,
   Italic,
   Link,
   List,
@@ -85,6 +86,7 @@ type ToolbarPluginProps = {
   onInsertImage?: () => void
   onInsertYouTube?: () => void
   onInsertX?: () => void
+  onInsertInstagram?: () => void
   onInsertLink?: () => void
   onInsertTable?: () => void
   onInsertLayout?: () => void
@@ -137,6 +139,7 @@ export function ToolbarPlugin({
   onInsertImage,
   onInsertYouTube,
   onInsertX,
+  onInsertInstagram,
   onInsertLink,
   onInsertTable,
   onInsertLayout,
@@ -313,7 +316,7 @@ export function ToolbarPlugin({
   }
 
   // 挿入メニューに項目があるかチェック
-  const hasInsertItems = onInsertImage || onInsertYouTube || onInsertX || onInsertTable || onInsertLayout
+  const hasInsertItems = onInsertImage || onInsertYouTube || onInsertX || onInsertInstagram || onInsertTable || onInsertLayout
 
   return (
     <div className="flex flex-wrap items-center gap-0.5 border-b bg-background p-1">
@@ -531,6 +534,12 @@ export function ToolbarPlugin({
               <DropdownMenuItem onClick={onInsertX} className="flex items-center gap-2">
                 <Twitter className="h-4 w-4" />
                 <span>X (Twitter)</span>
+              </DropdownMenuItem>
+            )}
+            {onInsertInstagram && (
+              <DropdownMenuItem onClick={onInsertInstagram} className="flex items-center gap-2">
+                <Instagram className="h-4 w-4" />
+                <span>Instagram</span>
               </DropdownMenuItem>
             )}
             {onInsertTable && (

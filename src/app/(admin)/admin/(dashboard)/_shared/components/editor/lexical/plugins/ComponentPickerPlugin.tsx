@@ -43,6 +43,7 @@ import {
   Image as ImageIcon,
   Youtube,
   Twitter,
+  Instagram,
   Table,
   Minus,
   Code,
@@ -63,6 +64,7 @@ type ComponentPickerPluginProps = {
   onInsertImage?: () => void
   onInsertYouTube?: () => void
   onInsertX?: () => void
+  onInsertInstagram?: () => void
   onInsertTable?: () => void
   onInsertLayout?: () => void
 }
@@ -165,6 +167,7 @@ export function ComponentPickerPlugin({
   onInsertImage,
   onInsertYouTube,
   onInsertX,
+  onInsertInstagram,
   onInsertTable,
   onInsertLayout,
 }: ComponentPickerPluginProps) {
@@ -329,6 +332,16 @@ export function ComponentPickerPlugin({
             }),
           ]
         : []),
+      ...(onInsertInstagram
+        ? [
+            new ComponentPickerOption('Instagram', {
+              icon: <Instagram className="h-4 w-4" />,
+              keywords: ['instagram', 'insta', 'embed', 'social', 'sns', 'photo'],
+              category: 'media',
+              onSelect: onInsertInstagram,
+            }),
+          ]
+        : []),
       ...(onInsertTable
         ? [
             new ComponentPickerOption('テーブル', {
@@ -402,7 +415,7 @@ export function ComponentPickerPlugin({
       )
       return titleMatch || keywordMatch
     })
-  }, [editor, queryString, onInsertImage, onInsertYouTube, onInsertX, onInsertTable, onInsertLayout])
+  }, [editor, queryString, onInsertImage, onInsertYouTube, onInsertX, onInsertInstagram, onInsertTable, onInsertLayout])
 
   // カテゴリー別にグループ化
   const groupedOptions = useMemo(() => {
