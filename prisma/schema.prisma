@@ -81,6 +81,7 @@ enum HomepageSectionType {
   FAQ // FAQ
   CTA // Call to Action
   CUSTOM // カスタム（Lexicalフルコンテンツ）
+  INSTAGRAM // Instagramフィード
 }
 
 enum BlogPostStatus {
@@ -108,6 +109,11 @@ enum TermsStatus {
   DRAFT
   PUBLISHED
   ARCHIVED
+}
+
+enum CouponType {
+  PERCENTAGE // パーセント割引 (例: 20%)
+  FIXED_AMOUNT // 定額割引 (例: ¥1,000)
 }
 
 // ==============================================
@@ -270,6 +276,7 @@ model SpaceCategory {
 
 model Space {
   id            String    @id @default(uuid())
+  slug          String    @unique
   name          String
   description   String    @db.Text
   address       String
@@ -299,6 +306,14 @@ model Space {
 
   // 規約設定
   termsId String? // 任意の規約参照
+
+  // 割引設定
+  discountType             String   @default("none") // "none" | "percentage" | "fixed"
+  discountValue            Decimal? @db.Decimal(10, 2)
+  durationDiscountOverride String   @default("inherit") // "inherit" | "enabled" | "disabled"
+
+  // 税率設定
+  taxRateType String @default("standard") // "standard" | "reduced"
 
   // 場所・カテゴリー設定
   locationId String? // 場所（建物）参照
@@ -335,6 +350,19 @@ model Reservation {
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
+  // 割引情報
+  couponId               String? // 適用されたクーポンID
+  couponDiscountAmount   Decimal? @db.Decimal(10, 2) // クーポン割引額
+  durationDiscountAmount Decimal? @db.Decimal(10, 2) // 長時間割引額
+  spaceDiscountAmount    Decimal? @db.Decimal(10, 2) // スペース固有割引額
+  basePrice              Decimal? @db.Decimal(10, 2) // 割引前価格（記録用）
+
+  // 税情報（予約時点の値を記録）
+  taxRateType       String?  // "standard" | "reduced" - 適用された税率タイプ
+  taxRate           Decimal? @db.Decimal(5, 2) // 適用税率（%）
+  taxAmount         Decimal? @db.Decimal(10, 2) // 税額
+  totalPriceWithTax Decimal? @db.Decimal(10, 2) // 税込み合計
+
   // Google Calendar Sync
   googleCalendarEventId      String? // 共有カレンダーのイベントID
   googleCalendarOAuthEventId String? // OAuth連携（管理者個人）のイベントID
@@ -345,6 +373,7 @@ model Reservation {
   space           Space            @relation(fields: [spaceId], references: [id], onDelete: Cascade)
   user            User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
   customer        Customer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  coupon          Coupon?          @relation(fields: [couponId], references: [id], onDelete: SetNull)
   termsAgreements TermsAgreement[]
 
   @@index([spaceId])
@@ -354,6 +383,7 @@ model Reservation {
   @@index([status])
   @@index([spaceId, startTime, endTime])
   @@index([customerId, startTime])
+  @@index([couponId])
   @@map("reservations")
 }
 
@@ -389,6 +419,48 @@ model Customer {
   @@map("customers")
 }
 
+// ==============================================
+// Coupon Model (割引クーポン)
+// ==============================================
+
+model Coupon {
+  id          String     @id @default(uuid())
+  code        String     @unique // クーポンコード (大文字英数字)
+  name        String // 管理用名称
+  description String? // 説明
+
+  // 割引設定
+  type          CouponType
+  discountValue Decimal    @db.Decimal(10, 2) // 割引額 or 割引率
+
+  // 適用条件
+  minReservationAmount Decimal? @db.Decimal(10, 2) // 最低利用金額
+  maxDiscountAmount    Decimal? @db.Decimal(10, 2) // 最大割引額（パーセント割引時）
+
+  // 有効期限
+  validFrom  DateTime
+  validUntil DateTime?
+
+  // 利用制限
+  usageLimit Int? // 利用回数上限（null=無制限）
+  usageCount Int     @default(0) // 利用回数
+  isActive   Boolean @default(true)
+
+  // 併用設定
+  canCombineWithDurationDiscount Boolean @default(true) // 長時間割引との併用可否
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  reservations Reservation[]
+
+  @@index([code])
+  @@index([validFrom, validUntil])
+  @@index([isActive])
+  @@map("coupons")
+}
+
 model Inquiry {
   id        String        @id @default(uuid())
   name      String
@@ -406,6 +478,7 @@ model Inquiry {
 
 model News {
   id                 String       @id @default(uuid())
+  slug               String       @unique
   title              String
   content            String       @db.Text // HTMLコンテンツ（レンダリング用）
   isPublished        Boolean      @default(false)
@@ -794,6 +867,10 @@ model Settings {
   sidebarRecentCount  Int     @default(5) // 新着記事の表示件数
   sidebarPopularCount Int     @default(5) // 人気記事の表示件数
 
+  // Permalink Settings (パーマリンク設定)
+  blogPermalinkStructure String @default("post-name") // post-name | simple | date-name | category-name
+  blogUrlPrefix          String @default("blog")      // URL プレフィックス (例: blog, articles, posts)
+
   // Analytics Settings
   analyticsType         String? // "ga4" | "gtm" | null
   googleAnalyticsId     String? // GA4 Measurement ID (G-XXXXXXXXXX)
@@ -806,9 +883,24 @@ model Settings {
   defaultTimeSlot                  Int?    @default(60)
   minReservationDuration           Int?    @default(60)
   maxReservationDuration           Int?    @default(480)
-  cancellationPolicy               String? @db.Text
+  cancellationTermsId              String?
+  cancellationTerms                Terms?  @relation("CancellationPolicy", fields: [cancellationTermsId], references: [id])
   sendReservationConfirmationEmail Boolean @default(true)
   sendAdminNotificationEmail       Boolean @default(true)
+
+  // Discount Settings (割引設定)
+  durationDiscountEnabled Boolean @default(false) // 長時間割引の有効/無効
+  durationDiscountRules   Json    @default("[]") // 割引ルール配列 [{ hours: 4, discountRate: 10 }, ...]
+  discountCombinationMode String  @default("best") // "best" = 最もお得な割引のみ, "both" = 両方適用
+  showOriginalPrice       Boolean @default(true) // 割引前価格の表示
+  discountWarningEnabled  Boolean @default(true) // 併用時の警告表示
+
+  // Tax Settings (消費税設定)
+  taxStandardRate     Decimal @default(10) @db.Decimal(5, 2) // 標準税率（%）
+  taxReducedRate      Decimal @default(8) @db.Decimal(5, 2) // 軽減税率（%）
+  taxDisplayModeAdmin String  @default("both") // 管理画面: "tax_excluded" | "tax_included" | "both"
+  taxDisplayModePublic String @default("tax_included") // 公開ページ: "tax_excluded" | "tax_included" | "both"
+  taxInputMode        String  @default("tax_excluded") // 入力モード: "tax_excluded" | "tax_included"
 
   // Terms Agreement Settings
   termsAgreementEnabled   Boolean @default(true) // 規約同意チェック有効
@@ -886,6 +978,12 @@ model Settings {
   googleMapsLastTestedAt     DateTime?
   googleMapsConnectionStatus String?
 
+  // Cloudflare CDN (Cache Purge API)
+  cloudflareZoneId           String? // Zone ID (not encrypted)
+  cloudflareApiToken         String?   @db.Text // Encrypted API Token
+  cloudflareLastTestedAt     DateTime?
+  cloudflareConnectionStatus String? // 'connected' | 'error'
+
   // Custom API Keys (Generic key-value storage)
   // Format: { "id": { "name": "...", "key": "encrypted", "value": "encrypted", ... } }
   customApiKeys Json? @default("{}")
@@ -932,7 +1030,44 @@ model Settings {
   googleCalendarWebhookExpiration DateTime? // Webhook 有効期限
   googleCalendarWebhookToken      String? // Webhook 認証トークン (x-goog-channel-token)
 
+  // ==============================================
+  // Instagram連携
+  // ==============================================
+  instagramAccessToken     String?   @db.Text // Encrypted
+  instagramTokenExpiresAt  DateTime?
+  instagramUserId          String?
+  instagramUsername        String?
+  instagramAccountType     String?
+  instagramFeedEnabled     Boolean   @default(false)
+  instagramFeedLayout      String    @default("grid")
+  instagramFeedColumns     Int       @default(4)
+  instagramFeedMaxItems    Int       @default(8)
+  instagramShowCaption     Boolean   @default(false)
+  instagramShowViewAll     Boolean   @default(true)
+
   @@map("settings")
+}
+
+// =============================================================================
+// Instagram Post Cache
+// =============================================================================
+
+/// Instagram投稿のキャッシュ
+model InstagramPost {
+  id           String   @id @default(cuid())
+  postId       String   @unique // Instagram投稿ID
+  postUrl      String // 投稿URL
+  mediaUrl     String? // メディアURL
+  thumbnailUrl String? // サムネイルURL
+  caption      String?  @db.Text // キャプション
+  mediaType    String // IMAGE, VIDEO, CAROUSEL_ALBUM
+  permalink    String // 永続リンク
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([sortOrder])
+  @@map("instagram_posts")
 }
 
 // =============================================================================
@@ -1032,6 +1167,12 @@ enum AuditAction {
   PERMISSION_DENIED
   PASSWORD_CHANGE
   ROLE_CHANGE
+}
+
+enum EditorCommentStatus {
+  ACTIVE // アクティブ（未解決）
+  RESOLVED // 解決済み
+  DELETED // 削除済み（ソフトデリート）
 }
 
 enum MediaType {
@@ -1136,20 +1277,30 @@ model LoginAttempt {
 
 /// 規約マスター（複数のバージョンを持つ）
 model Terms {
-  id        String    @id @default(uuid())
-  type      TermsType
-  title     String // 表示タイトル（例: "利用規約"）
-  slug      String    @unique // URL用スラッグ（例: "terms-of-use"）
-  isActive  Boolean   @default(true) // 現在有効な規約か
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id         String    @id @default(uuid())
+  type       TermsType
+  title      String // 表示タイトル（例: "利用規約"）
+  slug       String    @unique // URL用スラッグ（例: "terms-of-use"）
+  isSiteWide Boolean   @default(false) // サイト全体の規約か（true: 公開ページで表示）
+  isActive   Boolean   @default(true) // 現在有効な規約か
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  // SEO/OGP設定（サイト全体規約用）
+  metaDescription String? // メタディスクリプション
+  metaKeywords    String? // メタキーワード
+  ogpTitle        String? // OGPタイトル
+  ogpDescription  String? // OGP説明
+  ogpImageUrl     String? // OGP画像URL
 
   // Relations
   versions   TermsVersion[]
   spaces     Space[] // この規約を使用するスペース
   agreements TermsAgreement[] // 同意記録
+  settingsAsCancellation Settings[] @relation("CancellationPolicy") // キャンセルポリシーとして設定
 
   @@index([type, isActive])
+  @@index([type, isSiteWide])
   @@index([slug])
   @@map("terms")
 }
@@ -1205,4 +1356,54 @@ model TermsAgreement {
   @@index([termsId, versionId])
   @@index([guestEmail, agreedAt])
   @@map("terms_agreements")
+}
+
+// =============================================================================
+// エディタコメント（Lexical MarkNode連携）
+// =============================================================================
+
+/// エディタコメントスレッド（Lexical MarkNodeに紐づく）
+model EditorCommentThread {
+  id          String              @id @default(uuid())
+  markId      String // Lexical MarkNode ID（エディタ内での一意識別子）
+  contentType String // コンテンツタイプ: "blog" | "news" | "page" | "faq"
+  contentId   String // コンテンツID（BlogPost.id, News.id, Page.id, FaqItem.id）
+  quotedText  String              @db.Text // マークされたテキスト（参照用）
+  status      EditorCommentStatus @default(ACTIVE)
+  resolvedAt  DateTime? // 解決日時
+  resolvedBy  String? // 解決者ID（User.id）
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  createdBy   String // 作成者ID（User.id）
+
+  // Relations
+  comments EditorComment[]
+
+  // 同一コンテンツ内でmarkIdは一意
+  @@unique([markId, contentType, contentId])
+  @@index([contentType, contentId, status])
+  @@index([createdBy])
+  @@index([status, createdAt])
+  @@map("editor_comment_threads")
+}
+
+/// エディタコメント（スレッド内の個別コメント）
+model EditorComment {
+  id        String    @id @default(uuid())
+  threadId  String
+  content   String    @db.Text // コメント本文
+  isDeleted Boolean   @default(false) // ソフトデリート
+  deletedAt DateTime? // 削除日時
+  deletedBy String? // 削除者ID（User.id）
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String // 作成者ID（User.id）
+
+  // Relations
+  thread EditorCommentThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, createdAt])
+  @@index([createdBy])
+  @@index([isDeleted])
+  @@map("editor_comments")
 }
