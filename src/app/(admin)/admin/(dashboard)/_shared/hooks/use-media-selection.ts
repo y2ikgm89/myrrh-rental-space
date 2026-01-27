@@ -7,7 +7,7 @@
  */
 
 import { useState } from 'react'
-import type { MediaData } from '@/admin/actions/media'
+import type { MediaData } from '@/admin/types/media-picker'
 import type { SelectionMode, SelectedMedia } from '@/admin/types/media-picker'
 
 /** アップロード結果（シンプルな型） */

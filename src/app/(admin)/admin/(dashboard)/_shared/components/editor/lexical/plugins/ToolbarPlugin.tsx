@@ -77,6 +77,7 @@ import { FontSizePlugin } from './FontSizePlugin'
 import { HighlightPlugin } from './HighlightPlugin'
 import { TextColorPlugin } from './TextColorPlugin'
 import { TextCasePlugin } from './TextCasePlugin'
+import { entriesOf } from '@/shared/lib/serialize'
 
 // =============================================================================
 // Types
@@ -93,6 +94,13 @@ type ToolbarPluginProps = {
 }
 
 type BlockType = 'paragraph' | 'h1' | 'h2' | 'h3' | 'h4' | 'quote' | 'ul' | 'ol'
+
+const BLOCK_TYPE_VALUES = ['paragraph', 'h1', 'h2', 'h3', 'h4', 'quote', 'ul', 'ol'] as const
+const BLOCK_TYPES = new Set<string>(BLOCK_TYPE_VALUES)
+
+function isBlockType(value: unknown): value is BlockType {
+  return typeof value === 'string' && BLOCK_TYPES.has(value)
+}
 
 type BlockTypeConfig = {
   label: string
@@ -113,10 +121,19 @@ const BLOCK_TYPE_CONFIG: Record<BlockType, BlockTypeConfig> = {
 // テキスト配置オプション
 type AlignmentType = 'left' | 'center' | 'right' | 'justify'
 
-const ALIGNMENT_TYPES = new Set<AlignmentType>(['left', 'center', 'right', 'justify'])
+const ALIGNMENT_TYPE_VALUES = ['left', 'center', 'right', 'justify'] as const
+const ALIGNMENT_TYPES = new Set<string>(ALIGNMENT_TYPE_VALUES)
 
-function isAlignmentType(value: string): value is AlignmentType {
-  return ALIGNMENT_TYPES.has(value as AlignmentType)
+function isAlignmentType(value: unknown): value is AlignmentType {
+  return typeof value === 'string' && ALIGNMENT_TYPES.has(value)
+}
+
+// HeadingTagType type guard (h1-h6 are valid Lexical heading tags)
+const HEADING_TAG_VALUES = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'] as const
+const HEADING_TAGS = new Set<string>(HEADING_TAG_VALUES)
+
+function isHeadingTag(value: unknown): value is HeadingTagType {
+  return typeof value === 'string' && HEADING_TAGS.has(value)
 }
 
 type AlignmentConfig = {
@@ -201,7 +218,8 @@ export function ToolbarPlugin({
           : $isQuoteNode(element)
             ? 'quote'
             : 'paragraph'
-        setBlockType(type as BlockType)
+        // h5, h6 は対応外なのでparagraphにフォールバック
+        setBlockType(isBlockType(type) ? type : 'paragraph')
       }
 
       // テキスト配置を取得
@@ -306,8 +324,10 @@ export function ToolbarPlugin({
         return
       }
 
-      // Heading
-      $setBlocksType(selection, () => $createHeadingNode(type as HeadingTagType))
+      // Heading (type is validated as HeadingTagType via isHeadingTag guard)
+      if (isHeadingTag(type)) {
+        $setBlocksType(selection, () => $createHeadingNode(type))
+      }
     })
   }
 
@@ -426,7 +446,7 @@ export function ToolbarPlugin({
           })()}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="min-w-[160px]">
-          {(Object.entries(BLOCK_TYPE_CONFIG) as [BlockType, BlockTypeConfig][]).map(
+          {entriesOf(BLOCK_TYPE_CONFIG).map(
             ([type, { label, icon: Icon }]) => (
               <DropdownMenuItem
                 key={type}
@@ -468,7 +488,7 @@ export function ToolbarPlugin({
           })()}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="min-w-[140px]">
-          {(Object.entries(ALIGNMENT_CONFIG) as [AlignmentType, AlignmentConfig][]).map(
+          {entriesOf(ALIGNMENT_CONFIG).map(
             ([type, { label, icon: Icon }]) => (
               <DropdownMenuItem
                 key={type}

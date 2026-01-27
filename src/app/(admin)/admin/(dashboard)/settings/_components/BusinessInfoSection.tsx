@@ -20,6 +20,7 @@ import {
 import { updateBusinessInfo } from '@/admin/actions/settings'
 import type { SettingsData } from '@/admin/actions/settings'
 import { useRefreshOnSuccess } from './hooks'
+import { toDateString } from '@/shared/lib/serialize'
 
 interface BusinessInfoSectionProps {
   settings: SettingsData
@@ -52,7 +53,7 @@ export function BusinessInfoSection({ settings }: BusinessInfoSectionProps) {
     businessType: settings.businessType || '',
     industryType: settings.industryType || '',
     establishedDate: settings.establishedDate
-      ? new Date(settings.establishedDate).toISOString().split('T')[0]
+      ? toDateString(new Date(settings.establishedDate))
       : '',
     registrationNumber: settings.registrationNumber || '',
     invoiceNumber: settings.invoiceNumber || '',

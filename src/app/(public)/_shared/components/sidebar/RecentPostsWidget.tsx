@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { tv } from 'tailwind-variants'
 import { Card, CardContent, CardHeader, CardTitle } from '@/public/components/ui'
+import { generatePostUrl } from '@/shared/lib/url'
 import type { ReactElement } from 'react'
 import type { SidebarRecentPost } from '@/public/actions/sidebar'
 
@@ -20,6 +21,7 @@ const styles = tv({
 
 interface RecentPostsWidgetProps {
   posts: SidebarRecentPost[]
+  postPrefix: string
 }
 
 /**
@@ -32,7 +34,7 @@ function formatPublishedDate(value: Date): string {
 /**
  * 新着記事ウィジェット
  */
-export function RecentPostsWidget({ posts }: RecentPostsWidgetProps): ReactElement {
+export function RecentPostsWidget({ posts, postPrefix }: RecentPostsWidgetProps): ReactElement {
   return (
     <Card>
       <CardHeader>
@@ -43,7 +45,7 @@ export function RecentPostsWidget({ posts }: RecentPostsWidgetProps): ReactEleme
           <ul className={styles.list()}>
             {posts.map((post) => (
               <li key={post.id}>
-                <Link href={`/blog/${post.slug}`} className={styles.item()}>
+                <Link href={generatePostUrl(post, { structure: 'post-name', prefix: postPrefix })} className={styles.item()}>
                   <div className={styles.thumbnail()}>
                     <Image
                       src={post.thumbnailUrl}

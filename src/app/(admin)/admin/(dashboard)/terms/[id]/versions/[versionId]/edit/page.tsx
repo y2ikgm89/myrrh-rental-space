@@ -58,6 +58,7 @@ export default async function EditVersionPage({ params }: EditVersionPageProps) 
 
       <TermsVersionForm
         termsId={id}
+        termsType={termsResult.data.type}
         version={version}
         onSuccess={() => {
           // Client-side redirect will be handled by the form

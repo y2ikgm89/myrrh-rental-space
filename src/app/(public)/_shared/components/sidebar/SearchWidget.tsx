@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useQueryStates } from 'nuqs'
 import { tv } from 'tailwind-variants'
 import { Card, CardContent, CardHeader, CardTitle, Input } from '@/public/components/ui'
+import { generatePostListUrl } from '@/shared/lib/url'
 import { parseAsCommaSeparated, parseAsPage, parseAsQuery, parseAsSortOrder } from '@/shared/lib/nuqs'
 
 const styles = tv({
@@ -16,17 +17,22 @@ const styles = tv({
   },
 })()
 
+interface SearchWidgetProps {
+  postPrefix: string
+}
+
 /**
  * 検索ウィジェット
  *
  * @description nuqs を使用して ?q= パラメータを更新
- * ブログ一覧以外のページでは /blog へナビゲーション
+ * ブログ一覧以外のページでは /posts へナビゲーション
  */
-export function SearchWidget(): ReactElement {
+export function SearchWidget({ postPrefix }: SearchWidgetProps): ReactElement {
   const [isPending, startTransition] = useTransition()
   const pathname = usePathname()
   const router = useRouter()
-  const isOnBlogList = pathname === '/blog'
+  const postListPath = postPrefix || '/posts'
+  const isOnPostList = pathname === postListPath
 
   const [{ q }, setParams] = useQueryStates(
     {
@@ -46,7 +52,7 @@ export function SearchWidget(): ReactElement {
 
   const handleSearchChange = (event: ChangeEvent<HTMLInputElement>): void => {
     // ブログ一覧ページでのみリアルタイム検索
-    if (isOnBlogList) {
+    if (isOnPostList) {
       setParams({ q: event.target.value || null, page: null })
     }
   }
@@ -56,10 +62,10 @@ export function SearchWidget(): ReactElement {
     const formData = new FormData(event.currentTarget)
     const searchValue = formData.get('q') as string
 
-    if (!isOnBlogList && searchValue) {
-      // ブログ一覧以外のページでは /blog へナビゲーション
+    if (!isOnPostList && searchValue) {
+      // ブログ一覧以外のページでは投稿一覧へナビゲーション
       startTransition(() => {
-        router.push(`/blog?q=${encodeURIComponent(searchValue)}`)
+        router.push(generatePostListUrl(postPrefix, { q: searchValue }))
       })
     }
   }
@@ -92,7 +98,7 @@ export function SearchWidget(): ReactElement {
               type="search"
               name="q"
               placeholder="キーワードで検索..."
-              defaultValue={isOnBlogList ? q : ''}
+              defaultValue={isOnPostList ? q : ''}
               onChange={handleSearchChange}
               className={styles.searchInput()}
               aria-label="ブログを検索"

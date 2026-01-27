@@ -1,7 +1,7 @@
 'use server'
 
 import { prisma } from '@/shared/lib/prisma'
-import { revalidateTag } from 'next/cache'
+import { updateTag } from 'next/cache'
 import { CACHE_TAGS } from '@/shared/lib/constants'
 import { Role } from '@/shared/generated/prisma/enums'
 import type { Prisma } from '@/shared/generated/prisma/client'
@@ -81,7 +81,7 @@ export async function getUsers(params: UserListParams = {}): Promise<UserListRes
         _count: {
           select: {
             reservations: true,
-            blogPosts: true,
+            posts: true,
           },
         },
       },
@@ -126,7 +126,7 @@ export async function getUser(id: string): Promise<UserData | null> {
       _count: {
         select: {
           reservations: true,
-          blogPosts: true,
+          posts: true,
         },
       },
     },
@@ -187,7 +187,7 @@ export const createUser = withPermission<[CreateUserInput], { id: string }>(
     },
   })
 
-  revalidateTag(CACHE_TAGS.STAFF, 'default')
+  updateTag(CACHE_TAGS.STAFF)
 
   return createSuccess('ユーザーを作成しました', { id: user.id })
 })
@@ -245,8 +245,8 @@ export const updateUser = withPermission<[string, UpdateUserInput], void>(
     data: updateData,
   })
 
-  revalidateTag(CACHE_TAGS.STAFF, 'default')
-  revalidateTag(`${CACHE_TAGS.STAFF}-${id}`, 'default')
+  updateTag(CACHE_TAGS.STAFF)
+  updateTag(`${CACHE_TAGS.STAFF}-${id}`)
 
   return createSuccess('ユーザーを更新しました')
 })
@@ -269,7 +269,7 @@ export const deleteUser = withPermission<[string], void>(
       _count: {
         select: {
           reservations: true,
-          blogPosts: true,
+          posts: true,
         },
       },
     },
@@ -280,9 +280,9 @@ export const deleteUser = withPermission<[string], void>(
   }
 
   // 関連データがある場合は警告
-  if (targetUser._count.reservations > 0 || targetUser._count.blogPosts > 0) {
+  if (targetUser._count.reservations > 0 || targetUser._count.posts > 0) {
     return createFailure(
-      `このユーザーには予約${targetUser._count.reservations}件、ブログ記事${targetUser._count.blogPosts}件が関連付けられています。先に関連データを削除してください`
+      `このユーザーには予約${targetUser._count.reservations}件、投稿${targetUser._count.posts}件が関連付けられています。先に関連データを削除してください`
     )
   }
 
@@ -290,7 +290,7 @@ export const deleteUser = withPermission<[string], void>(
     where: { id },
   })
 
-  revalidateTag(CACHE_TAGS.STAFF, 'default')
+  updateTag(CACHE_TAGS.STAFF)
 
   return createSuccess('ユーザーを削除しました')
 })
@@ -318,8 +318,8 @@ export const updateUserRole = withRole<[string, Role], void>(Role.SUPER_ADMIN)(
     // ロール変更を監査ログに記録（withRoleは自動監査なし）
     void logRoleChange(user.id, id, oldRole, role)
 
-    revalidateTag(CACHE_TAGS.STAFF, 'default')
-    revalidateTag(`${CACHE_TAGS.STAFF}-${id}`, 'default')
+    updateTag(CACHE_TAGS.STAFF)
+    updateTag(`${CACHE_TAGS.STAFF}-${id}`)
 
     return createSuccess('ロールを更新しました')
   }

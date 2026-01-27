@@ -4,29 +4,37 @@
  * OGP設定フィールド
  *
  * SNSシェア時の表示設定
+ * フィールド名をpropsで受け取ることで完全な型安全性を確保
  */
 
+import type { FieldValues } from 'react-hook-form'
 import { Input, Label, Textarea } from '@/admin/components/ui'
-import type { SidePanelSectionProps } from '../types'
+import { getFieldError, getErrorMessage } from '../types'
+import type { OGPFieldsProps } from '../types'
 
-export function OGPFields({
+export function OGPFields<T extends FieldValues>({
   register,
   errors,
   disabled,
-}: SidePanelSectionProps) {
+  fields,
+}: OGPFieldsProps<T>) {
+  const ogpTitleError = getFieldError(errors, fields.ogpTitle)
+  const ogpDescriptionError = getFieldError(errors, fields.ogpDescription)
+  const ogpImageUrlError = getFieldError(errors, fields.ogpImageUrl)
+
   return (
     <div className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="ogpTitle">OGPタイトル</Label>
         <Input
           id="ogpTitle"
-          {...register('ogpTitle')}
+          {...register(fields.ogpTitle)}
           placeholder="SNSシェア時のタイトル（100文字以内推奨）"
           disabled={disabled}
         />
-        {errors.ogpTitle && (
+        {ogpTitleError && (
           <p className="text-sm text-destructive">
-            {errors.ogpTitle.message}
+            {getErrorMessage(ogpTitleError)}
           </p>
         )}
       </div>
@@ -35,14 +43,14 @@ export function OGPFields({
         <Label htmlFor="ogpDescription">OGP説明文</Label>
         <Textarea
           id="ogpDescription"
-          {...register('ogpDescription')}
+          {...register(fields.ogpDescription)}
           placeholder="SNSシェア時の説明文（200文字以内推奨）"
           rows={3}
           disabled={disabled}
         />
-        {errors.ogpDescription && (
+        {ogpDescriptionError && (
           <p className="text-sm text-destructive">
-            {errors.ogpDescription.message}
+            {getErrorMessage(ogpDescriptionError)}
           </p>
         )}
       </div>
@@ -51,13 +59,13 @@ export function OGPFields({
         <Label htmlFor="ogpImageUrl">OGP画像URL</Label>
         <Input
           id="ogpImageUrl"
-          {...register('ogpImageUrl')}
+          {...register(fields.ogpImageUrl)}
           placeholder="https://example.com/images/ogp.jpg"
           disabled={disabled}
         />
-        {errors.ogpImageUrl && (
+        {ogpImageUrlError && (
           <p className="text-sm text-destructive">
-            {errors.ogpImageUrl.message}
+            {getErrorMessage(ogpImageUrlError)}
           </p>
         )}
         <p className="text-xs text-muted-foreground">

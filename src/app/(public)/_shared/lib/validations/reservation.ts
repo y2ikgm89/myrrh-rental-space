@@ -9,12 +9,12 @@ import { z } from 'zod'
 // 日付文字列のバリデーション（YYYY-MM-DD形式）
 const dateStringSchema = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, '日付の形式が正しくありません')
+  .regex(/^\d{4}-\d{2}-\d{2}$/, { message: '日付の形式が正しくありません' })
 
 // 時間文字列のバリデーション（HH:MM形式）
 const timeStringSchema = z
   .string()
-  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, '時間の形式が正しくありません')
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, { message: '時間の形式が正しくありません' })
 
 /**
  * 予約顧客情報スキーマ
@@ -22,21 +22,21 @@ const timeStringSchema = z
 export const customerInfoSchema = z.object({
   lastName: z
     .string()
-    .min(1, '姓を入力してください')
-    .max(50, '姓は50文字以内で入力してください'),
+    .min(1, { message: '姓を入力してください' })
+    .max(50, { message: '姓は50文字以内で入力してください' }),
   firstName: z
     .string()
-    .min(1, '名を入力してください')
-    .max(50, '名は50文字以内で入力してください'),
+    .min(1, { message: '名を入力してください' })
+    .max(50, { message: '名は50文字以内で入力してください' }),
   email: z
     .string()
-    .min(1, 'メールアドレスを入力してください')
-    .email('有効なメールアドレスを入力してください'),
+    .min(1, { message: 'メールアドレスを入力してください' })
+    .email({ message: '有効なメールアドレスを入力してください' }),
   phoneNumber: z
     .string()
-    .min(1, '電話番号を入力してください')
-    .regex(/^[0-9-]+$/, '電話番号は数字とハイフンのみで入力してください')
-    .max(20, '電話番号は20文字以内で入力してください'),
+    .min(1, { message: '電話番号を入力してください' })
+    .regex(/^[0-9-]+$/, { message: '電話番号は数字とハイフンのみで入力してください' })
+    .max(20, { message: '電話番号は20文字以内で入力してください' }),
 })
 
 /**
@@ -87,39 +87,44 @@ export const reservationDateTimeSchema = z
  * 予約リクエストスキーマ（基本フィールド）
  */
 export const baseReservationSchema = z.object({
-  spaceId: z.string().uuid('スペースIDが無効です'),
+  spaceId: z.string().uuid({ message: 'スペースIDが無効です' }),
   date: dateStringSchema,
   startTime: timeStringSchema,
   endTime: timeStringSchema,
   lastName: z
     .string()
-    .min(1, '姓を入力してください')
-    .max(50, '姓は50文字以内で入力してください'),
+    .min(1, { message: '姓を入力してください' })
+    .max(50, { message: '姓は50文字以内で入力してください' }),
   firstName: z
     .string()
-    .min(1, '名を入力してください')
-    .max(50, '名は50文字以内で入力してください'),
+    .min(1, { message: '名を入力してください' })
+    .max(50, { message: '名は50文字以内で入力してください' }),
   // カナ（IMEで自動取得、任意）
   lastNameKana: z
     .string()
-    .max(50, 'セイは50文字以内で入力してください')
+    .max(50, { message: 'セイは50文字以内で入力してください' })
     .optional(),
   firstNameKana: z
     .string()
-    .max(50, 'メイは50文字以内で入力してください')
+    .max(50, { message: 'メイは50文字以内で入力してください' })
     .optional(),
   email: z
     .string()
-    .min(1, 'メールアドレスを入力してください')
-    .email('有効なメールアドレスを入力してください'),
+    .min(1, { message: 'メールアドレスを入力してください' })
+    .email({ message: '有効なメールアドレスを入力してください' }),
   phoneNumber: z
     .string()
-    .min(1, '電話番号を入力してください')
-    .regex(/^[0-9-]+$/, '電話番号は数字とハイフンのみで入力してください')
-    .max(20, '電話番号は20文字以内で入力してください'),
+    .min(1, { message: '電話番号を入力してください' })
+    .regex(/^[0-9-]+$/, { message: '電話番号は数字とハイフンのみで入力してください' })
+    .max(20, { message: '電話番号は20文字以内で入力してください' }),
   notes: z
     .string()
-    .max(1000, '備考は1000文字以内で入力してください')
+    .max(1000, { message: '備考は1000文字以内で入力してください' })
+    .optional(),
+  // クーポンコード（オプション）
+  couponCode: z
+    .string()
+    .max(20, { message: 'クーポンコードは20文字以内で入力してください' })
     .optional(),
 })
 
@@ -164,22 +169,5 @@ export type ReservationActionResult =
       fieldErrors?: Record<string, string[]>
     }
 
-/**
- * 時間枠の型定義
- */
-export interface TimeSlot {
-  time: string // HH:MM形式
-  available: boolean
-}
-
-/**
- * カレンダー日付の型定義
- */
-export interface CalendarDate {
-  date: Date
-  isCurrentMonth: boolean
-  isToday: boolean
-  isSelected: boolean
-  isPast: boolean
-  hasAvailability: boolean
-}
+// 時間枠・カレンダー日付の型は @/shared/lib/reservation から re-export
+export type { TimeSlot, CalendarDate } from '@/shared/lib/reservation'

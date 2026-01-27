@@ -6,6 +6,7 @@
  */
 
 import { HomepageTab } from '@/app/(admin)/admin/(dashboard)/settings/_components/homepage/HomepageTab'
+import { getInstagramConfig } from '@/admin/actions/instagram'
 import type { Metadata } from 'next'
 import type { ReactElement } from 'react'
 
@@ -13,7 +14,10 @@ export const metadata: Metadata = {
   title: 'ホームページ編集',
 }
 
-export default function HomepageEditPage(): ReactElement {
+export default async function HomepageEditPage(): Promise<ReactElement> {
+  // Instagram接続状態を取得
+  const instagramConfig = await getInstagramConfig()
+
   return (
     <div className="space-y-6">
       <div>
@@ -22,7 +26,7 @@ export default function HomepageEditPage(): ReactElement {
           セクションの順序変更・設定編集
         </p>
       </div>
-      <HomepageTab />
+      <HomepageTab isInstagramConnected={instagramConfig.isConnected} />
     </div>
   )
 }

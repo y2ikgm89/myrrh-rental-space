@@ -1,26 +1,58 @@
 /**
  * インラインエディターコンポーネント
  *
- * Webflow型のWYSIWYG編集システム
+ * 公式Lexical/Gutenbergパターンに準拠
+ * - 専用エディターフック（usePostEditor, useNewsEditor, usePageEditor）
+ * - フック経由でフルスクリーン・キーボード・離脱警告を管理
  */
 
-export { InlineEditorLayout, useKeyboardShortcuts, useBeforeUnload } from './InlineEditorLayout'
-export { EditorHeader } from './EditorHeader'
-export { EditorCanvas } from './EditorCanvas'
-export { InlineTitleEditor } from './InlineTitleEditor'
-export { SidePanel } from './SidePanel'
-export { SidePanelShell } from './SidePanelShell'
-export { BlogSidePanel } from './BlogSidePanel'
-export { NewsSidePanel } from './NewsSidePanel'
+// 設定
+export {
+  postConfig,
+  newsConfig,
+  pageConfig,
+} from './content-types'
 
+// 型定義
+export type {
+  ContentTypeConfig,
+  ContentEditorProps,
+  ContentEditorExtraData,
+  CategoryOption,
+  TagOption,
+} from './content-types'
+
+// 基本フック
+export {
+  useFullscreenMode,
+  useKeyboardShortcuts,
+  useBeforeUnload,
+  useEditorPanels,
+} from './hooks'
+
+// 専用エディターフック
+export {
+  usePostEditor,
+  useNewsEditor,
+  usePageEditor,
+  useContentWidthStyles,
+} from './hooks/index'
+
+// 基本コンポーネント
+export { EditorHeader } from './EditorHeader'
+export { SidePanelShell, SIDE_PANEL_WIDTH } from './SidePanelShell'
+export { UnifiedSidePanel } from './UnifiedSidePanel'
+export { InlineEditorShell } from './InlineEditorShell'
+
+// 旧型定義（後方互換性のため一時的に維持）
 export type {
   PageEditorFormData,
   EditorHeaderProps,
-  EditorCanvasProps,
-  SidePanelProps,
   SidePanelSectionProps,
-  InlineEditorLayoutProps,
-  BlogEditorFormData,
-  BlogCategoryOption,
+  PostEditorFormData,
+  PostCategoryOption,
   NewsEditorFormData,
 } from './types'
+
+// Re-export AddCommentPayload for convenience
+export type { AddCommentPayload } from '../lexical/types'

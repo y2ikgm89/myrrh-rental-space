@@ -1,11 +1,22 @@
 /**
  * FAQページ
  *
- * よくある質問ページ（アコーディオンUI）
- * DBからFAQデータを取得して表示
+ * よくある質問ページ。カテゴリ別にFAQをアコーディオンUIで表示します。
  *
- * Next.js 16 PPR対応:
- * - use cache ディレクティブでデータ取得をキャッシュ
+ * ## 機能
+ * - カテゴリ別FAQの表示
+ * - アコーディオンUI（開閉可能）
+ * - お問い合わせCTA
+ *
+ * ## 構造化データ
+ * - FAQPage JSON-LD
+ * - Breadcrumb JSON-LD
+ *
+ * ## Next.js 16 PPR対応
+ * - `use cache` ディレクティブでデータ取得をキャッシュ
+ * - Suspenseでストリーミング対応
+ *
+ * @module public/faq/page
  */
 
 import { Suspense } from 'react'
@@ -37,7 +48,7 @@ async function getFaqData() {
     where: { isActive: true },
     include: {
       items: {
-        where: { isActive: true },
+        where: { isPublished: true },
         orderBy: { order: 'asc' },
       },
     },

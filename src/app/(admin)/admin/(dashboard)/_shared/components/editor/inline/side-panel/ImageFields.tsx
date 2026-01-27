@@ -4,7 +4,7 @@
  * 画像フィールド
  *
  * サムネイル・OGP画像の設定
- * ブログ記事用
+ * 投稿記事用
  */
 
 import Image from 'next/image'
@@ -12,11 +12,11 @@ import { ImagePlus } from 'lucide-react'
 import type { FieldErrors, UseFormSetValue } from 'react-hook-form'
 import { Button, Label } from '@/admin/components/ui'
 import { useSingleMediaPicker } from '@/admin/hooks/use-media-picker'
-import type { BlogEditorFormData } from '../types'
+import type { PostEditorFormData } from '../types'
 
 type ImageFieldsProps = {
-  errors: FieldErrors<BlogEditorFormData>
-  setValue: UseFormSetValue<BlogEditorFormData>
+  errors: FieldErrors<PostEditorFormData>
+  setValue: UseFormSetValue<PostEditorFormData>
   thumbnailUrl?: string
   ogpImageUrl?: string
   disabled?: boolean
@@ -30,7 +30,7 @@ export function ImageFields({
   disabled,
 }: ImageFieldsProps) {
   const thumbnailPicker = useSingleMediaPicker({
-    defaultUsage: 'BLOG',
+    defaultUsage: 'POST',
     onSelect: (media) => {
       if (media.length > 0) {
         setValue('thumbnailUrl', media[0].url)
@@ -39,7 +39,7 @@ export function ImageFields({
   })
 
   const ogpPicker = useSingleMediaPicker({
-    defaultUsage: 'BLOG',
+    defaultUsage: 'POST',
     onSelect: (media) => {
       if (media.length > 0) {
         setValue('ogpImageUrl', media[0].url)

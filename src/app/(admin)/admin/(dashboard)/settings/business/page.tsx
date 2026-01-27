@@ -10,13 +10,15 @@
 
 import { Suspense } from 'react'
 import { connection } from 'next/server'
-import { getSettings } from '@/admin/actions/settings'
+import { getSettings, getDiscountSettings, getTaxSettings } from '@/admin/actions/settings'
 import { SettingsLayout } from '../_components/SettingsLayout'
 import { SettingsTabs } from '../_components/SettingsTabs'
 import {
   BusinessInfoSection,
   BusinessHoursSection,
   ReservationSection,
+  DiscountSection,
+  TaxSection,
   TermsAgreementSection,
 } from '../_components/sections'
 import type { ReactElement } from 'react'
@@ -27,13 +29,17 @@ import type { ReactElement } from 'react'
 async function BusinessSettingsContent(): Promise<ReactElement> {
   await connection()
 
-  const settings = await getSettings()
+  const [settings, discountSettings, taxSettings] = await Promise.all([
+    getSettings(),
+    getDiscountSettings(),
+    getTaxSettings(),
+  ])
 
   if (!settings) {
     return (
       <SettingsLayout
         title="ビジネス設定"
-        description="事業者情報・営業時間・予約設定"
+        description="事業者情報・営業時間・予約・割引・消費税設定"
       >
         <div className="text-center py-8 text-muted-foreground">
           設定を読み込めませんでした
@@ -63,12 +69,22 @@ async function BusinessSettingsContent(): Promise<ReactElement> {
         </div>
       ),
     },
+    {
+      value: 'discount',
+      label: '割引',
+      content: <DiscountSection settings={discountSettings} />,
+    },
+    {
+      value: 'tax',
+      label: '消費税',
+      content: <TaxSection settings={taxSettings} />,
+    },
   ]
 
   return (
     <SettingsLayout
       title="ビジネス設定"
-      description="事業者情報・営業時間・予約設定"
+      description="事業者情報・営業時間・予約・割引・消費税設定"
     >
       <SettingsTabs tabs={tabs} defaultTab="info" />
     </SettingsLayout>
@@ -82,7 +98,7 @@ function BusinessSettingsLoading(): ReactElement {
   return (
     <SettingsLayout
       title="ビジネス設定"
-      description="事業者情報・営業時間・予約設定"
+      description="事業者情報・営業時間・予約・割引・消費税設定"
     >
       <div className="animate-pulse space-y-6">
         <div className="flex gap-1 h-10 bg-muted rounded-lg p-1">

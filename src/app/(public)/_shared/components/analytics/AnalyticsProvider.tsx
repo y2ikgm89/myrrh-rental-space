@@ -11,7 +11,7 @@
 
 import { GoogleAnalytics, GoogleTagManager } from '@next/third-parties/google'
 import { useCookieConsent } from '@/public/components/CookieConsentBanner'
-import type { AnalyticsConfig } from '@/public/lib/analytics/config'
+import type { AnalyticsConfig } from '@/shared/lib/analytics/config'
 
 interface AnalyticsProviderProps {
   config: AnalyticsConfig

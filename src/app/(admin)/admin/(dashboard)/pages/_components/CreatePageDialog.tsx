@@ -25,6 +25,7 @@ import { Input } from '@/admin/components/ui/input'
 import { Label } from '@/admin/components/ui/label'
 import { Textarea } from '@/admin/components/ui/textarea'
 import { createPage } from '@/admin/actions/page'
+import { logger } from '@/shared/lib/logger'
 
 const formSchema = z.object({
   slug: z
@@ -76,7 +77,7 @@ export function CreatePageDialog() {
           toast.error(result.error || 'ページの作成に失敗しました')
         }
       } catch (error) {
-        console.error('ページ作成エラー:', error)
+        logger.error('ページ作成エラー', { error: error instanceof Error ? error.message : String(error) })
         toast.error('ページの作成中にエラーが発生しました')
       }
     })

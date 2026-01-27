@@ -47,10 +47,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@/admin/components/ui/dialog'
-import { Button } from '@/admin/components/ui/button'
-import { Label } from '@/admin/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/admin/components/ui/radio-group'
+  Button,
+  Label,
+  SelectionBox,
+} from '@/admin/components/ui'
 
 // =============================================================================
 // Commands
@@ -76,12 +76,19 @@ export const UPDATE_LAYOUT_COMMAND: LexicalCommand<UpdateLayoutPayload> =
 // =============================================================================
 
 const LAYOUT_TEMPLATES = [
-  { value: '1fr 1fr', label: '2カラム（均等）', columns: 2 },
-  { value: '1fr 1fr 1fr', label: '3カラム（均等）', columns: 3 },
-  { value: '2fr 1fr', label: '2カラム（2:1）', columns: 2 },
-  { value: '1fr 2fr', label: '2カラム（1:2）', columns: 2 },
-  { value: '1fr 1fr 1fr 1fr', label: '4カラム（均等）', columns: 4 },
+  { value: '1fr 1fr', label: '2カラム（均等）', columns: 2, description: '50% / 50%' },
+  { value: '1fr 1fr 1fr', label: '3カラム（均等）', columns: 3, description: '33% / 33% / 33%' },
+  { value: '2fr 1fr', label: '2カラム（2:1）', columns: 2, description: '66% / 33%' },
+  { value: '1fr 2fr', label: '2カラム（1:2）', columns: 2, description: '33% / 66%' },
+  { value: '1fr 1fr 1fr 1fr', label: '4カラム（均等）', columns: 4, description: '25% / 25% / 25% / 25%' },
 ] as const
+
+// SelectionBox用のオプション
+const LAYOUT_SELECTION_OPTIONS = LAYOUT_TEMPLATES.map((t) => ({
+  value: t.value,
+  label: t.label,
+  description: t.description,
+}))
 
 // =============================================================================
 // Utilities
@@ -360,39 +367,13 @@ export function LayoutPlugin({ isOpen, onClose }: LayoutPluginProps) {
           <Label className="text-sm font-medium mb-3 block">
             レイアウトを選択
           </Label>
-          <RadioGroup
+          <SelectionBox
+            options={LAYOUT_SELECTION_OPTIONS}
             value={selectedTemplate}
-            onValueChange={setSelectedTemplate}
-            className="grid gap-2"
-          >
-            {LAYOUT_TEMPLATES.map((template) => (
-              <div
-                key={template.value}
-                className="flex items-center space-x-3 rounded-md border p-3 cursor-pointer hover:bg-muted/50"
-                onClick={() => setSelectedTemplate(template.value)}
-              >
-                <RadioGroupItem value={template.value} id={template.value} />
-                <Label
-                  htmlFor={template.value}
-                  className="flex-1 cursor-pointer"
-                >
-                  <div className="font-medium">{template.label}</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">
-                    {template.value}
-                  </div>
-                </Label>
-                {/* プレビュー */}
-                <div
-                  className="w-20 h-6 grid gap-1 opacity-60"
-                  style={{ gridTemplateColumns: template.value }}
-                >
-                  {Array.from({ length: template.columns }).map((_, i) => (
-                    <div key={i} className="bg-primary/20 rounded-sm" />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </RadioGroup>
+            onChange={setSelectedTemplate}
+            columns={1}
+            name="カラムレイアウト"
+          />
         </div>
 
         <DialogFooter>

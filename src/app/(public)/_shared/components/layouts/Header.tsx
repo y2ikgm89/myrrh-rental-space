@@ -15,6 +15,7 @@ import { prisma } from '@/shared/lib/prisma'
 import type { Settings } from '@/shared/generated/prisma/client'
 import { MobileMenu, type NavItem } from './MobileMenu'
 import { safeFetch, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
+import { toPlainObject } from '@/shared/lib/serialize'
 import { HeaderBranding } from './HeaderBranding'
 import { SITE_DEFAULTS } from '@/shared/lib/constants'
 
@@ -67,7 +68,7 @@ async function getHeaderSettings(): Promise<HeaderSettings | null> {
   cacheLife('hours')
   cacheTag('settings')
 
-  return safeFetch({
+  const result = await safeFetch({
     fetch: () =>
       prisma.settings.findFirst({
         select: {
@@ -82,6 +83,8 @@ async function getHeaderSettings(): Promise<HeaderSettings | null> {
     operationName: 'getHeaderSettings',
     context: { component: 'Header' },
   })
+
+  return toPlainObject(result)
 }
 
 export async function Header(): Promise<React.ReactElement> {

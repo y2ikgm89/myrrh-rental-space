@@ -17,9 +17,9 @@ export {
   LayoutWidth,
   type SpaceWhereInput,
   type ReservationWhereInput,
-  type BlogPostWhereInput,
-  type BlogCategoryWhereInput,
-  type BlogCommentWhereInput,
+  type PostWhereInput,
+  type PostCategoryWhereInput,
+  type PostCommentWhereInput,
   type CustomerWhereInput,
   type InquiryWhereInput,
   type NewsWhereInput,
@@ -46,7 +46,7 @@ export {
 
 // Preview types
 export {
-  type BlogPreviewData,
+  type PostPreviewData,
   type NewsPreviewData,
   type PagePreviewData,
   type PreviewData,
@@ -54,4 +54,8 @@ export {
   PREVIEW_STORAGE_PREFIX,
   getPreviewStorageKey,
   isPreviewDataValid,
+  PostPreviewContainerSchema,
+  NewsPreviewContainerSchema,
+  PagePreviewContainerSchema,
+  PreviewContainerSchema,
 } from './preview'

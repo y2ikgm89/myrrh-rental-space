@@ -7,7 +7,7 @@
  * 保存、プレビュー、設定パネル切り替えなどのアクションを提供
  */
 
-import { ArrowLeft, Settings, Eye, Save, Loader2, Globe, GlobeLock } from 'lucide-react'
+import { ArrowLeft, Settings, Eye, Save, Loader2, Globe, GlobeLock, MessageSquare } from 'lucide-react'
 import { tv } from 'tailwind-variants'
 import { Button } from '@/admin/components/ui'
 import { Z_INDEX } from '@/admin/lib/styles/z-index'
@@ -15,7 +15,7 @@ import type { EditorHeaderProps } from './types'
 
 const styles = tv({
   slots: {
-    header: `sticky top-0 z-[${Z_INDEX.sticky}] border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60`,
+    header: `fixed top-0 left-0 right-0 z-[${Z_INDEX.editorToolbar}] border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60`,
     container: 'flex h-14 items-center justify-between px-4',
     left: 'flex items-center gap-3',
     center: 'flex-1 flex items-center justify-center',
@@ -26,6 +26,15 @@ const styles = tv({
     dirtyIndicator: 'ml-2 text-xs text-amber-500',
   },
 })()
+
+/**
+ * 公開状態を判定するヘルパー関数
+ * PostStatus ('PUBLISHED') または boolean (true) の両方に対応
+ */
+function checkIsPublished(status: EditorHeaderProps['publishActions']): boolean {
+  if (!status) return false
+  return status.status === 'PUBLISHED' || status.status === true
+}
 
 export function EditorHeader({
   title,
@@ -39,8 +48,12 @@ export function EditorHeader({
   onBack,
   extraActions,
   publishActions,
+  showCommentButton,
+  isCommentPanelOpen,
+  onToggleCommentPanel,
+  commentCount,
 }: EditorHeaderProps) {
-  const isPublished = publishActions?.status === 'PUBLISHED'
+  const isPublished = checkIsPublished(publishActions)
 
   return (
     <header className={styles.header()}>
@@ -69,27 +82,47 @@ export function EditorHeader({
 
         {/* 右側: アクションボタン */}
         <div className={styles.right()}>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onPreview}
-            className="gap-1"
-          >
-            <Eye className="h-4 w-4" />
-            <span className="hidden sm:inline">プレビュー</span>
-          </Button>
+          {onPreview && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onPreview}
+              className="gap-1"
+            >
+              <Eye className="h-4 w-4" />
+              <span className="hidden sm:inline">プレビュー</span>
+            </Button>
+          )}
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onToggleSidePanel}
-            className={isSidePanelOpen ? 'bg-accent' : ''}
-          >
-            <Settings className="h-4 w-4" />
-            <span className="sr-only">設定</span>
-          </Button>
+          {onToggleSidePanel && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onToggleSidePanel}
+              className={isSidePanelOpen ? 'bg-accent' : ''}
+            >
+              <Settings className="h-4 w-4" />
+              <span className="sr-only">設定</span>
+            </Button>
+          )}
+
+          {showCommentButton && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onToggleCommentPanel}
+              className={isCommentPanelOpen ? 'bg-accent' : ''}
+            >
+              <MessageSquare className="h-4 w-4" />
+              {commentCount !== undefined && commentCount > 0 && (
+                <span className="ml-1 text-xs">{commentCount}</span>
+              )}
+              <span className="sr-only">コメント</span>
+            </Button>
+          )}
 
           <Button
             type="button"

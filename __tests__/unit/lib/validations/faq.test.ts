@@ -21,13 +21,18 @@ const VALID_FAQ_CATEGORY = {
   isActive: true,
 }
 
-// 有効なFAQアイテムデータ
+// 有効なFAQアイテムデータ（SEO/OGPフィールドを含む）
 const VALID_FAQ_ITEM = {
   categoryId: '123e4567-e89b-12d3-a456-426614174000',
   question: 'これはテスト質問ですか？',
   answer: 'はい、これはテスト回答です。',
   order: 0,
-  isActive: true,
+  isPublished: true,
+  metaDescription: null,
+  metaKeywords: null,
+  ogpTitle: null,
+  ogpDescription: null,
+  ogpImageUrl: null,
 }
 
 describe('faqCategoryFormSchema', () => {
@@ -306,12 +311,12 @@ describe('faqItemFormSchema', () => {
     })
   })
 
-  describe('isActive', () => {
+  describe('isPublished', () => {
     test('true/falseは許可', () => {
-      for (const isActive of [true, false]) {
+      for (const isPublished of [true, false]) {
         const result = faqItemFormSchema.safeParse({
           ...VALID_FAQ_ITEM,
-          isActive,
+          isPublished,
         })
         expect(result.success).toBe(true)
       }
@@ -338,7 +343,12 @@ describe('defaultFaqItemFormValues', () => {
       question: '',
       answer: '',
       order: 0,
-      isActive: true,
+      isPublished: true,
+      metaDescription: null,
+      metaKeywords: null,
+      ogpTitle: null,
+      ogpDescription: null,
+      ogpImageUrl: null,
     })
   })
 })

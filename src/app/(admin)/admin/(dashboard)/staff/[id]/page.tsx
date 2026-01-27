@@ -5,8 +5,7 @@ import { getUser } from '@/admin/actions/user'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/admin/components/ui/card'
 import { Button } from '@/admin/components/ui/button'
 import { Badge } from '@/admin/components/ui/badge'
-import { format } from 'date-fns'
-import { ja } from 'date-fns/locale'
+import { formatDate } from '@/shared/lib/utils'
 import { Role } from '@/shared/generated/prisma/enums'
 import { UserActions } from '../_components/UserActions'
 
@@ -29,17 +28,19 @@ export default async function StaffDetailPage({ params }: Props) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{user.name || '(未設定)'}</h1>
-          <p className="text-muted-foreground">{user.email}</p>
-        </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-4">
           <Button variant="outline" size="sm" asChild>
             <Link href="/admin/staff">
               <ArrowLeft className="mr-2 h-4 w-4" />
               一覧に戻る
             </Link>
           </Button>
+          <div>
+            <h1 className="text-2xl font-bold">{user.name || '(未設定)'}</h1>
+            <p className="text-muted-foreground">{user.email}</p>
+          </div>
+        </div>
+        <div className="flex gap-2">
           <Button asChild>
             <Link href={`/admin/staff/${user.id}/edit`}>編集</Link>
           </Button>
@@ -90,19 +91,19 @@ export default async function StaffDetailPage({ params }: Props) {
               <dd className="col-span-2">{user._count.reservations}件</dd>
             </div>
             <div className="grid grid-cols-3 gap-4">
-              <dt className="text-sm font-medium text-muted-foreground">ブログ記事数</dt>
-              <dd className="col-span-2">{user._count.blogPosts}件</dd>
+              <dt className="text-sm font-medium text-muted-foreground">投稿数</dt>
+              <dd className="col-span-2">{user._count.posts}件</dd>
             </div>
             <div className="grid grid-cols-3 gap-4">
               <dt className="text-sm font-medium text-muted-foreground">登録日</dt>
               <dd className="col-span-2">
-                {format(user.createdAt, 'yyyy年M月d日 HH:mm', { locale: ja })}
+                {formatDate(user.createdAt, true)}
               </dd>
             </div>
             <div className="grid grid-cols-3 gap-4">
               <dt className="text-sm font-medium text-muted-foreground">最終更新</dt>
               <dd className="col-span-2">
-                {format(user.updatedAt, 'yyyy年M月d日 HH:mm', { locale: ja })}
+                {formatDate(user.updatedAt, true)}
               </dd>
             </div>
           </CardContent>
@@ -127,17 +128,17 @@ export default async function StaffDetailPage({ params }: Props) {
         </Card>
       )}
 
-      {user._count.blogPosts > 0 && (
+      {user._count.posts > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>ブログ記事</CardTitle>
+            <CardTitle>投稿</CardTitle>
             <CardDescription>
-              このスタッフが作成したブログ記事があります
+              このスタッフが作成した投稿があります
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button variant="outline" asChild>
-              <Link href={`/admin/blog?authorId=${user.id}`}>
+              <Link href={`/admin/posts?authorId=${user.id}`}>
                 記事一覧を表示
               </Link>
             </Button>

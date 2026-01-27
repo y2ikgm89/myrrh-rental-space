@@ -23,9 +23,10 @@ import {
   useFullscreenMode,
   useKeyboardShortcuts,
   useBeforeUnload,
-  UnifiedSidePanel,
+  SIDE_PANEL_WIDTH,
 } from '@/admin/components/editor/inline'
-import { spaceContentTypeConfig } from '@/admin/components/editor/inline/content-types/space-config'
+import { SidePanelShell } from '@/admin/components/editor/inline/SidePanelShell'
+import { SEOFields, OGPFields, UnifiedPublishFields } from '@/admin/components/editor/inline/side-panel'
 import {
   Button,
   Dialog,
@@ -605,10 +606,10 @@ export function SpaceInlineEditor({
   const isFormDirty = isDirty || hasEditorChanges
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="h-screen flex">
+    <form onSubmit={handleSubmit(onSubmit)} className="h-screen flex pt-14">
       <div
         className="flex flex-1 flex-col overflow-hidden transition-[margin] duration-300"
-        style={{ marginRight: isSidePanelOpen ? '320px' : '0' }}
+        style={{ marginRight: isSidePanelOpen ? `${SIDE_PANEL_WIDTH.default}px` : '0' }}
       >
           <EditorHeader
             title={name || '新規スペース'}
@@ -1284,21 +1285,68 @@ export function SpaceInlineEditor({
           </div>
         </div>
 
-      <UnifiedSidePanel
+      <SidePanelShell
         isOpen={isSidePanelOpen}
         onClose={handleCloseSidePanel}
-        config={spaceContentTypeConfig}
-        register={register}
-        control={control}
-        errors={errors}
-        setValue={setValue}
-        getValues={getValues}
-        disabled={isPending}
-        extraProps={{
-          isPublishedValue: isPublished,
-          onIsPublishedChange: (value: boolean) => setValue('isPublished', value, { shouldDirty: true }),
-        }}
-      />
+        title="スペース設定"
+      >
+        <div className="space-y-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm">SEO設定</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <SEOFields
+                register={register}
+                errors={errors}
+                disabled={isPending}
+                fields={{
+                  metaDescription: 'metaDescription',
+                  metaKeywords: 'metaKeywords',
+                }}
+              />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm">OGP設定</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <OGPFields
+                register={register}
+                errors={errors}
+                disabled={isPending}
+                fields={{
+                  ogpTitle: 'ogpTitle',
+                  ogpDescription: 'ogpDescription',
+                  ogpImageUrl: 'ogpImageUrl',
+                }}
+              />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm">公開設定</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <UnifiedPublishFields
+                register={register}
+                control={control}
+                errors={errors}
+                setValue={setValue}
+                getValues={getValues}
+                disabled={isPending}
+                controlType="isPublished"
+                fields={{
+                  publishedAt: 'publishedAt',
+                }}
+                isPublishedValue={isPublished}
+                onIsPublishedChange={(value: boolean) => setValue('isPublished', value, { shouldDirty: true })}
+              />
+            </CardContent>
+          </Card>
+        </div>
+      </SidePanelShell>
 
       {/* メディアピッカーダイアログ */}
       <mainImagePicker.MediaPicker />

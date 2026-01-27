@@ -17,6 +17,7 @@ import {
   Input,
   Label,
   Textarea,
+  SelectionBox,
 } from '@/admin/components/ui'
 import { updateSeoSettings } from '@/admin/actions/settings'
 import type { SettingsData } from '@/admin/actions/settings'
@@ -37,6 +38,12 @@ function isValidAnalyticsType(value: unknown): value is 'ga4' | 'gtm' {
 function parseAnalyticsType(value: unknown): AnalyticsType {
   return isValidAnalyticsType(value) ? value : null
 }
+
+const ANALYTICS_TYPE_OPTIONS = [
+  { value: 'ga4', label: 'Google Analytics 4 (GA4)', description: 'Googleアナリティクス4を使用' },
+  { value: 'gtm', label: 'Google Tag Manager (GTM)', description: 'タグマネージャー経由で管理' },
+  { value: 'none', label: '無効', description: 'トラッキングを無効化' },
+]
 
 export function SeoSection({ settings }: SeoSectionProps) {
   const { handleResult } = useRefreshOnSuccess()
@@ -153,41 +160,14 @@ export function SeoSection({ settings }: SeoSectionProps) {
         <CardContent className="space-y-4">
           <div className="space-y-3">
             <Label>トラッキング方式</Label>
-            <div className="flex flex-wrap gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="analyticsType"
-                  checked={formData.analyticsType === 'ga4'}
-                  onChange={() => setFormData({ ...formData, analyticsType: 'ga4' })}
-                  disabled={isPending}
-                  className="w-4 h-4 text-primary"
-                />
-                <span>Google Analytics 4 (GA4)</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="analyticsType"
-                  checked={formData.analyticsType === 'gtm'}
-                  onChange={() => setFormData({ ...formData, analyticsType: 'gtm' })}
-                  disabled={isPending}
-                  className="w-4 h-4 text-primary"
-                />
-                <span>Google Tag Manager (GTM)</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="analyticsType"
-                  checked={formData.analyticsType === null}
-                  onChange={() => setFormData({ ...formData, analyticsType: null })}
-                  disabled={isPending}
-                  className="w-4 h-4 text-primary"
-                />
-                <span>無効</span>
-              </label>
-            </div>
+            <SelectionBox
+              options={ANALYTICS_TYPE_OPTIONS}
+              value={formData.analyticsType ?? 'none'}
+              onChange={(value) => setFormData({ ...formData, analyticsType: value === 'none' ? null : (value as 'ga4' | 'gtm') })}
+              columns={3}
+              disabled={isPending}
+              name="トラッキング方式"
+            />
             <p className="text-xs text-muted-foreground">
               GA4とGTMは排他選択です。GTM経由でGA4を使う場合はGTMを選択してください。
             </p>

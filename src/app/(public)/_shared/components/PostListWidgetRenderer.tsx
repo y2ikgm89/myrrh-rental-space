@@ -12,9 +12,10 @@ import {
   getRecentPosts,
   getPopularPosts,
   getRelatedPosts,
-  type BlogPostSummary,
-} from '@/public/lib/blog-queries'
+  type PostSummary,
+} from '@/public/lib/post-queries'
 import { logger } from '@/shared/lib/logger'
+import { generatePostUrl } from '@/shared/lib/url'
 
 type WidgetType = 'recent' | 'popular' | 'related'
 
@@ -24,6 +25,7 @@ interface PostListWidgetRendererProps {
   categoryId?: string | null
   title?: string | null
   excludePostId?: string
+  postPrefix: string
 }
 
 const WIDGET_CONFIG: Record<WidgetType, { defaultTitle: string; icon: string }> = {
@@ -38,9 +40,10 @@ export async function PostListWidgetRenderer({
   categoryId,
   title,
   excludePostId,
+  postPrefix,
 }: PostListWidgetRendererProps) {
   // タイプに応じてデータ取得（エラーハンドリング付き）
-  let posts: BlogPostSummary[]
+  let posts: PostSummary[]
 
   try {
     switch (type) {
@@ -81,7 +84,7 @@ export async function PostListWidgetRenderer({
         {posts.map((post) => (
           <Link
             key={post.id}
-            href={`/blog/${post.slug}`}
+            href={generatePostUrl(post, { structure: 'post-name', prefix: postPrefix })}
             className="group flex gap-3 rounded-lg p-2 transition-colors hover:bg-muted"
           >
             {/* サムネイル */}

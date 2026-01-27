@@ -5,6 +5,7 @@ import { tv } from 'tailwind-variants'
 import { getAvailableTimeSlots } from '@/public/actions/reservation'
 import type { TimeSlot } from '@/public/lib/validations/reservation'
 import { cn } from '@/shared/lib/utils'
+import { toDateString } from '@/shared/lib/serialize'
 
 const timeSlotStyles = tv({
   slots: {
@@ -61,7 +62,7 @@ export function TimeSlotPicker({
       return
     }
 
-    const dateStr = selectedDate.toISOString().split('T')[0]
+    const dateStr = toDateString(selectedDate)
     prevDateRef.current = selectedDate
 
     startTransition(async () => {

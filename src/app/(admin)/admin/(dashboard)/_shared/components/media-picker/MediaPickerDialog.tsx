@@ -6,12 +6,12 @@
  * メディアピッカーのメインダイアログ
  */
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { X, Image as ImageIcon, Link, Upload } from 'lucide-react'
 import { useMediaSelection } from '@/admin/hooks/use-media-selection'
 import { LibraryTab, UrlTab, UploadTab } from './tabs'
 import { Button } from '@/admin/components/ui'
-import type { MediaData } from '@/admin/actions/media'
+import type { MediaData } from '@/admin/types/media-picker'
 import type { UploadResult } from '@/admin/hooks/use-media-upload'
 import type { MediaUsage } from '@/admin/lib/validations/media'
 import type { SelectionMode, SelectedMedia, MediaPickerTab } from '@/admin/types/media-picker'
@@ -192,7 +192,7 @@ export function MediaPickerDialog({
 interface TabButtonProps {
   active: boolean
   onClick: () => void
-  icon: React.ReactNode
+  icon: ReactNode
   label: string
 }
 

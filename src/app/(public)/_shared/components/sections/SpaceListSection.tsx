@@ -22,6 +22,7 @@ import type { ReactElement } from 'react'
  */
 type SpaceCardData = {
   id: string
+  slug: string
   name: string
   description: string
   hourlyPrice: number
@@ -80,7 +81,7 @@ interface SpaceCardProps {
 
 function SpaceCard({ space, priority = false }: SpaceCardProps): ReactElement {
   return (
-    <Link href={`/spaces/${space.id}`}>
+    <Link href={`/spaces/${space.slug}`}>
       <Card className="h-full overflow-hidden transition-shadow hover:shadow-lg">
         <div className={imageWrapper()}>
           <Image
@@ -130,6 +131,7 @@ async function getSpaces(
       },
       select: {
         id: true,
+        slug: true,
         name: true,
         description: true,
         hourlyPrice: true,
@@ -141,6 +143,7 @@ async function getSpaces(
     // Decimal型をnumberに変換
     return spaces.map((space) => ({
       id: space.id,
+      slug: space.slug,
       name: space.name,
       description: space.description,
       hourlyPrice: Number(space.hourlyPrice),

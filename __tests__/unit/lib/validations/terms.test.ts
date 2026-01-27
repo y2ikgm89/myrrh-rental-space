@@ -413,11 +413,11 @@ describe('agreeToTermsSchema', () => {
 describe('TERMS_TYPES', () => {
   test('規約タイプが正しく定義されている', () => {
     expect(TERMS_TYPES).toEqual([
-      { value: 'TERMS_OF_USE', label: '利用規約' },
-      { value: 'PRIVACY_POLICY', label: 'プライバシーポリシー' },
-      { value: 'CANCELLATION', label: 'キャンセルポリシー' },
-      { value: 'PAYMENT', label: '支払い規約' },
-      { value: 'CUSTOM', label: 'カスタム規約' },
+      { value: 'TERMS_OF_USE', label: '利用規約', defaultTitle: '利用規約', defaultSlug: 'terms-of-use' },
+      { value: 'PRIVACY_POLICY', label: 'プライバシーポリシー', defaultTitle: 'プライバシーポリシー', defaultSlug: 'privacy-policy' },
+      { value: 'CANCELLATION', label: 'キャンセルポリシー', defaultTitle: 'キャンセルポリシー', defaultSlug: 'cancellation-policy' },
+      { value: 'PAYMENT', label: '支払い規約', defaultTitle: '支払い規約', defaultSlug: 'payment-terms' },
+      { value: 'CUSTOM', label: 'カスタム規約', defaultTitle: 'カスタム規約', defaultSlug: 'custom-terms' },
     ])
   })
 })

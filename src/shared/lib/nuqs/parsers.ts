@@ -14,6 +14,7 @@ import {
   parseAsStringLiteral,
   type SearchParams,
 } from 'nuqs/server'
+import { toDateString } from '@/shared/lib/serialize'
 
 // ============================================================
 // ページネーション
@@ -57,7 +58,7 @@ export const parseAsDate = createParser<Date>({
     const date = new Date(value)
     return Number.isNaN(date.getTime()) ? null : date
   },
-  serialize: (date) => date.toISOString().split('T')[0],
+  serialize: (date) => toDateString(date),
   eq: (a, b) => a.getTime() === b.getTime(),
 })
 

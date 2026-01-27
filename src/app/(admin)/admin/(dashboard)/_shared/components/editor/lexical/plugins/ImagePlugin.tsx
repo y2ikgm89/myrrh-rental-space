@@ -51,7 +51,7 @@ export function ImagePlugin({ isOpen, onClose }: ImagePluginProps) {
       onClose={onClose}
       onSelect={handleSelect}
       selectionMode="single"
-      defaultUsage="BLOG"
+      defaultUsage="POST"
       showUrlTab
     />
   )

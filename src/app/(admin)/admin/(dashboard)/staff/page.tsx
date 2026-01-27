@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/admin/components/ui/
 import { Button } from '@/admin/components/ui/button'
 import { Input } from '@/admin/components/ui/input'
 import { Badge } from '@/admin/components/ui/badge'
+import { LoadingState } from '@/admin/components/LoadingState'
 import {
   Table,
   TableBody,
@@ -22,8 +23,7 @@ import {
   SelectValue,
 } from '@/admin/components/ui/select'
 import Link from 'next/link'
-import { format } from 'date-fns'
-import { ja } from 'date-fns/locale'
+import { formatDateTimeShort, formatDateShort } from '@/shared/lib/utils'
 import { Role, getRoleFilterOrAll } from '@/shared/lib/validations/enums'
 import { UserActions } from './_components/UserActions'
 import { Pagination } from '@/admin/components/ui'
@@ -153,10 +153,10 @@ export default async function StaffPage({ searchParams }: Props) {
                         <RoleBadge role={invitation.role} />
                       </TableCell>
                       <TableCell>
-                        {format(invitation.expiresAt, 'yyyy/MM/dd HH:mm', { locale: ja })}
+                        {formatDateTimeShort(invitation.expiresAt)}
                       </TableCell>
                       <TableCell>
-                        {format(invitation.createdAt, 'yyyy/MM/dd', { locale: ja })}
+                        {formatDateShort(invitation.createdAt)}
                       </TableCell>
                       <TableCell>
                         <InvitationActions invitation={invitation} />
@@ -175,7 +175,7 @@ export default async function StaffPage({ searchParams }: Props) {
           <CardTitle>スタッフ一覧</CardTitle>
         </CardHeader>
         <CardContent>
-          <Suspense fallback={<div>読み込み中...</div>}>
+          <Suspense fallback={<LoadingState variant="inline" />}>
             <UserFilters
               search={params.search}
               role={params.role}
@@ -218,9 +218,9 @@ export default async function StaffPage({ searchParams }: Props) {
                         <RoleBadge role={user.role} />
                       </TableCell>
                       <TableCell>{user._count.reservations}</TableCell>
-                      <TableCell>{user._count.blogPosts}</TableCell>
+                      <TableCell>{user._count.posts}</TableCell>
                       <TableCell>
-                        {format(user.createdAt, 'yyyy/MM/dd', { locale: ja })}
+                        {formatDateShort(user.createdAt)}
                       </TableCell>
                       <TableCell>
                         <UserActions user={user} />

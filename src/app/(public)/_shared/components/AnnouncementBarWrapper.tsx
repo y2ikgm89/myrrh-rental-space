@@ -13,7 +13,7 @@ import {
 } from '@/shared/lib/settings'
 import type { CarouselSettings } from './AnnouncementBarCarousel'
 import type { ReactElement } from 'react'
-import { validateAnimation, validateDesignStyle } from '@/public/lib/announcement-bar-utils'
+import { validateAnimation, validateDesignStyle } from '@/shared/lib/announcement-bar-utils'
 
 const AnnouncementBarCarousel = dynamic(
   () => import('./AnnouncementBarCarousel').then((mod) => mod.AnnouncementBarCarousel),

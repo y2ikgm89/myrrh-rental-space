@@ -11,7 +11,7 @@ import { getSafeConfig } from '@/shared/lib/validations/homepage-section'
 import { HeroSection } from './HeroSection'
 import { SpaceListSection } from './SpaceListSection'
 import { NewsSectionRenderer } from './NewsSectionRenderer'
-import { BlogSectionRenderer } from './BlogSectionRenderer'
+import { PostSectionRenderer } from './PostSectionRenderer'
 import { FAQSectionRenderer } from './FAQSectionRenderer'
 import { CTASectionRenderer } from './CTASectionRenderer'
 import { CustomSection } from './CustomSection'
@@ -19,9 +19,10 @@ import { InstagramSectionRenderer } from './InstagramSectionRenderer'
 
 interface SectionRendererProps {
   section: HomepageSectionData
+  postPrefix: string
 }
 
-export function SectionRenderer({ section }: SectionRendererProps): ReactElement | null {
+export function SectionRenderer({ section, postPrefix }: SectionRendererProps): ReactElement | null {
   switch (section.type) {
     case HomepageSectionType.HERO: {
       const config = getSafeConfig(HomepageSectionType.HERO, section.config)
@@ -48,12 +49,13 @@ export function SectionRenderer({ section }: SectionRendererProps): ReactElement
       )
     }
 
-    case HomepageSectionType.BLOG: {
-      const config = getSafeConfig(HomepageSectionType.BLOG, section.config)
+    case HomepageSectionType.POST: {
+      const config = getSafeConfig(HomepageSectionType.POST, section.config)
       return (
-        <BlogSectionRenderer
+        <PostSectionRenderer
           title={section.title}
           config={config}
+          postPrefix={postPrefix}
         />
       )
     }
@@ -101,13 +103,14 @@ export function SectionRenderer({ section }: SectionRendererProps): ReactElement
 
 interface HomepageSectionsProps {
   sections: HomepageSectionData[]
+  postPrefix: string
 }
 
-export function HomepageSections({ sections }: HomepageSectionsProps): ReactElement {
+export function HomepageSections({ sections, postPrefix }: HomepageSectionsProps): ReactElement {
   return (
     <>
       {sections.map((section) => (
-        <SectionRenderer key={section.id} section={section} />
+        <SectionRenderer key={section.id} section={section} postPrefix={postPrefix} />
       ))}
     </>
   )

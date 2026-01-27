@@ -18,10 +18,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DeleteConfirmDialog,
 } from '@/admin/components/ui'
+import { DeleteConfirmDialog } from '@/admin/components/DeleteConfirmDialog'
 import { deleteUser, updateUserRole, type UserData } from '@/admin/actions/user'
-import { Role } from '@/shared/generated/prisma/enums'
+import { Role, isAdminRole } from '@/admin/lib/role-guards'
 import Link from 'next/link'
 
 type Props = {
@@ -65,8 +65,8 @@ export function UserActions({ user }: Props) {
     }
   }
 
-  const newRole = user.role === 'ADMIN' ? 'USER' : 'ADMIN'
-  const newRoleLabel = user.role === 'ADMIN' ? 'ユーザー' : '管理者'
+  const newRole = isAdminRole(user.role) ? Role.USER : Role.ADMIN
+  const newRoleLabel = isAdminRole(user.role) ? 'ユーザー' : '管理者'
 
   return (
     <>

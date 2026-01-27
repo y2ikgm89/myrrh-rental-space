@@ -21,6 +21,7 @@ import {
   SelectValue,
   Textarea,
   Checkbox,
+  SelectionBox,
 } from '@/admin/components/ui'
 import {
   adminReservationSchema,
@@ -89,6 +90,15 @@ function convertFieldErrors<T extends Record<string, unknown>>(
 
   return Object.keys(result).length > 0 ? result : undefined
 }
+
+// =============================================================================
+// Constants
+// =============================================================================
+
+const RESERVATION_STATUS_OPTIONS = [
+  { value: 'CONFIRMED', label: '確定', description: '予約が確定済み' },
+  { value: 'PENDING', label: '保留', description: '確認待ち' },
+]
 
 // =============================================================================
 // Main Component
@@ -389,28 +399,14 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label>予約ステータス</Label>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  value="CONFIRMED"
-                  checked={status === 'CONFIRMED'}
-                  onChange={() => setValue('status', 'CONFIRMED')}
-                  disabled={isPending}
-                />
-                <span>確定（CONFIRMED）</span>
-              </label>
-              <label className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  value="PENDING"
-                  checked={status === 'PENDING'}
-                  onChange={() => setValue('status', 'PENDING')}
-                  disabled={isPending}
-                />
-                <span>保留（PENDING）</span>
-              </label>
-            </div>
+            <SelectionBox
+              options={RESERVATION_STATUS_OPTIONS}
+              value={status ?? 'CONFIRMED'}
+              onChange={(value) => setValue('status', value as 'CONFIRMED' | 'PENDING')}
+              columns={2}
+              disabled={isPending}
+              name="予約ステータス"
+            />
             <p className="text-sm text-muted-foreground">
               電話予約の場合は「確定」を推奨します
             </p>

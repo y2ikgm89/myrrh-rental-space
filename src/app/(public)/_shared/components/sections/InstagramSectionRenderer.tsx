@@ -12,7 +12,7 @@ import { ExternalLink, Instagram } from 'lucide-react'
 import { Container, buttonVariants } from '@/public/components/ui'
 import { prisma } from '@/shared/lib/prisma'
 import { safeDecrypt } from '@/shared/lib/crypto'
-import { fetchInstagramFeed, type InstagramMediaItem } from '@/admin/lib/instagram'
+import { fetchInstagramFeed, type InstagramMediaItem } from '@/shared/lib/instagram'
 import { logger } from '@/shared/lib/logger'
 import { cn } from '@/shared/lib/utils'
 import type { InstagramConfig } from '@/shared/lib/validations/homepage-section'
@@ -72,6 +72,32 @@ interface InstagramSettings {
 }
 
 type FeedLayout = 'grid' | 'carousel' | 'card'
+type FeedColumns = 2 | 3 | 4 | 5 | 6
+
+// =============================================================================
+// Type Guards
+// =============================================================================
+
+const FEED_LAYOUT_VALUES = ['grid', 'carousel', 'card'] as const
+const FEED_LAYOUT_SET = new Set<string>(FEED_LAYOUT_VALUES)
+const FEED_COLUMNS_VALUES = [2, 3, 4, 5, 6] as const
+const FEED_COLUMNS_SET = new Set<number>(FEED_COLUMNS_VALUES)
+
+function isFeedLayout(value: unknown): value is FeedLayout {
+  return typeof value === 'string' && FEED_LAYOUT_SET.has(value)
+}
+
+function isFeedColumns(value: unknown): value is FeedColumns {
+  return typeof value === 'number' && FEED_COLUMNS_SET.has(value)
+}
+
+function parseFeedLayout(value: unknown): FeedLayout {
+  return isFeedLayout(value) ? value : 'grid'
+}
+
+function parseFeedColumns(value: unknown): FeedColumns {
+  return isFeedColumns(value) ? value : 4
+}
 
 // =============================================================================
 // Data Fetching
@@ -247,8 +273,8 @@ export async function InstagramSectionRenderer({
   }
 
   const displayTitle = customTitle || config.title
-  const layout = (settings.instagramFeedLayout || 'grid') as FeedLayout
-  const columns = settings.instagramFeedColumns as 2 | 3 | 4 | 5 | 6
+  const layout = parseFeedLayout(settings.instagramFeedLayout)
+  const columns = parseFeedColumns(settings.instagramFeedColumns)
   const showCaption = settings.instagramShowCaption
   const showViewAll = settings.instagramShowViewAll
   const username = settings.instagramUsername

@@ -1,6 +1,6 @@
 type LoadingStateProps = {
   message?: string
-  variant?: 'default' | 'table' | 'inline'
+  variant?: 'table' | 'inline'
 }
 
 /**

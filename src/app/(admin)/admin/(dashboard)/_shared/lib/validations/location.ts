@@ -14,8 +14,8 @@ import {
  * TimeSlotスキーマ
  */
 const timeSlotSchema = z.object({
-  open: z.string().regex(/^\d{2}:\d{2}$/, '開店時刻は HH:MM 形式で入力してください'),
-  close: z.string().regex(/^\d{2}:\d{2}$/, '閉店時刻は HH:MM 形式で入力してください'),
+  open: z.string().regex(/^\d{2}:\d{2}$/, { error: '開店時刻は HH:MM 形式で入力してください' }),
+  close: z.string().regex(/^\d{2}:\d{2}$/, { error: '閉店時刻は HH:MM 形式で入力してください' }),
 })
 
 /**
@@ -34,33 +34,33 @@ const businessHoursSchema = z
   )
 
 const imageUrlsSchema = z
-  .array(z.string().url('有効なURLを入力してください'))
-  .max(10, '画像は最大10枚までです')
+  .array(z.string().url({ error: '有効なURLを入力してください' }))
+  .max(10, { error: '画像は最大10枚までです' })
   .default([])
 
 export const locationFormSchema = z.object({
   name: z
     .string()
-    .min(1, '名前を入力してください')
-    .max(100, '名前は100文字以内で入力してください'),
+    .min(1, { error: '名前を入力してください' })
+    .max(100, { error: '名前は100文字以内で入力してください' }),
   description: z
     .string()
-    .max(1000, '説明は1000文字以内で入力してください')
+    .max(1000, { error: '説明は1000文字以内で入力してください' })
     .optional()
     .or(z.literal('')),
   address: z
     .string()
-    .min(1, '住所を入力してください')
-    .max(500, '住所は500文字以内で入力してください'),
+    .min(1, { error: '住所を入力してください' })
+    .max(500, { error: '住所は500文字以内で入力してください' }),
   access: z
     .string()
-    .max(1000, 'アクセス情報は1000文字以内で入力してください')
+    .max(1000, { error: 'アクセス情報は1000文字以内で入力してください' })
     .optional()
     .or(z.literal('')),
   imageUrl: z
     .string()
-    .min(1, '建物画像URLを入力してください')
-    .url('有効なURLを入力してください'),
+    .min(1, { error: '建物画像URLを入力してください' })
+    .url({ error: '有効なURLを入力してください' }),
   imageUrls: imageUrlsSchema,
   businessHours: businessHoursSchema.optional().nullable(),
   sortOrder: z.number().int().min(0).default(0),

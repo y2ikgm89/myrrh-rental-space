@@ -590,10 +590,10 @@ export default async function SpacePage({ params }: PageProps) {
 import { Suspense } from 'react'
 import { prisma } from '@/lib/prisma'
 
-async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+async function PostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  
-  const post = await prisma.blogPost.findUnique({
+
+  const post = await prisma.post.findUnique({
     where: { slug },
   })
 
@@ -812,61 +812,61 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
 ```typescript
 // ✅ 良い例: nuqsパーサーの定義
-// src/lib/nuqs/blog-parsers.ts
+// src/lib/nuqs/post-parsers.ts
 import {
   createSearchParamsCache,
   parseAsInteger,
   parseAsString,
 } from 'nuqs/server'
 
-export const blogParsers = {
+export const postParsers = {
   page: parseAsInteger.withDefault(1),
   category: parseAsString,
   tag: parseAsString,
   search: parseAsString,
 }
 
-export const blogSearchParamsCache = createSearchParamsCache(blogParsers)
+export const postSearchParamsCache = createSearchParamsCache(postParsers)
 
 // Server Componentでの使用
-// src/app/blog/page.tsx
-import { blogSearchParamsCache } from '@/lib/nuqs/blog-parsers'
+// src/app/posts/page.tsx
+import { postSearchParamsCache } from '@/lib/nuqs/post-parsers'
 import type { SearchParams } from 'nuqs/server'
 
-export default async function BlogPage({
+export default async function PostsPage({
   searchParams,
 }: {
   searchParams: Promise<SearchParams>
 }) {
   // ⚠️ Next.js 16では searchParams が Promise
-  const { page, category, tag, search } = await blogSearchParamsCache.parse(searchParams)
-  
+  const { page, category, tag, search } = await postSearchParamsCache.parse(searchParams)
+
   // データ取得（ISRキャッシュ）
-  const { posts, totalPages } = await getBlogPosts({ page, category, tag, search })
-  
+  const { posts, totalPages } = await getPosts({ page, category, tag, search })
+
   return (
     <div>
-      <BlogFilters />
-      <BlogPosts posts={posts} />
+      <PostFilters />
+      <PostList posts={posts} />
       <Pagination currentPage={page} totalPages={totalPages} />
     </div>
   )
 }
 
 // Client Componentでの使用
-// src/components/public/BlogFilters.tsx
+// src/components/public/PostFilters.tsx
 'use client'
 import { useQueryStates } from 'nuqs'
-import { blogParsers } from '@/lib/nuqs/blog-parsers'
+import { postParsers } from '@/lib/nuqs/post-parsers'
 
-export function BlogFilters() {
-  const [filters, setFilters] = useQueryStates(blogParsers)
-  
+export function PostFilters() {
+  const [filters, setFilters] = useQueryStates(postParsers)
+
   // フィルタ変更時にURLを更新
   const handleCategoryChange = (categorySlug: string | null) => {
     setFilters({ category: categorySlug, page: 1 })
   }
-  
+
   return (
     <div>
       {/* フィルタUI */}
@@ -875,13 +875,13 @@ export function BlogFilters() {
 }
 
 // ネストされたServer Componentでの使用
-// src/components/public/BlogResults.tsx
-import { blogSearchParamsCache } from '@/lib/nuqs/blog-parsers'
+// src/components/public/PostResults.tsx
+import { postSearchParamsCache } from '@/lib/nuqs/post-parsers'
 
-export function BlogResults() {
+export function PostResults() {
   // ネストされたServer Componentでも型安全にアクセス可能
-  const maxResults = blogSearchParamsCache.get('limit') ?? 12
-  
+  const maxResults = postSearchParamsCache.get('limit') ?? 12
+
   return <span>最大{maxResults}件表示</span>
 }
 ```

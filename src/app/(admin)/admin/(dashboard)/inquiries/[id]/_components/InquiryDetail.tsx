@@ -3,9 +3,8 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { format } from 'date-fns'
-import { ja } from 'date-fns/locale'
 import { ArrowLeft } from 'lucide-react'
+import { formatDate } from '@/shared/lib/utils'
 import { toast } from 'sonner'
 import {
   Button,
@@ -18,8 +17,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  DeleteConfirmDialog,
 } from '@/admin/components/ui'
+import { DeleteConfirmDialog } from '@/admin/components/DeleteConfirmDialog'
 import { InquiryStatusBadge } from '@/admin/components/status-badges'
 import { updateInquiryStatus, deleteInquiry } from '@/admin/actions/inquiry'
 import type { InquiryData } from '@/admin/actions/inquiry'
@@ -61,15 +60,6 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
     <div className="space-y-6">
       {/* ヘッダー */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">お問い合わせ詳細</h1>
-          <p className="text-muted-foreground">
-            受付日時:{' '}
-            {format(new Date(inquiry.createdAt), 'yyyy年MM月dd日 HH:mm', {
-              locale: ja,
-            })}
-          </p>
-        </div>
         <div className="flex items-center gap-4">
           <Button variant="outline" size="sm" asChild>
             <Link href="/admin/inquiries">
@@ -77,6 +67,14 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
               一覧に戻る
             </Link>
           </Button>
+          <div>
+            <h1 className="text-2xl font-bold">お問い合わせ詳細</h1>
+            <p className="text-muted-foreground">
+              受付日時: {formatDate(inquiry.createdAt, true)}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
           <Button
             variant="destructive"
             disabled={isPending}

@@ -3,11 +3,16 @@
  *
  * 認証不要で取得可能な設定のみを返す
  * Next.js 16 use cache ディレクティブによる明示的キャッシュ制御
+ *
+ * React 19 対応:
+ * - Prisma オブジェクトをプレーンオブジェクトに変換してから返す
+ * - Symbol プロパティを含むオブジェクトは Client Components に渡せないため
  */
 
 import { cacheLife, cacheTag } from 'next/cache'
 import { prisma } from '@/shared/lib/prisma'
 import { safeFetch, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
+import { toPlainObject, toPlainArray } from '@/shared/lib/serialize'
 
 /** お知らせバー設定のデフォルト値 */
 interface AnnouncementBarSettings {
@@ -51,7 +56,7 @@ export async function getCookieConsentSettings() {
   cacheLife('hours')
   cacheTag('cookie-consent', 'settings')
 
-  return safeFetch({
+  const result = await safeFetch({
     fetch: () =>
       prisma.settings.findUnique({
         where: { id: 'singleton' },
@@ -68,6 +73,8 @@ export async function getCookieConsentSettings() {
     severity: ErrorSeverity.LOW,
     operationName: 'getCookieConsentSettings',
   })
+
+  return toPlainObject(result)
 }
 
 /**
@@ -79,7 +86,7 @@ export async function getPublicBusinessSettings() {
   cacheLife('hours')
   cacheTag('business-settings', 'settings')
 
-  return safeFetch({
+  const result = await safeFetch({
     fetch: () =>
       prisma.settings.findUnique({
         where: { id: 'singleton' },
@@ -108,6 +115,8 @@ export async function getPublicBusinessSettings() {
     severity: ErrorSeverity.LOW,
     operationName: 'getPublicBusinessSettings',
   })
+
+  return toPlainObject(result)
 }
 
 /**
@@ -119,7 +128,7 @@ export async function getAnnouncementBarCarouselSettingsCached() {
   cacheLife('hours')
   cacheTag('announcement-bar', 'settings')
 
-  return safeFetch({
+  const result = await safeFetch({
     fetch: async () => {
       const settings = await prisma.settings.findFirst({
         select: {
@@ -145,6 +154,8 @@ export async function getAnnouncementBarCarouselSettingsCached() {
     severity: ErrorSeverity.LOW,
     operationName: 'getAnnouncementBarCarouselSettings',
   })
+
+  return toPlainObject(result)
 }
 
 /**
@@ -158,7 +169,7 @@ export async function getActiveAnnouncementBarsCached() {
   cacheLife('minutes')
   cacheTag('announcement-bar')
 
-  return safeFetch({
+  const result = await safeFetch({
     fetch: () =>
       prisma.announcementBar.findMany({
         where: { isActive: true },
@@ -169,6 +180,46 @@ export async function getActiveAnnouncementBarsCached() {
     severity: ErrorSeverity.LOW,
     operationName: 'getActiveAnnouncementBars',
   })
+
+  return toPlainArray(result)
+}
+
+/**
+ * パーマリンク設定を取得（公開サイト用）
+ * キャッシュ: 1時間、設定更新時に無効化
+ */
+export async function getPermalinkSettings() {
+  'use cache'
+  cacheLife('hours')
+  cacheTag('permalink', 'settings')
+
+  const result = await safeFetch({
+    fetch: () =>
+      prisma.settings.findUnique({
+        where: { id: 'singleton' },
+        select: {
+          postUrlPrefixEnabled: true,
+          postPermalinkStructure: true,
+        },
+      }),
+    fallback: { postUrlPrefixEnabled: true, postPermalinkStructure: 'post-name' },
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: 'getPermalinkSettings',
+  })
+
+  return toPlainObject(result)
+}
+
+/**
+ * 投稿URLプレフィックスを取得
+ *
+ * postUrlPrefixEnabled が true の場合は '/posts'
+ * false の場合は '' (ルートレベル)
+ */
+export async function getPostUrlPrefix(): Promise<string> {
+  const settings = await getPermalinkSettings()
+  return settings?.postUrlPrefixEnabled ?? true ? '/posts' : ''
 }
 
 /**

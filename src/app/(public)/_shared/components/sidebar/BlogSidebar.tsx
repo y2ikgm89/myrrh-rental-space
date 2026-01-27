@@ -17,6 +17,7 @@ const styles = tv({
 interface BlogSidebarProps {
   settings?: SidebarWidgets
   data: SidebarData
+  postPrefix: string
 }
 
 const defaultSettings: SidebarWidgets = {
@@ -32,7 +33,7 @@ const defaultSettings: SidebarWidgets = {
  *
  * @description 設定に基づいて各ウィジェットを条件付きレンダリング
  */
-export function BlogSidebar({ settings = defaultSettings, data }: BlogSidebarProps): ReactElement {
+export function BlogSidebar({ settings = defaultSettings, data, postPrefix }: BlogSidebarProps): ReactElement {
   const {
     search,
     recent,
@@ -43,22 +44,22 @@ export function BlogSidebar({ settings = defaultSettings, data }: BlogSidebarPro
 
   return (
     <aside className={styles.sidebar()}>
-      {search && <SearchWidget />}
+      {search && <SearchWidget postPrefix={postPrefix} />}
 
       {recent && data.recentPosts && (
-        <RecentPostsWidget posts={data.recentPosts} />
+        <RecentPostsWidget posts={data.recentPosts} postPrefix={postPrefix} />
       )}
 
       {popular && data.popularPosts && (
-        <PopularPostsWidget posts={data.popularPosts} />
+        <PopularPostsWidget posts={data.popularPosts} postPrefix={postPrefix} />
       )}
 
       {categories && data.categories && (
-        <CategoriesWidget categories={data.categories} />
+        <CategoriesWidget categories={data.categories} postPrefix={postPrefix} />
       )}
 
       {tags && data.tags && (
-        <TagsWidget tags={data.tags} />
+        <TagsWidget tags={data.tags} postPrefix={postPrefix} />
       )}
     </aside>
   )

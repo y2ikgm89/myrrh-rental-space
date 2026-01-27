@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { tv } from 'tailwind-variants'
 import { Card, CardContent, CardHeader, CardTitle } from '@/public/components/ui'
+import { generatePostListUrl } from '@/shared/lib/url'
 import type { ReactElement } from 'react'
 import type { SidebarTag } from '@/public/actions/sidebar'
 
@@ -25,6 +26,7 @@ const tagStyles = tv({
 
 interface TagsWidgetProps {
   tags: SidebarTag[]
+  postPrefix: string
 }
 
 /**
@@ -41,7 +43,7 @@ function calculateTagSize(count: number, maxCount: number): 'xs' | 'sm' | 'md' |
 /**
  * タグウィジェット（タグクラウド形式）
  */
-export function TagsWidget({ tags }: TagsWidgetProps): ReactElement {
+export function TagsWidget({ tags, postPrefix }: TagsWidgetProps): ReactElement {
   const maxCount = Math.max(...tags.map((tag) => tag.postCount), 1)
 
   return (
@@ -59,7 +61,7 @@ export function TagsWidget({ tags }: TagsWidgetProps): ReactElement {
               return (
                 <Link
                   key={tag.slug}
-                  href={`/blog?tags=${encodeURIComponent(tag.slug)}`}
+                  href={generatePostListUrl(postPrefix, { tags: tag.slug })}
                   className={tagStyles({ size })}
                   aria-label={`${tag.name}（${count}件）`}
                 >

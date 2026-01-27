@@ -7,8 +7,19 @@
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import dynamic from 'next/dynamic'
-import { Button, Label } from '@/admin/components/ui'
+import {
+  Button,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/admin/components/ui'
 import { EDITOR_PROSE_CLASSES } from '@/shared/lib/styles/prose'
+import { getTemplatesForType, applyBusinessInfo } from '@/shared/lib/terms-templates'
+import type { BusinessInfo } from '@/shared/lib/terms-templates'
+import type { TermsType } from '@/shared/generated/prisma/client'
 
 const LexicalEditor = dynamic(
   () => import('@/admin/components/editor/lexical/LexicalEditor').then((mod) => ({ default: mod.LexicalEditor })),
@@ -29,6 +40,8 @@ import type { TermsVersionDetail } from '@/shared/lib/validations/terms'
 
 interface TermsVersionFormProps {
   termsId: string
+  termsType: TermsType
+  businessInfo?: BusinessInfo
   version?: TermsVersionDetail | null
   onSuccess?: () => void
   onCancel?: () => void
@@ -36,14 +49,34 @@ interface TermsVersionFormProps {
 
 export function TermsVersionForm({
   termsId,
+  termsType,
+  businessInfo,
   version,
   onSuccess,
   onCancel,
 }: TermsVersionFormProps) {
   const [isPending, startTransition] = useTransition()
   const [content, setContent] = useState(version?.content ?? '')
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('')
 
   const isEditing = !!version
+  const templates = getTemplatesForType(termsType)
+
+  const handleTemplateChange = (templateId: string) => {
+    setSelectedTemplate(templateId)
+    if (templateId === 'blank') {
+      setContent('')
+      return
+    }
+    const template = templates.find((t) => t.id === templateId)
+    if (template) {
+      // 事業者情報でプレースホルダーを置換
+      const appliedContent = businessInfo
+        ? applyBusinessInfo(template.content, businessInfo)
+        : template.content
+      setContent(appliedContent)
+    }
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -69,6 +102,31 @@ export function TermsVersionForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* テンプレート選択（新規作成時のみ） */}
+      {!isEditing && templates.length > 0 && (
+        <div className="space-y-2">
+          <Label>テンプレートから作成</Label>
+          <Select value={selectedTemplate} onValueChange={handleTemplateChange}>
+            <SelectTrigger>
+              <SelectValue placeholder="テンプレートを選択..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="blank">空白から作成</SelectItem>
+              {templates.map((template) => (
+                <SelectItem key={template.id} value={template.id}>
+                  {template.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {selectedTemplate && selectedTemplate !== 'blank' && (
+            <p className="text-xs text-muted-foreground">
+              {templates.find((t) => t.id === selectedTemplate)?.description}
+            </p>
+          )}
+        </div>
+      )}
+
       <div className="space-y-2">
         <Label>規約内容 *</Label>
         <div className="min-h-[400px]">
@@ -77,7 +135,7 @@ export function TermsVersionForm({
             onChange={setContent}
             placeholder="規約の内容を入力してください..."
             className={EDITOR_PROSE_CLASSES}
-            minHeight="400px"
+            height="400px"
           />
         </div>
         <p className="text-xs text-muted-foreground">

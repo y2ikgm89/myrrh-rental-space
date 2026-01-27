@@ -1,10 +1,12 @@
 'use server'
 
 import { prisma } from '@/shared/lib/prisma'
-import { revalidatePath } from 'next/cache'
+import { updateTag } from 'next/cache'
+import { CACHE_TAGS } from '@/shared/lib/constants'
 import { z } from 'zod'
 import { randomBytes } from 'crypto'
-import { createSuccess, createFailure, withAuth } from '@/admin/types/server-actions'
+import { createSuccess, createFailure } from '@/admin/types/server-actions'
+import { withPermission } from '@/admin/lib/server-action-helpers'
 import { verifyAdminSession } from '@/shared/lib/auth'
 
 // =============================================================================
@@ -29,7 +31,7 @@ export type ICalTokenWithRelations = {
 // =============================================================================
 
 const createTokenSchema = z.object({
-  name: z.string().min(1, 'トークン名は必須です').max(100),
+  name: z.string().min(1, { error: 'トークン名は必須です' }).max(100),
   spaceId: z.string().uuid().nullable(),
   expiresInDays: z.number().int().min(0).nullable(), // 0 or null = 無期限
 })
@@ -69,14 +71,13 @@ export async function getICalTokens(): Promise<ICalTokenWithRelations[]> {
 /**
  * iCalトークンを作成
  */
-export const createICalToken = withAuth(async (
-  user,
-  data: {
-    name: string
-    spaceId: string | null
-    expiresInDays: number | null
-  }
-) => {
+export const createICalToken = withPermission<
+  [{ name: string; spaceId: string | null; expiresInDays: number | null }],
+  { id: string; token: string }
+>(
+  'settings',
+  'update'
+)(async (user, data) => {
   const parsed = createTokenSchema.safeParse(data)
   if (!parsed.success) {
     return createFailure('入力が不正です', parsed.error.flatten().fieldErrors)
@@ -112,7 +113,7 @@ export const createICalToken = withAuth(async (
     },
   })
 
-  revalidatePath('/admin/settings')
+  updateTag(CACHE_TAGS.SETTINGS)
 
   return createSuccess('トークンを作成しました', {
     id: newToken.id,
@@ -123,7 +124,10 @@ export const createICalToken = withAuth(async (
 /**
  * iCalトークンを削除
  */
-export const deleteICalToken = withAuth(async (_user, id: string) => {
+export const deleteICalToken = withPermission<[string]>(
+  'settings',
+  'update'
+)(async (_user, id) => {
   const token = await prisma.iCalToken.findUnique({ where: { id } })
 
   if (!token) {
@@ -132,7 +136,7 @@ export const deleteICalToken = withAuth(async (_user, id: string) => {
 
   await prisma.iCalToken.delete({ where: { id } })
 
-  revalidatePath('/admin/settings')
+  updateTag(CACHE_TAGS.SETTINGS)
 
   return createSuccess('トークンを削除しました')
 })
@@ -140,13 +144,12 @@ export const deleteICalToken = withAuth(async (_user, id: string) => {
 /**
  * iCalフィード設定を更新
  */
-export const updateICalFeedSettings = withAuth(async (
-  _user,
-  data: {
-    icalFeedEnabled: boolean
-    icalFeedIncludeCustomerInfo: boolean
-  }
-) => {
+export const updateICalFeedSettings = withPermission<
+  [{ icalFeedEnabled: boolean; icalFeedIncludeCustomerInfo: boolean }]
+>(
+  'settings',
+  'update'
+)(async (_user, data) => {
   await prisma.settings.updateMany({
     data: {
       icalFeedEnabled: data.icalFeedEnabled,
@@ -154,7 +157,7 @@ export const updateICalFeedSettings = withAuth(async (
     },
   })
 
-  revalidatePath('/admin/settings')
+  updateTag(CACHE_TAGS.SETTINGS)
 
   return createSuccess('設定を保存しました')
 })

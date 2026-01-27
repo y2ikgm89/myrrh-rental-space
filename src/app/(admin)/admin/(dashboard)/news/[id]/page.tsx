@@ -1,7 +1,9 @@
 import { notFound } from 'next/navigation'
+import { connection } from 'next/server'
 import { getNewsById } from '@/admin/actions/news'
-import { NewsInlineEditor } from '../_components/NewsInlineEditor'
+import { NewsEditor } from '../_components/NewsEditor'
 import type { Metadata } from 'next'
+
 
 type Params = Promise<{ id: string }>
 
@@ -10,6 +12,7 @@ type PageProps = {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  await connection()
   const { id } = await params
   const news = await getNewsById(id)
 
@@ -25,6 +28,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function EditNewsPage({ params }: PageProps) {
+  await connection()
   const { id } = await params
   const news = await getNewsById(id)
 
@@ -32,5 +36,5 @@ export default async function EditNewsPage({ params }: PageProps) {
     notFound()
   }
 
-  return <NewsInlineEditor news={news} />
+  return <NewsEditor news={news} mode="edit" />
 }

@@ -3,6 +3,7 @@
 import { useState, type ReactElement } from 'react'
 import { tv } from 'tailwind-variants'
 import { cn } from '@/shared/lib/utils'
+import { toDateString } from '@/shared/lib/serialize'
 
 const calendarStyles = tv({
   slots: {
@@ -119,7 +120,7 @@ export function Calendar({
     }
 
     // 明示的に無効化された日付
-    const dateStr = normalized.toISOString().split('T')[0]
+    const dateStr = toDateString(normalized)
     if (disabledDateSet.has(dateStr)) {
       return true
     }

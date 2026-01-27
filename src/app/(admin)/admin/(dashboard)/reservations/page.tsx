@@ -5,6 +5,7 @@ import { getReservations } from '@/admin/actions/reservation'
 import { ReservationFilters } from './_components/ReservationFilters'
 import { ReservationTable } from './_components/ReservationTable'
 import { Pagination, Button } from '@/admin/components/ui'
+import { LoadingState } from '@/admin/components/LoadingState'
 import { parseReservationStatusFilter } from '@/shared/lib/validations/enums'
 import type { Metadata } from 'next'
 
@@ -73,18 +74,12 @@ export default async function ReservationsPage({ searchParams }: PageProps) {
       </div>
 
       {/* フィルター */}
-      <Suspense fallback={<div>読み込み中...</div>}>
+      <Suspense fallback={<LoadingState variant="inline" />}>
         <ReservationFilters />
       </Suspense>
 
       {/* 予約一覧 */}
-      <Suspense
-        fallback={
-          <div className="rounded-lg border bg-white p-12 text-center">
-            <p className="text-muted-foreground">読み込み中...</p>
-          </div>
-        }
-      >
+      <Suspense fallback={<LoadingState />}>
         <ReservationList searchParams={searchParams} />
       </Suspense>
     </div>

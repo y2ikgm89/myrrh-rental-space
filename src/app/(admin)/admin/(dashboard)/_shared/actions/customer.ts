@@ -1,14 +1,10 @@
 'use server'
 
 import { prisma } from '@/shared/lib/prisma'
-import { revalidateTag } from 'next/cache'
+import { updateTag } from 'next/cache'
 import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
-import {
-  createSuccess,
-  createFailure,
-  withPermission,
-  type ActionResult,
-} from '@/admin/types/server-actions'
+import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+import { withPermission } from '@/admin/lib/server-action-helpers'
 import type { CustomerWhereInput } from '@/shared/types/prisma'
 import { checkReadPermissionFor } from '@/admin/lib/permissions'
 
@@ -156,7 +152,7 @@ export const createCustomer = withPermission<[input: CustomerFormInput], { id: s
     },
   })
 
-  revalidateTag(CACHE_TAGS.CUSTOMERS, 'default')
+  updateTag(CACHE_TAGS.CUSTOMERS)
 
   return createSuccess('顧客を作成しました', { id: customer.id })
 })
@@ -230,8 +226,8 @@ export const updateCustomerStatus = withPermission<[id: string, status: Customer
     data: { status },
   })
 
-  revalidateTag(CACHE_TAGS.CUSTOMERS, 'default')
-  revalidateTag(getCacheTag.customers.detail(id), 'default')
+  updateTag(CACHE_TAGS.CUSTOMERS)
+  updateTag(getCacheTag.customers.detail(id))
 
   return createSuccess('ステータスを更新しました')
 })
@@ -261,8 +257,8 @@ export const updateCustomerNotes = withPermission<[id: string, notes: string | n
     data: { notes },
   })
 
-  revalidateTag(CACHE_TAGS.CUSTOMERS, 'default')
-  revalidateTag(getCacheTag.customers.detail(id), 'default')
+  updateTag(CACHE_TAGS.CUSTOMERS)
+  updateTag(getCacheTag.customers.detail(id))
 
   return createSuccess('メモを更新しました')
 })
@@ -287,14 +283,16 @@ export const toggleCustomerActive = withPermission<[id: string], void>(
     data: { isActive: !customer.isActive },
   })
 
-  revalidateTag(CACHE_TAGS.CUSTOMERS, 'default')
-  revalidateTag(getCacheTag.customers.detail(id), 'default')
+  updateTag(CACHE_TAGS.CUSTOMERS)
+  updateTag(getCacheTag.customers.detail(id))
 
   return createSuccess('アクティブ状態を変更しました')
 })
 
 /**
  * 顧客統計情報を取得
+ *
+ * 最適化: 6つのCOUNTクエリをgroupByで1クエリに統合
  */
 export async function getCustomerStats(): Promise<{
   total: number
@@ -308,22 +306,26 @@ export async function getCustomerStats(): Promise<{
     return { total: 0, new: 0, regular: 0, vip: 0, inactive: 0, blacklist: 0 }
   }
 
-  const [total, newCount, regular, vip, inactive, blacklist] = await Promise.all([
-    prisma.customer.count(),
-    prisma.customer.count({ where: { status: 'NEW' } }),
-    prisma.customer.count({ where: { status: 'REGULAR' } }),
-    prisma.customer.count({ where: { status: 'VIP' } }),
-    prisma.customer.count({ where: { status: 'INACTIVE' } }),
-    prisma.customer.count({ where: { status: 'BLACKLIST' } }),
-  ])
+  // groupByで1クエリに統合（6クエリ→1クエリ）
+  const stats = await prisma.customer.groupBy({
+    by: ['status'],
+    _count: true,
+  })
+
+  // ステータス別カウントをマップに変換
+  const statusCounts = new Map(
+    stats.map((s) => [s.status, s._count])
+  )
+
+  const total = stats.reduce((sum, s) => sum + s._count, 0)
 
   return {
     total,
-    new: newCount,
-    regular,
-    vip,
-    inactive,
-    blacklist,
+    new: statusCounts.get('NEW') ?? 0,
+    regular: statusCounts.get('REGULAR') ?? 0,
+    vip: statusCounts.get('VIP') ?? 0,
+    inactive: statusCounts.get('INACTIVE') ?? 0,
+    blacklist: statusCounts.get('BLACKLIST') ?? 0,
   }
 }
 

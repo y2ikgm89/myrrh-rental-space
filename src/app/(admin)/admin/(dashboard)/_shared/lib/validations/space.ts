@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { seoOgpFieldsSchema, defaultSeoOgpValues } from '@/shared/lib/validations/seo'
+import type { SpaceDiscountType, DurationDiscountOverride } from '@/shared/lib/pricing'
 
 /**
  * スペースフォーム用バリデーションスキーマ
@@ -11,8 +12,8 @@ import { seoOgpFieldsSchema, defaultSeoOgpValues } from '@/shared/lib/validation
  * 画像URL配列のバリデーション
  */
 const imageUrlsSchema = z
-  .array(z.string().url('有効なURLを入力してください'))
-  .max(10, '画像は最大10枚までです')
+  .array(z.string().url({ error: '有効なURLを入力してください' }))
+  .max(10, { error: '画像は最大10枚までです' })
   .default([])
 
 /**
@@ -23,55 +24,89 @@ const facilitiesSchema = z
   .default([])
 
 /**
+ * スペース割引タイプ
+ */
+export const spaceDiscountTypeSchema = z.enum(['none', 'percentage', 'fixed'])
+
+/**
+ * 長時間割引オーバーライド設定
+ */
+export const durationDiscountOverrideSchema = z.enum(['inherit', 'enabled', 'disabled'])
+
+/**
+ * スペース作成・編集フォームスキーマ
+ */
+/**
+ * スラッグのバリデーション
+ */
+export const spaceSlugSchema = z
+  .string()
+  .min(1, { error: 'スラッグを入力してください' })
+  .max(100, { error: 'スラッグは100文字以内で入力してください' })
+  .regex(/^[a-z0-9-]+$/, { error: 'スラッグは小文字英数字とハイフンのみ使用可能です' })
+
+/**
  * スペース作成・編集フォームスキーマ
  */
 export const spaceFormSchema = z
   .object({
+    slug: spaceSlugSchema,
     name: z
       .string()
-      .min(1, '名前を入力してください')
-      .max(100, '名前は100文字以内で入力してください'),
+      .min(1, { error: '名前を入力してください' })
+      .max(100, { error: '名前は100文字以内で入力してください' }),
     description: z
       .string()
-      .min(1, '説明を入力してください')
-      .min(10, '説明は10文字以上で入力してください'),
-    address: z.string().min(1, '住所を入力してください'),
+      .min(1, { error: '説明を入力してください' })
+      .min(10, { error: '説明は10文字以上で入力してください' }),
+    address: z.string().min(1, { error: '住所を入力してください' }),
     access: z
       .string()
-      .max(500, 'アクセス情報は500文字以内で入力してください')
+      .max(500, { error: 'アクセス情報は500文字以内で入力してください' })
       .optional()
       .or(z.literal('')),
     capacity: z
       .number()
-      .int('整数を入力してください')
-      .min(1, '定員は1以上で入力してください')
-      .max(1000, '定員は1000以下で入力してください'),
+      .int({ error: '整数を入力してください' })
+      .min(1, { error: '定員は1以上で入力してください' })
+      .max(1000, { error: '定員は1000以下で入力してください' }),
     area: z
       .number()
-      .positive('正の数を入力してください')
-      .max(10000, '面積は10000以下で入力してください')
+      .positive({ error: '正の数を入力してください' })
+      .max(10000, { error: '面積は10000以下で入力してください' })
       .optional()
       .nullable(),
     hourlyPrice: z
       .number()
-      .min(0, '時間料金は0以上で入力してください')
-      .max(1000000, '時間料金は1000000以下で入力してください'),
+      .min(0, { error: '時間料金は0以上で入力してください' })
+      .max(1000000, { error: '時間料金は1000000以下で入力してください' }),
     dailyPrice: z
       .number()
-      .min(0, '日額料金は0以上で入力してください')
-      .max(10000000, '日額料金は10000000以下で入力してください')
+      .min(0, { error: '日額料金は0以上で入力してください' })
+      .max(10000000, { error: '日額料金は10000000以下で入力してください' })
       .optional()
       .nullable(),
     mainImageUrl: z
       .string()
-      .min(1, 'メイン画像URLを入力してください')
-      .url('有効なURLを入力してください'),
+      .min(1, { error: 'メイン画像URLを入力してください' })
+      .url({ error: '有効なURLを入力してください' }),
     imageUrls: imageUrlsSchema,
     facilities: facilitiesSchema,
     isPublished: z.boolean().default(false),
-    termsId: z.string().uuid('利用規約IDが無効です').optional().nullable(),
-    locationId: z.string().uuid('場所IDが無効です').optional().nullable(),
-    categoryId: z.string().uuid('カテゴリーIDが無効です').optional().nullable(),
+    termsId: z.string().uuid({ error: '利用規約IDが無効です' }).optional().nullable(),
+    locationId: z.string().uuid({ error: '場所IDが無効です' }).optional().nullable(),
+    categoryId: z.string().uuid({ error: 'カテゴリーIDが無効です' }).optional().nullable(),
+    // 割引設定
+    discountType: spaceDiscountTypeSchema.default('none'),
+    discountValue: z
+      .number()
+      .min(0, { error: '割引値は0以上で入力してください' })
+      .max(1000000, { error: '割引値は1000000以下で入力してください' })
+      .optional()
+      .nullable(),
+    durationDiscountOverride: durationDiscountOverrideSchema.default('inherit'),
+    // 税率設定
+    taxRateType: z.enum(['standard', 'reduced']).default('standard'),
   })
   .merge(seoOgpFieldsSchema)
 
@@ -104,6 +139,7 @@ export type SpaceActionResult =
  * フォームのデフォルト値
  */
 export const defaultSpaceFormValues: SpaceFormInput = {
+  slug: '',
   name: '',
   description: '',
   address: '',
@@ -119,6 +155,12 @@ export const defaultSpaceFormValues: SpaceFormInput = {
   termsId: null,
   locationId: null,
   categoryId: null,
+  // 割引設定
+  discountType: 'none',
+  discountValue: null,
+  durationDiscountOverride: 'inherit',
+  // 税率設定
+  taxRateType: 'standard',
   ...defaultSeoOgpValues,
 }
 
@@ -131,6 +173,7 @@ export const defaultSpaceFormValues: SpaceFormInput = {
  */
 export type SpaceWithStats = {
   id: string
+  slug: string
   name: string
   description: string
   address: string
@@ -151,6 +194,12 @@ export type SpaceWithStats = {
   termsId: string | null
   locationId: string | null
   categoryId: string | null
+  // 割引設定
+  discountType: SpaceDiscountType
+  discountValue: number | null
+  durationDiscountOverride: DurationDiscountOverride
+  // 税率設定
+  taxRateType: 'standard' | 'reduced'
   // SEO/OGP
   metaDescription: string | null
   metaKeywords: string | null

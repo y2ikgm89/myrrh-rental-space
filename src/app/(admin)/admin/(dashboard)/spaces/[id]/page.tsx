@@ -1,10 +1,12 @@
 import { notFound } from 'next/navigation'
+import { connection } from 'next/server'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { getSpaceById } from '@/admin/actions/space'
 import { SpaceDetail } from './_components/SpaceDetail'
 import { Button } from '@/admin/components/ui'
 import type { Metadata } from 'next'
+
 
 type Params = Promise<{ id: string }>
 
@@ -13,6 +15,7 @@ type PageProps = {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  await connection()
   const { id } = await params
   const space = await getSpaceById(id)
 
@@ -28,6 +31,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function SpaceDetailPage({ params }: PageProps) {
+  await connection()
   const { id } = await params
   const space = await getSpaceById(id)
 
@@ -53,7 +57,7 @@ export default async function SpaceDetailPage({ params }: PageProps) {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" asChild>
-            <Link href={`/spaces/${space.id}`} target="_blank">
+            <Link href={`/spaces/${space.slug}`} target="_blank">
               公開ページを見る
             </Link>
           </Button>

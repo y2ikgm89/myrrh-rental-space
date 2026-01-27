@@ -290,9 +290,9 @@ export function purgeSpaceCache(spaceId?: string): Promise<PurgeResult> {
   return purgeContentCache('/spaces', spaceId)
 }
 
-/** ブログ関連のキャッシュをパージ */
-export function purgeBlogCache(slug?: string): Promise<PurgeResult> {
-  return purgeContentCache('/blog', slug)
+/** 投稿関連のキャッシュをパージ */
+export function purgePostCache(slug?: string): Promise<PurgeResult> {
+  return purgeContentCache('/posts', slug)
 }
 
 /** ニュース関連のキャッシュをパージ */

@@ -25,7 +25,7 @@ export function FilePreview({
     <div className="space-y-4">
       <div className="flex aspect-video items-center justify-center overflow-hidden rounded-lg bg-muted">
         {previewUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
+          
           <img
             src={previewUrl}
             alt="プレビュー"

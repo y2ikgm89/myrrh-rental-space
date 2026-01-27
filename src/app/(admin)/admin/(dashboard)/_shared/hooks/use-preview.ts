@@ -6,7 +6,7 @@
 
 import { useCallback } from 'react'
 import {
-  type BlogPreviewData,
+  type PostPreviewData,
   type NewsPreviewData,
   type PagePreviewData,
   type PreviewData,
@@ -17,13 +17,16 @@ import {
 // Types
 // =============================================================================
 
-type ContentType = 'blog' | 'news' | 'page'
+type ContentType = 'post' | 'news' | 'page'
 
 type PreviewDataMap = {
-  blog: BlogPreviewData
+  post: PostPreviewData
   news: NewsPreviewData
   page: PagePreviewData
 }
+
+/** 任意のプレビューデータ型（統一エディター用） */
+type AnyPreviewData = PostPreviewData | NewsPreviewData | PagePreviewData
 
 // =============================================================================
 // Storage Functions
@@ -62,7 +65,7 @@ export function savePreviewData<T extends ContentType>(
  *
  * @param contentType - コンテンツタイプ
  * @param identifier - スラッグまたは識別子
- * @param basePath - プレビューページのベースパス（例: '/blog'）
+ * @param basePath - プレビューページのベースパス（例: '/posts'）
  */
 export function openPreview(
   contentType: ContentType,
@@ -104,7 +107,7 @@ export function clearPreviewData(
  *
  * @example
  * ```tsx
- * const { saveAndOpenPreview } = usePreview('blog')
+ * const { saveAndOpenPreview } = usePreview('post')
  *
  * const handlePreview = () => {
  *   const values = getValues()
@@ -118,8 +121,10 @@ export function clearPreviewData(
  */
 export function usePreview<T extends ContentType>(contentType: T) {
   const save = useCallback(
-    (identifier: string, data: PreviewDataMap[T]) => {
-      savePreviewData(contentType, identifier, data)
+    (identifier: string, data: PreviewDataMap[T] | AnyPreviewData) => {
+      // 外部ライブラリ型要件: PreviewDataMapの型はcontentTypeに依存するが、
+      // 統一エディターから呼ばれる場合はAnyPreviewData型で渡される
+      savePreviewData(contentType, identifier, data as PreviewDataMap[T])
     },
     [contentType]
   )
@@ -139,7 +144,7 @@ export function usePreview<T extends ContentType>(contentType: T) {
   )
 
   const saveAndOpenPreview = useCallback(
-    (identifier: string, data: PreviewDataMap[T], basePath: string) => {
+    (identifier: string, data: PreviewDataMap[T] | AnyPreviewData, basePath: string) => {
       save(identifier, data)
       open(identifier, basePath)
     },

@@ -1,8 +1,24 @@
+/**
+ * iCalフィード配信API
+ *
+ * 外部カレンダーアプリ（TimeTree, Google Calendar等）から購読可能な
+ * iCalフィード（.ics）を配信します。
+ *
+ * ## 機能
+ * - トークンベースの認証
+ * - 予約データのiCal形式変換
+ * - スペース別フィルタリング
+ *
+ * @module api/ical/[token]
+ */
+
 import { NextResponse } from 'next/server'
 import { prisma } from '@/shared/lib/prisma'
-import { generateICalFeed, type CalendarEvent } from '@/admin/lib/ical'
+import { generateICalFeed, type CalendarEvent } from '@/shared/lib/ical'
 import { format } from 'date-fns'
 import { ACTIVE_RESERVATION_STATUSES } from '@/shared/lib/validations/enums'
+import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
+import { fireAndForget } from '@/shared/lib/async-utils'
 
 /**
  * iCalフィード配信エンドポイント
@@ -40,15 +56,18 @@ export async function GET(
       return new NextResponse('Token expired', { status: 410 })
     }
 
-    // 最終アクセス日時を更新（非同期、エラー無視）
-    prisma.iCalToken
-      .update({
+    // 最終アクセス日時を更新（バックグラウンド）
+    fireAndForget(
+      prisma.iCalToken.update({
         where: { id: icalToken.id },
         data: { lastUsedAt: new Date() },
-      })
-      .catch(() => {
-        // 更新失敗しても続行
-      })
+      }),
+      {
+        operation: 'updateICalTokenLastUsed',
+        category: ErrorCategory.DATABASE,
+        severity: ErrorSeverity.LOW,
+      }
+    )
 
     // 予約データ取得（直近3ヶ月 + 過去1ヶ月の範囲と重複するもの）
     const now = new Date()
@@ -120,7 +139,11 @@ export async function GET(
       },
     })
   } catch (error) {
-    console.error('iCal feed error:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'iCalFeed' },
+    })
     return new NextResponse('Internal Server Error', { status: 500 })
   }
 }

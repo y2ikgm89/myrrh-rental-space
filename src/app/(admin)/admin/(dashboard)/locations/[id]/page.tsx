@@ -1,10 +1,12 @@
 import { notFound } from 'next/navigation'
+import { connection } from 'next/server'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { getLocationById } from '@/admin/actions/location'
 import { LocationDetail } from './_components/LocationDetail'
 import { Button } from '@/admin/components/ui'
 import type { Metadata } from 'next'
+
 
 type Params = Promise<{ id: string }>
 
@@ -13,6 +15,7 @@ type PageProps = {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  await connection()
   const { id } = await params
   const result = await getLocationById(id)
 
@@ -28,6 +31,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function LocationDetailPage({ params }: PageProps) {
+  await connection()
   const { id } = await params
   const result = await getLocationById(id)
 

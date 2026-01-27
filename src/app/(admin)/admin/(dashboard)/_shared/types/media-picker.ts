@@ -1,10 +1,55 @@
 /**
  * Media Picker Types
  *
- * メディアピッカー機能の型定義
+ * メディアピッカー機能とメディアデータの型定義
  */
 
 import type { MediaType, MediaUsage } from '@/admin/lib/validations/media'
+
+// =============================================================================
+// Media Data Types (Server Actionsから分離してHMRの問題を回避)
+// =============================================================================
+
+/**
+ * メディアデータ
+ * Server Actionsとクライアントコンポーネント間で共有される型
+ */
+export type MediaData = {
+  id: string
+  filename: string
+  url: string
+  mimeType: string
+  size: number
+  width: number | null
+  height: number | null
+  type: string
+  usage: string
+  alt: string | null
+  title: string | null
+  description: string | null
+  tags: string[]
+  createdAt: Date
+  updatedAt: Date
+  uploader: {
+    id: string
+    name: string
+  }
+}
+
+/**
+ * メディア一覧取得結果
+ */
+export type GetMediaResult = {
+  items: MediaData[]
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+}
+
+// =============================================================================
+// Media Picker Types
+// =============================================================================
 
 /**
  * 選択モード

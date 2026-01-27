@@ -40,7 +40,7 @@ const RESOURCE_OPTIONS = [
   { value: 'reservation', label: '予約' },
   { value: 'customer', label: '顧客' },
   { value: 'inquiry', label: 'お問い合わせ' },
-  { value: 'blog', label: 'ブログ' },
+  { value: 'post', label: '投稿' },
   { value: 'news', label: 'お知らせ' },
   { value: 'page', label: '固定ページ' },
   { value: 'faq', label: 'FAQ' },

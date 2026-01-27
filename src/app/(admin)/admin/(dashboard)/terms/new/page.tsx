@@ -1,33 +1,37 @@
-import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
-import { TermsForm } from '../_components/TermsForm'
-import { Button } from '@/admin/components/ui'
+import { getSettings } from '@/admin/actions/settings'
+import { TermsInlineEditor } from '../_components/TermsInlineEditor'
+import type { BusinessInfo } from '@/shared/lib/terms-templates'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: '規約作成 | Myrrh Rental Space',
 }
 
-export default function NewTermsPage() {
-  return (
-    <div className="space-y-6">
-      {/* ヘッダー */}
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/admin/terms">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            一覧に戻る
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold">規約作成</h1>
-          <p className="text-muted-foreground">
-            新しい利用規約を作成します。作成後、バージョンを追加して公開できます。
-          </p>
-        </div>
-      </div>
+export default async function NewTermsPage() {
+  const settings = await getSettings()
 
-      <TermsForm />
-    </div>
-  )
+  // 事業者情報を抽出
+  const businessInfo: BusinessInfo = settings
+    ? {
+        businessName: settings.businessName,
+        email: settings.email,
+        phoneNumber: settings.phoneNumber,
+        postalCode: settings.postalCode,
+        prefecture: settings.prefecture,
+        city: settings.city,
+        streetAddress: settings.streetAddress,
+        buildingName: settings.buildingName,
+      }
+    : {
+        businessName: null,
+        email: null,
+        phoneNumber: null,
+        postalCode: null,
+        prefecture: null,
+        city: null,
+        streetAddress: null,
+        buildingName: null,
+      }
+
+  return <TermsInlineEditor mode="create" businessInfo={businessInfo} />
 }

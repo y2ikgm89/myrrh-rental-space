@@ -4,18 +4,18 @@
  * 基本情報フィールド
  *
  * タイトル、スラッグ、抜粋の編集
- * ブログ記事用
+ * 投稿記事用
  */
 
 import type { UseFormRegister, UseFormGetValues, UseFormSetValue, FieldErrors } from 'react-hook-form'
 import { Input, Label, Textarea, Button } from '@/admin/components/ui'
-import type { BlogEditorFormData } from '../types'
+import type { PostEditorFormData } from '../types'
 
 type BasicInfoFieldsProps = {
-  register: UseFormRegister<BlogEditorFormData>
-  getValues: UseFormGetValues<BlogEditorFormData>
-  setValue: UseFormSetValue<BlogEditorFormData>
-  errors: FieldErrors<BlogEditorFormData>
+  register: UseFormRegister<PostEditorFormData>
+  getValues: UseFormGetValues<PostEditorFormData>
+  setValue: UseFormSetValue<PostEditorFormData>
+  errors: FieldErrors<PostEditorFormData>
   disabled?: boolean
 }
 
@@ -74,7 +74,7 @@ export function BasicInfoFields({
           disabled={disabled}
         />
         <p className="text-xs text-muted-foreground">
-          URLに使用されます: /blog/{getValues('slug') || 'article-slug'}
+          URLに使用されます: /posts/{getValues('slug') || 'article-slug'}
         </p>
         {errors.slug && (
           <p className="text-sm text-destructive">{errors.slug.message}</p>

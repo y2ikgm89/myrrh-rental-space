@@ -6,8 +6,8 @@
  */
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/admin/components/ui/card'
-import { getAnalyticsStats, isAnalyticsApiAvailable } from '@/public/lib/analytics/ga-data-api'
-import { getAnalyticsConfig } from '@/public/lib/analytics/config'
+import { getAnalyticsStats, isAnalyticsApiAvailable } from '@/shared/lib/analytics/ga-data-api'
+import { getAnalyticsConfig } from '@/shared/lib/analytics/config'
 import Link from 'next/link'
 
 /**

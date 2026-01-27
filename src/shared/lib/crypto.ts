@@ -1,14 +1,23 @@
 /**
  * 暗号化/復号化ユーティリティ
  *
- * AES-256-GCM + HKDF鍵導出を使用してセンシティブなデータを暗号化
- * 環境変数 ENCRYPTION_KEY が必要（32バイト = 64文字の16進数）
+ * AES-256-GCM + HKDF鍵導出を使用してセンシティブなデータを暗号化します。
+ * APIキー、Stripeデータなど機密情報の保存に使用します。
  *
- * セキュリティ機能:
- * - HKDF: マスターキーから目的別の派生鍵を自動生成
- * - AAD: 暗号化コンテキストの認証（改ざん検知強化）
+ * ## 必要な環境変数
+ * - `ENCRYPTION_KEY`: 32バイト（64文字の16進数）
  *
- * キー生成: openssl rand -hex 32
+ * ## セキュリティ機能
+ * - **HKDF**: マスターキーから目的別の派生鍵を自動生成
+ * - **AAD**: 暗号化コンテキストの認証（改ざん検知強化）
+ * - **GCM**: 認証付き暗号化モード
+ *
+ * ## キー生成コマンド
+ * ```bash
+ * openssl rand -hex 32
+ * ```
+ *
+ * @module shared/lib/crypto
  */
 
 import {
@@ -17,6 +26,7 @@ import {
   randomBytes,
   createHmac,
 } from 'crypto'
+import { logError, ErrorCategory, ErrorSeverity } from './errors'
 
 const ALGORITHM = 'aes-256-gcm'
 const IV_LENGTH = 12
@@ -129,8 +139,12 @@ export function safeEncrypt(
 ): string | null {
   try {
     return encrypt(plaintext, options)
-  } catch {
-    console.warn('Encryption failed: ENCRYPTION_KEY may not be set')
+  } catch (error) {
+    logError(error instanceof Error ? error : new Error('Encryption failed'), {
+      category: ErrorCategory.UNKNOWN,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'safeEncrypt', purpose: options?.purpose },
+    })
     return null
   }
 }
@@ -141,8 +155,12 @@ export function safeEncrypt(
 export function safeDecrypt(ciphertext: string): string | null {
   try {
     return decrypt(ciphertext)
-  } catch {
-    console.warn('Decryption failed')
+  } catch (error) {
+    logError(error instanceof Error ? error : new Error('Decryption failed'), {
+      category: ErrorCategory.UNKNOWN,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'safeDecrypt' },
+    })
     return null
   }
 }

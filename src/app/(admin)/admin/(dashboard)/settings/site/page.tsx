@@ -20,6 +20,7 @@ import {
   SeoSection,
   SidebarSection,
   LayoutSection,
+  PermalinkSection,
 } from '../_components/sections'
 import type { ReactElement } from 'react'
 
@@ -35,7 +36,7 @@ async function SiteSettingsContent(): Promise<ReactElement> {
     return (
       <SettingsLayout
         title="サイト設定"
-        description="一般設定・SEO設定・レイアウト"
+        description="一般設定・SEO・レイアウト・投稿"
       >
         <div className="text-center py-8 text-muted-foreground">
           設定を読み込めませんでした
@@ -70,12 +71,17 @@ async function SiteSettingsContent(): Promise<ReactElement> {
         </div>
       ),
     },
+    {
+      value: 'post',
+      label: '投稿',
+      content: <PermalinkSection settings={settings} />,
+    },
   ]
 
   return (
     <SettingsLayout
       title="サイト設定"
-      description="一般設定・SEO設定・レイアウト"
+      description="一般設定・SEO・レイアウト・投稿"
     >
       <SettingsTabs tabs={tabs} defaultTab="general" />
     </SettingsLayout>
@@ -89,13 +95,14 @@ function SiteSettingsLoading(): ReactElement {
   return (
     <SettingsLayout
       title="サイト設定"
-      description="一般設定・SEO設定・レイアウト"
+      description="一般設定・SEO・レイアウト・投稿"
     >
       <div className="animate-pulse space-y-6">
         <div className="flex gap-1 h-10 bg-muted rounded-lg p-1">
           <div className="h-8 w-16 bg-gray-300 rounded-md" />
           <div className="h-8 w-12 bg-gray-200 rounded-md" />
           <div className="h-8 w-20 bg-gray-200 rounded-md" />
+          <div className="h-8 w-16 bg-gray-200 rounded-md" />
         </div>
         <div className="h-48 bg-gray-200 rounded" />
         <div className="h-48 bg-gray-200 rounded" />

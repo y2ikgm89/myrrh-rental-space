@@ -33,6 +33,8 @@ import {
 import type { SettingsData } from '@/admin/actions/settings'
 import { SUPPORTED_CURRENCIES } from '@/admin/lib/stripe'
 import { useRefreshOnSuccess } from '../hooks'
+import { StatusBanner } from '../shared/StatusBanner'
+import { formatDateTimeShort } from '@/shared/lib/utils'
 
 // =============================================================================
 // Types
@@ -40,26 +42,6 @@ import { useRefreshOnSuccess } from '../hooks'
 
 interface StripeSectionProps {
   settings: SettingsData
-}
-
-interface StatusBannerProps {
-  success: boolean
-  children: React.ReactNode
-}
-
-// =============================================================================
-// Status Banner Component
-// =============================================================================
-
-function StatusBanner({ success, children }: StatusBannerProps): React.ReactElement {
-  const borderColor = success ? 'border-green-200' : 'border-red-200'
-  const bgColor = success ? 'bg-green-50' : 'bg-red-50'
-
-  return (
-    <div className={`rounded-lg border p-4 ${borderColor} ${bgColor}`}>
-      {children}
-    </div>
-  )
 }
 
 // =============================================================================
@@ -364,8 +346,8 @@ export function StripeSection({ settings }: StripeSectionProps) {
                 </>
               ) : (
                 <>
-                  <span className="h-2 w-2 rounded-full bg-red-500" />
-                  <span className="text-sm font-medium text-red-700">エラー</span>
+                  <span className="h-2 w-2 rounded-full bg-destructive" />
+                  <span className="text-sm font-medium text-destructive">エラー</span>
                 </>
               )}
             </div>
@@ -376,7 +358,7 @@ export function StripeSection({ settings }: StripeSectionProps) {
             )}
             {settings.stripeLastTestedAt && (
               <p className="text-xs text-muted-foreground">
-                最終テスト: {new Date(settings.stripeLastTestedAt).toLocaleString('ja-JP')}
+                最終テスト: {formatDateTimeShort(settings.stripeLastTestedAt)}
               </p>
             )}
           </StatusBanner>
@@ -385,7 +367,7 @@ export function StripeSection({ settings }: StripeSectionProps) {
         {/* 接続テスト結果 */}
         {testResult && (
           <StatusBanner success={testResult.success}>
-            <p className={`text-sm ${testResult.success ? 'text-green-700' : 'text-red-700'}`}>
+            <p className={`text-sm ${testResult.success ? 'text-green-700' : 'text-destructive'}`}>
               {testResult.message}
             </p>
             {testResult.mode && (

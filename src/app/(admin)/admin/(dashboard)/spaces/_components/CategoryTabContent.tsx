@@ -3,6 +3,7 @@ import { getSpaceCategories } from '@/admin/actions/space-category'
 import { CategoryFilters } from '../../space-categories/_components/CategoryFilters'
 import { CategoryTable } from '../../space-categories/_components/CategoryTable'
 import { CreateCategoryDialog } from '../../space-categories/_components/CreateCategoryDialog'
+import { LoadingState } from '@/admin/components/LoadingState'
 
 // =============================================================================
 // 型定義
@@ -51,18 +52,12 @@ export async function CategoryTabContent({ searchParams }: CategoryTabContentPro
       </div>
 
       {/* フィルター */}
-      <Suspense fallback={<div>読み込み中...</div>}>
+      <Suspense fallback={<LoadingState variant="inline" />}>
         <CategoryFilters />
       </Suspense>
 
       {/* カテゴリー一覧 */}
-      <Suspense
-        fallback={
-          <div className="rounded-lg border bg-white p-12 text-center">
-            <p className="text-muted-foreground">読み込み中...</p>
-          </div>
-        }
-      >
+      <Suspense fallback={<LoadingState />}>
         <CategoryList searchParams={searchParams} />
       </Suspense>
     </div>

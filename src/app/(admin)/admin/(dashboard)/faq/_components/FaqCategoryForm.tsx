@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { useWatch } from 'react-hook-form'
 import {
   Button,
   Card,
@@ -54,10 +55,10 @@ export function FaqCategoryForm({ category, mode }: FaqCategoryFormProps) {
     register,
     formState: { errors },
     setValue,
-    watch,
+    control,
   } = form
 
-  const isActive = watch('isActive')
+  const isActive = useWatch({ control, name: 'isActive' })
 
   // 名前からスラッグを自動生成
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -89,9 +90,11 @@ export function FaqCategoryForm({ category, mode }: FaqCategoryFormProps) {
               })}
               placeholder="例: ご予約について"
               disabled={isPending}
+              aria-invalid={!!errors.name}
+              aria-describedby={errors.name ? 'name-error' : undefined}
             />
             {errors.name && (
-              <p className="text-sm text-destructive">{errors.name.message}</p>
+              <p id="name-error" className="text-xs text-destructive">{errors.name.message}</p>
             )}
           </div>
 
@@ -102,12 +105,14 @@ export function FaqCategoryForm({ category, mode }: FaqCategoryFormProps) {
               {...register('slug')}
               placeholder="例: reservation"
               disabled={isPending}
+              aria-invalid={!!errors.slug}
+              aria-describedby={errors.slug ? 'slug-error' : 'slug-hint'}
             />
-            <p className="text-xs text-muted-foreground">
+            <p id="slug-hint" className="text-xs text-muted-foreground">
               URLに使用される識別子です（半角英数字とハイフンのみ）
             </p>
             {errors.slug && (
-              <p className="text-sm text-destructive">{errors.slug.message}</p>
+              <p id="slug-error" className="text-xs text-destructive">{errors.slug.message}</p>
             )}
           </div>
 
@@ -119,9 +124,11 @@ export function FaqCategoryForm({ category, mode }: FaqCategoryFormProps) {
               placeholder="カテゴリの説明（オプション）"
               rows={3}
               disabled={isPending}
+              aria-invalid={!!errors.description}
+              aria-describedby={errors.description ? 'description-error' : undefined}
             />
             {errors.description && (
-              <p className="text-sm text-destructive">
+              <p id="description-error" className="text-xs text-destructive">
                 {errors.description.message}
               </p>
             )}

@@ -12,7 +12,7 @@ import { Suspense } from 'react'
 import { connection } from 'next/server'
 import { getNavigationItems, getSocialLinks } from '@/admin/actions/navigation'
 import { SettingsLayout } from '../_components/SettingsLayout'
-import { NavigationManager } from '../site/_components/NavigationManager'
+import { NavigationManager } from '../site/_components/navigation'
 import type { ReactElement } from 'react'
 
 /**

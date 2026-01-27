@@ -4,11 +4,14 @@
  * 書き込み操作とセキュリティイベントの記録
  * - 非同期記録（パフォーマンス優先）
  * - 失敗時は無視（ログ記録失敗でビジネスロジックを止めない）
+ *
+ * @module admin/lib/audit
  */
 
 import { headers } from 'next/headers'
 import { prisma } from '@/shared/lib/prisma'
 import { AuditAction } from '@/shared/generated/prisma/enums'
+import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
 
 // =============================================================================
 // Types
@@ -84,7 +87,11 @@ export async function createAuditLog(input: AuditLogInput): Promise<void> {
     })
   } catch (error) {
     // ログ記録失敗は無視（本番ではSentry等に送信推奨）
-    console.error('[AuditLog] Failed to create audit log:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.LOW,
+      context: { operation: 'createAuditLog', action: input.action, resource: input.resource },
+    })
   }
 }
 

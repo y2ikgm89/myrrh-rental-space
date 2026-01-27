@@ -1,0 +1,177 @@
+/**
+ * キャッシュ設定定数
+ *
+ * Next.js 16 PPR の `cacheLife` ディレクティブで使用するキャッシュ期間設定
+ *
+ * @see https://nextjs.org/docs/app/api-reference/directives/use-cache
+ *
+ * @example
+ * ```typescript
+ * import { CACHE_LIFE } from '@/shared/lib/constants'
+ *
+ * async function getData() {
+ *   'use cache'
+ *   cacheLife(CACHE_LIFE.PUBLIC_CONTENT)
+ *   // ...
+ * }
+ * ```
+ */
+
+/**
+ * キャッシュ有効期間の設定
+ *
+ * Next.js 16 の cacheLife() で使用可能な値:
+ * - 'seconds' | 'minutes' | 'hours' | 'days' | 'weeks' | 'max'
+ */
+export const CACHE_LIFE = {
+  /**
+   * 公開コンテンツ（ブログ、ニュース、スペース、ページ）
+   * - 頻繁に更新されないが、適度に最新を保つ
+   */
+  PUBLIC_CONTENT: 'hours',
+
+  /**
+   * 静的設定（サイト設定、ナビゲーション）
+   * - 管理画面で変更されるまで長期間有効
+   */
+  STATIC_SETTINGS: 'days',
+
+  /**
+   * 動的データ（予約状況、在庫など）
+   * - 頻繁に更新される可能性がある
+   */
+  DYNAMIC_DATA: 'minutes',
+
+  /**
+   * メタデータ・SEO関連
+   * - 公開コンテンツと同期
+   */
+  METADATA: 'hours',
+} as const
+
+/**
+ * キャッシュタグのプレフィックス
+ *
+ * revalidateTag() で使用するタグ名の一元管理
+ *
+ * @example
+ * ```typescript
+ * import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
+ *
+ * // タグ付け
+ * cacheTag(getCacheTag.posts.detail(slug))
+ *
+ * // 無効化
+ * revalidateTag(CACHE_TAGS.POSTS)
+ * ```
+ */
+export const CACHE_TAGS = {
+  /** 投稿記事 */
+  POSTS: 'posts',
+  /** 投稿カテゴリ */
+  POST_CATEGORIES: 'post-categories',
+  /** 投稿タグ */
+  POST_TAGS: 'post-tags',
+  /** 投稿コメント */
+  POST_COMMENTS: 'post-comments',
+  /** お知らせ */
+  NEWS: 'news',
+  /** スペース */
+  SPACES: 'spaces',
+  /** スペースカテゴリ */
+  SPACE_CATEGORIES: 'space-categories',
+  /** ロケーション */
+  LOCATIONS: 'locations',
+  /** カスタムページ */
+  PAGES: 'pages',
+  /** サイト設定 */
+  SETTINGS: 'settings',
+  /** FAQ */
+  FAQ: 'faq',
+  /** FAQカテゴリ */
+  FAQ_CATEGORIES: 'faq-categories',
+  /** 予約 */
+  RESERVATIONS: 'reservations',
+  /** 顧客 */
+  CUSTOMERS: 'customers',
+  /** お問い合わせ */
+  INQUIRIES: 'inquiries',
+  /** メディア */
+  MEDIA: 'media',
+  /** ナビゲーション */
+  NAVIGATION: 'navigation',
+  /** アナウンスバー */
+  ANNOUNCEMENT_BAR: 'announcement-bar',
+  /** ホームページセクション */
+  HOMEPAGE_SECTIONS: 'homepage-sections',
+  /** 利用規約 */
+  TERMS: 'terms',
+  /** スタッフ */
+  STAFF: 'staff',
+  /** クーポン */
+  COUPONS: 'coupons',
+} as const
+
+/**
+ * 階層的キャッシュタグ生成ヘルパー
+ *
+ * @example
+ * ```typescript
+ * // 詳細ページのタグ
+ * cacheTag(getCacheTag.posts.detail(slug))
+ *
+ * // 無効化（詳細のみ）
+ * revalidateTag(getCacheTag.posts.detail(slug))
+ *
+ * // 無効化（リスト全体）
+ * revalidateTag(CACHE_TAGS.POSTS)
+ * ```
+ */
+export const getCacheTag = {
+  posts: {
+    list: () => CACHE_TAGS.POSTS,
+    detail: (slug: string) => `${CACHE_TAGS.POSTS}-${slug}`,
+    comments: (slug: string) => `${CACHE_TAGS.POST_COMMENTS}-${slug}`,
+    tags: () => CACHE_TAGS.POST_TAGS,
+    tagPage: (slug: string) => `${CACHE_TAGS.POST_TAGS}-${slug}`,
+  },
+  news: {
+    list: () => CACHE_TAGS.NEWS,
+    detail: (id: string) => `${CACHE_TAGS.NEWS}-${id}`,
+  },
+  spaces: {
+    list: () => CACHE_TAGS.SPACES,
+    detail: (id: string) => `${CACHE_TAGS.SPACES}-${id}`,
+  },
+  pages: {
+    list: () => CACHE_TAGS.PAGES,
+    detail: (slug: string) => `${CACHE_TAGS.PAGES}-${slug}`,
+  },
+  faq: {
+    list: () => CACHE_TAGS.FAQ,
+    detail: (id: string) => `${CACHE_TAGS.FAQ}-${id}`,
+  },
+  reservations: {
+    list: () => CACHE_TAGS.RESERVATIONS,
+    detail: (id: string) => `${CACHE_TAGS.RESERVATIONS}-${id}`,
+    calendar: () => `${CACHE_TAGS.RESERVATIONS}-calendar`,
+  },
+  customers: {
+    list: () => CACHE_TAGS.CUSTOMERS,
+    detail: (id: string) => `${CACHE_TAGS.CUSTOMERS}-${id}`,
+  },
+  inquiries: {
+    list: () => CACHE_TAGS.INQUIRIES,
+    detail: (id: string) => `${CACHE_TAGS.INQUIRIES}-${id}`,
+  },
+  coupons: {
+    list: () => CACHE_TAGS.COUPONS,
+    detail: (id: string) => `${CACHE_TAGS.COUPONS}-${id}`,
+  },
+} as const
+
+/** キャッシュ有効期間の型 */
+export type CacheLife = (typeof CACHE_LIFE)[keyof typeof CACHE_LIFE]
+
+/** キャッシュタグの型 */
+export type CacheTag = (typeof CACHE_TAGS)[keyof typeof CACHE_TAGS]

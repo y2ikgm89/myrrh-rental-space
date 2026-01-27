@@ -28,7 +28,7 @@ import {
   getGlassShimmerStyle,
   type DesignStyle,
   type AnimationType,
-} from '@/public/lib/announcement-bar-utils'
+} from '@/shared/lib/announcement-bar-utils'
 
 // =============================================================================
 // Types
@@ -109,13 +109,22 @@ function isWithinDisplayPeriod(bar: AnnouncementBarItem): boolean {
 
 const SESSION_STORAGE_CHANGE_EVENT = 'announcement-bar-dismissed'
 
+// スナップショットのキャッシュ（参照を安定させるため）
+let cachedDismissedIds: string[] = []
+let cachedDismissedIdsJson = ''
+
 function getDismissedIds(): string[] {
-  if (typeof window === 'undefined') return []
+  if (typeof window === 'undefined') return cachedDismissedIds
   try {
-    const dismissed = sessionStorage.getItem(STORAGE_KEY)
-    return dismissed ? JSON.parse(dismissed) : []
+    const json = sessionStorage.getItem(STORAGE_KEY) ?? ''
+    // JSONが変わった場合のみ新しい配列を作成
+    if (json !== cachedDismissedIdsJson) {
+      cachedDismissedIdsJson = json
+      cachedDismissedIds = json ? JSON.parse(json) : []
+    }
+    return cachedDismissedIds
   } catch {
-    return []
+    return cachedDismissedIds
   }
 }
 
@@ -123,8 +132,12 @@ function addDismissedId(id: string): void {
   try {
     const dismissed = getDismissedIds()
     if (!dismissed.includes(id)) {
-      dismissed.push(id)
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(dismissed))
+      const newDismissed = [...dismissed, id]
+      const json = JSON.stringify(newDismissed)
+      sessionStorage.setItem(STORAGE_KEY, json)
+      // キャッシュを更新
+      cachedDismissedIdsJson = json
+      cachedDismissedIds = newDismissed
       // 同一タブ内の変更を検知するためにカスタムイベントを発火
       window.dispatchEvent(new CustomEvent(SESSION_STORAGE_CHANGE_EVENT))
     }
@@ -134,7 +147,7 @@ function addDismissedId(id: string): void {
 }
 
 function getServerSnapshot(): string[] {
-  return []
+  return cachedDismissedIds
 }
 
 // useSyncExternalStore用のsubscribe関数（コンポーネント外で定義して参照を安定させる）

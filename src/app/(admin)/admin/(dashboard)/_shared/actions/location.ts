@@ -1,7 +1,7 @@
 'use server'
 
 import { prisma, Prisma } from '@/shared/lib/prisma'
-import { revalidateTag } from 'next/cache'
+import { updateTag } from 'next/cache'
 import { CACHE_TAGS } from '@/shared/lib/constants'
 import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
 import { withPermission } from '@/admin/lib/server-action-helpers'
@@ -211,7 +211,7 @@ export const createLocation = withPermission<[input: LocationFormInput], { id: s
     },
   })
 
-  revalidateTag(CACHE_TAGS.LOCATIONS, 'default')
+  updateTag(CACHE_TAGS.LOCATIONS)
 
   return createSuccess('場所を作成しました', { id: location.id })
 })
@@ -255,7 +255,7 @@ export const updateLocation = withPermission<[id: string, input: LocationFormInp
     },
   })
 
-  revalidateTag(CACHE_TAGS.LOCATIONS, 'default')
+  updateTag(CACHE_TAGS.LOCATIONS)
 
   return createSuccess('場所を更新しました', { id })
 })
@@ -277,7 +277,7 @@ export const toggleLocationPublish = withPermission<[id: string, isPublished: bo
     data: { isPublished },
   })
 
-  revalidateTag(CACHE_TAGS.LOCATIONS, 'default')
+  updateTag(CACHE_TAGS.LOCATIONS)
 
   return createSuccess('公開状態を更新しました', { id, isPublished })
 })
@@ -298,7 +298,7 @@ export const updateLocationOrder = withPermission<[items: { id: string; sortOrde
     )
   )
 
-  revalidateTag(CACHE_TAGS.LOCATIONS, 'default')
+  updateTag(CACHE_TAGS.LOCATIONS)
 
   return createSuccess('並び順を更新しました', { updated: items.length })
 })
@@ -334,7 +334,7 @@ export const deleteLocation = withPermission<[id: string], { id: string }>(
     data: { isActive: false },
   })
 
-  revalidateTag(CACHE_TAGS.LOCATIONS, 'default')
+  updateTag(CACHE_TAGS.LOCATIONS)
 
   return createSuccess('場所を削除しました', { id })
 })
@@ -363,7 +363,7 @@ export const hardDeleteLocation = withPermission<[id: string], { id: string }>(
 
   await prisma.location.delete({ where: { id } })
 
-  revalidateTag(CACHE_TAGS.LOCATIONS, 'default')
+  updateTag(CACHE_TAGS.LOCATIONS)
 
   return createSuccess('場所を完全に削除しました', { id })
 })

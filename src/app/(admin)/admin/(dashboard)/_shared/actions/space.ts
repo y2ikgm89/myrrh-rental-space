@@ -1,7 +1,7 @@
 'use server'
 
 import { prisma } from '@/shared/lib/prisma'
-import { revalidateTag } from 'next/cache'
+import { updateTag } from 'next/cache'
 import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
 import {
   spaceFormSchema,
@@ -11,11 +11,14 @@ import {
   type SpaceFilters,
   type SpacePagination,
 } from '@/admin/lib/validations/space'
-import { createSuccess, createFailure, withPermission, type ActionResult } from '@/admin/types/server-actions'
+import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+import { withPermission } from '@/admin/lib/server-action-helpers'
 import type { SpaceWhereInput } from '@/shared/types/prisma'
-import { parseStringArray, parseBusinessHours } from '@/shared/lib/json-validators'
+import { parseStringArray, parseBusinessHours, parseDiscountType, parseDurationDiscountOverride, parseTaxRateType } from '@/shared/lib/json-validators'
 import { checkReadPermissionFor } from '@/admin/lib/permissions'
 import { ACTIVE_RESERVATION_STATUSES } from '@/shared/lib/validations/enums'
+import { purgeSpaceCache } from '@/shared/lib/cloudflare'
+import { checkSlugAvailability, getSlugErrorMessage } from '@/shared/lib/slug-validation'
 
 // =============================================================================
 // Helper Functions
@@ -91,6 +94,7 @@ export async function getSpaces(
   // Symbol プロパティを除去して Client Components に渡せるようにする
   const formattedSpaces: SpaceWithStats[] = spaces.map((s) => ({
     id: s.id,
+    slug: s.slug,
     name: s.name,
     description: s.description,
     address: s.address,
@@ -111,6 +115,12 @@ export async function getSpaces(
     termsId: s.termsId,
     locationId: s.locationId,
     categoryId: s.categoryId,
+    // 割引設定
+    discountType: parseDiscountType(s.discountType),
+    discountValue: s.discountValue ? Number(s.discountValue) : null,
+    durationDiscountOverride: parseDurationDiscountOverride(s.durationDiscountOverride),
+    // 税率設定
+    taxRateType: parseTaxRateType(s.taxRateType),
     // SEO/OGP
     metaDescription: s.metaDescription,
     metaKeywords: s.metaKeywords,
@@ -157,6 +167,7 @@ export async function getSpaceById(id: string): Promise<SpaceWithStats | null> {
   // Symbol プロパティを除去して Client Components に渡せるようにする
   return {
     id: space.id,
+    slug: space.slug,
     name: space.name,
     description: space.description,
     address: space.address,
@@ -177,6 +188,12 @@ export async function getSpaceById(id: string): Promise<SpaceWithStats | null> {
     termsId: space.termsId,
     locationId: space.locationId,
     categoryId: space.categoryId,
+    // 割引設定
+    discountType: parseDiscountType(space.discountType),
+    discountValue: space.discountValue ? Number(space.discountValue) : null,
+    durationDiscountOverride: parseDurationDiscountOverride(space.durationDiscountOverride),
+    // 税率設定
+    taxRateType: parseTaxRateType(space.taxRateType),
     // SEO/OGP
     metaDescription: space.metaDescription,
     metaKeywords: space.metaKeywords,
@@ -226,6 +243,7 @@ export async function getSpaceStats(): Promise<{
  */
 export type SpaceSelectOption = {
   id: string
+  slug: string
   name: string
   mainImageUrl: string
   hourlyPrice: string
@@ -242,6 +260,7 @@ export async function getSpacesForSelect(): Promise<ActionResult<SpaceSelectOpti
     where: { isActive: true, isPublished: true },
     select: {
       id: true,
+      slug: true,
       name: true,
       mainImageUrl: true,
       hourlyPrice: true,
@@ -252,6 +271,7 @@ export async function getSpacesForSelect(): Promise<ActionResult<SpaceSelectOpti
 
   return createSuccess('取得しました', spaces.map((s) => ({
     id: s.id,
+    slug: s.slug,
     name: s.name,
     mainImageUrl: s.mainImageUrl,
     hourlyPrice: String(s.hourlyPrice),
@@ -277,8 +297,17 @@ export const createSpace = withPermission<[input: SpaceFormData], { id: string }
 
   const data = parsed.data
 
+  // スラッグの使用可能チェック（予約パス＋全コンテンツタイプ横断）
+  const slugCheck = await checkSlugAvailability(data.slug, {
+    currentType: 'space',
+  })
+  if (!slugCheck.available) {
+    return createFailure(getSlugErrorMessage(slugCheck.reason))
+  }
+
   const space = await prisma.space.create({
     data: {
+      slug: data.slug,
       name: data.name,
       description: data.description,
       address: data.address,
@@ -295,6 +324,12 @@ export const createSpace = withPermission<[input: SpaceFormData], { id: string }
       termsId: data.termsId || null,
       locationId: data.locationId || null,
       categoryId: data.categoryId || null,
+      // 割引設定
+      discountType: data.discountType ?? 'none',
+      discountValue: data.discountValue ?? null,
+      durationDiscountOverride: data.durationDiscountOverride ?? 'inherit',
+      // 税率設定
+      taxRateType: data.taxRateType ?? 'standard',
       // SEO フィールド
       metaDescription: data.metaDescription || null,
       metaKeywords: data.metaKeywords || null,
@@ -305,7 +340,10 @@ export const createSpace = withPermission<[input: SpaceFormData], { id: string }
     },
   })
 
-  revalidateTag(CACHE_TAGS.SPACES, 'default')
+  updateTag(CACHE_TAGS.SPACES)
+
+  // Cloudflare CDN キャッシュパージ（設定がある場合のみ実行）
+  void purgeSpaceCache(space.id)
 
   return createSuccess('スペースを作成しました', { id: space.id })
 })
@@ -332,6 +370,15 @@ export const updateSpace = withPermission<[id: string, input: SpaceFormData], vo
 
   const data = parsed.data
 
+  // スラッグの使用可能チェック（予約パス＋全コンテンツタイプ横断、自分自身は除外）
+  const slugCheck = await checkSlugAvailability(data.slug, {
+    currentType: 'space',
+    currentId: id,
+  })
+  if (!slugCheck.available) {
+    return createFailure(getSlugErrorMessage(slugCheck.reason))
+  }
+
   // 公開状態が変わった場合はpublishedAtを更新
   let publishedAt = existingSpace.publishedAt
   if (data.isPublished && !existingSpace.isPublished) {
@@ -343,6 +390,7 @@ export const updateSpace = withPermission<[id: string, input: SpaceFormData], vo
   await prisma.space.update({
     where: { id },
     data: {
+      slug: data.slug,
       name: data.name,
       description: data.description,
       address: data.address,
@@ -359,6 +407,12 @@ export const updateSpace = withPermission<[id: string, input: SpaceFormData], vo
       termsId: data.termsId || null,
       locationId: data.locationId || null,
       categoryId: data.categoryId || null,
+      // 割引設定
+      discountType: data.discountType ?? 'none',
+      discountValue: data.discountValue ?? null,
+      durationDiscountOverride: data.durationDiscountOverride ?? 'inherit',
+      // 税率設定
+      taxRateType: data.taxRateType ?? 'standard',
       // SEO フィールド
       metaDescription: data.metaDescription || null,
       metaKeywords: data.metaKeywords || null,
@@ -369,8 +423,11 @@ export const updateSpace = withPermission<[id: string, input: SpaceFormData], vo
     },
   })
 
-  revalidateTag(CACHE_TAGS.SPACES, 'default')
-  revalidateTag(getCacheTag.spaces.detail(id), 'default')
+  updateTag(CACHE_TAGS.SPACES)
+  updateTag(getCacheTag.spaces.detail(id))
+
+  // Cloudflare CDN キャッシュパージ
+  void purgeSpaceCache(id)
 
   return createSuccess('スペースを更新しました')
 })
@@ -398,8 +455,11 @@ export const updateSpacePublish = withPermission<[id: string, isPublished: boole
     },
   })
 
-  revalidateTag(CACHE_TAGS.SPACES, 'default')
-  revalidateTag(getCacheTag.spaces.detail(id), 'default')
+  updateTag(CACHE_TAGS.SPACES)
+  updateTag(getCacheTag.spaces.detail(id))
+
+  // Cloudflare CDN キャッシュパージ
+  void purgeSpaceCache(id)
 
   return createSuccess('公開状態を更新しました')
 })
@@ -444,7 +504,10 @@ export const deleteSpace = withPermission<[id: string], void>(
     },
   })
 
-  revalidateTag(CACHE_TAGS.SPACES, 'default')
+  updateTag(CACHE_TAGS.SPACES)
+
+  // Cloudflare CDN キャッシュパージ
+  void purgeSpaceCache(id)
 
   return createSuccess('スペースを削除しました')
 })
@@ -475,8 +538,11 @@ export const toggleSpacePublished = withPermission<[id: string], void>(
     },
   })
 
-  revalidateTag(CACHE_TAGS.SPACES, 'default')
-  revalidateTag(getCacheTag.spaces.detail(id), 'default')
+  updateTag(CACHE_TAGS.SPACES)
+  updateTag(getCacheTag.spaces.detail(id))
+
+  // Cloudflare CDN キャッシュパージ
+  void purgeSpaceCache(id)
 
   return createSuccess(newIsPublished ? 'スペースを公開しました' : 'スペースを非公開にしました')
 })

@@ -13,7 +13,7 @@ import { connection } from 'next/server'
 import { getAnnouncementBars } from '@/admin/actions/announcement-bar'
 import { getAnnouncementBarCarouselSettings } from '@/admin/actions/settings'
 import { SettingsLayout } from '../_components/SettingsLayout'
-import { AnnouncementBarManager } from '../site/_components/AnnouncementBarManager'
+import { AnnouncementBarManager } from '../site/_components/announcement-bar'
 import type { ReactElement } from 'react'
 
 /**

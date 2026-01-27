@@ -7,6 +7,8 @@
  * Prisma関連のインポートは含めない（server-onlyモジュールを避けるため）
  */
 
+import { isRecord } from '@/shared/lib/serialize'
+
 // =============================================================================
 // BusinessHours 型
 // =============================================================================
@@ -67,13 +69,12 @@ export type BusinessHours = {
  * TimeSlot型であるか判定
  */
 function isTimeSlot(value: unknown): value is TimeSlot {
-  if (typeof value !== 'object' || value === null) return false
-  const obj = value as Record<string, unknown>
+  if (!isRecord(value)) return false
   return (
-    typeof obj.open === 'string' &&
-    typeof obj.close === 'string' &&
-    /^\d{2}:\d{2}$/.test(obj.open) &&
-    /^\d{2}:\d{2}$/.test(obj.close)
+    typeof value.open === 'string' &&
+    typeof value.close === 'string' &&
+    /^\d{2}:\d{2}$/.test(value.open) &&
+    /^\d{2}:\d{2}$/.test(value.close)
   )
 }
 
@@ -88,18 +89,17 @@ function isDayOfWeek(value: unknown): value is DayOfWeek {
  * BusinessHours型であるか判定
  */
 export function isBusinessHours(value: unknown): value is BusinessHours {
-  if (typeof value !== 'object' || value === null) return false
-  const obj = value as Record<string, unknown>
+  if (!isRecord(value)) return false
 
   for (const day of DAYS_OF_WEEK) {
-    const slot = obj[day]
+    const slot = value[day]
     if (slot !== null && !isTimeSlot(slot)) {
       return false
     }
   }
 
   // 少なくとも1つの曜日キーが存在するか確認
-  const keys = Object.keys(obj)
+  const keys = Object.keys(value)
   return keys.some((key) => isDayOfWeek(key))
 }
 

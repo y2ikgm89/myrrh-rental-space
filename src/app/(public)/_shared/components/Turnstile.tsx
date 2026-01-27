@@ -1,6 +1,14 @@
 'use client'
 
+/**
+ * Cloudflare Turnstile コンポーネント
+ *
+ * Site KeyはDBから取得され、propsで渡されます。
+ * 環境変数は不要です。
+ */
+
 import { useEffect, useRef } from 'react'
+import { logger } from '@/shared/lib/logger'
 
 declare global {
   interface Window {
@@ -23,6 +31,7 @@ declare global {
 }
 
 type Props = {
+  siteKey: string
   onVerify: (token: string) => void
   onError?: () => void
   onExpire?: () => void
@@ -32,6 +41,7 @@ type Props = {
 }
 
 export function Turnstile({
+  siteKey,
   onVerify,
   onError,
   onExpire,
@@ -43,10 +53,8 @@ export function Turnstile({
   const widgetIdRef = useRef<string | null>(null)
 
   useEffect(() => {
-    const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
-
     if (!siteKey) {
-      console.warn('Turnstile site key is not configured')
+      logger.warn('Turnstile site key is not provided')
       return
     }
 
@@ -98,7 +106,7 @@ export function Turnstile({
         window.turnstile.remove(widgetIdRef.current)
       }
     }
-  }, [onVerify, onError, onExpire, theme, size])
+  }, [siteKey, onVerify, onError, onExpire, theme, size])
 
   return <div ref={containerRef} className={className} />
 }

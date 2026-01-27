@@ -7,7 +7,7 @@
  */
 
 import { MediaItem } from './MediaItem'
-import type { MediaData } from '@/admin/actions/media'
+import type { MediaData } from '@/admin/types/media-picker'
 
 interface MediaGridProps {
   items: MediaData[]

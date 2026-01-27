@@ -7,12 +7,15 @@
  */
 
 import { prisma } from '@/shared/lib/prisma'
-import { revalidatePath, revalidateTag } from 'next/cache'
-import { createSuccess, createFailure, withPermission } from '@/admin/types/server-actions'
+import { updateTag } from 'next/cache'
+import { CACHE_TAGS } from '@/shared/lib/constants'
+import { createSuccess, createFailure } from '@/admin/types/server-actions'
+import { withPermission } from '@/admin/lib/server-action-helpers'
 import { getSession, getRoleFromSession } from '@/shared/lib/auth'
 import { HomepageSectionType } from '@/shared/lib/validations/enums'
 import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'
 import { logPermissionDenied } from '@/admin/lib/audit'
+import { purgeHomeCache } from '@/shared/lib/cloudflare'
 import {
   createHomepageSectionSchema,
   updateHomepageSectionSchema,
@@ -72,10 +75,11 @@ async function checkReadPermission(): Promise<boolean> {
 }
 
 function revalidateHomepage() {
-  revalidatePath('/')
-  revalidatePath('/admin/pages')
-  revalidatePath('/admin/pages/homepage/edit')
-  revalidateTag('homepage', { expire: 0 })
+  updateTag(CACHE_TAGS.PAGES)
+  updateTag(CACHE_TAGS.SETTINGS)
+
+  // Cloudflare CDN キャッシュパージ
+  void purgeHomeCache()
 }
 
 // =============================================================================

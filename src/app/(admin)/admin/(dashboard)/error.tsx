@@ -32,10 +32,10 @@ export default function AdminError({ error, reset }: ErrorProps) {
 
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center px-4">
-      <div className="w-full max-w-md rounded-lg border border-red-200 bg-red-50 p-8 text-center">
+      <div className="w-full max-w-md rounded-lg border border-destructive/50 bg-destructive/10 p-8 text-center">
         <div className="mb-6">
           <svg
-            className="mx-auto h-16 w-16 text-red-500"
+            className="mx-auto h-16 w-16 text-destructive"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"

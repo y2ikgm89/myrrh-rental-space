@@ -45,7 +45,7 @@ function generateExcerpt(content: string, maxLength: number = 100): string {
 }
 
 export interface NewsCardProps {
-  news: Pick<News, 'id' | 'title' | 'content' | 'publishedAt'>
+  news: Pick<News, 'id' | 'slug' | 'title' | 'content' | 'publishedAt'>
 }
 
 export function NewsCard({ news }: NewsCardProps): ReactElement {
@@ -53,7 +53,7 @@ export function NewsCard({ news }: NewsCardProps): ReactElement {
 
   return (
     <Link
-      href={`/news/${news.id}`}
+      href={`/news/${news.slug}`}
       className={styles.cardWrapper()}
       aria-label={news.title}
     >

@@ -1,14 +1,23 @@
 /**
  * ワンタイムログイントークン生成API
  *
- * 管理者がスタッフにログインURLを共有するためのワンタイムトークンを生成
+ * 管理者がスタッフにログインURLを共有するためのワンタイムトークンを生成します。
+ * トークンは30日間有効で、複数回使用可能です。
+ *
+ * ## 機能
+ * - トークン生成（POST）
+ * - アクティブなトークン一覧取得（GET）
+ *
+ * @module api/admin/login-tokens
  */
 
 import { NextResponse } from 'next/server'
-import { getSession } from '@/shared/lib/auth'
+import { getSession, getRoleFromSession } from '@/shared/lib/auth'
 import { prisma } from '@/shared/lib/prisma'
 import { getAppUrl } from '@/shared/lib/constants'
 import { randomBytes } from 'crypto'
+import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
+import { isAdminRole, isSuperAdminRole } from '@/admin/lib/role-guards'
 
 /**
  * ワンタイムトークンを生成
@@ -17,7 +26,8 @@ export async function POST(): Promise<NextResponse> {
   try {
     // 認証チェック
     const session = await getSession()
-    if (!session?.user || session.user.role !== 'ADMIN') {
+    const role = getRoleFromSession(session)
+    if (!session?.user || !role || (!isAdminRole(role) && !isSuperAdminRole(role))) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -49,7 +59,11 @@ export async function POST(): Promise<NextResponse> {
       expiresAt: loginToken.expiresAt.toISOString(),
     })
   } catch (error: unknown) {
-    console.error('Error generating login token:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.HIGH,
+      context: { operation: 'generateLoginToken' },
+    })
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -64,7 +78,8 @@ export async function GET(): Promise<NextResponse> {
   try {
     // 認証チェック
     const session = await getSession()
-    if (!session?.user || session.user.role !== 'ADMIN') {
+    const role = getRoleFromSession(session)
+    if (!session?.user || !role || (!isAdminRole(role) && !isSuperAdminRole(role))) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -93,7 +108,11 @@ export async function GET(): Promise<NextResponse> {
       })),
     })
   } catch (error: unknown) {
-    console.error('Error fetching login tokens:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'fetchLoginTokens' },
+    })
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

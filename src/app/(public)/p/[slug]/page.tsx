@@ -24,7 +24,7 @@ import { tv } from 'tailwind-variants'
 import { ContentRenderer } from '@/public/components/ContentRenderer'
 import { BreadcrumbJsonLd } from '@/public/components/seo/JsonLd'
 import { BlogSidebar } from '@/public/components/sidebar'
-import { getSidebarSettings, getSidebarData } from '@/public/actions/sidebar'
+import { getSidebarFullData } from '@/public/actions/sidebar'
 import { prisma } from '@/shared/lib/prisma'
 import { criticalFetch, ErrorCategory } from '@/shared/lib/errors'
 import { toPlainObject } from '@/shared/lib/serialize'
@@ -32,6 +32,7 @@ import { getPageLayoutSettings } from '@/public/lib/layout-settings'
 import { getContainerStyles, getContentStyles } from '@/shared/lib/styles/layout-mapper'
 import { SYSTEM_PAGE_SLUGS } from '@/shared/lib/validations/page'
 import { getBaseUrl, CACHE_LIFE, CACHE_TAGS } from '@/shared/lib/constants'
+import { getPostUrlPrefix } from '@/shared/lib/settings/public'
 import { PagePreviewWrapper } from './_components'
 import type { ReactElement } from 'react'
 
@@ -302,12 +303,12 @@ export default async function CustomPage({ params, searchParams }: PageProps): P
   const showSidebar = page.showSidebar === true
 
   // サイドバーデータを取得（showSidebar が true の場合のみ）
-  const [sidebarSettings, sidebarData] = showSidebar
-    ? await Promise.all([getSidebarSettings(), getSidebarData()])
-    : [{ enabled: false, widgets: {} }, null]
+  const [sidebar, postPrefix] = showSidebar
+    ? await Promise.all([getSidebarFullData(), getPostUrlPrefix()])
+    : [{ enabled: false, widgets: {}, data: null }, '/posts']
 
   // サイドバーを実際に表示するかどうか
-  const shouldShowSidebar = showSidebar && sidebarSettings.enabled
+  const shouldShowSidebar = showSidebar && sidebar.enabled
 
   // レイアウト設定を取得
   const layoutConfig = await getPageLayoutSettings(page.slug)
@@ -352,9 +353,9 @@ export default async function CustomPage({ params, searchParams }: PageProps): P
           </main>
 
           {/* サイドバー */}
-          {shouldShowSidebar && sidebarData && (
+          {shouldShowSidebar && sidebar.data && (
             <aside className={styles.sidebar()}>
-              <BlogSidebar settings={sidebarSettings.widgets} data={sidebarData} />
+              <BlogSidebar settings={sidebar.widgets} data={sidebar.data} postPrefix={postPrefix} />
             </aside>
           )}
         </div>

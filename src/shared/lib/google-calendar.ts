@@ -1,11 +1,24 @@
 /**
  * Google Calendar API 統合
  *
- * サービスアカウントを使用して共有カレンダーに予約を自動登録
- * OAuth連携で管理者の個人カレンダーにも追加可能
+ * サービスアカウントを使用して共有カレンダーに予約を自動登録します。
+ * OAuth連携で管理者の個人カレンダーにも追加可能です。
+ *
+ * ## 機能
+ * - **サービスアカウント連携**: 共有カレンダーへの自動登録
+ * - **OAuth連携**: 管理者の個人カレンダーへの追加
+ * - **双方向同期**: カレンダー変更の検知と反映
+ * - **Webhook**: リアルタイム変更通知
+ *
+ * ## 接続方式
+ * - サービスアカウント: 共有カレンダーへの書き込み（推奨）
+ * - OAuth: 管理者個人カレンダーへのアクセス
+ *
+ * @module shared/lib/google-calendar
  */
 
 import { google, calendar_v3 } from 'googleapis'
+import { logError, ErrorCategory, ErrorSeverity, normalizeError } from './errors'
 import { safeDecrypt, encryptApiKey } from '@/shared/lib/crypto'
 import { prisma } from '@/shared/lib/prisma'
 
@@ -69,7 +82,11 @@ export async function getServiceAccountClient(): Promise<calendar_v3.Calendar | 
 
   const decryptedJson = safeDecrypt(settings.googleCalendarServiceAccountJson)
   if (!decryptedJson) {
-    console.error('Failed to decrypt service account credentials')
+    logError(new Error('Failed to decrypt service account credentials'), {
+      category: ErrorCategory.UNKNOWN,
+      severity: ErrorSeverity.HIGH,
+      context: { operation: 'getServiceAccountClient' },
+    })
     return null
   }
 
@@ -82,7 +99,11 @@ export async function getServiceAccountClient(): Promise<calendar_v3.Calendar | 
 
     return google.calendar({ version: 'v3', auth })
   } catch (error) {
-    console.error('Failed to initialize Google Calendar client:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.HIGH,
+      context: { operation: 'getServiceAccountClient' },
+    })
     return null
   }
 }
@@ -145,7 +166,11 @@ export async function getOAuthClient(
 
     return google.calendar({ version: 'v3', auth: oauth2Client })
   } catch (error) {
-    console.error('Failed to initialize OAuth client:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.HIGH,
+      context: { operation: 'getOAuthClient', userId },
+    })
     return null
   }
 }
@@ -204,7 +229,11 @@ export async function createCalendarEvent(
       eventUrl: response.data.htmlLink ?? undefined,
     }
   } catch (error) {
-    console.error('Failed to create calendar event:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'createCalendarEvent', summary: params.summary },
+    })
     return {
       success: false,
       error: formatGoogleApiError(error),
@@ -261,7 +290,11 @@ export async function updateCalendarEvent(
       eventUrl: response.data.htmlLink ?? undefined,
     }
   } catch (error) {
-    console.error('Failed to update calendar event:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'updateCalendarEvent', eventId },
+    })
     return {
       success: false,
       error: formatGoogleApiError(error),
@@ -298,7 +331,11 @@ export async function deleteCalendarEvent(
 
     return { success: true }
   } catch (error) {
-    console.error('Failed to delete calendar event:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'deleteCalendarEvent', eventId },
+    })
     return {
       success: false,
       error: formatGoogleApiError(error),
@@ -344,7 +381,11 @@ export async function createOAuthCalendarEvent(
       eventUrl: response.data.htmlLink ?? undefined,
     }
   } catch (error) {
-    console.error('Failed to create OAuth calendar event:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'createOAuthCalendarEvent', userId, summary: params.summary },
+    })
     return {
       success: false,
       error: formatGoogleApiError(error),
@@ -384,7 +425,11 @@ export async function testServiceAccountConnection(params: {
       accountEmail: credentials.client_email,
     }
   } catch (error) {
-    console.error('Google Calendar connection test failed:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'testServiceAccountConnection', calendarId: params.calendarId },
+    })
     return {
       success: false,
       error: formatGoogleApiError(error),
@@ -413,7 +458,11 @@ export async function testOAuthConnection(
       calendarName: response.data.summary ?? undefined,
     }
   } catch (error) {
-    console.error('OAuth connection test failed:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'testOAuthConnection', userId },
+    })
     return {
       success: false,
       error: formatGoogleApiError(error),
@@ -572,11 +621,14 @@ export async function fetchCalendarChanges(
   } catch (error) {
     // syncTokenが期限切れの場合はフルシンク
     if (error instanceof Error && error.message.includes('410')) {
-      console.log('Sync token expired, performing full sync')
       return fetchCalendarChanges(null)
     }
 
-    console.error('Failed to fetch calendar changes:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'fetchCalendarChanges', hasSyncToken: !!syncToken },
+    })
     return {
       success: false,
       changes: [],
@@ -613,7 +665,11 @@ export async function getCalendarEvent(
 
     return { success: true, event: response.data }
   } catch (error) {
-    console.error('Failed to get calendar event:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.LOW,
+      context: { operation: 'getCalendarEvent', eventId },
+    })
     return { success: false, error: formatGoogleApiError(error) }
   }
 }
@@ -652,6 +708,7 @@ export async function setupWebhookWatch(
 
   try {
     const channelId = crypto.randomUUID()
+    const webhookToken = crypto.randomUUID() // 認証用トークン
     const expiration = new Date()
     expiration.setDate(expiration.getDate() + 7) // 7日間有効（最大）
 
@@ -661,8 +718,15 @@ export async function setupWebhookWatch(
         id: channelId,
         type: 'web_hook',
         address: webhookUrl,
+        token: webhookToken, // x-goog-channel-token として送信される
         expiration: String(expiration.getTime()),
       },
+    })
+
+    // トークンをDBに保存
+    await prisma.settings.update({
+      where: { id: 'singleton' },
+      data: { googleCalendarWebhookToken: webhookToken },
     })
 
     return {
@@ -674,7 +738,11 @@ export async function setupWebhookWatch(
         : undefined,
     }
   } catch (error) {
-    console.error('Failed to setup webhook watch:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.HIGH,
+      context: { operation: 'setupWebhookWatch', webhookUrl },
+    })
     return {
       success: false,
       error: formatGoogleApiError(error),
@@ -704,7 +772,11 @@ export async function stopWebhookWatch(
 
     return { success: true }
   } catch (error) {
-    console.error('Failed to stop webhook watch:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'stopWebhookWatch', channelId, resourceId },
+    })
     return {
       success: false,
       error: formatGoogleApiError(error),
@@ -845,8 +917,6 @@ export async function renewWebhookIfNeeded(): Promise<WebhookRenewalResult> {
     return { success: true, renewed: false }
   }
 
-  console.log('Webhook renewal needed. Current expiration:', settings.googleCalendarWebhookExpiration)
-
   try {
     // 既存Webhookを停止（エラーは無視 - Google側で自動期限切れになる）
     if (settings.googleCalendarWebhookChannelId && settings.googleCalendarWebhookResourceId) {
@@ -854,7 +924,11 @@ export async function renewWebhookIfNeeded(): Promise<WebhookRenewalResult> {
         settings.googleCalendarWebhookChannelId,
         settings.googleCalendarWebhookResourceId
       ).catch((err) => {
-        console.warn('Failed to stop old webhook (will expire automatically):', err)
+        logError(normalizeError(err), {
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.LOW,
+          context: { operation: 'renewWebhookIfNeeded', note: 'old webhook stop failed (will expire automatically)' },
+        })
       })
     }
 
@@ -881,15 +955,17 @@ export async function renewWebhookIfNeeded(): Promise<WebhookRenewalResult> {
       },
     })
 
-    console.log('Webhook renewed successfully. New expiration:', result.expiration)
-
     return {
       success: true,
       renewed: true,
       newExpiration: result.expiration,
     }
   } catch (error) {
-    console.error('Webhook renewal failed:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.HIGH,
+      context: { operation: 'renewWebhookIfNeeded' },
+    })
     return {
       success: false,
       renewed: false,

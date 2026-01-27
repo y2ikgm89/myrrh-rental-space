@@ -511,7 +511,7 @@ describe('Page Admin Action Integration', () => {
         { slug: 'reservation', title: '予約', isContentEditable: false },
         { slug: 'spaces', title: 'スペース一覧', isContentEditable: false },
         { slug: 'contact', title: 'お問い合わせ', isContentEditable: false },
-        { slug: 'blog', title: 'ブログ', isContentEditable: false },
+        { slug: 'posts', title: '投稿', isContentEditable: false },
         { slug: 'news', title: 'お知らせ', isContentEditable: false },
       ]
 

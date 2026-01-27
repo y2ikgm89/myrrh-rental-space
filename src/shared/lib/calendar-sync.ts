@@ -1,12 +1,24 @@
 /**
  * カレンダー同期サービス
  *
- * 予約作成・更新・キャンセル時にGoogle Calendarと同期
- * - サービスアカウント: 共有カレンダーへの登録
- * - OAuth: 管理者個人カレンダーへの登録（オプション）
+ * 予約作成・更新・キャンセル時にGoogle Calendarと同期するサービス。
+ * サービスアカウントまたはOAuth経由で連携します。
+ *
+ * ## 同期モード
+ * - **サービスアカウント**: 共有カレンダーへの登録（推奨）
+ * - **OAuth**: 管理者個人カレンダーへの登録（オプション）
+ *
+ * ## 双方向同期（Two-Way Sync）
+ * - カレンダー側での変更を予約システムに反映
+ * - ポーリングまたはWebhookで変更検知
+ * - 競合時は既存予約を優先（変更拒否）
+ *
+ * @module shared/lib/calendar-sync
  */
 
 import { prisma } from '@/shared/lib/prisma'
+import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
+import { fireAndForget } from '@/shared/lib/async-utils'
 import {
   createCalendarEvent,
   updateCalendarEvent,
@@ -134,23 +146,41 @@ export async function syncReservationToCalendar(
       },
     })
 
-    console.error('Failed to sync reservation to calendar:', result.error)
+    logError(new Error(result.error || 'Unknown error'), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: {
+        operation: 'syncReservationToCalendar',
+        reservationId: data.reservationId,
+      },
+    })
     return { success: false, error: result.error }
   } catch (error) {
-    console.error('Calendar sync error:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: {
+        operation: 'syncReservationToCalendar',
+        reservationId: data.reservationId,
+      },
+    })
 
-    // エラーを記録
-    await prisma.reservation
-      .update({
+    // エラーを記録（バックグラウンド）
+    fireAndForget(
+      prisma.reservation.update({
         where: { id: data.reservationId },
         data: {
           calendarSyncError:
             error instanceof Error ? error.message : 'Unknown error',
         },
-      })
-      .catch((updateError) => {
-        console.error('Failed to save calendar sync error:', updateError)
-      })
+      }),
+      {
+        operation: 'saveCalendarSyncError',
+        category: ErrorCategory.DATABASE,
+        severity: ErrorSeverity.LOW,
+        context: { reservationId: data.reservationId },
+      }
+    )
 
     return {
       success: false,
@@ -197,7 +227,15 @@ export async function updateCalendarSync(
 
     return { success: false, error: result.error }
   } catch (error) {
-    console.error('Calendar update sync error:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: {
+        operation: 'updateCalendarSync',
+        reservationId: data.reservationId,
+        eventId: existingEventId,
+      },
+    })
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -235,7 +273,15 @@ export async function deleteCalendarSync(
 
     return { success: false, error: result.error }
   } catch (error) {
-    console.error('Calendar delete sync error:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: {
+        operation: 'deleteCalendarSync',
+        reservationId,
+        eventId,
+      },
+    })
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -245,6 +291,13 @@ export async function deleteCalendarSync(
 
 /**
  * 管理者の個人カレンダーにも同期（OAuth連携時）
+ *
+ * 管理者がOAuthで個人カレンダーを連携している場合、
+ * 予約イベントを個人カレンダーにも追加します。
+ *
+ * @param adminUserId - 管理者ユーザーID
+ * @param data - 予約同期データ
+ * @returns 同期結果
  */
 export async function syncToAdminCalendar(
   adminUserId: string,
@@ -268,7 +321,15 @@ export async function syncToAdminCalendar(
 
     return { success: false, error: result.error }
   } catch (error) {
-    console.error('Admin calendar sync error:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: {
+        operation: 'syncToAdminCalendar',
+        adminUserId,
+        reservationId: data.reservationId,
+      },
+    })
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -377,7 +438,6 @@ export async function syncFromCalendar(): Promise<TwoWaySyncResult> {
       const lastSyncedAt = settings.googleCalendarLastSyncedAt.getTime()
       const now = Date.now()
       if (now - lastSyncedAt < SYNC_MIN_INTERVAL_SECONDS * 1000) {
-        console.log('Sync skipped: too recent (last sync < 10 seconds ago)')
         return { ...result, success: true }
       }
     }
@@ -432,7 +492,11 @@ export async function syncFromCalendar(): Promise<TwoWaySyncResult> {
     result.success = result.errors.length === 0
     return result
   } catch (error) {
-    console.error('Two-way sync error:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.HIGH,
+      context: { operation: 'syncFromCalendar' },
+    })
     return {
       ...result,
       success: false,
@@ -564,31 +628,43 @@ async function processCalendarChange(change: CalendarChange): Promise<ProcessRes
       })
 
       if (!transactionResult.success && transactionResult.overlappingReservation) {
-        console.warn(
-          `Calendar time change rejected due to overlap. Reservation: ${reservation.id}, ` +
-            `Attempted: ${change.startTime.toISOString()} - ${change.endTime.toISOString()}, ` +
-            `Conflict with: ${transactionResult.overlappingReservation.id}`
-        )
+        logError(new Error('Calendar time change rejected due to overlap'), {
+          category: ErrorCategory.VALIDATION,
+          severity: ErrorSeverity.LOW,
+          context: {
+            operation: 'processCalendarChange',
+            reservationId: reservation.id,
+            attemptedStartTime: change.startTime.toISOString(),
+            attemptedEndTime: change.endTime.toISOString(),
+            conflictingReservationId: transactionResult.overlappingReservation.id,
+          },
+        })
 
         // 管理者にメール通知（非同期、トランザクション外）
         const customerName = `${reservation.customer.lastName} ${reservation.customer.firstName}`
-        sendCalendarSyncRejectionEmail({
-          reservationId: reservation.id,
-          spaceName: reservation.space.name,
-          customerName,
-          customerEmail: reservation.customer.email,
-          attemptedStartTime: change.startTime,
-          attemptedEndTime: change.endTime,
-          currentStartTime: reservation.startTime,
-          currentEndTime: reservation.endTime,
-          conflictingReservation: {
-            id: transactionResult.overlappingReservation.id,
-            startTime: transactionResult.overlappingReservation.startTime,
-            endTime: transactionResult.overlappingReservation.endTime,
-          },
-        }).catch((err) => {
-          console.error('Failed to send calendar sync rejection email:', err)
-        })
+        fireAndForget(
+          sendCalendarSyncRejectionEmail({
+            reservationId: reservation.id,
+            spaceName: reservation.space.name,
+            customerName,
+            customerEmail: reservation.customer.email,
+            attemptedStartTime: change.startTime,
+            attemptedEndTime: change.endTime,
+            currentStartTime: reservation.startTime,
+            currentEndTime: reservation.endTime,
+            conflictingReservation: {
+              id: transactionResult.overlappingReservation.id,
+              startTime: transactionResult.overlappingReservation.startTime,
+              endTime: transactionResult.overlappingReservation.endTime,
+            },
+          }),
+          {
+            operation: 'sendCalendarSyncRejectionEmail',
+            category: ErrorCategory.EXTERNAL_API,
+            severity: ErrorSeverity.LOW,
+            context: { reservationId: reservation.id },
+          }
+        )
 
         return { action: 'skipped', reservationId: reservation.id }
       }

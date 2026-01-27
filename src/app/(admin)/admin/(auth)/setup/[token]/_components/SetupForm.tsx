@@ -76,7 +76,7 @@ export function SetupForm({ invitation, token }: Props): ReactElement {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
+        <div className="bg-destructive/10 border border-destructive/50 text-destructive px-4 py-3 rounded-md text-sm">
           {error}
         </div>
       )}

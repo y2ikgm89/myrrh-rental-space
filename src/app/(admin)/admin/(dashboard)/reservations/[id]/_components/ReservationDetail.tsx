@@ -15,8 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
   Input,
-  DeleteConfirmDialog,
 } from '@/admin/components/ui'
+import { DeleteConfirmDialog } from '@/admin/components/DeleteConfirmDialog'
 import { ReservationStatusBadge } from '@/admin/components/status-badges'
 import {
   updateReservationStatus,

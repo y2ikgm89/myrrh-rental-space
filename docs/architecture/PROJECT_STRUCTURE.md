@@ -93,8 +93,8 @@ myrrh-rental-space/
 │       │   │   ├── components/  # 公開専用コンポーネント（tailwind-variants ベース）
 │       │   │   │   ├── ui/          # カスタム UI コンポーネント
 │       │   │   │   ├── layouts/     # Header, Footer, MobileMenu
-│       │   │   │   ├── sections/    # Hero, BlogSection, NewsSection, FAQSection
-│       │   │   │   ├── sidebar/     # ブログサイドバー
+│       │   │   │   ├── sections/    # Hero, PostSection, NewsSection, FAQSection
+│       │   │   │   ├── sidebar/     # 投稿サイドバー
 │       │   │   │   ├── a11y/        # アクセシビリティ
 │       │   │   │   ├── analytics/   # アナリティクス
 │       │   │   │   └── seo/         # SEO
@@ -106,7 +106,7 @@ myrrh-rental-space/
 │       │   ├── reservation/
 │       │   ├── spaces/
 │       │   ├── news/
-│       │   ├── blog/
+│       │   ├── posts/
 │       │   └── ...
 │       │
 │       ├── (admin)/admin/   # 管理画面（Route Group）
@@ -131,7 +131,7 @@ myrrh-rental-space/
 │       │       ├── spaces/
 │       │       ├── reservations/
 │       │       ├── customers/
-│       │       ├── blog/
+│       │       ├── posts/
 │       │       ├── news/
 │       │       ├── pages/
 │       │       ├── settings/
@@ -209,7 +209,7 @@ myrrh-rental-space/
 | `/contact` | SSG | 静的 | フォームはClient Component |
 | `/privacy`, `/terms` | SSG | 静的 | 静的コンテンツ |
 | `/news`, `/news/[id]` | ISR | `revalidate: 300` | 5分ごとに再生成 |
-| `/blog`, `/blog/[slug]` | ISR | `revalidate: 300` | 5分ごとに再生成 |
+| `/posts`, `/posts/[slug]` | ISR | `revalidate: 300` | 5分ごとに再生成 |
 
 ### 管理画面
 

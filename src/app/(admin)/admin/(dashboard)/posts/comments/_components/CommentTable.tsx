@@ -1,0 +1,264 @@
+'use client'
+
+/**
+ * コメント一覧テーブル
+ *
+ * 一括選択・削除機能付き
+ */
+
+import { useState, useTransition } from 'react'
+import Link from 'next/link'
+import { formatDistanceToNow } from 'date-fns'
+import { ja } from 'date-fns/locale'
+import { Trash2, RotateCcw, ExternalLink, User } from 'lucide-react'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  Button,
+  Checkbox,
+} from '@/admin/components/ui'
+import { EmptyState } from '@/admin/components/EmptyState'
+import {
+  deleteCommentAdmin,
+  deleteCommentsAdmin,
+  restoreCommentAdmin,
+  type AdminCommentData,
+} from '@/admin/actions/post-comment'
+import { cn } from '@/shared/lib/utils'
+
+type Props = {
+  comments: AdminCommentData[]
+}
+
+export function CommentTable({ comments }: Props) {
+  const [selected, setSelected] = useState<string[]>([])
+  const [isPending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+
+  // 全選択/解除
+  function toggleAll() {
+    if (selected.length === comments.length) {
+      setSelected([])
+    } else {
+      setSelected(comments.map((c) => c.id))
+    }
+  }
+
+  // 個別選択
+  function toggleOne(id: string) {
+    setSelected((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    )
+  }
+
+  // 一括削除
+  function handleBulkDelete() {
+    if (!confirm(`選択した${selected.length}件のコメントを削除しますか？`)) return
+
+    setError(null)
+    startTransition(async () => {
+      const result = await deleteCommentsAdmin(selected)
+      if (result.success) {
+        setSelected([])
+      } else {
+        setError(result.error)
+      }
+    })
+  }
+
+  // 単一削除
+  function handleDelete(id: string) {
+    if (!confirm('このコメントを削除しますか？')) return
+
+    setError(null)
+    startTransition(async () => {
+      const result = await deleteCommentAdmin(id)
+      if (!result.success) {
+        setError(result.error)
+      }
+    })
+  }
+
+  // 復元
+  function handleRestore(id: string) {
+    if (!confirm('このコメントを復元しますか？')) return
+
+    setError(null)
+    startTransition(async () => {
+      const result = await restoreCommentAdmin(id)
+      if (!result.success) {
+        setError(result.error)
+      }
+    })
+  }
+
+  // 投稿者名を取得
+  function getAuthorName(comment: AdminCommentData): string {
+    return comment.author.type === 'user'
+      ? comment.author.name
+      : comment.author.guestName
+  }
+
+  if (comments.length === 0) {
+    return <EmptyState message="コメントがありません" />
+  }
+
+  return (
+    <div className="rounded-lg border bg-white">
+      {/* 一括操作バー */}
+      {selected.length > 0 && (
+        <div className="flex items-center gap-4 p-4 border-b bg-muted/50">
+          <span className="text-sm font-medium">
+            {selected.length}件選択中
+          </span>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleBulkDelete}
+            disabled={isPending}
+          >
+            <Trash2 className="w-4 h-4 mr-1" />
+            選択したコメントを削除
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSelected([])}
+          >
+            選択解除
+          </Button>
+        </div>
+      )}
+
+      {/* エラー表示 */}
+      {error && (
+        <div className="p-4 border-b bg-destructive/10 text-destructive text-sm">
+          {error}
+        </div>
+      )}
+
+      {/* テーブル */}
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-12">
+              <Checkbox
+                checked={selected.length === comments.length}
+                onCheckedChange={toggleAll}
+              />
+            </TableHead>
+            <TableHead className="min-w-[200px]">コメント</TableHead>
+            <TableHead className="hidden lg:table-cell">投稿者</TableHead>
+            <TableHead className="hidden md:table-cell">記事</TableHead>
+            <TableHead className="hidden md:table-cell">投稿日時</TableHead>
+            <TableHead>ステータス</TableHead>
+            <TableHead className="w-24">操作</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {comments.map((comment) => (
+            <TableRow
+              key={comment.id}
+              className={cn(comment.isDeleted && 'opacity-50')}
+            >
+              <TableCell>
+                <Checkbox
+                  checked={selected.includes(comment.id)}
+                  onCheckedChange={() => toggleOne(comment.id)}
+                />
+              </TableCell>
+              <TableCell>
+                <p className="text-sm line-clamp-2 max-w-[300px]">
+                  {comment.content}
+                </p>
+                {comment.parentCommentId && (
+                  <span className="text-xs text-muted-foreground mt-1 block">
+                    ↳ 返信コメント
+                  </span>
+                )}
+              </TableCell>
+              <TableCell className="hidden lg:table-cell">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center">
+                    <User className="w-3 h-3 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">
+                      {getAuthorName(comment)}
+                    </p>
+                    {comment.author.type === 'guest' && (
+                      <p className="text-xs text-muted-foreground">
+                        {comment.author.guestEmail}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell className="hidden md:table-cell">
+                <Link
+                  href={`/posts/${comment.postSlug}`}
+                  target="_blank"
+                  className="text-sm text-primary hover:underline flex items-center gap-1"
+                >
+                  <span className="line-clamp-1 max-w-[150px]">
+                    {comment.postTitle}
+                  </span>
+                  <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                </Link>
+              </TableCell>
+              <TableCell className="hidden md:table-cell">
+                <span className="text-sm text-muted-foreground">
+                  {formatDistanceToNow(new Date(comment.createdAt), {
+                    addSuffix: true,
+                    locale: ja,
+                  })}
+                </span>
+              </TableCell>
+              <TableCell>
+                {comment.isDeleted ? (
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-destructive/10 text-destructive">
+                    削除済み
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-700">
+                    アクティブ
+                  </span>
+                )}
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-1">
+                  {comment.isDeleted ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRestore(comment.id)}
+                      disabled={isPending}
+                      title="復元"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(comment.id)}
+                      disabled={isPending}
+                      title="削除"
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  )
+}

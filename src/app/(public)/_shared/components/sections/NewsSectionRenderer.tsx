@@ -57,7 +57,7 @@ export async function NewsSectionRenderer({
           {newsItems.map((news) => (
             <Link
               key={news.id}
-              href={`/news/${news.id}`}
+              href={`/news/${news.slug}`}
               className={cn(styles.item(), 'group')}
             >
               <span className={styles.date()}>

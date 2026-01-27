@@ -486,6 +486,11 @@ describe('defaultSpaceFormValues', () => {
       termsId: null,
       locationId: null,
       categoryId: null,
+      metaDescription: null,
+      metaKeywords: null,
+      ogpTitle: null,
+      ogpDescription: null,
+      ogpImageUrl: null,
     })
   })
 })

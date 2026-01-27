@@ -1,15 +1,12 @@
 'use server'
 
 import { prisma } from '@/shared/lib/prisma'
-import { revalidateTag } from 'next/cache'
+import { updateTag } from 'next/cache'
 import { CACHE_TAGS } from '@/shared/lib/constants'
-import {
-  createSuccess,
-  createFailure,
-  withPermission,
-  type ActionResult,
-} from '@/admin/types/server-actions'
+import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+import { withPermission } from '@/admin/lib/server-action-helpers'
 import { checkReadPermissionFor } from '@/admin/lib/permissions'
+import { purgeFaqCache } from '@/shared/lib/cloudflare'
 import {
   faqCategoryFormSchema,
   faqItemFormSchema,
@@ -136,7 +133,10 @@ export const createFaqCategory = withPermission<
     },
   })
 
-  revalidateTag(CACHE_TAGS.FAQ, 'default')
+  updateTag(CACHE_TAGS.FAQ)
+
+  // Cloudflare CDN キャッシュパージ
+  void purgeFaqCache()
 
   return createSuccess('カテゴリを作成しました', { id: category.id })
 })
@@ -178,7 +178,10 @@ export const updateFaqCategory = withPermission<
     data: parsed.data,
   })
 
-  revalidateTag(CACHE_TAGS.FAQ, 'default')
+  updateTag(CACHE_TAGS.FAQ)
+
+  // Cloudflare CDN キャッシュパージ
+  void purgeFaqCache()
 
   return createSuccess('カテゴリを更新しました')
 })
@@ -207,7 +210,10 @@ export const deleteFaqCategory = withPermission<[id: string], void>(
     where: { id },
   })
 
-  revalidateTag(CACHE_TAGS.FAQ, 'default')
+  updateTag(CACHE_TAGS.FAQ)
+
+  // Cloudflare CDN キャッシュパージ
+  void purgeFaqCache()
 
   return createSuccess('カテゴリを削除しました')
 })
@@ -228,7 +234,10 @@ export const reorderFaqCategories = withPermission<[orderedIds: string[]], void>
     )
   )
 
-  revalidateTag(CACHE_TAGS.FAQ, 'default')
+  updateTag(CACHE_TAGS.FAQ)
+
+  // Cloudflare CDN キャッシュパージ
+  void purgeFaqCache()
 
   return createSuccess('順序を更新しました')
 })
@@ -366,7 +375,10 @@ export const createFaqItem = withPermission<
     },
   })
 
-  revalidateTag(CACHE_TAGS.FAQ, 'default')
+  updateTag(CACHE_TAGS.FAQ)
+
+  // Cloudflare CDN キャッシュパージ
+  void purgeFaqCache()
 
   return createSuccess('質問を作成しました', { id: item.id })
 })
@@ -405,7 +417,10 @@ export const updateFaqItem = withPermission<
     data: parsed.data,
   })
 
-  revalidateTag(CACHE_TAGS.FAQ, 'default')
+  updateTag(CACHE_TAGS.FAQ)
+
+  // Cloudflare CDN キャッシュパージ
+  void purgeFaqCache()
 
   return createSuccess('質問を更新しました')
 })
@@ -429,7 +444,10 @@ export const deleteFaqItem = withPermission<[id: string], void>(
     where: { id },
   })
 
-  revalidateTag(CACHE_TAGS.FAQ, 'default')
+  updateTag(CACHE_TAGS.FAQ)
+
+  // Cloudflare CDN キャッシュパージ
+  void purgeFaqCache()
 
   return createSuccess('質問を削除しました')
 })
@@ -450,7 +468,10 @@ export const reorderFaqItems = withPermission<
     )
   )
 
-  revalidateTag(CACHE_TAGS.FAQ, 'default')
+  updateTag(CACHE_TAGS.FAQ)
+
+  // Cloudflare CDN キャッシュパージ
+  void purgeFaqCache()
 
   return createSuccess('順序を更新しました')
 })
@@ -475,7 +496,10 @@ export const toggleFaqItemPublished = withPermission<[id: string], void>(
     data: { isPublished: !item.isPublished },
   })
 
-  revalidateTag(CACHE_TAGS.FAQ, 'default')
+  updateTag(CACHE_TAGS.FAQ)
+
+  // Cloudflare CDN キャッシュパージ
+  void purgeFaqCache()
 
   return createSuccess('公開状態を変更しました')
 })

@@ -17,6 +17,7 @@ import {
   ClipboardList,
   Settings,
   Image as ImageIcon,
+  Ticket,
 } from 'lucide-react'
 import type { SidebarItem } from '@/admin/types/admin-layout'
 
@@ -30,12 +31,17 @@ export const SIDEBAR_ITEMS: SidebarItem[] = [
     icon: <Calendar className="h-5 w-5" />,
   },
   {
+    label: 'クーポン',
+    href: '/admin/coupons',
+    icon: <Ticket className="h-5 w-5" />,
+  },
+  {
     label: 'スペース管理',
     href: '/admin/spaces',
     icon: <Building2 className="h-5 w-5" />,
   },
   { label: 'お知らせ', href: '/admin/news', icon: <Newspaper className="h-5 w-5" /> },
-  { label: 'ブログ', href: '/admin/blog', icon: <FileEdit className="h-5 w-5" /> },
+  { label: '投稿', href: '/admin/posts', icon: <FileEdit className="h-5 w-5" /> },
   { label: 'メディア', href: '/admin/media', icon: <ImageIcon className="h-5 w-5" /> },
   {
     label: 'ページ管理',

@@ -52,16 +52,16 @@ export async function getSiteLayoutSettings(): Promise<LayoutConfig> {
 // =============================================================================
 
 /**
- * ブログ記事のレイアウト設定を取得（個別設定 || サイト設定）
+ * 投稿記事のレイアウト設定を取得（個別設定 || サイト設定）
  */
-export async function getBlogLayoutSettings(postId: string): Promise<LayoutConfig> {
+export async function getPostLayoutSettings(postId: string): Promise<LayoutConfig> {
   'use cache'
   cacheLife('hours')
-  cacheTag('settings', 'layout-settings', `blog-${postId}`)
+  cacheTag('settings', 'layout-settings', `post-${postId}`)
 
   const [siteSettings, postSettings] = await Promise.all([
     getSiteLayoutSettings(),
-    prisma.blogPost.findUnique({
+    prisma.post.findUnique({
       where: { id: postId },
       select: {
         contentWidth: true,

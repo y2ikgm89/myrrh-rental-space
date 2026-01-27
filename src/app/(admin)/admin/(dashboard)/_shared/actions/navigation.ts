@@ -1,13 +1,16 @@
 'use server'
 
 import { prisma } from '@/shared/lib/prisma'
-import { revalidatePath } from 'next/cache'
+import { updateTag } from 'next/cache'
+import { CACHE_TAGS } from '@/shared/lib/constants'
 import { NavigationType, SocialPlatform } from '@/shared/generated/prisma/enums'
 import { z } from 'zod'
-import { createSuccess, createFailure, withPermission, type ActionResult } from '@/admin/types/server-actions'
+import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+import { withPermission } from '@/admin/lib/server-action-helpers'
 import { getSession, getRoleFromSession } from '@/shared/lib/auth'
 import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'
 import { logPermissionDenied } from '@/admin/lib/audit'
+import { purgeHomeCache } from '@/shared/lib/cloudflare'
 
 // =============================================================================
 // Types
@@ -47,8 +50,8 @@ export type SocialLinkData = {
 const navigationItemSchema = z.object({
   type: z.enum(['HEADER_DESKTOP', 'HEADER_MOBILE', 'FOOTER']),
   parentId: z.string().uuid().nullable().optional(),
-  label: z.string().min(1, 'ラベルは必須です').max(50, 'ラベルは50文字以内'),
-  url: z.string().min(1, 'URLは必須です').max(500),
+  label: z.string().min(1, { error: 'ラベルは必須です' }).max(50, { error: 'ラベルは50文字以内' }),
+  url: z.string().min(1, { error: 'URLは必須です' }).max(500),
   isExternal: z.boolean().default(false),
   order: z.number().int().min(0),
   isActive: z.boolean().default(true),
@@ -56,7 +59,7 @@ const navigationItemSchema = z.object({
 
 const socialLinkSchema = z.object({
   platform: z.enum(['TWITTER', 'FACEBOOK', 'INSTAGRAM', 'YOUTUBE', 'LINE', 'TIKTOK', 'OTHER']),
-  url: z.string().min(1, 'URLは必須です').url('有効なURLを入力してください'),
+  url: z.string().min(1, { error: 'URLは必須です' }).url({ error: '有効なURLを入力してください' }),
   iconUrl: z.string().nullable().optional(),
   order: z.number().int().min(0),
   isActive: z.boolean().default(true),
@@ -135,8 +138,10 @@ export const createNavigationItem = withPermission<[data: NavigationItemInput], 
     data: parsed.data,
   })
 
-  revalidatePath('/admin/settings/navigation')
-  revalidatePath('/')
+  updateTag(CACHE_TAGS.NAVIGATION)
+
+  // Cloudflare CDN キャッシュパージ（ナビゲーションは全ページに影響）
+  void purgeHomeCache()
 
   return createSuccess('ナビゲーションを作成しました', { id: item.id })
 })
@@ -166,8 +171,10 @@ export const updateNavigationItem = withPermission<[id: string, data: Navigation
     data: parsed.data,
   })
 
-  revalidatePath('/admin/settings/navigation')
-  revalidatePath('/')
+  updateTag(CACHE_TAGS.NAVIGATION)
+
+  // Cloudflare CDN キャッシュパージ（ナビゲーションは全ページに影響）
+  void purgeHomeCache()
 
   return createSuccess('ナビゲーションを更新しました')
 })
@@ -182,7 +189,9 @@ export const deleteNavigationItem = withPermission<[id: string], void>(
   const item = await prisma.navigationItem.findUnique({
     where: { id },
     include: {
-      children: true,
+      children: {
+        select: { id: true },
+      },
     },
   })
 
@@ -198,8 +207,10 @@ export const deleteNavigationItem = withPermission<[id: string], void>(
     where: { id },
   })
 
-  revalidatePath('/admin/settings/navigation')
-  revalidatePath('/')
+  updateTag(CACHE_TAGS.NAVIGATION)
+
+  // Cloudflare CDN キャッシュパージ（ナビゲーションは全ページに影響）
+  void purgeHomeCache()
 
   return createSuccess('ナビゲーションを削除しました')
 })
@@ -226,8 +237,10 @@ export const updateNavigationOrder = withPermission<
     )
   )
 
-  revalidatePath('/admin/settings/navigation')
-  revalidatePath('/')
+  updateTag(CACHE_TAGS.NAVIGATION)
+
+  // Cloudflare CDN キャッシュパージ（ナビゲーションは全ページに影響）
+  void purgeHomeCache()
 
   return createSuccess('順序を更新しました')
 })
@@ -248,8 +261,10 @@ export const updateSocialLinkOrder = withPermission<[items: { id: string; order:
     )
   )
 
-  revalidatePath('/admin/settings/navigation')
-  revalidatePath('/')
+  updateTag(CACHE_TAGS.NAVIGATION)
+
+  // Cloudflare CDN キャッシュパージ（ナビゲーションは全ページに影響）
+  void purgeHomeCache()
 
   return createSuccess('順序を更新しました')
 })
@@ -307,8 +322,10 @@ export const createSocialLink = withPermission<[data: SocialLinkInput], { id: st
     data: parsed.data,
   })
 
-  revalidatePath('/admin/settings/navigation')
-  revalidatePath('/')
+  updateTag(CACHE_TAGS.NAVIGATION)
+
+  // Cloudflare CDN キャッシュパージ（ナビゲーションは全ページに影響）
+  void purgeHomeCache()
 
   return createSuccess('SNSリンクを作成しました', { id: link.id })
 })
@@ -338,8 +355,10 @@ export const updateSocialLink = withPermission<[id: string, data: SocialLinkInpu
     data: parsed.data,
   })
 
-  revalidatePath('/admin/settings/navigation')
-  revalidatePath('/')
+  updateTag(CACHE_TAGS.NAVIGATION)
+
+  // Cloudflare CDN キャッシュパージ（ナビゲーションは全ページに影響）
+  void purgeHomeCache()
 
   return createSuccess('SNSリンクを更新しました')
 })
@@ -363,8 +382,10 @@ export const deleteSocialLink = withPermission<[id: string], void>(
     where: { id },
   })
 
-  revalidatePath('/admin/settings/navigation')
-  revalidatePath('/')
+  updateTag(CACHE_TAGS.NAVIGATION)
+
+  // Cloudflare CDN キャッシュパージ（ナビゲーションは全ページに影響）
+  void purgeHomeCache()
 
   return createSuccess('SNSリンクを削除しました')
 })

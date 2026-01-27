@@ -1,16 +1,18 @@
 /**
  * Prisma Seed Script
  *
- * 初期データを作成する
+ * 初期データを作成する（Prisma 7 ベストプラクティス準拠）
  *
  * 使用方法:
  *   bun prisma/seed.ts --admin <email> <password> [name]  # 管理者のみ
- *   bun prisma/seed.ts --demo                              # デモデータ生成
+ *   bun prisma/seed.ts --demo                              # デモデータ生成（既存スキップ）
+ *   bun prisma/seed.ts --fresh <email> <password> [name]   # 全削除 + 再作成
  *   bun prisma/seed.ts --all <email> <password> [name]     # 全て生成
  *
  * 例:
  *   bun prisma/seed.ts --admin admin@example.com mypassword123 "Administrator"
  *   bun prisma/seed.ts --demo
+ *   bun prisma/seed.ts --fresh admin@example.com mypassword123
  *   bun prisma/seed.ts --all admin@example.com mypassword123
  */
 
@@ -32,6 +34,74 @@ const adapter = new PrismaPg(pool)
 const prisma = new PrismaClient({
   adapter,
 })
+
+// =============================================================================
+// Helper: Clear All Data (--fresh用)
+// =============================================================================
+
+async function clearAllData() {
+  console.log('🗑️  Clearing all data...')
+  console.log('')
+
+  // 依存関係の逆順で削除（トランザクション使用）
+  await prisma.$transaction([
+    // コメント・バージョン履歴
+    prisma.postComment.deleteMany(),
+    prisma.postVersion.deleteMany(),
+    prisma.newsVersion.deleteMany(),
+
+    // 予約関連
+    prisma.termsAgreement.deleteMany(),
+    prisma.reservation.deleteMany(),
+
+    // コンテンツ
+    prisma.post.deleteMany(),
+    prisma.postCategory.deleteMany(),
+    prisma.postTag.deleteMany(),
+    prisma.faqItem.deleteMany(),
+    prisma.faqCategory.deleteMany(),
+    prisma.news.deleteMany(),
+    prisma.page.deleteMany(),
+    prisma.termsVersion.deleteMany(),
+    prisma.terms.deleteMany(),
+
+    // 顧客・問い合わせ
+    prisma.inquiry.deleteMany(),
+    prisma.customer.deleteMany(),
+
+    // スペース関連
+    prisma.iCalToken.deleteMany(),
+    prisma.space.deleteMany(),
+    prisma.spaceCategory.deleteMany(),
+    prisma.location.deleteMany(),
+
+    // クーポン
+    prisma.coupon.deleteMany(),
+
+    // サイト設定
+    prisma.homepageSection.deleteMany(),
+    prisma.navigationItem.deleteMany(),
+    prisma.announcementBar.deleteMany(),
+    prisma.socialLink.deleteMany(),
+
+    // 認証関連
+    prisma.auditLog.deleteMany(),
+    prisma.session.deleteMany(),
+    prisma.verification.deleteMany(),
+    prisma.loginToken.deleteMany(),
+    prisma.staffInvitation.deleteMany(),
+    prisma.account.deleteMany(),
+    prisma.user.deleteMany(),
+
+    // Media
+    prisma.media.deleteMany(),
+
+    // Settings は削除しない（upsertで更新）
+  ])
+
+  console.log('✅ All data cleared')
+  console.log('')
+}
 
 // =============================================================================
 // Admin User
@@ -79,7 +149,6 @@ async function seedAdmin(email: string, password: string, name: string = 'Admini
     console.log(`✅ Updated existing admin user: ${email}`)
   } else {
     // ユーザーと credential account を同時作成
-    // Better Auth: パスワードは Account テーブルに保存
     const userId = crypto.randomUUID()
     const newUser = await prisma.user.create({
       data: {
@@ -87,6 +156,7 @@ async function seedAdmin(email: string, password: string, name: string = 'Admini
         email,
         name,
         role: 'ADMIN',
+        emailVerified: true,
         accounts: {
           create: {
             accountId: userId,
@@ -101,12 +171,120 @@ async function seedAdmin(email: string, password: string, name: string = 'Admini
 }
 
 // =============================================================================
-// Demo Spaces
+// Settings (Singleton - upsert)
+// =============================================================================
+
+async function seedSettings() {
+  const settingsData = {
+    siteName: 'Myrrh Rental Space',
+    siteDescription: 'ビジネスからプライベートまで、様々な用途に対応したレンタルスペース',
+    businessName: '株式会社サンプル',
+    businessNameKana: 'カブシキガイシャサンプル',
+    representativeName: '山田 太郎',
+    businessType: '法人',
+    phoneNumber: '03-1234-5678',
+    email: 'info@example.com',
+    address: '東京都渋谷区神宮前1-1-1 サンプルビル',
+    postalCode: '150-0001',
+    prefecture: '東京都',
+    city: '渋谷区',
+    streetAddress: '神宮前1-1-1 サンプルビル',
+    footerCopyright: '© 2025 Myrrh Rental Space. All rights reserved.',
+  }
+
+  await prisma.settings.upsert({
+    where: { id: 'singleton' },
+    update: settingsData,
+    create: {
+      id: 'singleton',
+      ...settingsData,
+    },
+  })
+
+  console.log('✅ Settings configured')
+}
+
+// =============================================================================
+// Locations
+// =============================================================================
+
+async function seedLocations() {
+  const locations = [
+    {
+      name: '本館',
+      description: '表参道駅から徒歩5分の好立地。全フロアにWi-Fi完備。',
+      address: '東京都渋谷区神宮前1-1-1 サンプルビル',
+      access: '東京メトロ「表参道駅」A1出口より徒歩5分',
+      imageUrl: 'https://placehold.co/800x600/e2e8f0/64748b?text=Main+Building',
+      sortOrder: 0,
+      isPublished: true,
+    },
+    {
+      name: '別館',
+      description: '落ち着いた雰囲気の別館。少人数のミーティングに最適。',
+      address: '東京都渋谷区神宮前1-2-3 別館ビル',
+      access: '本館より徒歩2分',
+      imageUrl: 'https://placehold.co/800x600/dbeafe/3b82f6?text=Annex',
+      sortOrder: 1,
+      isPublished: true,
+    },
+    {
+      name: '新宿支店',
+      description: '新宿駅直結でアクセス抜群。大人数のセミナーにも対応。',
+      address: '東京都新宿区西新宿1-1-1 新宿タワー',
+      access: 'JR「新宿駅」西口直結',
+      imageUrl: 'https://placehold.co/800x600/dcfce7/22c55e?text=Shinjuku',
+      sortOrder: 2,
+      isPublished: false,
+    },
+  ]
+
+  await prisma.location.createMany({
+    data: locations,
+    skipDuplicates: true,
+  })
+
+  console.log('✅ Created locations')
+}
+
+// =============================================================================
+// Space Categories
+// =============================================================================
+
+async function seedSpaceCategories() {
+  const categories = [
+    { name: '会議室', description: '少人数から中規模のミーティングに最適', icon: 'Users', color: '#3B82F6', sortOrder: 0 },
+    { name: 'セミナールーム', description: '大人数の講義やワークショップ向け', icon: 'Presentation', color: '#8B5CF6', sortOrder: 1 },
+    { name: 'コワーキング', description: '自由席で気軽に作業できるスペース', icon: 'Laptop', color: '#10B981', sortOrder: 2 },
+    { name: 'イベントスペース', description: 'パーティーや展示会などの特別なイベントに', icon: 'PartyPopper', color: '#F59E0B', sortOrder: 3 },
+  ]
+
+  await prisma.spaceCategory.createMany({
+    data: categories,
+    skipDuplicates: true,
+  })
+
+  console.log('✅ Created space categories')
+}
+
+// =============================================================================
+// Spaces (with Location/Category relations)
 // =============================================================================
 
 async function seedSpaces() {
+  // 先にLocation/Categoryを取得
+  const locations = await prisma.location.findMany({ orderBy: { sortOrder: 'asc' } })
+  const categories = await prisma.spaceCategory.findMany({ orderBy: { sortOrder: 'asc' } })
+
+  const mainBuilding = locations.find((l) => l.name === '本館')
+  const annex = locations.find((l) => l.name === '別館')
+  const meetingRoom = categories.find((c) => c.name === '会議室')
+  const seminarRoom = categories.find((c) => c.name === 'セミナールーム')
+  const coworking = categories.find((c) => c.name === 'コワーキング')
+
   const spaces = [
     {
+      slug: 'meeting-room-a',
       name: 'ミーティングルーム A',
       description: `明るく開放的なミーティングルームです。
 
@@ -122,19 +300,25 @@ async function seedSpaces() {
       address: '東京都渋谷区神宮前1-1-1 サンプルビル3F',
       access: '東京メトロ「表参道駅」A1出口より徒歩5分',
       capacity: 8,
-      area: 25.5,
-      hourlyPrice: 3000,
-      dailyPrice: 20000,
+      area: new Prisma.Decimal(25.5),
+      hourlyPrice: new Prisma.Decimal(3000),
+      dailyPrice: new Prisma.Decimal(20000),
       mainImageUrl: 'https://placehold.co/800x600/e2e8f0/64748b?text=Meeting+Room',
       imageUrls: [
-        'https://placehold.co/800x600/e2e8f0/64748b?text=Meeting+Room',
+        'https://placehold.co/800x600/e2e8f0/64748b?text=Meeting+Room+1',
         'https://placehold.co/800x600/e2e8f0/64748b?text=Meeting+Room+2',
+        'https://placehold.co/800x600/e2e8f0/64748b?text=Meeting+Room+3',
+        'https://placehold.co/800x600/e2e8f0/64748b?text=Meeting+Room+4',
+        'https://placehold.co/800x600/e2e8f0/64748b?text=Meeting+Room+5',
       ],
       facilities: ['Wi-Fi', 'プロジェクター', 'ホワイトボード', '空調', '電源タップ'],
       isPublished: true,
       isActive: true,
+      locationId: mainBuilding?.id,
+      categoryId: meetingRoom?.id,
     },
     {
+      slug: 'seminar-room',
       name: 'セミナールーム',
       description: `最大30名収容可能なセミナールームです。
 
@@ -150,19 +334,24 @@ async function seedSpaces() {
       address: '東京都渋谷区神宮前1-1-1 サンプルビル4F',
       access: '東京メトロ「表参道駅」A1出口より徒歩5分',
       capacity: 30,
-      area: 60.0,
-      hourlyPrice: 8000,
-      dailyPrice: 50000,
+      area: new Prisma.Decimal(60.0),
+      hourlyPrice: new Prisma.Decimal(8000),
+      dailyPrice: new Prisma.Decimal(50000),
       mainImageUrl: 'https://placehold.co/800x600/dbeafe/3b82f6?text=Seminar+Room',
       imageUrls: [
-        'https://placehold.co/800x600/dbeafe/3b82f6?text=Seminar+Room',
+        'https://placehold.co/800x600/dbeafe/3b82f6?text=Seminar+Room+1',
         'https://placehold.co/800x600/dbeafe/3b82f6?text=Seminar+Room+2',
+        'https://placehold.co/800x600/dbeafe/3b82f6?text=Seminar+Room+3',
+        'https://placehold.co/800x600/dbeafe/3b82f6?text=Seminar+Room+4',
       ],
       facilities: ['Wi-Fi', 'プロジェクター', '大型スクリーン', 'マイク', '空調', '可動式テーブル'],
       isPublished: true,
       isActive: true,
+      locationId: mainBuilding?.id,
+      categoryId: seminarRoom?.id,
     },
     {
+      slug: 'coworking-space',
       name: 'コワーキングスペース',
       description: `フリーアドレスのコワーキングスペースです。
 
@@ -178,25 +367,28 @@ async function seedSpaces() {
       address: '東京都渋谷区神宮前1-1-1 サンプルビル2F',
       access: '東京メトロ「表参道駅」A1出口より徒歩5分',
       capacity: 20,
-      area: 80.0,
-      hourlyPrice: 500,
-      dailyPrice: 3000,
+      area: new Prisma.Decimal(80.0),
+      hourlyPrice: new Prisma.Decimal(500),
+      dailyPrice: new Prisma.Decimal(3000),
       mainImageUrl: 'https://placehold.co/800x600/dcfce7/22c55e?text=Coworking',
       imageUrls: [
-        'https://placehold.co/800x600/dcfce7/22c55e?text=Coworking',
+        'https://placehold.co/800x600/dcfce7/22c55e?text=Coworking+1',
         'https://placehold.co/800x600/dcfce7/22c55e?text=Coworking+2',
+        'https://placehold.co/800x600/dcfce7/22c55e?text=Coworking+3',
+        'https://placehold.co/800x600/dcfce7/22c55e?text=Coworking+4',
+        'https://placehold.co/800x600/dcfce7/22c55e?text=Coworking+5',
+        'https://placehold.co/800x600/dcfce7/22c55e?text=Coworking+6',
       ],
       facilities: ['Wi-Fi', '電源', 'ロッカー', 'ドリンクバー', '複合機', '空調'],
       isPublished: true,
       isActive: true,
+      locationId: annex?.id,
+      categoryId: coworking?.id,
     },
   ]
 
   for (const space of spaces) {
-    const existing = await prisma.space.findFirst({
-      where: { name: space.name },
-    })
-
+    const existing = await prisma.space.findFirst({ where: { slug: space.slug } })
     if (!existing) {
       await prisma.space.create({ data: space })
       console.log(`✅ Created space: ${space.name}`)
@@ -207,12 +399,365 @@ async function seedSpaces() {
 }
 
 // =============================================================================
-// Demo News
+// Coupons (新規追加)
+// =============================================================================
+
+async function seedCoupons() {
+  const now = new Date()
+  const oneMonthLater = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+  const threeMonthsLater = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000)
+  const sixMonthsLater = new Date(now.getTime() + 180 * 24 * 60 * 60 * 1000)
+
+  const coupons: Prisma.CouponCreateInput[] = [
+    {
+      code: 'WELCOME10',
+      name: '初回限定10%OFF',
+      description: '初めてのご利用で10%割引。新規のお客様限定クーポンです。',
+      type: 'PERCENTAGE',
+      discountValue: new Prisma.Decimal(10),
+      validFrom: now,
+      validUntil: sixMonthsLater,
+      usageLimit: 100,
+      isActive: true,
+      canCombineWithDurationDiscount: true,
+    },
+    {
+      code: 'SUMMER2026',
+      name: '夏季キャンペーン15%OFF',
+      description: '期間限定の夏季キャンペーン。全スペース15%割引。',
+      type: 'PERCENTAGE',
+      discountValue: new Prisma.Decimal(15),
+      validFrom: now,
+      validUntil: threeMonthsLater,
+      usageLimit: 50,
+      isActive: true,
+      canCombineWithDurationDiscount: false,
+    },
+    {
+      code: 'FIXED1000',
+      name: '1,000円割引',
+      description: '5,000円以上のご利用で1,000円割引。',
+      type: 'FIXED_AMOUNT',
+      discountValue: new Prisma.Decimal(1000),
+      minReservationAmount: new Prisma.Decimal(5000),
+      validFrom: now,
+      validUntil: threeMonthsLater,
+      isActive: true,
+      canCombineWithDurationDiscount: true,
+    },
+    {
+      code: 'LONGUSE20',
+      name: '長時間利用割引20%OFF',
+      description: '4時間以上のご利用で20%割引。',
+      type: 'PERCENTAGE',
+      discountValue: new Prisma.Decimal(20),
+      minReservationAmount: new Prisma.Decimal(10000),
+      maxDiscountAmount: new Prisma.Decimal(5000),
+      validFrom: now,
+      validUntil: sixMonthsLater,
+      isActive: true,
+      canCombineWithDurationDiscount: false,
+    },
+    {
+      code: 'VIP30',
+      name: 'VIP会員様専用30%OFF',
+      description: 'VIP会員様限定の特別クーポン。',
+      type: 'PERCENTAGE',
+      discountValue: new Prisma.Decimal(30),
+      maxDiscountAmount: new Prisma.Decimal(10000),
+      validFrom: now,
+      validUntil: oneMonthLater,
+      usageLimit: 20,
+      isActive: true,
+      canCombineWithDurationDiscount: true,
+    },
+  ]
+
+  for (const coupon of coupons) {
+    const existing = await prisma.coupon.findUnique({ where: { code: coupon.code } })
+    if (!existing) {
+      await prisma.coupon.create({ data: coupon })
+      console.log(`✅ Created coupon: ${coupon.code}`)
+    } else {
+      console.log(`⏭️ Skipped existing coupon: ${coupon.code}`)
+    }
+  }
+}
+
+// =============================================================================
+// Blog Tags (新規追加)
+// =============================================================================
+
+async function seedBlogTags() {
+  const tags = [
+    { name: 'ビジネス', slug: 'business' },
+    { name: '働き方', slug: 'work-style' },
+    { name: '活用事例', slug: 'case-study' },
+    { name: 'セミナー', slug: 'seminar' },
+    { name: '会議', slug: 'meeting' },
+    { name: 'リモートワーク', slug: 'remote-work' },
+    { name: 'コワーキング', slug: 'coworking' },
+    { name: 'イベント', slug: 'event' },
+    { name: '初心者向け', slug: 'beginner' },
+    { name: 'お知らせ', slug: 'announcement' },
+  ]
+
+  await prisma.postTag.createMany({
+    data: tags,
+    skipDuplicates: true,
+  })
+
+  console.log('✅ Created blog tags')
+}
+
+// =============================================================================
+// Customers
+// =============================================================================
+
+async function seedCustomers() {
+  const customers = [
+    // NEW customers (5)
+    { lastName: '田中', firstName: '太郎', email: 'tanaka.taro@example.com', phoneNumber: '090-1111-1111', status: 'NEW' as const },
+    { lastName: '山田', firstName: '花子', email: 'yamada.hanako@example.com', phoneNumber: '090-1111-2222', status: 'NEW' as const },
+    { lastName: '佐藤', firstName: '一郎', email: 'sato.ichiro@example.com', phoneNumber: '090-1111-3333', status: 'NEW' as const },
+    { lastName: '木村', firstName: '優子', email: 'kimura.yuko@example.com', phoneNumber: '090-1111-4444', status: 'NEW' as const },
+    { lastName: '林', firstName: '大介', email: 'hayashi.daisuke@example.com', phoneNumber: '090-1111-5555', status: 'NEW' as const },
+    // REGULAR customers (12)
+    { lastName: '鈴木', firstName: '美咲', email: 'suzuki.misaki@example.com', phoneNumber: '090-2222-1111', status: 'REGULAR' as const, totalReservations: 5, totalSpent: 50000 },
+    { lastName: '高橋', firstName: '健太', email: 'takahashi.kenta@example.com', phoneNumber: '090-2222-2222', status: 'REGULAR' as const, totalReservations: 3, totalSpent: 30000 },
+    { lastName: '伊藤', firstName: 'さくら', email: 'ito.sakura@example.com', phoneNumber: '090-2222-3333', status: 'REGULAR' as const, totalReservations: 7, totalSpent: 70000 },
+    { lastName: '渡辺', firstName: '大輔', email: 'watanabe.daisuke@example.com', phoneNumber: '090-2222-4444', status: 'REGULAR' as const, totalReservations: 4, totalSpent: 40000 },
+    { lastName: '小林', firstName: '真由', email: 'kobayashi.mayu@example.com', phoneNumber: '090-2222-5555', status: 'REGULAR' as const, totalReservations: 6, totalSpent: 60000 },
+    { lastName: '松本', firstName: '直樹', email: 'matsumoto.naoki@example.com', phoneNumber: '090-2222-6666', status: 'REGULAR' as const, totalReservations: 8, totalSpent: 80000 },
+    { lastName: '井上', firstName: '美香', email: 'inoue.mika@example.com', phoneNumber: '090-2222-7777', status: 'REGULAR' as const, totalReservations: 4, totalSpent: 45000 },
+    { lastName: '斎藤', firstName: '拓也', email: 'saito.takuya@example.com', phoneNumber: '090-2222-8888', status: 'REGULAR' as const, totalReservations: 9, totalSpent: 95000 },
+    { lastName: '清水', firstName: '由美', email: 'shimizu.yumi@example.com', phoneNumber: '090-2222-9999', status: 'REGULAR' as const, totalReservations: 3, totalSpent: 35000 },
+    { lastName: '山口', firstName: '翔', email: 'yamaguchi.sho@example.com', phoneNumber: '090-2222-0000', status: 'REGULAR' as const, totalReservations: 5, totalSpent: 55000 },
+    { lastName: '石田', firstName: '愛', email: 'ishida.ai@example.com', phoneNumber: '090-2223-1111', status: 'REGULAR' as const, totalReservations: 6, totalSpent: 65000 },
+    { lastName: '前田', firstName: '健一', email: 'maeda.kenichi@example.com', phoneNumber: '090-2223-2222', status: 'REGULAR' as const, totalReservations: 7, totalSpent: 75000 },
+    // VIP customers (6)
+    { lastName: '加藤', firstName: '誠', email: 'kato.makoto@example.com', phoneNumber: '090-3333-1111', status: 'VIP' as const, totalReservations: 20, totalSpent: 500000 },
+    { lastName: '吉田', firstName: '美穂', email: 'yoshida.miho@example.com', phoneNumber: '090-3333-2222', status: 'VIP' as const, totalReservations: 15, totalSpent: 400000 },
+    { lastName: '山本', firstName: '翔太', email: 'yamamoto.shota@example.com', phoneNumber: '090-3333-3333', status: 'VIP' as const, totalReservations: 25, totalSpent: 600000 },
+    { lastName: '中島', firstName: '裕子', email: 'nakajima.yuko@example.com', phoneNumber: '090-3333-4444', status: 'VIP' as const, totalReservations: 18, totalSpent: 450000 },
+    { lastName: '小野', firstName: '雄大', email: 'ono.yudai@example.com', phoneNumber: '090-3333-5555', status: 'VIP' as const, totalReservations: 22, totalSpent: 550000 },
+    { lastName: '藤田', firstName: '恵', email: 'fujita.megumi@example.com', phoneNumber: '090-3333-6666', status: 'VIP' as const, totalReservations: 30, totalSpent: 700000 },
+    // INACTIVE customers (3)
+    { lastName: '中村', firstName: '恵子', email: 'nakamura.keiko@example.com', phoneNumber: '090-4444-1111', status: 'INACTIVE' as const, isActive: false },
+    { lastName: '小川', firstName: '裕介', email: 'ogawa.yusuke@example.com', phoneNumber: '090-4444-2222', status: 'INACTIVE' as const, isActive: false },
+    { lastName: '岡田', firstName: '真理', email: 'okada.mari@example.com', phoneNumber: '090-4444-3333', status: 'INACTIVE' as const, isActive: false },
+    // Corporate customers (4)
+    { lastName: '株式会社ABC', firstName: '（担当: 田村）', email: 'tamura@abc-corp.example.com', phoneNumber: '03-1234-5678', status: 'REGULAR' as const, totalReservations: 10, totalSpent: 200000 },
+    { lastName: '合同会社XYZ', firstName: '（担当: 森田）', email: 'morita@xyz-llc.example.com', phoneNumber: '03-9876-5432', status: 'VIP' as const, totalReservations: 30, totalSpent: 800000 },
+    { lastName: '有限会社サンプル', firstName: '（担当: 西村）', email: 'nishimura@sample.example.com', phoneNumber: '03-1111-2222', status: 'REGULAR' as const, totalReservations: 12, totalSpent: 250000 },
+    { lastName: 'NPO法人地域支援', firstName: '（担当: 村上）', email: 'murakami@npo.example.com', phoneNumber: '03-3333-4444', status: 'REGULAR' as const, totalReservations: 8, totalSpent: 120000 },
+  ]
+
+  for (const customer of customers) {
+    const existing = await prisma.customer.findUnique({
+      where: { email: customer.email },
+    })
+
+    if (!existing) {
+      await prisma.customer.create({
+        data: {
+          ...customer,
+          totalSpent: customer.totalSpent ? new Prisma.Decimal(customer.totalSpent) : null,
+        },
+      })
+      console.log(`✅ Created customer: ${customer.lastName} ${customer.firstName}`)
+    } else {
+      console.log(`⏭️ Skipped existing customer: ${customer.lastName} ${customer.firstName}`)
+    }
+  }
+}
+
+// =============================================================================
+// Inquiries
+// =============================================================================
+
+async function seedInquiries() {
+  const inquiries = [
+    { name: '山田 一郎', email: 'yamada@example.com', subject: '予約について', message: '来週の土曜日に会議室を予約したいのですが、空き状況を教えていただけますか？', status: 'NEW' as const },
+    { name: '佐藤 花子', email: 'sato@example.com', subject: '設備について', message: 'プロジェクターの解像度を教えてください。4K対応ですか？', status: 'NEW' as const },
+    { name: '田中 太郎', email: 'tanaka@example.com', subject: '料金プラン', message: '長期利用の割引プランはありますか？月契約を検討しています。', status: 'IN_PROGRESS' as const },
+    { name: '鈴木 美咲', email: 'suzuki@example.com', subject: 'キャンセルについて', message: '明日の予約をキャンセルしたいのですが、手続きを教えてください。', status: 'IN_PROGRESS' as const },
+    { name: '高橋 健太', email: 'takahashi@example.com', subject: 'アクセス方法', message: '最寄り駅からの詳しい道順を教えていただけますか？', status: 'RESOLVED' as const },
+    { name: '伊藤 さくら', email: 'ito@example.com', subject: '備品レンタル', message: 'ホワイトボードマーカーは用意されていますか？', status: 'RESOLVED' as const },
+    { name: '渡辺 大輔', email: 'watanabe@example.com', subject: '法人契約について', message: '法人での利用を検討しています。請求書払いは可能ですか？', status: 'RESOLVED' as const },
+    { name: '小林 真由', email: 'kobayashi@example.com', subject: '見学希望', message: '利用前にスペースを見学することは可能ですか？', status: 'CLOSED' as const },
+    { name: '株式会社ABC 田村', email: 'tamura@abc.example.com', subject: '定期利用', message: '毎週水曜日の定期利用を希望します。優先予約は可能ですか？', status: 'NEW' as const },
+    { name: '森田 裕介', email: 'morita@example.com', subject: 'Wi-Fiについて', message: 'Wi-Fiの通信速度はどのくらいですか？オンライン会議で使用予定です。', status: 'NEW' as const },
+    { name: '中村 恵子', email: 'nakamura.keiko@example.com', subject: '飲食の持ち込み', message: '軽食の持ち込みは可能でしょうか？ランチミーティングを予定しています。', status: 'NEW' as const },
+    { name: '加藤 誠', email: 'kato.makoto@example.com', subject: '延長料金', message: '予約時間を延長した場合の追加料金を教えてください。', status: 'NEW' as const },
+    { name: '吉田 美穂', email: 'yoshida.miho@example.com', subject: '駐車場について', message: '近隣に駐車場はありますか？提携駐車場があれば教えてください。', status: 'IN_PROGRESS' as const },
+    { name: '山本 翔太', email: 'yamamoto.shota@example.com', subject: '撮影利用', message: '商品撮影でスペースを使いたいのですが、撮影は可能でしょうか？', status: 'IN_PROGRESS' as const },
+    { name: '合同会社XYZ 森田', email: 'morita.xyz@example.com', subject: '大人数利用', message: '50名規模のセミナーを開催予定です。対応可能なスペースはありますか？', status: 'IN_PROGRESS' as const },
+    { name: '中島 裕子', email: 'nakajima.yuko@example.com', subject: '予約変更', message: '来週の予約を別の日に変更したいのですが、手続き方法を教えてください。', status: 'RESOLVED' as const },
+    { name: '小野 雄大', email: 'ono.yudai@example.com', subject: '深夜利用', message: '22時以降の利用は可能でしょうか？夜間のミーティングを予定しています。', status: 'RESOLVED' as const },
+    { name: '藤田 恵', email: 'fujita.megumi@example.com', subject: 'イベント利用', message: '商品発表会を開催したいのですが、イベント利用は可能ですか？', status: 'RESOLVED' as const },
+    { name: 'NPO法人地域支援 村上', email: 'murakami.npo@example.com', subject: '非営利団体割引', message: 'NPO法人向けの割引プランはありますか？地域イベントで利用したいです。', status: 'CLOSED' as const },
+    { name: '石田 愛', email: 'ishida.ai@example.com', subject: 'レイアウト変更', message: 'テーブルや椅子のレイアウトを自由に変更することは可能ですか？', status: 'CLOSED' as const },
+  ]
+
+  for (const inquiry of inquiries) {
+    const existing = await prisma.inquiry.findFirst({
+      where: { email: inquiry.email, subject: inquiry.subject },
+    })
+
+    if (!existing) {
+      await prisma.inquiry.create({ data: inquiry })
+      console.log(`✅ Created inquiry: ${inquiry.subject}`)
+    } else {
+      console.log(`⏭️ Skipped existing inquiry: ${inquiry.subject}`)
+    }
+  }
+}
+
+// =============================================================================
+// Reservations (with Coupon relations)
+// =============================================================================
+
+async function seedReservations() {
+  const spaces = await prisma.space.findMany({ where: { isActive: true } })
+  const customers = await prisma.customer.findMany({ where: { isActive: true } })
+  const coupons = await prisma.coupon.findMany({ where: { isActive: true } })
+
+  if (spaces.length === 0 || customers.length === 0) {
+    console.log('⚠️ No spaces or customers found. Skipping reservations seed.')
+    return
+  }
+
+  const welcomeCoupon = coupons.find((c) => c.code === 'WELCOME10')
+  const now = new Date()
+
+  const reservations: Array<{
+    spaceIndex: number
+    customerIndex: number
+    daysOffset: number
+    startHour: number
+    duration: number
+    status: 'PENDING' | 'CONFIRMED' | 'CANCELLED'
+    notes?: string
+    applyCoupon?: boolean
+  }> = [
+    // Past reservations
+    { spaceIndex: 0, customerIndex: 0, daysOffset: -60, startHour: 10, duration: 2, status: 'CONFIRMED', notes: '電話予約' },
+    { spaceIndex: 1, customerIndex: 1, daysOffset: -55, startHour: 14, duration: 3, status: 'CONFIRMED' },
+    { spaceIndex: 2, customerIndex: 2, daysOffset: -50, startHour: 9, duration: 4, status: 'CONFIRMED', notes: '研修で利用' },
+    { spaceIndex: 0, customerIndex: 3, daysOffset: -45, startHour: 13, duration: 2, status: 'CONFIRMED' },
+    { spaceIndex: 1, customerIndex: 4, daysOffset: -40, startHour: 15, duration: 3, status: 'CANCELLED', notes: '天候不良でキャンセル' },
+    { spaceIndex: 2, customerIndex: 5, daysOffset: -35, startHour: 10, duration: 5, status: 'CONFIRMED', notes: 'セミナー開催' },
+    { spaceIndex: 0, customerIndex: 6, daysOffset: -30, startHour: 11, duration: 2, status: 'CONFIRMED' },
+    { spaceIndex: 1, customerIndex: 7, daysOffset: -28, startHour: 16, duration: 2, status: 'CANCELLED', notes: 'お客様都合' },
+    { spaceIndex: 2, customerIndex: 8, daysOffset: -25, startHour: 9, duration: 3, status: 'CONFIRMED' },
+    { spaceIndex: 0, customerIndex: 9, daysOffset: -22, startHour: 14, duration: 4, status: 'CONFIRMED', notes: '面接会場として' },
+    { spaceIndex: 1, customerIndex: 10, daysOffset: -20, startHour: 10, duration: 2, status: 'CONFIRMED' },
+    { spaceIndex: 2, customerIndex: 11, daysOffset: -18, startHour: 13, duration: 3, status: 'CANCELLED', notes: '日程変更' },
+    { spaceIndex: 0, customerIndex: 12, daysOffset: -15, startHour: 15, duration: 2, status: 'CONFIRMED' },
+    { spaceIndex: 1, customerIndex: 13, daysOffset: -12, startHour: 9, duration: 6, status: 'CONFIRMED', notes: 'ワークショップ' },
+    { spaceIndex: 2, customerIndex: 14, daysOffset: -10, startHour: 11, duration: 2, status: 'CONFIRMED' },
+    { spaceIndex: 0, customerIndex: 15, daysOffset: -9, startHour: 14, duration: 3, status: 'CANCELLED', notes: '体調不良' },
+    { spaceIndex: 1, customerIndex: 16, daysOffset: -8, startHour: 10, duration: 4, status: 'CONFIRMED' },
+    { spaceIndex: 2, customerIndex: 17, daysOffset: -7, startHour: 16, duration: 2, status: 'CONFIRMED' },
+    { spaceIndex: 0, customerIndex: 18, daysOffset: -5, startHour: 9, duration: 3, status: 'CANCELLED', notes: '会議延期' },
+    { spaceIndex: 1, customerIndex: 19, daysOffset: -3, startHour: 13, duration: 2, status: 'CONFIRMED', notes: '打ち合わせ' },
+    // Today
+    { spaceIndex: 0, customerIndex: 20, daysOffset: 0, startHour: 9, duration: 2, status: 'CONFIRMED', notes: '本日のご予約' },
+    { spaceIndex: 1, customerIndex: 21, daysOffset: 0, startHour: 10, duration: 3, status: 'CONFIRMED' },
+    { spaceIndex: 2, customerIndex: 22, daysOffset: 0, startHour: 14, duration: 4, status: 'CONFIRMED' },
+    { spaceIndex: 0, customerIndex: 23, daysOffset: 0, startHour: 15, duration: 2, status: 'CONFIRMED' },
+    { spaceIndex: 1, customerIndex: 24, daysOffset: 0, startHour: 17, duration: 2, status: 'PENDING', notes: '当日予約' },
+    // Future confirmed (with some coupon usage)
+    { spaceIndex: 0, customerIndex: 0, daysOffset: 1, startHour: 10, duration: 2, status: 'CONFIRMED', applyCoupon: true },
+    { spaceIndex: 1, customerIndex: 1, daysOffset: 2, startHour: 13, duration: 3, status: 'CONFIRMED', notes: 'Web予約', applyCoupon: true },
+    { spaceIndex: 2, customerIndex: 2, daysOffset: 3, startHour: 9, duration: 8, status: 'CONFIRMED', notes: '終日利用' },
+    { spaceIndex: 0, customerIndex: 3, daysOffset: 4, startHour: 14, duration: 2, status: 'CONFIRMED', applyCoupon: true },
+    { spaceIndex: 1, customerIndex: 4, daysOffset: 5, startHour: 10, duration: 4, status: 'CONFIRMED' },
+    { spaceIndex: 2, customerIndex: 5, daysOffset: 7, startHour: 11, duration: 3, status: 'CONFIRMED', notes: '定例会議' },
+    { spaceIndex: 0, customerIndex: 6, daysOffset: 8, startHour: 15, duration: 2, status: 'CONFIRMED' },
+    { spaceIndex: 1, customerIndex: 7, daysOffset: 10, startHour: 9, duration: 5, status: 'CONFIRMED', notes: '社内研修' },
+    { spaceIndex: 2, customerIndex: 8, daysOffset: 12, startHour: 13, duration: 3, status: 'CONFIRMED' },
+    { spaceIndex: 0, customerIndex: 9, daysOffset: 14, startHour: 10, duration: 2, status: 'CONFIRMED' },
+    { spaceIndex: 1, customerIndex: 10, daysOffset: 17, startHour: 14, duration: 4, status: 'CONFIRMED', notes: 'プレゼン練習' },
+    { spaceIndex: 2, customerIndex: 11, daysOffset: 20, startHour: 9, duration: 6, status: 'CONFIRMED' },
+    { spaceIndex: 0, customerIndex: 12, daysOffset: 25, startHour: 11, duration: 2, status: 'CONFIRMED' },
+    { spaceIndex: 1, customerIndex: 13, daysOffset: 28, startHour: 15, duration: 3, status: 'CONFIRMED', notes: '月末会議' },
+    { spaceIndex: 2, customerIndex: 14, daysOffset: 30, startHour: 10, duration: 4, status: 'CONFIRMED' },
+    // Future pending
+    { spaceIndex: 0, customerIndex: 15, daysOffset: 2, startHour: 16, duration: 2, status: 'PENDING', notes: '確認待ち' },
+    { spaceIndex: 2, customerIndex: 16, daysOffset: 4, startHour: 11, duration: 3, status: 'PENDING' },
+    { spaceIndex: 1, customerIndex: 17, daysOffset: 6, startHour: 14, duration: 2, status: 'PENDING' },
+    { spaceIndex: 0, customerIndex: 18, daysOffset: 9, startHour: 9, duration: 3, status: 'PENDING' },
+    { spaceIndex: 2, customerIndex: 19, daysOffset: 11, startHour: 13, duration: 4, status: 'PENDING', notes: '新規お客様' },
+    { spaceIndex: 1, customerIndex: 20, daysOffset: 15, startHour: 10, duration: 2, status: 'PENDING' },
+    { spaceIndex: 0, customerIndex: 21, daysOffset: 18, startHour: 15, duration: 3, status: 'PENDING', notes: '仮予約' },
+    { spaceIndex: 2, customerIndex: 22, daysOffset: 22, startHour: 11, duration: 2, status: 'PENDING' },
+    { spaceIndex: 1, customerIndex: 23, daysOffset: 26, startHour: 14, duration: 4, status: 'PENDING' },
+    { spaceIndex: 0, customerIndex: 24, daysOffset: 29, startHour: 9, duration: 3, status: 'PENDING', notes: '来月の予約' },
+  ]
+
+  for (const res of reservations) {
+    const space = spaces[res.spaceIndex % spaces.length]
+    const customer = customers[res.customerIndex % customers.length]
+
+    const date = new Date(now)
+    date.setDate(date.getDate() + res.daysOffset)
+    date.setHours(res.startHour, 0, 0, 0)
+
+    const endDate = new Date(date)
+    endDate.setHours(endDate.getHours() + res.duration)
+
+    const existing = await prisma.reservation.findFirst({
+      where: {
+        spaceId: space.id,
+        customerId: customer.id,
+        startTime: date,
+      },
+    })
+
+    if (!existing) {
+      const basePrice = Number(space.hourlyPrice) * res.duration
+      let couponDiscountAmount: number | null = null
+      let couponId: string | null = null
+
+      // クーポン適用（一部の予約にのみ）
+      if (res.applyCoupon && welcomeCoupon) {
+        couponId = welcomeCoupon.id
+        couponDiscountAmount = basePrice * (Number(welcomeCoupon.discountValue) / 100)
+      }
+
+      const totalPrice = basePrice - (couponDiscountAmount ?? 0)
+
+      await prisma.reservation.create({
+        data: {
+          spaceId: space.id,
+          customerId: customer.id,
+          startTime: date,
+          endTime: endDate,
+          status: res.status,
+          basePrice: new Prisma.Decimal(basePrice),
+          totalPrice: new Prisma.Decimal(totalPrice),
+          couponId,
+          couponDiscountAmount: couponDiscountAmount ? new Prisma.Decimal(couponDiscountAmount) : null,
+          notes: res.notes,
+        },
+      })
+      console.log(`✅ Created reservation: ${space.name} - ${customer.lastName} (${res.status})`)
+    } else {
+      console.log(`⏭️ Skipped existing reservation`)
+    }
+  }
+}
+
+// =============================================================================
+// News
 // =============================================================================
 
 async function seedNews() {
   const newsItems: Prisma.NewsCreateInput[] = [
     {
+      slug: 'year-end-business-hours',
       title: '【重要】年末年始の営業について',
       content: `いつもMyrrh Rental Spaceをご利用いただきありがとうございます。
 
@@ -226,10 +771,11 @@ async function seedNews() {
 
 休業期間中にいただいたお問い合わせは、1月4日以降順次ご対応させていただきます。
 ご不便をおかけいたしますが、何卒よろしくお願いいたします。`,
-      status: 'PUBLISHED',
+      isPublished: true,
       publishedAt: new Date(),
     },
     {
+      slug: 'new-seminar-room-open',
       title: '新スペース「セミナールーム」オープンのお知らせ',
       content: `この度、最大30名収容可能な「セミナールーム」を新たにオープンいたしました。
 
@@ -243,20 +789,22 @@ async function seedNews() {
 
 オープン記念として、1月末まで全日20%OFFでご提供いたします。
 この機会にぜひご利用ください。`,
-      status: 'PUBLISHED',
-      publishedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 1週間前
+      isPublished: true,
+      publishedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
     },
     {
+      slug: 'wifi-upgrade',
       title: 'Wi-Fi回線を増強しました',
       content: `より快適にご利用いただけるよう、全スペースのWi-Fi回線を増強いたしました。
 
 これにより、オンライン会議や大容量データの送受信もストレスなく行えるようになりました。
 
 ぜひご利用ください。`,
-      status: 'PUBLISHED',
-      publishedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000), // 2週間前
+      isPublished: true,
+      publishedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
     },
     {
+      slug: 'website-renewal',
       title: 'ホームページをリニューアルしました',
       content: `Myrrh Rental Spaceのホームページをリニューアルいたしました。
 
@@ -264,22 +812,171 @@ async function seedNews() {
 スペースの検索・予約もスムーズに行えるようになっています。
 
 今後ともMyrrh Rental Spaceをよろしくお願いいたします。`,
-      status: 'PUBLISHED',
-      publishedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 1ヶ月前
+      isPublished: true,
+      publishedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
     },
     {
+      slug: 'spring-campaign-draft',
       title: '【未公開】春のキャンペーン企画中',
       content: `春のキャンペーンを企画中です。詳細は後日公開予定。`,
-      status: 'DRAFT',
+      isPublished: false,
+      publishedAt: null,
+    },
+    {
+      slug: 'corporate-monthly-plan',
+      title: '法人向け月額プランを開始しました',
+      content: `法人のお客様向けに、お得な月額プランを開始いたしました。
+
+【プラン内容】
+・月10時間プラン: 20,000円（税込）
+・月20時間プラン: 35,000円（税込）
+・月40時間プラン: 60,000円（税込）
+
+【特典】
+・通常料金より最大25%お得
+・請求書払い対応
+・優先予約（1週間前から予約可能）
+・専任サポート
+
+詳細はお問い合わせください。`,
+      isPublished: true,
+      publishedAt: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000),
+    },
+    {
+      slug: 'credit-card-payment',
+      title: 'クレジットカード決済に対応しました',
+      content: `ご要望の多かったクレジットカード決済に対応いたしました。
+
+【対応カード】
+・Visa
+・Mastercard
+・American Express
+・JCB
+
+予約時にオンラインで決済いただけるようになり、より便利にご利用いただけます。`,
+      isPublished: true,
+      publishedAt: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000),
+    },
+    {
+      slug: 'media-coverage-newspaper',
+      title: '【メディア掲載】〇〇新聞に紹介されました',
+      content: `2025年12月の〇〇新聞「注目のレンタルスペース特集」にて、当スペースが紹介されました。
+
+「駅近でアクセス抜群、設備も充実した使いやすいスペース」としてご紹介いただきました。
+
+記事の詳細はこちらから（リンク）
+
+引き続きサービス向上に努めてまいります。`,
+      isPublished: true,
+      publishedAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000),
+    },
+    {
+      slug: 'users-1000-milestone',
+      title: 'ご利用者数1000名を突破しました',
+      content: `おかげさまで、累計ご利用者数が1000名を突破いたしました。
+
+日頃よりご愛顧いただき、誠にありがとうございます。
+
+これを記念して、期間限定で以下のキャンペーンを実施いたします。
+
+【キャンペーン内容】
+・ご利用料金10%OFF（2月末まで）
+・リピーター様限定：次回予約時に使える500円クーポン進呈
+
+今後とも変わらぬご愛顧のほど、よろしくお願いいたします。`,
+      isPublished: true,
+      publishedAt: new Date(Date.now() - 50 * 24 * 60 * 60 * 1000),
+    },
+    {
+      slug: 'hvac-renewal',
+      title: '空調設備をリニューアルしました',
+      content: `全スペースの空調設備をリニューアルいたしました。
+
+【改善点】
+・最新型のエアコンに入れ替え
+・個別温度調整が可能に
+・静音性の向上
+・省エネ対応
+
+より快適な環境でご利用いただけるようになりました。`,
+      isPublished: true,
+      publishedAt: new Date(Date.now() - 55 * 24 * 60 * 60 * 1000),
+    },
+    {
+      slug: 'terms-revision-notice',
+      title: '【重要】利用規約改定のお知らせ',
+      content: `2026年1月1日より、利用規約を一部改定いたします。
+
+【主な変更点】
+・キャンセルポリシーの明確化
+・禁止事項の追加
+・個人情報の取り扱いに関する記載の更新
+
+詳細は「利用規約」ページをご確認ください。
+
+今後ともよろしくお願いいたします。`,
+      isPublished: true,
+      publishedAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000),
+    },
+    {
+      slug: 'reservation-system-update',
+      title: 'オンライン予約システムをアップデートしました',
+      content: `オンライン予約システムをアップデートいたしました。
+
+【改善点】
+・スマートフォンでの操作性向上
+・予約カレンダーの視認性改善
+・複数日予約に対応
+・予約確認メールのデザイン刷新
+
+より使いやすくなったシステムをぜひお試しください。`,
+      isPublished: true,
+      publishedAt: new Date(Date.now() - 65 * 24 * 60 * 60 * 1000),
+    },
+    {
+      slug: 'temporary-closure-staff-training',
+      title: 'スタッフ研修のため臨時休業のお知らせ',
+      content: `下記日程におきまして、スタッフ研修のため臨時休業とさせていただきます。
+
+【臨時休業日】
+3月15日（土）終日
+
+ご不便をおかけいたしますが、何卒ご了承ください。
+
+3月16日（日）より通常営業いたします。`,
+      isPublished: true,
+      publishedAt: new Date(Date.now() - 70 * 24 * 60 * 60 * 1000),
+    },
+    {
+      slug: 'parking-partnership',
+      title: '駐車場提携を開始しました',
+      content: `近隣の駐車場「〇〇パーキング」との提携を開始いたしました。
+
+【特典】
+当スペースをご利用の方は、駐車料金が最大3時間無料になります。
+
+【利用方法】
+1. 駐車時に駐車券を受け取る
+2. スペース利用後、スタッフに駐車券を提示
+3. 割引処理後、お車でお帰りください
+
+お車でお越しの方もご利用しやすくなりました。`,
+      isPublished: true,
+      publishedAt: new Date(Date.now() - 75 * 24 * 60 * 60 * 1000),
+    },
+    {
+      slug: 'new-service-coming-soon',
+      title: '【未公開】新サービス準備中',
+      content: `2026年春に向けて、新サービスを準備中です。
+
+詳細は後日発表いたします。お楽しみに！`,
+      isPublished: false,
       publishedAt: null,
     },
   ]
 
   for (const news of newsItems) {
-    const existing = await prisma.news.findFirst({
-      where: { title: news.title },
-    })
-
+    const existing = await prisma.news.findUnique({ where: { slug: news.slug } })
     if (!existing) {
       await prisma.news.create({ data: news })
       console.log(`✅ Created news: ${news.title.slice(0, 30)}...`)
@@ -290,21 +987,211 @@ async function seedNews() {
 }
 
 // =============================================================================
-// Demo Blog
+// Pages
 // =============================================================================
 
-async function seedBlog() {
-  // First, ensure we have a user to be the author
-  const author = await prisma.user.findFirst({
-    where: { role: 'ADMIN' },
+async function seedPages() {
+  // プライバシーポリシーページ
+  const privacyPage = {
+    slug: 'privacy',
+    title: 'プライバシーポリシー',
+    description: '当サイトにおける個人情報の取り扱いについてご説明いたします。',
+    content: `<p>株式会社〇〇（以下「当社」といいます。）は、当社が運営するレンタルスペース予約サービス「Myrrh Rental Space」（以下「本サービス」といいます。）において、お客様の個人情報の保護を重要な責務と認識し、以下のとおりプライバシーポリシー（以下「本ポリシー」といいます。）を定め、個人情報の適切な取り扱いに努めます。</p>
+
+<h2>第1条（個人情報の定義）</h2>
+<p>本ポリシーにおいて「個人情報」とは、個人情報保護法に定める個人情報を指します。</p>
+
+<h2>第2条（収集する個人情報）</h2>
+<p>当社は、本サービスの提供にあたり、氏名、メールアドレス、電話番号等の個人情報を収集することがあります。</p>
+
+<h2>第3条（個人情報の利用目的）</h2>
+<p>当社は、収集した個人情報を本サービスの提供、運営、維持管理等の目的で利用いたします。</p>
+
+<p style="text-align: right; margin-top: 3rem;">制定日: 2026年1月1日<br>株式会社〇〇</p>`,
+    metaDescription: '当サイトにおける個人情報の取り扱いについてご説明いたします。',
+    isPublished: true,
+    isActive: true,
+  }
+
+  const existing = await prisma.page.findUnique({ where: { slug: privacyPage.slug } })
+  if (!existing) {
+    await prisma.page.create({ data: privacyPage })
+    console.log(`✅ Created page: ${privacyPage.title}`)
+  }
+
+  // SEOのみ編集可能なシステムページ
+  const seoOnlyPages = [
+    { slug: 'reservation', title: '予約', description: 'レンタルスペースの予約' },
+    { slug: 'spaces', title: 'スペース一覧', description: 'ご利用可能なレンタルスペース' },
+    { slug: 'contact', title: 'お問い合わせ', description: 'お問い合わせフォーム' },
+    { slug: 'posts', title: 'ブログ', description: 'ブログ記事一覧' },
+    { slug: 'news', title: 'お知らせ', description: 'ニュース・お知らせ一覧' },
+    { slug: 'about', title: '会社概要', description: '会社・サービスについて' },
+    { slug: 'faq', title: 'よくある質問', description: 'FAQ' },
+  ]
+
+  for (const page of seoOnlyPages) {
+    const existingPage = await prisma.page.findUnique({ where: { slug: page.slug } })
+    if (!existingPage) {
+      await prisma.page.create({
+        data: {
+          slug: page.slug,
+          title: page.title,
+          description: page.description,
+          content: '',
+          isPublished: true,
+          isActive: true,
+          isSystemPage: true,
+        },
+      })
+      console.log(`✅ Created system page: ${page.title}`)
+    } else if (!existingPage.isSystemPage) {
+      await prisma.page.update({
+        where: { id: existingPage.id },
+        data: { isSystemPage: true },
+      })
+      console.log(`🔄 Updated to system page: ${page.title}`)
+    } else {
+      console.log(`⏭️ Skipped existing system page: ${page.title}`)
+    }
+  }
+}
+
+// =============================================================================
+// Terms
+// =============================================================================
+
+async function seedTerms() {
+  const existing = await prisma.terms.findFirst({
+    where: { type: 'TERMS_OF_USE', isSiteWide: true },
   })
 
-  if (!author) {
-    console.log('⚠️ No admin user found. Skipping blog seed. Create an admin first.')
+  if (existing) {
+    console.log('⏭️ Site-wide terms already exists')
     return
   }
 
-  // Create categories
+  const admin = await prisma.user.findFirst({ where: { role: 'ADMIN' } })
+  if (!admin) {
+    console.log('⚠️ No admin user found. Skipping terms seed.')
+    return
+  }
+
+  const termsContent = `<p>この利用規約は、レンタルスペース予約サービス「Myrrh Rental Space」の利用条件を定めるものです。</p>
+
+<h2>第1条（適用）</h2>
+<p>本規約は、当サービスの利用に関わる一切の関係に適用されます。</p>
+
+<h2>第2条（禁止事項）</h2>
+<p>利用者は、以下の行為をしてはなりません。</p>
+<ul>
+<li>法令または公序良俗に違反する行為</li>
+<li>当社または第三者の権利を侵害する行為</li>
+<li>その他、当社が不適切と判断する行為</li>
+</ul>`
+
+  await prisma.terms.create({
+    data: {
+      type: 'TERMS_OF_USE',
+      title: 'サイト利用規約',
+      slug: 'terms-of-use',
+      isSiteWide: true,
+      versions: {
+        create: {
+          version: 1,
+          content: termsContent,
+          status: 'PUBLISHED',
+          publishedAt: new Date(),
+          isCurrentVersion: true,
+          createdBy: admin.id,
+        },
+      },
+    },
+  })
+
+  console.log('✅ Created site-wide terms')
+}
+
+// =============================================================================
+// FAQ
+// =============================================================================
+
+async function seedFaq() {
+  const faqData = [
+    {
+      category: { name: 'ご予約について', slug: 'reservation', description: '予約に関するよくあるご質問', order: 0 },
+      items: [
+        { question: '予約はどのくらい前からできますか？', answer: '<p>ご予約は<strong>3ヶ月前</strong>から承っております。</p>' },
+        { question: '予約のキャンセルはできますか？', answer: '<p>はい、可能です。キャンセル規定は7日前まで無料、3日前まで50%、前日・当日100%となります。</p>' },
+        { question: '予約の変更はできますか？', answer: '<p>日時・スペースの変更は<strong>3日前まで</strong>無料で承ります。</p>' },
+        { question: '当日予約は可能ですか？', answer: '<p>空き状況によっては可能です。お電話にてお問い合わせください。</p>' },
+        { question: '定期利用の割引はありますか？', answer: '<p>月4回以上のご利用で<strong>10%OFF</strong>、月8回以上で<strong>15%OFF</strong>となります。</p>' },
+      ],
+    },
+    {
+      category: { name: 'お支払いについて', slug: 'payment', description: '料金・お支払いに関するご質問', order: 1 },
+      items: [
+        { question: '支払い方法は何がありますか？', answer: '<p>クレジットカード、銀行振込、請求書払い（法人のみ）に対応しております。</p>' },
+        { question: '領収書は発行できますか？', answer: '<p>はい、マイページよりダウンロードいただけます。</p>' },
+        { question: '請求書払いは可能ですか？', answer: '<p>法人のお客様に限り対応しております。</p>' },
+        { question: '延長料金はいくらですか？', answer: '<p>30分単位で、通常の時間料金の50%となります。</p>' },
+      ],
+    },
+    {
+      category: { name: '設備・備品について', slug: 'facilities', description: 'スペースの設備に関するご質問', order: 2 },
+      items: [
+        { question: 'Wi-Fiは利用できますか？', answer: '<p>はい、全スペースで<strong>高速Wi-Fi</strong>を無料でご利用いただけます。</p>' },
+        { question: 'プロジェクターの持ち込みは可能ですか？', answer: '<p>可能ですが、各スペースにプロジェクターを完備しております。</p>' },
+        { question: '飲食の持ち込みはできますか？', answer: '<p>はい、可能です。ゴミはお持ち帰りください。</p>' },
+        { question: 'ホワイトボードはありますか？', answer: '<p>全ての会議室・セミナールームに完備しております。</p>' },
+        { question: '電源・延長コードは使えますか？', answer: '<p>各席に電源コンセントを完備しております。延長コードも無料貸出しております。</p>' },
+      ],
+    },
+  ]
+
+  for (const { category, items } of faqData) {
+    let faqCategory = await prisma.faqCategory.findUnique({ where: { slug: category.slug } })
+
+    if (!faqCategory) {
+      faqCategory = await prisma.faqCategory.create({ data: category })
+      console.log(`✅ Created FAQ category: ${category.name}`)
+    }
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]
+      const existing = await prisma.faqItem.findFirst({
+        where: { categoryId: faqCategory.id, question: item.question },
+      })
+
+      if (!existing) {
+        await prisma.faqItem.create({
+          data: {
+            categoryId: faqCategory.id,
+            question: item.question,
+            answer: item.answer,
+            order: i,
+            isPublished: true,
+            publishedAt: new Date(),
+          },
+        })
+        console.log(`✅ Created FAQ item: ${item.question.slice(0, 30)}...`)
+      }
+    }
+  }
+}
+
+// =============================================================================
+// Blog Categories & Posts
+// =============================================================================
+
+async function seedBlog() {
+  const author = await prisma.user.findFirst({ where: { role: 'ADMIN' } })
+  if (!author) {
+    console.log('⚠️ No admin user found. Skipping blog seed.')
+    return
+  }
+
+  // Create categories (未分類はマイグレーションで作成済み)
   const categories = [
     { name: '活用事例', slug: 'case-study', description: 'スペースの活用事例をご紹介' },
     { name: 'お役立ち情報', slug: 'tips', description: 'ビジネスに役立つ情報' },
@@ -312,31 +1199,22 @@ async function seedBlog() {
   ]
 
   for (const category of categories) {
-    const existing = await prisma.blogCategory.findFirst({
-      where: { slug: category.slug },
-    })
-
+    const existing = await prisma.postCategory.findUnique({ where: { slug: category.slug } })
     if (!existing) {
-      await prisma.blogCategory.create({ data: category })
-      console.log(`✅ Created blog category: ${category.name}`)
+      await prisma.postCategory.create({ data: category })
+      console.log(`✅ Created post category: ${category.name}`)
     }
   }
 
-  // Get category IDs
-  const caseStudyCategory = await prisma.blogCategory.findFirst({
-    where: { slug: 'case-study' },
-  })
-  const tipsCategory = await prisma.blogCategory.findFirst({
-    where: { slug: 'tips' },
-  })
+  const caseStudyCategory = await prisma.postCategory.findUnique({ where: { slug: 'case-study' } })
+  const tipsCategory = await prisma.postCategory.findUnique({ where: { slug: 'tips' } })
 
   if (!caseStudyCategory || !tipsCategory) {
     console.log('⚠️ Categories not found. Skipping blog posts.')
     return
   }
 
-  // Create blog posts
-  const posts: Prisma.BlogPostUncheckedCreateInput[] = [
+  const posts: Prisma.PostUncheckedCreateInput[] = [
     {
       title: 'レンタルスペースを活用したセミナー開催のコツ',
       slug: 'seminar-tips',
@@ -344,31 +1222,15 @@ async function seedBlog() {
       content: `# レンタルスペースを活用したセミナー開催のコツ
 
 セミナーを開催する際、会場選びは成功の鍵を握る重要な要素です。
-今回は、レンタルスペースを活用したセミナー開催のコツをご紹介します。
 
 ## 1. 適切な広さを選ぶ
-
 参加者数の1.5倍程度の収容人数を目安に選びましょう。
-余裕があることで、参加者も快適に過ごせます。
 
 ## 2. 設備をチェック
-
-- プロジェクター
-- スクリーン
-- マイク
-- Wi-Fi
-
-これらの設備が揃っているか確認しましょう。
+プロジェクター、スクリーン、マイク、Wi-Fiの有無を確認しましょう。
 
 ## 3. アクセスの良さ
-
-参加者が迷わず来られるよう、アクセスの良い場所を選びましょう。
-駅から徒歩5分以内がおすすめです。
-
-## まとめ
-
-適切な会場選びで、セミナーの成功率がぐっと上がります。
-ぜひ参考にしてみてください。`,
+駅から徒歩5分以内がおすすめです。`,
       thumbnailUrl: 'https://placehold.co/800x600/fef3c7/f59e0b?text=Blog+1',
       categoryId: tipsCategory.id,
       authorId: author.id,
@@ -380,33 +1242,15 @@ async function seedBlog() {
       title: '会議室の上手な使い方 - 生産性を上げる5つのポイント',
       slug: 'meeting-room-productivity',
       excerpt: '会議の生産性を高めるための会議室の使い方をご紹介します。',
-      content: `# 会議室の上手な使い方 - 生産性を上げる5つのポイント
+      content: `# 会議室の上手な使い方
 
-会議が長引いてしまう、なかなか結論が出ない...
-そんなお悩みを解決する、会議室の上手な使い方をご紹介します。
+会議が長引いてしまう、なかなか結論が出ない...そんなお悩みを解決します。
 
 ## 1. 適切なサイズの部屋を選ぶ
-
-参加者数に対して広すぎる部屋は、緊張感が生まれにくくなります。
-適切なサイズの部屋を選びましょう。
-
 ## 2. ホワイトボードを活用する
-
-議論を可視化することで、参加者全員の認識を合わせやすくなります。
-
 ## 3. タイムキーパーを設ける
-
-時間を意識することで、だらだらした会議を防げます。
-
 ## 4. スタンディングミーティングを取り入れる
-
-短い打ち合わせは立って行うことで、効率アップ。
-
-## 5. 会議後の片付けまで時間に含める
-
-次の利用者のためにも、片付けの時間を確保しましょう。
-
-これらのポイントを意識して、生産性の高い会議を実現しましょう！`,
+## 5. 会議後の片付けまで時間に含める`,
       thumbnailUrl: 'https://placehold.co/800x600/e2e8f0/64748b?text=Meeting+Room',
       categoryId: tipsCategory.id,
       authorId: author.id,
@@ -423,30 +1267,12 @@ async function seedBlog() {
 先日、IT企業のA社様に社内研修でセミナールームをご利用いただきました。
 
 ## ご利用の背景
-
-A社様は急成長中のスタートアップ企業。
-オフィスには研修用の大きな部屋がなく、外部の会場を探されていたとのこと。
+急成長中のスタートアップ企業で、オフィスには研修用の大きな部屋がなく外部会場を探されていました。
 
 ## 選んでいただいた理由
-
 - 駅から近くアクセス抜群
 - 30名収容可能な広さ
-- プロジェクター・マイク完備
-- 料金がリーズナブル
-
-## 当日の様子
-
-新入社員向けの技術研修で、終日ご利用いただきました。
-プロジェクターでスライドを投影しながら、
-ハンズオン形式の研修を実施されていました。
-
-## お客様の声
-
-「オフィスから近く、設備も充実していて助かりました。
-また利用したいと思います。」
-
-ありがとうございました！
-またのご利用をお待ちしております。`,
+- プロジェクター・マイク完備`,
       thumbnailUrl: 'https://placehold.co/800x600/fce7f3/ec4899?text=Blog+3',
       categoryId: caseStudyCategory.id,
       authorId: author.id,
@@ -454,15 +1280,46 @@ A社様は急成長中のスタートアップ企業。
       status: 'PUBLISHED',
       publishedAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000),
     },
+    {
+      title: 'リモートワーク時代のコワーキングスペース活用術',
+      slug: 'remote-work-coworking',
+      excerpt: 'リモートワークの普及に伴い、コワーキングスペースの需要が高まっています。',
+      content: `# リモートワーク時代のコワーキングスペース活用術
+
+## なぜコワーキングスペースが選ばれるのか
+1. 集中できる環境
+2. 設備が整っている
+3. 気分転換になる
+4. 人との出会い`,
+      thumbnailUrl: 'https://placehold.co/800x600/dcfce7/22c55e?text=Coworking',
+      categoryId: tipsCategory.id,
+      authorId: author.id,
+      tags: ['リモートワーク', 'コワーキング', '働き方'],
+      status: 'PUBLISHED',
+      publishedAt: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000),
+    },
+    {
+      title: '2026年のオフィストレンドとレンタルスペースの役割',
+      slug: 'office-trends-2026',
+      excerpt: '2026年のオフィストレンドを予測し、レンタルスペースの可能性を探ります。',
+      content: `# 2026年のオフィストレンドとレンタルスペースの役割
+
+## トレンド1: ハイブリッドワークの定着
+## トレンド2: フレキシブルオフィスの増加
+## トレンド3: コラボレーションスペースの重視`,
+      thumbnailUrl: 'https://placehold.co/800x600/fef3c7/f59e0b?text=Trends',
+      categoryId: tipsCategory.id,
+      authorId: author.id,
+      tags: ['トレンド', 'オフィス', '働き方改革'],
+      status: 'DRAFT',
+      publishedAt: null,
+    },
   ]
 
   for (const post of posts) {
-    const existing = await prisma.blogPost.findFirst({
-      where: { slug: post.slug },
-    })
-
+    const existing = await prisma.post.findUnique({ where: { slug: post.slug } })
     if (!existing) {
-      await prisma.blogPost.create({ data: post })
+      await prisma.post.create({ data: post })
       console.log(`✅ Created blog post: ${post.title.slice(0, 30)}...`)
     } else {
       console.log(`⏭️ Skipped existing blog post: ${post.title.slice(0, 30)}...`)
@@ -471,310 +1328,147 @@ A社様は急成長中のスタートアップ企業。
 }
 
 // =============================================================================
-// Demo Pages
+// Blog Comments
 // =============================================================================
 
-async function seedPages() {
-  const pages = [
-    {
-      slug: 'privacy',
-      title: 'プライバシーポリシー',
-      description: '当サイトにおける個人情報の取り扱いについてご説明いたします。',
-      content: `<p>株式会社〇〇（以下「当社」といいます。）は、当社が運営するレンタルスペース予約サービス「Myrrh Rental Space」（以下「本サービス」といいます。）において、お客様の個人情報の保護を重要な責務と認識し、以下のとおりプライバシーポリシー（以下「本ポリシー」といいます。）を定め、個人情報の適切な取り扱いに努めます。</p>
-
-<h2>第1条（個人情報の定義）</h2>
-<p>本ポリシーにおいて「個人情報」とは、個人情報保護法に定める個人情報を指し、生存する個人に関する情報であって、当該情報に含まれる氏名、生年月日、住所、電話番号、メールアドレスその他の記述等により特定の個人を識別できるもの、または個人識別符号が含まれるものをいいます。</p>
-
-<h2>第2条（収集する個人情報）</h2>
-<p>当社は、本サービスの提供にあたり、以下の個人情報を収集することがあります。</p>
-<ul>
-<li>氏名（法人の場合は代表者名および担当者名）</li>
-<li>メールアドレス</li>
-<li>電話番号</li>
-<li>住所</li>
-<li>会社名・団体名（法人のお客様の場合）</li>
-<li>予約情報（利用日時、利用スペース、利用目的等）</li>
-<li>お支払い情報（クレジットカード情報は決済代行会社が管理）</li>
-<li>お問い合わせ内容</li>
-<li>本サービス利用時に自動的に収集される情報（IPアドレス、Cookie、アクセスログ等）</li>
-</ul>
-
-<h2>第3条（個人情報の利用目的）</h2>
-<p>当社は、収集した個人情報を以下の目的で利用いたします。</p>
-<ul>
-<li>本サービスの提供、運営、維持管理</li>
-<li>予約の受付、確認、変更、キャンセル処理</li>
-<li>利用料金の請求、決済処理</li>
-<li>お問い合わせへの対応、サポートの提供</li>
-<li>本サービスに関する重要なお知らせの配信</li>
-<li>新機能、キャンペーン、イベント等のご案内（お客様の同意がある場合に限ります）</li>
-<li>本サービスの改善、新サービスの開発</li>
-<li>利用状況の分析、統計データの作成（個人を特定できない形式で行います）</li>
-<li>不正利用の防止、セキュリティの確保</li>
-<li>法令に基づく対応</li>
-</ul>
-
-<h2>第4条（個人情報の第三者提供）</h2>
-<p>当社は、以下の場合を除き、お客様の同意なく個人情報を第三者に提供することはありません。</p>
-<ul>
-<li>法令に基づく場合</li>
-<li>人の生命、身体または財産の保護のために必要がある場合であって、本人の同意を得ることが困難であるとき</li>
-<li>公衆衛生の向上または児童の健全な育成の推進のために特に必要がある場合であって、本人の同意を得ることが困難であるとき</li>
-<li>国の機関もしくは地方公共団体またはその委託を受けた者が法令の定める事務を遂行することに対して協力する必要がある場合であって、本人の同意を得ることにより当該事務の遂行に支障を及ぼすおそれがあるとき</li>
-</ul>
-
-<h2>第5条（個人情報の委託）</h2>
-<p>当社は、本サービスの提供にあたり、個人情報の取り扱いの全部または一部を外部に委託することがあります。この場合、当社は委託先との間で適切な契約を締結し、委託先における個人情報の安全管理が図られるよう、必要かつ適切な監督を行います。</p>
-
-<h2>第6条（個人情報の安全管理）</h2>
-<p>当社は、個人情報の漏洩、滅失またはき損の防止その他の個人情報の安全管理のために、以下の措置を講じます。</p>
-<ul>
-<li>SSL/TLSによる通信の暗号化</li>
-<li>アクセス権限の適切な管理</li>
-<li>ファイアウォール等によるセキュリティ対策</li>
-<li>従業員への個人情報保護に関する教育の実施</li>
-<li>定期的なセキュリティ監査の実施</li>
-</ul>
-
-<h2>第7条（Cookieの使用）</h2>
-<p>本サービスでは、お客様の利便性向上、利用状況の分析等の目的でCookieを使用しています。Cookieとは、ウェブサイトがお客様のブラウザに送信する小さなテキストファイルで、お客様の端末に保存されます。</p>
-<h3>使用するCookieの種類</h3>
-<ul>
-<li><strong>必須Cookie：</strong>サービスの基本的な機能を提供するために必要なCookie</li>
-<li><strong>分析Cookie：</strong>サービスの利用状況を分析し、改善に役立てるためのCookie</li>
-<li><strong>機能Cookie：</strong>お客様の設定や好みを記憶するためのCookie</li>
-</ul>
-<p>お客様はブラウザの設定によりCookieの受け取りを拒否することができますが、その場合、本サービスの一部機能をご利用いただけない場合があります。</p>
-
-<h2>第8条（個人情報の開示・訂正・削除）</h2>
-<p>お客様は、当社に対して、ご自身の個人情報の開示、訂正、追加、削除、利用停止を請求することができます。ご請求いただいた場合、本人確認を行ったうえで、合理的な期間内に対応いたします。</p>
-<p>ご請求は、本ポリシー末尾に記載のお問い合わせ窓口までご連絡ください。</p>
-
-<h2>第9条（未成年者の個人情報）</h2>
-<p>当社は、18歳未満の方から意図的に個人情報を収集することはありません。18歳未満の方が本サービスを利用される場合は、保護者の方の同意を得たうえでご利用ください。</p>
-
-<h2>第10条（プライバシーポリシーの変更）</h2>
-<p>当社は、必要に応じて本ポリシーを変更することがあります。重要な変更を行う場合は、本サービス上でお知らせするか、メールにてご連絡いたします。変更後のポリシーは、本サービス上に掲載した時点から効力を生じるものとします。</p>
-
-<h2>第11条（お問い合わせ窓口）</h2>
-<p>本ポリシーに関するお問い合わせは、以下の窓口までお願いいたします。</p>
-<p><strong>株式会社〇〇</strong><br>
-個人情報保護管理者: 〇〇 〇〇<br>
-住所: 〒000-0000 〇〇県〇〇市〇〇町0-0-0<br>
-メール: privacy@example.com<br>
-電話: 00-0000-0000（受付時間: 平日 10:00〜17:00）</p>
-
-<p style="text-align: right; margin-top: 3rem;">制定日: 2026年1月1日<br>株式会社〇〇</p>`,
-      metaDescription: '当サイトにおける個人情報の取り扱いについてご説明いたします。お客様のプライバシー保護に努めています。',
-      isPublished: true,
-      isActive: true,
-    },
-    {
-      slug: 'terms',
-      title: '利用規約',
-      description: '当サービスの利用規約をご確認ください。',
-      content: `<p>この利用規約（以下「本規約」といいます。）は、株式会社〇〇（以下「当社」といいます。）が運営するレンタルスペース予約サービス「Myrrh Rental Space」（以下「本サービス」といいます。）の利用条件を定めるものです。本サービスをご利用いただく際は、本規約に同意いただいたものとみなします。</p>
-
-<h2>第1条（適用）</h2>
-<ol>
-<li>本規約は、お客様と当社との間の本サービスの利用に関わる一切の関係に適用されるものとします。</li>
-<li>当社は、本規約のほか、ご利用にあたってのルール等、各種の定め（以下「個別規定」といいます。）をすることがあります。これら個別規定はその名称のいかんに関わらず、本規約の一部を構成するものとします。</li>
-<li>本規約の規定が前条の個別規定の規定と矛盾する場合には、個別規定において特段の定めなき限り、個別規定の規定が優先されるものとします。</li>
-</ol>
-
-<h2>第2条（定義）</h2>
-<p>本規約において使用する用語の定義は、以下のとおりとします。</p>
-<ul>
-<li><strong>「お客様」：</strong>本サービスを利用する個人または法人</li>
-<li><strong>「スペース」：</strong>本サービスを通じて予約可能なレンタルスペース</li>
-<li><strong>「予約」：</strong>お客様がスペースの利用を申し込み、当社がこれを承諾すること</li>
-<li><strong>「利用料金」：</strong>スペースの利用に対してお客様が支払う料金</li>
-</ul>
-
-<h2>第3条（会員登録）</h2>
-<ol>
-<li>本サービスの利用を希望する方は、当社の定める方法によって会員登録を行うものとします。</li>
-<li>当社は、会員登録の申請者に以下の事由があると判断した場合、会員登録の申請を承認しないことがあり、その理由については一切の開示義務を負わないものとします。
-<ul>
-<li>虚偽の事項を届け出た場合</li>
-<li>本規約に違反したことがある者からの申請である場合</li>
-<li>その他、当社が会員登録を相当でないと判断した場合</li>
-</ul>
-</li>
-</ol>
-
-<h2>第4条（予約および利用）</h2>
-<ol>
-<li>お客様は、本サービス上で希望のスペースを選択し、所定の手続きを経て予約を行うものとします。</li>
-<li>予約は、当社からの予約確認通知をもって成立するものとします。</li>
-<li>お客様は、予約時に指定した利用時間内にスペースを利用するものとし、利用時間を超過した場合は、当社が定める延長料金をお支払いいただきます。</li>
-<li>お客様は、スペースを善良な管理者の注意をもって利用するものとし、利用終了時には原状回復を行うものとします。</li>
-</ol>
-
-<h2>第5条（利用料金および支払方法）</h2>
-<ol>
-<li>お客様は、スペースの利用の対価として、本サービス上に表示される利用料金を当社が指定する方法により支払うものとします。</li>
-<li>利用料金の支払方法は、クレジットカード決済、銀行振込、その他当社が指定する方法によるものとします。</li>
-<li>お客様が利用料金の支払を遅滞した場合、お客様は年14.6%の割合による遅延損害金を支払うものとします。</li>
-</ol>
-
-<h2>第6条（キャンセルおよび返金）</h2>
-<ol>
-<li>お客様は、予約をキャンセルする場合、本サービス上の所定の手続きにより行うものとします。</li>
-<li>キャンセルに伴う返金は、以下のキャンセルポリシーに基づいて行います。
-<ul>
-<li>利用日の7日前まで：全額返金</li>
-<li>利用日の3日前まで：50%返金</li>
-<li>利用日の前日まで：30%返金</li>
-<li>利用日当日：返金なし</li>
-</ul>
-</li>
-<li>当社の都合により予約をキャンセルする場合は、利用料金の全額を返金いたします。</li>
-</ol>
-
-<h2>第7条（禁止事項）</h2>
-<p>お客様は、本サービスの利用にあたり、以下の行為をしてはなりません。</p>
-<ul>
-<li>法令または公序良俗に違反する行為</li>
-<li>犯罪行為に関連する行為</li>
-<li>当社、他のお客様、またはその他第三者のサーバーまたはネットワークの機能を破壊したり、妨害したりする行為</li>
-<li>当社のサービスの運営を妨害するおそれのある行為</li>
-<li>他のお客様に関する個人情報等を収集または蓄積する行為</li>
-<li>不正アクセスをし、またはこれを試みる行為</li>
-<li>他のお客様に成りすます行為</li>
-<li>当社のサービスに関連して、反社会的勢力に対して直接または間接に利益を供与する行為</li>
-<li>スペース内での喫煙（指定の喫煙スペースを除く）</li>
-<li>スペース内での火気の使用（許可された場合を除く）</li>
-<li>近隣住民への迷惑行為（騒音、悪臭等）</li>
-<li>スペースの設備・備品の損壊、汚損</li>
-<li>許可なく第三者にスペースを転貸する行為</li>
-<li>その他、当社が不適切と判断する行為</li>
-</ul>
-
-<h2>第8条（本サービスの提供の停止等）</h2>
-<ol>
-<li>当社は、以下のいずれかの事由があると判断した場合、お客様に事前に通知することなく本サービスの全部または一部の提供を停止または中断することができるものとします。
-<ul>
-<li>本サービスにかかるコンピュータシステムの保守点検または更新を行う場合</li>
-<li>地震、落雷、火災、停電または天災などの不可抗力により、本サービスの提供が困難となった場合</li>
-<li>コンピュータまたは通信回線等が事故により停止した場合</li>
-<li>その他、当社が本サービスの提供が困難と判断した場合</li>
-</ul>
-</li>
-<li>当社は、本サービスの提供の停止または中断により、お客様または第三者が被ったいかなる不利益または損害についても、一切の責任を負わないものとします。</li>
-</ol>
-
-<h2>第9条（損害賠償）</h2>
-<ol>
-<li>お客様がスペースの設備・備品を損壊、汚損した場合、お客様は当社に対し、その修繕または原状回復に要する費用を賠償するものとします。</li>
-<li>お客様が本規約に違反し、当社または第三者に損害を与えた場合、お客様はその損害を賠償するものとします。</li>
-</ol>
-
-<h2>第10条（免責事項）</h2>
-<ol>
-<li>当社は、本サービスに事実上または法律上の瑕疵（安全性、信頼性、正確性、完全性、有効性、特定の目的への適合性、セキュリティなどに関する欠陥、エラーやバグ、権利侵害などを含みます。）がないことを明示的にも黙示的にも保証しておりません。</li>
-<li>当社は、本サービスに起因してお客様に生じたあらゆる損害について、当社の故意又は重過失による場合を除き、一切の責任を負いません。ただし、本サービスに関する当社とお客様との間の契約（本規約を含みます。）が消費者契約法に定める消費者契約となる場合、この免責規定は適用されません。</li>
-<li>当社は、お客様がスペース内に持ち込んだ物品の盗難、紛失、損壊について、一切の責任を負いません。</li>
-</ol>
-
-<h2>第11条（サービス内容の変更等）</h2>
-<p>当社は、お客様への事前の通知なく、本サービスの内容を変更し、または本サービスの提供を中止することができるものとし、これによってお客様に生じた損害について一切の責任を負いません。</p>
-
-<h2>第12条（利用規約の変更）</h2>
-<ol>
-<li>当社は、必要と判断した場合には、お客様に通知することなくいつでも本規約を変更することができるものとします。</li>
-<li>変更後の利用規約は、本サービス上に掲載した時点から効力を生じるものとします。</li>
-<li>お客様が本規約の変更後も本サービスの利用を継続する場合、変更後の規約に同意したものとみなします。</li>
-</ol>
-
-<h2>第13条（個人情報の取扱い）</h2>
-<p>当社は、本サービスの利用によって取得する個人情報については、当社「プライバシーポリシー」に従い適切に取り扱うものとします。</p>
-
-<h2>第14条（権利義務の譲渡の禁止）</h2>
-<p>お客様は、当社の書面による事前の承諾なく、利用契約上の地位または本規約に基づく権利もしくは義務を第三者に譲渡し、または担保に供することはできません。</p>
-
-<h2>第15条（準拠法・裁判管轄）</h2>
-<ol>
-<li>本規約の解釈にあたっては、日本法を準拠法とします。</li>
-<li>本サービスに関して紛争が生じた場合には、当社の本店所在地を管轄する裁判所を専属的合意管轄とします。</li>
-</ol>
-
-<h2>第16条（お問い合わせ窓口）</h2>
-<p>本規約に関するお問い合わせは、以下の窓口までお願いいたします。</p>
-<p><strong>株式会社〇〇</strong><br>
-住所: 〒000-0000 〇〇県〇〇市〇〇町0-0-0<br>
-メール: support@example.com<br>
-電話: 00-0000-0000（受付時間: 平日 10:00〜17:00）</p>
-
-<p style="text-align: right; margin-top: 3rem;">制定日: 2026年1月1日<br>株式会社〇〇</p>`,
-      metaDescription: '当サービスの利用規約をご確認ください。ご利用前に必ずお読みいただき、同意のうえでご利用ください。',
-      isPublished: true,
-      isActive: true,
-    },
-  ]
-
-  for (const page of pages) {
-    const existing = await prisma.page.findFirst({
-      where: { slug: page.slug },
-    })
-
-    if (!existing) {
-      await prisma.page.create({ data: page })
-      console.log(`✅ Created page: ${page.title}`)
-    } else {
-      console.log(`⏭️ Skipped existing page: ${page.title}`)
-    }
+async function seedBlogComments() {
+  const posts = await prisma.post.findMany({ where: { status: 'PUBLISHED' }, take: 3 })
+  if (posts.length === 0) {
+    console.log('⚠️ No published blog posts found. Skipping comments seed.')
+    return
   }
 
-  // SEOのみ編集可能なシステムページ（コンテンツはコードで実装）
-  const seoOnlyPages = [
-    { slug: 'reservation', title: '予約', description: 'レンタルスペースの予約' },
-    { slug: 'spaces', title: 'スペース一覧', description: 'ご利用可能なレンタルスペース' },
-    { slug: 'contact', title: 'お問い合わせ', description: 'お問い合わせフォーム' },
-    { slug: 'blog', title: 'ブログ', description: 'ブログ記事一覧' },
-    { slug: 'news', title: 'お知らせ', description: 'ニュース・お知らせ一覧' },
-    { slug: 'about', title: '会社概要', description: '会社・サービスについて' },
-    { slug: 'faq', title: 'よくある質問', description: 'FAQ' },
+  const comments = [
+    { guestName: '山田太郎', guestEmail: 'yamada@example.com', content: 'とても参考になりました！' },
+    { guestName: '鈴木花子', guestEmail: 'suzuki@example.com', content: '会議室選びで悩んでいたので助かりました。' },
+    { guestName: '田中一郎', guestEmail: 'tanaka@example.com', content: '実際に利用してみて、記事の通りでした！' },
+    { guestName: '佐藤美咲', guestEmail: 'sato@example.com', content: 'もう少し詳しく知りたいです。' },
+    { guestName: '高橋健太', guestEmail: 'takahashi@example.com', content: '素晴らしい記事ですね。' },
   ]
 
-  for (const page of seoOnlyPages) {
-    const existing = await prisma.page.findFirst({
-      where: { slug: page.slug },
+  for (let i = 0; i < comments.length; i++) {
+    const post = posts[i % posts.length]
+    const comment = comments[i]
+
+    const existing = await prisma.postComment.findFirst({
+      where: { postId: post.id, guestEmail: comment.guestEmail },
     })
 
     if (!existing) {
-      await prisma.page.create({
-        data: {
-          slug: page.slug,
-          title: page.title,
-          description: page.description,
-          content: '',
-          isPublished: true,
-          isActive: true,
-          isSystemPage: true,
-        },
+      await prisma.postComment.create({
+        data: { postId: post.id, ...comment },
       })
-      console.log(`✅ Created system page: ${page.title}`)
-    } else if (!existing.isSystemPage) {
-      // 既存ページをシステムページに更新
-      await prisma.page.update({
-        where: { id: existing.id },
-        data: { isSystemPage: true },
-      })
-      console.log(`🔄 Updated to system page: ${page.title}`)
-    } else {
-      console.log(`⏭️ Skipped existing system page: ${page.title}`)
+      console.log(`✅ Created blog comment by ${comment.guestName}`)
     }
   }
 }
 
 // =============================================================================
-// Demo Homepage Sections
+// Navigation
+// =============================================================================
+
+async function seedNavigation() {
+  const headerItems = [
+    { label: 'ホーム', url: '/', order: 0 },
+    { label: 'スペース', url: '/spaces', order: 1 },
+    { label: '予約', url: '/reservation', order: 2 },
+    { label: 'ブログ', url: '/posts', order: 3 },
+    { label: 'お知らせ', url: '/news', order: 4 },
+    { label: 'よくある質問', url: '/faq', order: 5 },
+    { label: 'お問い合わせ', url: '/contact', order: 6 },
+  ]
+
+  const footerItems = [
+    { label: '利用規約', url: '/terms', order: 0 },
+    { label: 'プライバシーポリシー', url: '/p/privacy', order: 1 },
+    { label: '会社概要', url: '/about', order: 2 },
+    { label: 'お問い合わせ', url: '/contact', order: 3 },
+  ]
+
+  for (const item of headerItems) {
+    const existing = await prisma.navigationItem.findFirst({
+      where: { type: 'HEADER_DESKTOP', url: item.url },
+    })
+    if (!existing) {
+      await prisma.navigationItem.create({ data: { ...item, type: 'HEADER_DESKTOP' } })
+    }
+  }
+
+  for (const item of headerItems) {
+    const existing = await prisma.navigationItem.findFirst({
+      where: { type: 'HEADER_MOBILE', url: item.url },
+    })
+    if (!existing) {
+      await prisma.navigationItem.create({ data: { ...item, type: 'HEADER_MOBILE' } })
+    }
+  }
+
+  for (const item of footerItems) {
+    const existing = await prisma.navigationItem.findFirst({
+      where: { type: 'FOOTER', url: item.url },
+    })
+    if (!existing) {
+      await prisma.navigationItem.create({ data: { ...item, type: 'FOOTER' } })
+    }
+  }
+
+  console.log('✅ Created navigation items')
+}
+
+// =============================================================================
+// Announcement Bar
+// =============================================================================
+
+async function seedAnnouncementBar() {
+  const announcements = [
+    { message: '【お知らせ】年末年始の営業日程を掲載しました', type: 'info', linkUrl: '/news', linkText: '詳細を見る', priority: 0 },
+    { message: 'オープン記念！今月末まで全スペース20%OFF', type: 'promo', linkUrl: '/spaces', linkText: 'スペースを見る', priority: 1 },
+    { message: '1月15日（水）は設備点検のため休館いたします', type: 'warning', priority: 2, isActive: false },
+  ]
+
+  for (const announcement of announcements) {
+    const existing = await prisma.announcementBar.findFirst({
+      where: { message: announcement.message },
+    })
+
+    if (!existing) {
+      await prisma.announcementBar.create({ data: announcement })
+      console.log(`✅ Created announcement: ${announcement.message.slice(0, 30)}...`)
+    }
+  }
+}
+
+// =============================================================================
+// Social Links
+// =============================================================================
+
+async function seedSocialLinks() {
+  const socialLinks = [
+    { platform: 'TWITTER' as const, url: 'https://twitter.com/myrrh_rental', order: 0 },
+    { platform: 'INSTAGRAM' as const, url: 'https://instagram.com/myrrh_rental', order: 1 },
+    { platform: 'FACEBOOK' as const, url: 'https://facebook.com/myrrh.rental', order: 2 },
+    { platform: 'LINE' as const, url: 'https://line.me/R/ti/p/@myrrh-rental', order: 3 },
+    { platform: 'YOUTUBE' as const, url: 'https://youtube.com/@myrrh-rental', order: 4, showOnMobile: false },
+  ]
+
+  for (const link of socialLinks) {
+    const existing = await prisma.socialLink.findFirst({
+      where: { platform: link.platform },
+    })
+
+    if (!existing) {
+      await prisma.socialLink.create({ data: link })
+      console.log(`✅ Created social link: ${link.platform}`)
+    }
+  }
+}
+
+// =============================================================================
+// Homepage Sections
 // =============================================================================
 
 async function seedHomepageSections() {
   const existingCount = await prisma.homepageSection.count()
-
   if (existingCount > 0) {
     console.log('⏭️ Homepage sections already exist')
     return
@@ -795,30 +1489,19 @@ async function seedHomepageSections() {
     },
     {
       type: 'SPACE_LIST',
-      config: {
-        maxItems: 6,
-        showOnlyPublished: true,
-      },
+      config: { maxItems: 6, showOnlyPublished: true },
       order: 1,
       isActive: true,
     },
     {
       type: 'NEWS',
-      config: {
-        title: 'お知らせ',
-        maxItems: 3,
-        showViewAllLink: true,
-      },
+      config: { title: 'お知らせ', maxItems: 3, showViewAllLink: true },
       order: 2,
       isActive: true,
     },
     {
-      type: 'BLOG',
-      config: {
-        title: '最新の記事',
-        maxItems: 3,
-        showViewAllLink: true,
-      },
+      type: 'POST',
+      config: { title: '最新の記事', maxItems: 3, showViewAllLink: true },
       order: 3,
       isActive: true,
     },
@@ -828,18 +1511,9 @@ async function seedHomepageSections() {
         title: 'よくあるご質問',
         maxItems: 5,
         items: [
-          {
-            question: '予約のキャンセルはできますか？',
-            answer: 'はい、予約日の48時間前までは無料でキャンセル可能です。それ以降のキャンセルは料金の50%をご負担いただきます。',
-          },
-          {
-            question: '支払い方法は何がありますか？',
-            answer: 'クレジットカード（Visa, Mastercard, AMEX）、銀行振込に対応しております。',
-          },
-          {
-            question: '利用時間の延長はできますか？',
-            answer: '空き状況に応じて可能です。当日、スタッフにお申し付けください。',
-          },
+          { question: '予約のキャンセルはできますか？', answer: 'はい、予約日の48時間前までは無料でキャンセル可能です。' },
+          { question: '支払い方法は何がありますか？', answer: 'クレジットカード、銀行振込に対応しております。' },
+          { question: '利用時間の延長はできますか？', answer: '空き状況に応じて可能です。' },
         ],
       },
       order: 4,
@@ -866,47 +1540,93 @@ async function seedHomepageSections() {
 }
 
 // =============================================================================
-// Demo Settings
-// =============================================================================
-
-async function seedSettings() {
-  const existing = await prisma.settings.findUnique({
-    where: { id: 'singleton' },
-  })
-
-  const settingsData = {
-    siteName: 'Myrrh Rental Space',
-    siteDescription: 'ビジネスからプライベートまで、様々な用途に対応したレンタルスペース',
-    businessName: '株式会社サンプル',
-    businessNameKana: 'カブシキガイシャサンプル',
-    representativeName: '山田 太郎',
-    businessType: '法人',
-    phoneNumber: '03-1234-5678',
-    email: 'info@example.com',
-    address: '東京都渋谷区神宮前1-1-1 サンプルビル',
-    postalCode: '150-0001',
-    prefecture: '東京都',
-    city: '渋谷区',
-    streetAddress: '神宮前1-1-1 サンプルビル',
-    footerCopyright: '© 2025 Myrrh Rental Space. All rights reserved.',
-  }
-
-  if (!existing) {
-    await prisma.settings.create({
-      data: {
-        id: 'singleton',
-        ...settingsData,
-      },
-    })
-    console.log('✅ Created settings')
-  } else {
-    console.log('⏭️ Settings already exist')
-  }
-}
-
-// =============================================================================
 // Main
 // =============================================================================
+
+async function seedAll(email: string, password: string, name: string) {
+  await seedAdmin(email, password, name)
+
+  console.log('')
+  console.log('📦 Creating demo data...')
+  console.log('')
+
+  // Phase 1: 基本設定
+  await seedSettings()
+
+  // Phase 2: マスターデータ
+  await seedLocations()
+  await seedSpaceCategories()
+  await seedTerms()
+
+  // Phase 3: スペース（リレーション設定）
+  await seedSpaces()
+
+  // Phase 4: 顧客・問い合わせ・クーポン
+  await seedCustomers()
+  await seedInquiries()
+  await seedCoupons()
+
+  // Phase 5: 予約（クーポン適用例含む）
+  await seedReservations()
+
+  // Phase 6: コンテンツ
+  await seedNews()
+  await seedPages()
+  await seedFaq()
+  await seedBlogTags()
+  await seedBlog()
+  await seedBlogComments()
+
+  // Phase 7: サイト設定
+  await seedNavigation()
+  await seedAnnouncementBar()
+  await seedSocialLinks()
+  await seedHomepageSections()
+}
+
+async function seedDemo() {
+  console.log('📦 Creating demo data (skip existing)...')
+  console.log('')
+
+  // 基本設定
+  await seedSettings()
+
+  // マスターデータ
+  await seedLocations()
+  await seedSpaceCategories()
+
+  // スペース
+  await seedSpaces()
+
+  // コンテンツ
+  await seedNews()
+  await seedPages()
+  await seedTerms()
+  await seedFaq()
+  await seedHomepageSections()
+  await seedNavigation()
+  await seedAnnouncementBar()
+  await seedSocialLinks()
+
+  // 顧客・問い合わせ・クーポン
+  await seedCustomers()
+  await seedInquiries()
+  await seedCoupons()
+
+  // Blog (admin必須)
+  const adminUser = await prisma.user.findFirst({ where: { role: 'ADMIN' } })
+  if (adminUser) {
+    await seedBlogTags()
+    await seedBlog()
+    await seedBlogComments()
+  } else {
+    console.log('⚠️ No admin user found. Skipping blog seed.')
+    console.log('   Create an admin first: bun prisma/seed.ts --admin <email> <password>')
+  }
+
+  // 予約
+  await seedReservations()
+}
 
 async function main() {
   const args = process.argv.slice(2)
@@ -916,11 +1636,13 @@ async function main() {
 Usage:
   bun prisma/seed.ts --admin <email> <password> [name]  # Create admin user only
   bun prisma/seed.ts --demo                              # Create demo data only
+  bun prisma/seed.ts --fresh <email> <password> [name]   # Clear all + create all
   bun prisma/seed.ts --all <email> <password> [name]     # Create all data
 
 Examples:
   bun prisma/seed.ts --admin admin@example.com mypassword123
   bun prisma/seed.ts --demo
+  bun prisma/seed.ts --fresh admin@example.com mypassword123
   bun prisma/seed.ts --all admin@example.com mypassword123 "Administrator"
 `)
     process.exit(1)
@@ -937,57 +1659,26 @@ Examples:
       console.error('Error: --admin requires <email> and <password>')
       process.exit(1)
     }
-    const email = args[1]
-    const password = args[2]
-    const name = args[3] || 'Administrator'
-
-    await seedAdmin(email, password, name)
+    await seedAdmin(args[1], args[2], args[3] || 'Administrator')
   } else if (mode === '--demo') {
-    console.log('📦 Creating demo data...')
-    console.log('')
-
-    await seedSettings()
-    await seedSpaces()
-    await seedNews()
-    await seedPages()
-    await seedHomepageSections()
-
-    // Blog needs an admin user
-    const adminUser = await prisma.user.findFirst({ where: { role: 'ADMIN' } })
-    if (adminUser) {
-      await seedBlog()
-    } else {
-      console.log('⚠️ No admin user found. Skipping blog seed.')
-      console.log('   Create an admin first: bun prisma/seed.ts --admin <email> <password>')
+    await seedDemo()
+  } else if (mode === '--fresh') {
+    if (args.length < 3) {
+      console.error('Error: --fresh requires <email> and <password>')
+      process.exit(1)
     }
+    await clearAllData()
+    await seedAll(args[1], args[2], args[3] || 'Administrator')
   } else if (mode === '--all') {
     if (args.length < 3) {
       console.error('Error: --all requires <email> and <password>')
       process.exit(1)
     }
-    const email = args[1]
-    const password = args[2]
-    const name = args[3] || 'Administrator'
-
-    await seedAdmin(email, password, name)
-
-    console.log('')
-    console.log('📦 Creating demo data...')
-    console.log('')
-
-    await seedSettings()
-    await seedSpaces()
-    await seedNews()
-    await seedPages()
-    await seedHomepageSections()
-    await seedBlog()
+    await seedAll(args[1], args[2], args[3] || 'Administrator')
   } else {
-    // Legacy mode: bun prisma/seed.ts <email> <password> [name]
+    // Legacy mode
     if (args.length >= 2 && !args[0].startsWith('--')) {
-      const email = args[0]
-      const password = args[1]
-      const name = args[2] || 'Administrator'
-      await seedAdmin(email, password, name)
+      await seedAdmin(args[0], args[1], args[2] || 'Administrator')
     } else {
       console.error('Unknown option:', mode)
       process.exit(1)

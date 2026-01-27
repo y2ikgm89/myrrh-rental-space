@@ -4,8 +4,12 @@ import { useActionState, useEffect, type ReactElement } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { createCustomer, type CreateCustomerInput } from '@/admin/actions/customer'
+import { createCustomer } from '@/admin/actions/customer'
+import {
+  customerFormSchema,
+  type CustomerFormData,
+  type CustomerFormInput,
+} from '@/admin/lib/validations/customer'
 import {
   Button,
   Input,
@@ -15,19 +19,11 @@ import {
 } from '@/admin/components/ui'
 import { cn } from '@/shared/lib/utils'
 import { useKanaInput } from '@/shared/hooks'
-
-const customerFormSchema = z.object({
-  lastName: z.string().min(1, '姓は必須です').max(50, '姓は50文字以内で入力してください'),
-  firstName: z.string().min(1, '名は必須です').max(50, '名は50文字以内で入力してください'),
-  lastNameKana: z.string().max(50, 'セイは50文字以内で入力してください').optional().or(z.literal('')),
-  firstNameKana: z.string().max(50, 'メイは50文字以内で入力してください').optional().or(z.literal('')),
-  email: z.string().email('有効なメールアドレスを入力してください'),
-  phoneNumber: z.string().max(20, '電話番号は20文字以内で入力してください').optional().or(z.literal('')),
-  address: z.string().max(500, '住所は500文字以内で入力してください').optional().or(z.literal('')),
-  notes: z.string().max(2000, 'メモは2000文字以内で入力してください').optional().or(z.literal('')),
-})
-
-type CustomerFormData = z.infer<typeof customerFormSchema>
+import {
+  getFormString,
+  getFormStringRequired,
+  getFormStringOrDefault,
+} from '@/shared/lib/form-data'
 
 type FormState = {
   success: boolean
@@ -35,23 +31,19 @@ type FormState = {
   customerId?: string
 } | null
 
-// TODO: FormData直接アクセスを @/shared/lib/form-data のヘルパー関数で置き換え可能
-// - getFormStringRequired: lastName, firstName, email
-// - getFormString: lastNameKana, firstNameKana
-// - getFormStringOrDefault: phoneNumber, address, notes
 async function submitAction(
   _prevState: FormState,
   formData: FormData
 ): Promise<FormState> {
-  const input: CreateCustomerInput = {
-    lastName: formData.get('lastName') as string,
-    firstName: formData.get('firstName') as string,
-    lastNameKana: (formData.get('lastNameKana') as string) || undefined,
-    firstNameKana: (formData.get('firstNameKana') as string) || undefined,
-    email: formData.get('email') as string,
-    phoneNumber: (formData.get('phoneNumber') as string) || '',
-    address: (formData.get('address') as string) || '',
-    notes: (formData.get('notes') as string) || '',
+  const input: CustomerFormInput = {
+    lastName: getFormStringRequired(formData, 'lastName'),
+    firstName: getFormStringRequired(formData, 'firstName'),
+    lastNameKana: getFormString(formData, 'lastNameKana'),
+    firstNameKana: getFormString(formData, 'firstNameKana'),
+    email: getFormStringRequired(formData, 'email'),
+    phoneNumber: getFormStringOrDefault(formData, 'phoneNumber', ''),
+    address: getFormStringOrDefault(formData, 'address', ''),
+    notes: getFormStringOrDefault(formData, 'notes', ''),
   }
 
   const result = await createCustomer(input)

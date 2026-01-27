@@ -13,11 +13,11 @@ export const supabase: SupabaseClient | null =
 export const isSupabaseConfigured = (): boolean => supabase !== null
 
 // Storage bucket names
-export type StorageBucket = 'spaces' | 'blog' | 'site' | 'media'
+export type StorageBucket = 'spaces' | 'posts' | 'site' | 'media'
 
-export const STORAGE_BUCKETS: Record<'SPACES' | 'BLOG' | 'SITE' | 'MEDIA', StorageBucket> = {
+export const STORAGE_BUCKETS: Record<'SPACES' | 'POSTS' | 'SITE' | 'MEDIA', StorageBucket> = {
   SPACES: 'spaces',
-  BLOG: 'blog',
+  POSTS: 'posts',
   SITE: 'site',
   MEDIA: 'media',
 }

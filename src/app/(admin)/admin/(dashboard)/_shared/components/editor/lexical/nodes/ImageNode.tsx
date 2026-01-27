@@ -1,27 +1,27 @@
 /**
  * Image Node
  *
- * 画像を表示するカスタムノード
+ * @description 画像を表示するDecoratorNode
  */
 
 'use client'
 
 import type { ReactElement } from 'react'
-import {
-  DecoratorNode,
-  type DOMConversionMap,
-  type DOMConversionOutput,
-  type DOMExportOutput,
-  type LexicalNode,
-  type NodeKey,
-  type SerializedLexicalNode,
-  type Spread,
+import type {
+  DOMConversionMap,
+  DOMConversionOutput,
+  DOMExportOutput,
+  EditorConfig,
+  LexicalNode,
+  NodeKey,
+  SerializedLexicalNode,
+  Spread,
 } from 'lexical'
-import { Suspense, lazy } from 'react'
+import { $applyNodeReplacement, DecoratorNode } from 'lexical'
 
-const ImageComponent = lazy(() =>
-  import('./ImageComponent').then((m) => ({ default: m.ImageComponent }))
-)
+// =============================================================================
+// Types
+// =============================================================================
 
 export type SerializedImageNode = Spread<
   {
@@ -33,18 +33,61 @@ export type SerializedImageNode = Spread<
   SerializedLexicalNode
 >
 
-function $convertImageElement(domNode: HTMLElement): DOMConversionOutput | null {
-  const img = domNode as HTMLImageElement
-  const src = img.getAttribute('src')
-  if (!src) {
-    return null
-  }
-  const alt = img.getAttribute('alt') || ''
-  const width = img.width || undefined
-  const height = img.height || undefined
-  const node = $createImageNode({ src, alt, width, height })
-  return { node }
+// =============================================================================
+// Component
+// =============================================================================
+
+function ImageComponent({
+  src,
+  alt,
+  width,
+  height,
+  nodeKey,
+}: {
+  src: string
+  alt: string
+  width?: number
+  height?: number
+  nodeKey: NodeKey
+}) {
+  return (
+    <div
+      data-lexical-node-key={nodeKey}
+      className="relative my-4 flex justify-center"
+    >
+      <img
+        src={src}
+        alt={alt}
+        width={width}
+        height={height}
+        className="max-w-full h-auto rounded-lg"
+        draggable={false}
+      />
+    </div>
+  )
 }
+
+// =============================================================================
+// DOM Conversion
+// =============================================================================
+
+function $convertImageElement(domNode: Node): null | DOMConversionOutput {
+  if (domNode instanceof HTMLImageElement) {
+    const src = domNode.getAttribute('src')
+    if (src) {
+      const alt = domNode.getAttribute('alt') ?? ''
+      const width = domNode.width || undefined
+      const height = domNode.height || undefined
+      const node = $createImageNode({ src, alt, width, height })
+      return { node }
+    }
+  }
+  return null
+}
+
+// =============================================================================
+// Node Class
+// =============================================================================
 
 export class ImageNode extends DecoratorNode<ReactElement> {
   __src: string
@@ -66,20 +109,6 @@ export class ImageNode extends DecoratorNode<ReactElement> {
     )
   }
 
-  constructor(
-    src: string,
-    alt: string = '',
-    width?: number,
-    height?: number,
-    key?: NodeKey
-  ) {
-    super(key)
-    this.__src = src
-    this.__alt = alt
-    this.__width = width
-    this.__height = height
-  }
-
   static importJSON(serializedNode: SerializedImageNode): ImageNode {
     return $createImageNode({
       src: serializedNode.src,
@@ -87,17 +116,6 @@ export class ImageNode extends DecoratorNode<ReactElement> {
       width: serializedNode.width,
       height: serializedNode.height,
     })
-  }
-
-  exportJSON(): SerializedImageNode {
-    return {
-      type: 'image',
-      version: 1,
-      src: this.__src,
-      alt: this.__alt,
-      width: this.__width,
-      height: this.__height,
-    }
   }
 
   static importDOM(): DOMConversionMap | null {
@@ -109,91 +127,102 @@ export class ImageNode extends DecoratorNode<ReactElement> {
     }
   }
 
-  exportDOM(): DOMExportOutput {
-    const element = document.createElement('img')
-    element.setAttribute('src', this.__src)
-    element.setAttribute('alt', this.__alt)
-    if (this.__width) {
-      element.setAttribute('width', String(this.__width))
-    }
-    if (this.__height) {
-      element.setAttribute('height', String(this.__height))
-    }
-    element.setAttribute('loading', 'lazy')
-    return { element }
+  constructor(
+    src: string,
+    alt: string,
+    width?: number,
+    height?: number,
+    key?: NodeKey
+  ) {
+    super(key)
+    this.__src = src
+    this.__alt = alt
+    this.__width = width
+    this.__height = height
   }
 
-  createDOM(): HTMLElement {
-    const span = document.createElement('span')
-    span.className = 'editor-image-wrapper'
-    return span
+  exportJSON(): SerializedImageNode {
+    return {
+      ...super.exportJSON(),
+      type: 'image',
+      src: this.__src,
+      alt: this.__alt,
+      width: this.__width,
+      height: this.__height,
+    }
+  }
+
+  exportDOM(): DOMExportOutput {
+    const img = document.createElement('img')
+    img.setAttribute('src', this.__src)
+    img.setAttribute('alt', this.__alt)
+    if (this.__width) {
+      img.setAttribute('width', String(this.__width))
+    }
+    if (this.__height) {
+      img.setAttribute('height', String(this.__height))
+    }
+    img.className = 'max-w-full h-auto rounded-lg my-4'
+    return { element: img }
+  }
+
+  createDOM(config: EditorConfig): HTMLElement {
+    const div = document.createElement('div')
+    const theme = config.theme
+    const className = theme.image
+    if (className) {
+      div.className = className
+    }
+    return div
   }
 
   updateDOM(): false {
     return false
   }
 
-  getSrc(): string {
-    return this.__src
-  }
-
-  getAlt(): string {
-    return this.__alt
-  }
-
-  setSrc(src: string): void {
-    const writable = this.getWritable()
-    writable.__src = src
-  }
-
-  setAlt(alt: string): void {
-    const writable = this.getWritable()
-    writable.__alt = alt
-  }
-
-  setDimensions(width?: number, height?: number): void {
-    const writable = this.getWritable()
-    writable.__width = width
-    writable.__height = height
-  }
-
   decorate(): ReactElement {
     return (
-      <Suspense
-        fallback={
-          <div className="animate-pulse bg-muted rounded-lg h-48 flex items-center justify-center">
-            <span className="text-muted-foreground">読み込み中...</span>
-          </div>
-        }
-      >
-        <ImageComponent
-          nodeKey={this.__key}
-          src={this.__src}
-          alt={this.__alt}
-          width={this.__width}
-          height={this.__height}
-        />
-      </Suspense>
+      <ImageComponent
+        src={this.__src}
+        alt={this.__alt}
+        width={this.__width}
+        height={this.__height}
+        nodeKey={this.__key}
+      />
     )
   }
 }
 
-type ImageNodeOptions = {
-  src: string
-  alt?: string
-  width?: number
-  height?: number
-}
+// =============================================================================
+// Factory Functions
+// =============================================================================
 
+/**
+ * 画像ノードを作成する
+ *
+ * @param params - 画像のパラメータ
+ * @returns ImageNode インスタンス
+ */
 export function $createImageNode({
   src,
   alt = '',
   width,
   height,
-}: ImageNodeOptions): ImageNode {
-  return new ImageNode(src, alt, width, height)
+}: {
+  src: string
+  alt?: string
+  width?: number
+  height?: number
+}): ImageNode {
+  return $applyNodeReplacement(new ImageNode(src, alt, width, height))
 }
 
+/**
+ * ノードがImageNodeかどうかを判定する
+ *
+ * @param node - 判定対象のノード
+ * @returns ImageNodeの場合true
+ */
 export function $isImageNode(
   node: LexicalNode | null | undefined
 ): node is ImageNode {

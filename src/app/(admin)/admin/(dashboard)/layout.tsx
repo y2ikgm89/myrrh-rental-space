@@ -14,6 +14,7 @@ import { Suspense } from 'react'
 import { cacheLife, cacheTag } from 'next/cache'
 import { AdminLayoutProvider } from '@/admin/contexts/admin-layout-context'
 import { ResponsiveSidebar } from './_components/ResponsiveSidebar'
+import { MainContent } from './_components/MainContent'
 import { TopBar } from './_components/TopBar'
 import { UserInfo, UserInfoSkeleton } from './_components/UserInfo'
 import { prisma } from '@/shared/lib/prisma'
@@ -61,18 +62,18 @@ export default async function DashboardLayout({
         />
 
         {/* メインコンテンツエリア */}
-        <div className="lg:pl-64 transition-[padding] duration-300">
-          {/* トップバー */}
-          <TopBar
-            token={ADMIN_LOGIN_TOKEN}
-            siteName={brandingSettings.siteName}
-            headerLogoUrl={brandingSettings.headerLogoUrl}
-            useHeaderLogo={brandingSettings.useHeaderLogo}
-          />
-
-          {/* コンテンツ */}
-          <main className="p-4 lg:p-6">{children}</main>
-        </div>
+        <MainContent
+          topBar={
+            <TopBar
+              token={ADMIN_LOGIN_TOKEN}
+              siteName={brandingSettings.siteName}
+              headerLogoUrl={brandingSettings.headerLogoUrl}
+              useHeaderLogo={brandingSettings.useHeaderLogo}
+            />
+          }
+        >
+          {children}
+        </MainContent>
       </div>
     </AdminLayoutProvider>
   )

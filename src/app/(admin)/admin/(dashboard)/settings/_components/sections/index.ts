@@ -19,7 +19,7 @@ export { StripeSection } from './StripeSection'
 export { LayoutSection } from './LayoutSection'
 export { SidebarSection } from './SidebarSection'
 
-// Blog Settings
+// Posts Settings
 export { PermalinkSection } from './PermalinkSection'
 
 // External Service API Keys

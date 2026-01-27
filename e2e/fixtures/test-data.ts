@@ -95,7 +95,7 @@ export const urls = {
   news: '/news',
   contact: '/contact',
   // 認証
-  login: '/login',
+  login: '/admin/login',
   // 管理画面
   adminDashboard: '/admin',
   adminSpaces: '/admin/spaces',

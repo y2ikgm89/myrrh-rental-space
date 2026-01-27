@@ -5,6 +5,7 @@ import { tv } from 'tailwind-variants'
 import { Button } from '@/public/components/ui/Button'
 import { Input } from '@/public/components/ui/Input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/public/components/ui/Card'
+import { Turnstile } from '@/public/components/Turnstile'
 import { submitContact } from '@/public/actions/contact'
 import {
   contactSchema,
@@ -56,11 +57,17 @@ const initialFormState: FormState = {
   message: '',
 }
 
-export function ContactForm(): ReactElement {
+type Props = {
+  /** Turnstile Site Key（DBから取得、nullの場合はTurnstile無効） */
+  turnstileSiteKey: string | null
+}
+
+export function ContactForm({ turnstileSiteKey }: Props): ReactElement {
   const [formState, setFormState] = useState<FormState>(initialFormState)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({})
   const [result, setResult] = useState<ContactActionResult | null>(null)
   const [isPending, startTransition] = useTransition()
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -107,14 +114,15 @@ export function ContactForm(): ReactElement {
       return
     }
 
-    // サーバーアクション実行
+    // サーバーアクション実行（Turnstileトークン付き）
     startTransition(async () => {
-      const actionResult = await submitContact(input)
+      const actionResult = await submitContact(input, turnstileToken ?? undefined)
       setResult(actionResult)
 
       if (actionResult.success) {
         setFormState(initialFormState)
         setFieldErrors({})
+        setTurnstileToken(null)
       } else if (actionResult.fieldErrors) {
         setFieldErrors(actionResult.fieldErrors)
       }
@@ -144,6 +152,9 @@ export function ContactForm(): ReactElement {
       </Card>
     )
   }
+
+  // 送信ボタンの無効化条件
+  const isSubmitDisabled = isPending || Boolean(turnstileSiteKey && !turnstileToken)
 
   return (
     <Card>
@@ -283,8 +294,25 @@ export function ContactForm(): ReactElement {
             )}
           </div>
 
+          {/* Turnstile（スパム対策） */}
+          {turnstileSiteKey && (
+            <div className="flex justify-center">
+              <Turnstile
+                siteKey={turnstileSiteKey}
+                onVerify={setTurnstileToken}
+                onExpire={() => setTurnstileToken(null)}
+                size="normal"
+              />
+            </div>
+          )}
+
           {/* 送信ボタン */}
-          <Button type="submit" size="lg" className="w-full" disabled={isPending}>
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full"
+            disabled={isSubmitDisabled}
+          >
             {isPending ? '送信中...' : '送信する'}
           </Button>
         </form>

@@ -15,7 +15,15 @@ import Image from 'next/image'
 import { tv } from 'tailwind-variants'
 import { cn, formatPrice } from '@/shared/lib/utils'
 import { Container, Card, CardContent, CardFooter } from '@/public/components/ui'
-import { prisma, type Space, Prisma } from '@/shared/lib/prisma'
+import { ContentRenderer } from '@/public/components/ContentRenderer'
+import { prisma, Prisma } from '@/shared/lib/prisma'
+import { getPageContent, getPublicTaxSettings } from '@/public/actions/settings'
+import {
+  type TaxSettings,
+  getTaxRate,
+  calculateTaxIncludedPrice,
+} from '@/shared/lib/pricing'
+import { parseTaxRateType } from '@/shared/lib/json-validators'
 import { loadSpaceSearchParams } from '@/shared/lib/nuqs'
 import {
   spaceSearchParamsDefaults,
@@ -54,14 +62,42 @@ const styles = tv({
   },
 })()
 
-interface SpaceCardProps {
-  space: Space
-  index: number
+/**
+ * SpaceCard で使用するスペースデータの型
+ * Decimal フィールドは表示用に number に変換済み
+ */
+type SpaceCardData = {
+  id: string
+  slug: string
+  name: string
+  description: string
+  mainImageUrl: string
+  hourlyPrice: number
+  capacity: number
+  taxRateType: 'standard' | 'reduced'
 }
 
-function SpaceCard({ space, index }: SpaceCardProps): ReactElement {
+interface SpaceCardProps {
+  space: SpaceCardData
+  index: number
+  taxSettings: TaxSettings
+}
+
+function SpaceCard({ space, index, taxSettings }: SpaceCardProps): ReactElement {
+  const displayMode = taxSettings.displayModePublic
+  const taxRate = getTaxRate(space.taxRateType, taxSettings)
+  const taxIncludedPrice = calculateTaxIncludedPrice(space.hourlyPrice, taxRate)
+
+  // 表示モードに応じた価格フォーマット
+  const priceDisplay =
+    displayMode === 'tax_excluded'
+      ? `${formatPrice(space.hourlyPrice)}（税抜）`
+      : displayMode === 'tax_included'
+        ? formatPrice(taxIncludedPrice)
+        : `${formatPrice(taxIncludedPrice)}（税抜${formatPrice(space.hourlyPrice)}）`
+
   return (
-    <Link href={`/spaces/${space.id}`}>
+    <Link href={`/spaces/${space.slug}`}>
       <Card className="h-full overflow-hidden transition-shadow hover:shadow-lg">
         <div className={styles.imageWrapper()}>
           <Image
@@ -83,7 +119,7 @@ function SpaceCard({ space, index }: SpaceCardProps): ReactElement {
         </CardContent>
         <CardFooter className={cn(styles.meta(), 'p-4 pt-0')}>
           <span className={styles.price()}>
-            {formatPrice(space.hourlyPrice)}/時間
+            {priceDisplay}/時間
           </span>
           <span className={styles.capacity()}>定員 {space.capacity}名</span>
         </CardFooter>
@@ -127,9 +163,19 @@ async function SpaceResults({
   } satisfies Prisma.SpaceWhereInput
 
   // 並列でデータ取得
-  const [spaces, totalCount] = await Promise.all([
+  const [rawSpaces, totalCount, taxSettings] = await Promise.all([
     prisma.space.findMany({
       where,
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        description: true,
+        mainImageUrl: true,
+        hourlyPrice: true,
+        capacity: true,
+        taxRateType: true,
+      },
       skip: (safePage - 1) * safePerPage,
       take: safePerPage,
       orderBy: {
@@ -137,7 +183,15 @@ async function SpaceResults({
       },
     }),
     prisma.space.count({ where }),
+    getPublicTaxSettings(),
   ])
+
+  // Decimal を number に変換
+  const spaces: SpaceCardData[] = rawSpaces.map((space) => ({
+    ...space,
+    hourlyPrice: Number(space.hourlyPrice),
+    taxRateType: parseTaxRateType(space.taxRateType),
+  }))
 
   const totalPages = Math.ceil(totalCount / safePerPage)
 
@@ -156,7 +210,7 @@ async function SpaceResults({
       {spaces.length > 0 ? (
         <div className={styles.grid()}>
           {spaces.map((space, index) => (
-            <SpaceCard key={space.id} space={space} index={index} />
+            <SpaceCard key={space.id} space={space} index={index} taxSettings={taxSettings} />
           ))}
         </div>
       ) : (
@@ -196,6 +250,9 @@ interface PageProps {
 export default async function SpacesPage({
   searchParams,
 }: PageProps): Promise<ReactElement> {
+  // ページコンテンツを取得（管理画面で編集されたコンテンツ）
+  const pageContent = await getPageContent('spaces')
+
   return (
     <section className={styles.section()}>
       <Container>
@@ -206,6 +263,13 @@ export default async function SpacesPage({
             ご利用可能なレンタルスペースをお探しください
           </p>
         </header>
+
+        {/* ページコンテンツ（Lexicalエディタで編集されたコンテンツ） */}
+        {pageContent?.content && (
+          <div className="mb-8">
+            <ContentRenderer html={pageContent.content} />
+          </div>
+        )}
 
         {/* クライアントコンポーネント: フィルター */}
         <div className={styles.filtersWrapper()}>

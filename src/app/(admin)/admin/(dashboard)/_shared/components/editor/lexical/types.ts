@@ -1,64 +1,57 @@
 /**
- * Lexical Editor Types
+ * Lexical Editor 型定義
  *
- * エディタ関連の型定義
+ * @description エディタコンポーネントの型定義
  */
 
-import type { LexicalEditor } from 'lexical'
+import type { CSSProperties } from 'react'
+import type { SerializedEditorState, SerializedLexicalNode } from 'lexical'
 
 /**
- * エディタのプロップス
+ * コメント追加ペイロード
+ */
+export type AddCommentPayload = {
+  markId: string
+  quotedText: string
+}
+
+/**
+ * LexicalEditor コンポーネントのプロパティ
  */
 export type LexicalEditorProps = {
-  /** 初期コンテンツ（HTML文字列） */
+  /** 初期コンテンツ（HTML形式） */
   content?: string
-  /** コンテンツ変更時のコールバック */
+  /** コンテンツ変更時のコールバック（HTML形式で返す） */
   onChange?: (html: string) => void
+  /** エディタを無効化するかどうか */
+  disabled?: boolean
+  /** エディタのCSSクラス */
+  className?: string
+  /** ツールバーを表示するかどうか */
+  showToolbar?: boolean
+  /** エディタの高さ */
+  height?: string
   /** プレースホルダーテキスト */
   placeholder?: string
-  /** 編集不可状態 */
-  disabled?: boolean
-  /** proseスタイルクラス（EDITOR_PROSE_CLASSESなど）- contentEditableに適用 */
-  className?: string
-  /** 文字数制限 */
-  characterLimit?: number
-  /** 最小高さ */
-  minHeight?: string
-  /** ツールバー表示 */
-  showToolbar?: boolean
-  /** フローティングツールバー表示 */
-  showFloatingToolbar?: boolean
+  /** マークノードクリック時のコールバック */
+  onMarkClick?: (markId: string) => void
+  /** コメント追加時のコールバック（FloatingToolbarからのコメントボタンクリック） */
+  onAddComment?: (payload: AddCommentPayload) => void
+  /** コンテンツ幅制御用クラス名（公開ページと同じ幅を適用） */
+  contentWidthClassName?: string
+  /** コンテンツ幅制御用スタイル（カスタム幅用） */
+  contentWidthStyle?: CSSProperties
 }
 
 /**
- * ツールバーのプロップス
+ * シリアライズされたエディタ状態
  */
-export type ToolbarProps = {
-  editor: LexicalEditor
-  disabled?: boolean
-}
+export type SerializedLexicalState = SerializedEditorState<SerializedLexicalNode>
 
 /**
- * フローティングツールバーのプロップス
+ * 画像ノードのプロパティ
  */
-export type FloatingToolbarProps = {
-  editor: LexicalEditor
-  anchorElem: HTMLElement
-}
-
-/**
- * PostListWidgetの属性
- */
-export type PostListWidgetAttributes = {
-  type: 'recent' | 'popular' | 'category'
-  count: number
-  categoryId?: string
-}
-
-/**
- * 画像ノードの属性
- */
-export type ImageNodeAttributes = {
+export type ImageNodePayload = {
   src: string
   alt?: string
   width?: number
@@ -66,42 +59,8 @@ export type ImageNodeAttributes = {
 }
 
 /**
- * YouTubeノードの属性
+ * YouTubeノードのプロパティ
  */
-export type YouTubeNodeAttributes = {
+export type YouTubeNodePayload = {
   videoId: string
-  width?: number
-  height?: number
 }
-
-/**
- * ツールバーボタンの状態
- */
-export type ToolbarButtonState = {
-  bold: boolean
-  italic: boolean
-  underline: boolean
-  strikethrough: boolean
-  subscript: boolean
-  superscript: boolean
-  code: boolean
-  link: boolean
-  highlight: boolean
-}
-
-/**
- * ブロックタイプ
- */
-export type BlockType =
-  | 'paragraph'
-  | 'h1'
-  | 'h2'
-  | 'h3'
-  | 'h4'
-  | 'h5'
-  | 'h6'
-  | 'bullet'
-  | 'number'
-  | 'check'
-  | 'quote'
-  | 'code'

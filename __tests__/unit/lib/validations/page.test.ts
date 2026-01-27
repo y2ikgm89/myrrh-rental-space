@@ -382,24 +382,22 @@ describe('createPageSchema', () => {
 
 describe('SYSTEM_PAGES', () => {
   test('システムページが正しく定義されている', () => {
-    expect(SYSTEM_PAGES.length).toBe(9)
+    // terms, posts, news は専用ルートがあるためシステムページから除外
+    expect(SYSTEM_PAGES.length).toBe(6)
 
     const slugs = SYSTEM_PAGES.map((p) => p.slug)
     expect(slugs).toContain('privacy')
-    expect(slugs).toContain('terms')
     expect(slugs).toContain('about')
     expect(slugs).toContain('faq')
     expect(slugs).toContain('reservation')
     expect(slugs).toContain('spaces')
     expect(slugs).toContain('contact')
-    expect(slugs).toContain('blog')
-    expect(slugs).toContain('news')
   })
 
   test('コンテンツ編集可能ページが正しく設定されている', () => {
     const editablePages = SYSTEM_PAGES.filter((p) => p.isContentEditable)
     expect(editablePages.map((p) => p.slug).sort()).toEqual(
-      ['about', 'faq', 'privacy', 'terms'].sort()
+      ['about', 'contact', 'faq', 'privacy', 'reservation', 'spaces'].sort()
     )
   })
 })
@@ -427,7 +425,7 @@ describe('getSystemPageDefinition', () => {
 describe('isSystemPageSlug', () => {
   test('システムページスラッグはtrue', () => {
     expect(isSystemPageSlug('privacy')).toBe(true)
-    expect(isSystemPageSlug('terms')).toBe(true)
+    expect(isSystemPageSlug('about')).toBe(true)
     expect(isSystemPageSlug('reservation')).toBe(true)
   })
 
@@ -440,8 +438,8 @@ describe('isSystemPageSlug', () => {
 describe('canDeletePage', () => {
   test('システムページは削除不可', () => {
     expect(canDeletePage('privacy')).toBe(false)
-    expect(canDeletePage('terms')).toBe(false)
-    expect(canDeletePage('blog')).toBe(false)
+    expect(canDeletePage('about')).toBe(false)
+    expect(canDeletePage('contact')).toBe(false)
   })
 
   test('カスタムページは削除可能', () => {

@@ -8,7 +8,7 @@
 
 import { Check } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
-import type { MediaData } from '@/admin/actions/media'
+import type { MediaData } from '@/admin/types/media-picker'
 
 interface MediaItemProps {
   media: MediaData
@@ -46,7 +46,7 @@ export function MediaItem({
           disabled && 'opacity-50 cursor-not-allowed'
         )}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
+        
         <img
           src={media.url}
           alt={media.alt || media.filename}
@@ -74,7 +74,7 @@ export function MediaItem({
         disabled && 'opacity-50 cursor-not-allowed'
       )}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
+      
       <img
         src={media.url}
         alt={media.alt || media.filename}

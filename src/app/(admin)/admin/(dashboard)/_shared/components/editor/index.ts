@@ -4,23 +4,12 @@
  * Lexicalベースのリッチテキストエディタ
  */
 
-// メインエディタ（後方互換性のためRichTextEditorとしてもエクスポート）
+// メインエディタ
 export { LexicalEditor, LexicalEditor as RichTextEditor } from './lexical'
 export type { LexicalEditorProps, LexicalEditorProps as RichTextEditorProps } from './lexical'
 
 // ノード
-export {
-  ImageNode,
-  YouTubeNode,
-  PostListWidgetNode,
-  type PostListWidgetType,
-} from './lexical'
+export { ImageNode, YouTubeNode } from './lexical'
 
 // プラグイン
-export {
-  ToolbarPlugin,
-  FloatingToolbarPlugin,
-  ImagePlugin,
-  YouTubePlugin,
-  PostListWidgetPlugin,
-} from './lexical'
+export { ToolbarPlugin, ImagePlugin, YouTubePlugin } from './lexical'

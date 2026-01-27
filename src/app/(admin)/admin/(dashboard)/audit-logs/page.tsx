@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { loadAdminAuditLogSearchParams } from '@/shared/lib/nuqs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/admin/components/ui/card'
 import { Badge } from '@/admin/components/ui/badge'
+import { LoadingState } from '@/admin/components/LoadingState'
 import {
   Table,
   TableBody,
@@ -12,8 +13,7 @@ import {
 } from '@/admin/components/ui/table'
 import { Pagination } from '@/admin/components/ui'
 import { getAuditLogs, getAuditLogStats } from '@/admin/actions/audit-log'
-import { format } from 'date-fns'
-import { ja } from 'date-fns/locale'
+import { formatDateTimeShort } from '@/shared/lib/utils'
 import { AuditAction, getAuditActionFilterOrAll } from '@/shared/lib/validations/enums'
 import { AuditLogFilters } from './_components/AuditLogFilters'
 
@@ -93,7 +93,7 @@ export default async function AuditLogsPage({ searchParams }: Props) {
           <CardTitle>ログ一覧</CardTitle>
         </CardHeader>
         <CardContent>
-          <Suspense fallback={<div>読み込み中...</div>}>
+          <Suspense fallback={<LoadingState variant="inline" />}>
             <AuditLogFilters
               action={params.action}
               resource={params.resource}
@@ -125,7 +125,7 @@ export default async function AuditLogsPage({ searchParams }: Props) {
                   logs.logs.map((log: (typeof logs.logs)[number]) => (
                     <TableRow key={log.id}>
                       <TableCell className="whitespace-nowrap">
-                        {format(log.createdAt, 'yyyy/MM/dd HH:mm:ss', { locale: ja })}
+                        {formatDateTimeShort(log.createdAt)}
                       </TableCell>
                       <TableCell>
                         {log.user?.name || log.user?.email || '(システム)'}

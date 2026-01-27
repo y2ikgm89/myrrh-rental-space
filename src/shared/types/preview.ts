@@ -4,14 +4,93 @@
  * エディタで編集中のコンテンツを保存前にプレビューするための型定義
  */
 
+import { z } from 'zod'
+
+// =============================================================================
+// Zod Schemas
+// =============================================================================
+
+/**
+ * 投稿プレビューデータスキーマ
+ */
+export const PostPreviewDataSchema = z.object({
+  title: z.string(),
+  slug: z.string(),
+  excerpt: z.string(),
+  content: z.string(),
+  thumbnailUrl: z.string(),
+  publishedAt: z.string().nullable(),
+  tags: z.array(z.string()),
+  category: z.object({
+    name: z.string(),
+    slug: z.string(),
+  }),
+})
+
+/**
+ * ニュースプレビューデータスキーマ
+ */
+export const NewsPreviewDataSchema = z.object({
+  title: z.string(),
+  slug: z.string(),
+  content: z.string(),
+  publishedAt: z.string().nullable(),
+})
+
+/**
+ * ページプレビューデータスキーマ
+ */
+export const PagePreviewDataSchema = z.object({
+  title: z.string(),
+  slug: z.string(),
+  description: z.string().nullable(),
+  content: z.string(),
+  showSidebar: z.boolean(),
+})
+
+/**
+ * プレビューデータコンテナのベーススキーマ
+ */
+const PreviewDataBaseSchema = z.object({
+  version: z.literal(1),
+  timestamp: z.number(),
+})
+
+/**
+ * コンテンツタイプ別のプレビューデータコンテナスキーマ
+ */
+export const PostPreviewContainerSchema = PreviewDataBaseSchema.extend({
+  contentType: z.literal('post'),
+  data: PostPreviewDataSchema,
+})
+
+export const NewsPreviewContainerSchema = PreviewDataBaseSchema.extend({
+  contentType: z.literal('news'),
+  data: NewsPreviewDataSchema,
+})
+
+export const PagePreviewContainerSchema = PreviewDataBaseSchema.extend({
+  contentType: z.literal('page'),
+  data: PagePreviewDataSchema,
+})
+
+/**
+ * プレビューデータのunionスキーマ
+ */
+export const PreviewContainerSchema = z.discriminatedUnion('contentType', [
+  PostPreviewContainerSchema,
+  NewsPreviewContainerSchema,
+  PagePreviewContainerSchema,
+])
+
 // =============================================================================
 // Preview Data Types
 // =============================================================================
 
 /**
- * ブログプレビューデータ
+ * 投稿プレビューデータ
  */
-export type BlogPreviewData = {
+export type PostPreviewData = {
   title: string
   slug: string
   excerpt: string
@@ -61,7 +140,7 @@ export type PreviewData<T> = {
   /** 保存時刻（ミリ秒） */
   timestamp: number
   /** コンテンツタイプ */
-  contentType: 'blog' | 'news' | 'page'
+  contentType: 'post' | 'news' | 'page'
   /** 実際のプレビューデータ */
   data: T
 }
@@ -88,7 +167,7 @@ export const PREVIEW_STORAGE_PREFIX = 'preview-'
  * @returns ストレージキー
  */
 export function getPreviewStorageKey(
-  contentType: 'blog' | 'news' | 'page',
+  contentType: 'post' | 'news' | 'page',
   identifier: string
 ): string {
   return `${PREVIEW_STORAGE_PREFIX}${contentType}-${identifier}`

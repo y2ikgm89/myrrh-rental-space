@@ -4,11 +4,16 @@
  * サイドパネルシェルコンポーネント
  *
  * ブログ・ニュース等の編集パネルで共通するシェル部分（オーバーレイ、アニメーション、ヘッダー）
+ *
+ * レスポンシブ対応:
+ * - モバイル（< lg）: オーバーレイ + ドロワー形式
+ * - デスクトップ（>= lg）: fixed配置、InlineEditorShellで幅調整
  */
 
 import { X } from 'lucide-react'
 import { tv } from 'tailwind-variants'
 import { Button } from '@/admin/components/ui'
+import { useAdminLayout } from '@/admin/contexts/admin-layout-context'
 import { Z_INDEX } from '@/admin/lib/styles/z-index'
 import type { ReactNode } from 'react'
 
@@ -16,13 +21,14 @@ const styles = tv({
   slots: {
     overlay: [
       `fixed inset-0 z-[${Z_INDEX.overlay}] bg-black/20 transition-opacity duration-300`,
-      'lg:hidden',
+      'lg:hidden', // デスクトップではオーバーレイなし
     ],
     panel: [
-      `fixed right-0 top-0 z-[${Z_INDEX.editorSidePanel}] h-full bg-background border-l shadow-xl`,
+      `fixed right-0 z-[${Z_INDEX.editorSidePanel}] bg-background border-l`,
       'transform transition-transform duration-300 ease-in-out',
+      'flex flex-col',
     ],
-    header: 'flex items-center justify-between p-4 border-b',
+    header: 'flex items-center justify-between p-4 border-b flex-shrink-0',
     title: 'text-lg font-semibold',
     content: 'flex-1 overflow-y-auto p-4',
   },
@@ -41,9 +47,14 @@ const styles = tv({
       default: { panel: 'w-full sm:w-[420px]' },
       narrow: { panel: 'w-full sm:w-96' },
     },
+    isFullscreen: {
+      true: { panel: 'top-14 h-[calc(100vh-3.5rem)]' }, // EditorHeader(h-14=56px)の下
+      false: { panel: 'top-16 h-[calc(100vh-4rem)]' },  // TopBar(h-16=64px)の下
+    },
   },
   defaultVariants: {
     width: 'default',
+    isFullscreen: false,
   },
 })
 
@@ -62,7 +73,8 @@ export function SidePanelShell({
   children,
   width = 'default',
 }: SidePanelShellProps) {
-  const classes = styles({ isOpen, width })
+  const { isFullscreen } = useAdminLayout()
+  const classes = styles({ isOpen, width, isFullscreen })
 
   return (
     <>
@@ -88,3 +100,9 @@ export function SidePanelShell({
     </>
   )
 }
+
+/** サイドパネルの幅定数（コンテンツ側のマージン調整用） */
+export const SIDE_PANEL_WIDTH = {
+  default: 420,
+  narrow: 384, // 96 * 4 = 384px (w-96)
+} as const

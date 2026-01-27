@@ -1,11 +1,14 @@
 /**
- * Lexical Editor Module
- *
- * エディタコンポーネントの一括エクスポート
+ * Lexical Editor エクスポート
  */
 
+// メインエディタ
 export { LexicalEditor } from './LexicalEditor'
-export { editorTheme } from './theme'
+export { LazyLexicalEditor } from './LazyLexicalEditor'
 export type { LexicalEditorProps } from './types'
-export * from './nodes'
-export * from './plugins'
+
+// ノード
+export { ImageNode, YouTubeNode } from './nodes'
+
+// プラグイン
+export { ToolbarPlugin, ImagePlugin, YouTubePlugin } from './plugins'

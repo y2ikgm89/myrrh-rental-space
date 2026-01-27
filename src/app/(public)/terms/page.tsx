@@ -1,11 +1,11 @@
 /**
  * 利用規約ページ
  *
- * @description レンタルスペースサービスの利用規約を表示（DBから取得）
+ * @description レンタルスペースサービスの利用規約を表示（Termsテーブルから取得）
  *
  * Next.js 16 PPR対応:
  * - 静的シェル: セクション構造
- * - 動的コンテンツ: ページデータ（Suspenseでラップ）
+ * - 動的コンテンツ: 規約データ（Suspenseでラップ）
  */
 
 import { Suspense } from 'react'
@@ -15,15 +15,14 @@ import { notFound } from 'next/navigation'
 import { tv } from 'tailwind-variants'
 import { ContentRenderer } from '@/public/components/ContentRenderer'
 import { prisma } from '@/shared/lib/prisma'
-import { getPageLayoutSettings } from '@/public/lib/layout-settings'
-import { getContainerStyles, getContentStyles } from '@/shared/lib/styles/layout-mapper'
+import { TermsType, TermsStatus } from '@/shared/generated/prisma/enums'
 import type { ReactElement } from 'react'
 
 const styles = tv({
   slots: {
     section: 'py-16 bg-background min-h-screen',
-    container: 'mx-auto w-full px-4 sm:px-6 lg:px-8',
-    content: '', // 幅はgetContentStylesで動的に設定
+    container: 'mx-auto w-full max-w-4xl px-4 sm:px-6 lg:px-8',
+    content: '',
     header: 'mb-12 text-center',
     title: 'text-3xl font-bold tracking-tight text-foreground',
     lastUpdated: 'mt-2 text-sm text-muted-foreground',
@@ -31,38 +30,48 @@ const styles = tv({
 })()
 
 /**
- * ページデータを取得（キャッシュ付き）
+ * サイト全体の利用規約を取得（キャッシュ付き）
  */
-async function getTermsPage() {
+async function getSiteWideTerms() {
   'use cache'
   cacheLife('hours')
-  cacheTag('pages', 'page-terms')
+  cacheTag('terms', 'site-terms')
 
-  return prisma.page.findUnique({
+  return prisma.terms.findFirst({
     where: {
-      slug: 'terms',
-      isPublished: true,
+      type: TermsType.TERMS_OF_USE,
+      isSiteWide: true,
       isActive: true,
+    },
+    include: {
+      versions: {
+        where: {
+          isCurrentVersion: true,
+          status: TermsStatus.PUBLISHED,
+        },
+        take: 1,
+      },
     },
   })
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  const page = await getTermsPage()
+  const terms = await getSiteWideTerms()
 
-  if (!page) {
+  if (!terms) {
     return {
       title: '利用規約',
     }
   }
 
   return {
-    title: page.title,
-    description: page.metaDescription || page.description,
+    title: terms.title,
+    description: terms.metaDescription || undefined,
+    keywords: terms.metaKeywords || undefined,
     openGraph: {
-      title: page.ogpTitle || page.title,
-      description: page.ogpDescription || page.metaDescription || page.description || undefined,
-      images: page.ogpImageUrl ? [page.ogpImageUrl] : undefined,
+      title: terms.ogpTitle || terms.title,
+      description: terms.ogpDescription || terms.metaDescription || undefined,
+      images: terms.ogpImageUrl ? [terms.ogpImageUrl] : undefined,
     },
   }
 }
@@ -79,25 +88,29 @@ function formatDate(date: Date): string {
 }
 
 /**
- * 動的コンテンツ: ページ内容
+ * 動的コンテンツ: 規約内容
  */
 async function TermsContent(): Promise<ReactElement> {
-  const page = await getTermsPage()
+  const terms = await getSiteWideTerms()
 
-  if (!page) {
+  if (!terms || terms.versions.length === 0) {
     notFound()
   }
+
+  const currentVersion = terms.versions[0]
 
   return (
     <>
       <header className={styles.header()}>
-        <h1 className={styles.title()}>{page.title}</h1>
-        <p className={styles.lastUpdated()}>
-          最終更新日: {formatDate(page.updatedAt)}
-        </p>
+        <h1 className={styles.title()}>{terms.title}</h1>
+        {currentVersion.publishedAt && (
+          <p className={styles.lastUpdated()}>
+            最終更新日: {formatDate(currentVersion.publishedAt)}
+          </p>
+        )}
       </header>
 
-      <ContentRenderer html={page.content} />
+      <ContentRenderer html={currentVersion.content} />
     </>
   )
 }
@@ -122,15 +135,10 @@ function TermsLoading(): ReactElement {
 }
 
 export default async function TermsOfServicePage(): Promise<ReactElement> {
-  // レイアウト設定を取得
-  const layoutConfig = await getPageLayoutSettings('terms')
-  const containerStyles = getContainerStyles(layoutConfig)
-  const contentStyles = getContentStyles(layoutConfig)
-
   return (
     <section className={styles.section()}>
-      <div className={`${styles.container()} ${containerStyles.className}`} style={containerStyles.style}>
-        <div className={`${styles.content()} ${contentStyles.className}`} style={contentStyles.style}>
+      <div className={styles.container()}>
+        <div className={styles.content()}>
           <Suspense fallback={<TermsLoading />}>
             <TermsContent />
           </Suspense>

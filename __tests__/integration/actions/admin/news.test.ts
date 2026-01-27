@@ -9,7 +9,6 @@
 
 import { describe, test, expect } from 'bun:test'
 import { z } from 'zod'
-import { NewsStatus } from '@/shared/generated/prisma/enums'
 import { LayoutWidth } from '@/shared/types/prisma'
 
 // news.ts 内で定義されているスキーマを再現
@@ -186,20 +185,7 @@ describe('News Admin Action Integration', () => {
     })
   })
 
-  describe('NewsStatus enum 整合性', () => {
-    test('NewsStatus enumは3つの値を持つ', () => {
-      expect(Object.values(NewsStatus)).toHaveLength(3)
-    })
-
-    test('NewsStatus enumの値', () => {
-      const expectedStatuses = ['DRAFT', 'PUBLISHED', 'ARCHIVED']
-      const enumValues = Object.values(NewsStatus) as string[]
-
-      for (const status of expectedStatuses) {
-        expect(enumValues).toContain(status)
-      }
-    })
-  })
+  // Note: NewsStatus enum は isPublished (boolean) に移行したため削除
 
   describe('LayoutWidth enum テスト', () => {
     test('LayoutWidth enumの値が存在', () => {
@@ -235,8 +221,10 @@ describe('News Admin Action Integration', () => {
 
   describe('フィルター型テスト', () => {
     test('有効なフィルター値', () => {
+      // Note: NewsStatus enum は isPublished (boolean) に移行
+      // フィルターは 'ALL' | 'PUBLISHED' | 'DRAFT' のみ
       type NewsFilters = {
-        status?: 'ALL' | 'PUBLISHED' | 'DRAFT' | 'ARCHIVED'
+        status?: 'ALL' | 'PUBLISHED' | 'DRAFT'
         search?: string
       }
 
@@ -250,7 +238,7 @@ describe('News Admin Action Integration', () => {
 
     test('ALL ステータスフィルター', () => {
       type NewsFilters = {
-        status?: 'ALL' | 'PUBLISHED' | 'DRAFT' | 'ARCHIVED'
+        status?: 'ALL' | 'PUBLISHED' | 'DRAFT'
       }
 
       const filters: NewsFilters = {
@@ -332,11 +320,12 @@ describe('News Admin Action Integration', () => {
 
   describe('NewsData型テスト', () => {
     test('NewsData型の構造', () => {
+      // Note: status から isPublished (boolean) に移行
       type NewsData = {
         id: string
         title: string
         content: string
-        status: typeof NewsStatus[keyof typeof NewsStatus]
+        isPublished: boolean
         publishedAt: Date | null
         createdAt: Date
         updatedAt: Date
@@ -348,7 +337,7 @@ describe('News Admin Action Integration', () => {
         id: '550e8400-e29b-41d4-a716-446655440000',
         title: 'テストお知らせ',
         content: '<p>本文</p>',
-        status: NewsStatus.PUBLISHED,
+        isPublished: true,
         publishedAt: new Date(),
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -356,7 +345,7 @@ describe('News Admin Action Integration', () => {
         contentWidthCustom: null,
       }
 
-      expect(news.status).toBe('PUBLISHED')
+      expect(news.isPublished).toBe(true)
       expect(news.contentWidth).toBe('MD')
     })
   })

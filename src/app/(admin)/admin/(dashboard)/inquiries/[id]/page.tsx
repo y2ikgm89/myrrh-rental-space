@@ -1,7 +1,9 @@
 import { notFound } from 'next/navigation'
+import { connection } from 'next/server'
 import { getInquiryById } from '@/admin/actions/inquiry'
 import { InquiryDetail } from './_components/InquiryDetail'
 import type { Metadata } from 'next'
+
 
 type Params = Promise<{ id: string }>
 
@@ -10,6 +12,7 @@ type PageProps = {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  await connection()
   const { id } = await params
   const inquiry = await getInquiryById(id)
 
@@ -25,6 +28,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function InquiryDetailPage({ params }: PageProps) {
+  await connection()
   const { id } = await params
   const inquiry = await getInquiryById(id)
 

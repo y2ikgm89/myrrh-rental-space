@@ -27,6 +27,18 @@ const eslintConfig = defineConfig([
       "@typescript-eslint/no-explicit-any": "off",
     },
   },
+  // Media components: Allow <img> for dynamic URLs, blob URLs, and external URLs
+  // These cannot be optimized by Next.js Image (user uploads, external sources, local previews)
+  {
+    files: [
+      "src/app/(admin)/admin/(dashboard)/media/_components/**/*.tsx",
+      "src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/**/*.tsx",
+      "src/app/(admin)/admin/(dashboard)/_shared/components/media-picker/**/*.tsx",
+    ],
+    rules: {
+      "@next/next/no-img-element": "off",
+    },
+  },
   // Ignored paths
   globalIgnores([
     ".next/**",

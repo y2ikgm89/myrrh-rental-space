@@ -242,7 +242,7 @@ model Settings {
   defaultTimeSlot        Int?     @default(60) // 分単位
   minReservationDuration Int?     @default(60) // 分単位
   maxReservationDuration Int?     @default(480) // 分単位
-  cancellationPolicy     String?  @db.Text
+  cancellationTermsId    String?  // Terms.idへの参照
   sendReservationConfirmationEmail Boolean @default(true)
   sendAdminNotificationEmail      Boolean @default(true)
   
@@ -542,7 +542,7 @@ export const reservationSettingsSchema = z.object({
   ).optional(),
   minReservationDuration: z.number().int().positive().max(1440).optional(),
   maxReservationDuration: z.number().int().positive().max(1440).optional(),
-  cancellationPolicy: z.string().optional().nullable(),
+  cancellationTermsId: z.string().uuid().optional().nullable(),
   sendReservationConfirmationEmail: z.boolean().optional(),
   sendAdminNotificationEmail: z.boolean().optional(),
 }).refine(
@@ -590,7 +590,7 @@ import { revalidatePath, revalidateTag } from 'next/cache'
 // 基本情報、連絡先情報、SEO設定更新時
 revalidatePath('/')
 revalidatePath('/spaces')
-revalidatePath('/blog')
+revalidatePath('/posts')
 revalidatePath('/news')
 revalidateTag('site-settings', 'max') // stale-while-revalidate semantics
 

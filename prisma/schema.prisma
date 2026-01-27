@@ -77,14 +77,14 @@ enum HomepageSectionType {
   HERO // ヒーローセクション
   SPACE_LIST // スペース一覧
   NEWS // お知らせ一覧
-  BLOG // ブログ一覧
+  POST // 記事一覧
   FAQ // FAQ
   CTA // Call to Action
   CUSTOM // カスタム（Lexicalフルコンテンツ）
   INSTAGRAM // Instagramフィード
 }
 
-enum BlogPostStatus {
+enum PostStatus {
   DRAFT
   PUBLISHED
   ARCHIVED
@@ -137,8 +137,8 @@ model User {
   accounts        Account[]
   sessions        Session[]
   reservations    Reservation[]
-  blogPosts       BlogPost[]
-  blogComments    BlogComment[]
+  posts       Post[]
+  postComments    PostComment[]
   icalTokens      ICalToken[]
   auditLogs       AuditLog[]
   mediaFiles      Media[]
@@ -544,48 +544,48 @@ model AnnouncementBar {
 }
 
 // ==============================================
-// Blog Models
+// Post Models
 // ==============================================
 
-model BlogPost {
-  id                 String         @id @default(uuid())
+model Post {
+  id                 String      @id @default(uuid())
   title              String
-  slug               String         @unique
-  excerpt            String         @db.Text
-  content            String         @db.Text // HTMLコンテンツ（レンダリング用）
+  slug               String      @unique
+  excerpt            String      @db.Text
+  content            String      @db.Text // HTMLコンテンツ（レンダリング用）
   thumbnailUrl       String
   ogpImageUrl        String?
   categoryId         String
-  tags               Json           @default("[]")
+  tags               Json        @default("[]")
   metaDescription    String?
   metaKeywords       String?
   ogpTitle           String?
   ogpDescription     String?
   publishedAt        DateTime?
-  status             BlogPostStatus @default(DRAFT)
+  status             PostStatus  @default(DRAFT)
   authorId           String
-  viewCount          Int            @default(0)
+  viewCount          Int         @default(0)
   contentWidth       LayoutWidth?
   contentWidthCustom Int? // CUSTOMの場合の幅（px）
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
 
   // Relations
-  category BlogCategory      @relation(fields: [categoryId], references: [id])
-  author   User              @relation(fields: [authorId], references: [id])
-  comments BlogComment[]
-  versions BlogPostVersion[]
+  category PostCategory   @relation(fields: [categoryId], references: [id])
+  author   User           @relation(fields: [authorId], references: [id])
+  comments PostComment[]
+  versions PostVersion[]
 
   // OR検索用インデックス
   @@index([title])
   @@index([status, publishedAt])
   @@index([categoryId, status, publishedAt])
   @@index([viewCount])
-  @@map("blog_posts")
+  @@map("posts")
 }
 
-/// BlogPostのバージョン履歴
-model BlogPostVersion {
+/// Postのバージョン履歴
+model PostVersion {
   id        String   @id @default(uuid())
   postId    String
   version   Int // 自動インクリメント（Post内でユニーク）
@@ -594,40 +594,47 @@ model BlogPostVersion {
   createdBy String? // 作成者ID（User.id）
 
   // Relations
-  post BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@unique([postId, version])
   @@index([postId, createdAt])
-  @@map("blog_post_versions")
+  @@map("post_versions")
 }
 
-model BlogCategory {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  slug        String   @unique
-  description String?  @db.Text
-  order       Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+model PostCategory {
+  id              String   @id @default(uuid())
+  name            String   @unique
+  slug            String   @unique
+  description     String?  @db.Text
+  metaTitle       String?
+  metaDescription String?  @db.Text
+  ogpImageUrl     String?
+  order           Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   // Relations
-  posts BlogPost[]
+  posts Post[]
 
   @@index([order])
-  @@map("blog_categories")
+  @@map("post_categories")
 }
 
-model BlogTag {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  slug      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model PostTag {
+  id              String   @id @default(uuid())
+  name            String   @unique
+  slug            String   @unique
+  description     String?  @db.Text
+  metaTitle       String?
+  metaDescription String?  @db.Text
+  ogpImageUrl     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  @@map("blog_tags")
+  @@map("post_tags")
 }
 
-model BlogComment {
+model PostComment {
   id              String  @id @default(uuid())
   postId          String
   parentCommentId String? // Self-reference for nested comments
@@ -654,10 +661,10 @@ model BlogComment {
   updatedAt DateTime @updatedAt
 
   // Relations
-  post          BlogPost      @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user          User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
-  parentComment BlogComment?  @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: Cascade)
-  replies       BlogComment[] @relation("CommentReplies")
+  post          Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user          User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  parentComment PostComment? @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: Cascade)
+  replies       PostComment[] @relation("CommentReplies")
 
   // Indexes
   @@index([postId, createdAt])
@@ -668,7 +675,7 @@ model BlogComment {
   @@index([contentHash])
   @@index([isDeleted])
   @@index([isDeleted, createdAt(sort: Desc)]) // Admin search optimization
-  @@map("blog_comments")
+  @@map("post_comments")
 }
 
 // ==============================================
@@ -868,8 +875,8 @@ model Settings {
   sidebarPopularCount Int     @default(5) // 人気記事の表示件数
 
   // Permalink Settings (パーマリンク設定)
-  blogPermalinkStructure String @default("post-name") // post-name | simple | date-name | category-name
-  blogUrlPrefix          String @default("blog")      // URL プレフィックス (例: blog, articles, posts)
+  postPermalinkStructure String  @default("post-name") // post-name | date-name | category-name
+  postUrlPrefixEnabled   Boolean @default(true) // true: /posts/slug, false: /slug
 
   // Analytics Settings
   analyticsType         String? // "ga4" | "gtm" | null
@@ -1183,7 +1190,7 @@ enum MediaType {
 }
 
 enum MediaUsage {
-  BLOG
+  POST
   NEWS
   PAGE
   SPACE
@@ -1366,8 +1373,8 @@ model TermsAgreement {
 model EditorCommentThread {
   id          String              @id @default(uuid())
   markId      String // Lexical MarkNode ID（エディタ内での一意識別子）
-  contentType String // コンテンツタイプ: "blog" | "news" | "page" | "faq"
-  contentId   String // コンテンツID（BlogPost.id, News.id, Page.id, FaqItem.id）
+  contentType String // コンテンツタイプ: "post" | "news" | "page" | "faq"
+  contentId   String // コンテンツID（Post.id, News.id, Page.id, FaqItem.id）
   quotedText  String              @db.Text // マークされたテキスト（参照用）
   status      EditorCommentStatus @default(ACTIVE)
   resolvedAt  DateTime? // 解決日時

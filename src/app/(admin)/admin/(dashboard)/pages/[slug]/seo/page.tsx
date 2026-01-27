@@ -6,6 +6,7 @@
  */
 
 import { notFound } from 'next/navigation'
+import { connection } from 'next/server'
 import Link from 'next/link'
 import { ArrowLeft, ExternalLink } from 'lucide-react'
 import { getPageBySlug } from '@/admin/actions/page'
@@ -15,11 +16,13 @@ import { PageSeoForm } from './_components/PageSeoForm'
 import type { Metadata } from 'next'
 import type { ReactElement } from 'react'
 
+
 interface PageProps {
   params: Promise<{ slug: string }>
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  await connection()
   const { slug } = await params
   const page = await getPageBySlug(slug)
 
@@ -29,6 +32,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function PageSeoEditPage({ params }: PageProps): Promise<ReactElement> {
+  await connection()
   const { slug } = await params
   const page = await getPageBySlug(slug)
 

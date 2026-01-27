@@ -23,7 +23,6 @@ import {
   SelectionBox,
 } from '@/admin/components/ui'
 import {
-  getInstagramConfig,
   updateInstagramSettings,
   saveManualToken,
   testInstagramConnectionAction,
@@ -96,7 +95,7 @@ function ConnectionCard({
   isPending,
   onDisconnect,
 }: ConnectionCardProps) {
-  const { handleResult, refresh } = useRefreshOnSuccess()
+  const { handleResult } = useRefreshOnSuccess()
   const [connectionMethod, setConnectionMethod] =
     useState<ConnectionMethod>('oauth')
   const [manualToken, setManualToken] = useState('')

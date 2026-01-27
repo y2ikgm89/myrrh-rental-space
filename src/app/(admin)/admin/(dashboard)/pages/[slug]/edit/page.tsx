@@ -1,14 +1,16 @@
 /**
  * ページ編集画面
  *
- * Lexicalリッチテキストエディターでページを編集
+ * 統一ContentEditorでページを編集
  */
 
 import { notFound } from 'next/navigation'
+import { connection } from 'next/server'
 import { getPageBySlug } from '@/admin/actions/page'
-import { PageInlineEditor } from '../../_components/PageInlineEditor'
+import { PageEditor } from '../../_components/PageEditor'
 import type { Metadata } from 'next'
 import type { ReactElement } from 'react'
+
 
 type PageParams = Promise<{ slug: string }>
 
@@ -17,6 +19,7 @@ type PageProps = {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  await connection()
   const { slug } = await params
   const page = await getPageBySlug(slug)
 
@@ -26,6 +29,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function EditPagePage({ params }: PageProps): Promise<ReactElement> {
+  await connection()
   const { slug } = await params
   const page = await getPageBySlug(slug)
 
@@ -33,5 +37,5 @@ export default async function EditPagePage({ params }: PageProps): Promise<React
     notFound()
   }
 
-  return <PageInlineEditor page={page} />
+  return <PageEditor page={page} />
 }

@@ -25,7 +25,7 @@
 import { prisma } from '@/shared/lib/prisma'
 import { ErrorCategory, ErrorSeverity, ReservationOverlapError, isReservationOverlapError } from '@/shared/lib/errors'
 import { fireAndForget } from '@/shared/lib/async-utils'
-import { revalidateTag } from 'next/cache'
+import { updateTag } from 'next/cache'
 import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
 import { ReservationStatus } from '@/shared/generated/prisma/enums'
 import { z } from 'zod'
@@ -43,7 +43,7 @@ import { checkReservationOverlap } from '@/shared/lib/reservation'
 import { adminReservationSchema, type AdminReservationInput } from '@/admin/lib/validations/admin-reservation'
 import { extractFieldErrors } from '@/shared/lib/action-helpers'
 import { calculateReservationPrice, parseDurationDiscountRules, getDiscountCombinationModeOrDefault } from '@/shared/lib/pricing'
-import { incrementCouponUsage, validateCouponCode } from '@/admin/actions/coupon'
+import { incrementCouponUsage, validateCouponCode } from '@/shared/actions/coupon'
 
 // =============================================================================
 // Types
@@ -419,8 +419,8 @@ export const updateReservationStatus = withPermission<[string, ReservationStatus
     )
   }
 
-  revalidateTag(CACHE_TAGS.RESERVATIONS, 'default')
-  revalidateTag(getCacheTag.reservations.detail(id), 'default')
+  updateTag(CACHE_TAGS.RESERVATIONS)
+  updateTag(getCacheTag.reservations.detail(id))
 
   return createSuccess('ステータスを更新しました')
 })
@@ -450,8 +450,8 @@ export const updateReservationNotes = withPermission<[string, string | null]>(
     data: { notes },
   })
 
-  revalidateTag(CACHE_TAGS.RESERVATIONS, 'default')
-  revalidateTag(getCacheTag.reservations.detail(id), 'default')
+  updateTag(CACHE_TAGS.RESERVATIONS)
+  updateTag(getCacheTag.reservations.detail(id))
 
   return createSuccess('メモを更新しました')
 })
@@ -488,7 +488,7 @@ export const deleteReservation = withPermission<[string]>(
     where: { id },
   })
 
-  revalidateTag(CACHE_TAGS.RESERVATIONS, 'default')
+  updateTag(CACHE_TAGS.RESERVATIONS)
 
   return createSuccess('予約を削除しました')
 })
@@ -943,8 +943,8 @@ export const createAdminReservation = withPermission<[AdminReservationInput]>(
     )
   }
 
-  revalidateTag(CACHE_TAGS.RESERVATIONS, 'default')
-  revalidateTag(getCacheTag.reservations.calendar(), 'default')
+  updateTag(CACHE_TAGS.RESERVATIONS)
+  updateTag(getCacheTag.reservations.calendar())
 
   return createSuccess('予約を作成しました', { id: result.id })
 })

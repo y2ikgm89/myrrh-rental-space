@@ -7,7 +7,6 @@
  */
 
 import { describe, test, expect } from 'bun:test'
-import { NewsStatus } from '@/shared/generated/prisma/enums'
 
 // =============================================================================
 // GetPublishedNewsListOptions Tests
@@ -30,18 +29,7 @@ describe('News Public Action Integration', () => {
     })
   })
 
-  describe('NewsStatus enum', () => {
-    test('全てのステータスが定義されている', () => {
-      expect(NewsStatus.DRAFT).toBe('DRAFT')
-      expect(NewsStatus.PUBLISHED).toBe('PUBLISHED')
-      expect(NewsStatus.ARCHIVED).toBe('ARCHIVED')
-    })
-
-    test('ステータス数', () => {
-      const statusCount = Object.values(NewsStatus).length
-      expect(statusCount).toBe(3)
-    })
-  })
+  // Note: NewsStatus enum は isPublished (boolean) に移行したため削除
 
   describe('PublicNews type validation', () => {
     test('有効なお知らせデータ構造', () => {

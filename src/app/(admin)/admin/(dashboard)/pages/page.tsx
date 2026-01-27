@@ -13,6 +13,7 @@ import Link from 'next/link'
 import { Edit, Home, Settings2 } from 'lucide-react'
 import { getPagesList } from '@/admin/actions/page'
 import { Button } from '@/admin/components/ui'
+import { formatDateTimeShort } from '@/shared/lib/utils'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/admin/components/ui/table'
 import { Badge } from '@/admin/components/ui/badge'
 import { CreatePageDialog, PageActions } from './_components'
@@ -118,13 +119,7 @@ export default async function PagesManagementPage(): Promise<ReactElement> {
                     )}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {new Date(page.updatedAt).toLocaleDateString('ja-JP', {
-                      year: 'numeric',
-                      month: '2-digit',
-                      day: '2-digit',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
+                    {formatDateTimeShort(page.updatedAt)}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">

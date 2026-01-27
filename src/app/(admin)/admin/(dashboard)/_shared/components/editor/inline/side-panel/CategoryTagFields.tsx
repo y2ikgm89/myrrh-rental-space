@@ -4,7 +4,7 @@
  * カテゴリ・タグフィールド
  *
  * カテゴリ選択とタグ入力
- * ブログ記事用
+ * 投稿記事用
  */
 
 import type { UseFormRegister, UseFormSetValue, FieldErrors, Control } from 'react-hook-form'
@@ -18,14 +18,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/admin/components/ui'
-import type { BlogEditorFormData, BlogCategoryOption } from '../types'
+import type { PostEditorFormData, PostCategoryOption } from '../types'
 
 type CategoryTagFieldsProps = {
-  register: UseFormRegister<BlogEditorFormData>
-  control: Control<BlogEditorFormData>
-  setValue: UseFormSetValue<BlogEditorFormData>
-  errors: FieldErrors<BlogEditorFormData>
-  categories: BlogCategoryOption[]
+  register: UseFormRegister<PostEditorFormData>
+  control: Control<PostEditorFormData>
+  setValue: UseFormSetValue<PostEditorFormData>
+  errors: FieldErrors<PostEditorFormData>
+  categories: PostCategoryOption[]
   disabled?: boolean
 }
 

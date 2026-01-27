@@ -25,6 +25,7 @@ import {
 import type { TurnstileConfig } from '@/admin/types/api-keys'
 import { StatusBanner } from '../shared'
 import { useRefreshOnSuccess } from '../hooks'
+import { formatDateTimeShort } from '@/shared/lib/utils'
 
 // =============================================================================
 // Types
@@ -213,8 +214,8 @@ export function TurnstileSection({ config }: TurnstileSectionProps) {
                 </>
               ) : (
                 <>
-                  <span className="h-2 w-2 rounded-full bg-red-500" />
-                  <span className="text-sm font-medium text-red-700">
+                  <span className="h-2 w-2 rounded-full bg-destructive" />
+                  <span className="text-sm font-medium text-destructive">
                     エラー
                   </span>
                 </>
@@ -222,8 +223,7 @@ export function TurnstileSection({ config }: TurnstileSectionProps) {
             </div>
             {config.lastTestedAt && (
               <p className="mt-1 text-xs text-muted-foreground">
-                最終検証:{' '}
-                {new Date(config.lastTestedAt).toLocaleString('ja-JP')}
+                最終検証: {formatDateTimeShort(config.lastTestedAt)}
               </p>
             )}
           </StatusBanner>
@@ -233,7 +233,7 @@ export function TurnstileSection({ config }: TurnstileSectionProps) {
         {testResult && (
           <StatusBanner success={testResult.success}>
             <p
-              className={`text-sm ${testResult.success ? 'text-green-700' : 'text-red-700'}`}
+              className={`text-sm ${testResult.success ? 'text-green-700' : 'text-destructive'}`}
             >
               {testResult.message}
             </p>

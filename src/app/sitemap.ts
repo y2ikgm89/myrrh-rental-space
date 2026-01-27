@@ -1,129 +1,204 @@
 /**
- * 動的サイトマップ生成
+ * XMLサイトマップ生成
  *
+ * Google公式ガイドラインに準拠:
+ * - priority/changefreq は Google が無視するため不使用
+ * - lastmod は実際のコンテンツ更新日を使用
+ * - 正規化された絶対URLのみ含める
+ *
+ * @see https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap
  * @see https://nextjs.org/docs/app/api-reference/file-conventions/metadata/sitemap
  */
 
 import type { MetadataRoute } from 'next'
 import { prisma } from '@/shared/lib/prisma'
-import { BlogPostStatus, NewsStatus } from '@/shared/generated/prisma/enums'
+import { PostStatus } from '@/shared/generated/prisma/enums'
 import { getBaseUrl } from '@/shared/lib/constants'
+import { getPostUrlPrefix } from '@/shared/lib/settings/public'
+
+// =============================================================================
+// Types
+// =============================================================================
+
+type SitemapEntry = MetadataRoute.Sitemap[number]
+
+// =============================================================================
+// Constants
+// =============================================================================
 
 const BASE_URL = getBaseUrl()
 
+/**
+ * 静的ページの定義
+ *
+ * lastModified は設定で管理されないため、
+ * ビルド時の日付を使用（実質的に変更頻度が低いページ）
+ */
+const STATIC_PAGES = [
+  '/',
+  '/about',
+  '/contact',
+  '/faq',
+  '/reservation',
+  '/terms',
+  '/privacy',
+] as const
+
+// =============================================================================
+// Sitemap Generation
+// =============================================================================
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  // 静的ページ
-  const staticPages: MetadataRoute.Sitemap = [
-    {
-      url: BASE_URL,
-      lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 1,
-    },
-    {
-      url: `${BASE_URL}/spaces`,
-      lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 0.9,
-    },
-    {
-      url: `${BASE_URL}/news`,
-      lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 0.7,
-    },
-    {
-      url: `${BASE_URL}/blog`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.7,
-    },
-    {
-      url: `${BASE_URL}/contact`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.6,
-    },
-    {
-      url: `${BASE_URL}/about`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.5,
-    },
-    {
-      url: `${BASE_URL}/faq`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.5,
-    },
-    {
-      url: `${BASE_URL}/terms`,
-      lastModified: new Date(),
-      changeFrequency: 'yearly',
-      priority: 0.3,
-    },
-    {
-      url: `${BASE_URL}/privacy`,
-      lastModified: new Date(),
-      changeFrequency: 'yearly',
-      priority: 0.3,
-    },
-  ]
+  // 設定と全データを並列取得
+  const [
+    postPrefix,
+    spaces,
+    news,
+    posts,
+    postCategories,
+    postTags,
+    customPages,
+  ] = await Promise.all([
+    // 投稿URLプレフィックス設定
+    getPostUrlPrefix(),
+    // 公開中のスペース
+    prisma.space.findMany({
+      where: { isPublished: true, isActive: true },
+      select: { slug: true, updatedAt: true },
+      orderBy: { updatedAt: 'desc' },
+    }),
+    // 公開中のお知らせ
+    prisma.news.findMany({
+      where: { isPublished: true },
+      select: { slug: true, updatedAt: true },
+      orderBy: { updatedAt: 'desc' },
+    }),
+    // 公開中の投稿
+    prisma.post.findMany({
+      where: { status: PostStatus.PUBLISHED },
+      select: { slug: true, updatedAt: true },
+      orderBy: { updatedAt: 'desc' },
+    }),
+    // 投稿カテゴリ（投稿が1件以上あるもの）
+    prisma.postCategory.findMany({
+      where: {
+        posts: { some: { status: PostStatus.PUBLISHED } },
+      },
+      select: { slug: true, updatedAt: true },
+      orderBy: { updatedAt: 'desc' },
+    }),
+    // 投稿タグ（全て - タグページは常に存在する）
+    prisma.postTag.findMany({
+      select: { slug: true, updatedAt: true },
+      orderBy: { updatedAt: 'desc' },
+    }),
+    // 公開中のカスタムページ（システムページ以外）
+    prisma.page.findMany({
+      where: {
+        isPublished: true,
+        isActive: true,
+        isSystemPage: false,
+      },
+      select: { slug: true, updatedAt: true },
+      orderBy: { updatedAt: 'desc' },
+    }),
+  ])
 
-  // スペースページ（公開中のみ）
-  const spaces = await prisma.space.findMany({
-    where: {
-      isPublished: true,
-      isActive: true,
-    },
-    select: {
-      id: true,
-      updatedAt: true,
-    },
+  // 各コンテンツタイプの最新更新日を取得
+  const latestSpaceUpdate = spaces[0]?.updatedAt ?? new Date()
+  const latestNewsUpdate = news[0]?.updatedAt ?? new Date()
+  const latestPostUpdate = posts[0]?.updatedAt ?? new Date()
+
+  const entries: SitemapEntry[] = []
+
+  // ==========================================================================
+  // 1. 静的ページ
+  // ==========================================================================
+  for (const path of STATIC_PAGES) {
+    entries.push({
+      url: `${BASE_URL}${path}`,
+      lastModified: new Date(),
+    })
+  }
+
+  // ==========================================================================
+  // 2. 一覧ページ（各コンテンツの最新更新日を使用）
+  // ==========================================================================
+  entries.push({
+    url: `${BASE_URL}/spaces`,
+    lastModified: latestSpaceUpdate,
   })
-
-  const spacePages: MetadataRoute.Sitemap = spaces.map((space) => ({
-    url: `${BASE_URL}/spaces/${space.id}`,
-    lastModified: space.updatedAt,
-    changeFrequency: 'weekly',
-    priority: 0.8,
-  }))
-
-  // ニュースページ（公開中のみ）
-  const news = await prisma.news.findMany({
-    where: {
-      status: NewsStatus.PUBLISHED,
-    },
-    select: {
-      id: true,
-      updatedAt: true,
-    },
+  entries.push({
+    url: `${BASE_URL}/news`,
+    lastModified: latestNewsUpdate,
   })
+  // 投稿一覧ページ（プレフィックスが有効な場合のみ）
+  if (postPrefix) {
+    entries.push({
+      url: `${BASE_URL}${postPrefix}`,
+      lastModified: latestPostUpdate,
+    })
+  }
 
-  const newsPages: MetadataRoute.Sitemap = news.map((item) => ({
-    url: `${BASE_URL}/news/${item.id}`,
-    lastModified: item.updatedAt,
-    changeFrequency: 'monthly',
-    priority: 0.6,
-  }))
+  // ==========================================================================
+  // 3. スペース詳細ページ
+  // ==========================================================================
+  for (const space of spaces) {
+    entries.push({
+      url: `${BASE_URL}/spaces/${space.slug}`,
+      lastModified: space.updatedAt,
+    })
+  }
 
-  // ブログ記事（公開中のみ）
-  const blogPosts = await prisma.blogPost.findMany({
-    where: {
-      status: BlogPostStatus.PUBLISHED,
-    },
-    select: {
-      slug: true,
-      updatedAt: true,
-    },
-  })
+  // ==========================================================================
+  // 4. お知らせ詳細ページ
+  // ==========================================================================
+  for (const item of news) {
+    entries.push({
+      url: `${BASE_URL}/news/${item.slug}`,
+      lastModified: item.updatedAt,
+    })
+  }
 
-  const blogPages: MetadataRoute.Sitemap = blogPosts.map((post) => ({
-    url: `${BASE_URL}/blog/${post.slug}`,
-    lastModified: post.updatedAt,
-    changeFrequency: 'monthly',
-    priority: 0.7,
-  }))
+  // ==========================================================================
+  // 5. 投稿詳細ページ
+  // ==========================================================================
+  for (const post of posts) {
+    entries.push({
+      url: `${BASE_URL}${postPrefix}/${post.slug}`,
+      lastModified: post.updatedAt,
+    })
+  }
 
-  return [...staticPages, ...spacePages, ...newsPages, ...blogPages]
+  // ==========================================================================
+  // 6. 投稿カテゴリページ
+  // ==========================================================================
+  for (const category of postCategories) {
+    entries.push({
+      url: `${BASE_URL}${postPrefix}/category/${category.slug}`,
+      lastModified: category.updatedAt,
+    })
+  }
+
+  // ==========================================================================
+  // 7. 投稿タグページ
+  // ==========================================================================
+  for (const tag of postTags) {
+    entries.push({
+      url: `${BASE_URL}${postPrefix}/tag/${tag.slug}`,
+      lastModified: tag.updatedAt,
+    })
+  }
+
+  // ==========================================================================
+  // 8. カスタムページ
+  // ==========================================================================
+  for (const page of customPages) {
+    entries.push({
+      url: `${BASE_URL}/p/${page.slug}`,
+      lastModified: page.updatedAt,
+    })
+  }
+
+  return entries
 }

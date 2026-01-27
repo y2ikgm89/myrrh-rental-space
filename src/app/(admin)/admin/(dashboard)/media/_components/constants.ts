@@ -25,7 +25,7 @@ export const TYPE_OPTIONS: readonly TypeFilterOption[] = [
 
 export const USAGE_OPTIONS: readonly UsageOption[] = [
   { value: MediaUsage.GENERAL, label: '未分類' },
-  { value: MediaUsage.BLOG, label: 'ブログ' },
+  { value: MediaUsage.POST, label: '投稿' },
   { value: MediaUsage.NEWS, label: 'お知らせ' },
   { value: MediaUsage.PAGE, label: 'ページ' },
   { value: MediaUsage.SPACE, label: 'スペース' },

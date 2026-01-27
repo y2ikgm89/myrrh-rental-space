@@ -19,7 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/admin/components/ui'
-import { deleteFaqCategory, deleteFaqItem, toggleFaqItemActive } from '@/admin/actions/faq'
+import { deleteFaqCategory, deleteFaqItem, toggleFaqItemPublished } from '@/admin/actions/faq'
 import type { FaqCategoryWithItems } from '@/admin/lib/validations/faq'
 
 const styles = tv({
@@ -89,9 +89,9 @@ export function FaqCategoryList({ categories }: FaqCategoryListProps) {
     })
   }
 
-  const handleToggleItemActive = (id: string) => {
+  const handleToggleItemPublished = (id: string) => {
     startTransition(async () => {
-      const result = await toggleFaqItemActive(id)
+      const result = await toggleFaqItemPublished(id)
       if (result.success) {
         toast.success(result.message)
         router.refresh()
@@ -180,7 +180,7 @@ export function FaqCategoryList({ categories }: FaqCategoryListProps) {
                         <div key={item.id} className={styles.itemRow()}>
                           <div className="flex-1 min-w-0">
                             <p className={styles.question()}>{item.question}</p>
-                            {!item.isActive && (
+                            {!item.isPublished && (
                               <Badge variant="secondary" className="mt-1">
                                 非公開
                               </Badge>
@@ -190,10 +190,10 @@ export function FaqCategoryList({ categories }: FaqCategoryListProps) {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleToggleItemActive(item.id)}
+                              onClick={() => handleToggleItemPublished(item.id)}
                               disabled={isPending}
                             >
-                              {item.isActive ? '非公開' : '公開'}
+                              {item.isPublished ? '非公開' : '公開'}
                             </Button>
                             <Button variant="ghost" size="sm" asChild>
                               <Link href={`/admin/faq/items/${item.id}/edit`}>

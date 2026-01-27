@@ -1,6 +1,22 @@
 /**
  * Cloudflare Turnstile サーバーサイド検証
+ *
+ * ボット対策としてCloudflare Turnstileを使用したトークン検証を行います。
+ * フォーム送信時のスパム防止に使用します。
+ *
+ * ## キー取得元
+ * - Site Key: DBから取得（管理画面で設定）
+ * - Secret Key: DBから取得（管理画面で設定）
+ *
+ * ## 開発環境
+ * シークレットキーが設定されていない場合は検証をスキップします。
+ *
+ * @module shared/lib/turnstile
  */
+
+import { prisma } from './prisma'
+import { decrypt, isEncrypted } from './crypto'
+import { logError, ErrorCategory, ErrorSeverity, normalizeError } from './errors'
 
 type TurnstileVerifyResponse = {
   success: boolean
@@ -10,22 +26,61 @@ type TurnstileVerifyResponse = {
 }
 
 /**
+ * DBからTurnstile Secret Keyを取得
+ */
+async function getTurnstileSecretKey(): Promise<string | null> {
+  const settings = await prisma.settings.findUnique({
+    where: { id: 'singleton' },
+    select: { turnstileSecretKey: true },
+  })
+
+  if (!settings?.turnstileSecretKey) {
+    return null
+  }
+
+  // 暗号化フォーマットの検証
+  if (!isEncrypted(settings.turnstileSecretKey)) {
+    logError(new Error('Invalid encrypted format for Turnstile secret key'), {
+      category: ErrorCategory.VALIDATION,
+      severity: ErrorSeverity.HIGH,
+      context: { operation: 'getTurnstileSecretKey' },
+    })
+    return null
+  }
+
+  // 復号化（失敗時はnullを返す）
+  try {
+    return decrypt(settings.turnstileSecretKey)
+  } catch (error) {
+    logError(normalizeError(error), {
+      category: ErrorCategory.UNKNOWN,
+      severity: ErrorSeverity.HIGH,
+      context: { operation: 'getTurnstileSecretKey' },
+    })
+    return null
+  }
+}
+
+/**
  * Turnstileトークンを検証
  * @param token クライアントから受け取ったトークン
  * @returns 検証成功時true、失敗時false
  */
 export async function verifyTurnstileToken(token: string): Promise<boolean> {
-  const secretKey = process.env.TURNSTILE_SECRET_KEY
+  const secretKey = await getTurnstileSecretKey()
 
   // シークレットキーが設定されていない場合はスキップ（開発環境用）
   if (!secretKey) {
-    console.warn('Turnstile secret key is not configured. Skipping verification.')
     return true
   }
 
   // トークンが空の場合は失敗
   if (!token) {
-    console.warn('Empty Turnstile token provided')
+    logError(new Error('Empty Turnstile token provided'), {
+      category: ErrorCategory.VALIDATION,
+      severity: ErrorSeverity.LOW,
+      context: { operation: 'verifyTurnstileToken' },
+    })
     return false
   }
 
@@ -41,30 +96,51 @@ export async function verifyTurnstileToken(token: string): Promise<boolean> {
           secret: secretKey,
           response: token,
         }),
+        signal: AbortSignal.timeout(5000),
       }
     )
 
     if (!response.ok) {
-      console.error('Turnstile API returned non-OK status:', response.status)
+      logError(new Error(`Turnstile API returned non-OK status: ${response.status}`), {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.MEDIUM,
+        context: { operation: 'verifyTurnstileToken', status: response.status },
+      })
       return false
     }
 
     const data: TurnstileVerifyResponse = await response.json()
 
     if (!data.success) {
-      console.warn('Turnstile verification failed:', data['error-codes'])
+      logError(new Error('Turnstile verification failed'), {
+        category: ErrorCategory.VALIDATION,
+        severity: ErrorSeverity.LOW,
+        context: { operation: 'verifyTurnstileToken', errorCodes: data['error-codes'] },
+      })
     }
 
     return data.success
   } catch (error) {
-    console.error('Turnstile verification error:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'verifyTurnstileToken' },
+    })
     return false
   }
 }
 
 /**
- * Turnstileが有効かどうかをチェック
+ * Turnstileが有効かどうかをチェック（DBベース）
  */
-export function isTurnstileEnabled(): boolean {
-  return Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && process.env.TURNSTILE_SECRET_KEY)
+export async function isTurnstileEnabled(): Promise<boolean> {
+  const settings = await prisma.settings.findUnique({
+    where: { id: 'singleton' },
+    select: {
+      turnstileSiteKey: true,
+      turnstileSecretKey: true,
+    },
+  })
+
+  return Boolean(settings?.turnstileSiteKey && settings?.turnstileSecretKey)
 }

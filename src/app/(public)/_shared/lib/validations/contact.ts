@@ -8,31 +8,31 @@ import { z } from 'zod'
 export const contactSchema = z.object({
   name: z
     .string()
-    .min(1, 'お名前を入力してください')
-    .max(100, 'お名前は100文字以内で入力してください'),
+    .min(1, { message: 'お名前を入力してください' })
+    .max(100, { message: 'お名前は100文字以内で入力してください' }),
   email: z
     .string()
-    .min(1, 'メールアドレスを入力してください')
-    .email('有効なメールアドレスを入力してください'),
+    .min(1, { message: 'メールアドレスを入力してください' })
+    .email({ message: '有効なメールアドレスを入力してください' }),
   phone: z
     .string()
     .optional()
     .refine(
       (val) => !val || /^[0-9-]+$/.test(val),
-      '電話番号は数字とハイフンのみで入力してください'
+      { message: '電話番号は数字とハイフンのみで入力してください' }
     )
     .refine(
       (val) => !val || val.length <= 20,
-      '電話番号は20文字以内で入力してください'
+      { message: '電話番号は20文字以内で入力してください' }
     ),
   subject: z
     .string()
-    .min(1, '件名を入力してください')
-    .max(200, '件名は200文字以内で入力してください'),
+    .min(1, { message: '件名を入力してください' })
+    .max(200, { message: '件名は200文字以内で入力してください' }),
   message: z
     .string()
-    .min(1, 'お問い合わせ内容を入力してください')
-    .max(5000, 'お問い合わせ内容は5000文字以内で入力してください'),
+    .min(1, { message: 'お問い合わせ内容を入力してください' })
+    .max(5000, { message: 'お問い合わせ内容は5000文字以内で入力してください' }),
 })
 
 export type ContactInput = z.input<typeof contactSchema>

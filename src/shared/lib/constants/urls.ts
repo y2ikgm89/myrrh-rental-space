@@ -39,7 +39,7 @@ export function getAdminUrl(path: string): string {
 /**
  * 公開ページ URL を構築
  *
- * @param path - ルートからのパス（例: '/blog/my-post'）
+ * @param path - ルートからのパス（例: '/posts/my-post'）
  */
 export function getPublicUrl(path: string): string {
   return `${getBaseUrl()}${path}`

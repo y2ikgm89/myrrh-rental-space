@@ -58,7 +58,7 @@ const SETTINGS_CATEGORIES: SettingsCardProps[] = [
     description: '外部サービスのAPIキーを管理',
     href: '/admin/settings/api',
     icon: Key,
-    items: ['Resend', 'Turnstile', 'Google'],
+    items: ['Resend', 'Cloudflare', 'Google', 'Instagram'],
   },
   {
     title: 'システム管理',

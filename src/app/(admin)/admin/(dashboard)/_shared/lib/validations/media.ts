@@ -17,13 +17,12 @@ export { MediaType, MediaUsage, isValidMediaType, isValidMediaUsage }
 // Zod Schemas for Prisma Enums
 // =============================================================================
 
-export const MediaTypeEnum = z.enum(
-  Object.values(MediaType) as [MediaType, ...MediaType[]]
-)
+const MEDIA_TYPE_VALUES = ['IMAGE', 'VIDEO', 'DOCUMENT', 'OTHER'] as const
+const MEDIA_USAGE_VALUES = ['POST', 'NEWS', 'PAGE', 'SPACE', 'SITE', 'GENERAL'] as const
 
-export const MediaUsageEnum = z.enum(
-  Object.values(MediaUsage) as [MediaUsage, ...MediaUsage[]]
-)
+export const MediaTypeEnum = z.enum(MEDIA_TYPE_VALUES)
+
+export const MediaUsageEnum = z.enum(MEDIA_USAGE_VALUES)
 
 // =============================================================================
 // Constants

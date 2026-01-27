@@ -11,6 +11,7 @@
 
 import { useSyncExternalStore } from 'react'
 import Link from 'next/link'
+import { logger } from '@/shared/lib/logger'
 
 // デフォルト値
 const DEFAULT_MESSAGE =
@@ -86,7 +87,7 @@ export function CookieConsentBanner({
         new CustomEvent('cookie-consent-changed', { detail: 'accepted' })
       )
     } catch (error) {
-      console.error('Failed to save cookie consent:', error)
+      logger.error('Failed to save cookie consent', { error: error instanceof Error ? error.message : String(error) })
     }
   }
 
@@ -98,7 +99,7 @@ export function CookieConsentBanner({
         new CustomEvent('cookie-consent-changed', { detail: 'rejected' })
       )
     } catch (error) {
-      console.error('Failed to save cookie consent:', error)
+      logger.error('Failed to save cookie consent', { error: error instanceof Error ? error.message : String(error) })
     }
   }
 
@@ -181,6 +182,6 @@ export function resetCookieConsent(): void {
       new CustomEvent('cookie-consent-changed', { detail: null })
     )
   } catch (error) {
-    console.error('Failed to reset cookie consent:', error)
+    logger.error('Failed to reset cookie consent', { error: error instanceof Error ? error.message : String(error) })
   }
 }

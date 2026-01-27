@@ -152,3 +152,69 @@ export async function getTermsAgreementsForReservation(reservationId: string) {
 
   return agreements
 }
+
+/**
+ * キャンセルポリシーを取得（予約フォーム用）
+ *
+ * Settingsに設定されたキャンセルポリシー（Terms）の現在バージョンを返す
+ */
+export const getCancellationPolicy = cache(async (): Promise<TermsWithVersion | null> => {
+  'use cache'
+  cacheLife('hours')
+  cacheTag('terms', 'cancellation-policy')
+
+  const settings = await prisma.settings.findUnique({
+    where: { id: 'singleton' },
+    select: { cancellationTermsId: true },
+  })
+
+  if (!settings?.cancellationTermsId) {
+    return null
+  }
+
+  const terms = await prisma.terms.findUnique({
+    where: {
+      id: settings.cancellationTermsId,
+      isActive: true,
+    },
+    select: {
+      id: true,
+      type: true,
+      title: true,
+      slug: true,
+      isActive: true,
+      versions: {
+        where: {
+          isCurrentVersion: true,
+          status: TermsStatus.PUBLISHED,
+        },
+        take: 1,
+        select: {
+          id: true,
+          version: true,
+          content: true,
+          publishedAt: true,
+        },
+      },
+    },
+  })
+
+  // 規約が無効 or 公開バージョンがない場合はnull
+  if (!terms || !terms.versions[0]) {
+    return null
+  }
+
+  return {
+    id: terms.id,
+    type: terms.type,
+    title: terms.title,
+    slug: terms.slug,
+    isActive: terms.isActive,
+    currentVersion: {
+      id: terms.versions[0].id,
+      version: terms.versions[0].version,
+      content: terms.versions[0].content,
+      publishedAt: terms.versions[0].publishedAt!,
+    },
+  }
+})

@@ -7,10 +7,20 @@ import { seoOgpFieldsSchema, seoOgpFieldsFormSchema } from '@/shared/lib/validat
 // =============================================================================
 
 /**
+ * スラッグのバリデーション
+ */
+export const newsSlugSchema = z
+  .string()
+  .min(1, { error: 'スラッグを入力してください' })
+  .max(100, { error: 'スラッグは100文字以内で入力してください' })
+  .regex(/^[a-z0-9-]+$/, { error: 'スラッグは小文字英数字とハイフンのみ使用可能です' })
+
+/**
  * お知らせ作成スキーマ
  */
 export const createNewsSchema = z.object({
-  title: z.string().min(1, 'タイトルは必須です').max(200, 'タイトルは200文字以内で入力してください'),
+  slug: newsSlugSchema,
+  title: z.string().min(1, { error: 'タイトルは必須です' }).max(200, { error: 'タイトルは200文字以内で入力してください' }),
   content: z.string().default(''),
 })
 
@@ -21,8 +31,9 @@ export type CreateNewsInput = z.infer<typeof createNewsSchema>
  */
 export const updateNewsSchema = z
   .object({
-    title: z.string().min(1, 'タイトルは必須です').max(200, 'タイトルは200文字以内で入力してください'),
-    content: z.string().min(1, '本文は必須です'),
+    slug: newsSlugSchema,
+    title: z.string().min(1, { error: 'タイトルは必須です' }).max(200, { error: 'タイトルは200文字以内で入力してください' }),
+    content: z.string().min(1, { error: '本文は必須です' }),
     contentWidth: z.nativeEnum(LayoutWidth).nullable().optional(),
     contentWidthCustom: z.number().int().min(320).max(1920).nullable().optional(),
   })
@@ -36,8 +47,9 @@ export type UpdateNewsInput = z.infer<typeof updateNewsSchema>
  */
 export const newsFormSchema = z
   .object({
-    title: z.string().min(1, 'タイトルは必須です').max(200, 'タイトルは200文字以内で入力してください'),
-    content: z.string().min(1, '本文は必須です'),
+    slug: newsSlugSchema,
+    title: z.string().min(1, { error: 'タイトルは必須です' }).max(200, { error: 'タイトルは200文字以内で入力してください' }),
+    content: z.string().min(1, { error: '本文は必須です' }),
     isPublished: z.boolean(),
     publishedAt: z.string().optional(),
     contentWidth: z.string().optional(),
@@ -56,6 +68,7 @@ export type NewsFormData = z.infer<typeof newsFormSchema>
  */
 export type NewsData = {
   id: string
+  slug: string
   title: string
   content: string
   isPublished: boolean

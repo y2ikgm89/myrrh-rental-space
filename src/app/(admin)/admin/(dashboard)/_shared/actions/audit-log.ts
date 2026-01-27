@@ -10,6 +10,7 @@ import { createSuccess, createFailure, type ActionResult } from '@/admin/types/s
 import { getSession, getRoleFromSession } from '@/shared/lib/auth'
 import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'
 import { logPermissionDenied } from '@/admin/lib/audit'
+import { isRecord } from '@/shared/lib/serialize'
 import { z } from 'zod'
 
 // =============================================================================
@@ -59,6 +60,38 @@ export type AuditLogStats = {
   today: number
   securityEvents: number
   byAction: Record<string, number>
+}
+
+// =============================================================================
+// Type Guards
+// =============================================================================
+
+type AuditLogMetadata = AuditLogItem['metadata']
+
+/**
+ * PrismaのJSON値からAuditLogMetadataを安全にパースする
+ */
+function parseAuditLogMetadata(value: unknown): AuditLogMetadata {
+  if (!isRecord(value)) return null
+
+  const result: { ipAddress?: string; userAgent?: string; [key: string]: unknown } = {}
+
+  // 既知のフィールドを型安全に抽出
+  if (typeof value.ipAddress === 'string') {
+    result.ipAddress = value.ipAddress
+  }
+  if (typeof value.userAgent === 'string') {
+    result.userAgent = value.userAgent
+  }
+
+  // その他のフィールドをコピー
+  for (const [key, val] of Object.entries(value)) {
+    if (key !== 'ipAddress' && key !== 'userAgent') {
+      result[key] = val
+    }
+  }
+
+  return result
 }
 
 // =============================================================================
@@ -119,8 +152,11 @@ export async function getAuditLogs(filters: AuditLogFilters = {}): Promise<Actio
     return createFailure(check.error)
   }
 
-  const validated = filtersSchema.parse(filters)
-  const { page, perPage, action, resource, userId, dateFrom, dateTo } = validated
+  const validated = filtersSchema.safeParse(filters)
+  if (!validated.success) {
+    return createFailure('入力が不正です')
+  }
+  const { page, perPage, action, resource, userId, dateFrom, dateTo } = validated.data
 
   type AuditLogWhere = {
     action?: AuditAction
@@ -174,7 +210,7 @@ export async function getAuditLogs(filters: AuditLogFilters = {}): Promise<Actio
   return createSuccess('監査ログを取得しました', {
     logs: logs.map((log) => ({
       ...log,
-      metadata: log.metadata as AuditLogItem['metadata'],
+      metadata: parseAuditLogMetadata(log.metadata),
     })),
     total,
     page,

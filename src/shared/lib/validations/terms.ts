@@ -2,19 +2,48 @@ import { z } from 'zod'
 import { TermsType, TermsStatus } from '@/shared/generated/prisma/enums'
 
 // ==============================================
+// Type Guards
+// ==============================================
+
+/**
+ * TermsType型ガード（Set-basedパターン）
+ */
+const TERMS_TYPE_VALUES = new Set<string>(Object.values(TermsType))
+
+export function isTermsType(value: unknown): value is TermsType {
+  return typeof value === 'string' && TERMS_TYPE_VALUES.has(value)
+}
+
+/**
+ * 文字列をTermsTypeに変換（無効な値はundefined）
+ */
+export function parseTermsType(value: unknown): TermsType | undefined {
+  return isTermsType(value) ? value : undefined
+}
+
+// ==============================================
 // Constants
 // ==============================================
 
 /**
- * 規約タイプの選択肢
+ * 規約タイプの選択肢（デフォルトタイトル・スラッグ付き）
  */
 export const TERMS_TYPES = [
-  { value: 'TERMS_OF_USE', label: '利用規約' },
-  { value: 'PRIVACY_POLICY', label: 'プライバシーポリシー' },
-  { value: 'CANCELLATION', label: 'キャンセルポリシー' },
-  { value: 'PAYMENT', label: '支払い規約' },
-  { value: 'CUSTOM', label: 'カスタム規約' },
+  { value: 'TERMS_OF_USE', label: '利用規約', defaultTitle: '利用規約', defaultSlug: 'terms-of-use' },
+  { value: 'PRIVACY_POLICY', label: 'プライバシーポリシー', defaultTitle: 'プライバシーポリシー', defaultSlug: 'privacy-policy' },
+  { value: 'CANCELLATION', label: 'キャンセルポリシー', defaultTitle: 'キャンセルポリシー', defaultSlug: 'cancellation-policy' },
+  { value: 'PAYMENT', label: '支払い規約', defaultTitle: '支払い規約', defaultSlug: 'payment-terms' },
+  { value: 'CUSTOM', label: 'カスタム規約', defaultTitle: 'カスタム規約', defaultSlug: 'custom-terms' },
 ] as const
+
+/**
+ * 規約タイプからデフォルト値を取得
+ */
+export function getTermsTypeDefaults(type: string): { title: string; slug: string } | null {
+  const found = TERMS_TYPES.find((t) => t.value === type)
+  if (!found) return null
+  return { title: found.defaultTitle, slug: found.defaultSlug }
+}
 
 // ==============================================
 // Terms Master Schemas
@@ -27,13 +56,13 @@ export const createTermsSchema = z.object({
   type: z.nativeEnum(TermsType),
   title: z
     .string()
-    .min(1, 'タイトルを入力してください')
-    .max(100, 'タイトルは100文字以内で入力してください'),
+    .min(1, { error: 'タイトルを入力してください' })
+    .max(100, { error: 'タイトルは100文字以内で入力してください' }),
   slug: z
     .string()
-    .min(1, 'スラッグを入力してください')
-    .max(50, 'スラッグは50文字以内で入力してください')
-    .regex(/^[a-z0-9-]+$/, 'スラッグは小文字英数字とハイフンのみ使用可能です'),
+    .min(1, { error: 'スラッグを入力してください' })
+    .max(50, { error: 'スラッグは50文字以内で入力してください' })
+    .regex(/^[a-z0-9-]+$/, { error: 'スラッグは小文字英数字とハイフンのみ使用可能です' }),
   isActive: z.boolean().default(true),
 })
 
@@ -53,27 +82,57 @@ export type UpdateTermsInput = z.input<typeof updateTermsSchema>
  * 規約バージョン作成スキーマ
  */
 export const createTermsVersionSchema = z.object({
-  termsId: z.string().uuid('規約IDが無効です'),
-  content: z.string().min(1, 'コンテンツを入力してください'),
+  termsId: z.string().uuid({ error: '規約IDが無効です' }),
+  content: z.string().min(1, { error: 'コンテンツを入力してください' }),
 })
 
 /**
  * 規約バージョン公開スキーマ
  */
 export const publishTermsVersionSchema = z.object({
-  versionId: z.string().uuid('バージョンIDが無効です'),
+  versionId: z.string().uuid({ error: 'バージョンIDが無効です' }),
 })
 
 /**
  * 規約バージョン更新スキーマ
  */
 export const updateTermsVersionSchema = z.object({
-  content: z.string().min(1, 'コンテンツを入力してください'),
+  content: z.string().min(1, { error: 'コンテンツを入力してください' }),
 })
 
 export type CreateTermsVersionInput = z.input<typeof createTermsVersionSchema>
 export type PublishTermsVersionInput = z.input<typeof publishTermsVersionSchema>
 export type UpdateTermsVersionInput = z.input<typeof updateTermsVersionSchema>
+
+// ==============================================
+// Site-Wide Terms SEO Schemas
+// ==============================================
+
+/**
+ * サイト全体規約のSEO更新スキーマ
+ */
+export const updateTermsSeoSchema = z.object({
+  metaDescription: z.string().max(160, { error: 'メタディスクリプションは160文字以内です' }).optional(),
+  metaKeywords: z.string().max(200, { error: 'メタキーワードは200文字以内です' }).optional(),
+  ogpTitle: z.string().max(100, { error: 'OGPタイトルは100文字以内です' }).optional(),
+  ogpDescription: z.string().max(200, { error: 'OGP説明は200文字以内です' }).optional(),
+  ogpImageUrl: z.string().url({ error: '有効なURLを入力してください' }).optional().or(z.literal('')),
+})
+
+export type UpdateTermsSeoInput = z.input<typeof updateTermsSeoSchema>
+
+/**
+ * サイト全体規約のSEO情報
+ */
+export interface SiteWideTermsSeo {
+  id: string
+  title: string
+  metaDescription: string | null
+  metaKeywords: string | null
+  ogpTitle: string | null
+  ogpDescription: string | null
+  ogpImageUrl: string | null
+}
 
 // ==============================================
 // Terms Agreement Schemas
@@ -83,12 +142,12 @@ export type UpdateTermsVersionInput = z.input<typeof updateTermsVersionSchema>
  * 規約同意記録スキーマ
  */
 export const recordTermsAgreementSchema = z.object({
-  termsId: z.string().uuid('規約IDが無効です'),
-  versionId: z.string().uuid('バージョンIDが無効です'),
-  reservationId: z.string().uuid('予約IDが無効です').optional(),
-  userId: z.string().uuid('ユーザーIDが無効です').optional(),
+  termsId: z.string().uuid({ error: '規約IDが無効です' }),
+  versionId: z.string().uuid({ error: 'バージョンIDが無効です' }),
+  reservationId: z.string().uuid({ error: '予約IDが無効です' }).optional(),
+  userId: z.string().uuid({ error: 'ユーザーIDが無効です' }).optional(),
   guestName: z.string().optional(),
-  guestEmail: z.string().email('メールアドレスが無効です').optional(),
+  guestEmail: z.string().email({ error: 'メールアドレスが無効です' }).optional(),
   ipAddress: z.string().optional(),
   userAgent: z.string().optional(),
 })
@@ -103,7 +162,7 @@ export type RecordTermsAgreementInput = z.input<typeof recordTermsAgreementSchem
  * スペースの規約取得スキーマ
  */
 export const getTermsForSpaceSchema = z.object({
-  spaceId: z.string().uuid('スペースIDが無効です'),
+  spaceId: z.string().uuid({ error: 'スペースIDが無効です' }),
 })
 
 /**
@@ -111,8 +170,8 @@ export const getTermsForSpaceSchema = z.object({
  */
 export const agreeToTermsSchema = z.object({
   versionIds: z
-    .array(z.string().uuid('バージョンIDが無効です'))
-    .min(1, '規約に同意してください'),
+    .array(z.string().uuid({ error: 'バージョンIDが無効です' }))
+    .min(1, { error: '規約に同意してください' }),
 })
 
 export type GetTermsForSpaceInput = z.input<typeof getTermsForSpaceSchema>

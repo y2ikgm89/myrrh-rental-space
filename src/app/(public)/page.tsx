@@ -13,6 +13,7 @@ import { HomepageSections } from '@/public/components/sections'
 import { WebSiteJsonLd } from '@/public/components/seo/JsonLd'
 import { generateHomeMetadata, getWebSiteJsonLdData } from '@/public/lib/seo'
 import { getPublicHomepageSections } from '@/public/actions/homepage'
+import { getPostUrlPrefix } from '@/shared/lib/settings/public'
 import type { ReactElement } from 'react'
 
 /**
@@ -27,9 +28,10 @@ export default async function HomePage(): Promise<ReactElement> {
   // Dynamic rendering - データベースから動的にコンテンツを取得
   await connection()
 
-  const [webSiteData, sections] = await Promise.all([
+  const [webSiteData, sections, postPrefix] = await Promise.all([
     getWebSiteJsonLdData(),
     getPublicHomepageSections(),
+    getPostUrlPrefix(),
   ])
 
   return (
@@ -39,7 +41,7 @@ export default async function HomePage(): Promise<ReactElement> {
         description={webSiteData.description}
         url={webSiteData.url}
       />
-      <HomepageSections sections={sections} />
+      <HomepageSections sections={sections} postPrefix={postPrefix} />
     </>
   )
 }

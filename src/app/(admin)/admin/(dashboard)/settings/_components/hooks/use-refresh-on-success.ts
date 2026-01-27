@@ -9,6 +9,7 @@
 
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { logger } from '@/shared/lib/logger'
 
 interface ActionResult {
   success: boolean
@@ -33,7 +34,7 @@ export function useRefreshOnSuccess() {
       try {
         router.refresh()
       } catch (error) {
-        console.error('Failed to refresh:', error)
+        logger.error('Failed to refresh', { error: error instanceof Error ? error.message : String(error) })
         // リフレッシュ失敗は致命的ではないため、警告のみ
       }
     } else {

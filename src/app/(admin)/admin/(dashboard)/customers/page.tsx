@@ -5,6 +5,7 @@ import { getCustomers } from '@/admin/actions/customer'
 import { CustomerFilters } from './_components/CustomerFilters'
 import { CustomerTable } from './_components/CustomerTable'
 import { Pagination, Button } from '@/admin/components/ui'
+import { LoadingState } from '@/admin/components/LoadingState'
 import { parseCustomerStatusFilter } from '@/shared/lib/validations/enums'
 import type { Metadata } from 'next'
 
@@ -62,18 +63,12 @@ export default async function CustomersPage({ searchParams }: PageProps) {
       </div>
 
       {/* フィルター */}
-      <Suspense fallback={<div>読み込み中...</div>}>
+      <Suspense fallback={<LoadingState variant="inline" />}>
         <CustomerFilters />
       </Suspense>
 
       {/* 顧客一覧 */}
-      <Suspense
-        fallback={
-          <div className="rounded-lg border bg-white p-12 text-center">
-            <p className="text-muted-foreground">読み込み中...</p>
-          </div>
-        }
-      >
+      <Suspense fallback={<LoadingState />}>
         <CustomerList searchParams={searchParams} />
       </Suspense>
     </div>

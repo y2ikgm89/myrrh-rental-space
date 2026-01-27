@@ -67,7 +67,7 @@
 ### News（お知らせ）
 - `id`, `title`, `content`, `publishedAt`, `isPublished`, `createdAt`, `updatedAt`
 
-### BlogPosts（ブログ記事）
+### Posts（投稿記事）
 - **基本フィールド**:
   - `id`: 一意識別子（String, UUID）
   - `title`: タイトル（String, 必須, 1-200文字）
@@ -95,7 +95,7 @@
   - `createdAt`: 作成日時（DateTime）
   - `updatedAt`: 更新日時（DateTime）
 - **リレーション**:
-  - `categoryId` → BlogCategories.id (FK)
+  - `categoryId` → PostCategories.id (FK)
   - `authorId` → Users.id (FK)
 - **インデックス**:
   - `slug`: ユニークインデックス
@@ -103,7 +103,7 @@
   - `[categoryId, isPublished, publishedAt]`: 複合インデックス（カテゴリ別公開済み記事の日時順ソート）
   - `viewCount`: 人気記事検索用
 
-### BlogCategories（ブログカテゴリ）
+### PostCategories（投稿カテゴリ）
 - **基本フィールド**:
   - `id`: 一意識別子（String, UUID）
   - `name`: カテゴリ名（String, 必須, 1-50文字, ユニーク）
@@ -117,7 +117,7 @@
   - `slug`: ユニークインデックス
   - `order`: 表示順序ソート用
 
-### BlogTags（ブログタグ）
+### PostTags（投稿タグ）
 - **基本フィールド**:
   - `id`: 一意識別子（String, UUID）
   - `name`: タグ名（String, 必須, 1-30文字, ユニーク）
@@ -165,7 +165,7 @@
   - `defaultTimeSlot`: デフォルト時間枠（Int, nullable, 分単位、デフォルト: 60）
   - `minReservationDuration`: 予約可能な最小時間（Int, nullable, 分単位、デフォルト: 60）
   - `maxReservationDuration`: 予約可能な最大時間（Int, nullable, 分単位、デフォルト: 480）
-  - `cancellationPolicy`: キャンセルポリシー（String, nullable, Text型）
+  - `cancellationTermsId`: キャンセルポリシー（String, nullable, Terms.idへの参照）
   - `sendReservationConfirmationEmail`: 予約確認メール送信フラグ（Boolean, デフォルト: true）
   - `sendAdminNotificationEmail`: 管理者通知メール送信フラグ（Boolean, デフォルト: true）
 - **通知設定**:
@@ -479,7 +479,7 @@ model Reservation {
 - `isPublished`: 公開済みお知らせの検索
 - 複合インデックス: `[isPublished, publishedAt]`
 
-**BlogPostsテーブル**:
+**Postsテーブル**:
 - `slug`: ユニークインデックス（スラッグ検索用）
 - `isPublished`: 公開済み記事の検索
 - `publishedAt`: 公開日時順のソート
@@ -488,11 +488,11 @@ model Reservation {
 - 複合インデックス: `[isPublished, publishedAt]`（公開済み記事の日時順ソート）
 - 複合インデックス: `[categoryId, isPublished, publishedAt]`（カテゴリ別公開済み記事の日時順ソート）
 
-**BlogCategoriesテーブル**:
+**PostCategoriesテーブル**:
 - `slug`: ユニークインデックス（スラッグ検索用）
 - `order`: 表示順序でのソート
 
-**BlogTagsテーブル**:
+**PostTagsテーブル**:
 - `slug`: ユニークインデックス（スラッグ検索用）
 
 **NavigationItemsテーブル**:

@@ -182,7 +182,7 @@ graph TB
 
 ### フロントエンド
 
-- **Next.js 16.1.1**: App Router、Server Components、SSR/SSG/ISR（CVE-2025-55182修正版）
+- **Next.js 16.1.4**: App Router、Server Components、SSR/SSG/ISR（CVE-2025-55182修正版）
 - **React 19.2.3**: UIライブラリ（CVE-2025-55182修正版）
 - **TypeScript 5.9.3**: 型安全性
 - **Tailwind CSS 4.1.18**: スタイリング
@@ -193,7 +193,7 @@ graph TB
 
 - **Next.js Server Actions**: サーバーサイドロジック
 - **Next.js Route Handlers**: APIエンドポイント
-- **Prisma 7.2.0**: ORM
+- **Prisma 7.3.0**: ORM
 - **Zod 4.3.5**: スキーマバリデーション
 
 ### データベース
@@ -264,11 +264,11 @@ graph LR
 
 | 技術 | 状態 | 備考 |
 |------|------|------|
-| Next.js 16.1.1 + React 19.2.3 | ✅ | 最新安定版（CVE-2025-55182修正済み） |
-| Prisma 7.2.0 + Supabase | ✅ | 完全互換、接続プーリング推奨 |
-| Bun 1.3.5 | ✅ | フルBunで実行可能（開発・本番） |
+| Next.js 16.1.4 + React 19.2.3 | ✅ | 最新安定版（CVE-2025-55182修正済み） |
+| Prisma 7.3.0 + Supabase | ✅ | 完全互換、接続プーリング推奨 |
+| Bun 1.3.6 | ✅ | フルBunで実行可能（開発・本番） |
 | Zod 4.3.5 | ✅ | 完全互換 |
-| Tailwind CSS | ✅ | 完全互換 |
+| Tailwind CSS 4.1.18 | ✅ | 完全互換 |
 | Three.js / Pixi.js | ✅ | 動的インポートで使用可能 |
 | GSAP / Framer Motion | ✅ | 使用可能 |
 | Turbopack | ✅ | Next.js 16でデフォルト有効 |
@@ -303,9 +303,9 @@ graph LR
 
 - **影響範囲**: React 19.0-19.2.0、Next.js 15.x-16.0.6
 - **深刻度**: 重大（認証されていないリモートコード実行が可能）
-- **必須対応**: 
+- **必須対応**:
   - React 19.2.1以上にアップグレード（最新安定版: 19.2.3）
-  - Next.js 16.0.7以上にアップグレード（最新安定版: 16.1.1）
+  - Next.js 16.0.7以上にアップグレード（最新安定版: 16.1.4）
 - **詳細**: React Server Componentsの脆弱性により、サーバー上でリモートコード実行が可能
 
 詳細は[`README.md`](./README.md)を参照してください。
@@ -314,8 +314,8 @@ graph LR
 
 #### Google Cloud Run
 
-- **ランタイム**: Bun 1.3.5（Dockerイメージ内で実行）
-- **ベースイメージ**: `oven/bun:1.3.5`
+- **ランタイム**: Bun 1.3.6（Dockerイメージ内で実行）
+- **ベースイメージ**: `oven/bun:1.3.6`
 - **ビルド**: `bun run build`（Dockerイメージ内で実行）
 - **環境変数**: Secret Managerから注入
 - **スケーリング**: 自動スケーリング設定
@@ -333,7 +333,7 @@ graph LR
 
 | リスク | 影響度 | 対策 | 状態 |
 |--------|--------|------|------|
-| React/Next.js セキュリティ脆弱性（CVE-2025-55182） | **重大** | React 19.2.3、Next.js 16.1.1に即座にアップグレード | ⚠️ **即座に対応必須** |
+| React/Next.js セキュリティ脆弱性（CVE-2025-55182） | **重大** | React 19.2.3、Next.js 16.1.4に即座にアップグレード | ✅ 対策済み |
 | Prisma Edge Runtime非対応 | 高 | Node.js Runtimeを明示的に指定 | ✅ 対策済み |
 | Better AuthとPrismaの互換性 | 低 | Better Auth ビルトイン Adapter 使用 | ✅ 対策済み |
 | Three.js/Pixi.jsのSSR問題 | 中 | 動的インポートでクライアントサイドのみ | ✅ 対策済み |
@@ -344,35 +344,39 @@ graph LR
 
 ## アーキテクチャパターン
 
-### UI 完全分離アーキテクチャ
+### Next.js コロケーションパターン (Plan 050)
 
 **管理画面と公開ページは完全に別物。UI は完全分離、ロジック/データは共有。**
 
 ```
 src/
 ├── app/
-│   ├── (public)/             # 公開ページルーティング
-│   ├── admin/                # 管理画面ルーティング
-│   └── api/                  # API Routes（共有）
-│
-├── components/
-│   ├── admin/                # 管理画面 UI（完全独立）
-│   │   ├── ui/               # shadcn/ui コンポーネント
-│   │   ├── layouts/          # AdminSidebar 等
-│   │   ├── forms/            # LoginForm, SpaceForm 等
-│   │   └── features/         # Dashboard, SpaceList 等
+│   ├── (public)/                          # 公開ページルーティング
+│   │   └── _shared/                       # 公開ページ専用コード
+│   │       ├── components/                # UI コンポーネント
+│   │       ├── actions/                   # Server Actions
+│   │       ├── lib/                       # ユーティリティ
+│   │       └── types/                     # 型定義
 │   │
-│   └── site/                 # 公開ページ UI（完全独立）
-│       ├── ui/               # カスタムコンポーネント（tv ベース）
-│       ├── layouts/          # Header, Footer
-│       └── sections/         # Hero, SpaceList, CTA 等
+│   ├── (admin)/admin/(dashboard)/         # 管理画面ルーティング
+│   │   └── _shared/                       # 管理画面専用コード
+│   │       ├── components/                # UI コンポーネント (shadcn/ui)
+│   │       ├── actions/                   # Server Actions
+│   │       ├── hooks/                     # カスタムフック
+│   │       ├── contexts/                  # コンテキスト
+│   │       ├── lib/                       # ユーティリティ
+│   │       └── types/                     # 型定義
+│   │
+│   └── api/                               # API Routes（共有）
 │
-├── actions/                  # Server Actions（共有）
-├── lib/                      # ユーティリティ（共有）
-│   ├── prisma.ts
-│   ├── auth.ts
-│   └── utils.ts              # cn 関数
-└── types/                    # 型定義（共有）
+└── shared/                                # 共有コード
+    ├── lib/                               # ユーティリティ（prisma, auth, utils）
+    └── types/                             # 型定義
+
+パスエイリアス:
+- @/admin/*  → src/app/(admin)/admin/(dashboard)/_shared/*
+- @/public/* → src/app/(public)/_shared/*
+- @/shared/* → src/shared/*
 ```
 
 #### UI ライブラリ構成
@@ -568,27 +572,27 @@ React 19では、Server ComponentでPromiseを作成し、それを直接Client 
 
 ```typescript
 // Server Component
-async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+async function PostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params // Next.js 16ではparamsはPromise
 
   // 重要なデータはawaitで取得
-  const post = await prisma.blogPost.findUnique({
+  const post = await prisma.post.findUnique({
     where: { slug }
   })
-  
+
   if (!post) {
     notFound()
   }
-  
+
   // Promiseを直接渡す（Client Componentでawait）
-  const commentsPromise = prisma.comment.findMany({ 
-    where: { postId: post.id } 
+  const commentsPromise = prisma.comment.findMany({
+    where: { postId: post.id }
   })
-  
+
   return (
     <article>
       <h1>{post.title}</h1>
-      <BlogContent content={post.content} />
+      <PostContent content={post.content} />
       <Suspense fallback={<CommentsLoading />}>
         <Comments commentsPromise={commentsPromise} />
       </Suspense>
@@ -848,6 +852,10 @@ Server Actionsでのエラーハンドリングを統一し、エラーレスポ
 
 ## 更新履歴
 
+- **2026-01-23**: バージョン更新、コロケーションパターン反映
+  - Next.js 16.1.4、Prisma 7.3.0、Better Auth 1.4.17、Bun 1.3.6
+  - プロジェクト構造をPlan 050のコロケーションパターンに更新
+  - CVE-2025-55182対策を「対策済み」に更新
 - **2026-01-12**: Next.js 16 cacheComponents対応
   - キャッシュ階層を5階層に拡張（L5: 非決定的操作を追加）
   - `'use cache'` ディレクティブを推奨パターンとして追加

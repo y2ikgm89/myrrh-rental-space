@@ -451,7 +451,7 @@ tests/integration/
 │   ├── create-reservation.test.ts
 │   └── update-space.test.ts
 ├── api/
-│   ├── blog-posts.test.ts
+│   ├── posts.test.ts
 │   └── spaces.test.ts
 ├── components/
 │   ├── reservation-flow.test.tsx
@@ -568,7 +568,7 @@ tests/e2e/
 ├── public/
 │   ├── home-page.spec.ts
 │   ├── reservation-flow.spec.ts
-│   └── blog.spec.ts
+│   └── posts.spec.ts
 ├── admin/
 │   ├── login.spec.ts
 │   ├── space-management.spec.ts
@@ -1429,7 +1429,7 @@ describe('createReservation', () => {
 ### プロジェクトドキュメント
 
 - [`CLAUDE.md`](../CLAUDE.md) - プロジェクト全体の仕様書（テスト手順）
-- [`BLOG_REQUIREMENTS.md`](../requirements/blog.md) - ブログ機能のテスト要件（このドキュメントを参照）
+- [`POSTS_REQUIREMENTS.md`](../requirements/posts.md) - 投稿機能のテスト要件（このドキュメントを参照）
 - [`../security/authentication.md`](./../security/authentication.md) - JWT認証のテスト要件（このドキュメントを参照）
 - [`BUN_RUNTIME.md`](./BUN_RUNTIME.md) - Bunランタイムガイド（テストランナー、このドキュメントを参照）
 - [`DEPLOYMENT.md`](./DEPLOYMENT.md) - デプロイメント手順（CI/CDでのテスト実行、このドキュメントを参照）

@@ -1,8 +1,10 @@
 'use server'
 
 import { prisma } from '@/shared/lib/prisma'
-import { revalidateTag } from 'next/cache'
-import { createSuccess, createFailure, withPermission, type ActionResult } from '@/admin/types/server-actions'
+import { updateTag } from 'next/cache'
+import { CACHE_TAGS } from '@/shared/lib/constants'
+import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+import { withPermission } from '@/admin/lib/server-action-helpers'
 import { spaceCategoryFormSchema } from '@/admin/lib/validations/space-category'
 import type {
   SpaceCategoryFormInput,
@@ -12,6 +14,7 @@ import type {
 import { getSession, getRoleFromSession } from '@/shared/lib/auth'
 import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'
 import { logPermissionDenied } from '@/admin/lib/audit'
+import { createValidationError } from '@/shared/lib/action-helpers'
 
 // =============================================================================
 // Helper Functions
@@ -170,9 +173,7 @@ export const createSpaceCategory = withPermission<[input: SpaceCategoryFormInput
   const parsed = spaceCategoryFormSchema.safeParse(input)
 
   if (!parsed.success) {
-    return createFailure(
-      parsed.error.issues.map((e) => e.message).join(', ')
-    )
+    return createValidationError(parsed.error)
   }
 
   const data = parsed.data
@@ -195,7 +196,7 @@ export const createSpaceCategory = withPermission<[input: SpaceCategoryFormInput
     },
   })
 
-  revalidateTag('space-categories', { expire: 0 })
+  updateTag(CACHE_TAGS.SPACE_CATEGORIES)
 
   return createSuccess('カテゴリーを作成しました', { id: category.id })
 })
@@ -214,9 +215,7 @@ export const updateSpaceCategory = withPermission<[id: string, input: SpaceCateg
   const parsed = spaceCategoryFormSchema.safeParse(input)
 
   if (!parsed.success) {
-    return createFailure(
-      parsed.error.issues.map((e) => e.message).join(', ')
-    )
+    return createValidationError(parsed.error)
   }
 
   const existing = await prisma.spaceCategory.findUnique({ where: { id } })
@@ -245,7 +244,7 @@ export const updateSpaceCategory = withPermission<[id: string, input: SpaceCateg
     },
   })
 
-  revalidateTag('space-categories', { expire: 0 })
+  updateTag(CACHE_TAGS.SPACE_CATEGORIES)
 
   return createSuccess('カテゴリーを更新しました', { id })
 })
@@ -266,7 +265,7 @@ export const updateSpaceCategoryOrder = withPermission<[items: { id: string; sor
     )
   )
 
-  revalidateTag('space-categories', { expire: 0 })
+  updateTag(CACHE_TAGS.SPACE_CATEGORIES)
 
   return createSuccess('並び順を更新しました', { updated: items.length })
 })
@@ -302,7 +301,7 @@ export const deleteSpaceCategory = withPermission<[id: string], { id: string }>(
     data: { isActive: false },
   })
 
-  revalidateTag('space-categories', { expire: 0 })
+  updateTag(CACHE_TAGS.SPACE_CATEGORIES)
 
   return createSuccess('カテゴリーを削除しました', { id })
 })
@@ -331,7 +330,7 @@ export const hardDeleteSpaceCategory = withPermission<[id: string], { id: string
 
   await prisma.spaceCategory.delete({ where: { id } })
 
-  revalidateTag('space-categories', { expire: 0 })
+  updateTag(CACHE_TAGS.SPACE_CATEGORIES)
 
   return createSuccess('カテゴリーを完全に削除しました', { id })
 })

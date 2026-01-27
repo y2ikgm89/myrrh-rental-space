@@ -53,3 +53,10 @@ export function maskTurnstileKey(key: string): string {
 export function maskGoogleMapsKey(key: string): string {
   return maskApiKey(key, 10, 4) // AIzaSyXXXX...xxxx
 }
+
+/**
+ * Cloudflare APIトークン用のマスク
+ */
+export function maskCloudflareToken(token: string): string {
+  return maskApiKey(token, 8, 4) // xxxxxxxx...xxxx
+}

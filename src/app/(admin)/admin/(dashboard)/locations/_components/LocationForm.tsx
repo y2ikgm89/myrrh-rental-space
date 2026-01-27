@@ -272,9 +272,11 @@ export function LocationForm({ location, mode }: LocationFormProps) {
               {...register('name')}
               placeholder="例: Myrrhビル"
               disabled={isPending}
+              aria-invalid={!!errors.name}
+              aria-describedby={errors.name ? 'name-error' : undefined}
             />
             {errors.name && (
-              <p className="text-sm text-destructive">{errors.name.message}</p>
+              <p id="name-error" className="text-xs text-destructive">{errors.name.message}</p>
             )}
           </div>
 
@@ -286,9 +288,11 @@ export function LocationForm({ location, mode }: LocationFormProps) {
               placeholder="建物・施設の説明を入力..."
               rows={4}
               disabled={isPending}
+              aria-invalid={!!errors.description}
+              aria-describedby={errors.description ? 'description-error' : undefined}
             />
             {errors.description && (
-              <p className="text-sm text-destructive">
+              <p id="description-error" className="text-xs text-destructive">
                 {errors.description.message}
               </p>
             )}
@@ -301,9 +305,11 @@ export function LocationForm({ location, mode }: LocationFormProps) {
               {...register('address')}
               placeholder="例: 東京都渋谷区..."
               disabled={isPending}
+              aria-invalid={!!errors.address}
+              aria-describedby={errors.address ? 'address-error' : undefined}
             />
             {errors.address && (
-              <p className="text-sm text-destructive">
+              <p id="address-error" className="text-xs text-destructive">
                 {errors.address.message}
               </p>
             )}
@@ -317,9 +323,11 @@ export function LocationForm({ location, mode }: LocationFormProps) {
               placeholder="例: 渋谷駅から徒歩5分&#10;地下鉄A出口すぐ"
               rows={3}
               disabled={isPending}
+              aria-invalid={!!errors.access}
+              aria-describedby={errors.access ? 'access-error' : undefined}
             />
             {errors.access && (
-              <p className="text-sm text-destructive">
+              <p id="access-error" className="text-xs text-destructive">
                 {errors.access.message}
               </p>
             )}
@@ -333,12 +341,14 @@ export function LocationForm({ location, mode }: LocationFormProps) {
               {...register('sortOrder', { valueAsNumber: true })}
               placeholder="0"
               disabled={isPending}
+              aria-invalid={!!errors.sortOrder}
+              aria-describedby={errors.sortOrder ? 'sortOrder-error' : 'sortOrder-hint'}
             />
-            <p className="text-sm text-muted-foreground">
+            <p id="sortOrder-hint" className="text-sm text-muted-foreground">
               数値が小さいほど先頭に表示されます
             </p>
             {errors.sortOrder && (
-              <p className="text-sm text-destructive">
+              <p id="sortOrder-error" className="text-xs text-destructive">
                 {errors.sortOrder.message}
               </p>
             )}
@@ -389,7 +399,7 @@ export function LocationForm({ location, mode }: LocationFormProps) {
               </div>
             </div>
             {errors.imageUrl && (
-              <p className="text-sm text-destructive">
+              <p className="text-xs text-destructive">
                 {errors.imageUrl.message}
               </p>
             )}

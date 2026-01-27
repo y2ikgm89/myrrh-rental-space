@@ -1,153 +1,146 @@
 /**
  * YouTube Node
  *
- * YouTube動画を埋め込むカスタムノード
+ * @description YouTube動画を埋め込むDecoratorNode
  */
 
 'use client'
 
 import type { ReactElement } from 'react'
-import {
-  DecoratorNode,
-  type DOMConversionMap,
-  type DOMConversionOutput,
-  type DOMExportOutput,
-  type LexicalNode,
-  type NodeKey,
-  type SerializedLexicalNode,
-  type Spread,
+import type {
+  DOMConversionMap,
+  DOMConversionOutput,
+  DOMExportOutput,
+  EditorConfig,
+  LexicalNode,
+  NodeKey,
+  SerializedLexicalNode,
+  Spread,
 } from 'lexical'
-import { Suspense, lazy } from 'react'
+import { $applyNodeReplacement, DecoratorNode } from 'lexical'
 
-const YouTubeComponent = lazy(() =>
-  import('./YouTubeComponent').then((m) => ({ default: m.YouTubeComponent }))
-)
+// =============================================================================
+// Types
+// =============================================================================
 
 export type SerializedYouTubeNode = Spread<
   {
     videoId: string
-    width?: number
-    height?: number
   },
   SerializedLexicalNode
 >
 
-function extractYouTubeVideoId(url: string): string | null {
-  const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&?\s]+)/,
-    /^([a-zA-Z0-9_-]{11})$/,
-  ]
-  for (const pattern of patterns) {
-    const match = url.match(pattern)
-    if (match) {
-      return match[1]
+// =============================================================================
+// Component
+// =============================================================================
+
+function YouTubeComponent({
+  videoId,
+  nodeKey,
+}: {
+  videoId: string
+  nodeKey: NodeKey
+}) {
+  return (
+    <div
+      data-lexical-node-key={nodeKey}
+      className="relative my-4 aspect-video w-full max-w-3xl mx-auto"
+    >
+      <iframe
+        src={`https://www.youtube.com/embed/${videoId}`}
+        title="YouTube video"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+        className="absolute inset-0 w-full h-full rounded-lg"
+      />
+    </div>
+  )
+}
+
+// =============================================================================
+// DOM Conversion
+// =============================================================================
+
+function $convertYouTubeElement(domNode: Node): null | DOMConversionOutput {
+  if (domNode instanceof HTMLIFrameElement) {
+    const src = domNode.getAttribute('src')
+    if (src) {
+      const match = src.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]+)/)
+      if (match?.[1]) {
+        const node = $createYouTubeNode({ videoId: match[1] })
+        return { node }
+      }
     }
   }
   return null
 }
 
-function $convertYouTubeElement(
-  domNode: HTMLElement
-): DOMConversionOutput | null {
-  const iframe = domNode as HTMLIFrameElement
-  const src = iframe.getAttribute('src')
-  if (!src) {
-    return null
-  }
-  const videoId = extractYouTubeVideoId(src)
-  if (!videoId) {
-    return null
-  }
-  const width = iframe.width ? parseInt(iframe.width, 10) : undefined
-  const height = iframe.height ? parseInt(iframe.height, 10) : undefined
-  const node = $createYouTubeNode(videoId, width, height)
-  return { node }
-}
+// =============================================================================
+// Node Class
+// =============================================================================
 
 export class YouTubeNode extends DecoratorNode<ReactElement> {
   __videoId: string
-  __width: number
-  __height: number
 
   static getType(): string {
     return 'youtube'
   }
 
   static clone(node: YouTubeNode): YouTubeNode {
-    return new YouTubeNode(
-      node.__videoId,
-      node.__width,
-      node.__height,
-      node.__key
-    )
-  }
-
-  constructor(
-    videoId: string,
-    width: number = 560,
-    height: number = 315,
-    key?: NodeKey
-  ) {
-    super(key)
-    this.__videoId = videoId
-    this.__width = width
-    this.__height = height
+    return new YouTubeNode(node.__videoId, node.__key)
   }
 
   static importJSON(serializedNode: SerializedYouTubeNode): YouTubeNode {
-    return $createYouTubeNode(
-      serializedNode.videoId,
-      serializedNode.width,
-      serializedNode.height
-    )
-  }
-
-  exportJSON(): SerializedYouTubeNode {
-    return {
-      type: 'youtube',
-      version: 1,
-      videoId: this.__videoId,
-      width: this.__width,
-      height: this.__height,
-    }
+    return $createYouTubeNode({ videoId: serializedNode.videoId })
   }
 
   static importDOM(): DOMConversionMap | null {
     return {
-      iframe: (domNode: HTMLElement) => {
-        const src = domNode.getAttribute('src') || ''
-        if (!src.includes('youtube.com') && !src.includes('youtu.be')) {
-          return null
-        }
-        return {
-          conversion: $convertYouTubeElement,
-          priority: 1,
-        }
-      },
+      iframe: () => ({
+        conversion: $convertYouTubeElement,
+        priority: 0,
+      }),
+    }
+  }
+
+  constructor(videoId: string, key?: NodeKey) {
+    super(key)
+    this.__videoId = videoId
+  }
+
+  exportJSON(): SerializedYouTubeNode {
+    return {
+      ...super.exportJSON(),
+      type: 'youtube',
+      videoId: this.__videoId,
     }
   }
 
   exportDOM(): DOMExportOutput {
-    const element = document.createElement('iframe')
-    element.setAttribute(
-      'src',
-      `https://www.youtube.com/embed/${this.__videoId}`
-    )
-    element.setAttribute('width', String(this.__width))
-    element.setAttribute('height', String(this.__height))
-    element.setAttribute('frameborder', '0')
-    element.setAttribute(
+    const div = document.createElement('div')
+    div.className = 'aspect-video w-full max-w-3xl mx-auto my-4'
+
+    const iframe = document.createElement('iframe')
+    iframe.setAttribute('src', `https://www.youtube.com/embed/${this.__videoId}`)
+    iframe.setAttribute('title', 'YouTube video')
+    iframe.setAttribute(
       'allow',
       'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
     )
-    element.setAttribute('allowfullscreen', '')
-    element.setAttribute('loading', 'lazy')
-    return { element }
+    iframe.setAttribute('allowfullscreen', '')
+    iframe.className = 'w-full h-full rounded-lg'
+
+    div.appendChild(iframe)
+    return { element: div }
   }
 
-  createDOM(): HTMLElement {
+  createDOM(config: EditorConfig): HTMLElement {
     const div = document.createElement('div')
-    div.className = 'youtube-wrapper my-4'
+    const theme = config.theme
+    const className = theme.youtube
+    if (className) {
+      div.className = className
+    }
     return div
   }
 
@@ -155,55 +148,37 @@ export class YouTubeNode extends DecoratorNode<ReactElement> {
     return false
   }
 
-  getVideoId(): string {
-    return this.__videoId
-  }
-
-  getWidth(): number {
-    return this.__width
-  }
-
-  getHeight(): number {
-    return this.__height
-  }
-
-  setDimensions(width: number, height: number): void {
-    const writable = this.getWritable()
-    writable.__width = width
-    writable.__height = height
-  }
-
   decorate(): ReactElement {
-    return (
-      <Suspense
-        fallback={
-          <div className="animate-pulse bg-muted rounded-lg aspect-video flex items-center justify-center">
-            <span className="text-muted-foreground">読み込み中...</span>
-          </div>
-        }
-      >
-        <YouTubeComponent
-          nodeKey={this.__key}
-          videoId={this.__videoId}
-          width={this.__width}
-        />
-      </Suspense>
-    )
+    return <YouTubeComponent videoId={this.__videoId} nodeKey={this.__key} />
   }
 }
 
-export function $createYouTubeNode(
-  videoId: string,
-  width?: number,
-  height?: number
-): YouTubeNode {
-  return new YouTubeNode(videoId, width || 560, height || 315)
+// =============================================================================
+// Factory Functions
+// =============================================================================
+
+/**
+ * YouTubeノードを作成する
+ *
+ * @param params - YouTubeのパラメータ
+ * @returns YouTubeNode インスタンス
+ */
+export function $createYouTubeNode({
+  videoId,
+}: {
+  videoId: string
+}): YouTubeNode {
+  return $applyNodeReplacement(new YouTubeNode(videoId))
 }
 
+/**
+ * ノードがYouTubeNodeかどうかを判定する
+ *
+ * @param node - 判定対象のノード
+ * @returns YouTubeNodeの場合true
+ */
 export function $isYouTubeNode(
   node: LexicalNode | null | undefined
 ): node is YouTubeNode {
   return node instanceof YouTubeNode
 }
-
-export { extractYouTubeVideoId }

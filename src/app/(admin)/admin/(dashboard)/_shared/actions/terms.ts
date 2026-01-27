@@ -1,22 +1,29 @@
 'use server'
 
 import { prisma } from '@/shared/lib/prisma'
-import { revalidatePath, revalidateTag } from 'next/cache'
-import { TermsStatus } from '@/shared/generated/prisma/enums'
+import { updateTag } from 'next/cache'
+import { CACHE_TAGS } from '@/shared/lib/constants'
+import { TermsStatus, TermsType } from '@/shared/generated/prisma/enums'
 import {
   createTermsSchema,
   updateTermsSchema,
   createTermsVersionSchema,
   updateTermsVersionSchema,
+  updateTermsSeoSchema,
+  getTermsTypeDefaults,
   type CreateTermsInput,
   type UpdateTermsInput,
   type CreateTermsVersionInput,
   type UpdateTermsVersionInput,
+  type UpdateTermsSeoInput,
   type TermsWithVersion,
   type TermsDetail,
   type TermsVersionDetail,
+  type SiteWideTermsSeo,
 } from '@/shared/lib/validations/terms'
-import { createSuccess, createFailure, withPermission, type ActionResult } from '@/admin/types/server-actions'
+import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+import { withPermission } from '@/admin/lib/server-action-helpers'
+import { purgeTermsCache } from '@/shared/lib/cloudflare'
 
 // =============================================================================
 // Terms CRUD
@@ -97,6 +104,53 @@ export async function getActiveTermsForSelect(): Promise<
 }
 
 /**
+ * 規約タイプからデフォルトのタイトル・スラッグを取得（重複回避付き）
+ */
+export async function getDefaultsForTermsType(
+  type: string
+): Promise<{ title: string; slug: string } | null> {
+  const defaults = getTermsTypeDefaults(type)
+  if (!defaults) return null
+
+  // まず基本スラッグが使用可能かチェック
+  const existing = await prisma.terms.findUnique({
+    where: { slug: defaults.slug },
+  })
+
+  if (!existing) {
+    return defaults
+  }
+
+  // 重複がある場合、同じプレフィックスのスラッグを検索
+  const similarTerms = await prisma.terms.findMany({
+    where: {
+      slug: { startsWith: defaults.slug },
+    },
+    select: { slug: true },
+  })
+
+  // 使用中の番号を収集
+  const usedNumbers = new Set<number>([1])
+  for (const term of similarTerms) {
+    const match = term.slug.match(new RegExp(`^${defaults.slug}-(\\d+)$`))
+    if (match) {
+      usedNumbers.add(parseInt(match[1], 10))
+    }
+  }
+
+  // 最小の空き番号を見つける
+  let suffix = 2
+  while (usedNumbers.has(suffix)) {
+    suffix++
+  }
+
+  return {
+    title: `${defaults.title} ${suffix}`,
+    slug: `${defaults.slug}-${suffix}`,
+  }
+}
+
+/**
  * 規約詳細を取得
  */
 export const getTermsById = withPermission<[string], TermsDetail | null>('terms', 'read')(
@@ -155,10 +209,68 @@ export const createTerms = withPermission<[CreateTermsInput], { id: string }>('t
       data: validation.data,
     })
 
-    revalidatePath('/admin/settings')
-    revalidateTag('terms', { expire: 0 })
+    updateTag(CACHE_TAGS.TERMS)
+
+    // Cloudflare CDN キャッシュパージ
+    void purgeTermsCache()
 
     return createSuccess('規約を作成しました', { id: terms.id })
+  }
+)
+
+/**
+ * 規約+バージョンを同時に作成（InlineEditor用）
+ */
+export const createTermsWithVersion = withPermission<
+  [CreateTermsInput & { content: string }],
+  { id: string; versionId: string }
+>('terms', 'create')(
+  async (user, input): Promise<ActionResult<{ id: string; versionId: string }>> => {
+    const { content, ...termsInput } = input
+
+    const validation = createTermsSchema.safeParse(termsInput)
+    if (!validation.success) {
+      return createFailure(validation.error.issues[0].message)
+    }
+
+    if (!content.trim()) {
+      return createFailure('コンテンツを入力してください')
+    }
+
+    // slug重複チェック
+    const existing = await prisma.terms.findUnique({
+      where: { slug: validation.data.slug },
+    })
+
+    if (existing) {
+      return createFailure('このスラッグは既に使用されています')
+    }
+
+    // トランザクションで規約とバージョンを同時作成
+    const result = await prisma.$transaction(async (tx) => {
+      const terms = await tx.terms.create({
+        data: validation.data,
+      })
+
+      const version = await tx.termsVersion.create({
+        data: {
+          termsId: terms.id,
+          content,
+          version: 1,
+          status: TermsStatus.DRAFT,
+          createdBy: user.id,
+        },
+      })
+
+      return { id: terms.id, versionId: version.id }
+    })
+
+    updateTag(CACHE_TAGS.TERMS)
+
+    // Cloudflare CDN キャッシュパージ
+    void purgeTermsCache()
+
+    return createSuccess('規約を作成しました', result)
   }
 )
 
@@ -191,8 +303,10 @@ export const updateTerms = withPermission<[string, UpdateTermsInput]>('terms', '
       data: validation.data,
     })
 
-    revalidatePath('/admin/settings')
-    revalidateTag('terms', { expire: 0 })
+    updateTag(CACHE_TAGS.TERMS)
+
+    // Cloudflare CDN キャッシュパージ
+    void purgeTermsCache()
 
     return createSuccess('規約を更新しました')
   }
@@ -216,8 +330,10 @@ export const deleteTerms = withPermission<[string]>('terms', 'delete')(
 
     await prisma.terms.delete({ where: { id } })
 
-    revalidatePath('/admin/settings')
-    revalidateTag('terms', { expire: 0 })
+    updateTag(CACHE_TAGS.TERMS)
+
+    // Cloudflare CDN キャッシュパージ
+    void purgeTermsCache()
 
     return createSuccess('規約を削除しました')
   }
@@ -242,8 +358,10 @@ export const toggleTermsActive = withPermission<[string]>('terms', 'update')(
       data: { isActive: !terms.isActive },
     })
 
-    revalidatePath('/admin/settings')
-    revalidateTag('terms', { expire: 0 })
+    updateTag(CACHE_TAGS.TERMS)
+
+    // Cloudflare CDN キャッシュパージ
+    void purgeTermsCache()
 
     return createSuccess(terms.isActive ? '規約を無効にしました' : '規約を有効にしました')
   }
@@ -299,8 +417,10 @@ export const createTermsVersion = withPermission<
       },
     })
 
-    revalidatePath('/admin/settings')
-    revalidateTag('terms', { expire: 0 })
+    updateTag(CACHE_TAGS.TERMS)
+
+    // Cloudflare CDN キャッシュパージ
+    void purgeTermsCache()
 
     return createSuccess(`バージョン ${nextVersion} を作成しました`, {
       id: version.id,
@@ -339,8 +459,7 @@ export const updateTermsVersion = withPermission<[string, UpdateTermsVersionInpu
     data: { content: validation.data.content },
   })
 
-  revalidatePath('/admin/settings')
-  revalidateTag('terms', { expire: 0 })
+  updateTag(CACHE_TAGS.TERMS)
 
   return createSuccess('バージョンを更新しました')
 })
@@ -385,8 +504,10 @@ export const publishTermsVersion = withPermission<[string]>('terms', 'update')(
       })
     })
 
-    revalidatePath('/admin/settings')
-    revalidateTag('terms', { expire: 0 })
+    updateTag(CACHE_TAGS.TERMS)
+
+    // Cloudflare CDN キャッシュパージ
+    void purgeTermsCache()
 
     return createSuccess('バージョンを公開しました')
   }
@@ -415,8 +536,10 @@ export const archiveTermsVersion = withPermission<[string]>('terms', 'update')(
       data: { status: TermsStatus.ARCHIVED },
     })
 
-    revalidatePath('/admin/settings')
-    revalidateTag('terms', { expire: 0 })
+    updateTag(CACHE_TAGS.TERMS)
+
+    // Cloudflare CDN キャッシュパージ
+    void purgeTermsCache()
 
     return createSuccess('バージョンをアーカイブしました')
   }
@@ -442,9 +565,81 @@ export const deleteTermsVersion = withPermission<[string]>('terms', 'delete')(
 
     await prisma.termsVersion.delete({ where: { id: versionId } })
 
-    revalidatePath('/admin/settings')
-    revalidateTag('terms', { expire: 0 })
+    updateTag(CACHE_TAGS.TERMS)
+
+    // Cloudflare CDN キャッシュパージ
+    void purgeTermsCache()
 
     return createSuccess('バージョンを削除しました')
+  }
+)
+
+// =============================================================================
+// Site-Wide Terms SEO Management
+// =============================================================================
+
+/**
+ * サイト全体規約のSEO情報を取得（利用規約ページ用）
+ */
+export const getSiteWideTermsSeo = withPermission<[], SiteWideTermsSeo | null>('terms', 'read')(
+  async (_user): Promise<ActionResult<SiteWideTermsSeo | null>> => {
+    const terms = await prisma.terms.findFirst({
+      where: {
+        type: TermsType.TERMS_OF_USE,
+        isSiteWide: true,
+      },
+      select: {
+        id: true,
+        title: true,
+        metaDescription: true,
+        metaKeywords: true,
+        ogpTitle: true,
+        ogpDescription: true,
+        ogpImageUrl: true,
+      },
+    })
+
+    return createSuccess('SEO情報を取得しました', terms)
+  }
+)
+
+/**
+ * サイト全体規約のSEO情報を更新
+ */
+export const updateSiteWideTermsSeo = withPermission<[UpdateTermsSeoInput]>('terms', 'update')(
+  async (_user, input): Promise<ActionResult<void>> => {
+    const validation = updateTermsSeoSchema.safeParse(input)
+    if (!validation.success) {
+      return createFailure(validation.error.issues[0].message)
+    }
+
+    const terms = await prisma.terms.findFirst({
+      where: {
+        type: TermsType.TERMS_OF_USE,
+        isSiteWide: true,
+      },
+    })
+
+    if (!terms) {
+      return createFailure('サイト全体の利用規約が見つかりません')
+    }
+
+    await prisma.terms.update({
+      where: { id: terms.id },
+      data: {
+        metaDescription: validation.data.metaDescription || null,
+        metaKeywords: validation.data.metaKeywords || null,
+        ogpTitle: validation.data.ogpTitle || null,
+        ogpDescription: validation.data.ogpDescription || null,
+        ogpImageUrl: validation.data.ogpImageUrl || null,
+      },
+    })
+
+    updateTag(CACHE_TAGS.TERMS)
+
+    // Cloudflare CDN キャッシュパージ
+    void purgeTermsCache()
+
+    return createSuccess('SEO設定を更新しました')
   }
 )

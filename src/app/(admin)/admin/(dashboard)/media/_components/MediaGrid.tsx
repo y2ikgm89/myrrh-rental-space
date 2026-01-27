@@ -6,7 +6,7 @@
 
 import { useState } from 'react'
 import { Check, Copy, Trash2, Eye, FileText, Film, File } from 'lucide-react'
-import type { MediaData } from '@/admin/actions/media'
+import type { MediaData } from '@/admin/types/media-picker'
 import { MediaDetailDialog } from './MediaDetailDialog'
 import { formatBytes } from '@/admin/lib/utils'
 import { TYPE_CONFIG } from './constants'
@@ -112,7 +112,7 @@ function MediaThumbnail({ item }: { item: MediaData }) {
   switch (item.type) {
     case 'IMAGE':
       return (
-        // eslint-disable-next-line @next/next/no-img-element
+        
         <img
           src={item.url}
           alt={item.alt || item.filename}

@@ -10,9 +10,12 @@ import {
 } from '@/shared/lib/json-validators'
 import {
   type TaxSettings,
+  type DurationDiscountRule,
+  type DiscountCombinationMode,
   DEFAULT_TAX_SETTINGS,
   getTaxDisplayModeOrDefault,
   getTaxInputModeOrDefault,
+  parseDurationDiscountRules,
 } from '@/shared/lib/pricing'
 import type { LayoutWidth } from '@/shared/generated/prisma/enums'
 
@@ -173,15 +176,18 @@ export async function getPublicSettings(): Promise<PublicSettingsData> {
 
 /**
  * パーマリンク設定の型
+ *
+ * 全URLはルートレベルで生成されます。
+ * - post-name: /slug
+ * - date-name: /2026/01/slug
+ * - category-name: /category/slug
  */
 export type PermalinkSettings = {
-  structure: 'post-name' | 'simple' | 'date-name' | 'category-name'
-  prefix: string
+  structure: 'post-name' | 'date-name' | 'category-name'
 }
 
 const VALID_PERMALINK_STRUCTURES = new Set<string>([
   'post-name',
-  'simple',
   'date-name',
   'category-name',
 ])
@@ -204,17 +210,15 @@ export async function getPermalinkSettings(): Promise<PermalinkSettings> {
   const settings = await prisma.settings.findUnique({
     where: { id: 'singleton' },
     select: {
-      blogPermalinkStructure: true,
-      blogUrlPrefix: true,
+      postPermalinkStructure: true,
     },
   })
 
-  const rawStructure = settings?.blogPermalinkStructure
+  const rawStructure = settings?.postPermalinkStructure
   const structure = isValidPermalinkStructure(rawStructure) ? rawStructure : 'post-name'
 
   return {
     structure,
-    prefix: settings?.blogUrlPrefix ?? 'blog',
   }
 }
 
@@ -308,4 +312,58 @@ export async function getTurnstileSiteKey(): Promise<string | null> {
   })
 
   return settings?.turnstileSiteKey ?? null
+}
+
+// =============================================================================
+// Discount Settings
+// =============================================================================
+
+export type DiscountSettingsData = {
+  durationDiscountEnabled: boolean
+  durationDiscountRules: DurationDiscountRule[]
+  discountCombinationMode: DiscountCombinationMode
+  showOriginalPrice: boolean
+  discountWarningEnabled: boolean
+}
+
+const DEFAULT_DISCOUNT_SETTINGS: DiscountSettingsData = {
+  durationDiscountEnabled: false,
+  durationDiscountRules: [],
+  discountCombinationMode: 'best',
+  showOriginalPrice: true,
+  discountWarningEnabled: true,
+}
+
+/**
+ * 公開ページ用の割引設定を取得
+ *
+ * 予約フォームで料金計算に使用
+ */
+export async function getPublicDiscountSettings(): Promise<DiscountSettingsData> {
+  'use cache'
+  cacheLife('hours')
+  cacheTag(CACHE_TAGS.SETTINGS)
+
+  const settings = await prisma.settings.findUnique({
+    where: { id: 'singleton' },
+    select: {
+      durationDiscountEnabled: true,
+      durationDiscountRules: true,
+      discountCombinationMode: true,
+      showOriginalPrice: true,
+      discountWarningEnabled: true,
+    },
+  })
+
+  if (!settings) {
+    return DEFAULT_DISCOUNT_SETTINGS
+  }
+
+  return {
+    durationDiscountEnabled: settings.durationDiscountEnabled,
+    durationDiscountRules: parseDurationDiscountRules(settings.durationDiscountRules),
+    discountCombinationMode: settings.discountCombinationMode as DiscountCombinationMode,
+    showOriginalPrice: settings.showOriginalPrice,
+    discountWarningEnabled: settings.discountWarningEnabled,
+  }
 }

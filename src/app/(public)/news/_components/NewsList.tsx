@@ -17,7 +17,7 @@ const styles = tv({
 })()
 
 export interface NewsListProps {
-  newsList: Pick<News, 'id' | 'title' | 'content' | 'publishedAt'>[]
+  newsList: Pick<News, 'id' | 'slug' | 'title' | 'content' | 'publishedAt'>[]
 }
 
 export function NewsList({ newsList }: NewsListProps): ReactElement {

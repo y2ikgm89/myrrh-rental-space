@@ -23,9 +23,9 @@ export { LayoutWidth } from '@/shared/generated/prisma/enums'
  */
 export type SpaceWhereInput = Prisma.SpaceWhereInput
 export type ReservationWhereInput = Prisma.ReservationWhereInput
-export type BlogPostWhereInput = Prisma.BlogPostWhereInput
-export type BlogCategoryWhereInput = Prisma.BlogCategoryWhereInput
-export type BlogCommentWhereInput = Prisma.BlogCommentWhereInput
+export type PostWhereInput = Prisma.PostWhereInput
+export type PostCategoryWhereInput = Prisma.PostCategoryWhereInput
+export type PostCommentWhereInput = Prisma.PostCommentWhereInput
 export type CustomerWhereInput = Prisma.CustomerWhereInput
 export type InquiryWhereInput = Prisma.InquiryWhereInput
 export type NewsWhereInput = Prisma.NewsWhereInput

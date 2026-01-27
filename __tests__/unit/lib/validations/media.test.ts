@@ -32,7 +32,7 @@ describe('mediaUploadSchema', () => {
     test('全フィールド指定も許可', () => {
       const result = mediaUploadSchema.safeParse({
         type: 'VIDEO',
-        usage: 'BLOG',
+        usage: 'POST',
         alt: '代替テキスト',
         title: 'タイトル',
         description: '説明',
@@ -60,7 +60,7 @@ describe('mediaUploadSchema', () => {
 
   describe('usage', () => {
     test('有効なMediaUsage値は許可', () => {
-      const validUsages = ['GENERAL', 'BLOG', 'SPACE', 'NEWS', 'PAGE', 'SITE']
+      const validUsages = ['GENERAL', 'POST', 'SPACE', 'NEWS', 'PAGE', 'SITE']
 
       for (const usage of validUsages) {
         const result = mediaUploadSchema.safeParse({ usage })
@@ -160,7 +160,7 @@ describe('mediaUpdateSchema', () => {
         title: 'タイトル',
         description: '説明',
         tags: ['tag1'],
-        usage: 'BLOG',
+        usage: 'POST',
       })
       expect(result.success).toBe(true)
     })
@@ -206,7 +206,7 @@ describe('mediaFiltersSchema', () => {
   test('全フィールド指定も許可', () => {
     const result = mediaFiltersSchema.safeParse({
       type: 'IMAGE',
-      usage: 'BLOG',
+      usage: 'POST',
       search: 'keyword',
       mimeType: 'image/jpeg',
     })

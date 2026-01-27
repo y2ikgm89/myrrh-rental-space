@@ -4,6 +4,7 @@ import { getSpaces } from '@/admin/actions/space'
 import { SpaceFilters } from './SpaceFilters'
 import { SpaceTable } from './SpaceTable'
 import { Button, Pagination } from '@/admin/components/ui'
+import { LoadingState } from '@/admin/components/LoadingState'
 
 // =============================================================================
 // 型定義
@@ -73,18 +74,12 @@ export async function SpaceTabContent({ searchParams }: SpaceTabContentProps) {
       </div>
 
       {/* フィルター */}
-      <Suspense fallback={<div>読み込み中...</div>}>
+      <Suspense fallback={<LoadingState variant="inline" />}>
         <SpaceFilters />
       </Suspense>
 
       {/* スペース一覧 */}
-      <Suspense
-        fallback={
-          <div className="rounded-lg border bg-white p-12 text-center">
-            <p className="text-muted-foreground">読み込み中...</p>
-          </div>
-        }
-      >
+      <Suspense fallback={<LoadingState />}>
         <SpaceList searchParams={searchParams} />
       </Suspense>
     </div>

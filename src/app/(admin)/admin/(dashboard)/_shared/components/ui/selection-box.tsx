@@ -7,7 +7,7 @@
  * アクセシビリティ対応（role="radiogroup", role="radio", aria-checked）
  */
 
-import { useCallback, useId } from 'react'
+import { useCallback, useId, type ReactNode } from 'react'
 import { cn } from '@/shared/lib/utils'
 
 // =============================================================================
@@ -22,7 +22,7 @@ export interface SelectionBoxOption {
   /** オプションの説明（任意） */
   description?: string
   /** アイコン（任意） */
-  icon?: React.ReactNode
+  icon?: ReactNode
 }
 
 export interface SelectionBoxProps {

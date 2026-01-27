@@ -1,14 +1,28 @@
 'use server'
 
 /**
- * ページ管理用Server Actions
+ * ページ管理 Server Actions
  *
- * 管理画面からの公開ページ編集用
+ * 管理画面からの公開ページ（固定ページ）の作成・編集・削除を行います。
+ * システムページ（利用規約、プライバシーポリシー等）のSEO設定も管理します。
+ *
+ * ## 主な機能
+ * - ページ一覧取得
+ * - ページ作成・更新・削除（論理/物理）
+ * - ページ復元
+ * - 公開状態の切り替え
+ * - SEO/OGP設定の更新
+ *
+ * @module admin/actions/page
  */
 
-import { revalidatePath, revalidateTag } from 'next/cache'
+import { updateTag } from 'next/cache'
+import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
 import { prisma } from '@/shared/lib/prisma'
 import { verifyAdminSession } from '@/shared/lib/auth'
+import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
+import { purgePageCache } from '@/shared/lib/cloudflare'
+import { checkSlugAvailability, getSlugErrorMessage } from '@/shared/lib/slug-validation'
 import {
   updatePageSchema,
   updatePageSeoSchema,
@@ -22,6 +36,14 @@ import {
 } from '@/admin/lib/validations/page'
 
 /**
+ * 各専用管理ページで管理するページのスラッグ
+ * これらはページ管理一覧には表示しない
+ * - posts/news: 各専用管理ページでSEO設定を管理
+ * - terms: Termsテーブルで管理（/admin/terms）
+ */
+const PAGES_MANAGED_ELSEWHERE = ['posts', 'news', 'terms'] as const
+
+/**
  * 管理画面用ページ一覧取得
  * @throws {Error} 認証が必要な場合
  */
@@ -29,7 +51,11 @@ export async function getPagesList(): Promise<PageData[]> {
   await verifyAdminSession()
 
   const pages = await prisma.page.findMany({
-    where: { isActive: true },
+    where: {
+      isActive: true,
+      // posts/newsは各専用管理ページで管理するため除外
+      slug: { notIn: [...PAGES_MANAGED_ELSEWHERE] },
+    },
     orderBy: { updatedAt: 'desc' },
   })
 
@@ -127,15 +153,19 @@ export async function updatePage(
     })
 
     // キャッシュ無効化
-    revalidatePath(`/${slug}`)
-    revalidatePath('/admin/pages')
-    revalidatePath(`/admin/pages/${slug}/edit`)
-    revalidateTag('pages', { expire: 0 })
-    revalidateTag(`page-${slug}`, { expire: 0 })
+    updateTag(CACHE_TAGS.PAGES)
+    updateTag(getCacheTag.pages.detail(slug))
+
+    // Cloudflare CDN キャッシュパージ
+    void purgePageCache(slug)
 
     return { success: true, message: 'ページを更新しました' }
   } catch (error) {
-    console.error('ページ更新エラー:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'updatePage', slug },
+    })
     return { success: false, error: 'ページの更新中にエラーが発生しました' }
   }
 }
@@ -160,7 +190,7 @@ export async function createPageIfNotExists(
     })
 
     if (existingPage) {
-      return existingPage as PageData
+      return existingPage
     }
 
     const page = await prisma.page.create({
@@ -173,9 +203,13 @@ export async function createPageIfNotExists(
       },
     })
 
-    return page as PageData
+    return page
   } catch (error) {
-    console.error('ページ作成エラー:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'createPageIfNotExists', slug },
+    })
     return null
   }
 }
@@ -211,16 +245,16 @@ export async function createPage(
   }
 
   try {
-    // スラッグの重複チェック
-    const existingPage = await prisma.page.findUnique({
-      where: { slug: parsed.data.slug },
+    // スラッグの使用可能チェック（予約パス＋全コンテンツタイプ横断）
+    const slugCheck = await checkSlugAvailability(parsed.data.slug, {
+      currentType: 'page',
     })
-
-    if (existingPage) {
+    if (!slugCheck.available) {
+      const errorMessage = getSlugErrorMessage(slugCheck.reason)
       return {
         success: false,
-        error: 'このスラッグは既に使用されています',
-        fieldErrors: { slug: ['このスラッグは既に使用されています'] },
+        error: errorMessage,
+        fieldErrors: { slug: [errorMessage] },
       }
     }
 
@@ -237,8 +271,10 @@ export async function createPage(
     })
 
     // キャッシュ無効化
-    revalidatePath('/admin/pages')
-    revalidateTag('pages', { expire: 0 })
+    updateTag(CACHE_TAGS.PAGES)
+
+    // Cloudflare CDN キャッシュパージ
+    void purgePageCache(page.slug)
 
     return {
       success: true,
@@ -246,7 +282,11 @@ export async function createPage(
       slug: page.slug,
     }
   } catch (error) {
-    console.error('ページ作成エラー:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'createPage', slug: input.slug },
+    })
     return { success: false, error: 'ページの作成中にエラーが発生しました' }
   }
 }
@@ -285,14 +325,19 @@ export async function deletePage(slug: string): Promise<PageActionResult> {
     })
 
     // キャッシュ無効化
-    revalidatePath(`/${slug}`)
-    revalidatePath('/admin/pages')
-    revalidateTag('pages', { expire: 0 })
-    revalidateTag(`page-${slug}`, { expire: 0 })
+    updateTag(CACHE_TAGS.PAGES)
+    updateTag(getCacheTag.pages.detail(slug))
+
+    // Cloudflare CDN キャッシュパージ
+    void purgePageCache(slug)
 
     return { success: true, message: 'ページを削除しました' }
   } catch (error) {
-    console.error('ページ削除エラー:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'deletePage', slug },
+    })
     return { success: false, error: 'ページの削除中にエラーが発生しました' }
   }
 }
@@ -329,14 +374,19 @@ export async function deletePagePermanently(
     })
 
     // キャッシュ無効化
-    revalidatePath(`/${slug}`)
-    revalidatePath('/admin/pages')
-    revalidateTag('pages', { expire: 0 })
-    revalidateTag(`page-${slug}`, { expire: 0 })
+    updateTag(CACHE_TAGS.PAGES)
+    updateTag(getCacheTag.pages.detail(slug))
+
+    // Cloudflare CDN キャッシュパージ
+    void purgePageCache(slug)
 
     return { success: true, message: 'ページを完全に削除しました' }
   } catch (error) {
-    console.error('ページ完全削除エラー:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'deletePagePermanently', slug },
+    })
     return { success: false, error: 'ページの削除中にエラーが発生しました' }
   }
 }
@@ -373,12 +423,18 @@ export async function restorePage(slug: string): Promise<PageActionResult> {
     })
 
     // キャッシュ無効化
-    revalidatePath('/admin/pages')
-    revalidateTag('pages', { expire: 0 })
+    updateTag(CACHE_TAGS.PAGES)
+
+    // Cloudflare CDN キャッシュパージ
+    void purgePageCache(slug)
 
     return { success: true, message: 'ページを復元しました' }
   } catch (error) {
-    console.error('ページ復元エラー:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'restorePage', slug },
+    })
     return { success: false, error: 'ページの復元中にエラーが発生しました' }
   }
 }
@@ -394,7 +450,7 @@ export async function getDeletedPagesList(): Promise<PageData[]> {
     orderBy: { updatedAt: 'desc' },
   })
 
-  return pages as PageData[]
+  return pages
 }
 
 /**
@@ -429,17 +485,22 @@ export async function togglePagePublished(
     })
 
     // キャッシュ無効化
-    revalidatePath(`/${slug}`)
-    revalidatePath('/admin/pages')
-    revalidateTag('pages', { expire: 0 })
-    revalidateTag(`page-${slug}`, { expire: 0 })
+    updateTag(CACHE_TAGS.PAGES)
+    updateTag(getCacheTag.pages.detail(slug))
+
+    // Cloudflare CDN キャッシュパージ
+    void purgePageCache(slug)
 
     return {
       success: true,
       message: newPublishedState ? 'ページを公開しました' : 'ページを非公開にしました',
     }
   } catch (error) {
-    console.error('ページ公開状態変更エラー:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'togglePagePublished', slug },
+    })
     return { success: false, error: 'ページの更新中にエラーが発生しました' }
   }
 }
@@ -499,16 +560,19 @@ export async function updatePageSeo(
     })
 
     // キャッシュ無効化
-    revalidatePath(`/${slug}`)
-    revalidatePath('/admin/pages')
-    revalidatePath(`/admin/pages/${slug}/seo`)
-    revalidateTag('pages', { expire: 0 })
-    revalidateTag(`page-${slug}`, { expire: 0 })
-    revalidateTag(`page-seo-${slug}`, { expire: 0 })
+    updateTag(CACHE_TAGS.PAGES)
+    updateTag(getCacheTag.pages.detail(slug))
+
+    // Cloudflare CDN キャッシュパージ
+    void purgePageCache(slug)
 
     return { success: true, message: 'SEO設定を更新しました' }
   } catch (error) {
-    console.error('SEO設定更新エラー:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'updatePageSeo', slug },
+    })
     return { success: false, error: 'SEO設定の更新中にエラーが発生しました' }
   }
 }
@@ -527,6 +591,6 @@ export async function getSystemPagesList(): Promise<PageData[]> {
     orderBy: { slug: 'asc' },
   })
 
-  return pages as PageData[]
+  return pages
 }
 

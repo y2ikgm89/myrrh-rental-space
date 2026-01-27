@@ -14,13 +14,13 @@ import {
   SocialPlatform,
   LayoutWidth,
   HomepageSectionType,
-  BlogPostStatus,
-  NewsStatus,
+  PostStatus,
   AuditAction,
   MediaType,
   MediaUsage,
   TermsType,
   TermsStatus,
+  CouponType,
 } from '@/shared/generated/prisma/client'
 
 // =============================================================================
@@ -36,14 +36,16 @@ export {
   SocialPlatform,
   LayoutWidth,
   HomepageSectionType,
-  BlogPostStatus,
-  NewsStatus,
+  PostStatus,
   AuditAction,
   MediaType,
   MediaUsage,
   TermsType,
   TermsStatus,
+  CouponType,
 }
+
+// Note: NewsStatus enum は isPublished (boolean) に移行したため削除
 
 // =============================================================================
 // Status Constants (for Prisma where clauses)
@@ -70,13 +72,15 @@ const VALID_NAVIGATION_TYPES = new Set<string>(Object.values(NavigationType))
 const VALID_SOCIAL_PLATFORMS = new Set<string>(Object.values(SocialPlatform))
 const VALID_LAYOUT_WIDTHS = new Set<string>(Object.values(LayoutWidth))
 const VALID_HOMEPAGE_SECTION_TYPES = new Set<string>(Object.values(HomepageSectionType))
-const VALID_BLOG_POST_STATUSES = new Set<string>(Object.values(BlogPostStatus))
-const VALID_NEWS_STATUSES = new Set<string>(Object.values(NewsStatus))
+const VALID_POST_STATUSES = new Set<string>(Object.values(PostStatus))
+// Note: NewsStatus enum は isPublished (boolean) に移行したため削除
+const VALID_NEWS_STATUS_FILTERS = new Set(['ALL', 'PUBLISHED', 'DRAFT'])
 const VALID_AUDIT_ACTIONS = new Set<string>(Object.values(AuditAction))
 const VALID_MEDIA_TYPES = new Set<string>(Object.values(MediaType))
 const VALID_MEDIA_USAGES = new Set<string>(Object.values(MediaUsage))
 const VALID_TERMS_TYPES = new Set<string>(Object.values(TermsType))
 const VALID_TERMS_STATUSES = new Set<string>(Object.values(TermsStatus))
+const VALID_COUPON_TYPES = new Set<string>(Object.values(CouponType))
 
 // =============================================================================
 // Type Guards
@@ -114,12 +118,16 @@ export function isValidHomepageSectionType(value: unknown): value is HomepageSec
   return typeof value === 'string' && VALID_HOMEPAGE_SECTION_TYPES.has(value)
 }
 
-export function isValidBlogPostStatus(value: unknown): value is BlogPostStatus {
-  return typeof value === 'string' && VALID_BLOG_POST_STATUSES.has(value)
+export function isValidPostStatus(value: unknown): value is PostStatus {
+  return typeof value === 'string' && VALID_POST_STATUSES.has(value)
 }
 
-export function isValidNewsStatus(value: unknown): value is NewsStatus {
-  return typeof value === 'string' && VALID_NEWS_STATUSES.has(value)
+// Note: NewsStatus enum は isPublished (boolean) に移行
+// フィルター用のバリデーション
+export type NewsStatusFilter = 'ALL' | 'PUBLISHED' | 'DRAFT'
+
+export function isValidNewsStatusFilter(value: unknown): value is NewsStatusFilter {
+  return typeof value === 'string' && VALID_NEWS_STATUS_FILTERS.has(value)
 }
 
 export function isValidAuditAction(value: unknown): value is AuditAction {
@@ -140,6 +148,10 @@ export function isValidTermsType(value: unknown): value is TermsType {
 
 export function isValidTermsStatus(value: unknown): value is TermsStatus {
   return typeof value === 'string' && VALID_TERMS_STATUSES.has(value)
+}
+
+export function isValidCouponType(value: unknown): value is CouponType {
+  return typeof value === 'string' && VALID_COUPON_TYPES.has(value)
 }
 
 // =============================================================================
@@ -178,19 +190,14 @@ export function getValidLayoutWidth(
   return value && isValidLayoutWidth(value) ? value : fallback
 }
 
-export function getValidBlogPostStatus(
+export function getValidPostStatus(
   value: string | null | undefined,
-  fallback: BlogPostStatus
-): BlogPostStatus {
-  return value && isValidBlogPostStatus(value) ? value : fallback
+  fallback: PostStatus
+): PostStatus {
+  return value && isValidPostStatus(value) ? value : fallback
 }
 
-export function getValidNewsStatus(
-  value: string | null | undefined,
-  fallback: NewsStatus
-): NewsStatus {
-  return value && isValidNewsStatus(value) ? value : fallback
-}
+// Note: getValidNewsStatus は削除（isPublished: boolean に移行）
 
 export function getValidMediaType(
   value: string | null | undefined,
@@ -236,16 +243,18 @@ export function parseCustomerStatusFilter(
   return parseStatusFilter(value, isValidCustomerStatus)
 }
 
-export function parseBlogPostStatusFilter(
+export function parsePostStatusFilter(
   value: string | null | undefined
-): BlogPostStatus | undefined {
-  return parseStatusFilter(value, isValidBlogPostStatus)
+): PostStatus | undefined {
+  return parseStatusFilter(value, isValidPostStatus)
 }
 
 export function parseNewsStatusFilter(
   value: string | null | undefined
-): NewsStatus | undefined {
-  return parseStatusFilter(value, isValidNewsStatus)
+): NewsStatusFilter | undefined {
+  if (!value || value === 'ALL') return 'ALL'
+  if (isValidNewsStatusFilter(value)) return value
+  return 'ALL'
 }
 
 export function parseRoleFilter(

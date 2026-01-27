@@ -15,7 +15,6 @@ import { Container } from '@/public/components/ui'
 import { prisma } from '@/shared/lib/prisma'
 import { loadNewsSearchParams } from '@/shared/lib/nuqs'
 import { generatePageMetadata } from '@/public/lib/page-metadata'
-import { NewsStatus } from '@/shared/generated/prisma/enums'
 import { NewsList, NewsPagination } from './_components'
 import type { SearchParams } from 'nuqs/server'
 import type { ReactElement } from 'react'
@@ -52,7 +51,7 @@ async function NewsResults({
   const safePerPage = perPage > 0 && perPage <= 50 ? perPage : 10
 
   const where = {
-    status: NewsStatus.PUBLISHED,
+    isPublished: true,
     publishedAt: { not: null },
   }
 
@@ -66,6 +65,7 @@ async function NewsResults({
       },
       select: {
         id: true,
+        slug: true,
         title: true,
         content: true,
         publishedAt: true,

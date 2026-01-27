@@ -24,8 +24,14 @@ type TopBarProps = {
 }
 
 export function TopBar({ token, siteName, headerLogoUrl, useHeaderLogo }: TopBarProps) {
-  const { toggleSidebar, isMobile } = useAdminLayout()
+  const { toggleSidebar, isMobile, isFullscreen, hasMounted } = useAdminLayout()
   const [logoError, setLogoError] = useState(false)
+
+  // フルスクリーンモード時はヘッダーを非表示
+  if (isFullscreen) return null
+
+  // Hydration対策: マウント前はSSR時と同じ値（isMobile=false）を使用
+  const showMobileMenu = hasMounted && isMobile
 
   const displayName = siteName || '管理画面'
 
@@ -54,7 +60,7 @@ export function TopBar({ token, siteName, headerLogoUrl, useHeaderLogo }: TopBar
     <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b bg-white px-4 shadow-sm lg:px-6">
       {/* 左: ハンバーガー + ブランディング */}
       <div className="flex items-center gap-3">
-        {isMobile && (
+        {showMobileMenu && (
           <Button
             type="button"
             variant="ghost"

@@ -13,7 +13,7 @@ import { Role } from '@/shared/generated/prisma/enums'
  * 招待作成スキーマ
  */
 export const createInvitationSchema = z.object({
-  email: z.string().email('有効なメールアドレスを入力してください'),
+  email: z.string().email({ error: '有効なメールアドレスを入力してください' }),
   role: z.nativeEnum(Role).default(Role.USER),
   name: z.string().max(100).optional(),
 })
@@ -22,9 +22,9 @@ export const createInvitationSchema = z.object({
  * パスワード設定スキーマ
  */
 export const setupPasswordSchema = z.object({
-  token: z.string().min(1, 'トークンが必要です'),
-  password: z.string().min(8, 'パスワードは8文字以上必要です'),
-  confirmPassword: z.string().min(8, '確認用パスワードを入力してください'),
+  token: z.string().min(1, { error: 'トークンが必要です' }),
+  password: z.string().min(8, { error: 'パスワードは8文字以上必要です' }),
+  confirmPassword: z.string().min(8, { error: '確認用パスワードを入力してください' }),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'パスワードが一致しません',
   path: ['confirmPassword'],

@@ -1,17 +1,15 @@
 'use server'
 
 import { prisma } from '@/shared/lib/prisma'
-import { revalidatePath } from 'next/cache'
+import { updateTag } from 'next/cache'
+import { CACHE_TAGS } from '@/shared/lib/constants'
 import { z } from 'zod'
-import {
-  createSuccess,
-  createFailure,
-  withPermission,
-  type ActionResult,
-} from '@/admin/types/server-actions'
+import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+import { withPermission } from '@/admin/lib/server-action-helpers'
 import { getSession, getRoleFromSession } from '@/shared/lib/auth'
 import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'
 import { logPermissionDenied } from '@/admin/lib/audit'
+import { purgeHomeCache } from '@/shared/lib/cloudflare'
 
 // =============================================================================
 // Types
@@ -43,12 +41,12 @@ export type GetAnnouncementBarsResult = {
 // =============================================================================
 
 const announcementBarSchema = z.object({
-  message: z.string().min(1, 'メッセージは必須です').max(200, 'メッセージは200文字以内で入力してください'),
+  message: z.string().min(1, { error: 'メッセージは必須です' }).max(200, { error: 'メッセージは200文字以内で入力してください' }),
   type: z.enum(['info', 'warning', 'promo']).default('info'),
-  linkUrl: z.string().url('有効なURLを入力してください').or(z.literal('')).nullable().optional(),
-  linkText: z.string().max(50, 'リンクテキストは50文字以内').nullable().optional(),
-  bgColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, '有効な色コードを入力してください').transform(v => v.toLowerCase()).or(z.literal('')).nullable().optional(),
-  textColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, '有効な色コードを入力してください').transform(v => v.toLowerCase()).or(z.literal('')).nullable().optional(),
+  linkUrl: z.string().url({ error: '有効なURLを入力してください' }).or(z.literal('')).nullable().optional(),
+  linkText: z.string().max(50, { error: 'リンクテキストは50文字以内' }).nullable().optional(),
+  bgColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, { error: '有効な色コードを入力してください' }).transform(v => v.toLowerCase()).or(z.literal('')).nullable().optional(),
+  textColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, { error: '有効な色コードを入力してください' }).transform(v => v.toLowerCase()).or(z.literal('')).nullable().optional(),
   isActive: z.boolean().default(true),
   priority: z.number().int().min(0).max(100).default(0),
   startAt: z.string().nullable().optional(),
@@ -183,8 +181,10 @@ export const createAnnouncementBar = withPermission<
     },
   })
 
-  revalidatePath('/admin/settings/announcement-bar')
-  revalidatePath('/', 'layout')
+  updateTag(CACHE_TAGS.ANNOUNCEMENT_BAR)
+
+  // Cloudflare CDN キャッシュパージ（アナウンスメントバーは全ページに影響）
+  void purgeHomeCache()
 
   return createSuccess('お知らせバーを作成しました', { id: bar.id })
 })
@@ -238,8 +238,10 @@ export const updateAnnouncementBar = withPermission<
     },
   })
 
-  revalidatePath('/admin/settings/announcement-bar')
-  revalidatePath('/', 'layout')
+  updateTag(CACHE_TAGS.ANNOUNCEMENT_BAR)
+
+  // Cloudflare CDN キャッシュパージ（アナウンスメントバーは全ページに影響）
+  void purgeHomeCache()
 
   return createSuccess('お知らせバーを更新しました')
 })
@@ -263,8 +265,10 @@ export const deleteAnnouncementBar = withPermission<[id: string], void>(
     where: { id },
   })
 
-  revalidatePath('/admin/settings/announcement-bar')
-  revalidatePath('/', 'layout')
+  updateTag(CACHE_TAGS.ANNOUNCEMENT_BAR)
+
+  // Cloudflare CDN キャッシュパージ（アナウンスメントバーは全ページに影響）
+  void purgeHomeCache()
 
   return createSuccess('お知らせバーを削除しました')
 })
@@ -291,8 +295,10 @@ export const toggleAnnouncementBarActive = withPermission<[id: string], void>(
     },
   })
 
-  revalidatePath('/admin/settings/announcement-bar')
-  revalidatePath('/', 'layout')
+  updateTag(CACHE_TAGS.ANNOUNCEMENT_BAR)
+
+  // Cloudflare CDN キャッシュパージ（アナウンスメントバーは全ページに影響）
+  void purgeHomeCache()
 
   return createSuccess('状態を変更しました')
 })

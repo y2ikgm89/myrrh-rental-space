@@ -1,9 +1,25 @@
+/**
+ * お知らせ管理ページ
+ *
+ * 2タブ構造で記事一覧・メタ情報を管理
+ */
+
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { getNewsList } from '@/admin/actions/news'
+import { getPageBySlug } from '@/admin/actions/page'
 import { NewsFilters } from './_components/NewsFilters'
 import { NewsTable } from './_components/NewsTable'
-import { Button, Pagination } from '@/admin/components/ui'
+import { ListPageSeoForm } from '@/admin/components/ListPageSeoForm'
+import {
+  Button,
+  Pagination,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from '@/admin/components/ui'
+import { LoadingState } from '@/admin/components/LoadingState'
 import { parseNewsStatusFilter } from '@/shared/lib/validations/enums'
 import type { Metadata } from 'next'
 
@@ -11,7 +27,17 @@ export const metadata: Metadata = {
   title: 'お知らせ管理 | Myrrh Rental Space',
 }
 
+// タブの型定義
+const NEWS_TABS = ['posts', 'meta'] as const
+type NewsTab = (typeof NEWS_TABS)[number]
+
+const NEWS_TABS_SET = new Set<string>(NEWS_TABS)
+function isValidTab(tab: string | undefined): tab is NewsTab {
+  return typeof tab === 'string' && NEWS_TABS_SET.has(tab)
+}
+
 type SearchParams = Promise<{
+  tab?: string
   status?: string
   search?: string
   page?: string
@@ -20,6 +46,10 @@ type SearchParams = Promise<{
 type PageProps = {
   searchParams: SearchParams
 }
+
+// ==============================================================================
+// 記事一覧タブのコンポーネント
+// ==============================================================================
 
 async function NewsList({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams
@@ -41,7 +71,46 @@ async function NewsList({ searchParams }: { searchParams: SearchParams }) {
   )
 }
 
+// ==============================================================================
+// SEOタブのコンポーネント
+// ==============================================================================
+
+async function SeoContent() {
+  const page = await getPageBySlug('news')
+
+  if (!page) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        お知らせページのメタ情報が見つかりません。
+        <br />
+        シードデータを再実行するか、管理者にお問い合わせください。
+      </div>
+    )
+  }
+
+  return (
+    <ListPageSeoForm
+      slug="news"
+      seoData={{
+        title: page.title,
+        metaDescription: page.metaDescription,
+        metaKeywords: page.metaKeywords,
+        ogpTitle: page.ogpTitle,
+        ogpDescription: page.ogpDescription,
+        ogpImageUrl: page.ogpImageUrl,
+      }}
+    />
+  )
+}
+
+// ==============================================================================
+// メインページコンポーネント
+// ==============================================================================
+
 export default async function NewsPage({ searchParams }: PageProps) {
+  const params = await searchParams
+  const currentTab = isValidTab(params.tab) ? params.tab : 'posts'
+
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
@@ -52,26 +121,41 @@ export default async function NewsPage({ searchParams }: PageProps) {
             お知らせの作成・編集・公開管理を行います
           </p>
         </div>
-        <Button asChild>
-          <Link href="/admin/news/new">新規作成</Link>
-        </Button>
+        {currentTab === 'posts' && (
+          <Button asChild>
+            <Link href="/admin/news/new">新規作成</Link>
+          </Button>
+        )}
       </div>
 
-      {/* フィルター */}
-      <Suspense fallback={<div>読み込み中...</div>}>
-        <NewsFilters />
-      </Suspense>
+      {/* タブ */}
+      <Tabs defaultValue={currentTab} className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="posts" asChild>
+            <Link href="/admin/news?tab=posts">記事一覧</Link>
+          </TabsTrigger>
+          <TabsTrigger value="meta" asChild>
+            <Link href="/admin/news?tab=meta">メタ情報</Link>
+          </TabsTrigger>
+        </TabsList>
 
-      {/* お知らせ一覧 */}
-      <Suspense
-        fallback={
-          <div className="rounded-lg border bg-white p-12 text-center">
-            <p className="text-muted-foreground">読み込み中...</p>
-          </div>
-        }
-      >
-        <NewsList searchParams={searchParams} />
-      </Suspense>
+        {/* 記事一覧タブ */}
+        <TabsContent value="posts" className="space-y-6">
+          <Suspense fallback={<LoadingState variant="inline" />}>
+            <NewsFilters />
+          </Suspense>
+          <Suspense fallback={<LoadingState />}>
+            <NewsList searchParams={searchParams} />
+          </Suspense>
+        </TabsContent>
+
+        {/* SEOタブ */}
+        <TabsContent value="meta">
+          <Suspense fallback={<LoadingState />}>
+            <SeoContent />
+          </Suspense>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

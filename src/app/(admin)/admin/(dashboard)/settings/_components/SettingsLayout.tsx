@@ -5,6 +5,7 @@
  * パンくず、戻るボタン、タイトル
  */
 
+import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/admin/components/ui'
@@ -12,7 +13,7 @@ import { Button } from '@/admin/components/ui'
 interface SettingsLayoutProps {
   title: string
   description?: string
-  children: React.ReactNode
+  children: ReactNode
 }
 
 export function SettingsLayout({ title, description, children }: SettingsLayoutProps) {

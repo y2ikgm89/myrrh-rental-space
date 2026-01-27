@@ -71,7 +71,7 @@ const ROLE_CONFIGS: RoleConfig[] = [
     description: '日常的なコンテンツ管理を担当',
     capabilities: [
       'スペース・予約・顧客の管理',
-      'ブログ・ニュース・ページの作成・編集・公開',
+      '投稿・ニュース・ページの作成・編集・公開',
       'FAQ・お問い合わせの管理',
       'サイト設定（ナビゲーション・告知バー等）',
     ],
@@ -91,7 +91,7 @@ const ROLE_CONFIGS: RoleConfig[] = [
     description: '割り当てられたコンテンツのみ編集可能',
     capabilities: [
       '割り当てられたページの編集',
-      'ブログ記事・ニュースの作成・編集',
+      '投稿・ニュースの作成・編集',
       'コンテンツのプレビュー',
     ],
     restrictions: [

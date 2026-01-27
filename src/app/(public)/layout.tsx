@@ -22,7 +22,7 @@ import { AnnouncementBarWrapper } from '@/public/components/AnnouncementBarWrapp
 import { SkipLink, AriaLiveRegion } from '@/public/components/a11y'
 import { AriaLiveProvider } from '@/shared/contexts'
 import { getCookieConsentSettings } from '@/shared/lib/settings'
-import { getAnalyticsConfig } from '@/public/lib/analytics/config'
+import { getAnalyticsConfig } from '@/shared/lib/analytics/config'
 import type { ReactElement, ReactNode } from 'react'
 
 /**

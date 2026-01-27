@@ -38,6 +38,7 @@ import { CodeNode, CodeHighlightNode } from '@lexical/code'
 import { MarkNode } from '@lexical/mark'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 
+import { cn } from '@/shared/lib/utils'
 import { ImageNode } from './nodes/ImageNode'
 import { YouTubeNode } from './nodes/YouTubeNode'
 import { XNode } from './nodes/XNode'
@@ -79,33 +80,23 @@ const URL_MATCHER =
 const EMAIL_MATCHER =
   /(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))/
 
+function createMatcher(regex: RegExp, urlTransform: (match: string) => string) {
+  return (text: string) => {
+    const match = regex.exec(text)
+    if (match === null) return null
+    const fullMatch = match[0]
+    return {
+      index: match.index,
+      length: fullMatch.length,
+      text: fullMatch,
+      url: urlTransform(fullMatch),
+    }
+  }
+}
+
 const MATCHERS = [
-  (text: string) => {
-    const match = URL_MATCHER.exec(text)
-    if (match === null) {
-      return null
-    }
-    const fullMatch = match[0]
-    return {
-      index: match.index,
-      length: fullMatch.length,
-      text: fullMatch,
-      url: fullMatch.startsWith('http') ? fullMatch : `https://${fullMatch}`,
-    }
-  },
-  (text: string) => {
-    const match = EMAIL_MATCHER.exec(text)
-    if (match === null) {
-      return null
-    }
-    const fullMatch = match[0]
-    return {
-      index: match.index,
-      length: fullMatch.length,
-      text: fullMatch,
-      url: `mailto:${fullMatch}`,
-    }
-  },
+  createMatcher(URL_MATCHER, (m) => (m.startsWith('http') ? m : `https://${m}`)),
+  createMatcher(EMAIL_MATCHER, (m) => `mailto:${m}`),
 ]
 
 // =============================================================================
@@ -218,9 +209,12 @@ function EditorInner({
   placeholder = 'ここに内容を入力...',
   onMarkClick,
   onAddComment,
+  contentWidthClassName,
+  contentWidthStyle,
 }: LexicalEditorProps) {
   const editorRef = useRef<LexicalEditorType | null>(null)
   const [contentWrapperRef, setContentWrapperRef] = useState<HTMLDivElement | null>(null)
+  const [contentWidthRef, setContentWidthRef] = useState<HTMLDivElement | null>(null)
 
   // 画像ダイアログ
   const { isImageDialogOpen, openImageDialog, closeImageDialog } =
@@ -273,10 +267,10 @@ function EditorInner({
 
   return (
     <div
-      className="flex flex-col rounded-lg border bg-background"
+      className="flex flex-col bg-background"
       style={{ height }}
     >
-      {/* ツールバー - 固定（スクロールしない） */}
+      {/* ツールバー - 固定（スクロールしない）、フルワイド */}
       {showToolbar && (
         <div className="shrink-0">
           <ToolbarPlugin
@@ -292,20 +286,27 @@ function EditorInner({
       )}
 
       {/* コンテンツラッパー - スクロール可能 */}
-      <div ref={setContentWrapperRef} className="relative flex-1 overflow-y-auto">
-        <RichTextPlugin
-          contentEditable={
-            <ContentEditable
-              className={`outline-none pl-8 pr-4 py-3 min-h-full ${className ?? ''}`}
-            />
-          }
-          placeholder={
-            <div className="pointer-events-none absolute top-3 left-8 text-muted-foreground">
-              {placeholder}
-            </div>
-          }
-          ErrorBoundary={LexicalErrorBoundary}
-        />
+      <div ref={setContentWrapperRef} className="flex-1 overflow-y-auto">
+        {/* 幅制御ラッパー（公開ページと同じコンテンツ幅を適用） */}
+        <div
+          ref={setContentWidthRef}
+          className={cn('relative', contentWidthClassName)}
+          style={contentWidthStyle}
+        >
+          <RichTextPlugin
+            contentEditable={
+              <ContentEditable
+                className={`outline-none pl-10 pr-2 py-2 min-h-full ${className ?? ''}`}
+              />
+            }
+            placeholder={
+              <div className="pointer-events-none absolute top-2 left-10 text-muted-foreground">
+                {placeholder}
+              </div>
+            }
+            ErrorBoundary={LexicalErrorBoundary}
+          />
+        </div>
       </div>
 
       {/* 公式プラグイン */}
@@ -324,7 +325,7 @@ function EditorInner({
       {/* カスタムプラグイン */}
       <HtmlInitializerPlugin content={content} editorRef={editorRef} />
       <DisablePlugin disabled={disabled} />
-      <DraggableBlockPlugin anchorElem={contentWrapperRef} />
+      <DraggableBlockPlugin anchorElem={contentWidthRef} />
       {contentWrapperRef && (
         <FloatingToolbarPlugin
           anchorElem={contentWrapperRef}

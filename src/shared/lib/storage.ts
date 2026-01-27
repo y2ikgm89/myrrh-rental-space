@@ -1,5 +1,26 @@
+/**
+ * ファイルストレージサービス
+ *
+ * Supabase Storageを使用したファイルアップロード・削除機能を提供します。
+ * スペース画像、ブログ画像、サイト設定画像などの管理に使用します。
+ *
+ * ## 機能
+ * - **ファイルアップロード**: 単一・複数ファイル対応
+ * - **ファイル削除**: 単一・複数ファイル対応
+ * - **専用アップロード**: スペース画像、ブログ画像、サイト画像
+ * - **バリデーション**: ファイルサイズ、ファイル形式チェック
+ *
+ * ## バケット
+ * - `spaces`: スペース画像用
+ * - `posts`: 投稿画像用
+ * - `site`: サイト設定画像（ロゴ・ファビコン・OGP）
+ *
+ * @module shared/lib/storage
+ */
+
 import { supabase, isSupabaseConfigured, STORAGE_BUCKETS, type StorageBucket } from './supabase'
 import { v4 as uuid } from 'uuid'
+import { logError, ErrorCategory, ErrorSeverity, normalizeError } from './errors'
 
 // =============================================================================
 // Types
@@ -100,7 +121,11 @@ export async function uploadFile(
       })
 
     if (error) {
-      console.error('Supabase upload error:', error)
+      logError(new Error(error.message), {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.MEDIUM,
+        context: { operation: 'uploadFile', bucket, filePath },
+      })
       return { success: false, error: 'ファイルのアップロードに失敗しました' }
     }
 
@@ -115,7 +140,11 @@ export async function uploadFile(
       path: filePath,
     }
   } catch (error) {
-    console.error('Upload error:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'uploadFile', bucket },
+    })
     return { success: false, error: 'ファイルのアップロードに失敗しました' }
   }
 }
@@ -170,13 +199,21 @@ export async function deleteFile(
       .remove([path])
 
     if (error) {
-      console.error('Supabase delete error:', error)
+      logError(new Error(error.message), {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.MEDIUM,
+        context: { operation: 'deleteFile', bucket, path },
+      })
       return { success: false, error: 'ファイルの削除に失敗しました' }
     }
 
     return { success: true }
   } catch (error) {
-    console.error('Delete error:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'deleteFile', bucket, path },
+    })
     return { success: false, error: 'ファイルの削除に失敗しました' }
   }
 }
@@ -198,13 +235,21 @@ export async function deleteFiles(
       .remove(paths)
 
     if (error) {
-      console.error('Supabase delete error:', error)
+      logError(new Error(error.message), {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.MEDIUM,
+        context: { operation: 'deleteFiles', bucket, pathCount: paths.length },
+      })
       return { success: false, error: 'ファイルの削除に失敗しました' }
     }
 
     return { success: true }
   } catch (error) {
-    console.error('Delete error:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'deleteFiles', bucket, pathCount: paths.length },
+    })
     return { success: false, error: 'ファイルの削除に失敗しました' }
   }
 }
@@ -227,13 +272,13 @@ export async function uploadSpaceImage(
 }
 
 /**
- * ブログ画像をアップロード
+ * 投稿画像をアップロード
  */
-export async function uploadBlogImage(
+export async function uploadPostImage(
   file: File,
   postId?: string
 ): Promise<UploadResult> {
-  return uploadFile(file, STORAGE_BUCKETS.BLOG, {
+  return uploadFile(file, STORAGE_BUCKETS.POSTS, {
     folder: postId || 'general',
     validation: IMAGE_VALIDATION,
   })

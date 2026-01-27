@@ -33,14 +33,14 @@ docs/
 
 | 技術 | バージョン |
 |-----|----------|
-| Next.js | 16.1.2 |
+| Next.js | 16.1.4 |
 | React | 19.2.3 |
-| TypeScript | 5.9 |
-| Prisma | 7.2.0 |
-| Better Auth | 1.4.13 |
-| Bun | 1.3 |
-| Zod | 4.3.5 |
-| Tailwind CSS | 4.x |
+| TypeScript | 5.9.3 |
+| Prisma | 7.3.0 |
+| Better Auth | 1.4.17 |
+| Bun | 1.3.6 |
+| Zod | 4.3.6 |
+| Tailwind CSS | 4.1.18 |
 
 詳細は [CLAUDE.md](../CLAUDE.md) を参照。
 
@@ -73,4 +73,4 @@ docs/
 
 ---
 
-最終更新: 2026-01-19
+最終更新: 2026-01-23

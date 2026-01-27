@@ -1,10 +1,18 @@
 /**
  * Aboutページ
  *
- * 企業・サービス紹介ページ
+ * 企業・サービス紹介ページ。ビジネス設定から取得した情報を表示します。
  *
- * Next.js 16 PPR対応:
- * - unstable_cache でキャッシュされた公開設定を使用
+ * ## 表示内容
+ * - ミッションステートメント
+ * - サービスの特徴
+ * - 会社概要（設定されている場合）
+ *
+ * ## 構造化データ
+ * - LocalBusiness JSON-LD
+ * - Breadcrumb JSON-LD
+ *
+ * @module public/about/page
  */
 
 import type { Metadata } from 'next'

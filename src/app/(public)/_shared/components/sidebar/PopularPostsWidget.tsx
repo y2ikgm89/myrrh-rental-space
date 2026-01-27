@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { tv } from 'tailwind-variants'
 import { Card, CardContent, CardHeader, CardTitle } from '@/public/components/ui'
+import { generatePostUrl } from '@/shared/lib/url'
 import type { ReactElement } from 'react'
 import type { SidebarPopularPost } from '@/public/actions/sidebar'
 
@@ -20,12 +21,13 @@ const styles = tv({
 
 interface PopularPostsWidgetProps {
   posts: SidebarPopularPost[]
+  postPrefix: string
 }
 
 /**
  * 人気記事ウィジェット
  */
-export function PopularPostsWidget({ posts }: PopularPostsWidgetProps): ReactElement {
+export function PopularPostsWidget({ posts, postPrefix }: PopularPostsWidgetProps): ReactElement {
   return (
     <Card>
       <CardHeader>
@@ -36,7 +38,7 @@ export function PopularPostsWidget({ posts }: PopularPostsWidgetProps): ReactEle
           <ul className={styles.list()}>
             {posts.map((post, index) => (
               <li key={post.id}>
-                <Link href={`/blog/${post.slug}`} className={styles.item()}>
+                <Link href={generatePostUrl(post, { structure: 'post-name', prefix: postPrefix })} className={styles.item()}>
                   <div className={styles.rank()} aria-label={`第${index + 1}位`}>
                     {index + 1}
                   </div>

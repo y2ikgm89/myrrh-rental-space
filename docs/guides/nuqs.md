@@ -3,7 +3,7 @@
 > **Note**: このドキュメントは nuqs ライブラリの実装状況とベストプラクティスを記載しています。
 
 **最終更新**: 2026-01-07
-**実装状況**: 公開ページ実装済み（/spaces, /blog）、管理画面計画中
+**実装状況**: 公開ページ実装済み（/spaces, /posts）、管理画面計画中
 
 ---
 
@@ -150,8 +150,8 @@ export const spaceSearchParams = {
 export const loadSpaceSearchParams = createLoader(spaceSearchParams)
 export const spaceSearchParamsCache = createSearchParamsCache(spaceSearchParams)
 
-// ブログ一覧
-export const blogSearchParams = {
+// 投稿一覧
+export const postSearchParams = {
   q: parseAsQuery,
   page: parseAsPage,
   perPage: parseAsPerPage,
@@ -160,8 +160,8 @@ export const blogSearchParams = {
   sort: parseAsSortOrder,
 }
 
-export const loadBlogSearchParams = createLoader(blogSearchParams)
-export const blogSearchParamsCache = createSearchParamsCache(blogSearchParams)
+export const loadPostSearchParams = createLoader(postSearchParams)
+export const postSearchParamsCache = createSearchParamsCache(postSearchParams)
 ```
 
 ---
@@ -313,7 +313,7 @@ export function Pagination({ currentPage, totalPages }: Props) {
 | ページ | 状態 | パラメータ |
 |-------|------|-----------|
 | `/spaces` | **完了** | `q`, `page`, `perPage`, `sort` |
-| `/blog` | **完了** | `q`, `page`, `category`, `tags`, `sort` |
+| `/posts` | **完了** | `q`, `page`, `category`, `tags`, `sort` |
 | `/news` | 計画中 | `page`, `perPage` |
 
 ### 管理画面（計画中）
@@ -322,7 +322,7 @@ export function Pagination({ currentPage, totalPages }: Props) {
 |-------|-----------|
 | `/admin/reservations` | `status`, `startDate`, `endDate`, `search`, `sort`, `view` |
 | `/admin/customers` | `search`, `status`, `sort`, `sortOrder` |
-| `/admin/blog` | `status`, `categoryId`, `search`, `sort` |
+| `/admin/posts` | `status`, `categoryId`, `search`, `sort` |
 | `/admin/spaces` | `isPublished`, `search`, `sort` |
 | `/admin/inquiries` | `status`, `sort` |
 
@@ -392,5 +392,5 @@ const handleCategoryChange = (category: string | null) => {
 ## 更新履歴
 
 - **2026-01-07**: 実装完了に伴い全面改訂。`createLoader` パターンに統一、実装済みコードを反映
-- **2026-01-07**: `/blog` の検索・フィルタ・ページネーションを実装
+- **2026-01-07**: `/posts` の検索・フィルタ・ページネーションを実装
 - **2026-01-06**: 初版作成、nuqs 採用箇所の洗い出しと要件定義

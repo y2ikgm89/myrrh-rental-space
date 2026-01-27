@@ -36,7 +36,7 @@ import {
   heroConfigSchema,
   spaceListConfigSchema,
   newsConfigSchema,
-  blogConfigSchema,
+  postsConfigSchema,
   faqConfigSchema,
   ctaConfigSchema,
   customConfigSchema,
@@ -45,7 +45,7 @@ import {
   isHeroConfig,
   isSpaceListConfig,
   isNewsConfig,
-  isBlogConfig,
+  isPostsConfig,
   isFaqConfig,
   isCtaConfig,
   isCustomConfig,
@@ -53,14 +53,14 @@ import {
   type HeroConfig,
   type SpaceListConfig,
   type NewsConfig,
-  type BlogConfig,
+  type PostsConfig,
   type FaqConfig,
   type CtaConfig,
   type CustomConfig,
   type InstagramConfig,
   type SpaceListConfigInput,
   type NewsConfigInput,
-  type BlogConfigInput,
+  type PostsConfigInput,
   type FaqConfigInput,
   type InstagramConfigInput,
 } from '@/admin/lib/validations/homepage-section'
@@ -380,24 +380,24 @@ function NewsConfigForm({
 }
 
 // =============================================================================
-// Blog Config Form
+// Posts Config Form
 // =============================================================================
 
-function BlogConfigForm({
+function PostsConfigForm({
   config,
   onSave,
   isPending,
 }: {
-  config: BlogConfig
-  onSave: (config: BlogConfig) => void
+  config: PostsConfig
+  onSave: (config: PostsConfig) => void
   isPending: boolean
 }) {
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<BlogConfigInput, unknown, BlogConfig>({
-    resolver: zodResolver(blogConfigSchema),
+  } = useForm<PostsConfigInput, unknown, PostsConfig>({
+    resolver: zodResolver(postsConfigSchema),
     defaultValues: config,
   })
 
@@ -405,9 +405,9 @@ function BlogConfigForm({
     <form onSubmit={handleSubmit(onSave)} className="space-y-6">
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="blog-title">セクションタイトル</Label>
+          <Label htmlFor="posts-title">セクションタイトル</Label>
           <Input
-            id="blog-title"
+            id="posts-title"
             {...register('title')}
             placeholder="最新の記事"
             disabled={isPending}
@@ -418,9 +418,9 @@ function BlogConfigForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="blog-max">表示件数</Label>
+          <Label htmlFor="posts-max">表示件数</Label>
           <Input
-            id="blog-max"
+            id="posts-max"
             type="number"
             min={1}
             max={10}
@@ -431,11 +431,11 @@ function BlogConfigForm({
 
         <div className="flex items-center gap-2">
           <Switch
-            id="blog-view-all"
+            id="posts-view-all"
             {...register('showViewAllLink')}
             disabled={isPending}
           />
-          <Label htmlFor="blog-view-all">「すべて見る」リンクを表示</Label>
+          <Label htmlFor="posts-view-all">「すべて見る」リンクを表示</Label>
         </div>
       </div>
 
@@ -801,10 +801,10 @@ export function SectionEditor({ section, onBack, onSave }: SectionEditorProps) {
             isPending={isPending}
           />
         )
-      case HomepageSectionType.BLOG:
+      case HomepageSectionType.POST:
         return (
-          <BlogConfigForm
-            config={getValidConfig(isBlogConfig, HomepageSectionType.BLOG)}
+          <PostsConfigForm
+            config={getValidConfig(isPostsConfig, HomepageSectionType.POST)}
             onSave={(c) => handleConfigSave(c)}
             isPending={isPending}
           />

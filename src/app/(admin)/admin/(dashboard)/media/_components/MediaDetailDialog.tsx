@@ -8,7 +8,8 @@ import { useState, useTransition, useRef } from 'react'
 import { X, Copy, ExternalLink, Trash2, Save, Loader2, FileText, Film, File } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
-import { updateMedia, deleteMedia, type MediaData } from '@/admin/actions/media'
+import { updateMedia, deleteMedia } from '@/admin/actions/media'
+import type { MediaData } from '@/admin/types/media-picker'
 import { formatDate } from '@/shared/lib/utils'
 import { formatBytes } from '@/admin/lib/utils'
 import { Button } from '@/admin/components/ui'
@@ -273,7 +274,7 @@ function MediaPreview({ item }: { item: MediaData }) {
   return (
     <div className="rounded-lg overflow-hidden bg-muted aspect-square flex items-center justify-center">
       {item.type === 'IMAGE' ? (
-        // eslint-disable-next-line @next/next/no-img-element
+        
         <img
           src={item.url}
           alt={item.alt || item.filename}

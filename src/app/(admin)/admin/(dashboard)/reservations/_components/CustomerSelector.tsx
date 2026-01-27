@@ -10,6 +10,7 @@ import {
   Card,
   CardContent,
 } from '@/admin/components/ui'
+import { logger } from '@/shared/lib/logger'
 
 interface CustomerSelectorProps {
   selectedCustomer: { id: string; name: string; email: string } | null
@@ -75,7 +76,7 @@ export function CustomerSelector({
         const results = await searchCustomers(searchQuery)
         setSearchResults(results)
       } catch (error) {
-        console.error('顧客検索エラー:', error)
+        logger.error('顧客検索エラー', { error: error instanceof Error ? error.message : String(error) })
         setSearchResults([])
       } finally {
         setIsSearching(false)

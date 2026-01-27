@@ -19,7 +19,7 @@ import {
   DialogFooter,
 } from '@/public/components/ui/Dialog'
 import { Button } from '@/public/components/ui/Button'
-import { SanitizedHtml } from '@/public/components/SanitizedHtml'
+import { SanitizedHtml } from '@/shared/components/SanitizedHtml'
 import { cn } from '@/shared/lib/utils'
 import { PROSE_CLASSES } from '@/shared/lib/styles/prose'
 

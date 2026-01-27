@@ -1,14 +1,21 @@
 /**
  * 予約ページ
  *
- * @description スペースを予約するためのページ
- * - カレンダーで日付選択
- * - 時間枠選択
- * - 顧客情報入力
+ * スペースを予約するためのページ。日時選択から顧客情報入力まで
+ * 一連の予約フローを提供します。
  *
- * Next.js 16 PPR対応:
+ * ## 予約フロー
+ * 1. カレンダーで日付選択
+ * 2. 時間枠選択
+ * 3. 顧客情報入力
+ * 4. 規約同意（設定されている場合）
+ * 5. 予約確定
+ *
+ * ## Next.js 16 PPR対応
  * - 静的シェル: ローディングUI
  * - 動的コンテンツ: 検索パラメータに基づくフォーム（Suspenseでラップ）
+ *
+ * @module public/reservation/page
  */
 
 import { Suspense } from 'react'
@@ -18,11 +25,19 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { prisma } from '@/shared/lib/prisma'
 import { Container } from '@/public/components/ui'
+import { ContentRenderer } from '@/public/components/ContentRenderer'
 import { ReservationForm } from './_components'
-import { getTermsAgreementSettings } from '@/public/actions/settings'
-import { getTermsForSpace } from '@/public/actions/terms'
+import {
+  getTermsAgreementSettings,
+  getPageContent,
+  getPublicTaxSettings,
+  getTurnstileSiteKey,
+  getPublicDiscountSettings,
+} from '@/public/actions/settings'
+import { getTermsForSpace, getCancellationPolicy } from '@/public/actions/terms'
 import { serializeTermsWithVersion } from '@/shared/lib/validations/terms'
 import { generatePageMetadata } from '@/public/lib/page-metadata'
+import { parseTaxRateType } from '@/shared/lib/json-validators'
 import type { ReactElement } from 'react'
 
 interface PageProps {
@@ -44,6 +59,7 @@ interface SerializedSpace {
   name: string
   hourlyPrice: number
   mainImageUrl: string | null
+  taxRateType: 'standard' | 'reduced'
 }
 
 /**
@@ -66,6 +82,7 @@ async function getSpaceForReservation(spaceId: string): Promise<SerializedSpace 
       name: true,
       hourlyPrice: true,
       mainImageUrl: true,
+      taxRateType: true,
     },
   })
 
@@ -78,6 +95,7 @@ async function getSpaceForReservation(spaceId: string): Promise<SerializedSpace 
     name: space.name,
     hourlyPrice: Number(space.hourlyPrice),
     mainImageUrl: space.mainImageUrl,
+    taxRateType: parseTaxRateType(space.taxRateType),
   }
 }
 
@@ -91,22 +109,33 @@ async function ReservationContent({
 }): Promise<ReactElement> {
   const { spaceId } = await searchParams
 
+  // ページコンテンツを取得（管理画面で編集されたコンテンツ）
+  const pageContent = await getPageContent('reservation')
+
   // spaceId が指定されていない場合はスペース選択画面へ誘導
   if (!spaceId) {
     return (
-      <div className="max-w-2xl mx-auto text-center">
-        <h1 className="text-3xl font-bold text-foreground mb-4">
-          予約するスペースを選択してください
-        </h1>
-        <p className="text-muted-foreground mb-8">
-          予約したいスペースの詳細ページから「予約する」ボタンをクリックしてください。
-        </p>
-        <Link
-          href="/spaces"
-          className="inline-flex items-center justify-center rounded-md bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 transition-colors"
-        >
-          スペース一覧を見る
-        </Link>
+      <div className="max-w-2xl mx-auto">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-foreground mb-4">
+            予約するスペースを選択してください
+          </h1>
+          <p className="text-muted-foreground mb-8">
+            予約したいスペースの詳細ページから「予約する」ボタンをクリックしてください。
+          </p>
+          <Link
+            href="/spaces"
+            className="inline-flex items-center justify-center rounded-md bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 transition-colors"
+          >
+            スペース一覧を見る
+          </Link>
+        </div>
+        {/* ページコンテンツ（Lexicalエディタで編集されたコンテンツ） */}
+        {pageContent?.content && (
+          <div className="mt-12">
+            <ContentRenderer html={pageContent.content} />
+          </div>
+        )}
       </div>
     )
   }
@@ -118,10 +147,14 @@ async function ReservationContent({
     notFound()
   }
 
-  // 規約同意設定とスペース固有の規約を並行取得
-  const [termsSettings, spaceTerms] = await Promise.all([
+  // 規約同意設定、スペース固有の規約、キャンセルポリシー、割引設定、税設定、Turnstile Site Keyを並行取得
+  const [termsSettings, spaceTerms, cancellationPolicy, discountSettings, taxSettings, turnstileSiteKey] = await Promise.all([
     getTermsAgreementSettings(),
     getTermsForSpace(spaceId),
+    getCancellationPolicy(),
+    getPublicDiscountSettings(),
+    getPublicTaxSettings(),
+    getTurnstileSiteKey(),
   ])
 
   return (
@@ -143,6 +176,11 @@ async function ReservationContent({
         hourlyPrice={space.hourlyPrice}
         termsSettings={termsSettings}
         spaceTerms={serializeTermsWithVersion(spaceTerms)}
+        cancellationPolicy={serializeTermsWithVersion(cancellationPolicy)}
+        discountSettings={discountSettings}
+        taxSettings={taxSettings}
+        taxRateType={space.taxRateType}
+        turnstileSiteKey={turnstileSiteKey}
       />
     </>
   )

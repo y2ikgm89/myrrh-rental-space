@@ -31,13 +31,13 @@ const safeUrlSchema = z
  * CTAボタン設定
  */
 const ctaButtonSchema = z.object({
-  text: z.string().min(1, 'ボタンテキストは必須です').max(50, 'ボタンテキストは50文字以内です'),
+  text: z.string().min(1, { message: 'ボタンテキストは必須です' }).max(50, { message: 'ボタンテキストは50文字以内です' }),
   url: safeUrlSchema,
 })
 
 const optionalCtaButtonSchema = z
   .object({
-    text: z.string().max(50, 'ボタンテキストは50文字以内です').optional(),
+    text: z.string().max(50, { message: 'ボタンテキストは50文字以内です' }).optional(),
     url: safeUrlSchema.optional(),
   })
   .optional()
@@ -50,9 +50,9 @@ const optionalCtaButtonSchema = z
  * Hero セクション設定
  */
 export const heroConfigSchema = z.object({
-  title: z.string().min(1, 'タイトルは必須です').max(100, 'タイトルは100文字以内です'),
-  subtitle: z.string().max(300, 'サブタイトルは300文字以内です').optional(),
-  backgroundImageUrl: z.string().url('有効なURLを入力してください').optional().or(z.literal('')),
+  title: z.string().min(1, { message: 'タイトルは必須です' }).max(100, { message: 'タイトルは100文字以内です' }),
+  subtitle: z.string().max(300, { message: 'サブタイトルは300文字以内です' }).optional(),
+  backgroundImageUrl: z.string().url({ message: '有効なURLを入力してください' }).optional().or(z.literal('')),
   ctaPrimary: ctaButtonSchema,
   ctaSecondary: optionalCtaButtonSchema,
 })
@@ -69,16 +69,16 @@ export const spaceListConfigSchema = z.object({
  * News セクション設定
  */
 export const newsConfigSchema = z.object({
-  title: z.string().max(100, 'タイトルは100文字以内です').default('お知らせ'),
+  title: z.string().max(100, { message: 'タイトルは100文字以内です' }).default('お知らせ'),
   maxItems: z.number().int().min(1).max(10).default(3),
   showViewAllLink: z.boolean().default(true),
 })
 
 /**
- * Blog セクション設定
+ * Posts セクション設定
  */
-export const blogConfigSchema = z.object({
-  title: z.string().max(100, 'タイトルは100文字以内です').default('最新の記事'),
+export const postsConfigSchema = z.object({
+  title: z.string().max(100, { message: 'タイトルは100文字以内です' }).default('最新の記事'),
   maxItems: z.number().int().min(1).max(10).default(3),
   showViewAllLink: z.boolean().default(true),
 })
@@ -89,14 +89,14 @@ export const blogConfigSchema = z.object({
  * - items指定: カスタムFAQ項目（Lexicalで編集）
  */
 export const faqConfigSchema = z.object({
-  title: z.string().max(100, 'タイトルは100文字以内です').default('よくあるご質問'),
+  title: z.string().max(100, { message: 'タイトルは100文字以内です' }).default('よくあるご質問'),
   categoryId: z.string().uuid().optional(), // FaqCategory参照
   maxItems: z.number().int().min(1).max(20).default(5),
   items: z
     .array(
       z.object({
-        question: z.string().min(1, '質問は必須です').max(200, '質問は200文字以内です'),
-        answer: z.string().min(1, '回答は必須です').max(5000, '回答は5000文字以内です'),
+        question: z.string().min(1, { message: '質問は必須です' }).max(200, { message: '質問は200文字以内です' }),
+        answer: z.string().min(1, { message: '回答は必須です' }).max(5000, { message: '回答は5000文字以内です' }),
       })
     )
     .optional(), // カスタムFAQ（categoryIdと排他的に使用）
@@ -106,8 +106,8 @@ export const faqConfigSchema = z.object({
  * CTA セクション設定
  */
 export const ctaConfigSchema = z.object({
-  title: z.string().min(1, 'タイトルは必須です').max(100, 'タイトルは100文字以内です'),
-  description: z.string().max(500, '説明は500文字以内です').optional(),
+  title: z.string().min(1, { message: 'タイトルは必須です' }).max(100, { message: 'タイトルは100文字以内です' }),
+  description: z.string().max(500, { message: '説明は500文字以内です' }).optional(),
   ctaPrimary: ctaButtonSchema,
   ctaSecondary: optionalCtaButtonSchema,
 })
@@ -127,7 +127,7 @@ export const customConfigSchema = z.object({
  * - 管理画面で設定したInstagramフィードを表示
  */
 export const instagramConfigSchema = z.object({
-  title: z.string().max(100, 'タイトルは100文字以内です').default('Instagram'),
+  title: z.string().max(100, { message: 'タイトルは100文字以内です' }).default('Instagram'),
   // フィードの詳細設定は管理画面のInstagram設定で管理
 })
 
@@ -143,7 +143,7 @@ export const sectionConfigSchemas: Record<
   | typeof heroConfigSchema
   | typeof spaceListConfigSchema
   | typeof newsConfigSchema
-  | typeof blogConfigSchema
+  | typeof postsConfigSchema
   | typeof faqConfigSchema
   | typeof ctaConfigSchema
   | typeof customConfigSchema
@@ -152,7 +152,7 @@ export const sectionConfigSchemas: Record<
   [HomepageSectionType.HERO]: heroConfigSchema,
   [HomepageSectionType.SPACE_LIST]: spaceListConfigSchema,
   [HomepageSectionType.NEWS]: newsConfigSchema,
-  [HomepageSectionType.BLOG]: blogConfigSchema,
+  [HomepageSectionType.POST]: postsConfigSchema,
   [HomepageSectionType.FAQ]: faqConfigSchema,
   [HomepageSectionType.CTA]: ctaConfigSchema,
   [HomepageSectionType.CUSTOM]: customConfigSchema,
@@ -172,9 +172,9 @@ export function validateSectionConfig(type: HomepageSectionType, config: unknown
  */
 export const createHomepageSectionSchema = z.object({
   type: z.nativeEnum(HomepageSectionType),
-  title: z.string().max(100, 'タイトルは100文字以内です').optional(),
+  title: z.string().max(100, { message: 'タイトルは100文字以内です' }).optional(),
   config: z.record(z.string(), z.unknown()).default({}),
-  content: z.string().max(500000, 'コンテンツは500,000文字以内です').optional(),
+  content: z.string().max(500000, { message: 'コンテンツは500,000文字以内です' }).optional(),
   order: z.number().int().min(0).optional(),
   isActive: z.boolean().default(true),
 })
@@ -183,9 +183,9 @@ export const createHomepageSectionSchema = z.object({
  * ホームページセクション更新スキーマ
  */
 export const updateHomepageSectionSchema = z.object({
-  title: z.string().max(100, 'タイトルは100文字以内です').optional(),
+  title: z.string().max(100, { message: 'タイトルは100文字以内です' }).optional(),
   config: z.record(z.string(), z.unknown()).optional(),
-  content: z.string().max(500000, 'コンテンツは500,000文字以内です').optional(),
+  content: z.string().max(500000, { message: 'コンテンツは500,000文字以内です' }).optional(),
   isActive: z.boolean().optional(),
 })
 
@@ -209,7 +209,7 @@ export const updateSectionOrderSchema = z.object({
 export type HeroConfig = z.infer<typeof heroConfigSchema>
 export type SpaceListConfig = z.infer<typeof spaceListConfigSchema>
 export type NewsConfig = z.infer<typeof newsConfigSchema>
-export type BlogConfig = z.infer<typeof blogConfigSchema>
+export type PostsConfig = z.infer<typeof postsConfigSchema>
 export type FaqConfig = z.infer<typeof faqConfigSchema>
 export type CtaConfig = z.infer<typeof ctaConfigSchema>
 export type CustomConfig = z.infer<typeof customConfigSchema>
@@ -220,7 +220,7 @@ export type InstagramConfig = z.infer<typeof instagramConfigSchema>
 // See: https://github.com/react-hook-form/resolvers/issues/800
 export type SpaceListConfigInput = z.input<typeof spaceListConfigSchema>
 export type NewsConfigInput = z.input<typeof newsConfigSchema>
-export type BlogConfigInput = z.input<typeof blogConfigSchema>
+export type PostsConfigInput = z.input<typeof postsConfigSchema>
 export type FaqConfigInput = z.input<typeof faqConfigSchema>
 export type InstagramConfigInput = z.input<typeof instagramConfigSchema>
 
@@ -228,7 +228,7 @@ export type SectionConfig =
   | HeroConfig
   | SpaceListConfig
   | NewsConfig
-  | BlogConfig
+  | PostsConfig
   | FaqConfig
   | CtaConfig
   | CustomConfig
@@ -264,10 +264,10 @@ export function isNewsConfig(config: unknown): config is NewsConfig {
 }
 
 /**
- * BlogConfig型ガード
+ * PostsConfig型ガード
  */
-export function isBlogConfig(config: unknown): config is BlogConfig {
-  return blogConfigSchema.safeParse(config).success
+export function isPostsConfig(config: unknown): config is PostsConfig {
+  return postsConfigSchema.safeParse(config).success
 }
 
 /**
@@ -308,7 +308,7 @@ export function getSafeConfig<T extends HomepageSectionType>(
 ): T extends typeof HomepageSectionType.HERO ? HeroConfig
   : T extends typeof HomepageSectionType.SPACE_LIST ? SpaceListConfig
   : T extends typeof HomepageSectionType.NEWS ? NewsConfig
-  : T extends typeof HomepageSectionType.BLOG ? BlogConfig
+  : T extends typeof HomepageSectionType.POST ? PostsConfig
   : T extends typeof HomepageSectionType.FAQ ? FaqConfig
   : T extends typeof HomepageSectionType.CTA ? CtaConfig
   : T extends typeof HomepageSectionType.CUSTOM ? CustomConfig
@@ -346,7 +346,7 @@ export const defaultSectionConfigs: Record<HomepageSectionType, SectionConfig> =
     maxItems: 3,
     showViewAllLink: true,
   },
-  [HomepageSectionType.BLOG]: {
+  [HomepageSectionType.POST]: {
     title: '最新の記事',
     maxItems: 3,
     showViewAllLink: true,
@@ -377,7 +377,7 @@ export const sectionTypeLabels: Record<HomepageSectionType, string> = {
   [HomepageSectionType.HERO]: 'ヒーロー',
   [HomepageSectionType.SPACE_LIST]: 'スペース一覧',
   [HomepageSectionType.NEWS]: 'お知らせ',
-  [HomepageSectionType.BLOG]: 'ブログ',
+  [HomepageSectionType.POST]: 'ブログ',
   [HomepageSectionType.FAQ]: 'よくあるご質問',
   [HomepageSectionType.CTA]: 'CTA（行動喚起）',
   [HomepageSectionType.CUSTOM]: 'カスタム',
@@ -391,7 +391,7 @@ export const defaultSectionOrder: HomepageSectionType[] = [
   HomepageSectionType.HERO,
   HomepageSectionType.SPACE_LIST,
   HomepageSectionType.NEWS,
-  HomepageSectionType.BLOG,
+  HomepageSectionType.POST,
   HomepageSectionType.FAQ,
   HomepageSectionType.CTA,
 ]

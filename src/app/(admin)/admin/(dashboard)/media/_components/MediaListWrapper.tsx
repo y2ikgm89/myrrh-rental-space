@@ -6,6 +6,7 @@ import { getMediaList } from '@/admin/actions/media'
 import { MediaGrid } from './MediaGrid'
 import { MediaTable } from './MediaTable'
 import { Pagination } from '@/admin/components/ui'
+import { EmptyState } from '@/admin/components/EmptyState'
 import {
   parseMediaTypeFilter,
   parseMediaUsageFilter,
@@ -39,12 +40,10 @@ export async function MediaListWrapper({ searchParams }: Props) {
 
   if (result.items.length === 0) {
     return (
-      <div className="rounded-lg border bg-white p-12 text-center">
-        <p className="text-muted-foreground">メディアがありません</p>
-        <p className="text-sm text-muted-foreground mt-1">
-          上のアップロードボタンからファイルをアップロードしてください
-        </p>
-      </div>
+      <EmptyState
+        message="メディアがありません"
+        description="上のアップロードボタンからファイルをアップロードしてください"
+      />
     )
   }
 

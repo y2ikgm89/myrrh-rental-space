@@ -12,8 +12,8 @@ import {
   Button,
   Badge,
   Switch,
-  DeleteConfirmDialog,
 } from '@/admin/components/ui'
+import { DeleteConfirmDialog } from '@/admin/components/DeleteConfirmDialog'
 import { toggleLocationPublish, deleteLocation } from '@/admin/actions/location'
 import type { LocationWithStats } from '@/admin/lib/validations/location'
 import { formatDateTimeShort } from '@/shared/lib/utils'

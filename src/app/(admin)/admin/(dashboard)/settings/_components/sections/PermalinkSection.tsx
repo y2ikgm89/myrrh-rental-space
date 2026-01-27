@@ -1,0 +1,186 @@
+'use client'
+
+/**
+ * パーマリンク設定セクション
+ *
+ * 投稿記事のURL構造とプレフィックス表示を設定
+ */
+
+import { useState, useTransition } from 'react'
+import { toast } from 'sonner'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Label,
+  Button,
+  SelectionBox,
+  Switch,
+} from '@/admin/components/ui'
+import { updatePermalinkSettings } from '@/admin/actions/settings'
+import type { SelectionBoxOption } from '@/admin/components/ui'
+
+// =============================================================================
+// Types
+// =============================================================================
+
+type PermalinkSectionProps = {
+  settings: {
+    postPermalinkStructure: string | null
+    postUrlPrefixEnabled: boolean
+  }
+}
+
+type PermalinkStructure = 'post-name' | 'date-name' | 'category-name'
+
+// =============================================================================
+// Type Guards
+// =============================================================================
+
+const VALID_STRUCTURES: readonly PermalinkStructure[] = ['post-name', 'date-name', 'category-name']
+const VALID_STRUCTURES_SET: ReadonlySet<string> = new Set(VALID_STRUCTURES)
+
+function isValidPermalinkStructure(value: unknown): value is PermalinkStructure {
+  return typeof value === 'string' && VALID_STRUCTURES_SET.has(value)
+}
+
+function getValidPermalinkStructure(value: string | null): PermalinkStructure {
+  return isValidPermalinkStructure(value) ? value : 'post-name'
+}
+
+// =============================================================================
+// Constants
+// =============================================================================
+
+const PERMALINK_OPTIONS: SelectionBoxOption[] = [
+  {
+    value: 'post-name',
+    label: 'シンプル',
+    description: '記事名のみのシンプルなURL',
+  },
+  {
+    value: 'date-name',
+    label: '日付+記事名',
+    description: '公開日が含まれるURL',
+  },
+  {
+    value: 'category-name',
+    label: 'カテゴリ+記事名',
+    description: 'カテゴリ階層を含むURL',
+  },
+]
+
+// =============================================================================
+// Component
+// =============================================================================
+
+export function PermalinkSection({ settings }: PermalinkSectionProps) {
+  const [isPending, startTransition] = useTransition()
+
+  const [structure, setStructure] = useState<PermalinkStructure>(
+    getValidPermalinkStructure(settings.postPermalinkStructure)
+  )
+  const [prefixEnabled, setPrefixEnabled] = useState(settings.postUrlPrefixEnabled)
+
+  const handleSave = () => {
+    startTransition(async () => {
+      const result = await updatePermalinkSettings({
+        postPermalinkStructure: structure,
+        postUrlPrefixEnabled: prefixEnabled,
+      })
+
+      if (result.success) {
+        toast.success('パーマリンク設定を保存しました')
+      } else {
+        toast.error(result.error)
+      }
+    })
+  }
+
+  const getPreviewUrl = () => {
+    const prefix = prefixEnabled ? '/posts' : ''
+    switch (structure) {
+      case 'date-name':
+        return `${prefix}/2026/01/article-title`
+      case 'category-name':
+        return `${prefix}/technology/article-title`
+      case 'post-name':
+      default:
+        return `${prefix}/article-title`
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>パーマリンク設定</CardTitle>
+        <CardDescription>
+          投稿記事のURL構造を設定します
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* URLプレフィックス設定 */}
+        <div className="flex items-center justify-between rounded-lg border p-4">
+          <div className="space-y-0.5">
+            <Label className="text-base">/posts/ プレフィックス</Label>
+            <p className="text-sm text-muted-foreground">
+              URLに /posts/ を含める（推奨）
+            </p>
+          </div>
+          <Switch
+            checked={prefixEnabled}
+            onCheckedChange={setPrefixEnabled}
+          />
+        </div>
+
+        {/* プレフィックス無効時の警告 */}
+        {!prefixEnabled && (
+          <div className="rounded-md border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950">
+            <p className="text-sm text-amber-800 dark:text-amber-200">
+              プレフィックスを無効にすると、投稿のスラッグがルートレベルで使用されます。
+              既存の静的ページ（about, contact 等）や予約パスと衝突しないよう注意してください。
+            </p>
+          </div>
+        )}
+
+        {/* URL構造選択 */}
+        <div className="space-y-3">
+          <Label>URL構造</Label>
+          <SelectionBox
+            options={PERMALINK_OPTIONS}
+            value={structure}
+            onChange={(value) => {
+              if (isValidPermalinkStructure(value)) {
+                setStructure(value)
+              }
+            }}
+            columns={1}
+            name="パーマリンク構造"
+          />
+        </div>
+
+        {/* プレビュー */}
+        <div className="rounded-md bg-muted p-4">
+          <Label className="text-sm font-medium">プレビュー</Label>
+          <code className="mt-2 block text-sm font-mono">
+            {getPreviewUrl()}
+          </code>
+        </div>
+
+        {/* 注意事項 */}
+        <div className="rounded-md border border-muted bg-muted/50 p-4">
+          <p className="text-sm text-muted-foreground">
+            予約済みパス（about, contact, news, spaces, admin など）と同名のスラッグは使用できません。
+          </p>
+        </div>
+
+        {/* 保存ボタン */}
+        <Button onClick={handleSave} disabled={isPending}>
+          {isPending ? '保存中...' : '保存'}
+        </Button>
+      </CardContent>
+    </Card>
+  )
+}

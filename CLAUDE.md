@@ -2,111 +2,160 @@
 
 > Myrrh Rental Space - レンタルスペース予約管理システム
 
-## ワークフロー
+## 🔴 必須（違反禁止）
 
-**IMPORTANT**:
-- 全ステップを順守（飛ばさない）
-- セッション継続時: このファイル再読 → `docs/plans/README.md`確認 → TodoWrite再初期化
-- 初期設定時: `docs/{requirements,architecture,plans}/`作成
+### 禁止
 
-| # | ステップ | エージェント | docs更新 |
-|---|----------|-------------|----------|
-| 0 | **Triage** | `/feature-dev`(複数ファイル+設計) | - |
-| 1 | **Explore** | `Explore`, `code-explorer` | - |
-| 2 | **Design** | `code-architect` | `architecture/` |
-| 3 | **Plan** | TodoWrite | `requirements/`, `plans/NNN-title.md` |
-| 4 | **Code** | `general-purpose`並列 → `code-simplifier` | - |
-| 5 | **Verify** | - | - |
-| 6 | **Review** | `code-reviewer` | - |
-| 7 | **Commit** | - | `plans/README.md` |
+- **型アサーション（`as`）禁止** → `.claude/rules/type-safety.md`
+- **後方互換性ハック禁止** → 不要コード完全削除
+- **検証なしの完了報告禁止** → 必ず検証コマンド実行
+- **曖昧な要件の推測実装禁止** → `AskUserQuestion`で確認
 
-**Triage判断**:
-- 複数ファイル＋設計判断＋自律実行OK → `/feature-dev`（**実装後、必ずドキュメント生成**）
-- 軽微な修正（設定変更、コメント、定数のみ）→ 直接実行、code-simplifierスキップ
+### 検証（完了報告前に必須）
 
-**Explore**: コードベースを読む（コードは書かない）
+| タイミング | コマンド |
+|-----------|---------|
+| 作業中 | `bun run type-check` |
+| 完了報告前 | `bun run type-check && bun run lint` |
+| コミット/PR前 | `bun run type-check && bun run lint && bun run build` |
 
-**PR作成**: 機能追加 / 複数ファイル変更 / 破壊的変更 / レビュー必要時
+### 詳細ルール
 
-## チェックリスト
-
-新規ロジック・複数ファイル変更時、TodoWriteに含める:
-
-```
-□ Explore: 関連コード調査
-□ Design: 設計検討（必要時）→ docs/architecture/更新
-□ Plan: docs/plans/NNN-title.md作成、docs/requirements/更新
-□ Code: 実装
-□ Code: code-simplifier
-□ Verify: type-check/lint/build
-□ Review: code-reviewer
-□ Commit: git commit + docs/plans/README.md更新
-```
-
-## /feature-dev 完了後（必須）
-
-1. `docs/plans/NNN-title.md` 作成（既存ファイルの最大番号+1）
-2. `docs/plans/README.md` の「完了した計画」先頭に追記
-3. `docs/requirements/` 関連ファイル更新
-4. `docs/architecture/` 設計変更時のみ更新
-
-※テンプレート: `docs/templates/`
-
-## 対話ルール
-
-作業開始前に確認が必要な場合:
-- 要件が曖昧 / 設計判断が必要 / 破壊的変更 / ライブラリ選択
-
-**曖昧な要件を推測で実装しない**
-
-## 規約
-
-- Server Components優先、Server Actions（mutations）
-- Zodバリデーション必須
-- 命名: コンポーネント`PascalCase.tsx`、その他`kebab-case.ts`
-- コミット: `<type>(<scope>): <subject>`（Conventional Commits）
-- **後方互換性なし**: クリーン実装を優先
-  - 不要なコードは完全削除（`// removed`コメント不要）
-  - 未使用の`_vars`リネームや型のre-export禁止
-  - 古いAPIのラッパー/シム作成禁止
-  - **破壊的変更時**: 現在の実装と必ず比較し、メリット・デメリットを精査・検証
-  - **移行時**: 既存機能は完全にクリーンアップ（残骸を残さない）
+- `.claude/rules/type-safety.md` - 型安全ルール
+- `.claude/rules/implementation-quality.md` - 実装品質ルール
+- `.claude/rules/test-quality.md` - テスト品質ルール
+- `.claude/rules/react-patterns.md` - React 19.2 / React Compiler
+- `.claude/rules/server-actions.md` - Next.js 16 Server Actions / キャッシュ
+- `.claude/rules/auth-patterns.md` - Better Auth 1.4 / RBAC
+- `.claude/rules/prisma-patterns.md` - Prisma 7 / JSON型安全
+- `.claude/rules/zod-patterns.md` - Zod 4 バリデーション
+- `.claude/rules/nuqs-patterns.md` - nuqs URL状態管理
+- `.claude/rules/tailwind-patterns.md` - Tailwind CSS 4 / CSS-first設定
+- `.claude/rules/lexical-patterns.md` - Lexical 0.39 エディタ実装
 
 ---
 
-## プロジェクト固有
+## 🟡 ワークフロー
+
+**superpowersが自動発動** — 特別な操作不要
+
+> **セッション継続時**: `docs/plans/README.md` を確認して進行中タスクを把握
+
+```
+要件確認 → 調査 → 設計 → 計画 → 実装(TDD) → 検証 → レビュー → 完了
+                  ↑ 全工程でsuperpowersが自動介入
+```
+
+### 自動発動スキル
+
+| スキル | 発動タイミング | 推奨ツール |
+|--------|----------------|-----------|
+| - | 要件確認時 | `AskUserQuestion` |
+| - | コードベース調査時 | `code-explorer`, `serena` * |
+| `brainstorming` | 機能追加・設計時 | `context7`, `WebSearch`, `WebFetch` |
+| `writing-plans` | 計画作成時 | - |
+| `executing-plans` | 計画実行時 | - |
+| `test-driven-development` | 実装時 | `serena` |
+| - | 実装後の整理 | `code-simplifier` |
+| `systematic-debugging` | バグ調査時 | `serena`, `code-explorer` |
+| `verification-before-completion` | 完了報告前 | `playwright`, `bun run test` |
+| `requesting-code-review` | レビュー依頼時 | - |
+| `receiving-code-review` | レビュー対応時 | - |
+| `finishing-a-development-branch` | ブランチ完了時 | - |
+| - | 実装完了後 | ドキュメント更新 * |
+
+\* **ドキュメント更新対象:** `docs/plans/NNN-title.md`作成 → `docs/plans/README.md`更新 → `docs/requirements/`（必要時） → `docs/architecture/`（設計変更時）
+
+\* **コードベース調査ツール使い分け:**
+- `serena`: シンボル参照追跡・定義ジャンプ・構造化コードの深い分析（LSPベース）
+- `code-explorer`: 広範なキーワード検索・ファイル構造探索・探索範囲が不明確な場合
+
+### superpowers使用基準
+
+| 状況 | 判断 |
+|------|------|
+| 原因明確なバグ修正 | 省略可 |
+| 1-2ファイルの小規模修正 | 省略可 |
+| ユーザーが具体的に指示 | 省略可 |
+| `verification-before-completion` | **常に必須** |
+
+### MCPツール
+
+| ツール | 用途 | 優先度 |
+|--------|------|--------|
+| `serena` | セマンティックコード分析・シンボル操作・リファクタリング | 🟡 推奨 |
+| `context7` | ライブラリAPI・最新ドキュメント取得 | 🟡 推奨 |
+| `playwright` | E2Eテスト・ブラウザ操作 | 🟡 推奨 |
+| `WebSearch` | 最新情報・エラー解決検索 | 🟢 必要時 |
+| `WebFetch` | 公開URL・GitHubリポジトリ取得 | 🟢 必要時 |
+
+### 手動コマンド（必要時のみ）
+
+| コマンド | 用途 |
+|---------|------|
+| `/superpowers:brainstorm` | 設計を明示的に開始 |
+| `/superpowers:write-plan` | 計画作成を明示的に開始 |
+| `/superpowers:execute-plan` | 計画実行を明示的に開始 |
+| `/superpowers:using-git-worktrees` | 隔離開発環境作成 |
+| `code-explorer` | コードベース深掘り分析 |
+| `code-simplifier` | コード整理・簡略化 |
+
+---
+
+## 🟢 プロジェクト情報
+
+### 技術スタック
+
+| 技術 | バージョン | 備考 |
+|------|-----------|------|
+| Next.js | 16.1.4 | `'use cache'`, `updateTag`, PPR対応 |
+| React | 19.2.3 | React Compiler 1.0, `<Activity>`, `useEffectEvent` |
+| TypeScript | 5.9.3 | TS 7.0 (Go native) プレビュー利用可 |
+| Bun | 1.3.x | Bun.SQL, HTML直接実行 |
+| Prisma | 7.3.0 | 型生成98%削減, mapped enums |
+| PostgreSQL | - | Supabase経由 |
+| Better Auth | 1.4.17 | RBAC, Auth.js統合 |
+| Tailwind CSS | 4.1.18 | CSS-first設定, @theme |
+| Zod | 4.3.6 | `{ error: }` パラメータ, z.fromJSONSchema() |
+| nuqs | 2.8.6 | createSearchParamsCache, Zod 4統合 |
+| Lexical | 0.39.0 | React 19対応, Node transforms |
+
+### 構造
+
+| パス | 用途 |
+|------|------|
+| `src/app/(admin)/admin/(dashboard)/_shared/` | 管理画面専用 |
+| `src/app/(public)/_shared/` | 公開ページ専用 |
+| `src/shared/` | 共有 |
+| `docs/{requirements,architecture,plans}/` | ドキュメント |
+
+### エイリアス
+
+`@/admin/*`, `@/public/*`, `@/shared/*`
 
 ### コマンド
 
 ```bash
 bun dev                    # 開発サーバー
-bun run test               # テスト実行
+bun run test               # テスト
 bun run type-check && bun run lint && bun run build  # 検証
-bunx --bun prisma migrate dev --name <name>  # DBマイグレーション
+bunx --bun prisma migrate dev --name <name>  # マイグレーション
+bun run db:generate        # Prismaスキーマ再生成
 ```
 
-### 技術スタック
+### コーディング規約
 
-Next.js 16 / React 19 / TypeScript 5.9 / Bun 1.3 / Prisma 7 / PostgreSQL (Supabase) / Better Auth 1.x / Tailwind CSS 4 / Zod 4
+- Server Components優先、Server Actions
+- Zodバリデーション必須
+- 命名: コンポーネント`PascalCase.tsx`、その他`kebab-case.ts`
+- コミット: `<type>(<scope>): <subject>`
 
-### 構造
+---
 
-**Next.js コロケーションパターン** (Plan 050)
+## セットアップ（初回のみ）
 
-| パス | 用途 |
-|------|------|
-| `src/app/(admin)/admin/(dashboard)/_shared/` | 管理画面専用（components, actions, hooks, contexts, lib, types） |
-| `src/app/(public)/_shared/` | 公開ページ専用（components, actions, emails, lib, types） |
-| `src/shared/` | 共有（prisma, auth, utils, email, storage など） |
-| `src/app/(public)/` | 公開ページルート |
-| `src/app/(admin)/admin/` | 管理画面ルート |
-| `src/app/api/` | API Routes |
-| `docs/requirements/` | 機能要件（機能単位） |
-| `docs/architecture/` | アーキテクチャ（設計判断・構成図） |
-| `docs/plans/` | 実装計画（README.md=履歴、NNN-title.md=詳細） |
-| `.claude/plans/` | Claude Code内部一時計画（.gitignore、必ずdocs/plans/へコピー） |
-
-**パスエイリアス**:
-- `@/admin/*` → `src/app/(admin)/admin/(dashboard)/_shared/*`
-- `@/public/*` → `src/app/(public)/_shared/*`
-- `@/shared/*` → `src/shared/*`
+```bash
+# superpowersインストール
+/plugin marketplace add obra/superpowers-marketplace
+/plugin install superpowers@superpowers-marketplace
+```

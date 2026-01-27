@@ -3,10 +3,13 @@
  *
  * DBからAnalytics関連の設定を取得する
  * Next.js 16 'use cache' ディレクティブによる明示的キャッシュ制御
+ *
+ * @module public/lib/analytics/config
  */
 
 import { cacheLife, cacheTag } from 'next/cache'
 import { prisma } from '@/shared/lib/prisma'
+import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
 
 export type AnalyticsConfig = {
   analyticsType: 'ga4' | 'gtm' | null
@@ -70,7 +73,11 @@ export async function getAnalyticsConfig(): Promise<AnalyticsConfig> {
       gaPropertyId: settings.gaPropertyId ?? null,
     }
   } catch (error) {
-    console.error('Failed to fetch analytics config:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.LOW,
+      context: { operation: 'getAnalyticsConfig' },
+    })
     return getDefaultAnalyticsConfig()
   }
 }

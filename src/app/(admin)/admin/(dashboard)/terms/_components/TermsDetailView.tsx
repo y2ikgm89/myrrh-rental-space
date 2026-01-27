@@ -38,12 +38,14 @@ import {
   deleteTermsVersion,
 } from '@/admin/actions/terms'
 import type { TermsDetail } from '@/shared/lib/validations/terms'
+import type { BusinessInfo } from '@/shared/lib/terms-templates'
 
 interface TermsDetailViewProps {
   terms: TermsDetail
+  businessInfo: BusinessInfo
 }
 
-export function TermsDetailView({ terms }: TermsDetailViewProps) {
+export function TermsDetailView({ terms, businessInfo }: TermsDetailViewProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [activeTab, setActiveTab] = useState('versions')
@@ -278,6 +280,8 @@ export function TermsDetailView({ terms }: TermsDetailViewProps) {
           </DialogHeader>
           <TermsVersionForm
             termsId={terms.id}
+            termsType={terms.type}
+            businessInfo={businessInfo}
             onSuccess={() => {
               setShowNewVersionDialog(false)
               router.refresh()

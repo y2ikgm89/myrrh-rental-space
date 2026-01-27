@@ -8,7 +8,7 @@
  * - モバイル: ドロワー (スライドイン)
  */
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { tv } from 'tailwind-variants'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -49,23 +49,34 @@ const styles = tv({
         sidebar: '-translate-x-full lg:translate-x-0',
       },
     },
+    isFullscreen: {
+      true: {
+        overlay: 'opacity-0 pointer-events-none',
+        // lg:でも非表示にするため lg:-translate-x-full を追加
+        sidebar: '-translate-x-full lg:-translate-x-full',
+      },
+    },
   },
 })
 
 type ResponsiveSidebarProps = {
-  userInfo: React.ReactNode
+  userInfo: ReactNode
 }
 
 export function ResponsiveSidebar({ userInfo }: ResponsiveSidebarProps) {
-  const { sidebarState, closeSidebar, isMobile } = useAdminLayout()
+  const { sidebarState, closeSidebar, isMobile, isFullscreen, hasMounted } = useAdminLayout()
   const pathname = usePathname()
   const sidebarRef = useRef<HTMLElement>(null)
-  const isOpen = sidebarState === 'expanded'
-  const classes = styles({ isOpen })
+
+  // Hydration対策: マウント前はSSR時と同じ値を使用
+  // SSR時: sidebarState='expanded', isMobile=false → isOpen=true
+  const isOpen = hasMounted ? sidebarState === 'expanded' : true
+  const effectiveIsMobile = hasMounted && isMobile
+  const classes = styles({ isOpen, isFullscreen })
 
   // ESCキーで閉じる
   useEffect(() => {
-    if (!isMobile || !isOpen) return
+    if (!effectiveIsMobile || !isOpen) return
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -75,17 +86,17 @@ export function ResponsiveSidebar({ userInfo }: ResponsiveSidebarProps) {
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isMobile, isOpen, closeSidebar])
+  }, [effectiveIsMobile, isOpen, closeSidebar])
 
   // スクロール禁止
   useEffect(() => {
-    if (isMobile && isOpen) {
+    if (effectiveIsMobile && isOpen) {
       document.body.classList.add('overflow-hidden')
     } else {
       document.body.classList.remove('overflow-hidden')
     }
     return () => document.body.classList.remove('overflow-hidden')
-  }, [isMobile, isOpen])
+  }, [effectiveIsMobile, isOpen])
 
   return (
     <>
@@ -118,7 +129,7 @@ export function ResponsiveSidebar({ userInfo }: ResponsiveSidebarProps) {
 
         {/* ロゴ */}
         <div className={classes.logo()}>
-          <Link href="/admin">Myrrh Admin</Link>
+          <Link href="/admin">管理画面</Link>
         </div>
 
         {/* ナビゲーション */}
@@ -133,7 +144,7 @@ export function ResponsiveSidebar({ userInfo }: ResponsiveSidebarProps) {
                   <Link
                     href={item.href}
                     className={`${classes.navItem()} ${isActive ? classes.navItemActive() : ''}`}
-                    onClick={() => isMobile && closeSidebar()}
+                    onClick={() => effectiveIsMobile && closeSidebar()}
                   >
                     {item.icon}
                     <span className="text-sm font-medium">{item.label}</span>

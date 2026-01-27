@@ -61,11 +61,13 @@ A reservation and management system for rental spaces. Provides a highly designe
 
 ## Dev environment tips
 
-- Project structure: **Admin/Public/Shared Complete Separation Architecture** (Plan 042)
-  - `src/admin/` - Admin-only (components, actions, hooks, contexts, lib, types)
-  - `src/public/` - Public-only (components, actions, emails, lib, types)
-  - `src/shared/` - Shared utilities (prisma, auth, utils, email, storage, generated/prisma)
-  - `src/app/` - App Router routes
+- Project structure: **Next.js Colocation Pattern** (Plan 050)
+  - `src/app/(admin)/admin/(dashboard)/_shared/` - Admin-only (components, actions, hooks, contexts, lib, types)
+  - `src/app/(public)/_shared/` - Public-only (components, actions, emails, lib, types)
+  - `src/shared/` - Shared utilities (prisma, auth, utils, email, storage)
+  - `src/app/(public)/` - Public page routes
+  - `src/app/(admin)/admin/` - Admin routes
+  - `src/app/api/` - API Routes
   - Path aliases: `@/admin/*`, `@/public/*`, `@/shared/*`
   - See `docs/architecture/PROJECT_STRUCTURE.md` for details
 - Prisma: Create migration after schema changes with `bunx --bun prisma migrate dev --name <migration_name>`, deploy with `bunx --bun prisma migrate deploy`, view DB with `bunx --bun prisma studio`
@@ -90,10 +92,10 @@ A reservation and management system for rental spaces. Provides a highly designe
 
 ## Technical stack
 
-- **React**: 19.2.3, **Next.js**: 16.1.1, **TypeScript**: 5.9.3, **Bun**: 1.3.6
-- **Prisma**: 7.2.0, **Supabase**: PostgreSQL, **Zod**: 4.3.5
+- **React**: 19.2.3, **Next.js**: 16.1.4, **TypeScript**: 5.9.3, **Bun**: 1.3.6
+- **Prisma**: 7.3.0, **Supabase**: PostgreSQL, **Zod**: 4.3.5
 - **Tailwind CSS**: 4.1.18, **GSAP** or **Motion** (formerly Framer Motion), **Three.js** (`@react-three/fiber` + `@react-three/drei`) or **Pixi.js** (`@pixi/react`)
-- **Better Auth**: 1.4.11, **nuqs**: 2.8.6
+- **Better Auth**: 1.4.17, **nuqs**: 2.8.6
 - **Deployment**: Google Cloud Run (Bun runtime), Supabase
 
 **For detailed version information**: See `[docs/architecture/TECH_STACK.md](docs/architecture/TECH_STACK.md)`
@@ -102,8 +104,8 @@ A reservation and management system for rental spaces. Provides a highly designe
 
 - **Prisma does not support Edge Runtime**: Use Bun Runtime (`runtime = "nodejs"`) for API Routes and Server Actions
 - **Full Bun Runtime Support**: This project runs fully on Bun 1.3.6 (package manager, runtime, build tool, test runner)
-- **Better Auth**: Use `better-auth/adapters/prisma` with Prisma 7, verify compatibility before version updates
-- **Security**: React 19.2.3 and Next.js 16.1.1 required (CVE-2025-55182 fix). Always validate inputs with Zod schemas (client and server)
+- **Better Auth**: Use `better-auth/adapters/prisma` with Prisma 7.3, verify compatibility before version updates
+- **Security**: React 19.2.3 and Next.js 16.1.4 required (CVE-2025-55182 fix). Always validate inputs with Zod schemas (client and server)
 
 **For detailed constraints**: See `[docs/operations/bun.md](docs/operations/bun.md)` and `[docs/security/README.md](docs/security/README.md)`
 
@@ -149,7 +151,7 @@ Project Rules provide more granular, context-aware guidance than `AGENTS.md`. Th
 
 - **Better Auth**: Email/Password, Google OAuth (as needed)
 - **Session strategy**: Cookie-based (scrypt password hashing)
-- **Prisma Adapter**: Use `better-auth/adapters/prisma` (check compatibility with Prisma 7.2.0)
+- **Prisma Adapter**: Use `better-auth/adapters/prisma` (check compatibility with Prisma 7.3.0)
 - **Roles**: `admin`, `user`
 - **Protection**: Next.js Middleware for routes, permission checks in Server Actions
 - **Supabase RLS**: Database-level security

@@ -15,6 +15,7 @@ import { prisma } from '@/shared/lib/prisma'
 import type { Settings } from '@/shared/generated/prisma/client'
 import type { ReactElement } from 'react'
 import { safeFetch, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
+import { toPlainObject } from '@/shared/lib/serialize'
 import { FooterBranding } from './FooterBranding'
 import { SITE_DEFAULTS } from '@/shared/lib/constants'
 
@@ -125,7 +126,7 @@ async function getFooterSettings(): Promise<FooterSettings | null> {
   cacheLife('hours')
   cacheTag('settings')
 
-  return safeFetch({
+  const result = await safeFetch({
     fetch: () =>
       prisma.settings.findFirst({
         select: {
@@ -151,6 +152,8 @@ async function getFooterSettings(): Promise<FooterSettings | null> {
     operationName: 'getFooterSettings',
     context: { component: 'Footer' },
   })
+
+  return toPlainObject(result)
 }
 
 export async function Footer(): Promise<ReactElement> {

@@ -1,9 +1,29 @@
+/**
+ * メール送信サービス
+ *
+ * 予約確認、お問い合わせ確認、管理者通知などのメール送信を行うサービス。
+ * Resend APIを使用してメールを配信します。
+ *
+ * ## 対応メール種別
+ * - **予約関連**: 予約確認、予約キャンセル、管理者通知
+ * - **お問い合わせ**: 確認メール、管理者通知
+ * - **システム**: カレンダー同期エラー、Webhook更新通知
+ * - **スタッフ**: 招待メール
+ *
+ * ## 添付機能
+ * - iCalファイル添付（予約確認メール）
+ * - Add to Calendarリンク（Google/Outlook/Apple）
+ *
+ * @module shared/lib/email-service
+ */
+
 import { getResendClient, getFromAddress, isEmailEnabled } from './email'
-import { ReservationConfirmationEmail } from '@/public/emails/reservation-confirmation'
-import { ReservationCancelledEmail } from '@/public/emails/reservation-cancelled'
-import { ContactConfirmationEmail } from '@/public/emails/contact-confirmation'
-import { AdminNotificationEmail } from '@/public/emails/admin-notification'
-import { StaffInvitationEmail } from '@/public/emails/staff-invitation'
+import { logError, ErrorCategory, ErrorSeverity, normalizeError } from './errors'
+import { ReservationConfirmationEmail } from '@/shared/emails/reservation-confirmation'
+import { ReservationCancelledEmail } from '@/shared/emails/reservation-cancelled'
+import { ContactConfirmationEmail } from '@/shared/emails/contact-confirmation'
+import { AdminNotificationEmail } from '@/shared/emails/admin-notification'
+import { StaffInvitationEmail } from '@/shared/emails/staff-invitation'
 import { prisma } from './prisma'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
@@ -11,7 +31,7 @@ import {
   createReservationEvent,
   generateAddToCalendarLinks,
   generateICalContent,
-} from '@/admin/lib/ical'
+} from '@/shared/lib/ical'
 import { getAdminUrl, SITE_DEFAULTS } from './constants'
 
 // =============================================================================
@@ -103,7 +123,7 @@ export async function sendReservationConfirmationEmail(
   data: ReservationEmailData
 ): Promise<{ success: boolean; error?: string }> {
   if (!isEmailEnabled()) {
-    console.warn('Email disabled: RESEND_API_KEY not set')
+    // Email disabled: RESEND_API_KEY not set - skip silently in development
     return { success: true }
   }
 
@@ -147,7 +167,14 @@ export async function sendReservationConfirmationEmail(
           },
         ]
       } catch (icalError) {
-        console.error('Failed to generate iCal attachment:', icalError)
+        logError(normalizeError(icalError), {
+          category: ErrorCategory.UNKNOWN,
+          severity: ErrorSeverity.LOW,
+          context: {
+            operation: 'generateICalAttachment',
+            reservationId: data.reservationId,
+          },
+        })
         // 添付なしで続行
       }
     }
@@ -172,19 +199,32 @@ export async function sendReservationConfirmationEmail(
 
     return { success: true }
   } catch (error) {
-    console.error('Failed to send reservation confirmation email:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: {
+        operation: 'sendReservationConfirmationEmail',
+        reservationId: data.reservationId,
+        customerEmail: data.customerEmail,
+      },
+    })
     return { success: false, error: 'メール送信に失敗しました' }
   }
 }
 
 /**
  * 予約キャンセルメールを送信
+ *
+ * 予約がキャンセルされた際に顧客へ通知メールを送信します。
+ *
+ * @param data - 予約メールデータ
+ * @returns 送信結果
  */
 export async function sendReservationCancelledEmail(
   data: ReservationEmailData
 ): Promise<{ success: boolean; error?: string }> {
   if (!isEmailEnabled()) {
-    console.warn('Email disabled: RESEND_API_KEY not set')
+    // Email disabled: RESEND_API_KEY not set - skip silently in development
     return { success: true }
   }
 
@@ -214,20 +254,34 @@ export async function sendReservationCancelledEmail(
 
     return { success: true }
   } catch (error) {
-    console.error('Failed to send reservation cancelled email:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: {
+        operation: 'sendReservationCancelledEmail',
+        reservationId: data.reservationId,
+        customerEmail: data.customerEmail,
+      },
+    })
     return { success: false, error: 'メール送信に失敗しました' }
   }
 }
 
 /**
  * 予約に関する管理者通知メールを送信
+ *
+ * 予約の作成・更新・キャンセル時に管理者へ通知メールを送信します。
+ *
+ * @param data - 予約メールデータ
+ * @param action - アクション種別（new/update/cancel）
+ * @returns 送信結果
  */
 export async function sendReservationAdminNotification(
   data: ReservationEmailData,
   action: 'new' | 'update' | 'cancel'
 ): Promise<{ success: boolean; error?: string }> {
   if (!isEmailEnabled()) {
-    console.warn('Email disabled: RESEND_API_KEY not set')
+    // Email disabled: RESEND_API_KEY not set - skip silently in development
     return { success: true }
   }
 
@@ -271,7 +325,15 @@ export async function sendReservationAdminNotification(
 
     return { success: true }
   } catch (error) {
-    console.error('Failed to send admin notification email:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: {
+        operation: 'sendReservationAdminNotification',
+        reservationId: data.reservationId,
+        action,
+      },
+    })
     return { success: false, error: 'メール送信に失敗しました' }
   }
 }
@@ -282,12 +344,17 @@ export async function sendReservationAdminNotification(
 
 /**
  * お問い合わせ確認メールを送信
+ *
+ * お問い合わせフォーム送信後に顧客へ確認メールを送信します。
+ *
+ * @param data - お問い合わせメールデータ
+ * @returns 送信結果
  */
 export async function sendContactConfirmationEmail(
   data: ContactEmailData
 ): Promise<{ success: boolean; error?: string }> {
   if (!isEmailEnabled()) {
-    console.warn('Email disabled: RESEND_API_KEY not set')
+    // Email disabled: RESEND_API_KEY not set - skip silently in development
     return { success: true }
   }
 
@@ -310,19 +377,32 @@ export async function sendContactConfirmationEmail(
 
     return { success: true }
   } catch (error) {
-    console.error('Failed to send contact confirmation email:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: {
+        operation: 'sendContactConfirmationEmail',
+        inquiryId: data.inquiryId,
+        email: data.email,
+      },
+    })
     return { success: false, error: 'メール送信に失敗しました' }
   }
 }
 
 /**
  * お問い合わせ管理者通知メールを送信
+ *
+ * 新規お問い合わせを管理者へ通知するメールを送信します。
+ *
+ * @param data - お問い合わせメールデータ
+ * @returns 送信結果
  */
 export async function sendContactAdminNotification(
   data: ContactEmailData
 ): Promise<{ success: boolean; error?: string }> {
   if (!isEmailEnabled()) {
-    console.warn('Email disabled: RESEND_API_KEY not set')
+    // Email disabled: RESEND_API_KEY not set - skip silently in development
     return { success: true }
   }
 
@@ -352,7 +432,14 @@ export async function sendContactAdminNotification(
 
     return { success: true }
   } catch (error) {
-    console.error('Failed to send admin notification email:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: {
+        operation: 'sendContactAdminNotification',
+        inquiryId: data.inquiryId,
+      },
+    })
     return { success: false, error: 'メール送信に失敗しました' }
   }
 }
@@ -363,6 +450,12 @@ export async function sendContactAdminNotification(
 
 /**
  * カレンダー同期による時間変更拒否の管理者通知メールを送信
+ *
+ * Google Calendar側での時間変更が予約重複により拒否された場合に
+ * 管理者へ通知メールを送信します。
+ *
+ * @param data - 同期拒否通知データ
+ * @returns 送信結果
  */
 export async function sendCalendarSyncRejectionEmail(data: {
   reservationId: string
@@ -380,7 +473,7 @@ export async function sendCalendarSyncRejectionEmail(data: {
   }
 }): Promise<{ success: boolean; error?: string }> {
   if (!isEmailEnabled()) {
-    console.warn('Email disabled: RESEND_API_KEY not set')
+    // Email disabled: RESEND_API_KEY not set - skip silently in development
     return { success: true }
   }
 
@@ -439,7 +532,14 @@ ${getAdminUrl(`/reservations/${data.reservationId}`)}
 
     return { success: true }
   } catch (error) {
-    console.error('Failed to send calendar sync rejection email:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: {
+        operation: 'sendCalendarSyncRejectionEmail',
+        reservationId: data.reservationId,
+      },
+    })
     return { success: false, error: 'メール送信に失敗しました' }
   }
 }
@@ -450,12 +550,18 @@ ${getAdminUrl(`/reservations/${data.reservationId}`)}
 
 /**
  * スタッフ招待メールを送信
+ *
+ * 新規スタッフを招待するメールを送信します。
+ * セットアップURLと有効期限を含みます。
+ *
+ * @param data - スタッフ招待メールデータ
+ * @returns 送信結果
  */
 export async function sendStaffInvitationEmail(
   data: StaffInvitationEmailData
 ): Promise<{ success: boolean; error?: string }> {
   if (!isEmailEnabled()) {
-    console.warn('Email disabled: RESEND_API_KEY not set')
+    // Email disabled: RESEND_API_KEY not set - skip silently in development
     return { success: true }
   }
 
@@ -478,13 +584,26 @@ export async function sendStaffInvitationEmail(
 
     return { success: true }
   } catch (error) {
-    console.error('Failed to send staff invitation email:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: {
+        operation: 'sendStaffInvitationEmail',
+        to: data.to,
+      },
+    })
     return { success: false, error: 'メール送信に失敗しました' }
   }
 }
 
 /**
  * Webhook更新通知メールを送信
+ *
+ * Google Calendar Webhookの自動更新結果を管理者へ通知します。
+ * 成功時は新しい有効期限、失敗時はエラー内容を含みます。
+ *
+ * @param data - Webhook更新通知データ
+ * @returns 送信結果
  */
 export async function sendWebhookRenewalNotification(data: {
   success: boolean
@@ -492,7 +611,7 @@ export async function sendWebhookRenewalNotification(data: {
   error?: string
 }): Promise<{ success: boolean; error?: string }> {
   if (!isEmailEnabled()) {
-    console.warn('Email disabled: RESEND_API_KEY not set')
+    // Email disabled: RESEND_API_KEY not set - skip silently in development
     return { success: true }
   }
 
@@ -547,7 +666,11 @@ ${getAdminUrl('/settings')}
 
     return { success: true }
   } catch (error) {
-    console.error('Failed to send webhook renewal notification email:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.LOW,
+      context: { operation: 'sendWebhookRenewalNotification' },
+    })
     return { success: false, error: 'メール送信に失敗しました' }
   }
 }

@@ -15,12 +15,12 @@ import { ReservationStatus } from '@/shared/generated/prisma/enums'
 // 日付文字列のバリデーション（YYYY-MM-DD形式）
 const dateStringSchema = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, '日付の形式が正しくありません')
+  .regex(/^\d{4}-\d{2}-\d{2}$/, { message: '日付の形式が正しくありません' })
 
 // 時間文字列のバリデーション（HH:MM形式）
 const timeStringSchema = z
   .string()
-  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, '時間の形式が正しくありません')
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, { message: '時間の形式が正しくありません' })
 
 /**
  * 新規顧客情報スキーマ
@@ -28,19 +28,19 @@ const timeStringSchema = z
 export const newCustomerSchema = z.object({
   lastName: z
     .string()
-    .min(1, '姓を入力してください')
-    .max(50, '姓は50文字以内で入力してください'),
+    .min(1, { message: '姓を入力してください' })
+    .max(50, { message: '姓は50文字以内で入力してください' }),
   firstName: z
     .string()
-    .min(1, '名を入力してください')
-    .max(50, '名は50文字以内で入力してください'),
+    .min(1, { message: '名を入力してください' })
+    .max(50, { message: '名は50文字以内で入力してください' }),
   email: z
     .string()
-    .min(1, 'メールアドレスを入力してください')
-    .email('有効なメールアドレスを入力してください'),
+    .min(1, { message: 'メールアドレスを入力してください' })
+    .email({ message: '有効なメールアドレスを入力してください' }),
   phoneNumber: z
     .string()
-    .max(20, '電話番号は20文字以内で入力してください')
+    .max(20, { message: '電話番号は20文字以内で入力してください' })
     .optional()
     .or(z.literal('')),
 })
@@ -51,7 +51,7 @@ export const newCustomerSchema = z.object({
 export const adminReservationSchema = z
   .object({
     // スペース
-    spaceId: z.string().uuid('スペースを選択してください'),
+    spaceId: z.string().uuid({ message: 'スペースを選択してください' }),
 
     // 日時
     date: dateStringSchema,
@@ -62,10 +62,17 @@ export const adminReservationSchema = z
     customerId: z.string().uuid().optional(),
     customerData: newCustomerSchema.optional(),
 
-    // オプション
-    totalPrice: z.number().nonnegative('料金は0以上で入力してください').optional(),
+    // 料金オプション
+    totalPrice: z.number().nonnegative({ message: '料金は0以上で入力してください' }).optional(),
+
+    // 割引オプション
+    couponCode: z.string().max(20).optional().or(z.literal('')),
+    manualDiscountAmount: z.number().nonnegative({ message: '割引額は0以上で入力してください' }).optional(),
+    manualDiscountReason: z.string().max(200, { message: '割引理由は200文字以内で入力してください' }).optional().or(z.literal('')),
+
+    // その他オプション
     status: z.nativeEnum(ReservationStatus).default('CONFIRMED'),
-    notes: z.string().max(1000, 'メモは1000文字以内で入力してください').optional(),
+    notes: z.string().max(1000, { message: 'メモは1000文字以内で入力してください' }).optional(),
     sendEmail: z.boolean().default(true),
   })
   .refine(

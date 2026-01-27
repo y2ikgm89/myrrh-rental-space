@@ -100,90 +100,56 @@ type CategoryFilterReturn = {
 // Hooks
 // ============================================================
 
-/**
- * 基本フィルターパラメータhooks
- *
- * @example
- * const { params, setSearch, setStatus, setPage } = useFilterParams()
- * const { params, setCategory } = useFilterParams({ withCategory: true })
- */
-export function useFilterParams(
-  options: UseFilterParamsOptions & { withCategory: true }
-): CategoryFilterReturn
-export function useFilterParams(
-  options?: UseFilterParamsOptions & { withCategory?: false }
-): BaseFilterReturn
-export function useFilterParams(
-  options: UseFilterParamsOptions = {}
-): BaseFilterReturn | CategoryFilterReturn {
-  const {
-    debounceMs = 300,
-    defaultStatus = '',
-    defaultPerPage = 10,
-    withCategory = false,
-  } = options
+// ============================================================
+// Internal: Base Filter Implementation
+// ============================================================
 
-  // パーサー定義
-  const baseParsers = {
-    search: parseAsString.withDefault(''),
-    status: parseAsString.withDefault(defaultStatus),
-    page: parseAsInteger.withDefault(1),
-    perPage: parseAsInteger.withDefault(defaultPerPage),
-  }
+function useBaseFilterParams(options: {
+  debounceMs: number
+  defaultStatus: string
+  defaultPerPage: number
+}): BaseFilterReturn {
+  const { debounceMs, defaultStatus, defaultPerPage } = options
 
-  const parsers = withCategory
-    ? { ...baseParsers, categoryId: parseAsString.withDefault('') }
-    : baseParsers
+  const [params, setParams] = useQueryStates(
+    {
+      search: parseAsString.withDefault(''),
+      status: parseAsString.withDefault(defaultStatus),
+      page: parseAsInteger.withDefault(1),
+      perPage: parseAsInteger.withDefault(defaultPerPage),
+    },
+    { history: 'push', shallow: false }
+  )
 
-  const [params, setParams] = useQueryStates(parsers, {
-    history: 'push',
-    shallow: false,
-  })
-
-  // 即時検索
   const setSearch = (value: string) => {
     void setParams({ search: value || null, page: 1 })
   }
 
-  // 検索（デバウンス付き）
   const setSearchDebounced = useDebouncedCallback(setSearch, debounceMs)
 
-  // ステータス変更
   const setStatus = (value: string) => {
     const statusValue = value === 'ALL' ? null : value || null
     void setParams({ status: statusValue, page: 1 })
   }
 
-  // カテゴリ変更（withCategory=trueの場合のみ）
-  const setCategory = (value: string) => {
-    if (!withCategory) return
-    const categoryValue = value === 'ALL' ? null : value || null
-    void setParams({ categoryId: categoryValue, page: 1 } as typeof params)
-  }
-
-  // ページ変更
   const setPage = (value: number) => {
     void setParams({ page: value })
   }
 
-  // 1ページあたりの件数変更
   const setPerPage = (value: number) => {
     void setParams({ perPage: value, page: 1 })
   }
 
-  // リセット
   const reset = () => {
     void setParams({
       search: null,
       status: null,
       page: 1,
       perPage: defaultPerPage,
-      ...(withCategory ? { categoryId: null } : {}),
-    } as Parameters<typeof setParams>[0])
+    })
   }
 
-  // 戻り値を構築
-  const base = {
+  return {
     params: {
       ...params,
       status: params.status || 'ALL',
@@ -195,30 +161,116 @@ export function useFilterParams(
     setPerPage,
     reset,
   }
+}
 
-  if (withCategory) {
-    const categoryParams = params as { categoryId?: string }
-    return {
-      ...base,
-      params: {
-        ...base.params,
-        categoryId: categoryParams.categoryId || 'ALL',
-      } as FilterParamsWithCategory,
-      setCategory,
-    }
+// ============================================================
+// Internal: Category Filter Implementation
+// ============================================================
+
+function useCategoryFilterParams(options: {
+  debounceMs: number
+  defaultStatus: string
+  defaultPerPage: number
+}): CategoryFilterReturn {
+  const { debounceMs, defaultStatus, defaultPerPage } = options
+
+  const [params, setParams] = useQueryStates(
+    {
+      search: parseAsString.withDefault(''),
+      status: parseAsString.withDefault(defaultStatus),
+      page: parseAsInteger.withDefault(1),
+      perPage: parseAsInteger.withDefault(defaultPerPage),
+      categoryId: parseAsString.withDefault(''),
+    },
+    { history: 'push', shallow: false }
+  )
+
+  const setSearch = (value: string) => {
+    void setParams({ search: value || null, page: 1 })
   }
 
-  return base
+  const setSearchDebounced = useDebouncedCallback(setSearch, debounceMs)
+
+  const setStatus = (value: string) => {
+    const statusValue = value === 'ALL' ? null : value || null
+    void setParams({ status: statusValue, page: 1 })
+  }
+
+  const setCategory = (value: string) => {
+    const categoryValue = value === 'ALL' ? null : value || null
+    void setParams({ categoryId: categoryValue, page: 1 })
+  }
+
+  const setPage = (value: number) => {
+    void setParams({ page: value })
+  }
+
+  const setPerPage = (value: number) => {
+    void setParams({ perPage: value, page: 1 })
+  }
+
+  const reset = () => {
+    void setParams({
+      search: null,
+      status: null,
+      page: 1,
+      perPage: defaultPerPage,
+      categoryId: null,
+    })
+  }
+
+  return {
+    params: {
+      ...params,
+      status: params.status || 'ALL',
+      categoryId: params.categoryId || 'ALL',
+    },
+    setSearch,
+    setSearchDebounced,
+    setStatus,
+    setCategory,
+    setPage,
+    setPerPage,
+    reset,
+  }
+}
+
+// ============================================================
+// Public: Filter Params Hooks
+// ============================================================
+
+type BaseFilterOptions = Omit<UseFilterParamsOptions, 'withCategory'>
+
+/**
+ * 基本フィルターパラメータhooks（カテゴリなし）
+ *
+ * @example
+ * const { params, setSearch, setStatus, setPage } = useFilterParams()
+ */
+export function useFilterParams(options: BaseFilterOptions = {}): BaseFilterReturn {
+  const {
+    debounceMs = 300,
+    defaultStatus = '',
+    defaultPerPage = 10,
+  } = options
+
+  return useBaseFilterParams({ debounceMs, defaultStatus, defaultPerPage })
 }
 
 /**
- * カテゴリ付きフィルターパラメータhooks（後方互換用）
+ * カテゴリ付きフィルターパラメータhooks
  *
  * @example
  * const { params, setCategory } = useFilterParamsWithCategory()
  */
 export function useFilterParamsWithCategory(
-  options: Omit<UseFilterParamsOptions, 'withCategory'> = {}
-) {
-  return useFilterParams({ ...options, withCategory: true })
+  options: BaseFilterOptions = {}
+): CategoryFilterReturn {
+  const {
+    debounceMs = 300,
+    defaultStatus = '',
+    defaultPerPage = 10,
+  } = options
+
+  return useCategoryFilterParams({ debounceMs, defaultStatus, defaultPerPage })
 }

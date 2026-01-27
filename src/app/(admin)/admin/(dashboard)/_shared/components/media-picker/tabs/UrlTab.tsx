@@ -106,7 +106,7 @@ export function UrlTab({ onAdd, canAddMore }: UrlTabProps) {
         <div className="space-y-2">
           <label className="text-sm font-medium">プレビュー</label>
           <div className="flex aspect-video items-center justify-center overflow-hidden rounded-lg border bg-muted">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+            
             <img
               src={previewUrl}
               alt={alt || 'プレビュー'}

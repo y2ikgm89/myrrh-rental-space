@@ -19,7 +19,7 @@
 
 import { randomBytes } from 'crypto'
 import { prisma } from '@/shared/lib/prisma'
-import { revalidateTag } from 'next/cache'
+import { updateTag } from 'next/cache'
 import { CACHE_TAGS } from '@/shared/lib/constants'
 import { sendStaffInvitationEmail } from '@/shared/lib/email-service'
 import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
@@ -147,7 +147,7 @@ export const sendInvitation = withPermission<[CreateInvitationInput], Invitation
     return createFailure('招待メールの送信に失敗しました。メール設定を確認してください。')
   }
 
-  revalidateTag(CACHE_TAGS.STAFF, 'default')
+  updateTag(CACHE_TAGS.STAFF)
   return createSuccess('招待メールを送信しました', {
     id: invitation.id,
     email: invitation.email,
@@ -252,7 +252,7 @@ export async function setupPassword(input: SetupPasswordInput): Promise<ActionRe
     return newUser
   })
 
-  revalidateTag(CACHE_TAGS.STAFF, 'default')
+  updateTag(CACHE_TAGS.STAFF)
   return createSuccess('アカウントを作成しました', { userId: result.id })
 }
 
@@ -305,7 +305,7 @@ export const deleteInvitation = withPermission<[string], void>(
     where: { id },
   })
 
-  revalidateTag(CACHE_TAGS.STAFF, 'default')
+  updateTag(CACHE_TAGS.STAFF)
   return createSuccess('招待を削除しました')
 })
 
@@ -359,6 +359,6 @@ export const resendInvitation = withPermission<[string], void>(
     return createFailure('招待メールの再送に失敗しました')
   }
 
-  revalidateTag(CACHE_TAGS.STAFF, 'default')
+  updateTag(CACHE_TAGS.STAFF)
   return createSuccess('招待を再送しました')
 })

@@ -84,7 +84,7 @@ const sectionTypeIcons: Record<HomepageSectionType, typeof Sparkles> = {
   [HomepageSectionType.HERO]: Sparkles,
   [HomepageSectionType.SPACE_LIST]: Layout,
   [HomepageSectionType.NEWS]: Newspaper,
-  [HomepageSectionType.BLOG]: FileText,
+  [HomepageSectionType.POST]: FileText,
   [HomepageSectionType.FAQ]: HelpCircle,
   [HomepageSectionType.CTA]: MousePointerClick,
   [HomepageSectionType.CUSTOM]: Wand2,
@@ -213,6 +213,7 @@ interface AddSectionDialogProps {
   onAdd: (type: HomepageSectionType) => void
   disabled: boolean
   existingTypes: HomepageSectionType[]
+  isInstagramConnected: boolean
 }
 
 function AddSectionDialog({
@@ -221,9 +222,17 @@ function AddSectionDialog({
   onAdd,
   disabled,
   existingTypes,
+  isInstagramConnected,
 }: AddSectionDialogProps) {
   const availableTypes = Object.values(HomepageSectionType).filter(
-    (type) => type === HomepageSectionType.CUSTOM || !existingTypes.includes(type)
+    (type) => {
+      // CUSTOMは複数追加可能
+      if (type === HomepageSectionType.CUSTOM) return true
+      // InstagramはAPI設定済みの場合のみ表示
+      if (type === HomepageSectionType.INSTAGRAM && !isInstagramConnected) return false
+      // それ以外は既存タイプでなければ表示
+      return !existingTypes.includes(type)
+    }
   )
 
   return (
@@ -285,7 +294,12 @@ function AddSectionDialog({
 // Main Component
 // =============================================================================
 
-export function HomepageTab() {
+interface HomepageTabProps {
+  /** Instagram APIが設定済みかどうか */
+  isInstagramConnected?: boolean
+}
+
+export function HomepageTab({ isInstagramConnected = false }: HomepageTabProps) {
   const [isPending, startTransition] = useTransition()
   const [sections, setSections] = useState<HomepageSectionData[] | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -532,6 +546,7 @@ export function HomepageTab() {
         onAdd={handleAddSection}
         disabled={isPending}
         existingTypes={sections.map((s) => s.type)}
+        isInstagramConnected={isInstagramConnected}
       />
 
       {/* Delete Confirmation Dialog */}

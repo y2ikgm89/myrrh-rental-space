@@ -49,35 +49,28 @@ async function ApiSettingsContent(): Promise<ReactElement> {
     ])
 
   const tabs = [
+    // メール
     {
       value: 'resend',
       label: 'Resend',
       content: <ResendSection config={resendConfig} />,
     },
+    // Cloudflare系
     {
       value: 'turnstile',
       label: 'Turnstile',
       content: <TurnstileSection config={turnstileConfig} />,
     },
     {
-      value: 'google-maps',
-      label: 'Google Maps',
-      content: <GoogleMapsSection config={googleMapsConfig} />,
-    },
-    {
       value: 'cloudflare',
       label: 'Cloudflare',
       content: <CloudflareSection config={cloudflareConfig} />,
     },
+    // Google系
     {
-      value: 'custom',
-      label: 'カスタム',
-      content: <CustomApiKeysSection keys={customApiKeys} />,
-    },
-    {
-      value: 'instagram',
-      label: 'Instagram',
-      content: <InstagramSection config={instagramConfig} />,
+      value: 'google-maps',
+      label: 'Google Maps',
+      content: <GoogleMapsSection config={googleMapsConfig} />,
     },
     ...(settings
       ? [
@@ -94,6 +87,18 @@ async function ApiSettingsContent(): Promise<ReactElement> {
           },
         ]
       : []),
+    // SNS
+    {
+      value: 'instagram',
+      label: 'Instagram',
+      content: <InstagramSection config={instagramConfig} />,
+    },
+    // 拡張
+    {
+      value: 'custom',
+      label: 'カスタム',
+      content: <CustomApiKeysSection keys={customApiKeys} />,
+    },
   ]
 
   return (

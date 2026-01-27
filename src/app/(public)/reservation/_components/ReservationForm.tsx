@@ -4,6 +4,7 @@ import {
   useState,
   useTransition,
   type ReactElement,
+  type ReactNode,
   type FormEvent,
 } from 'react'
 import { useKanaInput } from '@/shared/hooks'
@@ -14,6 +15,7 @@ import { Button } from '@/public/components/ui/Button'
 import { Checkbox } from '@/public/components/ui/Checkbox'
 import { Input } from '@/public/components/ui/Input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/public/components/ui/Card'
+import { Turnstile } from '@/public/components/Turnstile'
 import { TermsAgreementDialog } from '@/public/components/TermsAgreementDialog'
 import { Calendar } from './Calendar'
 import { TimeSlotPicker } from './TimeSlotPicker'
@@ -27,6 +29,22 @@ import {
 } from '@/public/lib/validations/reservation'
 import type { SerializedTermsWithVersion } from '@/shared/lib/validations/terms'
 import { cn } from '@/shared/lib/utils'
+import { toDateString } from '@/shared/lib/serialize'
+import {
+  CouponCodeInput,
+  type AppliedCoupon,
+} from '@/public/components/CouponCodeInput'
+import {
+  calculateReservationPrice,
+  calculateTaxIncludedPrice,
+  getTaxRate,
+  type DurationDiscountRule,
+  type DiscountCombinationMode,
+  type PriceCalculation,
+  type TaxSettings,
+  DEFAULT_TAX_SETTINGS,
+} from '@/shared/lib/pricing'
+import { formatPrice } from '@/shared/lib/utils'
 
 const formStyles = tv({
   slots: {
@@ -75,7 +93,7 @@ interface TermsLinkLabelProps {
   onPrivacyClick: () => void
 }
 
-function TermsLinkLabel({ settings, onTermsClick, onPrivacyClick }: TermsLinkLabelProps): React.ReactNode {
+function TermsLinkLabel({ settings, onTermsClick, onPrivacyClick }: TermsLinkLabelProps): ReactNode {
   const { requireTerms, requirePrivacy } = settings
 
   const linkClasses = 'text-primary hover:underline cursor-pointer font-medium'
@@ -127,6 +145,14 @@ interface TermsSettings {
   requirePrivacy: boolean
 }
 
+interface DiscountSettings {
+  durationDiscountEnabled: boolean
+  durationDiscountRules: DurationDiscountRule[]
+  discountCombinationMode: DiscountCombinationMode
+  showOriginalPrice: boolean
+  discountWarningEnabled: boolean
+}
+
 interface ReservationFormProps {
   spaceId: string
   spaceName: string
@@ -134,6 +160,16 @@ interface ReservationFormProps {
   termsSettings: TermsSettings
   /** スペース固有の規約（設定されている場合、シリアライズ済み） */
   spaceTerms: SerializedTermsWithVersion | null
+  /** キャンセルポリシー（設定されている場合、シリアライズ済み） */
+  cancellationPolicy: SerializedTermsWithVersion | null
+  /** 割引設定 */
+  discountSettings: DiscountSettings
+  /** 税設定 */
+  taxSettings?: TaxSettings
+  /** スペースの税率タイプ */
+  taxRateType?: 'standard' | 'reduced'
+  /** Turnstile Site Key（DBから取得、nullの場合はTurnstile無効） */
+  turnstileSiteKey: string | null
 }
 
 type FormStep = 'datetime' | 'info' | 'confirm'
@@ -169,17 +205,29 @@ export function ReservationForm({
   hourlyPrice,
   termsSettings,
   spaceTerms,
+  cancellationPolicy,
+  discountSettings,
+  taxSettings = DEFAULT_TAX_SETTINGS,
+  taxRateType = 'standard',
+  turnstileSiteKey,
 }: ReservationFormProps): ReactElement {
+  // 税計算用の値
+  const taxRate = getTaxRate(taxRateType, taxSettings)
+  const displayMode = taxSettings.displayModePublic
   // 日時選択状態
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [startTime, setStartTime] = useState<string | null>(null)
   const [endTime, setEndTime] = useState<string | null>(null)
+
+  // クーポン状態
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null)
 
   // フォーム状態
   const [formState, setFormState] = useState<FormState>(initialFormState)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({})
   const [result, setResult] = useState<ReservationActionResult | null>(null)
   const [isPending, startTransition] = useTransition()
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
 
   // カナ自動入力フック（IMEで漢字入力時に読みを自動取得）
   const lastNameKanaInput = useKanaInput({
@@ -200,6 +248,9 @@ export function ReservationForm({
   const [previewDialogType, setPreviewDialogType] = useState<'terms' | 'privacy' | null>(null)
   const [previewContent, setPreviewContent] = useState<PageContentResult>(null)
   const [isPreviewLoading, setIsPreviewLoading] = useState(false)
+
+  // キャンセルポリシーダイアログ状態
+  const [isCancellationPolicyOpen, setIsCancellationPolicyOpen] = useState(false)
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -279,12 +330,32 @@ export function ReservationForm({
     !spaceTerms || // 規約がない場合は同意不要
     formState.agreedTermsVersionId === spaceTerms.currentVersion?.id
 
-  const calculateTotal = (): number => {
-    if (!startTime || !endTime) return 0
+  // 料金計算（割引適用）
+  const calculatePrice = (): PriceCalculation | null => {
+    if (!startTime || !endTime) return null
     const [startHour] = startTime.split(':').map(Number)
     const [endHour] = endTime.split(':').map(Number)
     const hours = endHour - startHour
-    return hourlyPrice * hours
+    if (hours <= 0) return null
+
+    return calculateReservationPrice({
+      hourlyPrice,
+      hours,
+      durationRules: discountSettings.durationDiscountRules,
+      durationDiscountEnabled: discountSettings.durationDiscountEnabled,
+      coupon: appliedCoupon,
+      combinationMode: discountSettings.discountCombinationMode,
+      showWarning: discountSettings.discountWarningEnabled,
+    })
+  }
+
+  // クーポン適用/解除時のハンドラ
+  const handleApplyCoupon = (coupon: AppliedCoupon): void => {
+    setAppliedCoupon(coupon)
+  }
+
+  const handleRemoveCoupon = (): void => {
+    setAppliedCoupon(null)
   }
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>): void => {
@@ -302,7 +373,7 @@ export function ReservationForm({
       return
     }
 
-    const dateStr = selectedDate.toISOString().split('T')[0]
+    const dateStr = toDateString(selectedDate)
 
     // 規約同意が必要な場合は agreedToTerms を含める
     const baseInput = {
@@ -318,6 +389,8 @@ export function ReservationForm({
       email: formState.email,
       phoneNumber: formState.phoneNumber,
       notes: formState.notes || undefined,
+      // クーポンコード
+      couponCode: appliedCoupon?.code || undefined,
       // スペース固有の規約同意情報
       termsAgreement: formState.agreedTermsVersionId && spaceTerms
         ? {
@@ -351,7 +424,7 @@ export function ReservationForm({
     }
 
     startTransition(async () => {
-      const response = await createReservation(input)
+      const response = await createReservation(input, turnstileToken ?? undefined)
       setResult(response)
 
       if (response.success) {
@@ -359,6 +432,8 @@ export function ReservationForm({
         setSelectedDate(null)
         setStartTime(null)
         setEndTime(null)
+        setAppliedCoupon(null)
+        setTurnstileToken(null)
         setCurrentStep('confirm')
       } else if (response.fieldErrors) {
         setFieldErrors(response.fieldErrors)
@@ -414,7 +489,7 @@ export function ReservationForm({
     )
   }
 
-  const total = calculateTotal()
+  const priceInfo = calculatePrice()
   const hours = startTime && endTime
     ? parseInt(endTime.split(':')[0], 10) - parseInt(startTime.split(':')[0], 10)
     : 0
@@ -488,21 +563,133 @@ export function ReservationForm({
               />
 
               {/* 料金表示 */}
-              {canProceedToInfo && (
+              {canProceedToInfo && priceInfo && (() => {
+                // 税込み価格を計算
+                const taxIncludedHourly = calculateTaxIncludedPrice(hourlyPrice, taxRate)
+                const taxIncludedBase = calculateTaxIncludedPrice(priceInfo.basePrice, taxRate)
+                const taxIncludedTotal = calculateTaxIncludedPrice(priceInfo.totalPrice, taxRate)
+                const taxIncludedDurationDiscount = calculateTaxIncludedPrice(priceInfo.durationDiscount, taxRate)
+                const taxIncludedCouponDiscount = calculateTaxIncludedPrice(priceInfo.couponDiscount, taxRate)
+
+                // 表示モードに応じた価格フォーマット
+                const formatPriceByMode = (taxExcluded: number, taxIncluded: number) => {
+                  if (displayMode === 'tax_excluded') return formatPrice(taxExcluded)
+                  if (displayMode === 'tax_included') return formatPrice(taxIncluded)
+                  return `${formatPrice(taxIncluded)}（税抜${formatPrice(taxExcluded)}）`
+                }
+
+                const taxLabel = displayMode === 'tax_excluded' ? '（税抜）' : ''
+
+                return (
                 <div className={styles.priceSection()}>
                   <div className={styles.priceRow()}>
                     <span className={styles.priceLabel()}>
-                      ¥{hourlyPrice.toLocaleString()} × {hours}時間
+                      {formatPriceByMode(hourlyPrice, taxIncludedHourly)} × {hours}時間
+                    </span>
+                    <span className={styles.priceValue()}>
+                      {formatPriceByMode(priceInfo.basePrice, taxIncludedBase)}
                     </span>
                   </div>
+
+                  {/* 長時間割引表示 */}
+                  {priceInfo.appliedDurationRule && priceInfo.durationDiscount > 0 && (
+                    <div className={styles.priceRow()}>
+                      <span className={styles.priceLabel()}>
+                        長時間割引（{priceInfo.appliedDurationRule.hours}時間以上 {priceInfo.appliedDurationRule.discountRate}%OFF）
+                      </span>
+                      <span className="text-sm font-medium text-green-600">
+                        -{formatPriceByMode(priceInfo.durationDiscount, taxIncludedDurationDiscount)}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* クーポン割引表示 */}
+                  {priceInfo.appliedCoupon && priceInfo.couponDiscount > 0 && (
+                    <div className={styles.priceRow()}>
+                      <span className={styles.priceLabel()}>
+                        クーポン「{priceInfo.appliedCoupon.code}」
+                      </span>
+                      <span className="text-sm font-medium text-green-600">
+                        -{formatPriceByMode(priceInfo.couponDiscount, taxIncludedCouponDiscount)}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* 合計 */}
                   <div className={styles.totalRow()}>
-                    <span className={styles.totalLabel()}>合計</span>
-                    <span className={styles.totalValue()}>
-                      ¥{total.toLocaleString()}
-                    </span>
+                    <span className={styles.totalLabel()}>合計{taxLabel}</span>
+                    <div className="text-right">
+                      {/* 割引がある場合は元価格を取り消し線で表示 */}
+                      {discountSettings.showOriginalPrice && priceInfo.totalDiscountRate > 0 && (
+                        <span className="text-sm text-muted-foreground line-through mr-2">
+                          {displayMode === 'tax_excluded'
+                            ? formatPrice(priceInfo.basePrice)
+                            : formatPrice(taxIncludedBase)}
+                        </span>
+                      )}
+                      <span className={styles.totalValue()}>
+                        {displayMode === 'tax_excluded'
+                          ? formatPrice(priceInfo.totalPrice)
+                          : formatPrice(taxIncludedTotal)}
+                      </span>
+                      {priceInfo.totalDiscountRate > 0 && (
+                        <span className="ml-2 text-sm font-medium text-green-600">
+                          ({priceInfo.totalDiscountRate}%OFF)
+                        </span>
+                      )}
+                      {displayMode === 'both' && (
+                        <div className="text-xs text-muted-foreground mt-1">
+                          税抜 {formatPrice(priceInfo.totalPrice)}
+                        </div>
+                      )}
+                    </div>
                   </div>
+
+                  {/* クーポン入力 */}
+                  <div className="mt-4 pt-4 border-t border-border">
+                    <CouponCodeInput
+                      appliedCoupon={appliedCoupon}
+                      onApply={handleApplyCoupon}
+                      onRemove={handleRemoveCoupon}
+                      reservationAmount={priceInfo.basePrice}
+                    />
+                  </div>
+
+                  {/* 警告メッセージ */}
+                  {priceInfo.warnings.length > 0 && (
+                    <div className="mt-3 space-y-1">
+                      {priceInfo.warnings.map((warning, index) => (
+                        <p key={index} className="text-xs text-amber-600">
+                          ※ {warning}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* キャンセルポリシー */}
+                  {cancellationPolicy?.currentVersion && (
+                    <div className="mt-3 pt-3 border-t border-border">
+                      <button
+                        type="button"
+                        onClick={() => setIsCancellationPolicyOpen(true)}
+                        className="text-sm text-primary hover:underline"
+                      >
+                        キャンセルポリシーを確認
+                      </button>
+                    </div>
+                  )}
+
+                  {/* 税注釈 */}
+                  <p className="text-xs text-muted-foreground mt-3">
+                    {displayMode === 'tax_excluded'
+                      ? '※ 表示価格は税抜きです。'
+                      : displayMode === 'tax_included'
+                        ? '※ 表示価格は税込みです。'
+                        : '※ 価格は税込み表示です。'}
+                  </p>
                 </div>
-              )}
+                )
+              })()}
 
               <div className="mt-6">
                 <Button
@@ -531,9 +718,59 @@ export function ReservationForm({
               <p className="text-sm text-muted-foreground">
                 {formatSelectedDate()} {startTime} 〜 {endTime}（{hours}時間）
               </p>
-              <p className="text-lg font-bold text-primary mt-2">
-                ¥{total.toLocaleString()}
-              </p>
+              {priceInfo && (() => {
+                const taxIncludedBase = calculateTaxIncludedPrice(priceInfo.basePrice, taxRate)
+                const taxIncludedTotal = calculateTaxIncludedPrice(priceInfo.totalPrice, taxRate)
+                const taxIncludedDurationDiscount = calculateTaxIncludedPrice(priceInfo.durationDiscount, taxRate)
+                const taxIncludedCouponDiscount = calculateTaxIncludedPrice(priceInfo.couponDiscount, taxRate)
+
+                return (
+                <div className="mt-2">
+                  {/* 割引詳細 */}
+                  {(priceInfo.durationDiscount > 0 || priceInfo.couponDiscount > 0) && (
+                    <div className="text-xs text-muted-foreground space-y-0.5 mb-1">
+                      {priceInfo.appliedDurationRule && priceInfo.durationDiscount > 0 && (
+                        <p>長時間割引: -{displayMode === 'tax_excluded'
+                          ? formatPrice(priceInfo.durationDiscount)
+                          : formatPrice(taxIncludedDurationDiscount)}</p>
+                      )}
+                      {priceInfo.appliedCoupon && priceInfo.couponDiscount > 0 && (
+                        <p>クーポン「{priceInfo.appliedCoupon.code}」: -{displayMode === 'tax_excluded'
+                          ? formatPrice(priceInfo.couponDiscount)
+                          : formatPrice(taxIncludedCouponDiscount)}</p>
+                      )}
+                    </div>
+                  )}
+                  <div className="flex items-baseline gap-2 flex-wrap">
+                    {discountSettings.showOriginalPrice && priceInfo.totalDiscountRate > 0 && (
+                      <span className="text-sm text-muted-foreground line-through">
+                        {displayMode === 'tax_excluded'
+                          ? formatPrice(priceInfo.basePrice)
+                          : formatPrice(taxIncludedBase)}
+                      </span>
+                    )}
+                    <span className="text-lg font-bold text-primary">
+                      {displayMode === 'tax_excluded'
+                        ? formatPrice(priceInfo.totalPrice)
+                        : formatPrice(taxIncludedTotal)}
+                    </span>
+                    {priceInfo.totalDiscountRate > 0 && (
+                      <span className="text-sm font-medium text-green-600">
+                        ({priceInfo.totalDiscountRate}%OFF)
+                      </span>
+                    )}
+                  </div>
+                  {displayMode === 'both' && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      税抜 {formatPrice(priceInfo.totalPrice)}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {displayMode === 'tax_excluded' ? '※ 税抜' : '※ 税込'}
+                  </p>
+                </div>
+                )
+              })()}
             </div>
 
             <form onSubmit={handleSubmit} className={styles.form()}>
@@ -735,6 +972,18 @@ export function ReservationForm({
                 </div>
               )}
 
+              {/* Turnstile（スパム対策） */}
+              {turnstileSiteKey && (
+                <div className="flex justify-center">
+                  <Turnstile
+                    siteKey={turnstileSiteKey}
+                    onVerify={setTurnstileToken}
+                    onExpire={() => setTurnstileToken(null)}
+                    size="normal"
+                  />
+                </div>
+              )}
+
               {/* ボタン */}
               <div className="flex gap-4">
                 <Button
@@ -750,7 +999,8 @@ export function ReservationForm({
                   disabled={
                     isPending ||
                     !hasAgreedToSpaceTerms ||
-                    (termsSettings.enabled && !formState.agreedToTerms)
+                    (termsSettings.enabled && !formState.agreedToTerms) ||
+                    Boolean(turnstileSiteKey && !turnstileToken)
                   }
                   className="flex-1"
                 >
@@ -784,6 +1034,16 @@ export function ReservationForm({
         content={previewContent?.content || ''}
         loading={isPreviewLoading}
       />
+
+      {/* キャンセルポリシーダイアログ */}
+      {cancellationPolicy?.currentVersion && (
+        <TermsPreviewDialog
+          open={isCancellationPolicyOpen}
+          onOpenChange={setIsCancellationPolicyOpen}
+          title={cancellationPolicy.title}
+          content={cancellationPolicy.currentVersion.content}
+        />
+      )}
     </div>
   )
 }

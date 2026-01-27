@@ -10,14 +10,14 @@ import { CustomerStatus, ReservationStatus } from '@/shared/lib/validations/enum
  * コンポーネント・Server Actions両方で使用
  */
 export const customerFormSchema = z.object({
-  lastName: z.string().min(1, '姓は必須です').max(50, '姓は50文字以内で入力してください'),
-  firstName: z.string().min(1, '名は必須です').max(50, '名は50文字以内で入力してください'),
-  lastNameKana: z.string().max(50, 'セイは50文字以内で入力してください').optional().or(z.literal('')),
-  firstNameKana: z.string().max(50, 'メイは50文字以内で入力してください').optional().or(z.literal('')),
-  email: z.string().email('有効なメールアドレスを入力してください'),
-  phoneNumber: z.string().max(20, '電話番号は20文字以内で入力してください').optional().or(z.literal('')),
-  address: z.string().max(500, '住所は500文字以内で入力してください').optional().or(z.literal('')),
-  notes: z.string().max(2000, 'メモは2000文字以内で入力してください').optional().or(z.literal('')),
+  lastName: z.string().min(1, { error: '姓は必須です' }).max(50, { error: '姓は50文字以内で入力してください' }),
+  firstName: z.string().min(1, { error: '名は必須です' }).max(50, { error: '名は50文字以内で入力してください' }),
+  lastNameKana: z.string().max(50, { error: 'セイは50文字以内で入力してください' }).optional().or(z.literal('')),
+  firstNameKana: z.string().max(50, { error: 'メイは50文字以内で入力してください' }).optional().or(z.literal('')),
+  email: z.string().email({ error: '有効なメールアドレスを入力してください' }),
+  phoneNumber: z.string().max(20, { error: '電話番号は20文字以内で入力してください' }).optional().or(z.literal('')),
+  address: z.string().max(500, { error: '住所は500文字以内で入力してください' }).optional().or(z.literal('')),
+  notes: z.string().max(2000, { error: 'メモは2000文字以内で入力してください' }).optional().or(z.literal('')),
 })
 
 /**

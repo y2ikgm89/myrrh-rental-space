@@ -58,15 +58,22 @@ test.describe('ブログ一覧ページ', () => {
     await expect(createButton).toBeVisible()
     await expect(createButton).toContainText('新規作成')
 
-    // カテゴリ管理ボタンが存在することを確認
-    const categoryButton = page.locator('a[href="/admin/blog/categories"]')
-    await expect(categoryButton).toBeVisible()
-    await expect(categoryButton).toContainText('カテゴリ管理')
+    // タブが存在することを確認
+    const postsTab = page.locator('a[href="/admin/blog?tab=posts"]')
+    await expect(postsTab).toBeVisible()
+    await expect(postsTab).toContainText('記事一覧')
 
-    // コメント管理ボタンが存在することを確認
-    const commentButton = page.locator('a[href="/admin/blog/comments"]')
-    await expect(commentButton).toBeVisible()
-    await expect(commentButton).toContainText('コメント管理')
+    const categoriesTab = page.locator('a[href="/admin/blog?tab=categories"]')
+    await expect(categoriesTab).toBeVisible()
+    await expect(categoriesTab).toContainText('カテゴリー')
+
+    const tagsTab = page.locator('a[href="/admin/blog?tab=tags"]')
+    await expect(tagsTab).toBeVisible()
+    await expect(tagsTab).toContainText('タグ')
+
+    const commentsTab = page.locator('a[href="/admin/blog?tab=comments"]')
+    await expect(commentsTab).toBeVisible()
+    await expect(commentsTab).toContainText('コメント')
   })
 
   test('既存ブログ記事がテーブルに表示される', async ({ page }) => {
@@ -925,40 +932,100 @@ test.describe('検索・フィルター機能', () => {
 })
 
 // =============================================================================
-// 10. カテゴリ管理
+// 10. カテゴリー管理（タブ）
 // =============================================================================
 
-test.describe('カテゴリ管理', () => {
-  test('カテゴリ管理ページにアクセスできる', async ({ page }) => {
+test.describe('カテゴリー管理', () => {
+  test('カテゴリータブにアクセスできる', async ({ page }) => {
     await page.goto(urls.adminBlog)
     await page.waitForLoadState('networkidle')
 
-    // カテゴリ管理ボタンをクリック
-    const categoryButton = page.locator('a[href="/admin/blog/categories"]')
-    await categoryButton.click()
+    // カテゴリータブをクリック
+    const categoriesTab = page.locator('a[href="/admin/blog?tab=categories"]')
+    await categoriesTab.click()
 
-    // カテゴリ管理ページが表示されることを確認
-    await page.waitForURL('/admin/blog/categories')
-    await expect(page.locator('h1')).toContainText('カテゴリ管理')
+    // URLにタブパラメータが含まれることを確認
+    await page.waitForURL(/[?&]tab=categories/)
+
+    // カテゴリーマネージャーが表示されることを確認
+    await expect(page.locator('text=カテゴリー一覧')).toBeVisible()
+  })
+
+  test('直接URLでカテゴリータブにアクセスできる', async ({ page }) => {
+    await page.goto(urls.adminBlog + '?tab=categories')
+    await page.waitForLoadState('networkidle')
+
+    // ページタイトルを確認
+    await expect(page.locator('h1')).toContainText('ブログ管理')
+
+    // カテゴリーコンテンツが表示されることを確認
+    await expect(page.locator('text=カテゴリー一覧')).toBeVisible()
   })
 })
 
 // =============================================================================
-// 11. コメント管理
+// 10.5. タグ管理（タブ）
 // =============================================================================
 
-test.describe('コメント管理', () => {
-  test('コメント管理ページにアクセスできる', async ({ page }) => {
+test.describe('タグ管理', () => {
+  test('タグタブにアクセスできる', async ({ page }) => {
     await page.goto(urls.adminBlog)
     await page.waitForLoadState('networkidle')
 
-    // コメント管理ボタンをクリック
-    const commentButton = page.locator('a[href="/admin/blog/comments"]')
-    await commentButton.click()
+    // タグタブをクリック
+    const tagsTab = page.locator('a[href="/admin/blog?tab=tags"]')
+    await tagsTab.click()
 
-    // コメント管理ページが表示されることを確認
-    await page.waitForURL('/admin/blog/comments')
-    await expect(page.locator('h1')).toContainText('コメント管理')
+    // URLにタブパラメータが含まれることを確認
+    await page.waitForURL(/[?&]tab=tags/)
+
+    // タグマネージャーが表示されることを確認
+    await expect(page.locator('text=タグ一覧')).toBeVisible()
+  })
+
+  test('直接URLでタグタブにアクセスできる', async ({ page }) => {
+    await page.goto(urls.adminBlog + '?tab=tags')
+    await page.waitForLoadState('networkidle')
+
+    // ページタイトルを確認
+    await expect(page.locator('h1')).toContainText('ブログ管理')
+
+    // タグコンテンツが表示されることを確認
+    await expect(page.locator('text=タグ一覧')).toBeVisible()
+  })
+})
+
+// =============================================================================
+// 11. コメント管理（タブ）
+// =============================================================================
+
+test.describe('コメント管理', () => {
+  test('コメントタブにアクセスできる', async ({ page }) => {
+    await page.goto(urls.adminBlog)
+    await page.waitForLoadState('networkidle')
+
+    // コメントタブをクリック
+    const commentsTab = page.locator('a[href="/admin/blog?tab=comments"]')
+    await commentsTab.click()
+
+    // URLにタブパラメータが含まれることを確認
+    await page.waitForURL(/[?&]tab=comments/)
+
+    // コメント統計が表示されることを確認（またはコメント関連のコンテンツ）
+    const commentContent = page.locator('text=全コメント, text=コメント')
+    await expect(commentContent.first()).toBeVisible()
+  })
+
+  test('直接URLでコメントタブにアクセスできる', async ({ page }) => {
+    await page.goto(urls.adminBlog + '?tab=comments')
+    await page.waitForLoadState('networkidle')
+
+    // ページタイトルを確認
+    await expect(page.locator('h1')).toContainText('ブログ管理')
+
+    // コメントタブがアクティブであることを確認
+    const commentContent = page.locator('text=全コメント, text=コメント')
+    await expect(commentContent.first()).toBeVisible()
   })
 })
 

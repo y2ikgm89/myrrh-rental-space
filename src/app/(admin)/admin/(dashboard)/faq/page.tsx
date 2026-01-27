@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { getFaqCategories } from '@/admin/actions/faq'
 import { FaqCategoryList } from './_components/FaqCategoryList'
 import { Button } from '@/admin/components/ui'
+import { LoadingState } from '@/admin/components/LoadingState'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -37,13 +38,7 @@ export default function FaqPage() {
       </div>
 
       {/* FAQ一覧 */}
-      <Suspense
-        fallback={
-          <div className="rounded-lg border bg-white p-12 text-center">
-            <p className="text-muted-foreground">読み込み中...</p>
-          </div>
-        }
-      >
+      <Suspense fallback={<LoadingState />}>
         <FaqContent />
       </Suspense>
     </div>

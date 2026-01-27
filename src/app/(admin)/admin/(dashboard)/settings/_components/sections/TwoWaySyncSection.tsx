@@ -36,6 +36,7 @@ import {
 } from '@/admin/actions/settings'
 import { RefreshCw, Clock, Webhook, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { useRefreshOnSuccess } from '../hooks'
+import { formatDateTimeShort } from '@/shared/lib/utils'
 
 // =============================================================================
 // Types
@@ -123,11 +124,7 @@ export function TwoWaySyncSection({ settings }: TwoWaySyncSectionProps) {
     }
   }
 
-  const formatDate = (date: Date | null) => {
-    if (!date) return '-'
-    return new Date(date).toLocaleString('ja-JP')
-  }
-
+  
   return (
     <Card>
       <CardHeader>
@@ -242,7 +239,7 @@ export function TwoWaySyncSection({ settings }: TwoWaySyncSectionProps) {
                     {settings.googleCalendarWebhookActive ? (
                       <p className="text-sm text-green-600 flex items-center gap-1">
                         <CheckCircle2 className="h-4 w-4" />
-                        有効（有効期限: {formatDate(settings.googleCalendarWebhookExpiration)}）
+                        有効（有効期限: {formatDateTimeShort(settings.googleCalendarWebhookExpiration)}）
                       </p>
                     ) : (
                       <p className="text-sm text-muted-foreground flex items-center gap-1">
@@ -278,7 +275,7 @@ export function TwoWaySyncSection({ settings }: TwoWaySyncSectionProps) {
                 <div>
                   <Label>最終同期</Label>
                   <p className="text-sm text-muted-foreground">
-                    {formatDate(settings.googleCalendarLastSyncedAt)}
+                    {formatDateTimeShort(settings.googleCalendarLastSyncedAt)}
                   </p>
                 </div>
                 <Button
@@ -296,7 +293,7 @@ export function TwoWaySyncSection({ settings }: TwoWaySyncSectionProps) {
                   className={`rounded p-2 text-sm ${
                     syncResult.success
                       ? 'bg-green-50 text-green-700'
-                      : 'bg-red-50 text-red-700'
+                      : 'bg-destructive/10 text-destructive'
                   }`}
                 >
                   {syncResult.message}

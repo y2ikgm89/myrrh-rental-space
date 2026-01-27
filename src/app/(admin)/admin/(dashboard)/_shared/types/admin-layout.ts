@@ -26,6 +26,12 @@ export type AdminLayoutContextValue = {
   toggleSidebar: () => void
   closeSidebar: () => void
   isMobile: boolean
+  /** フルスクリーンモード（エディタ使用時にサイドバーを隠す） */
+  isFullscreen: boolean
+  enterFullscreen: () => void
+  exitFullscreen: () => void
+  /** クライアントサイドでマウント完了したか（Hydration対策用） */
+  hasMounted: boolean
 }
 
 /** サイドバーアイテム */

@@ -1,13 +1,20 @@
 /**
  * Google Analytics Data API クライアント
  *
- * GA4からアクセス解析データを取得する
- * サービスアカウント認証を使用
+ * GA4からアクセス解析データを取得するためのクライアント。
+ * サービスアカウント認証を使用します。
+ *
+ * ## 機能
+ * - GA4基本統計の取得
+ * - 人気ページランキング取得
+ * - API可用性チェック
  *
  * @see https://developers.google.com/analytics/devguides/reporting/data/v1
+ * @module public/lib/analytics/ga-data-api
  */
 
 import { BetaAnalyticsDataClient } from '@google-analytics/data'
+import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
 
 // =============================================================================
 // Types
@@ -49,8 +56,12 @@ function getAnalyticsClient(): BetaAnalyticsDataClient | null {
   try {
     const credentials = JSON.parse(credentialsJson)
     return new BetaAnalyticsDataClient({ credentials })
-  } catch {
-    console.error('Failed to parse GOOGLE_APPLICATION_CREDENTIALS_JSON')
+  } catch (error) {
+    logError(error instanceof Error ? error : new Error('Failed to parse GOOGLE_APPLICATION_CREDENTIALS_JSON'), {
+      category: ErrorCategory.VALIDATION,
+      severity: ErrorSeverity.HIGH,
+      context: { operation: 'getAnalyticsClient' },
+    })
     return null
   }
 }
@@ -135,7 +146,11 @@ export async function getAnalyticsStats(
       },
     }
   } catch (error) {
-    console.error('GA Data API error:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'getAnalyticsStats', propertyId },
+    })
     return {
       success: false,
       error: {

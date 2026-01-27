@@ -1,13 +1,21 @@
 /**
  * Better Auth 設定
  *
- * @see https://www.better-auth.com/docs
+ * Better Authを使用した認証・セッション管理の設定と
+ * セッション検証ユーティリティを提供します。
  *
- * - Prisma Adapter でデータベース連携
- * - 30日間セッション
- * - Credentials / Google OAuth Provider
- * - シングルトンパターンで AsyncLocalStorage 警告を回避
- * - ログイン成功/失敗の監査ログ自動記録
+ * ## 機能
+ * - **Prisma Adapter**: データベース連携
+ * - **30日間セッション**: 自動更新対応
+ * - **複数認証方式**: Email/Password、Google OAuth
+ * - **監査ログ**: ログイン成功/失敗の自動記録
+ *
+ * ## シングルトンパターン
+ * 開発環境のホットリロード時も単一インスタンスを維持し、
+ * AsyncLocalStorage の重複初期化警告を回避
+ *
+ * @see https://www.better-auth.com/docs
+ * @module shared/lib/auth
  */
 
 import { cache } from 'react'
@@ -20,6 +28,8 @@ import { nextCookies } from 'better-auth/next-js'
 import { prisma, Role } from './prisma'
 import { AuditAction } from '@/shared/generated/prisma/enums'
 import { SESSION_CONFIG, getAppUrl } from './constants'
+import { isRecord } from './serialize'
+import { logError, ErrorCategory, ErrorSeverity, normalizeError } from './errors'
 
 /**
  * 監査ログを記録（非同期、失敗無視）
@@ -40,7 +50,11 @@ async function logAuthEvent(
     })
   } catch (error) {
     // ログ記録失敗は無視（本番ではSentry等に送信推奨）
-    console.error('[AuditLog] Failed to create auth audit log:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.LOW,
+      context: { operation: 'createAuthAuditLog', action, userId },
+    })
   }
 }
 
@@ -101,12 +115,12 @@ function createAuth() {
   })
 }
 
-/**
- * シングルトン用グローバル型定義
- */
-const globalForAuth = globalThis as unknown as {
-  auth: ReturnType<typeof createAuth> | undefined
+// グローバル変数の型定義（auth.ts内で定義することで$Inferが正しく機能）
+declare global {
+  var auth: ReturnType<typeof createAuth> | undefined
 }
+
+const globalForAuth = globalThis
 
 /**
  * Better Auth インスタンス（シングルトン）
@@ -141,15 +155,9 @@ export type User = Omit<Session['user'], 'role'> & {
  * Better Authのセッションからユーザーを型安全に取得
  */
 function isValidSessionUser(user: unknown): user is Session['user'] {
-  return (
-    typeof user === 'object' &&
-    user !== null &&
-    'id' in user &&
-    'email' in user &&
-    'role' in user &&
-    typeof (user as Session['user']).id === 'string' &&
-    typeof (user as Session['user']).email === 'string'
-  )
+  if (!isRecord(user)) return false
+  if (!('id' in user) || !('email' in user) || !('role' in user)) return false
+  return typeof user.id === 'string' && typeof user.email === 'string'
 }
 
 /**

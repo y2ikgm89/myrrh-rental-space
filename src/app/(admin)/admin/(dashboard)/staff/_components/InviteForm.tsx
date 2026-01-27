@@ -9,7 +9,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button } from '@/admin/components/ui/button'
@@ -53,7 +53,7 @@ export function InviteForm() {
     register,
     handleSubmit,
     setValue,
-    watch,
+    control,
     reset,
     formState: { errors },
   } = useForm<InviteFormData>({
@@ -65,7 +65,7 @@ export function InviteForm() {
     },
   })
 
-  const currentRole = watch('role')
+  const currentRole = useWatch({ control, name: 'role' })
 
   async function onSubmit(data: InviteFormData) {
     setIsSubmitting(true)
@@ -148,9 +148,11 @@ export function InviteForm() {
             type="email"
             {...register('email')}
             placeholder="staff@example.com"
+            aria-invalid={!!errors.email}
+            aria-describedby={errors.email ? 'email-error' : undefined}
           />
           {errors.email && (
-            <p className="text-sm text-destructive">{errors.email.message}</p>
+            <p id="email-error" className="text-xs text-destructive">{errors.email.message}</p>
           )}
         </div>
 
@@ -160,12 +162,14 @@ export function InviteForm() {
             id="name"
             {...register('name')}
             placeholder="山田 太郎"
+            aria-invalid={!!errors.name}
+            aria-describedby={errors.name ? 'name-error' : 'name-hint'}
           />
-          <p className="text-xs text-muted-foreground">
+          <p id="name-hint" className="text-xs text-muted-foreground">
             未入力の場合、メールアドレスから自動生成されます
           </p>
           {errors.name && (
-            <p className="text-sm text-destructive">{errors.name.message}</p>
+            <p id="name-error" className="text-xs text-destructive">{errors.name.message}</p>
           )}
         </div>
       </div>
@@ -194,7 +198,7 @@ export function InviteForm() {
           {currentRole === 'VIEWER' && '閲覧のみ（編集不可）'}
         </p>
         {errors.role && (
-          <p className="text-sm text-destructive">{errors.role.message}</p>
+          <p className="text-xs text-destructive">{errors.role.message}</p>
         )}
       </div>
 

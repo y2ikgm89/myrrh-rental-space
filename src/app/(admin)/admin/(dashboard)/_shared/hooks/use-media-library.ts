@@ -8,8 +8,8 @@
  */
 
 import { useState, useRef, useEffect, startTransition } from 'react'
-import { getMediaList, type GetMediaResult } from '@/admin/actions/media'
-import type { MediaFilters, MediaPagination } from '@/admin/types/media-picker'
+import { getMediaList } from '@/admin/actions/media'
+import type { MediaFilters, MediaPagination, GetMediaResult } from '@/admin/types/media-picker'
 
 interface UseMediaLibraryOptions {
   initialFilters?: MediaFilters

@@ -12,8 +12,8 @@ import {
   Button,
   Badge,
   Switch,
-  DeleteConfirmDialog,
 } from '@/admin/components/ui'
+import { DeleteConfirmDialog } from '@/admin/components/DeleteConfirmDialog'
 import { updateSpacePublish, deleteSpace } from '@/admin/actions/space'
 import type { SpaceWithStats } from '@/admin/lib/validations/space'
 import { formatDateTimeShort, formatCurrency } from '@/shared/lib/utils'

@@ -1,7 +1,7 @@
 /**
  * レイアウト幅のスタイルマッピング
  *
- * LayoutWidth Enumから適切なTailwindクラスまたはCSS変数を生成
+ * LayoutWidth Enumから適切なCSSスタイルを生成
  */
 
 import { cn } from '@/shared/lib/utils'
@@ -14,79 +14,107 @@ import type { CSSProperties } from 'react'
 // =============================================================================
 
 /**
- * Container幅のTailwindクラスマッピング
+ * サイト幅のピクセル値マッピング
  */
-const CONTAINER_WIDTH_MAP: Record<LayoutWidth, string> = {
-  [LayoutWidth.XS]: 'max-w-xl',          // 640px
-  [LayoutWidth.SM]: 'max-w-3xl',         // 768px
-  [LayoutWidth.MD]: 'max-w-5xl',         // 1024px
-  [LayoutWidth.LG]: 'max-w-7xl',         // 1280px
-  [LayoutWidth.XL]: 'max-w-screen-2xl',  // 1536px
-  [LayoutWidth.FULL]: 'max-w-full',      // 100%
-  [LayoutWidth.CUSTOM]: '',              // カスタム値はstyleで対応
+const SITE_WIDTH_PX_MAP: Record<LayoutWidth, number | null> = {
+  [LayoutWidth.XS]: 900,    // 極小（未使用）
+  [LayoutWidth.SM]: 1000,   // コンパクト
+  [LayoutWidth.MD]: 1100,   // スタンダード
+  [LayoutWidth.LG]: 1200,   // ワイド（デフォルト）
+  [LayoutWidth.XL]: 1400,   // エクストラワイド
+  [LayoutWidth.FULL]: null, // 100%
+  [LayoutWidth.CUSTOM]: null, // カスタム値はstyleで対応
 }
 
 /**
- * コンテンツ幅のTailwindクラスマッピング
+ * コンテンツ幅のピクセル値マッピング
  */
-const CONTENT_WIDTH_MAP: Record<LayoutWidth, string> = {
-  [LayoutWidth.XS]: 'max-w-xl',          // 640px
-  [LayoutWidth.SM]: 'max-w-3xl',         // 768px
-  [LayoutWidth.MD]: 'max-w-5xl',         // 1024px
-  [LayoutWidth.LG]: 'max-w-7xl',         // 1280px
-  [LayoutWidth.XL]: 'max-w-screen-2xl',  // 1536px
-  [LayoutWidth.FULL]: 'max-w-full',      // 100%
-  [LayoutWidth.CUSTOM]: '',              // カスタム値はstyleで対応
+const CONTENT_WIDTH_PX_MAP: Record<LayoutWidth, number | null> = {
+  [LayoutWidth.XS]: 640,   // 長文テキスト向け
+  [LayoutWidth.SM]: 720,   // コンパクト
+  [LayoutWidth.MD]: 800,   // スタンダード（デフォルト）
+  [LayoutWidth.LG]: 900,   // ワイド
+  [LayoutWidth.XL]: 1024,  // 画像・ギャラリー向け
+  [LayoutWidth.FULL]: null, // 100%
+  [LayoutWidth.CUSTOM]: null, // カスタム値はstyleで対応
 }
 
-/**
- * 幅プリセットのピクセル値（UI表示用）
- */
+// =============================================================================
+// Width Presets (UI表示用)
+// =============================================================================
+
 interface WidthPreset {
   label: string
   px: number | null
 }
 
-export const WIDTH_PRESETS: Record<LayoutWidth, WidthPreset> = {
+/**
+ * サイト幅プリセット
+ */
+export const SITE_WIDTH_PRESETS: Record<LayoutWidth, WidthPreset> = {
+  [LayoutWidth.XS]: { label: '極小', px: 900 },
+  [LayoutWidth.SM]: { label: '小', px: 1000 },
+  [LayoutWidth.MD]: { label: '中', px: 1100 },
+  [LayoutWidth.LG]: { label: '大', px: 1200 },
+  [LayoutWidth.XL]: { label: '特大', px: 1400 },
+  [LayoutWidth.FULL]: { label: '全幅', px: null },
+  [LayoutWidth.CUSTOM]: { label: 'カスタム', px: null },
+}
+
+/**
+ * コンテンツ幅プリセット
+ */
+export const CONTENT_WIDTH_PRESETS: Record<LayoutWidth, WidthPreset> = {
   [LayoutWidth.XS]: { label: '極小', px: 640 },
-  [LayoutWidth.SM]: { label: '小', px: 768 },
-  [LayoutWidth.MD]: { label: '中', px: 1024 },
-  [LayoutWidth.LG]: { label: '大', px: 1280 },
-  [LayoutWidth.XL]: { label: '特大', px: 1536 },
+  [LayoutWidth.SM]: { label: '小', px: 720 },
+  [LayoutWidth.MD]: { label: '中', px: 800 },
+  [LayoutWidth.LG]: { label: '大', px: 900 },
+  [LayoutWidth.XL]: { label: '特大', px: 1024 },
   [LayoutWidth.FULL]: { label: '全幅', px: null },
   [LayoutWidth.CUSTOM]: { label: 'カスタム', px: null },
 }
 
 // =============================================================================
-// Container Style Functions
+// Container (Site Width) Style Functions
 // =============================================================================
 
 /**
- * Containerのクラス名を取得
+ * サイト幅のクラス名を取得
  */
 export function getContainerClass(config: LayoutConfig): string {
-  const { containerWidth, containerWidthCustom } = config
+  const { containerWidth } = config
 
-  // カスタム幅の場合はmax-wクラスを除外（styleで対応）
-  if (containerWidth === LayoutWidth.CUSTOM && containerWidthCustom) {
-    return 'mx-auto w-full px-4 sm:px-6 lg:px-8'
+  // FULLの場合のみmax-w-fullを使用
+  if (containerWidth === LayoutWidth.FULL) {
+    return cn('mx-auto w-full px-4 sm:px-6 lg:px-8', 'max-w-full')
   }
 
-  return cn(
-    'mx-auto w-full px-4 sm:px-6 lg:px-8',
-    CONTAINER_WIDTH_MAP[containerWidth]
-  )
+  return 'mx-auto w-full px-4 sm:px-6 lg:px-8'
 }
 
 /**
- * Containerのstyleオブジェクトを取得（カスタム幅用）
+ * サイト幅のstyleオブジェクトを取得
  */
 export function getContainerStyle(config: LayoutConfig): CSSProperties | undefined {
   const { containerWidth, containerWidthCustom } = config
 
+  // カスタム幅の場合
   if (containerWidth === LayoutWidth.CUSTOM && containerWidthCustom) {
     return {
       maxWidth: `${containerWidthCustom}px`,
+    }
+  }
+
+  // FULL幅の場合はstyle不要
+  if (containerWidth === LayoutWidth.FULL) {
+    return undefined
+  }
+
+  // プリセット幅の場合
+  const pxValue = SITE_WIDTH_PX_MAP[containerWidth]
+  if (pxValue) {
+    return {
+      maxWidth: `${pxValue}px`,
     }
   }
 
@@ -98,28 +126,42 @@ export function getContainerStyle(config: LayoutConfig): CSSProperties | undefin
 // =============================================================================
 
 /**
- * コンテンツのクラス名を取得
+ * コンテンツ幅のクラス名を取得
  */
 export function getContentClass(config: LayoutConfig): string {
-  const { contentWidth, contentWidthCustom } = config
+  const { contentWidth } = config
 
-  // カスタム幅の場合はmax-wクラスを除外
-  if (contentWidth === LayoutWidth.CUSTOM && contentWidthCustom) {
-    return 'mx-auto'
+  // FULLの場合のみmax-w-fullを使用
+  if (contentWidth === LayoutWidth.FULL) {
+    return cn('mx-auto', 'max-w-full')
   }
 
-  return cn('mx-auto', CONTENT_WIDTH_MAP[contentWidth])
+  return 'mx-auto'
 }
 
 /**
- * コンテンツのstyleオブジェクトを取得（カスタム幅用）
+ * コンテンツ幅のstyleオブジェクトを取得
  */
 export function getContentStyle(config: LayoutConfig): CSSProperties | undefined {
   const { contentWidth, contentWidthCustom } = config
 
+  // カスタム幅の場合
   if (contentWidth === LayoutWidth.CUSTOM && contentWidthCustom) {
     return {
       maxWidth: `${contentWidthCustom}px`,
+    }
+  }
+
+  // FULL幅の場合はstyle不要
+  if (contentWidth === LayoutWidth.FULL) {
+    return undefined
+  }
+
+  // プリセット幅の場合
+  const pxValue = CONTENT_WIDTH_PX_MAP[contentWidth]
+  if (pxValue) {
+    return {
+      maxWidth: `${pxValue}px`,
     }
   }
 
@@ -131,7 +173,7 @@ export function getContentStyle(config: LayoutConfig): CSSProperties | undefined
 // =============================================================================
 
 /**
- * Container用のクラスとスタイルを一括取得
+ * サイト幅のクラスとスタイルを一括取得
  */
 export function getContainerStyles(config: LayoutConfig): {
   className: string
@@ -144,7 +186,7 @@ export function getContainerStyles(config: LayoutConfig): {
 }
 
 /**
- * Content用のクラスとスタイルを一括取得
+ * コンテンツ幅のクラスとスタイルを一括取得
  */
 export function getContentStyles(config: LayoutConfig): {
   className: string
@@ -160,21 +202,6 @@ export function getContentStyles(config: LayoutConfig): {
 // Utility Functions
 // =============================================================================
 
-/**
- * 幅の説明文を取得（UI表示用）
- */
-export function getWidthLabel(width: LayoutWidth, customPx?: number | null): string {
-  if (width === LayoutWidth.CUSTOM && customPx) {
-    return `カスタム (${customPx}px)`
-  }
-
-  const preset = WIDTH_PRESETS[width]
-  if (preset.px) {
-    return `${preset.label} (${preset.px}px)`
-  }
-  return preset.label
-}
-
 type WidthOption = {
   value: LayoutWidth
   label: string
@@ -182,15 +209,14 @@ type WidthOption = {
 }
 
 /**
- * プリセット選択オプションを取得（管理画面用）
+ * サイト幅の選択オプションを取得
  */
-export function getWidthOptions(includeCustom = true): WidthOption[] {
+export function getSiteWidthOptions(includeCustom = true): WidthOption[] {
   const options: WidthOption[] = [
-    { value: LayoutWidth.XS, label: '極小 (640px)', description: '狭いコンテンツ向け' },
-    { value: LayoutWidth.SM, label: '小 (768px)', description: '記事コンテンツ推奨' },
-    { value: LayoutWidth.MD, label: '中 (1024px)', description: 'バランスの良い幅' },
-    { value: LayoutWidth.LG, label: '大 (1280px)', description: 'Container推奨' },
-    { value: LayoutWidth.XL, label: '特大 (1536px)', description: 'ワイドスクリーン向け' },
+    { value: LayoutWidth.SM, label: '小 (1000px)', description: 'コンパクト' },
+    { value: LayoutWidth.MD, label: '中 (1100px)', description: 'スタンダード' },
+    { value: LayoutWidth.LG, label: '大 (1200px)', description: 'ワイド' },
+    { value: LayoutWidth.XL, label: '特大 (1400px)', description: 'エクストラワイド' },
     { value: LayoutWidth.FULL, label: '全幅', description: '画面幅いっぱい' },
   ]
 
@@ -203,4 +229,57 @@ export function getWidthOptions(includeCustom = true): WidthOption[] {
   }
 
   return options
+}
+
+/**
+ * コンテンツ幅の選択オプションを取得
+ */
+export function getContentWidthOptions(includeCustom = true): WidthOption[] {
+  const options: WidthOption[] = [
+    { value: LayoutWidth.XS, label: '極小 (640px)', description: '長文テキスト向け' },
+    { value: LayoutWidth.SM, label: '小 (720px)', description: 'コンパクト' },
+    { value: LayoutWidth.MD, label: '中 (800px)', description: 'スタンダード' },
+    { value: LayoutWidth.LG, label: '大 (900px)', description: 'ワイド' },
+    { value: LayoutWidth.XL, label: '特大 (1024px)', description: '画像・ギャラリー向け' },
+  ]
+
+  if (includeCustom) {
+    options.push({
+      value: LayoutWidth.CUSTOM,
+      label: 'カスタム',
+      description: '任意の幅を指定',
+    })
+  }
+
+  return options
+}
+
+/**
+ * サイト幅のラベルを取得
+ */
+export function getSiteWidthLabel(width: LayoutWidth, customPx?: number | null): string {
+  if (width === LayoutWidth.CUSTOM && customPx) {
+    return `カスタム (${customPx}px)`
+  }
+
+  const preset = SITE_WIDTH_PRESETS[width]
+  if (preset.px) {
+    return `${preset.label} (${preset.px}px)`
+  }
+  return preset.label
+}
+
+/**
+ * コンテンツ幅のラベルを取得
+ */
+export function getContentWidthLabel(width: LayoutWidth, customPx?: number | null): string {
+  if (width === LayoutWidth.CUSTOM && customPx) {
+    return `カスタム (${customPx}px)`
+  }
+
+  const preset = CONTENT_WIDTH_PRESETS[width]
+  if (preset.px) {
+    return `${preset.label} (${preset.px}px)`
+  }
+  return preset.label
 }

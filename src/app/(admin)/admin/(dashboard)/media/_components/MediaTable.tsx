@@ -6,7 +6,7 @@
 
 import { useState } from 'react'
 import { Copy, Trash2, Eye, ExternalLink, FileText, Film, File, Image } from 'lucide-react'
-import type { MediaData } from '@/admin/actions/media'
+import type { MediaData } from '@/admin/types/media-picker'
 import { MediaDetailDialog } from './MediaDetailDialog'
 import { formatDate } from '@/shared/lib/utils'
 import { formatBytes } from '@/admin/lib/utils'

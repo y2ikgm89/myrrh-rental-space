@@ -7,6 +7,7 @@ import { LocationForm } from '../../_components/LocationForm'
 import { Button } from '@/admin/components/ui'
 import type { Metadata } from 'next'
 
+
 type Params = Promise<{ id: string }>
 
 type PageProps = {
@@ -14,6 +15,7 @@ type PageProps = {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  await connection()
   const { id } = await params
   const result = await getLocationById(id)
 

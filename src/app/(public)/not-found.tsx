@@ -7,13 +7,15 @@
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { getPostUrlPrefix } from '@/shared/lib/settings/public'
 
 export const metadata: Metadata = {
   title: 'ページが見つかりません',
   description: 'お探しのページは存在しないか、移動した可能性があります。',
 }
 
-export default function NotFound() {
+export default async function NotFound() {
+  const postPrefix = await getPostUrlPrefix()
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 py-16">
       <div className="w-full max-w-md text-center">
@@ -57,7 +59,7 @@ export default function NotFound() {
             <Link href="/news" className="text-primary-600 hover:underline">
               お知らせ
             </Link>
-            <Link href="/blog" className="text-primary-600 hover:underline">
+            <Link href={postPrefix || '/'} className="text-primary-600 hover:underline">
               ブログ
             </Link>
             <Link href="/contact" className="text-primary-600 hover:underline">

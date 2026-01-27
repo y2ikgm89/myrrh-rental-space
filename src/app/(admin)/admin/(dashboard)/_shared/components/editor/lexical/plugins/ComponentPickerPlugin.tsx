@@ -9,7 +9,7 @@
 
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
@@ -86,7 +86,7 @@ const CATEGORY_LABELS: Record<CategoryType, string> = {
 
 class ComponentPickerOption extends MenuOption {
   title: string
-  icon: React.ReactNode
+  icon: ReactNode
   keywords: string[]
   category: CategoryType
   onSelect: (queryString: string) => void
@@ -94,7 +94,7 @@ class ComponentPickerOption extends MenuOption {
   constructor(
     title: string,
     options: {
-      icon: React.ReactNode
+      icon: ReactNode
       keywords?: string[]
       category: CategoryType
       onSelect: (queryString: string) => void

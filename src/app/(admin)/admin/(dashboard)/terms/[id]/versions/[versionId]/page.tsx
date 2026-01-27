@@ -4,7 +4,7 @@ import { ArrowLeft } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { getTermsById, getTermsVersionById } from '@/admin/actions/terms'
-import { SanitizedHtml } from '@/public/components/SanitizedHtml'
+import { SanitizedHtml } from '@/shared/components/SanitizedHtml'
 import { PROSE_CLASSES } from '@/shared/lib/styles/prose'
 import { cn } from '@/shared/lib/utils'
 import {

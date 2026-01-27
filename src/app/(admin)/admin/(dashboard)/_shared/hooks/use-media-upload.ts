@@ -79,7 +79,12 @@ export function useMediaUpload(): UseMediaUploadReturn {
 
     reader.onload = (e) => {
       if (!isMountedRef.current) return
-      setPreviewUrl(e.target?.result as string)
+      const result = e.target?.result
+      // FileReader.result は string | ArrayBuffer | null
+      // readAsDataURL使用時はstringのはずだが、型安全に処理
+      if (typeof result === 'string') {
+        setPreviewUrl(result)
+      }
     }
     reader.readAsDataURL(file)
   }

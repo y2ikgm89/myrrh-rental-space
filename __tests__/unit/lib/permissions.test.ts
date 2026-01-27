@@ -53,7 +53,7 @@ describe('hasPermission', () => {
       expect(hasPermission(Role.ADMIN, 'space', 'create')).toBe(true)
       expect(hasPermission(Role.ADMIN, 'space', 'update')).toBe(true)
       expect(hasPermission(Role.ADMIN, 'space', 'delete')).toBe(true)
-      expect(hasPermission(Role.ADMIN, 'blog', 'publish')).toBe(true)
+      expect(hasPermission(Role.ADMIN, 'post', 'publish')).toBe(true)
       expect(hasPermission(Role.ADMIN, 'settings', 'update')).toBe(true)
       expect(hasPermission(Role.ADMIN, 'reservation', 'manage')).toBe(true)
     })
@@ -76,13 +76,13 @@ describe('hasPermission', () => {
     test('割り当てページの編集権限のみ', () => {
       // 閲覧可能
       expect(hasPermission(Role.EDITOR, 'page', 'read')).toBe(true)
-      expect(hasPermission(Role.EDITOR, 'blog', 'read')).toBe(true)
+      expect(hasPermission(Role.EDITOR, 'post', 'read')).toBe(true)
       expect(hasPermission(Role.EDITOR, 'news', 'read')).toBe(true)
       expect(hasPermission(Role.EDITOR, 'faq', 'read')).toBe(true)
 
       // 編集可能
       expect(hasPermission(Role.EDITOR, 'page', 'update')).toBe(true)
-      expect(hasPermission(Role.EDITOR, 'blog', 'update')).toBe(true)
+      expect(hasPermission(Role.EDITOR, 'post', 'update')).toBe(true)
       expect(hasPermission(Role.EDITOR, 'news', 'update')).toBe(true)
       expect(hasPermission(Role.EDITOR, 'faq', 'update')).toBe(true)
     })
@@ -90,7 +90,7 @@ describe('hasPermission', () => {
     test('作成・削除・公開権限を持たない', () => {
       expect(hasPermission(Role.EDITOR, 'page', 'create')).toBe(false)
       expect(hasPermission(Role.EDITOR, 'page', 'delete')).toBe(false)
-      expect(hasPermission(Role.EDITOR, 'blog', 'publish')).toBe(false)
+      expect(hasPermission(Role.EDITOR, 'post', 'publish')).toBe(false)
     })
 
     test('スペース・予約・顧客管理権限を持たない', () => {
@@ -106,7 +106,7 @@ describe('hasPermission', () => {
       expect(hasPermission(Role.VIEWER, 'reservation', 'read')).toBe(true)
       expect(hasPermission(Role.VIEWER, 'customer', 'read')).toBe(true)
       expect(hasPermission(Role.VIEWER, 'inquiry', 'read')).toBe(true)
-      expect(hasPermission(Role.VIEWER, 'blog', 'read')).toBe(true)
+      expect(hasPermission(Role.VIEWER, 'post', 'read')).toBe(true)
       expect(hasPermission(Role.VIEWER, 'settings', 'read')).toBe(true)
     })
 
@@ -114,7 +114,7 @@ describe('hasPermission', () => {
       expect(hasPermission(Role.VIEWER, 'space', 'create')).toBe(false)
       expect(hasPermission(Role.VIEWER, 'space', 'update')).toBe(false)
       expect(hasPermission(Role.VIEWER, 'space', 'delete')).toBe(false)
-      expect(hasPermission(Role.VIEWER, 'blog', 'publish')).toBe(false)
+      expect(hasPermission(Role.VIEWER, 'post', 'publish')).toBe(false)
     })
 
     test('ユーザー管理・監査ログ権限を持たない', () => {
@@ -177,7 +177,7 @@ describe('userHasResourceAccess', () => {
         userHasResourceAccess(ADMIN_USER, 'page', 'update', 'any-page-id')
       ).toBe(true)
       expect(
-        userHasResourceAccess(ADMIN_USER, 'blog', 'update', 'any-blog-id')
+        userHasResourceAccess(ADMIN_USER, 'post', 'update', 'any-post-id')
       ).toBe(true)
     })
   })

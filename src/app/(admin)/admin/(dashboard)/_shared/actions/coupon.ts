@@ -11,7 +11,7 @@
  */
 
 import { prisma, Prisma } from '@/shared/lib/prisma'
-import { revalidateTag } from 'next/cache'
+import { updateTag } from 'next/cache'
 import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
 import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
 import { withPermission } from '@/admin/lib/server-action-helpers'
@@ -309,7 +309,7 @@ export const createCoupon = withPermission<[input: CouponFormInput], { id: strin
     },
   })
 
-  revalidateTag(CACHE_TAGS.COUPONS, 'default')
+  updateTag(CACHE_TAGS.COUPONS)
 
   return createSuccess('クーポンを作成しました', { id: coupon.id })
 })
@@ -368,8 +368,8 @@ export const updateCoupon = withPermission<[id: string, input: CouponFormInput],
     },
   })
 
-  revalidateTag(CACHE_TAGS.COUPONS, 'default')
-  revalidateTag(getCacheTag.coupons.detail(id), 'default')
+  updateTag(CACHE_TAGS.COUPONS)
+  updateTag(getCacheTag.coupons.detail(id))
 
   return createSuccess('クーポンを更新しました')
 })
@@ -404,8 +404,8 @@ export const deleteCoupon = withPermission<[id: string], void>(
     where: { id },
   })
 
-  revalidateTag(CACHE_TAGS.COUPONS, 'default')
-  revalidateTag(getCacheTag.coupons.detail(id), 'default')
+  updateTag(CACHE_TAGS.COUPONS)
+  updateTag(getCacheTag.coupons.detail(id))
 
   return createSuccess('クーポンを削除しました')
 })
@@ -431,110 +431,9 @@ export const toggleCouponActive = withPermission<[id: string], void>(
     data: { isActive: !coupon.isActive },
   })
 
-  revalidateTag(CACHE_TAGS.COUPONS, 'default')
-  revalidateTag(getCacheTag.coupons.detail(id), 'default')
+  updateTag(CACHE_TAGS.COUPONS)
+  updateTag(getCacheTag.coupons.detail(id))
 
   return createSuccess(coupon.isActive ? 'クーポンを無効化しました' : 'クーポンを有効化しました')
 })
 
-// =============================================================================
-// Public Actions (for reservation form)
-// =============================================================================
-
-/**
- * クーポンコードを検証（公開ページ用）
- *
- * 予約フォームでクーポンコードを入力した際の検証
- * - コードの存在確認
- * - 有効期限の確認
- * - 利用回数制限の確認
- * - 最低利用金額の確認（オプション）
- */
-export async function validateCouponCode(
-  code: string,
-  reservationAmount?: number
-): Promise<ActionResult<{
-  coupon: Pick<CouponData, 'id' | 'code' | 'name' | 'type' | 'discountValue' | 'maxDiscountAmount' | 'canCombineWithDurationDiscount'>
-}>> {
-  const normalizedCode = code.toUpperCase().trim()
-
-  if (normalizedCode.length < 4) {
-    return createFailure('クーポンコードは4文字以上で入力してください')
-  }
-
-  // 入力検証: 英数字のみ許可
-  if (!/^[A-Z0-9]+$/.test(normalizedCode)) {
-    return createFailure('無効なクーポンコードです')
-  }
-
-  const coupon = await prisma.coupon.findUnique({
-    where: { code: normalizedCode },
-  })
-
-  // タイミング攻撃対策: すべての検証を実行し、統一されたエラーメッセージを返す
-  // エラー種別を収集（最低利用金額以外は同一メッセージ）
-  const now = new Date()
-  let isInvalid = false
-  let minAmountError: string | null = null
-
-  // クーポンが存在しない or 無効
-  if (!coupon || !coupon.isActive) {
-    isInvalid = true
-  }
-
-  // 以下の検証はクーポンが存在する場合のみ実行（定数時間確保のためダミー比較も実行）
-  if (coupon) {
-    // 有効期間前
-    if (coupon.validFrom > now) {
-      isInvalid = true
-    }
-    // 有効期限切れ
-    if (coupon.validUntil && coupon.validUntil < now) {
-      isInvalid = true
-    }
-    // 利用回数上限
-    if (coupon.usageLimit !== null && coupon.usageCount >= coupon.usageLimit) {
-      isInvalid = true
-    }
-    // 最低利用金額チェック（ユーザーに有用なフィードバックのため別メッセージ）
-    if (reservationAmount !== undefined && coupon.minReservationAmount) {
-      const minAmount = Number(coupon.minReservationAmount)
-      if (reservationAmount < minAmount) {
-        minAmountError = `このクーポンは¥${minAmount.toLocaleString()}以上のご利用で適用できます`
-      }
-    }
-  }
-
-  // 無効なクーポンのエラーを優先（最低利用金額エラーより先に返す）
-  if (isInvalid || !coupon) {
-    return createFailure('無効なクーポンコードです')
-  }
-
-  // 最低利用金額エラー
-  if (minAmountError) {
-    return createFailure(minAmountError)
-  }
-
-  // ここに到達した時点でcouponは必ず存在する
-  return createSuccess('クーポンを適用しました', {
-    coupon: {
-      id: coupon.id,
-      code: coupon.code,
-      name: coupon.name,
-      type: coupon.type,
-      discountValue: Number(coupon.discountValue),
-      maxDiscountAmount: coupon.maxDiscountAmount ? Number(coupon.maxDiscountAmount) : null,
-      canCombineWithDurationDiscount: coupon.canCombineWithDurationDiscount,
-    },
-  })
-}
-
-/**
- * クーポン使用回数をインクリメント（予約確定時に呼び出し）
- */
-export async function incrementCouponUsage(couponId: string): Promise<void> {
-  await prisma.coupon.update({
-    where: { id: couponId },
-    data: { usageCount: { increment: 1 } },
-  })
-}

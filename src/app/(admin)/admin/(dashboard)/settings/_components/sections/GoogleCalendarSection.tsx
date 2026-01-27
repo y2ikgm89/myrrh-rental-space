@@ -26,6 +26,8 @@ import {
   type SettingsData,
 } from '@/admin/actions/settings'
 import { useRefreshOnSuccess } from '../hooks'
+import { StatusBanner } from '../shared/StatusBanner'
+import { formatDateTimeShort } from '@/shared/lib/utils'
 
 // =============================================================================
 // Types
@@ -33,26 +35,6 @@ import { useRefreshOnSuccess } from '../hooks'
 
 interface GoogleCalendarSectionProps {
   settings: SettingsData
-}
-
-interface StatusBannerProps {
-  success: boolean
-  children: React.ReactNode
-}
-
-// =============================================================================
-// Status Banner Component
-// =============================================================================
-
-function StatusBanner({ success, children }: StatusBannerProps): React.ReactElement {
-  const borderColor = success ? 'border-green-200' : 'border-red-200'
-  const bgColor = success ? 'bg-green-50' : 'bg-red-50'
-
-  return (
-    <div className={`rounded-lg border p-4 ${borderColor} ${bgColor}`}>
-      {children}
-    </div>
-  )
 }
 
 // =============================================================================
@@ -266,14 +248,14 @@ export function GoogleCalendarSection({ settings }: GoogleCalendarSectionProps) 
                   </>
                 ) : (
                   <>
-                    <span className="h-2 w-2 rounded-full bg-red-500" />
-                    <span className="text-sm font-medium text-red-700">エラー</span>
+                    <span className="h-2 w-2 rounded-full bg-destructive" />
+                    <span className="text-sm font-medium text-destructive">エラー</span>
                   </>
                 )}
               </div>
               {settings.googleCalendarLastTestedAt && (
                 <p className="text-xs text-muted-foreground">
-                  最終テスト: {new Date(settings.googleCalendarLastTestedAt).toLocaleString('ja-JP')}
+                  最終テスト: {formatDateTimeShort(settings.googleCalendarLastTestedAt)}
                 </p>
               )}
             </StatusBanner>
@@ -282,7 +264,7 @@ export function GoogleCalendarSection({ settings }: GoogleCalendarSectionProps) 
           {/* 接続テスト結果 */}
           {testResult && (
             <StatusBanner success={testResult.success}>
-              <p className={`text-sm ${testResult.success ? 'text-green-700' : 'text-red-700'}`}>
+              <p className={`text-sm ${testResult.success ? 'text-green-700' : 'text-destructive'}`}>
                 {testResult.message}
               </p>
               {testResult.calendarName && (

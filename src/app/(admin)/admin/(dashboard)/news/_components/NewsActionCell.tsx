@@ -12,14 +12,13 @@ import {
   DropdownMenuTrigger,
 } from '@/admin/components/ui'
 import { publishNews, unpublishNews } from '@/admin/actions/news'
-import { NewsStatus } from '@/shared/generated/prisma/enums'
 
 type NewsActionCellProps = {
   newsId: string
-  status: NewsStatus
+  isPublished: boolean
 }
 
-export function NewsActionCell({ newsId, status }: NewsActionCellProps) {
+export function NewsActionCell({ newsId, isPublished }: NewsActionCellProps) {
   const [isPending, startTransition] = useTransition()
 
   const handlePublish = () => {
@@ -57,7 +56,7 @@ export function NewsActionCell({ newsId, status }: NewsActionCellProps) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          {status === NewsStatus.PUBLISHED ? (
+          {isPublished ? (
             <DropdownMenuItem onClick={handleUnpublish}>
               下書きに戻す
             </DropdownMenuItem>

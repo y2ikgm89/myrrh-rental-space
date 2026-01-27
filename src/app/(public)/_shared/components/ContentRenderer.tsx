@@ -9,7 +9,7 @@ import { z } from 'zod'
 import { cn } from '@/shared/lib/utils'
 import { PROSE_CLASSES } from '@/shared/lib/styles/prose'
 import { PostListWidgetRenderer } from './PostListWidgetRenderer'
-import { SanitizedHtml } from './SanitizedHtml'
+import { SanitizedHtml } from '@/shared/components/SanitizedHtml'
 
 // =============================================================================
 // Types
@@ -27,6 +27,8 @@ type ContentRendererProps = {
     /** 除外する記事ID */
     excludePostId?: string
   }
+  /** 投稿URLのプレフィックス（'/posts' または ''）、PostListWidgetが埋め込まれている場合は必須 */
+  postPrefix?: string
 }
 
 // =============================================================================
@@ -141,6 +143,7 @@ export async function ContentRenderer({
   html,
   className,
   widgetContext,
+  postPrefix = '/posts',
 }: ContentRendererProps) {
   if (!html) {
     return null
@@ -186,6 +189,7 @@ export async function ContentRenderer({
                 ? widgetContext?.excludePostId
                 : undefined
             }
+            postPrefix={postPrefix}
           />
         )
       })}

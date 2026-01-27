@@ -11,6 +11,8 @@ import { cache } from 'react'
 import { prisma, Role } from '@/shared/lib/prisma'
 import { getSession, getRoleFromSession, type User } from '@/shared/lib/auth'
 import { logPermissionDenied } from '@/admin/lib/audit'
+import { entriesOf } from '@/shared/lib/serialize'
+import { isEditorRole } from './role-guards'
 
 // =============================================================================
 // Types
@@ -24,7 +26,7 @@ export type Resource =
   | 'reservation'
   | 'customer'
   | 'inquiry'
-  | 'blog'
+  | 'post'
   | 'news'
   | 'page'
   | 'faq'
@@ -35,6 +37,7 @@ export type Resource =
   | 'navigation'
   | 'announcementBar'
   | 'media'
+  | 'coupon'
 
 /** アクション種別 */
 export type Action = 'create' | 'read' | 'update' | 'delete' | 'publish' | 'manage'
@@ -67,7 +70,7 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     'reservation:create', 'reservation:read', 'reservation:update', 'reservation:delete', 'reservation:manage',
     'customer:create', 'customer:read', 'customer:update', 'customer:delete', 'customer:manage',
     'inquiry:read', 'inquiry:update', 'inquiry:delete', 'inquiry:manage',
-    'blog:create', 'blog:read', 'blog:update', 'blog:delete', 'blog:publish',
+    'post:create', 'post:read', 'post:update', 'post:delete', 'post:publish',
     'news:create', 'news:read', 'news:update', 'news:delete', 'news:publish',
     'page:create', 'page:read', 'page:update', 'page:delete', 'page:publish',
     'faq:create', 'faq:read', 'faq:update', 'faq:delete', 'faq:manage',
@@ -78,6 +81,7 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     'navigation:create', 'navigation:read', 'navigation:update', 'navigation:delete', 'navigation:manage',
     'announcementBar:create', 'announcementBar:read', 'announcementBar:update', 'announcementBar:delete', 'announcementBar:manage',
     'media:create', 'media:read', 'media:update', 'media:delete', 'media:manage',
+    'coupon:create', 'coupon:read', 'coupon:update', 'coupon:delete', 'coupon:manage',
   ],
   ADMIN: [
     // コンテンツ管理（ユーザー管理・監査ログ除く）
@@ -87,7 +91,7 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     'reservation:create', 'reservation:read', 'reservation:update', 'reservation:delete', 'reservation:manage',
     'customer:create', 'customer:read', 'customer:update', 'customer:delete', 'customer:manage',
     'inquiry:read', 'inquiry:update', 'inquiry:delete', 'inquiry:manage',
-    'blog:create', 'blog:read', 'blog:update', 'blog:delete', 'blog:publish',
+    'post:create', 'post:read', 'post:update', 'post:delete', 'post:publish',
     'news:create', 'news:read', 'news:update', 'news:delete', 'news:publish',
     'page:create', 'page:read', 'page:update', 'page:delete', 'page:publish',
     'faq:create', 'faq:read', 'faq:update', 'faq:delete', 'faq:manage',
@@ -97,10 +101,11 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     'navigation:create', 'navigation:read', 'navigation:update', 'navigation:delete', 'navigation:manage',
     'announcementBar:create', 'announcementBar:read', 'announcementBar:update', 'announcementBar:delete', 'announcementBar:manage',
     'media:create', 'media:read', 'media:update', 'media:delete', 'media:manage',
+    'coupon:create', 'coupon:read', 'coupon:update', 'coupon:delete', 'coupon:manage',
   ],
   EDITOR: [
     // 割り当てページ編集のみ（要リソースIDチェック）
-    'blog:read', 'blog:update',
+    'post:read', 'post:update',
     'news:read', 'news:update',
     'page:read', 'page:update',
     'faq:read', 'faq:update',
@@ -114,7 +119,7 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     'reservation:read',
     'customer:read',
     'inquiry:read',
-    'blog:read',
+    'post:read',
     'news:read',
     'page:read',
     'faq:read',
@@ -142,7 +147,7 @@ export const RESOURCE_LABELS: Record<Resource, string> = {
   reservation: '予約',
   customer: '顧客',
   inquiry: 'お問い合わせ',
-  blog: 'ブログ',
+  post: '投稿',
   news: 'お知らせ',
   page: '固定ページ',
   faq: 'FAQ',
@@ -153,6 +158,7 @@ export const RESOURCE_LABELS: Record<Resource, string> = {
   navigation: 'ナビゲーション',
   announcementBar: 'お知らせバー',
   media: 'メディア',
+  coupon: 'クーポン',
 }
 
 /**
@@ -228,7 +234,7 @@ export function userHasPermission(
  * @returns 権限があればtrue
  */
 export function userHasResourceAccess(
-  user: User & { assignedPages?: string[] },
+  user: User,
   resource: Resource,
   action: Action,
   resourceId?: string
@@ -239,17 +245,20 @@ export function userHasResourceAccess(
   }
 
   // EDITOR以外は全リソースにアクセス可能
-  if (user.role !== Role.EDITOR) {
+  if (!isEditorRole(user.role)) {
     return true
   }
 
-  // EDITORはassignedPagesに含まれるリソースのみ
+  // EDITORはassignedPagesに含まれるリソースのみアクセス可能
+  // ただし、resourceIdなしの場合（一覧表示など）は許可
+  // 一覧表示時はフィルタリングで対応
   if (!resourceId) {
-    return false // IDなしはリスト表示等のため許可
+    return true
   }
 
-  // assignedPagesはUser型で string[] | undefined として定義済み
-  const assignedPages = user.assignedPages ?? []
+  // assignedPagesが存在するか型安全にチェック
+  const userWithPages = user as { assignedPages?: string[] }
+  const assignedPages = userWithPages.assignedPages ?? []
   return assignedPages.includes(resourceId)
 }
 
@@ -300,6 +309,61 @@ export function checkReadPermissionFor(resource: Resource): () => Promise<boolea
 }
 
 // =============================================================================
+// Permission Key Parsing
+// =============================================================================
+
+/**
+ * Resource型の型ガード
+ */
+function isValidResource(value: string): value is Resource {
+  const validResources: string[] = [
+    'space',
+    'location',
+    'spaceCategory',
+    'reservation',
+    'customer',
+    'inquiry',
+    'post',
+    'news',
+    'page',
+    'faq',
+    'terms',
+    'settings',
+    'user',
+    'auditLog',
+    'navigation',
+    'announcementBar',
+    'media',
+    'coupon',
+  ]
+  return validResources.includes(value)
+}
+
+/**
+ * Action型の型ガード
+ */
+function isValidAction(value: string): value is Action {
+  const validActions: string[] = ['create', 'read', 'update', 'delete', 'publish', 'manage']
+  return validActions.includes(value)
+}
+
+/**
+ * PermissionKeyをパースして型安全なresourceとactionを返す
+ *
+ * @param permKey - パースするPermissionKey（例: "page:read"）
+ * @returns パース結果。無効な場合はnull
+ */
+function parsePermissionKey(permKey: PermissionKey): { resource: Resource; action: Action } | null {
+  const parts = permKey.split(':')
+  if (parts.length !== 2) return null
+
+  const [resource, action] = parts
+  if (!isValidResource(resource) || !isValidAction(action)) return null
+
+  return { resource, action }
+}
+
+// =============================================================================
 // DB同期関数（初期化・シード用）
 // =============================================================================
 
@@ -320,7 +384,13 @@ export async function syncPermissionsToDb(): Promise<void> {
 
   // Permission テーブルに upsert
   for (const permKey of allPermissions) {
-    const [resource, action] = permKey.split(':') as [Resource, Action]
+    const parsed = parsePermissionKey(permKey)
+    if (!parsed) {
+      console.warn(`Invalid permission key: ${permKey}`)
+      continue
+    }
+
+    const { resource, action } = parsed
     await prisma.permission.upsert({
       where: { resource_action: { resource, action } },
       create: {
@@ -333,10 +403,16 @@ export async function syncPermissionsToDb(): Promise<void> {
   }
 
   // RolePermission テーブルに upsert
-  const roleEntries = Object.entries(ROLE_PERMISSIONS) as [Role, PermissionKey[]][]
+  const roleEntries = entriesOf(ROLE_PERMISSIONS)
   for (const [role, permissions] of roleEntries) {
     for (const permKey of permissions) {
-      const [resource, action] = permKey.split(':') as [Resource, Action]
+      const parsed = parsePermissionKey(permKey)
+      if (!parsed) {
+        console.warn(`Invalid permission key: ${permKey}`)
+        continue
+      }
+
+      const { resource, action } = parsed
       const permission = await prisma.permission.findUnique({
         where: { resource_action: { resource, action } },
       })
@@ -391,3 +467,9 @@ export const getUserPermissions = cache(
     )
   }
 )
+
+// =============================================================================
+// Role Type Guards (re-exported from role-guards.ts for client compatibility)
+// =============================================================================
+
+export { isEditorRole, isAdminRole, isSuperAdminRole } from './role-guards'

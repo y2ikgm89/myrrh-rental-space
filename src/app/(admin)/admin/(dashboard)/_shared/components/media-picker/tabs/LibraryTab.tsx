@@ -10,7 +10,7 @@
 import { use, useState, Suspense } from 'react'
 import { useMediaLibrary } from '@/admin/hooks/use-media-library'
 import { MediaGrid, SearchBar, ViewToggle, MediaGridSkeleton } from '../components'
-import type { GetMediaResult, MediaData } from '@/admin/actions/media'
+import type { GetMediaResult, MediaData } from '@/admin/types/media-picker'
 
 interface LibraryTabProps {
   selectedIds: Set<string>

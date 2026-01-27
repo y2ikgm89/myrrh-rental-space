@@ -10,7 +10,7 @@
 import Link from 'next/link'
 import { tv } from 'tailwind-variants'
 import { usePreviewData } from '@/public/hooks'
-import { SanitizedHtml } from '@/public/components/SanitizedHtml'
+import { SanitizedHtml } from '@/shared/components/SanitizedHtml'
 import { buttonVariants } from '@/public/components/ui'
 import { PROSE_CLASSES } from '@/shared/lib/styles/prose'
 import { cn } from '@/shared/lib/utils'

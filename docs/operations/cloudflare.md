@@ -1,605 +1,292 @@
 # Cloudflare CDN統合ガイド
 
-> **Note**: このドキュメントには、Next.js 16.1.1 + Cloud Run + Cloudflare CDNの統合について、各技術スタックの公式ベストプラクティスに基づいた実装ガイドが記載されています。技術スタックの詳細については、[`CLAUDE.md`](../CLAUDE.md)を参照してください。
+> **Note**: このドキュメントには、Next.js 16 PPR + Cloud Run + Cloudflare CDNの統合について記載されています。
 
 ---
 
 ## 概要
 
-このシステムは、Google Cloud Runで実行されるNext.jsアプリケーションの前にCloudflare CDNを配置することで、以下の効果を実現します：
+このシステムは、Next.js 16 PPR（Partial Pre-Rendering）とCloudflare CDNを組み合わせた2層キャッシュ戦略を採用しています。
 
-- **帯域幅コスト削減**: Cloud Runの帯域幅コストを70-90%削減
-- **パフォーマンス向上**: グローバルCDNによる配信速度向上（TTFB 50%以上改善、LCP 30%以上改善）
-- **セキュリティ強化**: DDoS保護、WAF（有料プラン）、Bot管理
-- **コスト最適化**: Cloudflare無料プランで十分な機能を提供
+### 2層キャッシュ構造
 
----
+| 層 | 技術 | 役割 |
+|----|------|------|
+| **サーバーサイド** | `use cache` + `cacheLife()` + `cacheTag()` | 高速化の主役 |
+| **CDN（Cloudflare）** | Cache-Control ヘッダー | 補助的役割 + 帯域幅削減 |
 
-## 技術スタック確認と最新推奨事項
+### 期待される効果
 
-### Next.js 16.1.1 公式推奨事項
-
-#### 静的アセット
-- `/_next/static/*` は自動的に `Cache-Control: public, max-age=31536000, immutable` が設定される
-- 追加設定は不要（Next.jsが自動的に最適化）
-
-#### 動的コンテンツ
-- `Cache-Control` ヘッダーを明示的に設定（SSR/ISR/SSGに応じて）
-- `s-maxage` と `stale-while-revalidate` を活用してCDNキャッシュを最適化
-
-#### CDN統合
-- `assetPrefix` は使用しない（Cloudflareプロキシモードで自動処理）
-- Next.jsのデフォルト動作を尊重し、CDNがoriginのヘッダーを尊重する設定
-
-### Cloudflare CDN 公式推奨事項
-
-#### キャッシュモード
-- **`respect_origin` モード**: Next.jsのCache-Controlヘッダーを尊重
-- Edge TTLはoriginのヘッダーに従う（デフォルト設定）
-
-#### Edge TTL設定
-- **200-299**: originのCache-Controlヘッダーを尊重
-- **400-499**: TTL 0（キャッシュしない）
-- **500-599**: TTL -1（no-store）
-
-#### Cache Rules
-- パスベースでキャッシュルールを設定
-- 静的アセット、SSG/ISRページ、SSRページを適切に分類
-
-### Cloud Run + Cloudflare 統合推奨事項
-
-#### CDN Interconnect
-- CloudflareとGoogle Cloudの直接接続を利用可能
-- コスト削減効果あり（最大75%の帯域幅コスト削減）
-
-#### Cloudflare Tunnel（オプション）
-- セキュリティ向上（パブリックIPアドレス不要）
-- 本ガイドでは標準的なプロキシモードを推奨
+| 項目 | 効果 |
+|------|------|
+| **帯域幅削減** | 約95% |
+| **無料枠内PV目安** | 〜50万PV/月 |
+| **TTFB改善** | 50%以上 |
+| **LCP改善** | 30%以上 |
 
 ---
 
-## キャッシュ戦略設計
+## キャッシュ戦略
 
-### 静的アセット（`/_next/static/*`）
+### 積極的戦略（採用）
 
-**Next.js設定**:
-- 自動設定済み（`Cache-Control: public, max-age=31536000, immutable`）
-- 追加設定不要
+公開ページに `public, s-maxage=3600, stale-while-revalidate=3600` を設定し、コンテンツ更新時にCloudflare APIでキャッシュをパージします。
 
-**Cloudflare設定**:
-- Cache Rules: 追加設定不要（originのヘッダーを尊重）
-- Edge TTL: originを尊重
+### ページ分類
 
-**TTL**: 1年（immutable）
-
-### 公開ファイル（`/public/*`）
-
-**Next.js設定**:
-```javascript
-// next.config.js
-{
-  source: '/public/:path*',
-  headers: [
-    {
-      key: 'Cache-Control',
-      value: 'public, max-age=31536000, immutable',
-    },
-  ],
-}
-```
-
-**Cloudflare設定**:
-- Cache Rules: 追加設定不要（originのヘッダーを尊重）
-- Edge TTL: originを尊重
-
-**TTL**: 1年（immutable）
-
-### SSGページ（`/contact`, `/privacy`）
-
-**Next.js設定**:
-```javascript
-// next.config.js
-{
-  source: '/contact',
-  headers: [
-    {
-      key: 'Cache-Control',
-      value: 'public, s-maxage=31536000, stale-while-revalidate=86400',
-    },
-  ],
-},
-{
-  source: '/privacy',
-  headers: [
-    {
-      key: 'Cache-Control',
-      value: 'public, s-maxage=31536000, stale-while-revalidate=86400',
-    },
-  ],
-}
-```
-
-**Cloudflare設定**:
-- Cache Rules: キャッシュ有効、Edge TTL: originを尊重
-
-**TTL**: 1年（再検証可能）
-
-### ISRページ
-
-#### `/` (ホームページ)
-- **Next.js設定**: `revalidate: 3600`
-- **Cache-Control**: `public, s-maxage=3600, stale-while-revalidate=3600`
-- **Cloudflare設定**: キャッシュ有効、Edge TTL: originを尊重
-
-#### `/spaces/[id]` (スペース詳細)
-- **Next.js設定**: `revalidate: 60`
-- **Cache-Control**: `public, s-maxage=60, stale-while-revalidate=300`
-- **Cloudflare設定**: キャッシュ有効、Edge TTL: originを尊重
-
-#### `/news`, `/news/[id]` (お知らせ)
-- **Next.js設定**: `revalidate: 300`
-- **Cache-Control**: `public, s-maxage=300, stale-while-revalidate=600`
-- **Cloudflare設定**: キャッシュ有効、Edge TTL: originを尊重
-
-### SSRページ（`/reservation`, `/admin/*`）
-
-**Next.js設定**:
-```javascript
-// next.config.js
-{
-  source: '/reservation',
-  headers: [
-    {
-      key: 'Cache-Control',
-      value: 'private, no-cache, no-store, must-revalidate',
-    },
-  ],
-},
-{
-  source: '/admin/:path*',
-  headers: [
-    {
-      key: 'Cache-Control',
-      value: 'private, no-cache, no-store, must-revalidate',
-    },
-  ],
-}
-```
-
-**Cloudflare設定**:
-- Cache Rules: キャッシュ無効
-
-**理由**: リアルタイム性が重要、認証情報を含む可能性
-
-### API Routes
-
-#### 動的API
-- **Cache-Control**: `private, no-cache`
-- **Cloudflare設定**: キャッシュ無効
-
-#### 静的API（ISR）
-- **Cache-Control**: `public, s-maxage=<revalidate>, stale-while-revalidate=<revalidate*2>`
-- **Cloudflare設定**: キャッシュ有効、Edge TTL: originを尊重
+| 分類 | ページ | サーバーキャッシュ | CDNキャッシュ |
+|------|--------|------------------|---------------|
+| **PPRベース** | `/spaces/[id]`, `/news/[id]`, `/posts/[slug]`, `/p/[slug]` | `cacheLife('hours')` | 1時間 |
+| **PPRハイブリッド** | `/posts`, `/faq`, `/terms` | `cacheLife('hours')` | 1時間 |
+| **動的** | `/`, `/spaces`, `/news`, `/contact`, `/about` | なし | 1時間 |
+| **認証必須** | `/admin/*`, `/reservation/*` | なし | キャッシュ禁止 |
+| **API** | `/api/*` | なし | キャッシュ禁止 |
 
 ---
 
-## Next.js設定実装
+## Next.js設定
 
-### `next.config.js` への追加設定
-
-既存のセキュリティヘッダー設定（`docs/security/README.md`参照）に加えて、キャッシュヘッダーを追加します。
-
-```javascript
-// next.config.js
-const securityHeaders = [
-  // ... 既存のセキュリティヘッダー設定
-]
-
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  output: 'standalone', // Cloud Run用（既存設定）
-  
-  async headers() {
-    return [
-      // セキュリティヘッダー（全パスに適用）
-      {
-        source: '/:path*',
-        headers: securityHeaders,
-      },
-      // 公開ファイル（静的アセット）
-      {
-        source: '/public/:path*',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
-        ],
-      },
-      // SSGページ
-      {
-        source: '/contact',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, s-maxage=31536000, stale-while-revalidate=86400',
-          },
-        ],
-      },
-      {
-        source: '/privacy',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, s-maxage=31536000, stale-while-revalidate=86400',
-          },
-        ],
-      },
-      // SSRページ（キャッシュしない）
-      {
-        source: '/reservation',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'private, no-cache, no-store, must-revalidate',
-          },
-        ],
-      },
-      {
-        source: '/admin/:path*',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'private, no-cache, no-store, must-revalidate',
-          },
-        ],
-      },
-      // API Routes（キャッシュしない）
-      {
-        source: '/api/:path*',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'private, no-cache',
-          },
-        ],
-      },
-    ]
-  },
-}
-
-module.exports = nextConfig
-```
-
-### ISRページのCache-Control設定
-
-ISRページは、各ページコンポーネントで `revalidate` を設定し、Route HandlerまたはMiddlewareでCache-Controlヘッダーを設定します。
+### Cache-Control ヘッダー（next.config.ts）
 
 ```typescript
-// src/app/page.tsx (ホームページ)
-export const revalidate = 3600
-
-// src/app/spaces/[id]/page.tsx (スペース詳細)
-export const revalidate = 60
-
-// src/app/news/page.tsx (お知らせ一覧)
-export const revalidate = 300
+async headers() {
+  return [
+    // 管理画面（キャッシュ禁止）
+    {
+      source: '/admin/:path*',
+      headers: [
+        { key: 'Cache-Control', value: 'private, no-cache, no-store, must-revalidate' },
+      ],
+    },
+    // 予約ページ（キャッシュ禁止）
+    {
+      source: '/reservation/:path*',
+      headers: [
+        { key: 'Cache-Control', value: 'private, no-cache, no-store, must-revalidate' },
+      ],
+    },
+    // API Routes（キャッシュ禁止）
+    {
+      source: '/api/:path*',
+      headers: [
+        { key: 'Cache-Control', value: 'private, no-cache' },
+      ],
+    },
+    // 公開ページ（積極的キャッシュ）
+    {
+      source: '/:path*',
+      headers: [
+        { key: 'Cache-Control', value: 'public, s-maxage=3600, stale-while-revalidate=3600' },
+      ],
+    },
+  ]
+}
 ```
 
-Route HandlerでCache-Controlヘッダーを設定する場合：
+### サーバーサイドキャッシュ（use cache）
+
+PPRページでは `use cache` ディレクティブと `cacheLife()` を使用：
 
 ```typescript
-// src/app/route.ts (例)
-import { NextResponse } from 'next/server'
+// src/app/(public)/spaces/[id]/page.tsx
+import { cacheLife, cacheTag } from 'next/cache'
 
-export async function GET() {
-  const response = NextResponse.json({ data: '...' })
-  response.headers.set(
-    'Cache-Control',
-    'public, s-maxage=3600, stale-while-revalidate=3600'
-  )
-  return response
+export default async function SpacePage({ params }: Props) {
+  'use cache'
+  cacheLife('hours')
+  cacheTag('space', `space:${params.id}`)
+
+  // ... コンポーネントの実装
 }
 ```
 
 ---
 
-## Cloudflare設定実装
+## Cloudflare設定（管理画面）
+
+### 設定手順
+
+1. **管理画面** → **設定** → **外部サービス連携** → **Cloudflare**
+2. **Zone ID** と **API Token** を入力
+3. **接続テスト** で確認
+4. **保存**
+
+### Cloudflare APIトークン作成手順
+
+1. Cloudflare Dashboard → My Profile → API Tokens
+2. Create Token → Custom token
+3. **Permissions**: Zone > Cache Purge > Purge
+4. **Zone Resources**: Include > Specific zone > your-domain.com
+5. Create Token
+
+### 必要な権限
+
+| 項目 | 設定 |
+|------|------|
+| **Permissions** | Zone > Cache Purge > Purge |
+| **Zone Resources** | Include > Specific zone > (対象ドメイン) |
+
+---
+
+## 自動キャッシュパージ
+
+### 仕組み
+
+コンテンツを更新すると、Server Actionsが自動的に以下を実行：
+
+1. `revalidateTag()` でサーバーキャッシュを無効化
+2. `purgeXxxCache()` でCloudflare CDNキャッシュをパージ
+
+### パージ関数
+
+| 関数 | 対象パス |
+|------|----------|
+| `purgeSpaceCache(id?)` | `/spaces`, `/spaces/[id]`, `/` |
+| `purgePostCache(slug?)` | `/posts`, `/posts/[slug]`, `/` |
+| `purgeNewsCache(id?)` | `/news`, `/news/[id]`, `/` |
+| `purgePageCache(slug)` | `/p/[slug]` |
+| `purgeFaqCache()` | `/faq` |
+| `purgeTermsCache()` | `/terms` |
+| `purgeHomeCache()` | `/` |
+| `purgeAllCloudflareCache()` | 全キャッシュ |
+
+### 実装例
+
+```typescript
+// src/app/(admin)/admin/(dashboard)/_shared/actions/space.ts
+import { revalidateTag } from 'next/cache'
+import { purgeSpaceCache } from '@/shared/lib/cloudflare'
+
+export const updateSpace = withPermission('space', 'update')(
+  async (user, id, data) => {
+    // ... 更新処理
+
+    // サーバーキャッシュ無効化
+    revalidateTag(CACHE_TAGS.SPACES, 'default')
+
+    // Cloudflare CDN キャッシュパージ
+    void purgeSpaceCache(id)
+
+    return createSuccess('スペースを更新しました')
+  }
+)
+```
+
+### Fire-and-Forget パターン
+
+`void purgeXxxCache()` を使用して非同期でパージを実行します。これにより：
+
+- ユーザーへのレスポンスがブロックされない
+- パージ失敗時もメイン処理に影響しない
+- ログにパージ結果が記録される
+
+---
+
+## Cloudflare Dashboard設定
 
 ### DNS設定
 
-1. **Cloudflareアカウント作成**
-   - [Cloudflare](https://www.cloudflare.com/)でアカウントを作成
-
-2. **ドメイン追加**
-   - Cloudflareダッシュボードで「Add a Site」をクリック
-   - ドメイン名を入力
-
-3. **DNS設定**
-   - Cloud RunのカスタムドメインのIPアドレスを取得
-   - AレコードまたはCNAMEレコードを追加
-   - **重要**: プロキシモードを有効にする（オレンジの雲アイコン）
+1. Cloudflareダッシュボードで「Add a Site」をクリック
+2. ドメイン名を入力
+3. Cloud RunのIPアドレスでAレコードまたはCNAMEレコードを追加
+4. **プロキシモードを有効にする**（オレンジの雲アイコン）
 
 ### SSL/TLS設定
 
-1. **SSL/TLSモード**
-   - 「SSL/TLS」→「Overview」に移動
-   - **モード**: 「Full (strict)」を選択
-   - これにより、CloudflareとCloud Run間の通信が暗号化される
+| 設定 | 推奨値 |
+|------|--------|
+| **SSL/TLSモード** | Full (strict) |
+| **Always Use HTTPS** | 有効 |
+| **Minimum TLS Version** | TLS 1.2 |
 
-2. **自動HTTPSリライト**
-   - 「SSL/TLS」→「Edge Certificates」に移動
-   - 「Always Use HTTPS」を有効化
+### Cache Rules設定（推奨）
 
-### Cache Rules設定
+Cloudflare Dashboard → Caching → Configuration → Cache Rules
 
-Cloudflareダッシュボードで「Caching」→「Configuration」→「Cache Rules」に移動し、以下のルールを設定します。
+#### 1. 管理画面・予約ページ（キャッシュ禁止）
 
-#### 1. 静的アセット（`/_next/static/*`）
+- **URL**: `/admin/*` OR `/reservation/*`
+- **Cache Status**: Bypass
 
-**設定名**: `Static Assets`
+#### 2. API Routes（キャッシュ禁止）
+
+- **URL**: `/api/*`
+- **Cache Status**: Bypass
+
+#### 3. 静的アセット
+
 - **URL**: `/_next/static/*`
 - **Cache Status**: Cache
 - **Edge TTL**: Respect origin headers
 
-#### 2. 公開ファイル（`/public/*`）
+#### 4. 公開ページ
 
-**設定名**: `Public Files`
-- **URL**: `/public/*`
+- **URL**: `/*`
 - **Cache Status**: Cache
 - **Edge TTL**: Respect origin headers
-
-#### 3. SSGページ
-
-**設定名**: `SSG Pages`
-- **URL**: `/contact` OR `/privacy`
-- **Cache Status**: Cache
-- **Edge TTL**: Respect origin headers
-
-#### 4. ISRページ
-
-**設定名**: `ISR Pages`
-- **URL**: `/` OR `/spaces/*` OR `/news/*`
-- **Cache Status**: Cache
-- **Edge TTL**: Respect origin headers
-
-#### 5. SSRページ（キャッシュしない）
-
-**設定名**: `SSR Pages - No Cache`
-- **URL**: `/reservation` OR `/admin/*`
-- **Cache Status**: Bypass
-
-#### 6. API Routes（キャッシュしない）
-
-**設定名**: `API Routes - No Cache`
-- **URL**: `/api/*`
-- **Cache Status**: Bypass
-
-### セキュリティ設定
-
-#### DDoS保護（無料プラン）
-
-**自動有効**: 無料プランでも基本機能あり
-
-**保護範囲**:
-- レイヤー3/4 DDoS攻撃（SYN Flood、UDP Flood、ICMP Floodなど）
-- レイヤー7 DDoS攻撃（HTTP Flood、Slowloris攻撃など）の基本機能
-
-**設定確認**:
-1. Cloudflareダッシュボードにログイン
-2. 「Security」→「DDoS」に移動
-3. 保護状況を確認（自動有効になっていることを確認）
-
-**詳細**: [`../requirements/../security/protection.md`](../requirements/../security/protection.md)を参照してください。
-
-#### Bot Fight Mode（無料プラン）
-
-**利用可能**: 無料プランで利用可能
-
-**設定手順**:
-1. Cloudflareダッシュボードにログイン
-2. 「Security」→「Bots」に移動
-3. 「Bot Fight Mode」を有効化
-
-**機能**:
-- 既知のBotトラフィックの自動検出とブロック
-- レガシーBotの検出とブロック
-- 検索エンジンのBotは自動的に許可
-
-**注意**: 無料プランでは高度なカスタマイズは不可（有料プランのBot Managementが必要）
-
-**詳細**: [`../requirements/../security/protection.md`](../requirements/../security/protection.md)を参照してください。
-
-#### WAF（Web Application Firewall）
-
-**有料プラン**: Proプラン以上で利用可能
-
-**注意**: このプロジェクトでは商用無料プランでの実現を優先するため、WAFは使用しません。代わりに、アプリケーション側のレート制限とIPブロック機能を活用します。
-
-**詳細**: [`../requirements/../security/protection.md`](../requirements/../security/protection.md)を参照してください。
-
----
-
-## セキュリティヘッダーとの統合
-
-### 既存設定の維持
-
-`docs/security/README.md` に記載されているセキュリティヘッダー設定は、Cloudflare経由でも正しく設定されます。
-
-### CSP（Content Security Policy）の調整
-
-既存のCSP設定（`docs/security/README.md`参照）は、Cloudflare CDN経由のリソースも許可するように設定されています：
-
-```javascript
-"img-src 'self' data: https:",
-"font-src 'self' data:",
-```
-
-これにより、Supabase Storageの画像URL（`https://`）も許可されています。
-
----
-
-## パフォーマンス最適化
-
-### 画像最適化
-
-- **Next.js Image Component**: 継続使用
-- **Supabase Storage**: 継続使用（CDN経由で配信）
-- **Cloudflare Image Resizing**: オプション（有料プラン）
-
-### 帯域幅削減効果
-
-- **静的アセット**: 100% CDN経由（Cloud Runの帯域幅0）
-- **HTML（SSG/ISR）**: キャッシュヒット時はCDN経由
-- **予想削減率**: 70-90%（トラフィック構成による）
-
-### パフォーマンス指標
-
-- **TTFB（Time to First Byte）**: 50%以上改善
-- **LCP（Largest Contentful Paint）**: 30%以上改善
-- **帯域幅使用量**: 70%以上削減
-
----
-
-## 実装手順
-
-### フェーズ1: 準備
-
-1. **Cloudflareアカウント作成**
-   - [Cloudflare](https://www.cloudflare.com/)でアカウントを作成
-
-2. **ドメイン追加**
-   - Cloudflareダッシュボードで「Add a Site」をクリック
-   - ドメイン名を入力
-
-3. **DNS設定**
-   - Cloud RunのカスタムドメインのIPアドレスを取得
-   - AレコードまたはCNAMEレコードを追加
-   - **プロキシモードを有効にする**（オレンジの雲アイコン）
-
-### フェーズ2: Next.js設定
-
-1. **`next.config.js` にキャッシュヘッダー設定を追加**
-   - 上記の「Next.js設定実装」セクションを参照
-
-2. **各ページ/API Routeに適切なCache-Controlヘッダーを設定**
-   - ISRページ: `revalidate` を設定
-   - Route Handler: Cache-Controlヘッダーを設定
-
-3. **動作確認（開発環境）**
-   ```bash
-   bun run dev
-   ```
-   - 開発サーバーでキャッシュヘッダーが正しく設定されているか確認
-
-### フェーズ3: Cloudflare設定
-
-1. **Cache Rules設定**
-   - 上記の「Cache Rules設定」セクションを参照
-
-2. **SSL/TLS設定**
-   - 「Full (strict)」モードを選択
-   - 「Always Use HTTPS」を有効化
-
-3. **セキュリティ設定**
-   - DDoS保護: 自動有効
-   - Bot Fight Mode: 有効化（無料プラン）
-
-### フェーズ4: 検証
-
-1. **キャッシュ動作確認**
-   ```bash
-   # 静的アセットのキャッシュ確認
-   curl -I https://your-domain.com/_next/static/chunks/main.js
-   
-   # SSGページのキャッシュ確認
-   curl -I https://your-domain.com/contact
-   
-   # SSRページがキャッシュされていないことを確認
-   curl -I https://your-domain.com/reservation
-   ```
-
-2. **パフォーマンス測定**
-   - [PageSpeed Insights](https://pagespeed.web.dev/)で測定
-   - Cloudflare Analyticsでキャッシュヒット率を確認
-
-3. **セキュリティヘッダー確認**
-   ```bash
-   curl -I https://your-domain.com/
-   ```
-   - セキュリティヘッダーが正しく設定されているか確認
-
----
-
-## キャッシュ無効化
-
-### デプロイ時
-
-Cloudflareのキャッシュパージは通常不要です。Next.jsの `revalidatePath()` を使用してNext.jsキャッシュを無効化すると、Cloudflareは自動的に再検証します。
-
-### 管理画面更新時
-
-管理画面での更新時は、`revalidatePath()` を使用してNext.jsキャッシュを無効化します：
-
-```typescript
-// src/actions/admin/spaces.ts
-import { revalidatePath } from 'next/cache'
-
-export async function updateSpace(id: string, data: UpdateSpaceData) {
-  // ... 更新処理
-  
-  // キャッシュを無効化
-  revalidatePath('/spaces/[id]', 'page')
-  revalidatePath('/')
-}
-```
-
-Cloudflareは、Next.jsが新しいコンテンツを返すと自動的に再検証します。
-
-### 手動キャッシュパージ（オプション）
-
-必要に応じて、Cloudflareダッシュボードで手動でキャッシュをパージできます：
-
-1. 「Caching」→「Configuration」→「Purge Cache」に移動
-2. 「Purge Everything」をクリック（全キャッシュを削除）
-3. または、特定のURLを指定してパージ
 
 ---
 
 ## トラブルシューティング
 
-### キャッシュが効かない
+### キャッシュが更新されない
 
-**問題**: 静的アセットがキャッシュされない
-
-**解決策**:
-1. Cloudflareのプロキシモードが有効になっているか確認
-2. Cache Rulesが正しく設定されているか確認
-3. Next.jsのCache-Controlヘッダーが正しく設定されているか確認
-
-### 動的コンテンツがキャッシュされる
-
-**問題**: SSRページやAPI Routesがキャッシュされる
+**原因**: Cloudflare APIの接続問題
 
 **解決策**:
-1. `next.config.js` で `Cache-Control: private, no-cache` が設定されているか確認
-2. CloudflareのCache Rulesで「Bypass」が設定されているか確認
+1. 管理画面でCloudflare接続テストを実行
+2. Zone IDとAPI Tokenが正しいか確認
+3. ログで `Cloudflare cache purge failed` を確認
 
-### セキュリティヘッダーが設定されない
+### パージAPIがエラーを返す
 
-**問題**: Cloudflare経由でセキュリティヘッダーが設定されない
-
-**解決策**:
-1. `next.config.js` のセキュリティヘッダー設定を確認
-2. Cloudflareの「Transform Rules」でヘッダーを追加（オプション）
-
-### SSL/TLSエラー
-
-**問題**: CloudflareとCloud Run間でSSL/TLSエラーが発生
+**原因**: APIトークンの権限不足
 
 **解決策**:
-1. SSL/TLSモードを「Full (strict)」に設定
-2. Cloud RunのSSL証明書が正しく設定されているか確認
+1. Cloudflare DashboardでAPIトークンの権限を確認
+2. `Zone > Cache Purge > Purge` 権限があるか確認
+3. Zone Resourcesが正しいドメインを指しているか確認
+
+### コンテンツ更新が遅延する
+
+**原因**: stale-while-revalidateによる遅延
+
+**解決策**:
+- これは正常な動作です
+- 更新後、最大で `stale-while-revalidate` の時間（1時間）だけ古いコンテンツが表示される可能性があります
+- 即座に反映が必要な場合は、Cloudflare Dashboardで手動パージを実行
+
+### 手動キャッシュパージ
+
+1. Cloudflare Dashboard → Caching → Configuration → Purge Cache
+2. **Purge Everything**: 全キャッシュを削除
+3. **Custom Purge**: 特定のURLを指定してパージ
+
+---
+
+## 運用ガイド
+
+### 通常運用
+
+- コンテンツ更新時は自動的にキャッシュがパージされます
+- 特別な操作は不要です
+
+### 緊急時の対応
+
+1. **Cloudflare Dashboardで手動パージ**
+   - Caching → Configuration → Purge Cache → Purge Everything
+
+2. **Cloudflare設定が未設定の場合**
+   - 管理画面でCloudflare設定が未設定の場合、パージ処理はスキップされます
+   - サーバーサイドキャッシュ（`revalidateTag`）は正常に動作します
+
+### モニタリング
+
+| 確認項目 | 場所 |
+|----------|------|
+| **キャッシュヒット率** | Cloudflare Dashboard → Analytics |
+| **パージログ** | アプリケーションログで `Cloudflare cache purged` を検索 |
+| **パージエラー** | アプリケーションログで `Cloudflare cache purge failed` を検索 |
 
 ---
 
@@ -607,17 +294,18 @@ Cloudflareは、Next.jsが新しいコンテンツを返すと自動的に再検
 
 ### Cloudflare無料プラン
 
-- **帯域幅**: 無制限
-- **DDoS保護**: 基本機能あり
-- **Bot Fight Mode**: 利用可能
-- **Cache Rules**: 利用可能
+| 機能 | 利用可否 |
+|------|----------|
+| **帯域幅** | 無制限 |
+| **Cache Purge API** | 利用可能（1,000リクエスト/月） |
+| **DDoS保護** | 基本機能あり |
+| **Bot Fight Mode** | 利用可能 |
+| **Cache Rules** | 10ルールまで |
 
-### Cloud Run帯域幅コスト削減
+### Cloud Run帯域幅削減
 
-- **削減率**: 70-90%（トラフィック構成による）
-- **計算例**: 
-  - 100GB/月のトラフィック → 10-30GB/月に削減
-  - コスト削減: 約$5.60-7.20/月（$0.08/GiBの場合）
+- **削減率**: 約95%（積極的キャッシュ戦略）
+- **無料枠内PV目安**: 〜50万PV/月
 
 ---
 
@@ -625,25 +313,23 @@ Cloudflareは、Next.jsが新しいコンテンツを返すと自動的に再検
 
 ### プロジェクトドキュメント
 
-- [`CLAUDE.md`](../CLAUDE.md) - プロジェクト全体の仕様書
+- [`CLAUDE.md`](../../CLAUDE.md) - プロジェクト概要
 - [`DEPLOYMENT.md`](./DEPLOYMENT.md) - デプロイメント手順
-- [`ARCHITECTURE.md`](./ARCHITECTURE.md) - システムアーキテクチャ
-- [`../security/README.md`](../security/README.md) - セキュリティポリシー
-- [`PROJECT_STRUCTURE.md`](./PROJECT_STRUCTURE.md) - プロジェクト構造
+- [`docs/architecture/`](../architecture/) - システムアーキテクチャ
 
 ### 外部リソース
 
-- [Next.js 16 Documentation](https://nextjs.org/docs)
-- [Cloudflare CDN Documentation](https://developers.cloudflare.com/cache/)
+- [Next.js Caching Documentation](https://nextjs.org/docs/app/building-your-application/caching)
+- [Cloudflare Cache Purge API](https://developers.cloudflare.com/cache/how-to/purge-cache/purge-by-url/)
 - [Cloudflare Cache Rules](https://developers.cloudflare.com/cache/how-to/cache-rules/)
-- [Google Cloud Run Documentation](https://cloud.google.com/run/docs)
-- [Cloudflare + Google Cloud Integration](https://www.cloudflare.com/learning/cloud/what-is-cloudflare-google-cloud-integration/)
 
 ---
 
 ## 更新履歴
 
+- **2026-01-23**: PPR + 積極的キャッシュ戦略に更新
+  - `use cache` + `cacheLife()` 対応
+  - Cloudflare API自動パージ機能追加
+  - 管理画面でのCloudflare設定機能追加
 - **2026-01-05**: 初版作成
-  - Next.js 16.1.1 + Cloud Run + Cloudflare CDN統合ガイド
-  - キャッシュ戦略設計
-  - 実装手順
+  - Next.js 16 + Cloud Run + Cloudflare CDN統合ガイド

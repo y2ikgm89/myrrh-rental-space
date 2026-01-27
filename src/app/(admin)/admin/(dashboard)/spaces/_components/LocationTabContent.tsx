@@ -4,6 +4,7 @@ import { getLocations } from '@/admin/actions/location'
 import { LocationFilters } from '../../locations/_components/LocationFilters'
 import { LocationTable } from '../../locations/_components/LocationTable'
 import { Button } from '@/admin/components/ui'
+import { LoadingState } from '@/admin/components/LoadingState'
 
 // =============================================================================
 // 型定義
@@ -57,18 +58,12 @@ export async function LocationTabContent({ searchParams }: LocationTabContentPro
       </div>
 
       {/* フィルター */}
-      <Suspense fallback={<div>読み込み中...</div>}>
+      <Suspense fallback={<LoadingState variant="inline" />}>
         <LocationFilters />
       </Suspense>
 
       {/* 場所一覧 */}
-      <Suspense
-        fallback={
-          <div className="rounded-lg border bg-white p-12 text-center">
-            <p className="text-muted-foreground">読み込み中...</p>
-          </div>
-        }
-      >
+      <Suspense fallback={<LoadingState />}>
         <LocationList searchParams={searchParams} />
       </Suspense>
     </div>

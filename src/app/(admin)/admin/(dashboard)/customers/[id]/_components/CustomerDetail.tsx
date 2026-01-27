@@ -2,9 +2,8 @@
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
-import { format } from 'date-fns'
-import { ja } from 'date-fns/locale'
 import { ArrowLeft } from 'lucide-react'
+import { formatDateShort, formatDateTimeShort, formatPrice } from '@/shared/lib/utils'
 import { toast } from 'sonner'
 import {
   Button,
@@ -78,23 +77,22 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
     <div className="space-y-6">
       {/* ヘッダー */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">
-            {customer.lastName} {customer.firstName}
-          </h1>
-          <p className="text-muted-foreground">
-            登録日:{' '}
-            {format(new Date(customer.createdAt), 'yyyy年MM月dd日', {
-              locale: ja,
-            })}
-          </p>
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/admin/customers">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              一覧に戻る
+            </Link>
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">
+              {customer.lastName} {customer.firstName}
+            </h1>
+            <p className="text-muted-foreground">
+              登録日: {formatDateShort(customer.createdAt)}
+            </p>
+          </div>
         </div>
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/admin/customers">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            一覧に戻る
-          </Link>
-        </Button>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
@@ -143,19 +141,13 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
               <div>
                 <p className="text-sm text-muted-foreground">累計利用金額</p>
                 <p className="text-2xl font-bold">
-                  {customer.totalSpent
-                    ? `¥${customer.totalSpent.toLocaleString()}`
-                    : '-'}
+                  {formatPrice(customer.totalSpent, '-')}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">最終予約日</p>
                 <p className="text-lg">
-                  {customer.lastReservationAt
-                    ? format(new Date(customer.lastReservationAt), 'yyyy/MM/dd', {
-                        locale: ja,
-                      })
-                    : '-'}
+                  {formatDateShort(customer.lastReservationAt)}
                 </p>
               </div>
             </CardContent>
@@ -189,20 +181,12 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
                           {reservation.space.name}
                         </TableCell>
                         <TableCell>
-                          {format(
-                            new Date(reservation.startTime),
-                            'yyyy/MM/dd HH:mm',
-                            { locale: ja }
-                          )}
+                          {formatDateTimeShort(reservation.startTime)}
                           {' - '}
-                          {format(new Date(reservation.endTime), 'HH:mm', {
-                            locale: ja,
-                          })}
+                          {new Date(reservation.endTime).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
                         </TableCell>
                         <TableCell>
-                          {reservation.totalPrice
-                            ? `¥${reservation.totalPrice.toLocaleString()}`
-                            : '-'}
+                          {formatPrice(reservation.totalPrice, '-')}
                         </TableCell>
                         <TableCell>
                           <ReservationStatusBadge status={reservation.status} />

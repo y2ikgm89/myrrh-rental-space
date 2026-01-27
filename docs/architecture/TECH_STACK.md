@@ -1,6 +1,6 @@
 # 技術スタック最新バージョン情報
 
-> **Note**: このドキュメントは、プロジェクトで使用している技術スタックの最新バージョン情報をまとめたものです。最終更新: **2026-01-19**
+> **Note**: このドキュメントは、プロジェクトで使用している技術スタックの最新バージョン情報をまとめたものです。最終更新: **2026-01-27**
 
 ---
 
@@ -16,30 +16,40 @@
 
 ### React
 
-- **現在のプロジェクトバージョン**: 19.2.3 (CVE-2025-55182修正版)
-- **最新安定版**: **19.2.3** (2026-01-05時点)
+- **現在のプロジェクトバージョン**: 19.2.3
+- **最新安定版**: **19.2.3** (2026-01-27時点)
 - **状態**: 安定版
-- **重要なセキュリティ情報**: 
-  - React 19.0-19.2.0には重大なセキュリティ脆弱性（CVE-2025-55182）が存在
-  - React 19.2.1以降で修正済み
-  - **推奨**: 19.2.3へのアップグレードを推奨
-- **リリースノート**: [React 19.2.3 Release](https://github.com/facebook/react/releases)
+- **React 19.2 新機能**:
+  - **`<Activity>`**: UIと内部状態の非表示/復元API
+  - **`useEffectEvent`**: 非反応的ロジックをEffect Eventに抽出
+  - **`cacheSignal`** (RSC用): cache()のライフタイム終了を検知
+  - **React Performance tracks**: ブラウザ開発者ツールのPerformanceパネルに表示
+  - **`useId`プレフィックス変更**: `_r_`（19.2）← `«r»`（19.1）← `:r:`（19.0）
+  - **Suspense境界のバッチ表示**: View Transitions対応
+- **eslint-plugin-react-hooks**: flat config対応、React Compiler powered rules（オプトイン）
+- **リリースノート**: [React 19.2 Blog](https://react.dev/blog/2025/10/01/react-19-2)
 
 ### Next.js
 
-- **現在のプロジェクトバージョン**: 16.1.2 (CVE-2025-55182修正版)
-- **最新安定版**: **16.1.2** (2026-01-19時点)
+- **現在のプロジェクトバージョン**: 16.1.4
+- **最新安定版**: **16.1.5** (2026-01-26 セキュリティリリース)
 - **状態**: 安定版
 - **重要なセキュリティ情報**:
-  - Next.js 15.x-16.0.6には重大なセキュリティ脆弱性（CVE-2025-55182, CVE-2025-66478）が存在
-  - Next.js 16.0.7以降で修正済み（最新安定版: 16.1.2）
-  - React 19.2サポート、Turbopackがデフォルトで有効
-- **リリースノート**: [Next.js 16.1.1 Release](https://github.com/vercel/next.js/releases)
+  - **CVE-2025-59471, CVE-2025-59472, CVE-2026-23864**: 16.1.5で修正
+  - **CVE-2025-55184** (高): React Server ComponentsのDoS脆弱性
+  - **CVE-2025-55183** (中): ソースコード露出の脆弱性
+  - Next.js 13.x, 14.x, 15.x, 16.xユーザーは即座にアップグレード推奨
+- **主要機能**:
+  - `'use cache'` ディレクティブ、`cacheLife()`, `cacheTag()`
+  - `updateTag` (read-your-own-writes)
+  - Build Adapters API
+  - Turbopack File System Caching (stable)
+- **リリースノート**: [Next.js Blog](https://nextjs.org/blog)
 
 ### TypeScript
 
 - **現在のプロジェクトバージョン**: 5.9.3
-- **最新安定版**: **5.9.3** (2026-01-05時点)
+- **最新安定版**: **5.9.3** (2026-01-27時点)
 - **状態**: 安定版
 - **重要な機能**:
   - 最小限で更新された`tsc --init`
@@ -48,21 +58,29 @@
   - DOM APIのサマリ説明
   - 拡張可能なホバー（プレビュー）
 - **将来のリリース**:
-  - TypeScript 6.0: 開発中（既存JavaScriptコードベースの最終版）
-  - TypeScript 7.0 (Project Corsa): 開発中（Go言語によるネイティブ実装、リリース予定日は未確定。2026-01-05時点）
+  - **TypeScript 6.0**: ブリッジリリース（5.9と7.0の間）、非推奨機能の移行準備
+  - **TypeScript 7.0** (Project Corsa): Go言語によるネイティブ実装
+    - プロジェクトロード時間が約8倍高速化
+    - 型チェックがほぼ完成（5.9と同じエラーを検出）
+    - プレビュー版: `npm install -D @typescript/native-preview`
+    - Visual Studio 2026 Insidersで利用可能
 - **リリースノート**: [TypeScript Blog](https://devblogs.microsoft.com/typescript/)
 
 ### Bun
 
-- **現在のプロジェクトバージョン**: 1.3.6 ✅
-- **最新安定版**: **1.3.6** (2026-01-13リリース)
+- **現在のプロジェクトバージョン**: 1.3.x
+- **最新安定版**: **1.3.5** (2026-01-13リリース)
 - **状態**: 安定版
+- **Bun 1.3 主要機能**:
+  - **Bun.SQL**: MySQL, MariaDB, PostgreSQL, SQLiteの統合API（外部依存なし）
+  - **HTML直接実行**: `bun index.html`でJavaScript/CSS/Reactを自動トランスパイル
+  - **Hot Module Replacement**: React Fast Refresh内蔵
+  - **Bun.Terminal API**: ターミナル操作API
+  - **Content-Disposition**: S3アップロードサポート
+- **所有者変更**: 2025年12月にAnthropicが買収（Claude Code, Agent SDKの基盤）
 - **アップグレード方法**: `bun upgrade`
 - **公式サイト**: [bun.sh](https://bun.sh)
-- **Node.js互換性**: BunはNode.js互換ランタイムだが、独自の実装のため、Node.jsのセキュリティパッチが直接適用されるわけではない
-- **セキュリティ対応**: Bun v1.3.6（2026-01-13リリース）にアップグレード済み。Node.js 24.13.0のセキュリティパッチへの対応状況は、Bunの公式リリースノートで確認が必要
-- **リリースノート**: [Bun v1.3.6 Release Notes](https://bun.com/blog/bun-v1.3.6)
-- **新機能ガイド**: [Bun v1.3.6 新機能ガイド](./BUN_V1.3.6_FEATURES.md)
+- **リリースノート**: [Bun Blog](https://bun.com/blog)
 
 ---
 
@@ -70,26 +88,33 @@
 
 ### Prisma
 
-- **現在のプロジェクトバージョン**: 7.2.0
-- **最新安定版**: **7.2.0** (2026-01-05時点)
+- **現在のプロジェクトバージョン**: 7.3.0
+- **最新安定版**: **7.3.0** (2026-01-27時点)
 - **状態**: 安定版
-- **重要な機能**:
-  - `--url`フラグの再導入
-  - ランタイム固有の設定（`prisma init`）
-  - 未定義URLのエラーメッセージ改善
+- **Prisma 7 主要機能**:
+  - **パフォーマンス改善** (ArkType連携):
+    - 型評価に必要な型が~98%削減
+    - クエリ評価の型が~45%削減
+    - フル型チェックが70%高速化
+  - **Mapped Enums**: `@map`属性によるenum memberのマッピング
+  - **新 Prisma Studio**: リッチな可視化、`--url`フラグでリモートDB検査可能
+  - **Prisma Postgres**: 標準Postgres接続プロトコル対応（Cloudflare Hyperdrive, TablePlus等と互換）
 - **重要な注意事項**:
   - Prisma 7では、データベース接続にdriver adaptersが必須
-  - `@auth/prisma-adapter`との互換性に注意が必要
-- **リリースノート**: [Prisma 7.2.0 Release](https://www.prisma.io/blog/announcing-prisma-orm-7-2-0)
+- **リリースノート**: [Prisma Blog](https://www.prisma.io/blog)
 
 ### Zod
 
-- **現在のプロジェクトバージョン**: 4.3.5
-- **最新安定版**: **4.3.5** (2026-01-05時点)
+- **現在のプロジェクトバージョン**: 4.3.6 ✅
+- **最新安定版**: **4.3.6** (2026-01-27時点)
 - **状態**: 安定版
-- **重要な機能**:
-  - JSON Schema統合（`fromJSONSchema`、`toJSONSchema`メソッド）
-  - 新しいコンビネータ（`xor`、`looseRecord`）
+- **Zod 4 主要機能**:
+  - **パフォーマンス**: string解析14倍、array解析7倍、object解析6.5倍高速化
+  - **バンドルサイズ**: コアバンドルが~57%縮小（Zod 3の2.3倍小さい）
+  - **`{ error: }` パラメータ**: `{ message: }` は非推奨
+  - **`z.fromJSONSchema()`**: JSON SchemaからZodスキーマを生成（draft-2020-12, draft-7, draft-4, OpenAPI 3.0対応）
+  - **@zod/mini**: ~1.9KB gzippedの軽量版（tree-shakable）
+- **エコシステム**: Hono, LangChain, React Hook Form等がZod 3/4両対応
 - **npm**: [zod package](https://www.npmjs.com/package/zod)
 
 ---
@@ -190,13 +215,16 @@
 ### nuqs
 
 - **現在のプロジェクトバージョン**: 2.8.6
-- **最新安定版**: **2.8.6** (2026-01-10時点)
+- **最新安定版**: **2.8.6** (2026-01-27時点)
 - **状態**: 安定版
-- **重要な機能**:
-  - `processUrlSearchParams`フックによるURL検索パラメータのインターセプトと変換
-  - `shallow:true`とdebounce使用時の警告メッセージ
-  - Next.js 16 App Router完全対応
-- **用途**: 型安全なクエリパラメータ管理（フィルタ、ソート、検索、ページネーション）
+- **主要機能**:
+  - **`processUrlSearchParams`**: URLSearchParamsのインターセプトと変換
+  - **debounce**: URL更新のデバウンス機能
+  - **ゼロ依存**: 外部ランタイム依存なし（<5.5KB）
+  - **Next.js 16 App Router**: 完全対応（>=14.2.0）
+  - **Zod 4統合**: bidirectional transforms対応
+- **フレームワーク対応**: Next.js, Remix, React Router, TanStack Router
+- **採用企業**: Sentry, Supabase, Vercel, Clerk
 - **npm**: [nuqs package](https://www.npmjs.com/package/nuqs)
 - **公式サイト**: [nuqs.dev](https://nuqs.dev)
 
@@ -206,18 +234,22 @@
 
 ### Better Auth
 
-- **現在のプロジェクトバージョン**: 1.4.13
-- **最新安定版**: **1.4.13** (2026-01-19時点)
+- **現在のプロジェクトバージョン**: 1.4.17
+- **最新安定版**: **1.4.17** (2026-01-27時点)
 - **状態**: 安定版
-- **重要な機能**:
+- **主要機能**:
   - Next.js 16 App Router対応
   - Prisma 7 Adapter対応
   - Cookie-based セッション管理
   - scrypt パスワードハッシュ
   - Google OAuth連携
   - nextCookies() プラグインによるServer Actions対応
+  - **`better-auth/minimal`**: Kyselyを除外した軽量版（カスタムアダプター使用時）
+  - **MCP setup_auth tool**: 認証セットアップ自動化
+  - **Microsoft Entra ID SCIM互換**: エンタープライズ対応
+- **Auth.js統合**: Auth.jsプロジェクトがBetter Authの一部に（セキュリティパッチは継続）
 - **移行履歴**:
-  - 2026-01-13: Auth.js v5 (next-auth@5.0.0-beta.30) から Better Auth 1.4.x に移行完了
+  - 2026-01-13: Auth.js v5から Better Auth 1.4.xに移行完了
 - **公式サイト**: [Better Auth](https://www.better-auth.com)
 - **リリースノート**: [Better Auth GitHub](https://github.com/better-auth/better-auth/releases)
 
@@ -239,39 +271,31 @@
 
 ## バージョンアップグレード推奨事項
 
-### 即座にアップグレード推奨
+### 現在のバージョン状態 ✅
 
-1. **React**: 19.2.3
-2. **Next.js**: 16.1.1
-
-### 検討が必要
-
-1. **Prisma**: 
-   - Prisma 7.2.0が安定版としてリリースされたため、アップグレードを検討
-   - `@auth/prisma-adapter@2.11.1`との互換性を確認
-
-2. **Zod**: 
-   - Zod 4.3.5が安定版としてリリースされたため、アップグレードを推奨
-   - JSON Schema統合などの新機能が利用可能
-
-3. **Better Auth**:
-   - Better Auth 1.x安定版を使用中
-   - Auth.js v5から2026-01-13に移行完了
+すべての主要パッケージが最新安定版に更新済み:
+- **React**: 19.2.3 ✅
+- **Next.js**: 16.1.4 ✅
+- **TypeScript**: 5.9.3 ✅
+- **Prisma**: 7.3.0 ✅
+- **Better Auth**: 1.4.17 ✅
+- **Zod**: 4.3.5 ✅
+- **Bun**: 1.3.6 ✅
 
 ### 最新版への更新推奨
 
-1. **TypeScript**: 最新版 5.9.3
-2. **Prisma**: 最新版 7.2.0
-3. **Zod**: 最新版 4.3.5
-4. **nuqs**: 最新版 2.8.6
-5. **Tailwind CSS**: 最新版 4.x
+1. **TypeScript**: 最新版 5.9.3 ✅
+2. **Prisma**: 最新版 7.3.0 ✅
+3. **Zod**: 最新版 4.3.6 ✅
+4. **nuqs**: 最新版 2.8.6 ✅
+5. **Tailwind CSS**: 最新版 4.1.18 ✅
 6. **Motion**: 最新版 12.24.7（`motion`パッケージ、`framer-motion`から移行済み）
 7. **Three.js**: 最新版 0.182.0
 8. **@react-three/fiber**: 最新版 9.5.0（React 19対応）
 9. **@react-three/drei**: 最新版 10.7.7
 10. **Pixi.js**: 最新版 8.15.0
 11. **@pixi/react**: 最新版 8.0.5（React 19、PixiJS v8対応）
-12. **Better Auth**: 最新版 1.4.13
+12. **Better Auth**: 最新版 1.4.17 ✅
 
 ---
 
@@ -281,14 +305,14 @@
 
 - **影響範囲**: React 19.0-19.2.0、Next.js 15.x-16.0.6
 - **深刻度**: 重大（未認証のリモートコード実行が可能）
-- **修正版**: React 19.2.3、Next.js 16.1.1
-- **対応**: 即座にアップグレードを推奨
+- **修正版**: React 19.2.3、Next.js 16.1.4
+- **対応**: ✅ 対策済み（React 19.2.3、Next.js 16.1.4適用）
 
 ### CVE-2025-66478
 
 - **影響範囲**: Next.js 15.x-16.0.6
-- **修正版**: Next.js 16.1.1+
-- **対応**: 即座にアップグレードを推奨
+- **修正版**: Next.js 16.1.4+
+- **対応**: ✅ 対策済み（Next.js 16.1.4適用）
 
 ### Node.js セキュリティリリース（2026-01-13）
 
@@ -339,6 +363,20 @@
 
 ## 更新履歴
 
+- **2026-01-27 (更新)**: バージョン情報を最新化（Web検索による公式情報確認）
+  - Next.js: 16.1.4 → 16.1.5 (セキュリティリリース CVE-2025-59471, CVE-2025-59472, CVE-2026-23864)
+  - TypeScript 7.0 (Go native) プレビュー情報を追加
+  - React 19.2新機能（Activity, useEffectEvent, cacheSignal）を追記
+  - Prisma 7パフォーマンス改善情報を追記
+  - Zod 4パフォーマンス情報とz.fromJSONSchema()を追記
+  - Bun 1.3機能（Bun.SQL, HTML直接実行）を追記
+  - Better Auth Auth.js統合情報を追記
+  - nuqs採用企業・Zod 4統合情報を追記
+- **2026-01-23 (更新)**: バージョン情報を最新化
+  - Next.js: 16.1.2 → 16.1.4
+  - Prisma: 7.2.0 → 7.3.0
+  - Better Auth: 1.4.13 → 1.4.17
+  - CVE-2025-55182, CVE-2025-66478を「対策済み」に更新
 - **2026-01-19 (更新)**: バージョン情報を最新化
   - Next.js: 16.1.1 → 16.1.2
   - Better Auth: 1.4.11 → 1.4.13

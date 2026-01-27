@@ -15,18 +15,16 @@
  * @module admin/actions/media
  */
 
-import { revalidateTag } from 'next/cache'
+import { updateTag } from 'next/cache'
 import { CACHE_TAGS } from '@/shared/lib/constants'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
-import { prisma, Role, Prisma } from '@/shared/lib/prisma'
+import { prisma, Prisma } from '@/shared/lib/prisma'
 import { STORAGE_BUCKETS } from '@/shared/lib/supabase'
 import { uploadFile, deleteFile, deleteFiles } from '@/shared/lib/storage'
 import { parseStringArray } from '@/shared/lib/json-validators'
-import {
-  withPermission,
-  createSuccess,
-  createFailure,
-} from '@/admin/types/server-actions'
+import { createSuccess, createFailure, type ActionResult } from '@/shared/types/server-actions'
+import { checkPermission, logAction } from '@/admin/lib/action-auth'
+import { isEditorRole } from '@/admin/lib/permissions'
 import {
   mediaUploadSchema,
   mediaUpdateSchema,
@@ -39,6 +37,7 @@ import {
   type MediaUpdateInput,
 } from '@/admin/lib/validations/media'
 import { checkReadPermissionFor } from '@/admin/lib/permissions'
+import type { MediaData, GetMediaResult } from '@/admin/types/media-picker'
 
 // =============================================================================
 // FormData Helper Functions
@@ -73,40 +72,6 @@ function getFormStringArray(formData: FormData, key: string): string[] {
   } catch {
     return []
   }
-}
-
-// =============================================================================
-// Types
-// =============================================================================
-
-export type MediaData = {
-  id: string
-  filename: string
-  url: string
-  mimeType: string
-  size: number
-  width: number | null
-  height: number | null
-  type: string
-  usage: string
-  alt: string | null
-  title: string | null
-  description: string | null
-  tags: string[]
-  createdAt: Date
-  updatedAt: Date
-  uploader: {
-    id: string
-    name: string
-  }
-}
-
-export type GetMediaResult = {
-  items: MediaData[]
-  total: number
-  page: number
-  limit: number
-  totalPages: number
 }
 
 // =============================================================================
@@ -159,10 +124,17 @@ export async function getMediaList(
     return { items: [], total: 0, page: 1, limit: 24, totalPages: 0 }
   }
 
-  const validatedFilters = mediaFiltersSchema.parse(filters)
-  const validatedPagination = mediaPaginationSchema.parse(pagination)
+  const validatedFilters = mediaFiltersSchema.safeParse(filters)
+  if (!validatedFilters.success) {
+    return { items: [], total: 0, page: 1, limit: 24, totalPages: 0 }
+  }
 
-  const { page, limit } = validatedPagination
+  const validatedPagination = mediaPaginationSchema.safeParse(pagination)
+  if (!validatedPagination.success) {
+    return { items: [], total: 0, page: 1, limit: 24, totalPages: 0 }
+  }
+
+  const { page, limit } = validatedPagination.data
   const skip = (page - 1) * limit
 
   // Build where clause
@@ -170,23 +142,23 @@ export async function getMediaList(
     isActive: true,
   }
 
-  if (validatedFilters.type) {
-    where.type = validatedFilters.type
+  if (validatedFilters.data.type) {
+    where.type = validatedFilters.data.type
   }
 
-  if (validatedFilters.usage) {
-    where.usage = validatedFilters.usage
+  if (validatedFilters.data.usage) {
+    where.usage = validatedFilters.data.usage
   }
 
-  if (validatedFilters.mimeType) {
-    where.mimeType = { contains: validatedFilters.mimeType }
+  if (validatedFilters.data.mimeType) {
+    where.mimeType = { contains: validatedFilters.data.mimeType }
   }
 
-  if (validatedFilters.search) {
+  if (validatedFilters.data.search) {
     where.OR = [
-      { filename: { contains: validatedFilters.search, mode: 'insensitive' } },
-      { title: { contains: validatedFilters.search, mode: 'insensitive' } },
-      { alt: { contains: validatedFilters.search, mode: 'insensitive' } },
+      { filename: { contains: validatedFilters.data.search, mode: 'insensitive' } },
+      { title: { contains: validatedFilters.data.search, mode: 'insensitive' } },
+      { alt: { contains: validatedFilters.data.search, mode: 'insensitive' } },
     ]
   }
 
@@ -232,16 +204,20 @@ export async function getMediaById(id: string): Promise<MediaData | null> {
 /**
  * メディアアップロード
  */
-export const uploadMedia = withPermission<[FormData], { id: string; url: string }>(
-  'media',
-  'create'
-)(async (user, formData: FormData) => {
+export async function uploadMedia(
+  formData: FormData
+): Promise<ActionResult<{ id: string; url: string }>> {
+  const auth = await checkPermission('media', 'create')
+  if (!auth.success) return auth.error
+
+  const user = auth.user
+
   const file = getFormFile(formData, 'file')
   if (!file) {
     return createFailure('ファイルが選択されていません')
   }
 
-  // Parse metadata from form (型安全なヘルパー関数を使用)
+  // Parse metadata from form
   const metadata = {
     type: getFormString(formData, 'type') || undefined,
     usage: getFormString(formData, 'usage') || undefined,
@@ -280,8 +256,6 @@ export const uploadMedia = withPermission<[FormData], { id: string; url: string 
 
     uploadedPath = result.path
 
-    // Note: Image dimensions can be extracted using sharp if needed
-    // For now, we skip dimension extraction
     const width: number | null = null
     const height: number | null = null
 
@@ -306,7 +280,8 @@ export const uploadMedia = withPermission<[FormData], { id: string; url: string 
       },
     })
 
-    revalidateTag(CACHE_TAGS.MEDIA, 'default')
+    updateTag(CACHE_TAGS.MEDIA)
+    logAction(user.id, 'create', 'media', media.id)
 
     return createSuccess('アップロードしました', { id: media.id, url: media.url })
   } catch (error) {
@@ -321,15 +296,20 @@ export const uploadMedia = withPermission<[FormData], { id: string; url: string 
     })
     return createFailure('アップロードに失敗しました')
   }
-})
+}
 
 /**
  * メディアメタデータ更新
  */
-export const updateMedia = withPermission<[string, MediaUpdateInput], void>(
-  'media',
-  'update'
-)(async (user, id: string, data: MediaUpdateInput) => {
+export async function updateMedia(
+  id: string,
+  data: MediaUpdateInput
+): Promise<ActionResult<void>> {
+  const auth = await checkPermission('media', 'update')
+  if (!auth.success) return auth.error
+
+  const user = auth.user
+
   const parsed = mediaUpdateSchema.safeParse(data)
   if (!parsed.success) {
     return createFailure(parsed.error.issues[0].message)
@@ -344,7 +324,7 @@ export const updateMedia = withPermission<[string, MediaUpdateInput], void>(
   }
 
   // EDITOR can only update their own uploads
-  if (user.role === Role.EDITOR && existing.uploadedBy !== user.id) {
+  if (isEditorRole(user.role) && existing.uploadedBy !== user.id) {
     return createFailure('このメディアを編集する権限がありません')
   }
 
@@ -359,19 +339,22 @@ export const updateMedia = withPermission<[string, MediaUpdateInput], void>(
     },
   })
 
-  revalidateTag(CACHE_TAGS.MEDIA, 'default')
-  revalidateTag(`${CACHE_TAGS.MEDIA}-${id}`, 'default')
+  updateTag(CACHE_TAGS.MEDIA)
+  updateTag(`${CACHE_TAGS.MEDIA}-${id}`)
+  logAction(user.id, 'update', 'media', id)
 
   return createSuccess('更新しました')
-})
+}
 
 /**
  * メディア削除
  */
-export const deleteMedia = withPermission<[string], void>(
-  'media',
-  'delete'
-)(async (user, id: string) => {
+export async function deleteMedia(id: string): Promise<ActionResult<void>> {
+  const auth = await checkPermission('media', 'delete')
+  if (!auth.success) return auth.error
+
+  const user = auth.user
+
   const media = await prisma.media.findUnique({
     where: { id, isActive: true },
   })
@@ -389,7 +372,6 @@ export const deleteMedia = withPermission<[string], void>(
         severity: ErrorSeverity.LOW,
         context: { operation: 'deleteMedia', mediaId: id, storagePath: media.storagePath },
       })
-      // Continue with soft delete even if storage delete fails
     }
 
     // Soft delete
@@ -398,7 +380,8 @@ export const deleteMedia = withPermission<[string], void>(
       data: { isActive: false },
     })
 
-    revalidateTag(CACHE_TAGS.MEDIA, 'default')
+    updateTag(CACHE_TAGS.MEDIA)
+    logAction(user.id, 'delete', 'media', id)
 
     return createSuccess('削除しました')
   } catch (error) {
@@ -409,15 +392,19 @@ export const deleteMedia = withPermission<[string], void>(
     })
     return createFailure('削除に失敗しました')
   }
-})
+}
 
 /**
  * メディア一括削除
  */
-export const bulkDeleteMedia = withPermission<[string[]], { deleted: number }>(
-  'media',
-  'delete'
-)(async (user, ids: string[]) => {
+export async function bulkDeleteMedia(
+  ids: string[]
+): Promise<ActionResult<{ deleted: number }>> {
+  const auth = await checkPermission('media', 'delete')
+  if (!auth.success) return auth.error
+
+  const user = auth.user
+
   if (ids.length === 0) {
     return createSuccess('削除対象がありません', { deleted: 0 })
   }
@@ -442,7 +429,8 @@ export const bulkDeleteMedia = withPermission<[string[]], { deleted: number }>(
       data: { isActive: false },
     })
 
-    revalidateTag(CACHE_TAGS.MEDIA, 'default')
+    updateTag(CACHE_TAGS.MEDIA)
+    logAction(user.id, 'delete', 'media')
 
     return createSuccess(`${mediaItems.length}件のメディアを削除しました`, {
       deleted: mediaItems.length,
@@ -455,4 +443,4 @@ export const bulkDeleteMedia = withPermission<[string[]], { deleted: number }>(
     })
     return createFailure('一括削除に失敗しました')
   }
-})
+}

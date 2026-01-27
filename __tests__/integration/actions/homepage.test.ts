@@ -20,7 +20,7 @@ import {
 describe('Homepage Public Action Integration', () => {
   describe('HomepageSectionType enum', () => {
     test('全てのセクションタイプが定義されている', () => {
-      const expectedTypes = ['HERO', 'SPACE_LIST', 'NEWS', 'BLOG', 'FAQ', 'CTA', 'CUSTOM']
+      const expectedTypes = ['HERO', 'SPACE_LIST', 'NEWS', 'POSTS', 'FAQ', 'CTA', 'CUSTOM', 'INSTAGRAM']
 
       expectedTypes.forEach((type) => {
         expect(Object.values(HomepageSectionType)).toContain(type)
@@ -29,7 +29,7 @@ describe('Homepage Public Action Integration', () => {
 
     test('セクションタイプ数', () => {
       const typeCount = Object.values(HomepageSectionType).length
-      expect(typeCount).toBe(7)
+      expect(typeCount).toBe(8)
     })
   })
 
@@ -92,15 +92,15 @@ describe('Homepage Public Action Integration', () => {
       })
     })
 
-    describe('BLOG section', () => {
-      test('有効なBLOG設定', () => {
+    describe('POSTS section', () => {
+      test('有効なPOSTS設定', () => {
         const config = {
           title: '最新の記事',
           maxItems: 3,
           showViewAllLink: true,
         }
 
-        const result = validateSectionConfig(HomepageSectionType.BLOG, config)
+        const result = validateSectionConfig(HomepageSectionType.POSTS, config)
         expect(result.success).toBe(true)
       })
     })
@@ -167,8 +167,8 @@ describe('Homepage Public Action Integration', () => {
       expect(config).toHaveProperty('maxItems')
     })
 
-    test('BLOGのデフォルト設定', () => {
-      const config = defaultSectionConfigs[HomepageSectionType.BLOG]
+    test('POSTSのデフォルト設定', () => {
+      const config = defaultSectionConfigs[HomepageSectionType.POSTS]
       expect(config).toHaveProperty('maxItems')
     })
   })

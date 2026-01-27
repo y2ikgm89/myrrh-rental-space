@@ -44,7 +44,7 @@ import { getTermsAgreementSettings } from '@/public/actions/settings'
 import { recordTermsAgreement } from '@/public/actions/terms'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
 import { fireAndForget } from '@/shared/lib/async-utils'
-import { toDateString, extractFirstFromCommaList } from '@/shared/lib/serialize'
+import { toDateString, extractFirstFromCommaList, isRecord } from '@/shared/lib/serialize'
 import {
   calculateReservationPrice,
   parseDurationDiscountRules,
@@ -57,7 +57,7 @@ import {
   type SpaceDiscountSettings,
   type TaxSettings,
 } from '@/shared/lib/pricing'
-import { validateCouponCode } from '@/admin/actions/coupon'
+import { validateCouponCode } from '@/shared/actions/coupon'
 
 // 型の再エクスポート（後方互換性のため）
 export type { TimeSlot } from '@/shared/lib/reservation'
@@ -92,10 +92,9 @@ function isTermsAgreementInfo(value: unknown): value is TermsAgreementInfo {
  * 入力からtermsAgreementを安全に抽出
  */
 function extractTermsAgreement(input: unknown): TermsAgreementInfo | undefined {
-  if (typeof input === 'object' && input !== null && 'termsAgreement' in input) {
-    const maybeTerms = (input as Record<string, unknown>).termsAgreement
-    if (isTermsAgreementInfo(maybeTerms)) {
-      return maybeTerms
+  if (isRecord(input) && 'termsAgreement' in input) {
+    if (isTermsAgreementInfo(input.termsAgreement)) {
+      return input.termsAgreement
     }
   }
   return undefined

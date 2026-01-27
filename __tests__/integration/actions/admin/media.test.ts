@@ -20,7 +20,7 @@ const MediaType = {
 type MediaType = (typeof MediaType)[keyof typeof MediaType]
 
 const MediaUsage = {
-  BLOG: 'BLOG',
+  POST: 'POST',
   NEWS: 'NEWS',
   PAGE: 'PAGE',
   SPACE: 'SPACE',
@@ -31,7 +31,7 @@ type MediaUsage = (typeof MediaUsage)[keyof typeof MediaUsage]
 
 // Zod enum スキーマ
 const MediaTypeEnum = z.enum(['IMAGE', 'VIDEO', 'DOCUMENT', 'OTHER'])
-const MediaUsageEnum = z.enum(['BLOG', 'NEWS', 'PAGE', 'SPACE', 'SITE', 'GENERAL'])
+const MediaUsageEnum = z.enum(['POST', 'NEWS', 'PAGE', 'SPACE', 'SITE', 'GENERAL'])
 
 // media.ts 内で使用されているスキーマを再現
 const mediaUploadSchema = z.object({
@@ -72,7 +72,7 @@ const mediaPaginationSchema = z.object({
 // 有効なアップロードデータ
 const VALID_UPLOAD_INPUT = {
   type: MediaType.IMAGE,
-  usage: MediaUsage.BLOG,
+  usage: MediaUsage.POST,
   alt: '画像の説明',
   title: '画像タイトル',
   description: '画像の詳細な説明です。',
@@ -133,7 +133,7 @@ describe('Media Admin Action Integration', () => {
       })
 
       test('全MediaUsageが使用可能', () => {
-        const usages: MediaUsage[] = ['BLOG', 'NEWS', 'PAGE', 'SPACE', 'SITE', 'GENERAL']
+        const usages: MediaUsage[] = ['POST', 'NEWS', 'PAGE', 'SPACE', 'SITE', 'GENERAL']
         for (const usage of usages) {
           const result = mediaUploadSchema.safeParse({
             ...VALID_UPLOAD_INPUT,
@@ -344,7 +344,7 @@ describe('Media Admin Action Integration', () => {
     test('全フィールド指定', () => {
       const result = mediaFiltersSchema.safeParse({
         type: MediaType.IMAGE,
-        usage: MediaUsage.BLOG,
+        usage: MediaUsage.POST,
         search: '検索キーワード',
         mimeType: 'image/jpeg',
       })
@@ -454,7 +454,7 @@ describe('Media Admin Action Integration', () => {
 
   describe('MediaUsage enum テスト', () => {
     test('MediaUsage enumの値が存在', () => {
-      expect(MediaUsage.BLOG).toBe('BLOG')
+      expect(MediaUsage.POST).toBe('POST')
       expect(MediaUsage.NEWS).toBe('NEWS')
       expect(MediaUsage.PAGE).toBe('PAGE')
       expect(MediaUsage.SPACE).toBe('SPACE')
@@ -556,7 +556,7 @@ describe('Media Admin Action Integration', () => {
         width: 1920,
         height: 1080,
         type: 'IMAGE',
-        usage: 'BLOG',
+        usage: 'POST',
         alt: '画像の説明',
         title: '画像タイトル',
         description: '詳細な説明',
@@ -570,7 +570,7 @@ describe('Media Admin Action Integration', () => {
       }
 
       expect(media.type).toBe('IMAGE')
-      expect(media.usage).toBe('BLOG')
+      expect(media.usage).toBe('POST')
       expect(media.uploader.name).toBe('管理者')
     })
   })

@@ -3,6 +3,7 @@ import { getInquiries } from '@/admin/actions/inquiry'
 import { InquiryFilters } from './_components/InquiryFilters'
 import { InquiryTable } from './_components/InquiryTable'
 import { Pagination } from '@/admin/components/ui'
+import { LoadingState } from '@/admin/components/LoadingState'
 import { parseInquiryStatusFilter } from '@/shared/lib/validations/enums'
 import type { Metadata } from 'next'
 
@@ -54,18 +55,12 @@ export default async function InquiriesPage({ searchParams }: PageProps) {
       </div>
 
       {/* フィルター */}
-      <Suspense fallback={<div>読み込み中...</div>}>
+      <Suspense fallback={<LoadingState variant="inline" />}>
         <InquiryFilters />
       </Suspense>
 
       {/* お問い合わせ一覧 */}
-      <Suspense
-        fallback={
-          <div className="rounded-lg border bg-white p-12 text-center">
-            <p className="text-muted-foreground">読み込み中...</p>
-          </div>
-        }
-      >
+      <Suspense fallback={<LoadingState />}>
         <InquiryList searchParams={searchParams} />
       </Suspense>
     </div>

@@ -182,7 +182,7 @@ export function MediaUploadDialog({
               {/* Preview */}
               {previewUrl ? (
                 <div className="mb-4 rounded-lg overflow-hidden bg-muted">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  
                   <img
                     src={previewUrl}
                     alt="プレビュー"

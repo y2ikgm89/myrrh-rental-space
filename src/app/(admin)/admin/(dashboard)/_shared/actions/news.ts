@@ -1,11 +1,14 @@
 'use server'
 
 import { prisma } from '@/shared/lib/prisma'
-import { revalidateTag } from 'next/cache'
+import { updateTag } from 'next/cache'
 import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
-import { createSuccess, createFailure, withPermission } from '@/admin/types/server-actions'
+import { createSuccess, createFailure } from '@/admin/types/server-actions'
+import { withPermission } from '@/admin/lib/server-action-helpers'
 import type { NewsWhereInput } from '@/shared/types/prisma'
 import { checkReadPermissionFor } from '@/admin/lib/permissions'
+import { purgeNewsCache } from '@/shared/lib/cloudflare'
+import { checkSlugAvailability, getSlugErrorMessage } from '@/shared/lib/slug-validation'
 
 // Types and schemas from centralized validation file
 import {
@@ -130,17 +133,29 @@ export const createNews = withPermission<[CreateNewsInput], { id: string }>(
     return createFailure(parsed.error.issues[0].message)
   }
 
-  const { title, content } = parsed.data
+  const { slug, title, content } = parsed.data
+
+  // スラッグの使用可能チェック（予約パス＋全コンテンツタイプ横断）
+  const slugCheck = await checkSlugAvailability(slug, {
+    currentType: 'news',
+  })
+  if (!slugCheck.available) {
+    return createFailure(getSlugErrorMessage(slugCheck.reason))
+  }
 
   const news = await prisma.news.create({
     data: {
+      slug,
       title,
       content,
       isPublished: false,
     },
   })
 
-  revalidateTag(CACHE_TAGS.NEWS, 'default')
+  updateTag(CACHE_TAGS.NEWS)
+
+  // Cloudflare CDN キャッシュパージ
+  void purgeNewsCache(news.id)
 
   return createSuccess('お知らせを作成しました', { id: news.id })
 })
@@ -166,6 +181,7 @@ export const updateNews = withPermission<[string, UpdateNewsInput], void>(
   }
 
   const {
+    slug,
     title,
     content,
     contentWidth,
@@ -177,9 +193,19 @@ export const updateNews = withPermission<[string, UpdateNewsInput], void>(
     ogpImageUrl,
   } = parsed.data
 
+  // スラッグの使用可能チェック（予約パス＋全コンテンツタイプ横断、自分自身は除外）
+  const slugCheck = await checkSlugAvailability(slug, {
+    currentType: 'news',
+    currentId: id,
+  })
+  if (!slugCheck.available) {
+    return createFailure(getSlugErrorMessage(slugCheck.reason))
+  }
+
   await prisma.news.update({
     where: { id },
     data: {
+      slug,
       title,
       content,
       contentWidth: contentWidth ?? null,
@@ -194,8 +220,11 @@ export const updateNews = withPermission<[string, UpdateNewsInput], void>(
     },
   })
 
-  revalidateTag(CACHE_TAGS.NEWS, 'default')
-  revalidateTag(getCacheTag.news.detail(id), 'default')
+  updateTag(CACHE_TAGS.NEWS)
+  updateTag(getCacheTag.news.detail(id))
+
+  // Cloudflare CDN キャッシュパージ
+  void purgeNewsCache(id)
 
   return createSuccess('お知らせを保存しました')
 })
@@ -219,7 +248,10 @@ export const deleteNews = withPermission<[string], void>(
     where: { id },
   })
 
-  revalidateTag(CACHE_TAGS.NEWS, 'default')
+  updateTag(CACHE_TAGS.NEWS)
+
+  // Cloudflare CDN キャッシュパージ
+  void purgeNewsCache(id)
 
   return createSuccess('お知らせを削除しました')
 })
@@ -266,8 +298,11 @@ export const publishNews = withPermission<[string], void>(
     }),
   ])
 
-  revalidateTag(CACHE_TAGS.NEWS, 'default')
-  revalidateTag(getCacheTag.news.detail(id), 'default')
+  updateTag(CACHE_TAGS.NEWS)
+  updateTag(getCacheTag.news.detail(id))
+
+  // Cloudflare CDN キャッシュパージ
+  void purgeNewsCache(id)
 
   return createSuccess(`公開しました（バージョン ${nextVersion}）`)
 })
@@ -294,8 +329,11 @@ export const unpublishNews = withPermission<[string], void>(
     },
   })
 
-  revalidateTag(CACHE_TAGS.NEWS, 'default')
-  revalidateTag(getCacheTag.news.detail(id), 'default')
+  updateTag(CACHE_TAGS.NEWS)
+  updateTag(getCacheTag.news.detail(id))
+
+  // Cloudflare CDN キャッシュパージ
+  void purgeNewsCache(id)
 
   return createSuccess('下書きに戻しました')
 })
@@ -377,8 +415,11 @@ export const restoreNewsVersion = withPermission<[string, number], void>(
     },
   })
 
-  revalidateTag(CACHE_TAGS.NEWS, 'default')
-  revalidateTag(getCacheTag.news.detail(newsId), 'default')
+  updateTag(CACHE_TAGS.NEWS)
+  updateTag(getCacheTag.news.detail(newsId))
+
+  // Cloudflare CDN キャッシュパージ
+  void purgeNewsCache(newsId)
 
   return createSuccess(`バージョン ${version} を復元しました（下書き状態）`)
 })
@@ -389,6 +430,7 @@ export const restoreNewsVersion = withPermission<[string, number], void>(
 
 export type PublicNews = {
   id: string
+  slug: string
   title: string
   publishedAt: Date
 }
@@ -413,6 +455,7 @@ export async function getPublishedNewsList(
     },
     select: {
       id: true,
+      slug: true,
       title: true,
       publishedAt: true,
     },

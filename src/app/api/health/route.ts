@@ -1,5 +1,15 @@
+/**
+ * ヘルスチェックAPI
+ *
+ * Cloud Run / Load Balancerからのヘルスチェックリクエストに応答します。
+ * データベース接続の確認も行います。
+ *
+ * @module api/health
+ */
+
 import { NextResponse } from 'next/server'
 import { prisma } from '@/shared/lib/prisma'
+import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
 
 /**
  * Health check endpoint for Cloud Run / Load Balancer
@@ -31,7 +41,11 @@ export async function GET() {
       }
     )
   } catch (error) {
-    console.error('Health check failed:', error)
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.CRITICAL,
+      context: { operation: 'healthCheck' },
+    })
 
     return NextResponse.json(
       {

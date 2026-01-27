@@ -17,7 +17,7 @@ export type Resource =
   | 'reservation'
   | 'customer'
   | 'inquiry'
-  | 'blog'
+  | 'post'
   | 'news'
   | 'page'
   | 'faq'
@@ -58,7 +58,7 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     'reservation:create', 'reservation:read', 'reservation:update', 'reservation:delete', 'reservation:manage',
     'customer:create', 'customer:read', 'customer:update', 'customer:delete', 'customer:manage',
     'inquiry:read', 'inquiry:update', 'inquiry:delete', 'inquiry:manage',
-    'blog:create', 'blog:read', 'blog:update', 'blog:delete', 'blog:publish',
+    'post:create', 'post:read', 'post:update', 'post:delete', 'post:publish',
     'news:create', 'news:read', 'news:update', 'news:delete', 'news:publish',
     'page:create', 'page:read', 'page:update', 'page:delete', 'page:publish',
     'faq:create', 'faq:read', 'faq:update', 'faq:delete', 'faq:manage',
@@ -76,7 +76,7 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     'reservation:create', 'reservation:read', 'reservation:update', 'reservation:delete', 'reservation:manage',
     'customer:create', 'customer:read', 'customer:update', 'customer:delete', 'customer:manage',
     'inquiry:read', 'inquiry:update', 'inquiry:delete', 'inquiry:manage',
-    'blog:create', 'blog:read', 'blog:update', 'blog:delete', 'blog:publish',
+    'post:create', 'post:read', 'post:update', 'post:delete', 'post:publish',
     'news:create', 'news:read', 'news:update', 'news:delete', 'news:publish',
     'page:create', 'page:read', 'page:update', 'page:delete', 'page:publish',
     'faq:create', 'faq:read', 'faq:update', 'faq:delete', 'faq:manage',
@@ -89,7 +89,7 @@ export const ROLE_PERMISSIONS: RolePermissions = {
   ],
   EDITOR: [
     // 割り当てページ編集のみ（要リソースIDチェック）
-    'blog:read', 'blog:update',
+    'post:read', 'post:update',
     'news:read', 'news:update',
     'page:read', 'page:update',
     'faq:read', 'faq:update',
@@ -101,7 +101,7 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     'reservation:read',
     'customer:read',
     'inquiry:read',
-    'blog:read',
+    'post:read',
     'news:read',
     'page:read',
     'faq:read',
@@ -127,7 +127,7 @@ export const RESOURCE_LABELS: Record<Resource, string> = {
   reservation: '予約',
   customer: '顧客',
   inquiry: 'お問い合わせ',
-  blog: 'ブログ',
+  post: '投稿',
   news: 'お知らせ',
   page: '固定ページ',
   faq: 'FAQ',

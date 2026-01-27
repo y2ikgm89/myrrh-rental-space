@@ -1,19 +1,14 @@
 'use server'
 
 import { prisma } from '@/shared/lib/prisma'
-import { revalidatePath } from 'next/cache'
+import { updateTag } from 'next/cache'
+import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
 import { InquiryStatus } from '@/shared/generated/prisma/enums'
 import { z } from 'zod'
-import {
-  createSuccess,
-  createFailure,
-  withPermission,
-  type ActionResult,
-} from '@/admin/types/server-actions'
+import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+import { withPermission } from '@/admin/lib/server-action-helpers'
 import type { InquiryWhereInput } from '@/shared/types/prisma'
-import { getSession, getRoleFromSession } from '@/shared/lib/auth'
-import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'
-import { logPermissionDenied } from '@/admin/lib/audit'
+import { checkReadPermissionFor } from '@/admin/lib/permissions'
 
 // =============================================================================
 // Types
@@ -63,21 +58,7 @@ const updateStatusSchema = z.object({
 // Helper Functions
 // =============================================================================
 
-/**
- * 読み取り権限チェック（権限なしなら空結果を返すパターン用）
- */
-async function checkReadPermission(): Promise<boolean> {
-  const session = await getSession()
-  if (!session?.user) return false
-  const role = getRoleFromSession(session)
-  if (!role) return false
-  if (!canAccessAdmin(role)) return false
-  if (!hasPermission(role, 'inquiry', 'read')) {
-    void logPermissionDenied(session.user.id, 'inquiry', 'read')
-    return false
-  }
-  return true
-}
+const checkReadPermission = checkReadPermissionFor('inquiry')
 
 // =============================================================================
 // Actions
@@ -120,18 +101,18 @@ export async function getInquiries(
     ]
   }
 
-  // 総件数を取得
-  const total = await prisma.inquiry.count({ where })
-
-  // お問い合わせ一覧を取得
-  const inquiries = await prisma.inquiry.findMany({
-    where,
-    orderBy: {
-      [sortBy]: sortOrder,
-    },
-    skip: (page - 1) * limit,
-    take: limit,
-  })
+  // 総件数とお問い合わせ一覧を並列取得（N+1解消）
+  const [total, inquiries] = await prisma.$transaction([
+    prisma.inquiry.count({ where }),
+    prisma.inquiry.findMany({
+      where,
+      orderBy: {
+        [sortBy]: sortOrder,
+      },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+  ])
 
   return {
     inquiries,
@@ -184,8 +165,8 @@ export const updateInquiryStatus = withPermission<
     data: { status },
   })
 
-  revalidatePath('/admin/inquiries')
-  revalidatePath(`/admin/inquiries/${id}`)
+  updateTag(CACHE_TAGS.INQUIRIES)
+  updateTag(getCacheTag.inquiries.detail(id))
 
   return createSuccess('ステータスを更新しました')
 })
@@ -209,7 +190,7 @@ export const deleteInquiry = withPermission<[id: string], void>(
     where: { id },
   })
 
-  revalidatePath('/admin/inquiries')
+  updateTag(CACHE_TAGS.INQUIRIES)
 
   return createSuccess('お問い合わせを削除しました')
 })

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { tv } from 'tailwind-variants'
 import { Card, CardContent, CardHeader, CardTitle } from '@/public/components/ui'
+import { generatePostListUrl } from '@/shared/lib/url'
 import type { ReactElement } from 'react'
 import type { SidebarCategory } from '@/public/actions/sidebar'
 
@@ -16,12 +17,13 @@ const styles = tv({
 
 interface CategoriesWidgetProps {
   categories: SidebarCategory[]
+  postPrefix: string
 }
 
 /**
  * カテゴリーウィジェット
  */
-export function CategoriesWidget({ categories }: CategoriesWidgetProps): ReactElement {
+export function CategoriesWidget({ categories, postPrefix }: CategoriesWidgetProps): ReactElement {
   return (
     <Card>
       <CardHeader>
@@ -32,7 +34,7 @@ export function CategoriesWidget({ categories }: CategoriesWidgetProps): ReactEl
           <ul className={styles.list()}>
             {categories.map((category) => (
               <li key={category.id}>
-                <Link href={`/blog?category=${category.slug}`} className={styles.item()}>
+                <Link href={generatePostListUrl(postPrefix, { category: category.slug })} className={styles.item()}>
                   <span className={styles.name()}>{category.name}</span>
                   <span className={styles.count()} aria-label={`${category.postCount}件の記事`}>
                     {category.postCount}
