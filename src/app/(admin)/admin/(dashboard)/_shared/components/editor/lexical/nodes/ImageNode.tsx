@@ -191,6 +191,39 @@ export class ImageNode extends DecoratorNode<ReactElement> {
       />
     )
   }
+
+  // Getters
+  getSrc(): string {
+    return this.getLatest().__src
+  }
+
+  getAlt(): string {
+    return this.getLatest().__alt
+  }
+
+  getWidth(): number | undefined {
+    return this.getLatest().__width
+  }
+
+  getHeight(): number | undefined {
+    return this.getLatest().__height
+  }
+
+  // Setters
+  setAlt(alt: string): void {
+    const self = this.getWritable()
+    self.__alt = alt
+  }
+
+  setWidth(width: number | undefined): void {
+    const self = this.getWritable()
+    self.__width = width
+  }
+
+  setHeight(height: number | undefined): void {
+    const self = this.getWritable()
+    self.__height = height
+  }
 }
 
 // =============================================================================
