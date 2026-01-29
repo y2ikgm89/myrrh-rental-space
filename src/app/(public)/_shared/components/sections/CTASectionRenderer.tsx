@@ -9,6 +9,12 @@ import { tv } from 'tailwind-variants'
 import { cn } from '@/shared/lib/utils'
 import { Container, buttonVariants } from '@/public/components/ui'
 import type { CtaConfig } from '@/shared/lib/validations/homepage-section'
+import type { CTAButtonItem } from '@/shared/lib/validations/section-design'
+import {
+  getCustomColorStyle,
+  hasCustomColors,
+  CUSTOM_COLOR_HOVER_CLASS,
+} from './cta-button-styles'
 import type { ReactElement } from 'react'
 
 const ctaVariants = tv({
@@ -27,34 +33,55 @@ interface CTASectionRendererProps {
   config: CtaConfig
 }
 
+/**
+ * CTA背景（bg-primary）上でのボタンスタイルマッピング
+ */
+function getCtaButtonClasses(variant: CTAButtonItem['variant']): string {
+  switch (variant) {
+    case 'primary':
+      return 'bg-primary-foreground text-primary hover:bg-primary-foreground/90'
+    case 'secondary':
+    case 'outline':
+      return 'border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary'
+    case 'ghost':
+      return 'text-primary-foreground hover:bg-primary-foreground/10'
+    default: {
+      const _exhaustive: never = variant
+      return _exhaustive
+    }
+  }
+}
+
 export function CTASectionRenderer({ config }: CTASectionRendererProps): ReactElement {
   return (
     <section className={styles.section()}>
       <Container size="md" className={styles.wrapper()}>
         <h2 className={styles.heading()}>{config.title}</h2>
         {config.description && <p className={styles.subtext()}>{config.description}</p>}
-        <div className={styles.buttonGroup()}>
-          <Link
-            href={config.ctaPrimary.url}
-            className={cn(
-              buttonVariants({ size: 'lg' }),
-              'bg-primary-foreground text-primary hover:bg-primary-foreground/90'
-            )}
-          >
-            {config.ctaPrimary.text}
-          </Link>
-          {config.ctaSecondary?.text && config.ctaSecondary?.url && (
-            <Link
-              href={config.ctaSecondary.url}
-              className={cn(
-                buttonVariants({ variant: 'outline', size: 'lg' }),
-                'border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary'
-              )}
-            >
-              {config.ctaSecondary.text}
-            </Link>
-          )}
-        </div>
+        {config.buttons.length > 0 && (
+          <div className={styles.buttonGroup()}>
+            {config.buttons.map((button, index) => (
+              <Link
+                key={index}
+                href={button.url}
+                target={button.openInNewTab ? '_blank' : undefined}
+                rel={button.openInNewTab ? 'noopener noreferrer' : undefined}
+                className={cn(
+                  buttonVariants({
+                    variant: button.variant === 'primary' ? 'primary' : 'outline',
+                    size: button.size,
+                  }),
+                  hasCustomColors(button)
+                    ? CUSTOM_COLOR_HOVER_CLASS
+                    : getCtaButtonClasses(button.variant)
+                )}
+                style={getCustomColorStyle(button)}
+              >
+                {button.text}
+              </Link>
+            ))}
+          </div>
+        )}
       </Container>
     </section>
   )
