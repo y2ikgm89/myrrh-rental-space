@@ -36,7 +36,7 @@ const STAFF_ROLE_LABELS: Record<StaffRole, string> = {
 }
 
 const inviteSchema = z.object({
-  email: z.string().email('有効なメールアドレスを入力してください'),
+  email: z.string().email({ error: '有効なメールアドレスを入力してください' }),
   name: z.string().max(100).optional(),
   role: z.enum(['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'VIEWER'] as const),
 })

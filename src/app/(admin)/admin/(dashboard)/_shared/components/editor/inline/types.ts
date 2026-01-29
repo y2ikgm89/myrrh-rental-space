@@ -108,18 +108,6 @@ export function getFieldError<T extends FieldValues>(
 // =============================================================================
 
 /**
- * ページ編集用フォームデータ
- */
-export type PageEditorFormData = {
-  title: string
-  content: string
-  description?: string
-  contentWidth?: string
-  contentWidthCustom?: string
-  showSidebar?: boolean | null  // null=デフォルト（カスタムページは非表示）、true=表示、false=非表示
-} & SEOFormFields & OGPFormFields & PublishFormFields
-
-/**
  * エディターヘッダープロパティ
  */
 export type EditorHeaderProps = {
@@ -153,24 +141,11 @@ export type EditorHeaderProps = {
 }
 
 /**
- * サイドパネルプロパティ
- */
-export type SidePanelProps = {
-  isOpen: boolean
-  onClose: () => void
-  register: UseFormRegister<PageEditorFormData>
-  control: Control<PageEditorFormData>
-  errors: FieldErrors<PageEditorFormData>
-  setValue: UseFormSetValue<PageEditorFormData>
-  disabled?: boolean
-}
-
-/**
  * サイドパネルセクションプロパティ（ジェネリック）
  *
  * @template T - フォームデータ型（FieldValuesを継承）
  */
-export type SidePanelSectionProps<T extends FieldValues = PageEditorFormData> = {
+export type SidePanelSectionProps<T extends FieldValues = FieldValues> = {
   register: UseFormRegister<T>
   control: Control<T>
   errors: FieldErrors<T>
@@ -216,25 +191,6 @@ export type OGPFieldsProps<T extends FieldValues> = {
 // =============================================================================
 // フィールド名定数（型安全なマッピング用）
 // =============================================================================
-
-/** PageEditorFormData用のSEOフィールド名 */
-export const PAGE_SEO_FIELDS = {
-  metaDescription: 'metaDescription',
-  metaKeywords: 'metaKeywords',
-} as const satisfies { [K in keyof SEOFormFields]-?: Path<PageEditorFormData> }
-
-/** PageEditorFormData用のOGPフィールド名 */
-export const PAGE_OGP_FIELDS = {
-  ogpTitle: 'ogpTitle',
-  ogpDescription: 'ogpDescription',
-  ogpImageUrl: 'ogpImageUrl',
-} as const satisfies { [K in keyof OGPFormFields]-?: Path<PageEditorFormData> }
-
-/** PageEditorFormData用の公開設定フィールド名 */
-export const PAGE_PUBLISH_FIELDS = {
-  isPublished: 'isPublished',
-  publishedAt: 'publishedAt',
-} as const satisfies { [K in keyof PublishFormFields]-?: Path<PageEditorFormData> }
 
 /** PostEditorFormData用のSEOフィールド名 */
 export const POST_SEO_FIELDS = {

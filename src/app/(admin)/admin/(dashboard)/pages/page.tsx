@@ -10,14 +10,13 @@
  */
 
 import Link from 'next/link'
-import { Edit, Home, Settings2 } from 'lucide-react'
+import { Edit, Home } from 'lucide-react'
 import { getPagesList } from '@/admin/actions/page'
 import { Button } from '@/admin/components/ui'
 import { formatDateTimeShort } from '@/shared/lib/utils'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/admin/components/ui/table'
 import { Badge } from '@/admin/components/ui/badge'
 import { CreatePageDialog, PageActions } from './_components'
-import { getSystemPageDefinition } from '@/admin/lib/validations/page'
 import type { Metadata } from 'next'
 import type { ReactElement } from 'react'
 
@@ -84,11 +83,7 @@ export default async function PagesManagementPage(): Promise<ReactElement> {
             </TableRow>
 
             {/* ページ一覧 */}
-            {pages.map((page) => {
-              const systemPageDef = getSystemPageDefinition(page.slug)
-              const isContentEditable = systemPageDef?.isContentEditable ?? !page.isSystemPage
-
-              return (
+            {pages.map((page) => (
                 <TableRow key={page.id} className={page.isSystemPage ? 'bg-muted/30' : ''}>
                   <TableCell className="font-mono text-sm">
                     /{page.slug}
@@ -96,15 +91,9 @@ export default async function PagesManagementPage(): Promise<ReactElement> {
                   <TableCell className="font-medium">{page.title}</TableCell>
                   <TableCell>
                     {page.isSystemPage ? (
-                      isContentEditable ? (
-                        <Badge variant="outline" className="text-xs">
-                          システム
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary" className="text-xs">
-                          SEOのみ
-                        </Badge>
-                      )
+                      <Badge variant="outline" className="text-xs">
+                        システム
+                      </Badge>
                     ) : (
                       <Badge variant="default" className="text-xs">
                         カスタム
@@ -123,21 +112,12 @@ export default async function PagesManagementPage(): Promise<ReactElement> {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
-                      {isContentEditable ? (
-                        <Button asChild size="sm" variant="ghost">
-                          <Link href={`/admin/pages/${page.slug}/edit`}>
-                            <Edit className="h-4 w-4 mr-1" />
-                            編集
-                          </Link>
-                        </Button>
-                      ) : (
-                        <Button asChild size="sm" variant="ghost">
-                          <Link href={`/admin/pages/${page.slug}/seo`}>
-                            <Settings2 className="h-4 w-4 mr-1" />
-                            SEO
-                          </Link>
-                        </Button>
-                      )}
+                      <Button asChild size="sm" variant="ghost">
+                        <Link href={`/admin/pages/${page.slug}/edit`}>
+                          <Edit className="h-4 w-4 mr-1" />
+                          編集
+                        </Link>
+                      </Button>
                       <PageActions
                         slug={page.slug}
                         title={page.title}
@@ -147,8 +127,7 @@ export default async function PagesManagementPage(): Promise<ReactElement> {
                     </div>
                   </TableCell>
                 </TableRow>
-              )
-            })}
+              ))}
           </TableBody>
         </Table>
       </div>

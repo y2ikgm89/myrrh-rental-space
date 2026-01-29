@@ -14,8 +14,9 @@ import { LayoutWidth } from '@/shared/generated/prisma/enums'
 
 /**
  * システムページ定義
- * - コンテンツ編集可能: privacy, about, faq（Lexicalエディタで編集）
- * - SEOのみ編集可能: reservation, spaces, contact（コードで実装）
+ *
+ * システムページは削除不可。セクションシステムで編集可能。
+ * すべてのページは /[slug] で統一されたURLで表示される。
  *
  * Note: 以下は各専用管理ページで管理
  * - posts/news → /admin/posts, /admin/news
@@ -25,17 +26,15 @@ export interface SystemPageDefinition {
   slug: string
   title: string
   description: string
-  isContentEditable: boolean
 }
 
 export const SYSTEM_PAGES: readonly SystemPageDefinition[] = [
-  // コンテンツ編集可能なシステムページ（Lexicalエディタで編集）
-  { slug: 'privacy', title: 'プライバシーポリシー', description: '個人情報の取り扱いについて', isContentEditable: true },
-  { slug: 'about', title: '会社概要', description: '会社・サービスについて', isContentEditable: true },
-  { slug: 'faq', title: 'よくある質問', description: 'FAQ', isContentEditable: true },
-  { slug: 'reservation', title: '予約', description: 'レンタルスペースの予約', isContentEditable: true },
-  { slug: 'spaces', title: 'スペース一覧', description: 'ご利用可能なレンタルスペース', isContentEditable: true },
-  { slug: 'contact', title: 'お問い合わせ', description: 'お問い合わせフォーム', isContentEditable: true },
+  { slug: 'privacy', title: 'プライバシーポリシー', description: '個人情報の取り扱いについて' },
+  { slug: 'about', title: '会社概要', description: '会社・サービスについて' },
+  { slug: 'faq', title: 'よくある質問', description: 'FAQ' },
+  { slug: 'reservation', title: '予約', description: 'レンタルスペースの予約' },
+  { slug: 'spaces', title: 'スペース一覧', description: 'ご利用可能なレンタルスペース' },
+  { slug: 'contact', title: 'お問い合わせ', description: 'お問い合わせフォーム' },
 ]
 
 export const SYSTEM_PAGE_SLUGS = SYSTEM_PAGES.map((p) => p.slug)
@@ -100,7 +99,6 @@ export type UpdatePageSeoInput = z.infer<typeof updatePageSeoSchema>
 export const updatePageSchema = z.object({
   title: z.string().min(1, { error: 'タイトルは必須です' }).max(200, { error: 'タイトルは200文字以内です' }),
   description: z.string().max(500, { error: '説明は500文字以内です' }).optional(),
-  content: z.string().min(1, { error: 'コンテンツは必須です' }).max(500000, { error: 'コンテンツは500,000文字以内です' }),
   metaDescription: z.string().max(160, { error: 'メタディスクリプションは160文字以内です' }).optional(),
   metaKeywords: z.string().max(200, { error: 'メタキーワードは200文字以内です' }).optional(),
   ogpTitle: z.string().max(100, { error: 'OGPタイトルは100文字以内です' }).optional(),

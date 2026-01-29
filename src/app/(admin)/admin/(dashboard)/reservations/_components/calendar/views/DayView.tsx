@@ -33,7 +33,7 @@ export function DayView({ date, events, onEventClick }: DayViewProps) {
   return (
     <div className="flex h-full flex-col rounded-lg border bg-white">
       {/* ヘッダー */}
-      <div className="grid grid-cols-[60px_1fr] border-b bg-gray-50">
+      <div className="grid grid-cols-[60px_1fr] border-b bg-muted/50">
         <div className="border-r p-2" />
         <div
           className={cn(

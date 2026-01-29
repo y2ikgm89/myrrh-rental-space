@@ -9,7 +9,10 @@ function Card({ className, ref, ...props }: DivProps) {
     <div
       ref={ref}
       className={cn(
-        'rounded-xl border bg-card text-card-foreground shadow',
+        // Swiss Design: シャープなエッジ、控えめなシャドウ
+        'rounded-md border bg-card text-card-foreground',
+        'shadow-[0_1px_3px_0_rgb(0_0_0/0.04),0_1px_2px_-1px_rgb(0_0_0/0.03)]',
+        'transition-shadow duration-200',
         className
       )}
       {...props}
@@ -31,7 +34,11 @@ function CardTitle({ className, ref, ...props }: DivProps) {
   return (
     <div
       ref={ref}
-      className={cn('font-semibold leading-none tracking-tight', className)}
+      className={cn(
+        // Swiss Typography: タイトなレタースペーシング
+        'text-base font-semibold leading-none tracking-tight',
+        className
+      )}
       {...props}
     />
   )

@@ -48,6 +48,8 @@ interface SpaceInfoProps {
   facilities: string[]
   location?: LocationInfo | null
   category?: CategoryInfo | null
+  /** 説明欄のカスタムコンテンツ（インライン編集用） */
+  descriptionSlot?: ReactElement
 }
 
 export async function SpaceInfo({
@@ -60,6 +62,7 @@ export async function SpaceInfo({
   facilities,
   location,
   category,
+  descriptionSlot,
 }: SpaceInfoProps): Promise<ReactElement> {
   return (
     <div className={styles.section()}>
@@ -82,7 +85,7 @@ export async function SpaceInfo({
           </div>
         )}
         <div className="mt-4">
-          <ContentRenderer html={description} />
+          {descriptionSlot ?? <ContentRenderer html={description} />}
         </div>
       </div>
 

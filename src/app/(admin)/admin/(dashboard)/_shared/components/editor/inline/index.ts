@@ -10,7 +10,6 @@
 export {
   postConfig,
   newsConfig,
-  pageConfig,
 } from './content-types'
 
 // 型定義
@@ -34,7 +33,6 @@ export {
 export {
   usePostEditor,
   useNewsEditor,
-  usePageEditor,
   useContentWidthStyles,
 } from './hooks/index'
 
@@ -44,9 +42,8 @@ export { SidePanelShell, SIDE_PANEL_WIDTH } from './SidePanelShell'
 export { UnifiedSidePanel } from './UnifiedSidePanel'
 export { InlineEditorShell } from './InlineEditorShell'
 
-// 旧型定義（後方互換性のため一時的に維持）
+// 旧型定義
 export type {
-  PageEditorFormData,
   EditorHeaderProps,
   SidePanelSectionProps,
   PostEditorFormData,

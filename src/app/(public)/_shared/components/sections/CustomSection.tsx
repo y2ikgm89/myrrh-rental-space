@@ -25,14 +25,17 @@ interface CustomSectionProps {
   title?: string | null
   content?: string | null
   config: CustomConfig
+  /** コンテンツスロット（インライン編集用） */
+  contentSlot?: ReactElement
 }
 
 export async function CustomSection({
   title,
   content,
   config,
+  contentSlot,
 }: CustomSectionProps): Promise<ReactElement | null> {
-  if (!content) {
+  if (!content && !contentSlot) {
     return null
   }
 
@@ -44,7 +47,7 @@ export async function CustomSection({
             <h2 className={styles.sectionTitle()}>{title}</h2>
           </div>
         )}
-        <ContentRenderer html={content} />
+        {contentSlot ?? <ContentRenderer html={content ?? ''} />}
       </Container>
     </section>
   )

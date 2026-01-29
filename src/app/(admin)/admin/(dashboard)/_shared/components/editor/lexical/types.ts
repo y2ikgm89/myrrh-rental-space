@@ -29,6 +29,8 @@ export type LexicalEditorProps = {
   className?: string
   /** ツールバーを表示するかどうか */
   showToolbar?: boolean
+  /** インスペクターサイドバーを表示するかどうか */
+  showInspector?: boolean
   /** エディタの高さ */
   height?: string
   /** プレースホルダーテキスト */

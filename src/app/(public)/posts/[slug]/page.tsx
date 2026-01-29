@@ -30,13 +30,14 @@ import { ArticleJsonLd } from '@/public/components/seo/JsonLd'
 import { BlogSidebar } from '@/public/components/sidebar'
 import { getSidebarFullData } from '@/public/actions/sidebar'
 import { prisma } from '@/shared/lib/prisma'
+import { isAdmin } from '@/shared/lib/auth'
 import { criticalFetch, ErrorCategory } from '@/shared/lib/errors'
 import { toPlainObject, toISOString, formatSerializedDate } from '@/shared/lib/serialize'
 import { parseStringArray } from '@/shared/lib/json-validators'
 import { getPostLayoutSettings } from '@/public/lib/layout-settings'
 import { getContainerStyles, getContentStyles } from '@/shared/lib/styles/layout-mapper'
 import { PostStatus } from '@/shared/generated/prisma/enums'
-import { CommentSection, PostPreviewWrapper } from './_components'
+import { CommentSection, PostPreviewWrapper, InlineEditableWrapper } from './_components'
 import { getBaseUrl, SITE_DEFAULTS, CACHE_LIFE, CACHE_TAGS } from '@/shared/lib/constants'
 import { getPostUrlPrefix } from '@/shared/lib/settings/public'
 import { generatePostUrl, generatePostListUrl } from '@/shared/lib/url'
@@ -89,7 +90,7 @@ const styles = tv({
 /** ページコンポーネントのProps */
 interface PageProps {
   params: Promise<{ slug: string }>
-  searchParams: Promise<{ preview?: string }>
+  searchParams: Promise<{ preview?: string; edit?: string }>
 }
 
 // =============================================================================
@@ -387,6 +388,9 @@ export default async function PostDetailPage({
 
   const tags = parseStringArray(post.tags)
 
+  // 管理者チェック（インライン編集用）
+  const userIsAdmin = await isAdmin()
+
   // サイドバーデータと前後記事を並列取得
   const [{ prevPost, nextPost }, sidebar] = await Promise.all([
     getAdjacentPosts(post.id, post.publishedAt),
@@ -464,16 +468,38 @@ export default async function PostDetailPage({
                 />
               </div>
 
-              {/* 本文（HTMLコンテンツ + PostListWidget） */}
-              <ContentRenderer
-                html={post.content}
-                className={styles.content()}
-                widgetContext={{
-                  categoryId: post.categoryId,
-                  excludePostId: post.id,
-                }}
-                postPrefix={postPrefix}
-              />
+              {/* 本文（HTMLコンテンツ + PostListWidget） - インライン編集対応 */}
+              <Suspense
+                fallback={
+                  <ContentRenderer
+                    html={post.content}
+                    className={styles.content()}
+                    widgetContext={{
+                      categoryId: post.categoryId,
+                      excludePostId: post.id,
+                    }}
+                    postPrefix={postPrefix}
+                  />
+                }
+              >
+                <InlineEditableWrapper
+                  postId={post.id}
+                  initialContent={post.content}
+                  isAdmin={userIsAdmin}
+                  contentWidthClassName={contentStyles.className}
+                  contentWidthStyle={contentStyles.style}
+                >
+                  <ContentRenderer
+                    html={post.content}
+                    className={styles.content()}
+                    widgetContext={{
+                      categoryId: post.categoryId,
+                      excludePostId: post.id,
+                    }}
+                    postPrefix={postPrefix}
+                  />
+                </InlineEditableWrapper>
+              </Suspense>
 
               {/* タグ */}
               {tags.length > 0 && (

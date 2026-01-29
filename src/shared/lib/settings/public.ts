@@ -222,6 +222,63 @@ export async function getPostUrlPrefix(): Promise<string> {
   return settings?.postUrlPrefixEnabled ?? true ? '/posts' : ''
 }
 
+export async function getPublicRobotsTxtSettings() {
+  'use cache'
+  cacheLife('hours')
+  cacheTag('robots-txt', 'settings')
+
+  const result = await safeFetch({
+    fetch: () =>
+      prisma.settings.findUnique({
+        where: { id: 'singleton' },
+        select: {
+          robotsTxtEnabled: true,
+          robotsTxtCustom: true,
+        },
+      }),
+    fallback: { robotsTxtEnabled: false, robotsTxtCustom: null },
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: 'getPublicRobotsTxtSettings',
+  })
+
+  return toPlainObject(result)
+}
+
+/**
+ * レイアウト設定を取得（エディタ用）
+ * キャッシュ: 1時間、設定更新時に無効化
+ */
+export async function getLayoutSettings() {
+  'use cache'
+  cacheLife('hours')
+  cacheTag('layout', 'settings')
+
+  const result = await safeFetch({
+    fetch: () =>
+      prisma.settings.findUnique({
+        where: { id: 'singleton' },
+        select: {
+          containerWidth: true,
+          containerWidthCustom: true,
+          contentWidth: true,
+          contentWidthCustom: true,
+        },
+      }),
+    fallback: {
+      containerWidth: 'LG',
+      containerWidthCustom: null,
+      contentWidth: 'MD',
+      contentWidthCustom: null,
+    },
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: 'getLayoutSettings',
+  })
+
+  return toPlainObject(result)
+}
+
 /**
  * 設定キャッシュを無効化
  * 設定更新時にServer Actionから呼び出す

@@ -1,7 +1,15 @@
 /**
  * 選択中ノード検出フック
  *
- * @description SELECTION_CHANGE_COMMANDを監視し、選択中のDecoratorNode/ElementNodeを返す
+ * @description
+ * Lexicalエディタ内で選択されているノードを監視し、
+ * インスペクター対象のノードが選択されている場合にその情報を返す。
+ *
+ * 対応する選択パターン：
+ * - NodeSelection: DecoratorNode（Button, Image, Bookmark）をクリックした場合
+ * - RangeSelection: ElementNode（Callout）内にカーソルがある場合
+ *
+ * @module
  */
 
 'use client'
@@ -15,53 +23,63 @@ import {
   SELECTION_CHANGE_COMMAND,
   COMMAND_PRIORITY_LOW,
   type LexicalNode,
-  type NodeKey,
 } from 'lexical'
 import { mergeRegister } from '@lexical/utils'
 
-import { $isButtonNode, type ButtonNode } from '../../nodes/ButtonNode'
-import { $isImageNode, type ImageNode } from '../../nodes/ImageNode'
-import { $isCalloutNode, type CalloutNode } from '../../nodes/CalloutNode'
-import { $isBookmarkNode, type BookmarkNode } from '../../nodes/BookmarkNode'
+import {
+  getInspectableInfo,
+  type SelectedNodeInfo,
+  type InspectableNodeType,
+} from './inspectable-nodes'
 
 // =============================================================================
-// Types
+// Re-exports
 // =============================================================================
 
-export type InspectableNode = ButtonNode | ImageNode | CalloutNode | BookmarkNode
-
-export type InspectableNodeType = 'button' | 'image' | 'callout' | 'bookmark'
-
-export type SelectedNodeInfo = {
-  node: InspectableNode
-  nodeKey: NodeKey
-  nodeType: InspectableNodeType
-} | null
-
-// =============================================================================
-// Type Guards
-// =============================================================================
-
-function getInspectableNodeType(node: LexicalNode): InspectableNodeType | null {
-  if ($isButtonNode(node)) return 'button'
-  if ($isImageNode(node)) return 'image'
-  if ($isCalloutNode(node)) return 'callout'
-  if ($isBookmarkNode(node)) return 'bookmark'
-  return null
-}
-
-function isInspectableNode(node: LexicalNode): node is InspectableNode {
-  return getInspectableNodeType(node) !== null
-}
+export type { SelectedNodeInfo, InspectableNodeType }
 
 // =============================================================================
 // Hook
 // =============================================================================
 
+/**
+ * 選択中のインスペクター対象ノードを返すフック
+ *
+ * @description
+ * SELECTION_CHANGE_COMMANDとエディタ更新を監視し、
+ * 現在選択されているノードがインスペクター対象であればその情報を返す。
+ *
+ * このフックは以下のLexical APIを使用:
+ * - `SELECTION_CHANGE_COMMAND`: 選択変更の検出
+ * - `registerUpdateListener`: エディタ状態変更の検出（ノードプロパティ変更時）
+ * - `mergeRegister`: 複数リスナーの一括解除
+ *
+ * @returns 選択中のノード情報、または選択がない/対象外の場合はnull
+ *
+ * @example
+ * ```tsx
+ * function InspectorSidebar() {
+ *   const selectedNode = useSelectedNode()
+ *
+ *   if (!selectedNode) {
+ *     return <div>ノードを選択してください</div>
+ *   }
+ *
+ *   switch (selectedNode.nodeType) {
+ *     case 'button':
+ *       return <ButtonInspectorPanel node={selectedNode.node} />
+ *     // ...
+ *   }
+ * }
+ * ```
+ */
 export function useSelectedNode(): SelectedNodeInfo {
   const [editor] = useLexicalComposerContext()
   const [selectedNode, setSelectedNode] = useState<SelectedNodeInfo>(null)
 
+  /**
+   * 選択状態を読み取り、インスペクター対象ノードを特定する
+   */
   const updateSelectedNode = useCallback(() => {
     editor.getEditorState().read(() => {
       const selection = $getSelection()
@@ -70,14 +88,9 @@ export function useSelectedNode(): SelectedNodeInfo {
       if ($isNodeSelection(selection)) {
         const nodes = selection.getNodes()
         if (nodes.length === 1) {
-          const node = nodes[0]
-          const nodeType = getInspectableNodeType(node)
-          if (nodeType && isInspectableNode(node)) {
-            setSelectedNode({
-              node,
-              nodeKey: node.getKey(),
-              nodeType,
-            })
+          const info = getInspectableInfo(nodes[0])
+          if (info) {
+            setSelectedNode(info)
             return
           }
         }
@@ -89,13 +102,9 @@ export function useSelectedNode(): SelectedNodeInfo {
         // 親をたどってInspectableNodeを探す
         let current: LexicalNode | null = anchorNode
         while (current !== null) {
-          const nodeType = getInspectableNodeType(current)
-          if (nodeType && isInspectableNode(current)) {
-            setSelectedNode({
-              node: current,
-              nodeKey: current.getKey(),
-              nodeType,
-            })
+          const info = getInspectableInfo(current)
+          if (info) {
+            setSelectedNode(info)
             return
           }
           current = current.getParent()
@@ -112,12 +121,14 @@ export function useSelectedNode(): SelectedNodeInfo {
     updateSelectedNode()
 
     // リスナー登録
+    // - SELECTION_CHANGE_COMMAND: 選択が変わった時
+    // - registerUpdateListener: ノードのプロパティが変わった時（パネルに反映するため）
     return mergeRegister(
       editor.registerCommand(
         SELECTION_CHANGE_COMMAND,
         () => {
           updateSelectedNode()
-          return false
+          return false // 他のハンドラにも伝播させる
         },
         COMMAND_PRIORITY_LOW
       ),

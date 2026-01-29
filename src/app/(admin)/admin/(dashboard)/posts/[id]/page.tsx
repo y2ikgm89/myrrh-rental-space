@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { connection } from 'next/server'
 import { getPostById, getPostCategories, getPostTags } from '@/admin/actions/post'
 import { PostEditor } from '../_components/PostEditor'
+import { getLayoutSettings } from '@/shared/lib/settings/public'
 import type { Metadata } from 'next'
 
 
@@ -30,15 +31,25 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function EditPostPage({ params }: PageProps) {
   await connection()
   const { id } = await params
-  const [post, categories, tags] = await Promise.all([
+
+  const [post, categories, tags, layoutSettings] = await Promise.all([
     getPostById(id),
     getPostCategories(),
     getPostTags(),
+    getLayoutSettings(),
   ])
 
   if (!post) {
     notFound()
   }
 
-  return <PostEditor post={post} categories={categories} tags={tags} mode="edit" />
+  return (
+    <PostEditor
+      post={post}
+      categories={categories}
+      tags={tags}
+      mode="edit"
+      layoutSettings={layoutSettings}
+    />
+  )
 }

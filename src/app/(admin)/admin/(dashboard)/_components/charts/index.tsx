@@ -14,7 +14,7 @@ export const ReservationChart = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="h-80 animate-pulse rounded-lg bg-gray-100" />
+      <div className="h-80 animate-pulse rounded-lg bg-muted" />
     ),
   }
 )

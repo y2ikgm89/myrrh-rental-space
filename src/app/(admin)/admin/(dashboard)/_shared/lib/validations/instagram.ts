@@ -36,7 +36,7 @@ const INSTAGRAM_POST_URL_PATTERN =
  */
 export const instagramPostUrlSchema = z
   .string()
-  .url({ message: '有効なURLを入力してください' })
+  .url({ error: '有効なURLを入力してください' })
   .refine((url) => INSTAGRAM_POST_URL_PATTERN.test(url), {
     message: '有効なInstagram投稿URLを入力してください',
   })
@@ -57,7 +57,7 @@ export function isValidInstagramPostUrl(url: string): boolean {
  */
 export const instagramTokenSchema = z
   .string()
-  .min(1, { message: 'トークンを入力してください' })
+  .min(1, { error: 'トークンを入力してください' })
 
 /**
  * Instagramアクセストークンの簡易形式検証
@@ -77,8 +77,8 @@ export function isValidInstagramToken(token: string): boolean {
  */
 export const instagramPostIdSchema = z
   .string()
-  .min(1, { message: '投稿IDを入力してください' })
-  .regex(/^[a-zA-Z0-9_-]+$/, { message: '無効な投稿ID形式です' })
+  .min(1, { error: '投稿IDを入力してください' })
+  .regex(/^[a-zA-Z0-9_-]+$/, { error: '無効な投稿ID形式です' })
 
 /**
  * Instagram投稿URLから投稿ショートコードを抽出

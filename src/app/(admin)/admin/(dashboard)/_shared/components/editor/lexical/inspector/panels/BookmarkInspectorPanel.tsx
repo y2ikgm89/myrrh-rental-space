@@ -7,10 +7,10 @@
 'use client'
 
 import { useCallback } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $getNodeByKey } from 'lexical'
 import { $isBookmarkNode, type BookmarkNode } from '../../nodes/BookmarkNode'
+import { InspectorHeader } from '../InspectorHeader'
 import { InspectorSection } from '../InspectorSection'
+import { useNodeUpdater } from '../hooks/use-node-updater'
 import { Input, Label, Textarea } from '@/admin/components/ui'
 
 // =============================================================================
@@ -27,26 +27,13 @@ type BookmarkInspectorPanelProps = {
 // =============================================================================
 
 export function BookmarkInspectorPanel({ nodeKey, node }: BookmarkInspectorPanelProps) {
-  const [editor] = useLexicalComposerContext()
+  const updateNode = useNodeUpdater(nodeKey, $isBookmarkNode)
 
   // 現在の値を取得
   const url = node.getUrl()
   const title = node.getTitle()
   const description = node.getDescription()
   const siteName = node.getSiteName()
-
-  // 更新ヘルパー
-  const updateNode = useCallback(
-    (updater: (node: BookmarkNode) => void) => {
-      editor.update(() => {
-        const targetNode = $getNodeByKey(nodeKey)
-        if ($isBookmarkNode(targetNode)) {
-          updater(targetNode)
-        }
-      })
-    },
-    [editor, nodeKey]
-  )
 
   const handleTitleChange = useCallback(
     (value: string) => updateNode((n) => n.setTitle(value)),
@@ -65,9 +52,7 @@ export function BookmarkInspectorPanel({ nodeKey, node }: BookmarkInspectorPanel
 
   return (
     <div>
-      <div className="px-4 py-3 border-b border-border">
-        <h3 className="font-semibold text-sm">ブックマーク</h3>
-      </div>
+      <InspectorHeader title="ブックマーク" />
 
       <InspectorSection title="基本設定">
         <div className="space-y-3">

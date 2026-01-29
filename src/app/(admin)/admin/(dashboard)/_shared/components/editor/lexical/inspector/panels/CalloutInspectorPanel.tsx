@@ -7,15 +7,10 @@
 'use client'
 
 import { useCallback } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $getNodeByKey } from 'lexical'
-import {
-  $isCalloutNode,
-  type CalloutNode,
-  type CalloutType,
-  CALLOUT_TYPES,
-} from '../../nodes/CalloutNode'
+import { $isCalloutNode, type CalloutNode, isCalloutType } from '../../nodes/CalloutNode'
+import { InspectorHeader } from '../InspectorHeader'
 import { InspectorSection } from '../InspectorSection'
+import { useNodeUpdater } from '../hooks/use-node-updater'
 import { Label, SelectionBox } from '@/admin/components/ui'
 
 // =============================================================================
@@ -28,14 +23,6 @@ const CALLOUT_OPTIONS = [
   { value: 'error', label: 'エラー' },
   { value: 'success', label: '成功' },
 ]
-
-// =============================================================================
-// Type Guard
-// =============================================================================
-
-function isCalloutType(value: string): value is CalloutType {
-  return (CALLOUT_TYPES as readonly string[]).includes(value)
-}
 
 // =============================================================================
 // Types
@@ -51,29 +38,21 @@ type CalloutInspectorPanelProps = {
 // =============================================================================
 
 export function CalloutInspectorPanel({ nodeKey, node }: CalloutInspectorPanelProps) {
-  const [editor] = useLexicalComposerContext()
-
+  const updateNode = useNodeUpdater(nodeKey, $isCalloutNode)
   const calloutType = node.getCalloutType()
 
   const handleTypeChange = useCallback(
     (value: string) => {
-      if (!isCalloutType(value)) return
-
-      editor.update(() => {
-        const targetNode = $getNodeByKey(nodeKey)
-        if ($isCalloutNode(targetNode)) {
-          targetNode.setCalloutType(value)
-        }
-      })
+      if (isCalloutType(value)) {
+        updateNode((n) => n.setCalloutType(value))
+      }
     },
-    [editor, nodeKey]
+    [updateNode]
   )
 
   return (
     <div>
-      <div className="px-4 py-3 border-b border-border">
-        <h3 className="font-semibold text-sm">コールアウト</h3>
-      </div>
+      <InspectorHeader title="コールアウト" />
 
       <InspectorSection title="スタイル">
         <div className="space-y-1.5">

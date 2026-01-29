@@ -8,16 +8,16 @@ import { z } from 'zod'
 export const guestCommentSchema = z.object({
   content: z
     .string()
-    .min(1, { message: 'コメントを入力してください' })
-    .max(2000, { message: 'コメントは2000文字以内で入力してください' }),
+    .min(1, { error: 'コメントを入力してください' })
+    .max(2000, { error: 'コメントは2000文字以内で入力してください' }),
   guestName: z
     .string()
-    .min(1, { message: 'お名前を入力してください' })
-    .max(100, { message: 'お名前は100文字以内で入力してください' }),
+    .min(1, { error: 'お名前を入力してください' })
+    .max(100, { error: 'お名前は100文字以内で入力してください' }),
   guestEmail: z
     .string()
-    .min(1, { message: 'メールアドレスを入力してください' })
-    .email({ message: '有効なメールアドレスを入力してください' }),
+    .min(1, { error: 'メールアドレスを入力してください' })
+    .email({ error: '有効なメールアドレスを入力してください' }),
 })
 
 /**
@@ -28,8 +28,8 @@ export const guestCommentSchema = z.object({
 export const userCommentSchema = z.object({
   content: z
     .string()
-    .min(1, { message: 'コメントを入力してください' })
-    .max(2000, { message: 'コメントは2000文字以内で入力してください' }),
+    .min(1, { error: 'コメントを入力してください' })
+    .max(2000, { error: 'コメントは2000文字以内で入力してください' }),
 })
 
 /**
@@ -38,12 +38,12 @@ export const userCommentSchema = z.object({
  * Server Actionで使用
  */
 export const createCommentSchema = z.object({
-  postId: z.string().uuid({ message: '無効な記事IDです' }),
-  parentCommentId: z.string().uuid({ message: '無効なコメントIDです' }).optional(),
+  postId: z.string().uuid({ error: '無効な記事IDです' }),
+  parentCommentId: z.string().uuid({ error: '無効なコメントIDです' }).optional(),
   content: z
     .string()
-    .min(1, { message: 'コメントを入力してください' })
-    .max(2000, { message: 'コメントは2000文字以内で入力してください' }),
+    .min(1, { error: 'コメントを入力してください' })
+    .max(2000, { error: 'コメントは2000文字以内で入力してください' }),
   guestName: z.string().max(100).optional(),
   guestEmail: z.string().email().optional(),
 })

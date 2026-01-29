@@ -43,13 +43,13 @@ function AnnouncementBarLoading(): ReactElement {
     <div className="space-y-6">
       {/* タブ */}
       <div className="flex gap-1 h-10 bg-muted rounded-lg p-1">
-        <div className="h-8 w-32 animate-pulse rounded-md bg-gray-300" />
-        <div className="h-8 w-24 animate-pulse rounded-md bg-gray-200" />
+        <div className="h-8 w-32 animate-pulse rounded-md bg-muted-foreground/30" />
+        <div className="h-8 w-24 animate-pulse rounded-md bg-muted" />
       </div>
 
       {/* テーブル */}
       <div className="animate-pulse space-y-4">
-        <div className="h-64 rounded bg-gray-200" />
+        <div className="h-64 rounded bg-muted" />
       </div>
     </div>
   )

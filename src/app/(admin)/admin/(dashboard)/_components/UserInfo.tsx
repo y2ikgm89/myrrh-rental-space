@@ -15,7 +15,7 @@ export async function UserInfo(): Promise<ReactElement | null> {
 
   return (
     <div className="flex items-center gap-3">
-      <div className="h-8 w-8 rounded-full bg-gray-700 flex items-center justify-center">
+      <div className="h-8 w-8 rounded-full bg-sidebar-border flex items-center justify-center">
         <span className="text-sm font-medium">
           {session.user.name?.[0] ?? session.user.email?.[0] ?? 'U'}
         </span>
@@ -24,7 +24,7 @@ export async function UserInfo(): Promise<ReactElement | null> {
         <p className="text-sm font-medium truncate">
           {session.user.name ?? 'ユーザー'}
         </p>
-        <p className="text-xs text-gray-400 truncate">{session.user.email}</p>
+        <p className="text-xs text-sidebar-text-muted truncate">{session.user.email}</p>
       </div>
     </div>
   )
@@ -33,10 +33,10 @@ export async function UserInfo(): Promise<ReactElement | null> {
 export function UserInfoSkeleton(): ReactElement {
   return (
     <div className="flex items-center gap-3 animate-pulse">
-      <div className="h-8 w-8 rounded-full bg-gray-700" />
+      <div className="h-8 w-8 rounded-full bg-sidebar-border" />
       <div className="flex-1 space-y-2">
-        <div className="h-4 bg-gray-700 rounded w-20" />
-        <div className="h-3 bg-gray-700 rounded w-32" />
+        <div className="h-4 bg-sidebar-border rounded w-20" />
+        <div className="h-3 bg-sidebar-border rounded w-32" />
       </div>
     </div>
   )

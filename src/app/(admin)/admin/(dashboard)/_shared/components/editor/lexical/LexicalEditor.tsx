@@ -45,6 +45,25 @@ import { XNode } from './nodes/XNode'
 import { InstagramNode } from './nodes/InstagramNode'
 import { LayoutContainerNode } from './nodes/LayoutContainerNode'
 import { LayoutItemNode } from './nodes/LayoutItemNode'
+import { PageBreakNode } from './nodes/PageBreakNode'
+import { CalloutNode } from './nodes/CalloutNode'
+import { CollapsibleContainerNode } from './nodes/CollapsibleContainerNode'
+import { CollapsibleTitleNode } from './nodes/CollapsibleTitleNode'
+import { CollapsibleContentNode } from './nodes/CollapsibleContentNode'
+// New custom block nodes
+import { ButtonNode } from './nodes/ButtonNode'
+import { PullQuoteNode } from './nodes/PullQuoteNode'
+import { PullQuoteTextNode } from './nodes/PullQuoteTextNode'
+import { PullQuoteCitationNode } from './nodes/PullQuoteCitationNode'
+import { BookmarkNode } from './nodes/BookmarkNode'
+import { StepsContainerNode } from './nodes/StepsContainerNode'
+import { StepItemNode } from './nodes/StepItemNode'
+import { StepTitleNode } from './nodes/StepTitleNode'
+import { StepContentNode } from './nodes/StepContentNode'
+import { TabsContainerNode } from './nodes/TabsContainerNode'
+import { TabListNode } from './nodes/TabListNode'
+import { TabTitleNode } from './nodes/TabTitleNode'
+import { TabPanelNode } from './nodes/TabPanelNode'
 import {
   ToolbarPlugin,
   ImagePlugin,
@@ -58,6 +77,15 @@ import {
   DraggableBlockPlugin,
   FloatingToolbarPlugin,
   CommentPlugin,
+  PageBreakPlugin,
+  CalloutPlugin,
+  CollapsiblePlugin,
+  EmojiPickerPlugin,
+  ButtonPlugin,
+  PullQuotePlugin,
+  BookmarkPlugin,
+  StepsPlugin,
+  TabsPlugin,
   useImageDialog,
   useYouTubeDialog,
   useXDialog,
@@ -65,9 +93,16 @@ import {
   useLinkDialog,
   useTableDialog,
   useLayoutDialog,
+  useCalloutDialog,
+  useButtonDialog,
+  usePullQuoteDialog,
+  useBookmarkDialog,
+  useStepsDialog,
+  useTabsDialog,
   useComment,
 } from './plugins'
 import { editorTheme } from './theme'
+import { InspectorSidebar } from './inspector'
 import type { LexicalEditorProps } from './types'
 
 // =============================================================================
@@ -205,6 +240,7 @@ function EditorInner({
   disabled = false,
   className,
   showToolbar = true,
+  showInspector = true,
   height = '300px',
   placeholder = 'ここに内容を入力...',
   onMarkClick,
@@ -243,6 +279,30 @@ function EditorInner({
   const { isLayoutDialogOpen, openLayoutDialog, closeLayoutDialog } =
     useLayoutDialog()
 
+  // コールアウトダイアログ
+  const { isCalloutDialogOpen, openCalloutDialog, closeCalloutDialog } =
+    useCalloutDialog()
+
+  // ボタンダイアログ
+  const { isButtonDialogOpen, openButtonDialog, closeButtonDialog } =
+    useButtonDialog()
+
+  // プルクォートダイアログ
+  const { isPullQuoteDialogOpen, openPullQuoteDialog, closePullQuoteDialog } =
+    usePullQuoteDialog()
+
+  // ブックマークダイアログ
+  const { isBookmarkDialogOpen, openBookmarkDialog, closeBookmarkDialog } =
+    useBookmarkDialog()
+
+  // ステップダイアログ
+  const { isStepsDialogOpen, openStepsDialog, closeStepsDialog } =
+    useStepsDialog()
+
+  // タブダイアログ
+  const { isTabsDialogOpen, openTabsDialog, closeTabsDialog } =
+    useTabsDialog()
+
   // コメント機能
   const { canAddComment, addComment } = useComment()
 
@@ -266,93 +326,120 @@ function EditorInner({
   }
 
   return (
-    <div
-      className="flex flex-col bg-background"
-      style={{ height }}
-    >
-      {/* ツールバー - 固定（スクロールしない）、フルワイド */}
-      {showToolbar && (
-        <div className="shrink-0">
-          <ToolbarPlugin
-            onInsertImage={openImageDialog}
-            onInsertYouTube={openYouTubeDialog}
-            onInsertX={openXDialog}
-            onInsertInstagram={openInstagramDialog}
-            onInsertLink={openLinkDialog}
-            onInsertTable={openTableDialog}
-            onInsertLayout={openLayoutDialog}
-          />
-        </div>
-      )}
+    <div className="flex h-full">
+      {/* メインエディタ部分 */}
+      <div
+        className="flex flex-col flex-1 bg-background min-w-0"
+        style={{ height }}
+      >
+        {/* ツールバー - 固定（スクロールしない）、フルワイド */}
+        {showToolbar && (
+          <div className="shrink-0">
+            <ToolbarPlugin
+              onInsertImage={openImageDialog}
+              onInsertYouTube={openYouTubeDialog}
+              onInsertX={openXDialog}
+              onInsertInstagram={openInstagramDialog}
+              onInsertLink={openLinkDialog}
+              onInsertTable={openTableDialog}
+              onInsertLayout={openLayoutDialog}
+              onInsertCallout={openCalloutDialog}
+              onInsertButton={openButtonDialog}
+              onInsertPullQuote={openPullQuoteDialog}
+              onInsertBookmark={openBookmarkDialog}
+              onInsertSteps={openStepsDialog}
+              onInsertTabs={openTabsDialog}
+            />
+          </div>
+        )}
 
-      {/* コンテンツラッパー - スクロール可能 */}
-      <div ref={setContentWrapperRef} className="flex-1 overflow-y-auto">
-        {/* 幅制御ラッパー（公開ページと同じコンテンツ幅を適用） */}
-        <div
-          ref={setContentWidthRef}
-          className={cn('relative', contentWidthClassName)}
-          style={contentWidthStyle}
-        >
-          <RichTextPlugin
-            contentEditable={
-              <ContentEditable
-                className={`outline-none pl-10 pr-2 py-2 min-h-full ${className ?? ''}`}
-              />
-            }
-            placeholder={
-              <div className="pointer-events-none absolute top-2 left-10 text-muted-foreground">
-                {placeholder}
-              </div>
-            }
-            ErrorBoundary={LexicalErrorBoundary}
-          />
+        {/* コンテンツラッパー - スクロール可能 */}
+        <div ref={setContentWrapperRef} className="flex-1 overflow-y-auto">
+          {/* 幅制御ラッパー（公開ページと同じコンテンツ幅を適用） */}
+          <div
+            ref={setContentWidthRef}
+            className={cn('relative', contentWidthClassName)}
+            style={contentWidthStyle}
+          >
+            <RichTextPlugin
+              contentEditable={
+                <ContentEditable
+                  className={`outline-none pl-10 pr-2 py-2 min-h-full ${className ?? ''}`}
+                />
+              }
+              placeholder={
+                <div className="pointer-events-none absolute top-2 left-10 text-muted-foreground">
+                  {placeholder}
+                </div>
+              }
+              ErrorBoundary={LexicalErrorBoundary}
+            />
+          </div>
         </div>
+
+        {/* 公式プラグイン */}
+        <HistoryPlugin />
+        <ListPlugin />
+        <CheckListPlugin />
+        <TablePlugin />
+        <LinkPlugin validateUrl={validateUrl} />
+        <AutoLinkPlugin matchers={MATCHERS} />
+        <ClickableLinkPlugin />
+        <TabIndentationPlugin />
+        <MarkdownShortcutPlugin transformers={EDITOR_TRANSFORMERS} />
+        <HorizontalRulePlugin />
+        <OnChangePlugin onChange={handleChange} ignoreSelectionChange />
+
+        {/* カスタムプラグイン */}
+        <HtmlInitializerPlugin content={content} editorRef={editorRef} />
+        <DisablePlugin disabled={disabled} />
+        <DraggableBlockPlugin anchorElem={contentWidthRef} />
+        {contentWrapperRef && (
+          <FloatingToolbarPlugin
+            anchorElem={contentWrapperRef}
+            setIsLinkEditMode={(isEditMode) => {
+              if (isEditMode) openLinkDialog()
+            }}
+            onAddComment={onAddComment ? handleAddComment : undefined}
+          />
+        )}
+        <CommentPlugin onMarkClick={onMarkClick} />
+        <PageBreakPlugin />
+        <ComponentPickerPlugin
+          onInsertImage={openImageDialog}
+          onInsertYouTube={openYouTubeDialog}
+          onInsertX={openXDialog}
+          onInsertInstagram={openInstagramDialog}
+          onInsertTable={openTableDialog}
+          onInsertLayout={openLayoutDialog}
+          onInsertCallout={openCalloutDialog}
+          onInsertButton={openButtonDialog}
+          onInsertPullQuote={openPullQuoteDialog}
+          onInsertBookmark={openBookmarkDialog}
+          onInsertSteps={openStepsDialog}
+          onInsertTabs={openTabsDialog}
+        />
+
+        {/* ダイアログ */}
+        <ImagePlugin isOpen={isImageDialogOpen} onClose={closeImageDialog} />
+        <YouTubePlugin isOpen={isYouTubeDialogOpen} onClose={closeYouTubeDialog} />
+        <XPlugin isOpen={isXDialogOpen} onClose={closeXDialog} />
+        <InstagramPlugin isOpen={isInstagramDialogOpen} onClose={closeInstagramDialog} />
+        <LinkDialogPlugin isOpen={isLinkDialogOpen} onClose={closeLinkDialog} />
+        <TableInsertPlugin isOpen={isTableDialogOpen} onClose={closeTableDialog} />
+        <LayoutPlugin isOpen={isLayoutDialogOpen} onClose={closeLayoutDialog} />
+        <CalloutPlugin isOpen={isCalloutDialogOpen} onClose={closeCalloutDialog} />
+        <ButtonPlugin isOpen={isButtonDialogOpen} onClose={closeButtonDialog} />
+        <PullQuotePlugin isOpen={isPullQuoteDialogOpen} onClose={closePullQuoteDialog} />
+        <BookmarkPlugin isOpen={isBookmarkDialogOpen} onClose={closeBookmarkDialog} />
+        <StepsPlugin isOpen={isStepsDialogOpen} onClose={closeStepsDialog} />
+        <TabsPlugin isOpen={isTabsDialogOpen} onClose={closeTabsDialog} />
+        <CollapsiblePlugin />
+        <EmojiPickerPlugin />
       </div>
 
-      {/* 公式プラグイン */}
-      <HistoryPlugin />
-      <ListPlugin />
-      <CheckListPlugin />
-      <TablePlugin />
-      <LinkPlugin validateUrl={validateUrl} />
-      <AutoLinkPlugin matchers={MATCHERS} />
-      <ClickableLinkPlugin />
-      <TabIndentationPlugin />
-      <MarkdownShortcutPlugin transformers={EDITOR_TRANSFORMERS} />
-      <HorizontalRulePlugin />
-      <OnChangePlugin onChange={handleChange} ignoreSelectionChange />
-
-      {/* カスタムプラグイン */}
-      <HtmlInitializerPlugin content={content} editorRef={editorRef} />
-      <DisablePlugin disabled={disabled} />
-      <DraggableBlockPlugin anchorElem={contentWidthRef} />
-      {contentWrapperRef && (
-        <FloatingToolbarPlugin
-          anchorElem={contentWrapperRef}
-          setIsLinkEditMode={(isEditMode) => {
-            if (isEditMode) openLinkDialog()
-          }}
-          onAddComment={onAddComment ? handleAddComment : undefined}
-        />
-      )}
-      <CommentPlugin onMarkClick={onMarkClick} />
-      <ComponentPickerPlugin
-        onInsertImage={openImageDialog}
-        onInsertYouTube={openYouTubeDialog}
-        onInsertX={openXDialog}
-        onInsertInstagram={openInstagramDialog}
-        onInsertTable={openTableDialog}
-        onInsertLayout={openLayoutDialog}
-      />
-
-      {/* ダイアログ */}
-      <ImagePlugin isOpen={isImageDialogOpen} onClose={closeImageDialog} />
-      <YouTubePlugin isOpen={isYouTubeDialogOpen} onClose={closeYouTubeDialog} />
-      <XPlugin isOpen={isXDialogOpen} onClose={closeXDialog} />
-      <InstagramPlugin isOpen={isInstagramDialogOpen} onClose={closeInstagramDialog} />
-      <LinkDialogPlugin isOpen={isLinkDialogOpen} onClose={closeLinkDialog} />
-      <TableInsertPlugin isOpen={isTableDialogOpen} onClose={closeTableDialog} />
-      <LayoutPlugin isOpen={isLayoutDialogOpen} onClose={closeLayoutDialog} />
+      {/* インスペクターサイドバー */}
+      {showInspector && <InspectorSidebar />}
     </div>
   )
 }
@@ -386,6 +473,25 @@ export function LexicalEditor(props: LexicalEditorProps) {
         LayoutContainerNode,
         LayoutItemNode,
         MarkNode,
+        PageBreakNode,
+        CalloutNode,
+        CollapsibleContainerNode,
+        CollapsibleTitleNode,
+        CollapsibleContentNode,
+        // New custom block nodes
+        ButtonNode,
+        PullQuoteNode,
+        PullQuoteTextNode,
+        PullQuoteCitationNode,
+        BookmarkNode,
+        StepsContainerNode,
+        StepItemNode,
+        StepTitleNode,
+        StepContentNode,
+        TabsContainerNode,
+        TabListNode,
+        TabTitleNode,
+        TabPanelNode,
       ],
       onError: (error: Error) => {
         console.error('Lexical Error:', error)

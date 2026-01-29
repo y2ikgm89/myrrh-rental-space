@@ -52,4 +52,3 @@ export {
 // コンテンツタイプ設定
 export { postConfig } from './post'
 export { newsConfig } from './news'
-export { pageConfig } from './page'

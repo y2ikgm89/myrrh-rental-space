@@ -121,30 +121,30 @@ const taxRateTypeSchema = z.enum(['standard', 'reduced'])
 
 const slugSchema = z
   .string()
-  .min(1, 'スラッグを入力してください')
-  .max(100, 'スラッグは100文字以内で入力してください')
-  .regex(/^[a-z0-9-]+$/, 'スラッグは小文字英数字とハイフンのみ使用可能です')
+  .min(1, { error: 'スラッグを入力してください' })
+  .max(100, { error: 'スラッグは100文字以内で入力してください' })
+  .regex(/^[a-z0-9-]+$/, { error: 'スラッグは小文字英数字とハイフンのみ使用可能です' })
 
 const formSchema = z.object({
   slug: slugSchema,
-  name: z.string().min(1, '名前を入力してください').max(100, '名前は100文字以内で入力してください'),
-  description: z.string().min(1, '説明を入力してください').min(10, '説明は10文字以上で入力してください'),
-  address: z.string().min(1, '住所を入力してください'),
-  access: z.string().max(500, 'アクセス情報は500文字以内で入力してください').optional(),
-  capacity: z.number().int('整数を入力してください').min(1, '定員は1以上で入力してください').max(1000, '定員は1000以下で入力してください'),
-  area: z.number().positive('正の数を入力してください').max(10000, '面積は10000以下で入力してください').optional(),
-  hourlyPrice: z.number().min(0, '時間料金は0以上で入力してください').max(1000000, '時間料金は1000000以下で入力してください'),
-  dailyPrice: z.number().min(0, '日額料金は0以上で入力してください').max(10000000, '日額料金は10000000以下で入力してください').optional(),
-  mainImageUrl: z.string().min(1, 'メイン画像URLを入力してください').url('有効なURLを入力してください'),
-  imageUrls: z.array(z.string().url('有効なURLを入力してください')).max(10, '画像は最大10枚までです'),
+  name: z.string().min(1, { error: '名前を入力してください' }).max(100, { error: '名前は100文字以内で入力してください' }),
+  description: z.string().min(1, { error: '説明を入力してください' }).min(10, { error: '説明は10文字以上で入力してください' }),
+  address: z.string().min(1, { error: '住所を入力してください' }),
+  access: z.string().max(500, { error: 'アクセス情報は500文字以内で入力してください' }).optional(),
+  capacity: z.number().int({ error: '整数を入力してください' }).min(1, { error: '定員は1以上で入力してください' }).max(1000, { error: '定員は1000以下で入力してください' }),
+  area: z.number().positive({ error: '正の数を入力してください' }).max(10000, { error: '面積は10000以下で入力してください' }).optional(),
+  hourlyPrice: z.number().min(0, { error: '時間料金は0以上で入力してください' }).max(1000000, { error: '時間料金は1000000以下で入力してください' }),
+  dailyPrice: z.number().min(0, { error: '日額料金は0以上で入力してください' }).max(10000000, { error: '日額料金は10000000以下で入力してください' }).optional(),
+  mainImageUrl: z.string().min(1, { error: 'メイン画像URLを入力してください' }).url({ error: '有効なURLを入力してください' }),
+  imageUrls: z.array(z.string().url({ error: '有効なURLを入力してください' })).max(10, { error: '画像は最大10枚までです' }),
   facilities: z.array(z.string().min(1).max(50)),
   isPublished: z.boolean(),
-  termsId: z.string().uuid('利用規約IDが無効です').optional(),
-  locationId: z.string().uuid('場所IDが無効です').optional(),
-  categoryId: z.string().uuid('カテゴリーIDが無効です').optional(),
+  termsId: z.string().uuid({ error: '利用規約IDが無効です' }).optional(),
+  locationId: z.string().uuid({ error: '場所IDが無効です' }).optional(),
+  categoryId: z.string().uuid({ error: 'カテゴリーIDが無効です' }).optional(),
   // 割引設定
   discountType: discountTypeSchema,
-  discountValue: z.number().min(0, '割引値は0以上で入力してください').max(1000000, '割引値は1000000以下で入力してください').optional().nullable(),
+  discountValue: z.number().min(0, { error: '割引値は0以上で入力してください' }).max(1000000, { error: '割引値は1000000以下で入力してください' }).optional().nullable(),
   durationDiscountOverride: durationDiscountOverrideSchema,
   // 税率設定
   taxRateType: taxRateTypeSchema,

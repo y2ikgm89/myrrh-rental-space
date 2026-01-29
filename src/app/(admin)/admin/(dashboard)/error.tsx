@@ -49,28 +49,28 @@ export default function AdminError({ error, reset }: ErrorProps) {
           </svg>
         </div>
 
-        <h1 className="mb-3 text-xl font-bold text-gray-900">
+        <h1 className="mb-3 text-xl font-bold text-foreground">
           エラーが発生しました
         </h1>
 
-        <p className="mb-6 text-sm text-gray-600">
+        <p className="mb-6 text-sm text-muted-foreground">
           管理画面でエラーが発生しました。
           <br />
           再度お試しいただくか、ダッシュボードにお戻りください。
         </p>
 
         {error.digest && (
-          <p className="mb-4 rounded bg-gray-100 px-3 py-2 font-mono text-xs text-gray-500">
+          <p className="mb-4 rounded bg-muted px-3 py-2 font-mono text-xs text-muted-foreground">
             Error ID: {error.digest}
           </p>
         )}
 
         {process.env.NODE_ENV === 'development' && (
           <details className="mb-6 text-left">
-            <summary className="cursor-pointer text-sm font-medium text-gray-700">
+            <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
               エラー詳細（開発環境のみ）
             </summary>
-            <pre className="mt-2 overflow-auto rounded bg-gray-900 p-3 text-xs text-gray-100">
+            <pre className="mt-2 overflow-auto rounded bg-foreground p-3 text-xs text-background">
               {error.message}
               {error.stack && `\n\n${error.stack}`}
             </pre>
@@ -80,13 +80,13 @@ export default function AdminError({ error, reset }: ErrorProps) {
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
           <button
             onClick={handleReset}
-            className="rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+            className="rounded-lg bg-foreground px-5 py-2.5 text-sm font-medium text-background transition-colors hover:bg-foreground/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
           >
             再試行
           </button>
           <Link
             href="/admin"
-            className="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+            className="rounded-lg border border-border bg-card px-5 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
           >
             ダッシュボードへ
           </Link>

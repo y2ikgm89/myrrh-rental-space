@@ -54,3 +54,15 @@ export {
   TEXT_CASE_TYPES,
   type TextCaseType,
 } from './TextCasePlugin'
+
+export { PageBreakPlugin, INSERT_PAGE_BREAK_COMMAND } from './PageBreakPlugin'
+export { CalloutPlugin, useCalloutDialog, INSERT_CALLOUT_COMMAND } from './CalloutPlugin'
+export { CollapsiblePlugin, INSERT_COLLAPSIBLE_COMMAND, TOGGLE_COLLAPSIBLE_COMMAND } from './CollapsiblePlugin'
+export { EmojiPickerPlugin } from './EmojiPickerPlugin'
+
+// New custom block plugins
+export { ButtonPlugin, useButtonDialog } from './ButtonPlugin'
+export { PullQuotePlugin, usePullQuoteDialog } from './PullQuotePlugin'
+export { BookmarkPlugin, useBookmarkDialog } from './BookmarkPlugin'
+export { StepsPlugin, useStepsDialog } from './StepsPlugin'
+export { TabsPlugin, useTabsDialog } from './TabsPlugin'

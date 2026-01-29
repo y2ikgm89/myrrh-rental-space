@@ -1,13 +1,18 @@
 /**
  * ページ編集画面
  *
- * 統一ContentEditorでページを編集
+ * セクション編集画面を表示します。
+ *
+ * システムページ（about, faq, contact等）の場合、
+ * Pageモデルが存在しなければ自動作成します。
  */
 
 import { notFound } from 'next/navigation'
 import { connection } from 'next/server'
-import { getPageBySlug } from '@/admin/actions/page'
-import { PageEditor } from '../../_components/PageEditor'
+import { ensureSystemPage } from '@/admin/actions/page'
+import { getPageWithSections } from '@/admin/actions/page-section'
+import { isSystemPageSlug } from '@/shared/lib/validations/page'
+import { PageEditTabs } from './_components/PageEditTabs'
 import type { Metadata } from 'next'
 import type { ReactElement } from 'react'
 
@@ -21,21 +26,27 @@ type PageProps = {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   await connection()
   const { slug } = await params
-  const page = await getPageBySlug(slug)
+  const pageWithSections = await getPageWithSections(slug)
 
   return {
-    title: page ? `${page.title}を編集` : 'ページ編集',
+    title: pageWithSections ? `${pageWithSections.title}を編集` : 'ページ編集',
   }
 }
 
 export default async function EditPagePage({ params }: PageProps): Promise<ReactElement> {
   await connection()
   const { slug } = await params
-  const page = await getPageBySlug(slug)
 
-  if (!page) {
+  // システムページの場合、存在しなければ自動作成（セクションも保証）
+  if (isSystemPageSlug(slug)) {
+    await ensureSystemPage(slug)
+  }
+
+  const pageWithSections = await getPageWithSections(slug)
+
+  if (!pageWithSections) {
     notFound()
   }
 
-  return <PageEditor page={page} />
+  return <PageEditTabs pageWithSections={pageWithSections} />
 }

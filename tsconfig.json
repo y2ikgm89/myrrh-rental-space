@@ -24,10 +24,18 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@/admin/*": ["./src/app/(admin)/admin/(dashboard)/_shared/*"],
-      "@/public/*": ["./src/app/(public)/_shared/*"],
-      "@/shared/*": ["./src/shared/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@/admin/*": [
+        "./src/app/(admin)/admin/(dashboard)/_shared/*"
+      ],
+      "@/public/*": [
+        "./src/app/(public)/_shared/*"
+      ],
+      "@/shared/*": [
+        "./src/shared/*"
+      ]
     }
   },
   "include": [
@@ -35,8 +43,8 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
-    "**/*.mts"
+    "**/*.mts",
+    ".next/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

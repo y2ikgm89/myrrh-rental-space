@@ -19,14 +19,15 @@
 import { cacheLife, cacheTag } from 'next/cache'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
+import { Suspense } from 'react'
 import { prisma } from '@/shared/lib/prisma'
+import { isAdmin } from '@/shared/lib/auth'
 import { criticalFetch, ErrorCategory } from '@/shared/lib/errors'
 import { toPlainObject } from '@/shared/lib/serialize'
 import { Container } from '@/public/components/ui'
 import { ProductJsonLd, BreadcrumbJsonLd } from '@/public/components/seo/JsonLd'
-import { SpaceInfo } from './_components/SpaceInfo'
-import { ImageGallery } from './_components/ImageGallery'
-import { ReservationCTA } from './_components/ReservationCTA'
+import { ContentRenderer } from '@/public/components/ContentRenderer'
+import { SpaceInfo, ImageGallery, ReservationCTA, InlineEditableWrapper } from './_components'
 import { parseStringArray, parseTaxRateType } from '@/shared/lib/json-validators'
 import { getBaseUrl, CACHE_LIFE, CACHE_TAGS } from '@/shared/lib/constants'
 import { getPublicTaxSettings } from '@/public/actions/settings'
@@ -45,6 +46,7 @@ const BASE_URL = getBaseUrl()
 /** ページコンポーネントのProps */
 interface PageProps {
   params: Promise<{ slug: string }>
+  searchParams: Promise<{ edit?: string }>
 }
 
 // =============================================================================
@@ -239,6 +241,7 @@ export async function generateMetadata({
  */
 export default async function SpaceDetailPage({
   params,
+  searchParams: _searchParams,
 }: PageProps): Promise<ReactElement> {
   const { slug } = await params
 
@@ -256,11 +259,27 @@ export default async function SpaceDetailPage({
     notFound()
   }
 
+  // 管理者チェック（インライン編集用）
+  const userIsAdmin = await isAdmin()
+
   // imageUrls を配列として取得
   const imageUrls = parseStringArray(space.imageUrls)
 
   // facilities を配列として取得
   const facilities = parseStringArray(space.facilities)
+
+  // 説明欄のインライン編集用スロット
+  const descriptionSlot = (
+    <Suspense fallback={<ContentRenderer html={space.description} />}>
+      <InlineEditableWrapper
+        spaceId={space.id}
+        initialContent={space.description}
+        isAdmin={userIsAdmin}
+      >
+        <ContentRenderer html={space.description} />
+      </InlineEditableWrapper>
+    </Suspense>
+  )
 
   return (
     <>
@@ -305,6 +324,7 @@ export default async function SpaceDetailPage({
                 facilities={facilities}
                 location={space.location}
                 category={space.category}
+                descriptionSlot={descriptionSlot}
               />
             </div>
 

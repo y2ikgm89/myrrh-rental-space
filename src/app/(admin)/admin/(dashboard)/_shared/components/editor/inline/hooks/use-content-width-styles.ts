@@ -2,13 +2,13 @@
  * コンテンツ幅スタイルフック
  *
  * React Hook Form公式推奨のuseWatch()を使用したリアルタイム幅更新
- * 型アサーション完全排除
+ * グローバル設定をフォールバックとして使用
  */
 
 import type { CSSProperties } from 'react'
 import { useWatch, type Control } from 'react-hook-form'
 import { getContentStyles } from '@/shared/lib/styles/layout-mapper'
-import { DEFAULT_LAYOUT_CONFIG } from '@/shared/types/layout'
+import { LayoutWidth, type ContentWidthSettings } from '@/shared/types'
 import { isValidLayoutWidth } from '@/shared/lib/validations/enums'
 
 // =============================================================================
@@ -25,6 +25,8 @@ type ContentWidthFormFields = {
 
 type UseContentWidthStylesOptions<T extends ContentWidthFormFields> = {
   control: Control<T>
+  /** グローバル設定（フォールバック値として使用） */
+  layoutSettings?: ContentWidthSettings | null
 }
 
 type ContentWidthStyles = {
@@ -42,11 +44,15 @@ type ContentWidthStyles = {
  * @description
  * - React Hook Form公式推奨の`useWatch()`を使用
  * - フォーム値の変更をリアルタイムで反映
+ * - フォーム値が未設定の場合はlayoutSettingsをフォールバック
  * - 公開ページと同じ幅をエディタに適用
  *
  * @example
  * ```tsx
- * const contentStyles = useContentWidthStyles({ control: form.control })
+ * const contentStyles = useContentWidthStyles({
+ *   control: form.control,
+ *   layoutSettings,
+ * })
  * <LexicalEditor
  *   contentWidthClassName={contentStyles.className}
  *   contentWidthStyle={contentStyles.style}
@@ -55,6 +61,7 @@ type ContentWidthStyles = {
  */
 export function useContentWidthStyles<T extends ContentWidthFormFields>({
   control,
+  layoutSettings,
 }: UseContentWidthStylesOptions<T>): ContentWidthStyles {
   // useWatch()でリアルタイム監視（公式推奨パターン）
   const contentWidth = useWatch({
@@ -67,6 +74,12 @@ export function useContentWidthStyles<T extends ContentWidthFormFields>({
     name: 'contentWidthCustom' as never,
   }) as string | undefined
 
+  // フォールバック値（グローバル設定 → ハードコードデフォルト）
+  const fallbackWidth = isValidLayoutWidth(layoutSettings?.contentWidth)
+    ? layoutSettings.contentWidth
+    : LayoutWidth.MD
+  const fallbackCustomWidth = layoutSettings?.contentWidthCustom ?? null
+
   // カスタム幅のパース（NaN対策）
   const parsedCustomWidth = contentWidthCustom
     ? parseInt(contentWidthCustom, 10)
@@ -74,13 +87,17 @@ export function useContentWidthStyles<T extends ContentWidthFormFields>({
   const validCustomWidth =
     parsedCustomWidth !== null && !Number.isNaN(parsedCustomWidth)
       ? parsedCustomWidth
-      : null
+      : fallbackCustomWidth
+
+  // 有効なコンテンツ幅を決定
+  const effectiveContentWidth = isValidLayoutWidth(contentWidth)
+    ? contentWidth
+    : fallbackWidth
 
   return getContentStyles({
-    ...DEFAULT_LAYOUT_CONFIG,
-    contentWidth: isValidLayoutWidth(contentWidth)
-      ? contentWidth
-      : DEFAULT_LAYOUT_CONFIG.contentWidth,
+    containerWidth: LayoutWidth.LG,
+    containerWidthCustom: null,
+    contentWidth: effectiveContentWidth,
     contentWidthCustom: validCustomWidth,
   })
 }

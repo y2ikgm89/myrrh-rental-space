@@ -300,10 +300,10 @@ export function purgeNewsCache(newsId?: string): Promise<PurgeResult> {
   return purgeContentCache('/news', newsId)
 }
 
-/** カスタムページのキャッシュをパージ */
+/** ページのキャッシュをパージ */
 export function purgePageCache(slug: string): Promise<PurgeResult> {
   const siteUrl = getSiteUrl()
-  return purgeCloudflareByPaths(siteUrl, [`/p/${slug}`])
+  return purgeCloudflareByPaths(siteUrl, [`/${slug}`])
 }
 
 /** ホームページのキャッシュをパージ */

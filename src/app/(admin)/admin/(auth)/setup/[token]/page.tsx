@@ -25,13 +25,13 @@ export default async function SetupPage({ params }: Props): Promise<ReactElement
 
   if (!result.success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="w-full max-w-md">
-          <div className="bg-white rounded-lg shadow-lg p-8">
+          <div className="bg-card rounded-lg shadow-lg p-8">
             <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-destructive/10 mb-4">
                 <svg
-                  className="h-6 w-6 text-red-600"
+                  className="h-6 w-6 text-destructive"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -44,11 +44,11 @@ export default async function SetupPage({ params }: Props): Promise<ReactElement
                   />
                 </svg>
               </div>
-              <h1 className="text-xl font-bold text-gray-900 mb-2">
+              <h1 className="text-xl font-bold text-foreground mb-2">
                 招待リンクが無効です
               </h1>
-              <p className="text-gray-600 mb-6">{result.error}</p>
-              <p className="text-sm text-gray-500">
+              <p className="text-muted-foreground mb-6">{result.error}</p>
+              <p className="text-sm text-muted-foreground">
                 管理者に連絡して、新しい招待を依頼してください。
               </p>
             </div>
@@ -59,12 +59,12 @@ export default async function SetupPage({ params }: Props): Promise<ReactElement
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+    <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-lg shadow-lg p-8">
+        <div className="bg-card rounded-lg shadow-lg p-8">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-gray-900">パスワード設定</h1>
-            <p className="text-gray-600 mt-2">
+            <h1 className="text-2xl font-bold text-foreground">パスワード設定</h1>
+            <p className="text-muted-foreground mt-2">
               アカウントのパスワードを設定してください
             </p>
           </div>

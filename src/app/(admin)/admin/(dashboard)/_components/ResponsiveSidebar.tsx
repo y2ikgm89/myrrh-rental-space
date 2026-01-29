@@ -21,22 +21,37 @@ import { Z_INDEX } from '@/admin/lib/styles/z-index'
 const styles = tv({
   slots: {
     overlay: [
-      'fixed inset-0 bg-black/50 transition-opacity duration-300',
+      'fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300',
       'lg:hidden',
     ],
     sidebar: [
-      'fixed inset-y-0 left-0 bg-gray-900 text-white transition-transform duration-300',
+      // Swiss Industrial: ダークで洗練されたサイドバー
+      'fixed inset-y-0 left-0 bg-sidebar-bg text-sidebar-text transition-transform duration-300 ease-out',
       'flex flex-col w-64',
+      // 右端に微細なハイライトライン
+      'border-r border-sidebar-border',
     ],
-    logo: 'flex h-16 items-center justify-center border-b border-gray-800 text-xl font-bold',
-    nav: 'flex-1 overflow-y-auto px-3 py-6',
+    logo: [
+      'flex h-14 items-center justify-center border-b border-sidebar-border',
+      // Swiss Typography: クリーンなロゴ
+      'text-lg font-semibold tracking-tight',
+    ],
+    nav: 'flex-1 overflow-y-auto px-3 py-4',
     navItem: [
-      'flex items-center gap-3 rounded-lg px-3 py-2 text-gray-300',
-      'transition-colors hover:bg-gray-800 hover:text-white',
+      'flex items-center gap-3 rounded-md px-3 py-2.5 text-sidebar-text-muted cursor-pointer',
+      'transition-all duration-200 ease-out',
+      'hover:bg-white/5 hover:text-sidebar-text',
     ],
-    navItemActive: 'bg-gray-800 text-white',
-    closeButton: 'absolute right-3 top-3 lg:hidden',
-    userSection: 'border-t border-gray-800 p-4',
+    navItemActive: [
+      // アクティブ状態: プライマリカラーのアクセント
+      'bg-sidebar-accent text-white',
+      'hover:bg-sidebar-accent/90',
+      // 左端にアクセントバー
+      'relative before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2',
+      'before:w-0.5 before:h-4 before:bg-white before:rounded-full',
+    ],
+    closeButton: 'absolute right-3 top-3 lg:hidden text-sidebar-text-muted hover:text-sidebar-text',
+    userSection: 'border-t border-sidebar-border p-4',
   },
   variants: {
     isOpen: {

@@ -60,10 +60,10 @@ const LexicalEditor = dynamic(
 // =============================================================================
 
 const termsFormSchema = z.object({
-  title: z.string().min(1, 'タイトルを入力してください').max(100),
-  slug: z.string().min(1, 'スラッグを入力してください').max(50).regex(/^[a-z0-9-]+$/, '小文字英数字とハイフンのみ'),
-  type: z.string().min(1, '規約タイプを選択してください'),
-  content: z.string().min(1, 'コンテンツを入力してください'),
+  title: z.string().min(1, { error: 'タイトルを入力してください' }).max(100),
+  slug: z.string().min(1, { error: 'スラッグを入力してください' }).max(50).regex(/^[a-z0-9-]+$/, { error: '小文字英数字とハイフンのみ' }),
+  type: z.string().min(1, { error: '規約タイプを選択してください' }),
+  content: z.string().min(1, { error: 'コンテンツを入力してください' }),
   selectedTemplate: z.string().optional(),
 })
 

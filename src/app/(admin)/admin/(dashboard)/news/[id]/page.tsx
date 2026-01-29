@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { connection } from 'next/server'
 import { getNewsById } from '@/admin/actions/news'
 import { NewsEditor } from '../_components/NewsEditor'
+import { getLayoutSettings } from '@/shared/lib/settings/public'
 import type { Metadata } from 'next'
 
 
@@ -30,11 +31,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function EditNewsPage({ params }: PageProps) {
   await connection()
   const { id } = await params
-  const news = await getNewsById(id)
+
+  const [news, layoutSettings] = await Promise.all([
+    getNewsById(id),
+    getLayoutSettings(),
+  ])
 
   if (!news) {
     notFound()
   }
 
-  return <NewsEditor news={news} mode="edit" />
+  return <NewsEditor news={news} mode="edit" layoutSettings={layoutSettings} />
 }

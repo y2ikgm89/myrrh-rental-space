@@ -36,7 +36,7 @@ export function WeekView({ dateRange, events, onEventClick }: WeekViewProps) {
   return (
     <div className="flex h-full flex-col rounded-lg border bg-white">
       {/* ヘッダー */}
-      <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b bg-gray-50">
+      <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b bg-muted/50">
         <div className="border-r p-2" />
         {displayDays.map((day, index) => (
           <div

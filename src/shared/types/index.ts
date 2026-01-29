@@ -28,10 +28,7 @@ export {
 } from './prisma'
 
 // Layout types
-export {
-  type LayoutConfig,
-  DEFAULT_LAYOUT_CONFIG,
-} from './layout'
+export { type LayoutConfig, type ContentWidthSettings } from './layout'
 
 // Server action types
 export {

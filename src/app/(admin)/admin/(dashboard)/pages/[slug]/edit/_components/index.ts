@@ -1,0 +1,1 @@
+export { PageEditTabs } from './PageEditTabs'

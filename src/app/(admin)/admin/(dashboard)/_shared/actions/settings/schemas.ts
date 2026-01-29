@@ -61,10 +61,10 @@ export type ContactInfoInput = z.infer<typeof contactInfoSchema>
 const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/
 
 export const timeSlotSchema = z.object({
-  openTime: z.string().regex(TIME_REGEX, '正しい時刻形式（HH:mm）で入力してください'),
-  closeTime: z.string().regex(TIME_REGEX, '正しい時刻形式（HH:mm）で入力してください'),
+  openTime: z.string().regex(TIME_REGEX, { error: '正しい時刻形式（HH:mm）で入力してください' }),
+  closeTime: z.string().regex(TIME_REGEX, { error: '正しい時刻形式（HH:mm）で入力してください' }),
 }).refine((data) => data.closeTime > data.openTime, {
-  message: '終了時刻は開始時刻より後にしてください',
+  error: '終了時刻は開始時刻より後にしてください',
   path: ['closeTime'],
 })
 
@@ -92,13 +92,13 @@ export const businessHoursDaySchema = z.object({
     if (data.isOpen && data.slots.length === 0) return false
     return true
   },
-  { message: '営業日には最低1つの時間帯を設定してください' }
+  { error: '営業日には最低1つの時間帯を設定してください' }
 ).refine(
   (data) => {
     if (!data.isOpen || data.slots.length <= 1) return true
     return !hasOverlappingSlots(data.slots)
   },
-  { message: '時間帯が重複しています' }
+  { error: '時間帯が重複しています' }
 )
 
 const WEEKDAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const
@@ -122,7 +122,7 @@ export const businessHoursSettingsSchema = z.object({
   regularHolidays: z.array(z.string()).nullable(),
   specialHolidays: z.array(z.string()).nullable(),
   // HTMLタグを禁止してXSS対策
-  holidayNotice: z.string().max(1000).regex(/^[^<>]*$/, 'HTMLタグは使用できません').nullable().or(z.literal('')).transform((v) => v || null),
+  holidayNotice: z.string().max(1000).regex(/^[^<>]*$/, { error: 'HTMLタグは使用できません' }).nullable().or(z.literal('')).transform((v) => v || null),
 })
 
 export type BusinessHoursSettingsInput = z.infer<typeof businessHoursSettingsSchema>
@@ -316,3 +316,34 @@ export const taxSettingsSchema = z.object({
 })
 
 export type TaxSettingsInput = z.infer<typeof taxSettingsSchema>
+
+// robots.txt
+
+export const robotsTxtSettingsSchema = z.object({
+  robotsTxtEnabled: z.boolean(),
+  robotsTxtCustom: z.string().max(10000, { error: 'robots.txtは10000文字以内で入力してください' }).nullable(),
+})
+
+export type RobotsTxtSettingsInput = z.infer<typeof robotsTxtSettingsSchema>
+
+export function checkRobotsTxtWarnings(content: string): string[] {
+  const warnings: string[] = []
+  const lines = content.split('\n').map((line) => line.trim().toLowerCase())
+
+  let hasWildcardUserAgent = false
+  for (const line of lines) {
+    if (line.startsWith('user-agent:') && line.includes('*')) {
+      hasWildcardUserAgent = true
+    }
+    if (hasWildcardUserAgent && line === 'disallow: /') {
+      warnings.push('この設定はサイト全体が検索結果から除外されます')
+      break
+    }
+  }
+
+  if (!lines.some((line) => line.startsWith('sitemap:'))) {
+    warnings.push('Sitemapが指定されていません（推奨）')
+  }
+
+  return warnings
+}

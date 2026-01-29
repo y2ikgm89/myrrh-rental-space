@@ -5,6 +5,7 @@
 export { BasicInfoSection } from './BasicInfoSection'
 export { ContactInfoSection } from './ContactInfoSection'
 export { SeoSection } from './SeoSection'
+export { RobotsTxtSection } from './RobotsTxtSection'
 export { EmailSection } from './EmailSection'
 export { NotificationSection } from './NotificationSection'
 export { ReservationSection } from './ReservationSection'

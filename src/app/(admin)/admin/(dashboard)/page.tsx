@@ -22,7 +22,7 @@ import {
 } from './_components/skeletons'
 
 function ChartSkeleton() {
-  return <div className="h-80 animate-pulse rounded-lg bg-gray-100" />
+  return <div className="h-80 animate-pulse rounded-lg bg-muted" />
 }
 
 export const metadata: Metadata = {
@@ -33,10 +33,10 @@ function DashboardHeaderSkeleton() {
   return (
     <div className="flex items-center justify-between">
       <div>
-        <div className="h-8 w-40 animate-pulse rounded bg-gray-200 mb-1" />
-        <div className="h-5 w-48 animate-pulse rounded bg-gray-200" />
+        <div className="h-8 w-40 animate-pulse rounded bg-muted mb-1" />
+        <div className="h-5 w-48 animate-pulse rounded bg-muted" />
       </div>
-      <div className="h-10 w-32 animate-pulse rounded bg-gray-200" />
+      <div className="h-10 w-32 animate-pulse rounded bg-muted" />
     </div>
   )
 }
@@ -60,7 +60,7 @@ export default async function AdminDashboard(): Promise<ReactElement> {
       </Suspense>
 
       {/* アクセス解析: 外部API（Google Analytics）で最も遅い */}
-      <Suspense fallback={<div className="h-64 animate-pulse rounded-lg bg-gray-100" />}>
+      <Suspense fallback={<div className="h-64 animate-pulse rounded-lg bg-muted" />}>
         <AnalyticsCard />
       </Suspense>
 

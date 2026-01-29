@@ -39,7 +39,7 @@ export function TopBar({ token, siteName, headerLogoUrl, useHeaderLogo }: TopBar
   const renderBranding = () => {
     // テキスト表示の条件: ロゴ無効 or ロゴURL無し or ロゴ読込失敗
     if (!useHeaderLogo || !headerLogoUrl || logoError) {
-      return <span className="text-lg font-semibold text-gray-900">{displayName}</span>
+      return <span className="text-lg font-semibold text-foreground">{displayName}</span>
     }
 
     // ロゴ表示
@@ -82,7 +82,7 @@ export function TopBar({ token, siteName, headerLogoUrl, useHeaderLogo }: TopBar
         <Link
           href="/"
           target="_blank"
-          className="text-sm text-gray-600 hover:text-gray-900 hidden sm:block"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-200 hidden sm:block"
         >
           サイトを表示
         </Link>

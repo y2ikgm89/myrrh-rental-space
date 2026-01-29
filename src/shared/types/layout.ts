@@ -7,7 +7,7 @@
 import { LayoutWidth } from '@/shared/types/prisma'
 
 /**
- * レイアウト設定
+ * レイアウト設定（Prisma LayoutWidth Enum使用）
  */
 export type LayoutConfig = {
   containerWidth: LayoutWidth
@@ -17,11 +17,12 @@ export type LayoutConfig = {
 }
 
 /**
- * デフォルトレイアウト設定
+ * コンテンツ幅設定（エディタのフォールバック用）
+ *
+ * DBから取得した値をエディタに渡すための型。
+ * フォーム値が未設定の場合のデフォルト値として使用。
  */
-export const DEFAULT_LAYOUT_CONFIG: LayoutConfig = {
-  containerWidth: LayoutWidth.LG,
-  containerWidthCustom: null,
-  contentWidth: LayoutWidth.SM,
-  contentWidthCustom: null,
+export type ContentWidthSettings = {
+  contentWidth: string | null
+  contentWidthCustom: number | null
 }

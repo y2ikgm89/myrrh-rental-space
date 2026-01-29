@@ -52,11 +52,11 @@ export function DesignPreview({
       case 'gradient':
         return `bg-gradient-to-r ${defaultColors.gradient}`
       case 'outlined':
-        return 'bg-transparent border-y border-gray-400'
+        return 'bg-transparent border-y border-border'
       case 'glass':
         return 'backdrop-blur-md bg-white/10 border-y border-white/20'
       case 'minimal':
-        return 'bg-transparent border-b border-gray-300'
+        return 'bg-transparent border-b border-border'
       case 'striped':
         return !bgColor ? defaultColors.bg : ''
     }
@@ -72,7 +72,7 @@ export function DesignPreview({
         return 'text-white'
       case 'outlined':
       case 'minimal':
-        return 'text-gray-800'
+        return 'text-foreground'
     }
   }
 

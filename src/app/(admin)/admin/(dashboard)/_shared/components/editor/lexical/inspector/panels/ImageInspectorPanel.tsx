@@ -7,10 +7,10 @@
 'use client'
 
 import { useCallback } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $getNodeByKey } from 'lexical'
 import { $isImageNode, type ImageNode } from '../../nodes/ImageNode'
+import { InspectorHeader } from '../InspectorHeader'
 import { InspectorSection } from '../InspectorSection'
+import { useNodeUpdater } from '../hooks/use-node-updater'
 import { Input, Label } from '@/admin/components/ui'
 
 // =============================================================================
@@ -27,26 +27,13 @@ type ImageInspectorPanelProps = {
 // =============================================================================
 
 export function ImageInspectorPanel({ nodeKey, node }: ImageInspectorPanelProps) {
-  const [editor] = useLexicalComposerContext()
+  const updateNode = useNodeUpdater(nodeKey, $isImageNode)
 
   // 現在の値を取得
   const src = node.getSrc()
   const alt = node.getAlt()
   const width = node.getWidth()
   const height = node.getHeight()
-
-  // 更新ヘルパー
-  const updateNode = useCallback(
-    (updater: (node: ImageNode) => void) => {
-      editor.update(() => {
-        const targetNode = $getNodeByKey(nodeKey)
-        if ($isImageNode(targetNode)) {
-          updater(targetNode)
-        }
-      })
-    },
-    [editor, nodeKey]
-  )
 
   const handleAltChange = useCallback(
     (value: string) => updateNode((n) => n.setAlt(value)),
@@ -71,9 +58,7 @@ export function ImageInspectorPanel({ nodeKey, node }: ImageInspectorPanelProps)
 
   return (
     <div>
-      <div className="px-4 py-3 border-b border-border">
-        <h3 className="font-semibold text-sm">画像</h3>
-      </div>
+      <InspectorHeader title="画像" />
 
       <InspectorSection title="基本設定">
         <div className="space-y-3">

@@ -30,11 +30,11 @@ import { logger } from '@/shared/lib/logger'
 const formSchema = z.object({
   slug: z
     .string()
-    .min(1, 'スラッグは必須です')
-    .max(100, 'スラッグは100文字以内です')
-    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, '半角英数字とハイフンのみ使用可能'),
-  title: z.string().min(1, 'タイトルは必須です').max(200, 'タイトルは200文字以内です'),
-  description: z.string().max(500, '説明は500文字以内です').optional(),
+    .min(1, { error: 'スラッグは必須です' })
+    .max(100, { error: 'スラッグは100文字以内です' })
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, { error: '半角英数字とハイフンのみ使用可能' }),
+  title: z.string().min(1, { error: 'タイトルは必須です' }).max(200, { error: 'タイトルは200文字以内です' }),
+  description: z.string().max(500, { error: '説明は500文字以内です' }).optional(),
 })
 
 type FormData = z.infer<typeof formSchema>

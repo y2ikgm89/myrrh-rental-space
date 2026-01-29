@@ -37,6 +37,7 @@ import {
   AlignJustify,
   AlignLeft,
   AlignRight,
+  AlertCircle,
   Bold,
   Check,
   ChevronDown,
@@ -55,6 +56,7 @@ import {
   Pilcrow,
   Plus,
   Redo,
+  Scissors,
   Strikethrough,
   Table,
   TextQuote,
@@ -62,6 +64,12 @@ import {
   Undo,
   Youtube,
   Twitter,
+  ChevronsDownUp,
+  MousePointerClick,
+  Quote,
+  Link2,
+  Footprints,
+  PanelTop,
 } from 'lucide-react'
 import { Button } from '@/admin/components/ui/button'
 import { Separator } from '@/admin/components/ui/separator'
@@ -77,6 +85,8 @@ import { FontSizePlugin } from './FontSizePlugin'
 import { HighlightPlugin } from './HighlightPlugin'
 import { TextColorPlugin } from './TextColorPlugin'
 import { TextCasePlugin } from './TextCasePlugin'
+import { INSERT_PAGE_BREAK_COMMAND } from './PageBreakPlugin'
+import { INSERT_COLLAPSIBLE_COMMAND } from './CollapsiblePlugin'
 import { entriesOf } from '@/shared/lib/serialize'
 
 // =============================================================================
@@ -91,6 +101,12 @@ type ToolbarPluginProps = {
   onInsertLink?: () => void
   onInsertTable?: () => void
   onInsertLayout?: () => void
+  onInsertCallout?: () => void
+  onInsertButton?: () => void
+  onInsertPullQuote?: () => void
+  onInsertBookmark?: () => void
+  onInsertSteps?: () => void
+  onInsertTabs?: () => void
 }
 
 type BlockType = 'paragraph' | 'h1' | 'h2' | 'h3' | 'h4' | 'quote' | 'ul' | 'ol'
@@ -160,6 +176,12 @@ export function ToolbarPlugin({
   onInsertLink,
   onInsertTable,
   onInsertLayout,
+  onInsertCallout,
+  onInsertButton,
+  onInsertPullQuote,
+  onInsertBookmark,
+  onInsertSteps,
+  onInsertTabs,
 }: ToolbarPluginProps) {
   const [editor] = useLexicalComposerContext()
 
@@ -335,11 +357,21 @@ export function ToolbarPlugin({
     editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, format)
   }
 
-  // 挿入メニューに項目があるかチェック
-  const hasInsertItems = onInsertImage || onInsertYouTube || onInsertX || onInsertInstagram || onInsertTable || onInsertLayout
+  // 挿入ハンドラー
+  const handleInsertPageBreak = () => {
+    editor.dispatchCommand(INSERT_PAGE_BREAK_COMMAND, undefined)
+  }
+
+  const handleInsertCollapsible = () => {
+    editor.dispatchCommand(INSERT_COLLAPSIBLE_COMMAND, undefined)
+  }
+
+  // 挿入メニューに項目があるかチェック（常にtrue: 区切り線、ページ区切り、折りたたみは常に表示）
+  const hasInsertItems = true
 
   return (
-    <div className="flex flex-wrap items-center gap-0.5 border-b bg-background p-1">
+    <div className="flex justify-center border-b bg-background p-1">
+      <div className="flex flex-wrap items-center gap-0.5">
       {/* Undo/Redo */}
       <Button
         type="button"
@@ -574,14 +606,60 @@ export function ToolbarPlugin({
                 <span>カラム</span>
               </DropdownMenuItem>
             )}
+            {onInsertCallout && (
+              <DropdownMenuItem onClick={onInsertCallout} className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                <span>コールアウト</span>
+              </DropdownMenuItem>
+            )}
+            {onInsertPullQuote && (
+              <DropdownMenuItem onClick={onInsertPullQuote} className="flex items-center gap-2">
+                <Quote className="h-4 w-4" />
+                <span>プルクォート</span>
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem onClick={handleInsertCollapsible} className="flex items-center gap-2">
+              <ChevronsDownUp className="h-4 w-4" />
+              <span>折りたたみ</span>
+            </DropdownMenuItem>
+            {onInsertSteps && (
+              <DropdownMenuItem onClick={onInsertSteps} className="flex items-center gap-2">
+                <Footprints className="h-4 w-4" />
+                <span>ステップ</span>
+              </DropdownMenuItem>
+            )}
+            {onInsertTabs && (
+              <DropdownMenuItem onClick={onInsertTabs} className="flex items-center gap-2">
+                <PanelTop className="h-4 w-4" />
+                <span>タブ</span>
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator />
+            {onInsertButton && (
+              <DropdownMenuItem onClick={onInsertButton} className="flex items-center gap-2">
+                <MousePointerClick className="h-4 w-4" />
+                <span>ボタン</span>
+              </DropdownMenuItem>
+            )}
+            {onInsertBookmark && (
+              <DropdownMenuItem onClick={onInsertBookmark} className="flex items-center gap-2">
+                <Link2 className="h-4 w-4" />
+                <span>ブックマーク</span>
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleInsertHorizontalRule} className="flex items-center gap-2">
               <Minus className="h-4 w-4" />
               <span>区切り線</span>
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleInsertPageBreak} className="flex items-center gap-2">
+              <Scissors className="h-4 w-4" />
+              <span>ページ区切り</span>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )}
+      </div>
     </div>
   )
 }

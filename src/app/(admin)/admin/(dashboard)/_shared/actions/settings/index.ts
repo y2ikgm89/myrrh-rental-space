@@ -156,3 +156,18 @@ export {
 
 export type { TaxSettingsData } from './tax'
 export type { TaxSettingsInput } from './schemas'
+
+// =============================================================================
+// robots.txt Actions
+// =============================================================================
+
+export {
+  getRobotsTxtSettings,
+  updateRobotsTxtSettings,
+  resetRobotsTxtToDefault,
+} from './robots-txt'
+
+export { DEFAULT_ROBOTS_TXT } from './robots-txt-constants'
+
+export type { RobotsTxtData } from './robots-txt'
+export type { RobotsTxtSettingsInput } from './schemas'

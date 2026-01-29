@@ -84,6 +84,21 @@ enum HomepageSectionType {
   INSTAGRAM // Instagramフィード
 }
 
+enum PageSectionType {
+  HERO // ヒーローセクション
+  CUSTOM // Lexicalリッチテキスト
+  CONTACT_FORM // お問い合わせフォーム
+  FAQ_LIST // FAQ一覧
+  SPACE_LIST // スペース一覧
+  NEWS_LIST // お知らせ一覧
+  POST_LIST // 記事一覧
+  CTA // Call to Action
+  GALLERY // ギャラリー
+  TESTIMONIAL // 体験談・レビュー
+  MAP // 地図
+  EMBED // 埋め込み（iframe）
+}
+
 enum PostStatus {
   DRAFT
   PUBLISHED
@@ -687,7 +702,6 @@ model Page {
   slug               String       @unique
   title              String
   description        String?      @db.Text
-  content            String       @db.Text // HTMLコンテンツ（レンダリング用）
   metaDescription    String?
   metaKeywords       String?
   ogpTitle           String?
@@ -703,9 +717,33 @@ model Page {
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
 
+  // Relations
+  sections PageSection[]
+
   @@index([isPublished, isActive])
   @@index([isSystemPage])
   @@map("pages")
+}
+
+/// ページセクション（Slice-based CMS）
+model PageSection {
+  id        String          @id @default(uuid())
+  pageId    String
+  type      PageSectionType
+  title     String? // セクション見出し（表示用）
+  config    Json            @default("{}") // タイプ別設定（JSON Schema で型安全）
+  content   String?         @db.Text // Lexical HTML（CUSTOM等で使用）
+  order     Int             @default(0) // 表示順序（DnDで変更可能）
+  isActive  Boolean         @default(true) // ON/OFF制御
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  // Relations
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId, order, isActive])
+  @@index([type])
+  @@map("page_sections")
 }
 
 model NavigationItem {
@@ -1051,6 +1089,12 @@ model Settings {
   instagramFeedMaxItems    Int       @default(8)
   instagramShowCaption     Boolean   @default(false)
   instagramShowViewAll     Boolean   @default(true)
+
+  // ==============================================
+  // robots.txt設定
+  // ==============================================
+  robotsTxtEnabled Boolean @default(false) // カスタムrobots.txtを使用
+  robotsTxtCustom  String? @db.Text // カスタムrobots.txt内容
 
   @@map("settings")
 }

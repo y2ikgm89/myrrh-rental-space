@@ -69,10 +69,9 @@ export default async function PageSeoEditPage({ params }: PageProps): Promise<Re
       </div>
 
       {/* 説明 */}
-      {systemPageDef && !systemPageDef.isContentEditable && (
-        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
-          このページはシステムページです。コンテンツはコードで実装されているため、
-          SEO/OGP設定のみ編集可能です。
+      {systemPageDef && (
+        <div className="rounded-lg border border-border bg-muted/50 p-4 text-sm text-muted-foreground">
+          このページはシステムページです。コンテンツはセクション管理で編集できます。
         </div>
       )}
 

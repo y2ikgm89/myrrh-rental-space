@@ -112,7 +112,7 @@ export async function Header(): Promise<React.ReactElement> {
   const mobileItems: NavItem[] = mobileNavItems.length > 0 ? mobileNavItems : desktopItems
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         {/* ロゴ/サイト名 */}
         <Link href="/" className="flex items-center space-x-2">
@@ -129,7 +129,7 @@ export async function Header(): Promise<React.ReactElement> {
             <Link
               key={item.url || index}
               href={item.url}
-              className="text-sm font-medium text-gray-600 transition-colors hover:text-gray-900"
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
               {item.label}
             </Link>

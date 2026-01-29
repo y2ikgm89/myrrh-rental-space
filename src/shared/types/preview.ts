@@ -39,12 +39,13 @@ export const NewsPreviewDataSchema = z.object({
 
 /**
  * ページプレビューデータスキーマ
+ *
+ * Note: content は廃止（セクションシステムに移行済み）
  */
 export const PagePreviewDataSchema = z.object({
   title: z.string(),
   slug: z.string(),
   description: z.string().nullable(),
-  content: z.string(),
   showSidebar: z.boolean(),
 })
 
@@ -116,12 +117,13 @@ export type NewsPreviewData = {
 
 /**
  * ページプレビューデータ
+ *
+ * Note: content は廃止（セクションシステムに移行済み）
  */
 export type PagePreviewData = {
   title: string
   slug: string
   description: string | null
-  content: string
   showSidebar: boolean
 }
 

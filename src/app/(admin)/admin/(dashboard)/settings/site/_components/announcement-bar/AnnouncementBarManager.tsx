@@ -38,10 +38,10 @@ import { isValidHexColor, type BarFormData, type CarouselSettings } from './type
 // =============================================================================
 
 const barFormSchema = z.object({
-  message: z.string().min(1, 'メッセージは必須です').max(200, 'メッセージは200文字以内'),
+  message: z.string().min(1, { error: 'メッセージは必須です' }).max(200, { error: 'メッセージは200文字以内' }),
   type: z.enum(['info', 'warning', 'promo']),
-  linkUrl: z.string().url('有効なURLを入力してください').or(z.literal('')),
-  linkText: z.string().max(50, 'リンクテキストは50文字以内'),
+  linkUrl: z.string().url({ error: '有効なURLを入力してください' }).or(z.literal('')),
+  linkText: z.string().max(50, { error: 'リンクテキストは50文字以内' }),
   isActive: z.boolean(),
   priority: z.number().int().min(0).max(100),
   startAt: z.string(),

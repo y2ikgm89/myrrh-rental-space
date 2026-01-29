@@ -10,6 +10,7 @@
 - **後方互換性ハック禁止** → 不要コード完全削除
 - **検証なしの完了報告禁止** → 必ず検証コマンド実行
 - **曖昧な要件の推測実装禁止** → `AskUserQuestion`で確認
+- **ハードコードカラー禁止** → `gray-*`等禁止、テーマ変数使用 → `.claude/rules/tailwind-patterns.md`
 
 ### 検証（完了報告前に必須）
 
@@ -32,6 +33,7 @@
 - `.claude/rules/nuqs-patterns.md` - nuqs URL状態管理
 - `.claude/rules/tailwind-patterns.md` - Tailwind CSS 4 / CSS-first設定
 - `.claude/rules/lexical-patterns.md` - Lexical 0.39 エディタ実装
+- `.claude/rules/ui-ux-patterns.md` - UI/UX スキル使用ガイドライン
 
 ---
 
@@ -53,6 +55,8 @@
 | - | 要件確認時 | `AskUserQuestion` |
 | - | コードベース調査時 | `code-explorer`, `serena` * |
 | `brainstorming` | 機能追加・設計時 | `context7`, `WebSearch`, `WebFetch` |
+| `ui-ux-pro-max` | UI/UXデザイン方針決定時 | `search.py` * |
+| `frontend-design` | フロントエンドUI実装時 | - |
 | `writing-plans` | 計画作成時 | - |
 | `executing-plans` | 計画実行時 | - |
 | `test-driven-development` | 実装時 | `serena` |
@@ -69,6 +73,12 @@
 \* **コードベース調査ツール使い分け:**
 - `serena`: シンボル参照追跡・定義ジャンプ・構造化コードの深い分析（LSPベース）
 - `code-explorer`: 広範なキーワード検索・ファイル構造探索・探索範囲が不明確な場合
+
+\* **ui-ux-pro-max検索:**
+```bash
+python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --domain <domain> --stack nextjs
+```
+ドメイン: `product`, `style`, `typography`, `color`, `landing`, `chart`, `ux`
 
 ### superpowers使用基準
 
@@ -97,6 +107,8 @@
 | `/superpowers:write-plan` | 計画作成を明示的に開始 |
 | `/superpowers:execute-plan` | 計画実行を明示的に開始 |
 | `/superpowers:using-git-worktrees` | 隔離開発環境作成 |
+| `/ui-ux-pro-max` | UI/UXデザイン方針決定 |
+| `/frontend-design` | フロントエンドUI実装 |
 | `code-explorer` | コードベース深掘り分析 |
 | `code-simplifier` | コード整理・簡略化 |
 
@@ -122,12 +134,45 @@
 
 ### 構造
 
+**Multiple Root Layouts アーキテクチャ（Next.js 16 推奨パターン）**
+
+```
+src/app/
+├── (admin)/                              # 管理画面ルートグループ
+│   ├── layout.tsx                        # Admin Root Layout (html/body)
+│   ├── _styles/admin.css                 # 管理画面専用テーマ（固定）
+│   └── admin/(dashboard)/_shared/        # 管理画面共有コンポーネント
+│
+├── (public)/                             # 公開ページルートグループ
+│   ├── layout.tsx                        # Public Root Layout (html/body)
+│   ├── _styles/public.css                # 公開ページテーマ（AI生成対象）
+│   ├── [slug]/page.tsx                   # セクションベースページ（統一ルート）
+│   └── _shared/                          # 公開ページ共有コンポーネント
+│
+└── src/shared/                           # 両方で共有（CSS変数非依存）
+```
+
 | パス | 用途 |
 |------|------|
-| `src/app/(admin)/admin/(dashboard)/_shared/` | 管理画面専用 |
-| `src/app/(public)/_shared/` | 公開ページ専用 |
-| `src/shared/` | 共有 |
+| `src/app/(admin)/_styles/admin.css` | 管理画面専用テーマ（Swiss Industrial Admin） |
+| `src/app/(public)/_styles/public.css` | 公開ページテーマ（AI生成でカスタマイズ） |
+| `src/app/(admin)/admin/(dashboard)/_shared/` | 管理画面専用コンポーネント |
+| `src/app/(public)/_shared/` | 公開ページ専用コンポーネント |
+| `src/app/(public)/[slug]/` | 統一ページルート（セクションシステム） |
+| `src/shared/` | 共有（CSS変数に依存しないコード） |
 | `docs/{requirements,architecture,plans}/` | ドキュメント |
+
+**公開ページURL構造**:
+- `/` - ホームページ
+- `/faq`, `/about`, `/contact`, `/spaces`, `/reservation`, `/privacy`, `/terms` - 専用ページ
+- `/news`, `/news/[slug]` - ニュース
+- `/posts`, `/posts/[slug]` - ブログ
+- `/spaces/[slug]` - スペース詳細
+- `/[slug]` - カスタムページ（DBで管理）
+
+**注意**:
+- 公開ページ ↔ 管理画面の遷移はフルページリロード（異なるRoot Layout間の仕様）
+- 旧URLの `/p/[slug]` は廃止済み
 
 ### エイリアス
 
@@ -158,4 +203,8 @@ bun run db:generate        # Prismaスキーマ再生成
 # superpowersインストール
 /plugin marketplace add obra/superpowers-marketplace
 /plugin install superpowers@superpowers-marketplace
+
+# ui-ux-pro-max（プロジェクトローカル、インストール済み）
+# CLIでインストール: npm install -g uipro-cli && uipro init --ai claude
+# 配置: .claude/skills/ui-ux-pro-max/
 ```

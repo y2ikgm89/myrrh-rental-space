@@ -17,6 +17,96 @@
 
 ## 完了した計画
 
+### 076 - カスタムページURL統一 (2026-01-29) ✅
+
+`/p/` プレフィックスを廃止し、カスタムページを `/[slug]` に統一。専用ページは維持。
+
+**目的**:
+- カスタムページURLの統一（`/p/my-page` → `/my-page`）
+- 専用ページ（faq, about, contact等）はコードで維持
+- URLの簡潔化
+
+**実装内容**:
+- [x] Phase 1: `/p/[slug]` → `/[slug]` ルート移動
+- [x] Phase 2: `/p/` ディレクトリ削除
+- [x] Phase 3: 専用ページのスラッグをRESERVED_SLUGSに追加
+- [x] Phase 4: 管理画面のプレビューURL修正（`/p/${slug}` → `/${slug}`）
+- [x] Phase 5: 検証（type-check, lint, build）
+
+**削除ファイル**:
+- `src/app/(public)/p/` - 旧ルート全体
+
+**新規/移動ファイル**:
+- `src/app/(public)/[slug]/page.tsx` - カスタムページルート
+- `src/app/(public)/[slug]/_components/` - コンポーネント
+
+**維持する専用ページ**:
+- `/faq` - FAQ専用ページ
+- `/about` - About専用ページ
+- `/contact` - Contact専用ページ
+- `/reservation` - Reservation専用ページ
+- `/privacy` - Privacy専用ページ
+- `/terms` - Terms専用ページ
+- `/spaces` - Spaces一覧専用ページ
+
+**URL変更**:
+| 旧URL | 新URL |
+|-------|-------|
+| `/p/my-page` | `/my-page` |
+
+**技術**: Next.js 16 Dynamic Routes / RESERVED_SLUGS除外パターン
+
+---
+
+### 075 - 公開/管理画面CSS完全分離 (2026-01-28) ✅
+
+Next.js 16「Multiple Root Layouts」パターンを採用し、公開ページと管理画面のCSSを完全分離。
+
+**目的**:
+- 公開ページをAI生成対応にする
+- 管理画面のテーマが公開ページに影響しないようにする
+- 顧客ブランドに合わせた公開ページのカスタマイズを可能にする
+
+**実装内容**:
+- [x] Phase 1: 準備（admin.css, public.css 新規作成）
+- [x] Phase 2: Root Layout分離（(admin)/layout.tsx, (public)/layout.tsx をRoot Layout化）
+- [x] Phase 3: 旧ファイル削除（layout.tsx, globals.css）
+- [x] Phase 4: UIコンポーネント整理
+- [x] Phase 5: ドキュメント更新（CLAUDE.md, rules/*.md）
+
+**変更ファイル**:
+- `src/app/(admin)/layout.tsx` - 新規作成（Admin Root Layout）
+- `src/app/(admin)/_styles/admin.css` - 新規作成（管理画面専用テーマ）
+- `src/app/(public)/layout.tsx` - Root Layout化
+- `src/app/(public)/_styles/public.css` - 新規作成（公開ページテーマ）
+- `src/app/layout.tsx` - 削除
+- `src/app/globals.css` - 削除
+- `CLAUDE.md` - 構造説明更新
+- `.claude/rules/tailwind-patterns.md` - CSS分離説明追加
+- `.claude/rules/ui-ux-patterns.md` - CSSアーキテクチャ説明追加
+
+**技術**: Next.js 16 Multiple Root Layouts / Tailwind CSS 4 @theme / OKLCH
+
+**計画書**: `docs/plans/2026-01-28-css-architecture-separation.md`
+
+---
+
+### 074 - 管理画面UI/UX改善 (2026-01-28) ✅
+
+管理画面全体のUI/UXを段階的に改善。Trust Blueパレットでミニマル・クリーンなデザインに統一。
+
+**実装内容**:
+- [x] Phase 1: 共通コンポーネント（Button/Card/Table/Input等にcursor-pointer, duration-200, ring-2追加）
+- [x] Phase 2: レイアウト（サイドバー/ヘッダー/メインコンテンツをテーマカラーに統一）
+- [x] Phase 3: フォーム要素（Select/Textarea/Checkbox/Switch等にcursor-pointer, duration-200追加）
+- [x] Phase 4: モバイル最適化（タッチターゲット最小44px、ページヘッダースタック表示、グリッド調整）
+
+**変更ファイル**: globals.css, button.tsx, card.tsx, table.tsx, input.tsx, select.tsx, textarea.tsx, checkbox.tsx, switch.tsx, badge.tsx, dialog.tsx, dropdown-menu.tsx, tabs.tsx, Pagination.tsx, ResponsiveSidebar.tsx, TopBar.tsx, MainContent.tsx, reservations/page.tsx, news/page.tsx, customers/page.tsx, posts/page.tsx, staff/page.tsx
+
+**技術**: Trust Blue パレット / Minimalism & Swiss Style / WCAG準拠タッチターゲット
+
+---
+
 ### 073 - カテゴリー・タグUI統一化 (2026-01-26) ✅
 
 投稿カテゴリー・タグ管理のUI/UXを他の管理画面と統一し、nuqsを正しく使用する

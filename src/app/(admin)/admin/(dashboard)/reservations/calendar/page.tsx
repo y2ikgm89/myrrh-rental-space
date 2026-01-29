@@ -29,8 +29,8 @@ interface PageProps {
 function CalendarSkeleton() {
   return (
     <div className="flex h-full flex-col space-y-4">
-      <div className="h-16 animate-pulse rounded-lg bg-gray-100" />
-      <div className="flex-1 animate-pulse rounded-lg bg-gray-100" />
+      <div className="h-16 animate-pulse rounded-lg bg-muted" />
+      <div className="flex-1 animate-pulse rounded-lg bg-muted" />
     </div>
   )
 }

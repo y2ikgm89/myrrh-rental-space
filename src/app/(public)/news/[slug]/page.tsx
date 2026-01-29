@@ -23,14 +23,16 @@ import { tv } from 'tailwind-variants'
 import { buttonVariants } from '@/public/components/ui'
 import { ContentRenderer } from '@/public/components/ContentRenderer'
 import { NewsArticleJsonLd } from '@/public/components/seo/JsonLd'
+import { Suspense } from 'react'
 import { prisma } from '@/shared/lib/prisma'
+import { isAdmin } from '@/shared/lib/auth'
 import { criticalFetch, ErrorCategory } from '@/shared/lib/errors'
 import { toPlainObject, toISOString, formatSerializedDate } from '@/shared/lib/serialize'
 import { cn } from '@/shared/lib/utils'
 import { getNewsLayoutSettings } from '@/public/lib/layout-settings'
 import { getContainerStyles, getContentStyles } from '@/shared/lib/styles/layout-mapper'
 import { getBaseUrl, CACHE_LIFE, CACHE_TAGS } from '@/shared/lib/constants'
-import { NewsPreviewWrapper } from './_components'
+import { NewsPreviewWrapper, InlineEditableWrapper } from './_components'
 import type { ReactElement } from 'react'
 
 // =============================================================================
@@ -46,7 +48,7 @@ const BASE_URL = getBaseUrl()
 /** ページコンポーネントのProps */
 interface PageProps {
   params: Promise<{ slug: string }>
-  searchParams: Promise<{ preview?: string }>
+  searchParams: Promise<{ preview?: string; edit?: string }>
 }
 
 // =============================================================================
@@ -266,6 +268,9 @@ export default async function NewsDetailPage({
     notFound()
   }
 
+  // 管理者チェック（インライン編集用）
+  const userIsAdmin = await isAdmin()
+
   // レイアウト設定を取得（IDで取得）
   const layoutConfig = await getNewsLayoutSettings(news.id)
   const containerStyles = getContainerStyles(layoutConfig)
@@ -301,7 +306,18 @@ export default async function NewsDetailPage({
             </time>
           </header>
 
-          <ContentRenderer html={news.content} />
+          {/* 本文 - インライン編集対応 */}
+          <Suspense fallback={<ContentRenderer html={news.content} />}>
+            <InlineEditableWrapper
+              newsId={news.id}
+              initialContent={news.content}
+              isAdmin={userIsAdmin}
+              contentWidthClassName={contentStyles.className}
+              contentWidthStyle={contentStyles.style}
+            >
+              <ContentRenderer html={news.content} />
+            </InlineEditableWrapper>
+          </Suspense>
 
           <div className={styles.backLink()}>
             <Link

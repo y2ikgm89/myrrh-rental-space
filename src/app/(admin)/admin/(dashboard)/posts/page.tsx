@@ -159,15 +159,15 @@ export default async function PostsPage({ searchParams }: PageProps) {
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">投稿管理</h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground sm:text-base">
             投稿・カテゴリー・タグ・コメントを管理します
           </p>
         </div>
         {currentTab === 'posts' && (
-          <Button asChild>
+          <Button asChild className="min-h-10 sm:min-h-9">
             <Link href="/admin/posts/new">新規作成</Link>
           </Button>
         )}

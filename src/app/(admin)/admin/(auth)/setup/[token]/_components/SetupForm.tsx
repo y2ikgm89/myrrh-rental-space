@@ -81,21 +81,21 @@ export function SetupForm({ invitation, token }: Props): ReactElement {
         </div>
       )}
 
-      <div className="bg-gray-50 rounded-lg p-4">
+      <div className="bg-muted/50 rounded-lg p-4">
         <dl className="space-y-2 text-sm">
           <div className="flex justify-between">
-            <dt className="text-gray-500">メールアドレス</dt>
-            <dd className="text-gray-900 font-medium">{invitation.email}</dd>
+            <dt className="text-muted-foreground">メールアドレス</dt>
+            <dd className="text-foreground font-medium">{invitation.email}</dd>
           </div>
           {invitation.name && (
             <div className="flex justify-between">
-              <dt className="text-gray-500">お名前</dt>
-              <dd className="text-gray-900 font-medium">{invitation.name}</dd>
+              <dt className="text-muted-foreground">お名前</dt>
+              <dd className="text-foreground font-medium">{invitation.name}</dd>
             </div>
           )}
           <div className="flex justify-between">
-            <dt className="text-gray-500">権限</dt>
-            <dd className="text-gray-900 font-medium">
+            <dt className="text-muted-foreground">権限</dt>
+            <dd className="text-foreground font-medium">
               {invitation.role === 'SUPER_ADMIN' && 'スーパー管理者'}
               {invitation.role === 'ADMIN' && '管理者'}
               {invitation.role === 'EDITOR' && '編集者'}
@@ -109,7 +109,7 @@ export function SetupForm({ invitation, token }: Props): ReactElement {
       <div>
         <label
           htmlFor="password"
-          className="block text-sm font-medium text-gray-700 mb-1"
+          className="block text-sm font-medium text-muted-foreground mb-1"
         >
           パスワード
         </label>
@@ -121,16 +121,16 @@ export function SetupForm({ invitation, token }: Props): ReactElement {
           required
           minLength={8}
           autoComplete="new-password"
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+          className="w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
           placeholder="8文字以上"
         />
-        <p className="mt-1 text-xs text-gray-500">8文字以上で設定してください</p>
+        <p className="mt-1 text-xs text-muted-foreground">8文字以上で設定してください</p>
       </div>
 
       <div>
         <label
           htmlFor="confirmPassword"
-          className="block text-sm font-medium text-gray-700 mb-1"
+          className="block text-sm font-medium text-muted-foreground mb-1"
         >
           パスワード（確認）
         </label>
@@ -142,7 +142,7 @@ export function SetupForm({ invitation, token }: Props): ReactElement {
           required
           minLength={8}
           autoComplete="new-password"
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+          className="w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
           placeholder="もう一度入力"
         />
       </div>
@@ -150,7 +150,7 @@ export function SetupForm({ invitation, token }: Props): ReactElement {
       <button
         type="submit"
         disabled={isLoading}
-        className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-900 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isLoading ? '設定中...' : 'パスワードを設定してログイン'}
       </button>

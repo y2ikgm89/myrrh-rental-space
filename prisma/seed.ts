@@ -18,9 +18,10 @@
 
 import 'dotenv/config'
 import { PrismaPg } from '@prisma/adapter-pg'
-import { PrismaClient, Prisma } from '../src/shared/generated/prisma/client'
+import { PrismaClient, Prisma, Role } from '../src/shared/generated/prisma/client'
 import { Pool } from 'pg'
 import { hashPassword } from 'better-auth/crypto'
+import { syncPermissionsToDb } from '../src/app/(admin)/admin/(dashboard)/_shared/lib/permissions'
 
 // PostgreSQL 接続プール
 const pool = new Pool({
@@ -84,6 +85,10 @@ async function clearAllData() {
     prisma.announcementBar.deleteMany(),
     prisma.socialLink.deleteMany(),
 
+    // RBAC権限
+    prisma.rolePermission.deleteMany(),
+    prisma.permission.deleteMany(),
+
     // 認証関連
     prisma.auditLog.deleteMany(),
     prisma.session.deleteMany(),
@@ -104,11 +109,19 @@ async function clearAllData() {
 }
 
 // =============================================================================
-// Admin User
+// Helper: Create or Update User with Credential
 // =============================================================================
 
-async function seedAdmin(email: string, password: string, name: string = 'Administrator') {
-  // Better Auth のデフォルト（Scrypt）でハッシュ化
+interface CreateUserOptions {
+  email: string
+  password: string
+  name: string
+  role: Role
+  assignedPages?: string[]
+}
+
+async function createOrUpdateUserWithCredential(options: CreateUserOptions): Promise<boolean> {
+  const { email, password, name, role, assignedPages = [] } = options
   const hashedPassword = await hashPassword(password)
 
   const existingUser = await prisma.user.findUnique({
@@ -120,10 +133,7 @@ async function seedAdmin(email: string, password: string, name: string = 'Admini
     // ユーザー更新
     await prisma.user.update({
       where: { email },
-      data: {
-        role: 'ADMIN',
-        name,
-      },
+      data: { role, name, assignedPages },
     })
 
     // credential account のパスワード更新 or 作成
@@ -146,27 +156,91 @@ async function seedAdmin(email: string, password: string, name: string = 'Admini
       })
     }
 
-    console.log(`✅ Updated existing admin user: ${email}`)
-  } else {
-    // ユーザーと credential account を同時作成
-    const userId = crypto.randomUUID()
-    const newUser = await prisma.user.create({
-      data: {
-        id: userId,
-        email,
-        name,
-        role: 'ADMIN',
-        emailVerified: true,
-        accounts: {
-          create: {
-            accountId: userId,
-            providerId: 'credential',
-            password: hashedPassword,
-          },
+    return false // updated
+  }
+
+  // ユーザーと credential account を同時作成
+  const userId = crypto.randomUUID()
+  await prisma.user.create({
+    data: {
+      id: userId,
+      email,
+      name,
+      role,
+      emailVerified: true,
+      assignedPages,
+      accounts: {
+        create: {
+          accountId: userId,
+          providerId: 'credential',
+          password: hashedPassword,
         },
       },
-    })
-    console.log(`✅ Created new admin user: ${newUser.email}`)
+    },
+  })
+
+  return true // created
+}
+
+// =============================================================================
+// Admin User
+// =============================================================================
+
+async function seedAdmin(email: string, password: string, name: string = 'Administrator') {
+  const created = await createOrUpdateUserWithCredential({
+    email,
+    password,
+    name,
+    role: Role.ADMIN,
+  })
+
+  if (created) {
+    console.log(`✅ Created new admin user: ${email}`)
+  } else {
+    console.log(`✅ Updated existing admin user: ${email}`)
+  }
+}
+
+// =============================================================================
+// Staff Users (Demo: RBAC roles)
+// =============================================================================
+
+async function seedStaffUsers() {
+  const staffUsers: Array<{
+    email: string
+    name: string
+    role: Role
+    password: string
+  }> = [
+    {
+      email: 'superadmin@example.com',
+      name: 'スーパー管理者',
+      role: Role.SUPER_ADMIN,
+      password: 'superadmin123',
+    },
+    {
+      email: 'editor@example.com',
+      name: '田中編集者',
+      role: Role.EDITOR,
+      password: 'editor123',
+    },
+    {
+      email: 'viewer@example.com',
+      name: '鈴木閲覧者',
+      role: Role.VIEWER,
+      password: 'viewer123',
+    },
+  ]
+
+  for (const staff of staffUsers) {
+    const existing = await prisma.user.findUnique({ where: { email: staff.email } })
+    if (existing) {
+      console.log(`⏭️ Skipped existing staff: ${staff.email}`)
+      continue
+    }
+
+    await createOrUpdateUserWithCredential(staff)
+    console.log(`✅ Created staff user: ${staff.name} (${staff.role})`)
   }
 }
 
@@ -202,6 +276,16 @@ async function seedSettings() {
   })
 
   console.log('✅ Settings configured')
+}
+
+// =============================================================================
+// Permissions (RBAC)
+// =============================================================================
+
+async function seedPermissions() {
+  console.log('🔐 Syncing permissions...')
+  await syncPermissionsToDb()
+  console.log('✅ Permissions synced')
 }
 
 // =============================================================================
@@ -991,36 +1075,28 @@ async function seedNews() {
 // =============================================================================
 
 async function seedPages() {
+  const { ensurePageSections } = await import('@/shared/lib/section-defaults')
+
   // プライバシーポリシーページ
-  const privacyPage = {
+  const privacyPageData = {
     slug: 'privacy',
     title: 'プライバシーポリシー',
     description: '当サイトにおける個人情報の取り扱いについてご説明いたします。',
-    content: `<p>株式会社〇〇（以下「当社」といいます。）は、当社が運営するレンタルスペース予約サービス「Myrrh Rental Space」（以下「本サービス」といいます。）において、お客様の個人情報の保護を重要な責務と認識し、以下のとおりプライバシーポリシー（以下「本ポリシー」といいます。）を定め、個人情報の適切な取り扱いに努めます。</p>
-
-<h2>第1条（個人情報の定義）</h2>
-<p>本ポリシーにおいて「個人情報」とは、個人情報保護法に定める個人情報を指します。</p>
-
-<h2>第2条（収集する個人情報）</h2>
-<p>当社は、本サービスの提供にあたり、氏名、メールアドレス、電話番号等の個人情報を収集することがあります。</p>
-
-<h2>第3条（個人情報の利用目的）</h2>
-<p>当社は、収集した個人情報を本サービスの提供、運営、維持管理等の目的で利用いたします。</p>
-
-<p style="text-align: right; margin-top: 3rem;">制定日: 2026年1月1日<br>株式会社〇〇</p>`,
     metaDescription: '当サイトにおける個人情報の取り扱いについてご説明いたします。',
     isPublished: true,
     isActive: true,
+    isSystemPage: true,
   }
 
-  const existing = await prisma.page.findUnique({ where: { slug: privacyPage.slug } })
+  const existing = await prisma.page.findUnique({ where: { slug: privacyPageData.slug } })
   if (!existing) {
-    await prisma.page.create({ data: privacyPage })
-    console.log(`✅ Created page: ${privacyPage.title}`)
+    const page = await prisma.page.create({ data: privacyPageData })
+    await ensurePageSections(page.id, page.slug)
+    console.log(`✅ Created page: ${privacyPageData.title}`)
   }
 
-  // SEOのみ編集可能なシステムページ
-  const seoOnlyPages = [
+  // システムページ
+  const systemPages = [
     { slug: 'reservation', title: '予約', description: 'レンタルスペースの予約' },
     { slug: 'spaces', title: 'スペース一覧', description: 'ご利用可能なレンタルスペース' },
     { slug: 'contact', title: 'お問い合わせ', description: 'お問い合わせフォーム' },
@@ -1030,29 +1106,33 @@ async function seedPages() {
     { slug: 'faq', title: 'よくある質問', description: 'FAQ' },
   ]
 
-  for (const page of seoOnlyPages) {
-    const existingPage = await prisma.page.findUnique({ where: { slug: page.slug } })
+  for (const pageData of systemPages) {
+    const existingPage = await prisma.page.findUnique({ where: { slug: pageData.slug } })
     if (!existingPage) {
-      await prisma.page.create({
+      const page = await prisma.page.create({
         data: {
-          slug: page.slug,
-          title: page.title,
-          description: page.description,
-          content: '',
+          slug: pageData.slug,
+          title: pageData.title,
+          description: pageData.description,
           isPublished: true,
           isActive: true,
           isSystemPage: true,
         },
       })
-      console.log(`✅ Created system page: ${page.title}`)
+      await ensurePageSections(page.id, page.slug)
+      console.log(`✅ Created system page: ${pageData.title}`)
     } else if (!existingPage.isSystemPage) {
       await prisma.page.update({
         where: { id: existingPage.id },
         data: { isSystemPage: true },
       })
-      console.log(`🔄 Updated to system page: ${page.title}`)
+      // 既存ページにもデフォルトセクションを確保
+      await ensurePageSections(existingPage.id, existingPage.slug)
+      console.log(`🔄 Updated to system page: ${pageData.title}`)
     } else {
-      console.log(`⏭️ Skipped existing system page: ${page.title}`)
+      // 既存システムページにもデフォルトセクションを確保
+      await ensurePageSections(existingPage.id, existingPage.slug)
+      console.log(`⏭️ Skipped existing system page: ${pageData.title}`)
     }
   }
 }
@@ -1545,13 +1625,15 @@ async function seedHomepageSections() {
 
 async function seedAll(email: string, password: string, name: string) {
   await seedAdmin(email, password, name)
+  await seedStaffUsers()
 
   console.log('')
   console.log('📦 Creating demo data...')
   console.log('')
 
-  // Phase 1: 基本設定
+  // Phase 1: 基本設定・権限
   await seedSettings()
+  await seedPermissions()
 
   // Phase 2: マスターデータ
   await seedLocations()
@@ -1590,6 +1672,7 @@ async function seedDemo() {
 
   // 基本設定
   await seedSettings()
+  await seedPermissions()
 
   // マスターデータ
   await seedLocations()
@@ -1613,14 +1696,17 @@ async function seedDemo() {
   await seedInquiries()
   await seedCoupons()
 
-  // Blog (admin必須)
-  const adminUser = await prisma.user.findFirst({ where: { role: 'ADMIN' } })
+  // スタッフユーザー・ブログ (admin必須)
+  const adminUser = await prisma.user.findFirst({
+    where: { role: { in: [Role.ADMIN, Role.SUPER_ADMIN] } },
+  })
   if (adminUser) {
+    await seedStaffUsers()
     await seedBlogTags()
     await seedBlog()
     await seedBlogComments()
   } else {
-    console.log('⚠️ No admin user found. Skipping blog seed.')
+    console.log('⚠️ No admin user found. Skipping staff users and blog seed.')
     console.log('   Create an admin first: bun prisma/seed.ts --admin <email> <password>')
   }
 

@@ -1,48 +1,22 @@
 /**
  * 予約ページ
  *
- * スペースを予約するためのページ。日時選択から顧客情報入力まで
- * 一連の予約フローを提供します。
+ * セクションシステムでレンダリング。
  *
- * ## 予約フロー
- * 1. カレンダーで日付選択
- * 2. 時間枠選択
- * 3. 顧客情報入力
- * 4. 規約同意（設定されている場合）
- * 5. 予約確定
- *
- * ## Next.js 16 PPR対応
- * - 静的シェル: ローディングUI
- * - 動的コンテンツ: 検索パラメータに基づくフォーム（Suspenseでラップ）
+ * ## 構造化データ
+ * - Breadcrumb JSON-LD
  *
  * @module public/reservation/page
  */
 
-import { Suspense } from 'react'
-import { cacheLife, cacheTag } from 'next/cache'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import Link from 'next/link'
-import { prisma } from '@/shared/lib/prisma'
-import { Container } from '@/public/components/ui'
-import { ContentRenderer } from '@/public/components/ContentRenderer'
-import { ReservationForm } from './_components'
-import {
-  getTermsAgreementSettings,
-  getPageContent,
-  getPublicTaxSettings,
-  getTurnstileSiteKey,
-  getPublicDiscountSettings,
-} from '@/public/actions/settings'
-import { getTermsForSpace, getCancellationPolicy } from '@/public/actions/terms'
-import { serializeTermsWithVersion } from '@/shared/lib/validations/terms'
+import { BreadcrumbJsonLd } from '@/public/components/seo/JsonLd'
 import { generatePageMetadata } from '@/public/lib/page-metadata'
-import { parseTaxRateType } from '@/shared/lib/json-validators'
+import { getPublicPageWithSections } from '@/public/actions/page-section'
+import { PageSections } from '@/public/components/page-sections'
+import { getPostUrlPrefix } from '@/shared/lib/settings/public'
 import type { ReactElement } from 'react'
-
-interface PageProps {
-  searchParams: Promise<{ spaceId?: string }>
-}
 
 export async function generateMetadata(): Promise<Metadata> {
   return generatePageMetadata('reservation', {
@@ -51,166 +25,25 @@ export async function generateMetadata(): Promise<Metadata> {
   })
 }
 
-/**
- * スペース情報（シリアライズ済み）
- */
-interface SerializedSpace {
-  id: string
-  name: string
-  hourlyPrice: number
-  mainImageUrl: string | null
-  taxRateType: 'standard' | 'reduced'
-}
+export default async function ReservationPage(): Promise<ReactElement> {
+  const [pageWithSections, postPrefix] = await Promise.all([
+    getPublicPageWithSections('reservation'),
+    getPostUrlPrefix(),
+  ])
 
-/**
- * スペース情報を取得（キャッシュ付き）
- * Prismaオブジェクトをプレーンオブジェクトに変換して返す
- */
-async function getSpaceForReservation(spaceId: string): Promise<SerializedSpace | null> {
-  'use cache'
-  cacheLife('hours')
-  cacheTag('spaces', `space-${spaceId}`)
-
-  const space = await prisma.space.findUnique({
-    where: {
-      id: spaceId,
-      isPublished: true,
-      isActive: true,
-    },
-    select: {
-      id: true,
-      name: true,
-      hourlyPrice: true,
-      mainImageUrl: true,
-      taxRateType: true,
-    },
-  })
-
-  if (!space) return null
-
-  // Prismaオブジェクトをプレーンオブジェクトに変換（シンボルプロパティを除去）
-  // Number()でプリミティブ値に変換（Decimal/numberどちらでも動作）
-  return {
-    id: space.id,
-    name: space.name,
-    hourlyPrice: Number(space.hourlyPrice),
-    mainImageUrl: space.mainImageUrl,
-    taxRateType: parseTaxRateType(space.taxRateType),
-  }
-}
-
-/**
- * 動的コンテンツ: 検索パラメータに基づく予約フォーム
- */
-async function ReservationContent({
-  searchParams,
-}: {
-  searchParams: Promise<{ spaceId?: string }>
-}): Promise<ReactElement> {
-  const { spaceId } = await searchParams
-
-  // ページコンテンツを取得（管理画面で編集されたコンテンツ）
-  const pageContent = await getPageContent('reservation')
-
-  // spaceId が指定されていない場合はスペース選択画面へ誘導
-  if (!spaceId) {
-    return (
-      <div className="max-w-2xl mx-auto">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-foreground mb-4">
-            予約するスペースを選択してください
-          </h1>
-          <p className="text-muted-foreground mb-8">
-            予約したいスペースの詳細ページから「予約する」ボタンをクリックしてください。
-          </p>
-          <Link
-            href="/spaces"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 transition-colors"
-          >
-            スペース一覧を見る
-          </Link>
-        </div>
-        {/* ページコンテンツ（Lexicalエディタで編集されたコンテンツ） */}
-        {pageContent?.content && (
-          <div className="mt-12">
-            <ContentRenderer html={pageContent.content} />
-          </div>
-        )}
-      </div>
-    )
-  }
-
-  // スペース情報を取得
-  const space = await getSpaceForReservation(spaceId)
-
-  if (!space) {
+  if (!pageWithSections || pageWithSections.sections.length === 0) {
     notFound()
   }
 
-  // 規約同意設定、スペース固有の規約、キャンセルポリシー、割引設定、税設定、Turnstile Site Keyを並行取得
-  const [termsSettings, spaceTerms, cancellationPolicy, discountSettings, taxSettings, turnstileSiteKey] = await Promise.all([
-    getTermsAgreementSettings(),
-    getTermsForSpace(spaceId),
-    getCancellationPolicy(),
-    getPublicDiscountSettings(),
-    getPublicTaxSettings(),
-    getTurnstileSiteKey(),
-  ])
-
   return (
     <>
-      {/* ページヘッダー */}
-      <div className="max-w-4xl mx-auto mb-8">
-        <h1 className="text-3xl font-bold text-foreground mb-2">
-          予約
-        </h1>
-        <p className="text-muted-foreground">
-          {space.name} のご予約
-        </p>
-      </div>
-
-      {/* 予約フォーム */}
-      <ReservationForm
-        spaceId={space.id}
-        spaceName={space.name}
-        hourlyPrice={space.hourlyPrice}
-        termsSettings={termsSettings}
-        spaceTerms={serializeTermsWithVersion(spaceTerms)}
-        cancellationPolicy={serializeTermsWithVersion(cancellationPolicy)}
-        discountSettings={discountSettings}
-        taxSettings={taxSettings}
-        taxRateType={space.taxRateType}
-        turnstileSiteKey={turnstileSiteKey}
+      <BreadcrumbJsonLd
+        items={[
+          { name: 'ホーム', url: '/' },
+          { name: pageWithSections.title || '予約', url: '/reservation' },
+        ]}
       />
+      <PageSections sections={pageWithSections.sections} postPrefix={postPrefix} />
     </>
-  )
-}
-
-/**
- * ローディングUI
- */
-function ReservationLoading(): ReactElement {
-  return (
-    <div className="max-w-4xl mx-auto">
-      <div className="animate-pulse space-y-4">
-        <div className="h-10 bg-muted rounded w-32" />
-        <div className="h-6 bg-muted rounded w-48" />
-        <div className="h-96 bg-muted rounded" />
-      </div>
-    </div>
-  )
-}
-
-export default async function ReservationPage({
-  searchParams,
-}: PageProps): Promise<ReactElement> {
-  return (
-    <section className="py-16 bg-background min-h-screen">
-      <Container>
-        <Suspense fallback={<ReservationLoading />}>
-          <ReservationContent searchParams={searchParams} />
-        </Suspense>
-      </Container>
-    </section>
   )
 }

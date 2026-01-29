@@ -27,7 +27,8 @@ import {
   updatePageSchema,
   updatePageSeoSchema,
   createPageSchema,
-  SYSTEM_PAGE_SLUGS,
+  isSystemPageSlug,
+  getSystemPageDefinition,
   type UpdatePageInput,
   type UpdatePageSeoInput,
   type CreatePageInput,
@@ -138,7 +139,6 @@ export async function updatePage(
       data: {
         title: parsed.data.title,
         description: parsed.data.description || null,
-        content: parsed.data.content,
         metaDescription: parsed.data.metaDescription || null,
         metaKeywords: parsed.data.metaKeywords || null,
         ogpTitle: parsed.data.ogpTitle || null,
@@ -176,7 +176,6 @@ export async function updatePage(
 export async function createPageIfNotExists(
   slug: string,
   title: string,
-  content: string
 ): Promise<PageData | null> {
   try {
     await verifyAdminSession()
@@ -197,7 +196,6 @@ export async function createPageIfNotExists(
       data: {
         slug,
         title,
-        content,
         isPublished: true,
         isActive: true,
       },
@@ -209,6 +207,62 @@ export async function createPageIfNotExists(
       category: ErrorCategory.DATABASE,
       severity: ErrorSeverity.MEDIUM,
       context: { operation: 'createPageIfNotExists', slug },
+    })
+    return null
+  }
+}
+
+/**
+ * システムページを自動作成（存在しない場合）
+ *
+ * システムページ（about, faq, contact等）が存在しない場合、
+ * SYSTEM_PAGES定義を元に自動作成します。
+ * セクションシステムで編集可能な状態で作成されます。
+ */
+export async function ensureSystemPage(slug: string): Promise<PageData | null> {
+  try {
+    await verifyAdminSession()
+  } catch {
+    return null
+  }
+
+  // システムページ定義を取得
+  const definition = getSystemPageDefinition(slug)
+  if (!definition) {
+    return null
+  }
+
+  try {
+    // 既存ページを確認、なければ作成
+    const existingPage = await prisma.page.findUnique({
+      where: { slug },
+    })
+
+    const page = existingPage ?? await prisma.page.create({
+      data: {
+        slug: definition.slug,
+        title: definition.title,
+        description: definition.description,
+        isPublished: true,
+        isActive: true,
+        isSystemPage: true,
+      },
+    })
+
+    // デフォルトセクションを作成（冪等: 既存セクションがあれば何もしない）
+    const { ensurePageSections } = await import('@/shared/lib/section-defaults')
+    await ensurePageSections(page.id, definition.slug)
+
+    if (!existingPage) {
+      updateTag(CACHE_TAGS.PAGES)
+    }
+
+    return page
+  } catch (error) {
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'ensureSystemPage', slug },
     })
     return null
   }
@@ -264,7 +318,6 @@ export async function createPage(
         slug: parsed.data.slug,
         title: parsed.data.title,
         description: parsed.data.description || null,
-        content: '<div></div>',
         isPublished: parsed.data.isPublished,
         isActive: true,
       },
@@ -302,7 +355,7 @@ export async function deletePage(slug: string): Promise<PageActionResult> {
   }
 
   // システムページは削除不可
-  if (SYSTEM_PAGE_SLUGS.includes(slug as typeof SYSTEM_PAGE_SLUGS[number])) {
+  if (isSystemPageSlug(slug)) {
     return { success: false, error: 'システムページは削除できません' }
   }
 
@@ -355,7 +408,7 @@ export async function deletePagePermanently(
   }
 
   // システムページは削除不可
-  if (SYSTEM_PAGE_SLUGS.includes(slug as typeof SYSTEM_PAGE_SLUGS[number])) {
+  if (isSystemPageSlug(slug)) {
     return { success: false, error: 'システムページは削除できません' }
   }
 

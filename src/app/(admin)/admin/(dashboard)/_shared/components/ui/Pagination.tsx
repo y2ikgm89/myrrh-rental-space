@@ -35,14 +35,14 @@ export function Pagination({ currentPage, totalPages, total }: PaginationProps) 
   }
 
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="text-sm text-muted-foreground">
         全 {total} 件（{currentPage} / {totalPages} ページ）
       </div>
       <div className="flex items-center gap-2">
         <Button
           variant="outline"
-          size="sm"
+          className="min-h-10 min-w-[72px] sm:min-h-8"
           onClick={() => goToPage(currentPage - 1)}
           disabled={currentPage <= 1 || isPending}
         >
@@ -50,7 +50,7 @@ export function Pagination({ currentPage, totalPages, total }: PaginationProps) 
         </Button>
         <Button
           variant="outline"
-          size="sm"
+          className="min-h-10 min-w-[72px] sm:min-h-8"
           onClick={() => goToPage(currentPage + 1)}
           disabled={currentPage >= totalPages || isPending}
         >

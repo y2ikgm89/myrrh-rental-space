@@ -6,3 +6,6 @@
 
 // Preview
 export { usePreviewData } from './use-preview-data'
+
+// Section Inspector
+export { useSectionUpdater } from './use-section-updater'

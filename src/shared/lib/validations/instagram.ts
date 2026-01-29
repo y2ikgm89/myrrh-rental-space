@@ -40,7 +40,7 @@ export const instagramPostUrlSchema = z
   .string()
   .url({ error: '有効なURLを入力してください' })
   .refine((url) => INSTAGRAM_POST_URL_PATTERN.test(url), {
-    message: '有効なInstagram投稿URLを入力してください',
+    error: '有効なInstagram投稿URLを入力してください',
   })
 
 /**

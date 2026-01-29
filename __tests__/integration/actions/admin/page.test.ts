@@ -24,7 +24,6 @@ const updatePageSeoSchema = z.object({
 const updatePageSchema = z.object({
   title: z.string().min(1, 'タイトルは必須です').max(200, 'タイトルは200文字以内です'),
   description: z.string().max(500, '説明は500文字以内です').optional(),
-  content: z.string().min(1, 'コンテンツは必須です').max(500000, 'コンテンツは500,000文字以内です'),
   metaDescription: z.string().max(160, 'メタディスクリプションは160文字以内です').optional(),
   metaKeywords: z.string().max(200, 'メタキーワードは200文字以内です').optional(),
   ogpTitle: z.string().max(100, 'OGPタイトルは100文字以内です').optional(),
@@ -59,7 +58,6 @@ const VALID_CREATE_PAGE_INPUT = {
 const VALID_UPDATE_PAGE_INPUT = {
   title: 'テストページ（更新）',
   description: 'テストページの説明です（更新）。',
-  content: '<div><h1>テスト</h1><p>本文</p></div>',
   isPublished: true,
 }
 
@@ -226,14 +224,6 @@ describe('Page Admin Action Integration', () => {
         expect(result.success).toBe(true)
       })
 
-      test('HTMLコンテンツは許可', () => {
-        const result = updatePageSchema.safeParse({
-          ...VALID_UPDATE_PAGE_INPUT,
-          content: '<div><h1>見出し</h1><p>本文</p><script>alert("test")</script></div>',
-        })
-        expect(result.success).toBe(true)
-      })
-
       test('contentWidthオプション設定可能', () => {
         const result = updatePageSchema.safeParse({
           ...VALID_UPDATE_PAGE_INPUT,
@@ -258,38 +248,6 @@ describe('Page Admin Action Integration', () => {
         expect(result.success).toBe(true)
         if (result.success) {
           expect(result.data.publishedAt).toBeInstanceOf(Date)
-        }
-      })
-    })
-
-    describe('content', () => {
-      test('空のコンテンツはエラー', () => {
-        const result = updatePageSchema.safeParse({
-          ...VALID_UPDATE_PAGE_INPUT,
-          content: '',
-        })
-        expect(result.success).toBe(false)
-        if (!result.success) {
-          expect(result.error.issues[0].message).toContain('コンテンツは必須')
-        }
-      })
-
-      test('500,000文字のコンテンツはOK', () => {
-        const result = updatePageSchema.safeParse({
-          ...VALID_UPDATE_PAGE_INPUT,
-          content: 'x'.repeat(500000),
-        })
-        expect(result.success).toBe(true)
-      })
-
-      test('500,001文字のコンテンツはエラー', () => {
-        const result = updatePageSchema.safeParse({
-          ...VALID_UPDATE_PAGE_INPUT,
-          content: 'x'.repeat(500001),
-        })
-        expect(result.success).toBe(false)
-        if (!result.success) {
-          expect(result.error.issues[0].message).toContain('500,000文字以内')
         }
       })
     })
@@ -528,7 +486,6 @@ describe('Page Admin Action Integration', () => {
         slug: string
         title: string
         description: string | null
-        content: string
         metaDescription: string | null
         metaKeywords: string | null
         ogpTitle: string | null
@@ -549,7 +506,6 @@ describe('Page Admin Action Integration', () => {
         slug: 'test-page',
         title: 'テストページ',
         description: '説明',
-        content: '<p>本文</p>',
         metaDescription: 'メタ説明',
         metaKeywords: 'キーワード',
         ogpTitle: 'OGPタイトル',

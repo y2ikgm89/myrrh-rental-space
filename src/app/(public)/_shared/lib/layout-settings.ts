@@ -8,10 +8,21 @@
 import { cacheLife, cacheTag } from 'next/cache'
 import { prisma } from '@/shared/lib/prisma'
 import { LayoutWidth } from '@/shared/types/prisma'
-import { type LayoutConfig, DEFAULT_LAYOUT_CONFIG } from '@/shared/types/layout'
+import type { LayoutConfig } from '@/shared/types/layout'
 
 // Re-export for convenience
 export type { LayoutConfig } from '@/shared/types/layout'
+
+// =============================================================================
+// Fallback Config (DB未設定時のデフォルト値)
+// =============================================================================
+
+const FALLBACK_LAYOUT_CONFIG: LayoutConfig = {
+  containerWidth: LayoutWidth.LG,
+  containerWidthCustom: null,
+  contentWidth: LayoutWidth.MD,
+  contentWidthCustom: null,
+}
 
 // =============================================================================
 // Site Layout Settings
@@ -36,13 +47,13 @@ export async function getSiteLayoutSettings(): Promise<LayoutConfig> {
   })
 
   if (!settings) {
-    return DEFAULT_LAYOUT_CONFIG
+    return FALLBACK_LAYOUT_CONFIG
   }
 
   return {
-    containerWidth: settings.containerWidth ?? DEFAULT_LAYOUT_CONFIG.containerWidth,
+    containerWidth: settings.containerWidth ?? FALLBACK_LAYOUT_CONFIG.containerWidth,
     containerWidthCustom: settings.containerWidthCustom,
-    contentWidth: settings.contentWidth ?? DEFAULT_LAYOUT_CONFIG.contentWidth,
+    contentWidth: settings.contentWidth ?? FALLBACK_LAYOUT_CONFIG.contentWidth,
     contentWidthCustom: settings.contentWidthCustom,
   }
 }

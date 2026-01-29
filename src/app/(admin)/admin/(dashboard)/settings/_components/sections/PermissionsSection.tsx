@@ -104,9 +104,9 @@ const ROLE_CONFIGS: RoleConfig[] = [
     id: 'VIEWER',
     label: '閲覧者',
     icon: Eye,
-    color: 'text-gray-700',
-    bgColor: 'bg-gray-50',
-    borderColor: 'border-gray-200',
+    color: 'text-muted-foreground',
+    bgColor: 'bg-muted/50',
+    borderColor: 'border-border',
     description: 'データの閲覧のみ可能',
     capabilities: [
       'ダッシュボードの閲覧',

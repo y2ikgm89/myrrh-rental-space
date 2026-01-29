@@ -7,7 +7,8 @@
  */
 
 import Image from 'next/image'
-import { useState, useTransition } from 'react'
+import Link from 'next/link'
+import { useState, useCallback, useTransition } from 'react'
 import { toast } from 'sonner'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -41,15 +42,14 @@ import {
   ctaConfigSchema,
   customConfigSchema,
   instagramConfigSchema,
-  defaultSectionConfigs,
-  isHeroConfig,
-  isSpaceListConfig,
-  isNewsConfig,
-  isPostsConfig,
-  isFaqConfig,
-  isCtaConfig,
-  isCustomConfig,
-  isInstagramConfig,
+  getHeroConfig,
+  getSpaceListConfig,
+  getNewsConfig,
+  getPostsConfig,
+  getFaqConfig,
+  getCtaConfig,
+  getCustomConfig,
+  getInstagramConfig,
   type HeroConfig,
   type SpaceListConfig,
   type NewsConfig,
@@ -58,12 +58,17 @@ import {
   type CtaConfig,
   type CustomConfig,
   type InstagramConfig,
+  type HeroConfigInput,
   type SpaceListConfigInput,
   type NewsConfigInput,
   type PostsConfigInput,
   type FaqConfigInput,
+  type CtaConfigInput,
+  type CustomConfigInput,
   type InstagramConfigInput,
+  type CTAButtonItem,
 } from '@/admin/lib/validations/homepage-section'
+import { CTAButtonEditor } from '@/shared/components/cta-button-editor'
 import dynamic from 'next/dynamic'
 import { EDITOR_PROSE_CLASSES } from '@/shared/lib/styles/prose'
 
@@ -102,13 +107,15 @@ function HeroConfigForm({
   onSave: (config: HeroConfig) => void
   isPending: boolean
 }) {
+  const [buttons, setButtons] = useState<CTAButtonItem[]>(config.buttons)
+
   const {
     register,
     handleSubmit,
     setValue,
     control,
     formState: { errors },
-  } = useForm<HeroConfig>({
+  } = useForm<HeroConfigInput, unknown, HeroConfig>({
     resolver: zodResolver(heroConfigSchema),
     defaultValues: config,
   })
@@ -123,6 +130,14 @@ function HeroConfigForm({
       }
     },
   })
+
+  const handleButtonsChange = useCallback(
+    (newButtons: CTAButtonItem[]) => {
+      setButtons(newButtons)
+      setValue('buttons', newButtons)
+    },
+    [setValue]
+  )
 
   return (
     <form onSubmit={handleSubmit(onSave)} className="space-y-6">
@@ -199,46 +214,13 @@ function HeroConfigForm({
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="hero-cta-primary-text">メインボタンテキスト</Label>
-            <Input
-              id="hero-cta-primary-text"
-              {...register('ctaPrimary.text')}
-              placeholder="スペースを探す"
-              disabled={isPending}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="hero-cta-primary-url">メインボタンURL</Label>
-            <Input
-              id="hero-cta-primary-url"
-              {...register('ctaPrimary.url')}
-              placeholder="/spaces"
-              disabled={isPending}
-            />
-          </div>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="hero-cta-secondary-text">サブボタンテキスト（任意）</Label>
-            <Input
-              id="hero-cta-secondary-text"
-              {...register('ctaSecondary.text')}
-              placeholder="お問い合わせ"
-              disabled={isPending}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="hero-cta-secondary-url">サブボタンURL（任意）</Label>
-            <Input
-              id="hero-cta-secondary-url"
-              {...register('ctaSecondary.url')}
-              placeholder="/contact"
-              disabled={isPending}
-            />
-          </div>
+        <div className="space-y-2">
+          <Label>ボタン</Label>
+          <CTAButtonEditor
+            buttons={buttons}
+            onChange={handleButtonsChange}
+            disabled={isPending}
+          />
         </div>
       </div>
 
@@ -532,14 +514,25 @@ function CtaConfigForm({
   onSave: (config: CtaConfig) => void
   isPending: boolean
 }) {
+  const [buttons, setButtons] = useState<CTAButtonItem[]>(config.buttons)
+
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
-  } = useForm<CtaConfig>({
+  } = useForm<CtaConfigInput, unknown, CtaConfig>({
     resolver: zodResolver(ctaConfigSchema),
     defaultValues: config,
   })
+
+  const handleButtonsChange = useCallback(
+    (newButtons: CTAButtonItem[]) => {
+      setButtons(newButtons)
+      setValue('buttons', newButtons)
+    },
+    [setValue]
+  )
 
   return (
     <form onSubmit={handleSubmit(onSave)} className="space-y-6">
@@ -568,46 +561,13 @@ function CtaConfigForm({
           />
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="cta-primary-text">メインボタンテキスト</Label>
-            <Input
-              id="cta-primary-text"
-              {...register('ctaPrimary.text')}
-              placeholder="予約する"
-              disabled={isPending}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="cta-primary-url">メインボタンURL</Label>
-            <Input
-              id="cta-primary-url"
-              {...register('ctaPrimary.url')}
-              placeholder="/reservation"
-              disabled={isPending}
-            />
-          </div>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="cta-secondary-text">サブボタンテキスト（任意）</Label>
-            <Input
-              id="cta-secondary-text"
-              {...register('ctaSecondary.text')}
-              placeholder="お問い合わせ"
-              disabled={isPending}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="cta-secondary-url">サブボタンURL（任意）</Label>
-            <Input
-              id="cta-secondary-url"
-              {...register('ctaSecondary.url')}
-              placeholder="/contact"
-              disabled={isPending}
-            />
-          </div>
+        <div className="space-y-2">
+          <Label>ボタン</Label>
+          <CTAButtonEditor
+            buttons={buttons}
+            onChange={handleButtonsChange}
+            disabled={isPending}
+          />
         </div>
       </div>
 
@@ -639,7 +599,7 @@ function CustomConfigForm({
   const {
     register,
     handleSubmit,
-  } = useForm<CustomConfig>({
+  } = useForm<CustomConfigInput, unknown, CustomConfig>({
     resolver: zodResolver(customConfigSchema),
     defaultValues: config,
   })
@@ -725,9 +685,9 @@ function InstagramConfigForm({
         <div className="rounded-lg border bg-muted/50 p-4">
           <p className="text-sm text-muted-foreground">
             フィードの詳細設定（表示件数、レイアウト、カラム数など）は
-            <a href="/admin/settings/api" className="ml-1 text-primary hover:underline">
+            <Link href="/admin/settings/api" className="ml-1 text-primary hover:underline">
               API設定 &gt; Instagram
-            </a>
+            </Link>
             で管理できます。
           </p>
         </div>
@@ -767,20 +727,11 @@ export function SectionEditor({ section, onBack, onSave }: SectionEditorProps) {
   const renderConfigForm = () => {
     const { config } = section
 
-    // 型ガードでconfig検証、失敗時はデフォルト値を使用
-    const getValidConfig = <T,>(
-      validator: (c: unknown) => c is T,
-      type: HomepageSectionType
-    ): T => {
-      if (validator(config)) return config
-      return defaultSectionConfigs[type] as T
-    }
-
     switch (section.type) {
       case HomepageSectionType.HERO:
         return (
           <HeroConfigForm
-            config={getValidConfig(isHeroConfig, HomepageSectionType.HERO)}
+            config={getHeroConfig(config)}
             onSave={(c) => handleConfigSave(c)}
             isPending={isPending}
           />
@@ -788,7 +739,7 @@ export function SectionEditor({ section, onBack, onSave }: SectionEditorProps) {
       case HomepageSectionType.SPACE_LIST:
         return (
           <SpaceListConfigForm
-            config={getValidConfig(isSpaceListConfig, HomepageSectionType.SPACE_LIST)}
+            config={getSpaceListConfig(config)}
             onSave={(c) => handleConfigSave(c)}
             isPending={isPending}
           />
@@ -796,7 +747,7 @@ export function SectionEditor({ section, onBack, onSave }: SectionEditorProps) {
       case HomepageSectionType.NEWS:
         return (
           <NewsConfigForm
-            config={getValidConfig(isNewsConfig, HomepageSectionType.NEWS)}
+            config={getNewsConfig(config)}
             onSave={(c) => handleConfigSave(c)}
             isPending={isPending}
           />
@@ -804,7 +755,7 @@ export function SectionEditor({ section, onBack, onSave }: SectionEditorProps) {
       case HomepageSectionType.POST:
         return (
           <PostsConfigForm
-            config={getValidConfig(isPostsConfig, HomepageSectionType.POST)}
+            config={getPostsConfig(config)}
             onSave={(c) => handleConfigSave(c)}
             isPending={isPending}
           />
@@ -812,7 +763,7 @@ export function SectionEditor({ section, onBack, onSave }: SectionEditorProps) {
       case HomepageSectionType.FAQ:
         return (
           <FaqConfigForm
-            config={getValidConfig(isFaqConfig, HomepageSectionType.FAQ)}
+            config={getFaqConfig(config)}
             onSave={(c) => handleConfigSave(c)}
             isPending={isPending}
           />
@@ -820,7 +771,7 @@ export function SectionEditor({ section, onBack, onSave }: SectionEditorProps) {
       case HomepageSectionType.CTA:
         return (
           <CtaConfigForm
-            config={getValidConfig(isCtaConfig, HomepageSectionType.CTA)}
+            config={getCtaConfig(config)}
             onSave={(c) => handleConfigSave(c)}
             isPending={isPending}
           />
@@ -828,7 +779,7 @@ export function SectionEditor({ section, onBack, onSave }: SectionEditorProps) {
       case HomepageSectionType.CUSTOM:
         return (
           <CustomConfigForm
-            config={getValidConfig(isCustomConfig, HomepageSectionType.CUSTOM)}
+            config={getCustomConfig(config)}
             content={section.content}
             onSave={(c, content) => handleConfigSave(c, content)}
             isPending={isPending}
@@ -837,7 +788,7 @@ export function SectionEditor({ section, onBack, onSave }: SectionEditorProps) {
       case HomepageSectionType.INSTAGRAM:
         return (
           <InstagramConfigForm
-            config={getValidConfig(isInstagramConfig, HomepageSectionType.INSTAGRAM)}
+            config={getInstagramConfig(config)}
             onSave={(c) => handleConfigSave(c)}
             isPending={isPending}
           />
@@ -893,7 +844,7 @@ export function SectionEditor({ section, onBack, onSave }: SectionEditorProps) {
 // =============================================================================
 
 const titleSchema = z.object({
-  title: z.string().max(100, 'タイトルは100文字以内です').optional(),
+  title: z.string().max(100, { error: 'タイトルは100文字以内です' }).optional(),
 })
 
 type TitleFormData = z.infer<typeof titleSchema>

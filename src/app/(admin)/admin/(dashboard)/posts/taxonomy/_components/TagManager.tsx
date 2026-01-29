@@ -55,12 +55,12 @@ type TagFormData = {
 }
 
 const tagFormSchema = z.object({
-  name: z.string().min(1, 'タグ名は必須です').max(50, 'タグ名は50文字以内'),
+  name: z.string().min(1, { error: 'タグ名は必須です' }).max(50, { error: 'タグ名は50文字以内' }),
   slug: z
     .string()
-    .min(1, 'スラッグは必須です')
+    .min(1, { error: 'スラッグは必須です' })
     .max(50)
-    .regex(/^[a-z0-9-]+$/, 'スラッグは小文字英数字とハイフンのみ'),
+    .regex(/^[a-z0-9-]+$/, { error: 'スラッグは小文字英数字とハイフンのみ' }),
 }) satisfies z.ZodType<TagFormData>
 
 // =============================================================================

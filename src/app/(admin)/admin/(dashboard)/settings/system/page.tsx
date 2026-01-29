@@ -64,11 +64,11 @@ function SystemSettingsLoading(): ReactElement {
   return (
     <div className="animate-pulse space-y-6">
       <div className="flex gap-1 h-10 bg-muted rounded-lg p-1">
-        <div className="h-8 w-24 bg-gray-300 rounded-md" />
-        <div className="h-8 w-16 bg-gray-200 rounded-md" />
-        <div className="h-8 w-12 bg-gray-200 rounded-md" />
+        <div className="h-8 w-24 bg-muted-foreground/30 rounded-md" />
+        <div className="h-8 w-16 bg-muted rounded-md" />
+        <div className="h-8 w-12 bg-muted rounded-md" />
       </div>
-      <div className="h-48 bg-gray-200 rounded" />
+      <div className="h-48 bg-muted rounded" />
     </div>
   )
 }

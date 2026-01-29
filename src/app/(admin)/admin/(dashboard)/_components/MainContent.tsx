@@ -22,6 +22,7 @@ const wrapperStyles = tv({
 })
 
 const mainStyles = tv({
+  base: 'min-h-[calc(100vh-4rem)] bg-background',
   variants: {
     isFullscreen: {
       true: '',

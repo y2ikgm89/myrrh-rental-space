@@ -61,7 +61,7 @@ export function MonthView({
   return (
     <div className="flex h-full flex-col rounded-lg border bg-white">
       {/* 曜日ヘッダー */}
-      <div className="grid grid-cols-7 border-b bg-gray-50">
+      <div className="grid grid-cols-7 border-b bg-muted/50">
         {weekdays.map((day, index) => (
           <div
             key={day}
@@ -97,7 +97,7 @@ export function MonthView({
                   key={dayId}
                   className={cn(
                     'relative flex min-h-[100px] flex-col border-r p-1 last:border-r-0',
-                    !isCurrentMonth && 'bg-gray-50',
+                    !isCurrentMonth && 'bg-muted/50',
                     isToday(day) && 'bg-primary/5'
                   )}
                 >
@@ -105,7 +105,7 @@ export function MonthView({
                   <button
                     type="button"
                     className={cn(
-                      'mb-1 flex h-6 w-6 items-center justify-center rounded-full text-sm transition-colors hover:bg-gray-100',
+                      'mb-1 flex h-6 w-6 items-center justify-center rounded-full text-sm transition-colors hover:bg-accent',
                       !isCurrentMonth && 'text-muted-foreground',
                       isToday(day) &&
                         'bg-primary text-primary-foreground hover:bg-primary/90',
@@ -130,7 +130,7 @@ export function MonthView({
                     {hiddenCount > 0 && !dayExpanded && (
                       <button
                         type="button"
-                        className="mt-0.5 w-full rounded px-1 py-0.5 text-left text-[10px] text-primary hover:bg-gray-100"
+                        className="mt-0.5 w-full rounded px-1 py-0.5 text-left text-[10px] text-primary hover:bg-accent"
                         onClick={() => toggleExpandDay(dayId)}
                       >
                         他 {hiddenCount} 件
@@ -141,7 +141,7 @@ export function MonthView({
                     {dayExpanded && hiddenCount > 0 && (
                       <button
                         type="button"
-                        className="mt-0.5 w-full rounded px-1 py-0.5 text-left text-[10px] text-primary hover:bg-gray-100"
+                        className="mt-0.5 w-full rounded px-1 py-0.5 text-left text-[10px] text-primary hover:bg-accent"
                         onClick={() => toggleExpandDay(dayId)}
                       >
                         折りたたむ

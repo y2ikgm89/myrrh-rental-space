@@ -42,7 +42,7 @@ import { generateSlug } from '@/shared/lib/utils'
 
 const baseTaxonomySchema = z.object({
   name: z.string().min(1).max(50),
-  slug: z.string().min(1).max(50).regex(/^[a-z0-9-]+$/, 'スラッグは小文字英数字とハイフンのみ'),
+  slug: z.string().min(1).max(50).regex(/^[a-z0-9-]+$/, { error: 'スラッグは小文字英数字とハイフンのみ' }),
   description: z.string().max(500).optional(),
   metaTitle: z.string().max(70).optional(),
   metaDescription: z.string().max(160).optional(),
@@ -50,14 +50,14 @@ const baseTaxonomySchema = z.object({
 })
 
 const categoryFormSchema = baseTaxonomySchema.extend({
-  name: z.string().min(1, 'カテゴリ名は必須です').max(50, 'カテゴリ名は50文字以内'),
-  slug: z.string().min(1, 'スラッグは必須です').max(50).regex(/^[a-z0-9-]+$/, 'スラッグは小文字英数字とハイフンのみ'),
+  name: z.string().min(1, { error: 'カテゴリ名は必須です' }).max(50, { error: 'カテゴリ名は50文字以内' }),
+  slug: z.string().min(1, { error: 'スラッグは必須です' }).max(50).regex(/^[a-z0-9-]+$/, { error: 'スラッグは小文字英数字とハイフンのみ' }),
   order: z.number().int().min(0),
 })
 
 const tagFormSchema = baseTaxonomySchema.extend({
-  name: z.string().min(1, 'タグ名は必須です').max(50, 'タグ名は50文字以内'),
-  slug: z.string().min(1, 'スラッグは必須です').max(50).regex(/^[a-z0-9-]+$/, 'スラッグは小文字英数字とハイフンのみ'),
+  name: z.string().min(1, { error: 'タグ名は必須です' }).max(50, { error: 'タグ名は50文字以内' }),
+  slug: z.string().min(1, { error: 'スラッグは必須です' }).max(50).regex(/^[a-z0-9-]+$/, { error: 'スラッグは小文字英数字とハイフンのみ' }),
 })
 
 type CategoryFormData = z.infer<typeof categoryFormSchema>

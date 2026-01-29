@@ -4,10 +4,21 @@
  * HomepageSectionDataに基づいて適切なセクションコンポーネントをレンダリング
  */
 
-import type { ReactElement } from 'react'
+import { Suspense, type ReactElement } from 'react'
 import { HomepageSectionType } from '@/shared/lib/validations/enums'
 import type { HomepageSectionData } from '@/public/actions/homepage'
-import { getSafeConfig } from '@/shared/lib/validations/homepage-section'
+import {
+  getHeroConfig,
+  getSpaceListConfig,
+  getNewsConfig,
+  getPostsConfig,
+  getFaqConfig,
+  getCtaConfig,
+  getCustomConfig,
+  getInstagramConfig,
+} from '@/shared/lib/validations/homepage-section'
+import { ContentRenderer } from '@/public/components/ContentRenderer'
+import { InlineEditableWrapper } from '@/public/components/inline-editor'
 import { HeroSection } from './HeroSection'
 import { SpaceListSection } from './SpaceListSection'
 import { NewsSectionRenderer } from './NewsSectionRenderer'
@@ -20,17 +31,19 @@ import { InstagramSectionRenderer } from './InstagramSectionRenderer'
 interface SectionRendererProps {
   section: HomepageSectionData
   postPrefix: string
+  /** 管理者かどうか（インライン編集用） */
+  isAdmin?: boolean
 }
 
-export function SectionRenderer({ section, postPrefix }: SectionRendererProps): ReactElement | null {
+export function SectionRenderer({ section, postPrefix, isAdmin = false }: SectionRendererProps): ReactElement | null {
   switch (section.type) {
     case HomepageSectionType.HERO: {
-      const config = getSafeConfig(HomepageSectionType.HERO, section.config)
+      const config = getHeroConfig(section.config)
       return <HeroSection config={config} />
     }
 
     case HomepageSectionType.SPACE_LIST: {
-      const config = getSafeConfig(HomepageSectionType.SPACE_LIST, section.config)
+      const config = getSpaceListConfig(section.config)
       return (
         <SpaceListSection
           title={section.title}
@@ -40,7 +53,7 @@ export function SectionRenderer({ section, postPrefix }: SectionRendererProps): 
     }
 
     case HomepageSectionType.NEWS: {
-      const config = getSafeConfig(HomepageSectionType.NEWS, section.config)
+      const config = getNewsConfig(section.config)
       return (
         <NewsSectionRenderer
           title={section.title}
@@ -50,7 +63,7 @@ export function SectionRenderer({ section, postPrefix }: SectionRendererProps): 
     }
 
     case HomepageSectionType.POST: {
-      const config = getSafeConfig(HomepageSectionType.POST, section.config)
+      const config = getPostsConfig(section.config)
       return (
         <PostSectionRenderer
           title={section.title}
@@ -61,7 +74,7 @@ export function SectionRenderer({ section, postPrefix }: SectionRendererProps): 
     }
 
     case HomepageSectionType.FAQ: {
-      const config = getSafeConfig(HomepageSectionType.FAQ, section.config)
+      const config = getFaqConfig(section.config)
       return (
         <FAQSectionRenderer
           title={section.title}
@@ -71,23 +84,36 @@ export function SectionRenderer({ section, postPrefix }: SectionRendererProps): 
     }
 
     case HomepageSectionType.CTA: {
-      const config = getSafeConfig(HomepageSectionType.CTA, section.config)
+      const config = getCtaConfig(section.config)
       return <CTASectionRenderer config={config} />
     }
 
     case HomepageSectionType.CUSTOM: {
-      const config = getSafeConfig(HomepageSectionType.CUSTOM, section.config)
+      const config = getCustomConfig(section.config)
+      const contentSlot = section.content ? (
+        <Suspense fallback={<ContentRenderer html={section.content} />}>
+          <InlineEditableWrapper
+            contentType="homepage-section"
+            contentId={section.id}
+            initialContent={section.content}
+            isAdmin={isAdmin}
+          >
+            <ContentRenderer html={section.content} />
+          </InlineEditableWrapper>
+        </Suspense>
+      ) : undefined
       return (
         <CustomSection
           title={section.title}
           content={section.content}
           config={config}
+          contentSlot={contentSlot}
         />
       )
     }
 
     case HomepageSectionType.INSTAGRAM: {
-      const config = getSafeConfig(HomepageSectionType.INSTAGRAM, section.config)
+      const config = getInstagramConfig(section.config)
       return (
         <InstagramSectionRenderer
           title={section.title}
@@ -104,13 +130,15 @@ export function SectionRenderer({ section, postPrefix }: SectionRendererProps): 
 interface HomepageSectionsProps {
   sections: HomepageSectionData[]
   postPrefix: string
+  /** 管理者かどうか（インライン編集用） */
+  isAdmin?: boolean
 }
 
-export function HomepageSections({ sections, postPrefix }: HomepageSectionsProps): ReactElement {
+export function HomepageSections({ sections, postPrefix, isAdmin = false }: HomepageSectionsProps): ReactElement {
   return (
     <>
       {sections.map((section) => (
-        <SectionRenderer key={section.id} section={section} postPrefix={postPrefix} />
+        <SectionRenderer key={section.id} section={section} postPrefix={postPrefix} isAdmin={isAdmin} />
       ))}
     </>
   )

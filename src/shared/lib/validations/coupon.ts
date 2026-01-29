@@ -84,7 +84,7 @@ export const couponFormSchema = z
       return true
     },
     {
-      message: 'パーセント割引は100%以下で入力してください',
+      error: 'パーセント割引は100%以下で入力してください',
       path: ['discountValue'],
     }
   )
@@ -97,7 +97,7 @@ export const couponFormSchema = z
       return true
     },
     {
-      message: '有効期限は開始日より後に設定してください',
+      error: '有効期限は開始日より後に設定してください',
       path: ['validUntil'],
     }
   )

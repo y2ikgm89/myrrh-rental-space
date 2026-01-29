@@ -4,6 +4,7 @@
  * レイアウト設定セクション
  *
  * サイト全体の幅と記事コンテンツ幅を設定
+ * リアルタイムプレビュー付き
  */
 
 import { useState, useTransition } from 'react'
@@ -31,6 +32,10 @@ import {
   isValidLayoutWidth,
   getValidLayoutWidth,
 } from '@/shared/lib/validations/enums'
+import { getContentStyles } from '@/shared/lib/styles/layout-mapper'
+import { LazyLexicalEditor } from '@/admin/components/editor/lexical'
+import { EDITOR_PROSE_CLASSES } from '@/shared/lib/styles/prose'
+import { LayoutWidth as LayoutWidthEnum } from '@/shared/types/prisma'
 
 // =============================================================================
 // Types
@@ -116,6 +121,25 @@ export function LayoutSection({ settings }: LayoutSectionProps) {
   const handlePreview = () => {
     window.open('/posts', '_blank')
   }
+
+  // リアルタイムプレビュー用スタイル計算（React Compilerが自動メモ化）
+  const parsedCustomWidth = contentWidthCustom
+    ? parseInt(contentWidthCustom, 10)
+    : null
+  const validCustomWidth =
+    parsedCustomWidth !== null && !Number.isNaN(parsedCustomWidth)
+      ? parsedCustomWidth
+      : null
+
+  const previewStyles = getContentStyles({
+    containerWidth: LayoutWidthEnum.LG,
+    containerWidthCustom: null,
+    contentWidth: contentWidth as LayoutWidthEnum,
+    contentWidthCustom: validCustomWidth,
+  })
+
+  // サンプルコンテンツ（HTMLを直接生成）
+  const sampleContent = `<p>これはコンテンツ幅のプレビューです。設定を変更すると、このエディタの幅がリアルタイムで変わります。</p><p>実際のブログ記事やお知らせは、ここに表示されるのと同じ幅で公開ページに表示されます。</p>`
 
   return (
     <Card>
@@ -236,6 +260,27 @@ export function LayoutSection({ settings }: LayoutSectionProps) {
                 </p>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* コンテンツ幅プレビュー */}
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <h4 className="text-sm font-medium">コンテンツ幅プレビュー</h4>
+            <p className="text-xs text-muted-foreground">
+              設定した幅でエディタがどのように表示されるか確認できます
+            </p>
+          </div>
+          <div className="rounded-lg border bg-muted/20 p-4 overflow-x-auto">
+            <LazyLexicalEditor
+              content={sampleContent}
+              disabled
+              className={EDITOR_PROSE_CLASSES}
+              showToolbar={false}
+              height="120px"
+              contentWidthClassName={previewStyles.className}
+              contentWidthStyle={previewStyles.style}
+            />
           </div>
         </div>
 

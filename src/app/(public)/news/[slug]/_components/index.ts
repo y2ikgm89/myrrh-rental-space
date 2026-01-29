@@ -3,3 +3,4 @@
  */
 
 export { NewsPreviewWrapper } from './NewsPreviewWrapper'
+export { InlineEditableWrapper } from './InlineEditableWrapper'

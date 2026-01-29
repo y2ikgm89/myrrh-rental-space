@@ -70,7 +70,7 @@ export function InlineEditorShell({
       <div className="flex flex-1 overflow-hidden">
         {/* エディタ領域 */}
         <div
-          className="overflow-auto transition-[width] duration-300"
+          className="h-full overflow-auto transition-[width] duration-300"
           style={{ width: editorWidth }}
         >
           {children}

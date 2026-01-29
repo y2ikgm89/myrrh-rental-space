@@ -195,7 +195,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // ==========================================================================
   for (const page of customPages) {
     entries.push({
-      url: `${BASE_URL}/p/${page.slug}`,
+      url: `${BASE_URL}/${page.slug}`,
       lastModified: page.updatedAt,
     })
   }

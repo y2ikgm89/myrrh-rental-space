@@ -10,11 +10,11 @@ export function StatsCardsSkeleton() {
       {Array.from({ length: 4 }).map((_, i) => (
         <Card key={i}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <div className="h-4 w-24 animate-pulse rounded bg-gray-200" />
+            <div className="h-4 w-24 animate-pulse rounded bg-muted" />
           </CardHeader>
           <CardContent>
-            <div className="h-8 w-20 animate-pulse rounded bg-gray-200 mb-1" />
-            <div className="h-3 w-16 animate-pulse rounded bg-gray-200" />
+            <div className="h-8 w-20 animate-pulse rounded bg-muted mb-1" />
+            <div className="h-3 w-16 animate-pulse rounded bg-muted" />
           </CardContent>
         </Card>
       ))}

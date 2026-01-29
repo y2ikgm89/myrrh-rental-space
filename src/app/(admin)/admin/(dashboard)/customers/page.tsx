@@ -47,14 +47,14 @@ export default async function CustomersPage({ searchParams }: PageProps) {
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">顧客管理</h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground sm:text-base">
             顧客情報の確認・ステータス管理を行います
           </p>
         </div>
-        <Button asChild>
+        <Button asChild className="min-h-10 sm:min-h-9">
           <Link href="/admin/customers/new">
             <Plus className="mr-2 h-4 w-4" />
             新規顧客

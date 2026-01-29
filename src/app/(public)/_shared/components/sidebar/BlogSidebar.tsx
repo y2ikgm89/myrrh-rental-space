@@ -1,5 +1,5 @@
 import { tv } from 'tailwind-variants'
-import { SearchWidget } from './SearchWidget'
+import { SearchWidgetWrapper } from './SearchWidgetWrapper'
 import { RecentPostsWidget } from './RecentPostsWidget'
 import { PopularPostsWidget } from './PopularPostsWidget'
 import { CategoriesWidget } from './CategoriesWidget'
@@ -44,7 +44,7 @@ export function BlogSidebar({ settings = defaultSettings, data, postPrefix }: Bl
 
   return (
     <aside className={styles.sidebar()}>
-      {search && <SearchWidget postPrefix={postPrefix} />}
+      {search && <SearchWidgetWrapper postPrefix={postPrefix} />}
 
       {recent && data.recentPosts && (
         <RecentPostsWidget posts={data.recentPosts} postPrefix={postPrefix} />

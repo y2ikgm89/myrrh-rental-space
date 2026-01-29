@@ -22,7 +22,15 @@ type TableSectionProps = React.HTMLAttributes<HTMLTableSectionElement> & {
 
 function TableHeader({ className, ref, ...props }: TableSectionProps) {
   return (
-    <thead ref={ref} className={cn('[&_tr]:border-b', className)} {...props} />
+    <thead
+      ref={ref}
+      className={cn(
+        // Swiss Design: クリーンなヘッダー、微細な背景
+        'bg-muted/40 [&_tr]:border-b [&_tr]:border-border/80',
+        className
+      )}
+      {...props}
+    />
   )
 }
 
@@ -58,7 +66,9 @@ function TableRow({ className, ref, ...props }: TableRowProps) {
     <tr
       ref={ref}
       className={cn(
-        'border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted',
+        'border-b border-border/60 transition-colors duration-200',
+        // Swiss Design: 控えめだが明確なホバー状態
+        'hover:bg-accent/50 data-[state=selected]:bg-accent',
         className
       )}
       {...props}
@@ -75,7 +85,10 @@ function TableHead({ className, ref, ...props }: TableHeadProps) {
     <th
       ref={ref}
       className={cn(
-        'h-10 px-2 text-left align-middle font-medium text-muted-foreground md:h-12 md:px-4 [&:has([role=checkbox])]:pr-0',
+        'h-10 px-2 text-left align-middle md:h-11 md:px-4',
+        // Swiss Typography: 小さめ、大文字、トラッキング広め
+        'text-xs font-semibold uppercase tracking-wider text-muted-foreground',
+        '[&:has([role=checkbox])]:pr-0',
         className
       )}
       {...props}

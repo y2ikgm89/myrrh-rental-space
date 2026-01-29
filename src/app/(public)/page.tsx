@@ -8,13 +8,15 @@
  */
 
 import type { Metadata } from 'next'
+import { Suspense, type ReactElement } from 'react'
 import { connection } from 'next/server'
 import { HomepageSections } from '@/public/components/sections'
+import { SectionInspectorSidebar } from '@/public/components/section-inspector'
 import { WebSiteJsonLd } from '@/public/components/seo/JsonLd'
 import { generateHomeMetadata, getWebSiteJsonLdData } from '@/public/lib/seo'
 import { getPublicHomepageSections } from '@/public/actions/homepage'
 import { getPostUrlPrefix } from '@/shared/lib/settings/public'
-import type { ReactElement } from 'react'
+import { isAdmin } from '@/shared/lib/auth'
 
 /**
  * ホームページメタデータ生成
@@ -28,10 +30,11 @@ export default async function HomePage(): Promise<ReactElement> {
   // Dynamic rendering - データベースから動的にコンテンツを取得
   await connection()
 
-  const [webSiteData, sections, postPrefix] = await Promise.all([
+  const [webSiteData, sections, postPrefix, userIsAdmin] = await Promise.all([
     getWebSiteJsonLdData(),
     getPublicHomepageSections(),
     getPostUrlPrefix(),
+    isAdmin(),
   ])
 
   return (
@@ -41,7 +44,12 @@ export default async function HomePage(): Promise<ReactElement> {
         description={webSiteData.description}
         url={webSiteData.url}
       />
-      <HomepageSections sections={sections} postPrefix={postPrefix} />
+      <HomepageSections sections={sections} postPrefix={postPrefix} isAdmin={userIsAdmin} />
+      {userIsAdmin && (
+        <Suspense fallback={null}>
+          <SectionInspectorSidebar sections={sections} />
+        </Suspense>
+      )}
     </>
   )
 }

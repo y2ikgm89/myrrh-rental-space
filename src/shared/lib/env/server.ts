@@ -78,21 +78,21 @@ export const serverEnv = createEnv({
     // API キーの暗号化に使用
     ENCRYPTION_KEY: z
       .string()
-      .length(64, { message: 'ENCRYPTION_KEY must be exactly 64 characters' })
+      .length(64, { error: 'ENCRYPTION_KEY must be exactly 64 characters' })
       .optional(),
 
     // Cron（本番必須 - ランタイム検証）
     // Cron エンドポイントの認証に使用
     CRON_SECRET: z
       .string()
-      .min(32, { message: 'CRON_SECRET must be at least 32 characters' })
+      .min(32, { error: 'CRON_SECRET must be at least 32 characters' })
       .optional(),
 
     // Admin Login（本番必須 - ランタイム検証）
     // 管理画面ログインページへのアクセス制限
     ADMIN_LOGIN_TOKEN: z
       .string()
-      .min(32, { message: 'ADMIN_LOGIN_TOKEN must be at least 32 characters' })
+      .min(32, { error: 'ADMIN_LOGIN_TOKEN must be at least 32 characters' })
       .optional(),
 
     // Node environment

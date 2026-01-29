@@ -256,6 +256,8 @@ export async function getPublicTaxSettings(): Promise<TaxSettings> {
 
 /**
  * ページコンテンツ取得用の結果型
+ *
+ * セクションシステムからCUSTOMセクションのコンテンツを取得
  */
 export type PageContentResult = {
   title: string
@@ -263,13 +265,15 @@ export type PageContentResult = {
 } | null
 
 /**
- * ページコンテンツを取得（公開ページ用・認証不要・キャッシュ付き）
- * ダイアログ表示用にタイトルとコンテンツのみ返す
+ * ページのタイトルとコンテンツを取得（公開ページ用・認証不要・キャッシュ付き）
+ *
+ * セクションシステムからCUSTOMタイプのセクションコンテンツを結合して返します。
+ * 主に規約プレビューダイアログで使用。
  */
 export async function getPageContent(slug: string): Promise<PageContentResult> {
   'use cache'
   cacheLife('hours')
-  cacheTag(CACHE_TAGS.PAGES)
+  cacheTag(CACHE_TAGS.PAGES, `${CACHE_TAGS.PAGES}-sections-${slug}`)
 
   const page = await prisma.page.findUnique({
     where: {
@@ -279,17 +283,32 @@ export async function getPageContent(slug: string): Promise<PageContentResult> {
     },
     select: {
       title: true,
-      content: true,
+      sections: {
+        where: {
+          isActive: true,
+          type: 'CUSTOM',
+        },
+        select: {
+          content: true,
+        },
+        orderBy: { order: 'asc' },
+      },
     },
   })
 
-  if (!page || !page.content) {
+  if (!page) {
     return null
   }
 
+  // CUSTOMセクションのcontentを結合
+  const content = page.sections
+    .map((s) => s.content ?? '')
+    .filter(Boolean)
+    .join('')
+
   return {
     title: page.title,
-    content: page.content,
+    content,
   }
 }
 

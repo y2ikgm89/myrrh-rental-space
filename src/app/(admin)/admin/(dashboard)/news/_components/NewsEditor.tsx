@@ -29,6 +29,7 @@ import {
   newsConfig,
 } from '@/admin/components/editor/inline'
 import type { NewsData } from '@/admin/lib/validations/news'
+import type { ContentWidthSettings } from '@/shared/types'
 
 // =============================================================================
 // Types
@@ -37,13 +38,15 @@ import type { NewsData } from '@/admin/lib/validations/news'
 type NewsEditorProps = {
   news?: NewsData
   mode?: 'create' | 'edit'
+  /** グローバルレイアウト設定（フォールバック値として使用） */
+  layoutSettings?: ContentWidthSettings | null
 }
 
 // =============================================================================
 // Component
 // =============================================================================
 
-export function NewsEditor({ news, mode = 'edit' }: NewsEditorProps) {
+export function NewsEditor({ news, mode = 'edit', layoutSettings }: NewsEditorProps) {
   // 専用フック使用（型アサーション不要）
   const editor = useNewsEditor({ news, mode })
 
@@ -105,8 +108,11 @@ export function NewsEditor({ news, mode = 'edit' }: NewsEditorProps) {
   // スラッグの表示
   const displaySlug = `news/${editor.slug}`
 
-  // コンテンツ幅スタイル（useWatch公式パターン）
-  const contentStyles = useContentWidthStyles({ control: editor.form.control })
+  // コンテンツ幅スタイル（useWatch公式パターン + グローバル設定フォールバック）
+  const contentStyles = useContentWidthStyles({
+    control: editor.form.control,
+    layoutSettings,
+  })
 
   // サイドパネル用extraProps
   const sidePanelExtraProps = {

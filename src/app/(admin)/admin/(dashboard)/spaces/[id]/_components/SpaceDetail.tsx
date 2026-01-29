@@ -243,7 +243,7 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
           {/* 閉じるボタン */}
           <button
             type="button"
-            className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors"
+            className="absolute top-4 right-4 text-white hover:text-white/70 transition-colors"
             onClick={() => setIsModalOpen(false)}
           >
             <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -255,7 +255,7 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
           {allImages.length > 1 && (
             <button
               type="button"
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 transition-colors p-2"
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:text-white/70 transition-colors p-2"
               onClick={(e) => { e.stopPropagation(); handlePrev() }}
             >
               <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -278,7 +278,7 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
           {allImages.length > 1 && (
             <button
               type="button"
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 transition-colors p-2"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:text-white/70 transition-colors p-2"
               onClick={(e) => { e.stopPropagation(); handleNext() }}
             >
               <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">

@@ -7,8 +7,6 @@
 'use client'
 
 import { useCallback } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $getNodeByKey } from 'lexical'
 import {
   $isButtonNode,
   type ButtonNode,
@@ -16,7 +14,9 @@ import {
   isButtonSize,
   isButtonAlignment,
 } from '../../nodes/ButtonNode'
+import { InspectorHeader } from '../InspectorHeader'
 import { InspectorSection } from '../InspectorSection'
+import { useNodeUpdater } from '../hooks/use-node-updater'
 import { Input, Label, SelectionBox, Switch } from '@/admin/components/ui'
 
 // =============================================================================
@@ -55,7 +55,7 @@ type ButtonInspectorPanelProps = {
 // =============================================================================
 
 export function ButtonInspectorPanel({ nodeKey, node }: ButtonInspectorPanelProps) {
-  const [editor] = useLexicalComposerContext()
+  const updateNode = useNodeUpdater(nodeKey, $isButtonNode)
 
   // 現在の値を取得
   const text = node.getText()
@@ -64,19 +64,6 @@ export function ButtonInspectorPanel({ nodeKey, node }: ButtonInspectorPanelProp
   const size = node.getSize()
   const alignment = node.getAlignment()
   const openInNewTab = node.getOpenInNewTab()
-
-  // 更新ヘルパー
-  const updateNode = useCallback(
-    (updater: (node: ButtonNode) => void) => {
-      editor.update(() => {
-        const targetNode = $getNodeByKey(nodeKey)
-        if ($isButtonNode(targetNode)) {
-          updater(targetNode)
-        }
-      })
-    },
-    [editor, nodeKey]
-  )
 
   const handleTextChange = useCallback(
     (value: string) => updateNode((n) => n.setText(value)),
@@ -122,9 +109,7 @@ export function ButtonInspectorPanel({ nodeKey, node }: ButtonInspectorPanelProp
 
   return (
     <div>
-      <div className="px-4 py-3 border-b border-border">
-        <h3 className="font-semibold text-sm">ボタン</h3>
-      </div>
+      <InspectorHeader title="ボタン" />
 
       <InspectorSection title="基本設定">
         <div className="space-y-3">

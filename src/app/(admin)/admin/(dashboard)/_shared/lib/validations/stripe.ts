@@ -36,7 +36,7 @@ export const stripeSettingsSchema = z
     stripeTestMode: z.boolean(),
     stripePublishableKey: z
       .string()
-      .max(200, { message: MESSAGES.maxLength('公開可能キー') })
+      .max(200, { error: MESSAGES.maxLength('公開可能キー') })
       .nullable()
       .optional()
       .refine((val) => !val || isValidPublishableKey(val), {
@@ -44,7 +44,7 @@ export const stripeSettingsSchema = z
       }),
     stripeSecretKey: z
       .string()
-      .max(200, { message: MESSAGES.maxLength('シークレットキー') })
+      .max(200, { error: MESSAGES.maxLength('シークレットキー') })
       .nullable()
       .optional()
       .refine((val) => !val || isValidSecretKey(val), {
@@ -52,7 +52,7 @@ export const stripeSettingsSchema = z
       }),
     stripeWebhookSecret: z
       .string()
-      .max(200, { message: MESSAGES.maxLength('Webhookシークレット') })
+      .max(200, { error: MESSAGES.maxLength('Webhookシークレット') })
       .nullable()
       .optional()
       .refine((val) => !val || isValidWebhookSecret(val), {
@@ -81,7 +81,7 @@ export type StripeSettingsInput = z.infer<typeof stripeSettingsSchema>
 export const stripeConnectionTestSchema = z.object({
   secretKey: z
     .string()
-    .min(1, { message: 'シークレットキーを入力してください' })
+    .min(1, { error: 'シークレットキーを入力してください' })
     .refine(isValidSecretKey, {
       message: MESSAGES.secretKey,
     }),

@@ -30,7 +30,6 @@ const VALID_SEO_INPUT = {
 const VALID_PAGE_INPUT = {
   title: 'テストページタイトル',
   description: 'ページの説明',
-  content: 'これはテストコンテンツです。',
   metaDescription: 'メタディスクリプション',
   metaKeywords: 'キーワード',
   ogpTitle: 'OGPタイトル',
@@ -212,30 +211,6 @@ describe('updatePageSchema', () => {
     })
   })
 
-  describe('content', () => {
-    test('空文字はエラー', () => {
-      const result = updatePageSchema.safeParse({
-        ...VALID_PAGE_INPUT,
-        content: '',
-      })
-      expect(result.success).toBe(false)
-      if (!result.success) {
-        expect(result.error.issues[0].message).toContain('必須')
-      }
-    })
-
-    test('500000文字超過はエラー', () => {
-      const result = updatePageSchema.safeParse({
-        ...VALID_PAGE_INPUT,
-        content: 'あ'.repeat(500001),
-      })
-      expect(result.success).toBe(false)
-      if (!result.success) {
-        expect(result.error.issues[0].message).toContain('500,000文字以内')
-      }
-    })
-  })
-
   describe('isPublished', () => {
     test('デフォルトはtrue', () => {
       const { isPublished, ...withoutIsPublished } = VALID_PAGE_INPUT
@@ -394,11 +369,12 @@ describe('SYSTEM_PAGES', () => {
     expect(slugs).toContain('contact')
   })
 
-  test('コンテンツ編集可能ページが正しく設定されている', () => {
-    const editablePages = SYSTEM_PAGES.filter((p) => p.isContentEditable)
-    expect(editablePages.map((p) => p.slug).sort()).toEqual(
-      ['about', 'contact', 'faq', 'privacy', 'reservation', 'spaces'].sort()
-    )
+  test('すべてのシステムページにslug/title/descriptionがある', () => {
+    for (const page of SYSTEM_PAGES) {
+      expect(page.slug).toBeTruthy()
+      expect(page.title).toBeTruthy()
+      expect(page.description).toBeTruthy()
+    }
   })
 })
 

@@ -78,17 +78,17 @@ export default async function StaffPage({ searchParams }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">スタッフ管理</h1>
-          <p className="text-muted-foreground">管理画面にアクセスできるスタッフアカウントを管理</p>
+          <p className="text-sm text-muted-foreground sm:text-base">管理画面にアクセスできるスタッフアカウントを管理</p>
         </div>
-        <Button asChild>
+        <Button asChild className="min-h-10 sm:min-h-9">
           <Link href="/admin/staff/new">スタッフを招待</Link>
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">総スタッフ数</CardTitle>
@@ -269,15 +269,15 @@ function RoleBadge({ role }: { role: Role }) {
 
 function UserFilters({ search, role }: { search: string; role: string }) {
   return (
-    <form className="flex gap-4">
+    <form className="flex flex-col gap-3 sm:flex-row sm:gap-4">
       <Input
         name="search"
         placeholder="名前またはメールアドレスで検索..."
         defaultValue={search}
-        className="max-w-sm"
+        className="w-full sm:max-w-sm"
       />
       <Select name="role" defaultValue={role}>
-        <SelectTrigger className="w-[180px]">
+        <SelectTrigger className="w-full sm:w-[180px]">
           <SelectValue placeholder="ロール" />
         </SelectTrigger>
         <SelectContent>
@@ -288,7 +288,7 @@ function UserFilters({ search, role }: { search: string; role: string }) {
           <SelectItem value="VIEWER">閲覧者</SelectItem>
         </SelectContent>
       </Select>
-      <Button type="submit" variant="secondary">
+      <Button type="submit" variant="secondary" className="min-h-10 sm:min-h-9">
         検索
       </Button>
     </form>

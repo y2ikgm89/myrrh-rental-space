@@ -51,10 +51,20 @@ import {
   CaseLower,
   CaseUpper,
   CaseSensitive,
+  Scissors,
+  AlertCircle,
+  ChevronDown,
+  MousePointerClick,
+  Quote,
+  Link2,
+  Footprints,
+  PanelTop,
 } from 'lucide-react'
 import { INSERT_HORIZONTAL_RULE_COMMAND } from '@lexical/react/LexicalHorizontalRuleNode'
 import { $createCodeNode } from '@lexical/code'
 import { FORMAT_TEXT_COMMAND, type TextFormatType } from 'lexical'
+import { INSERT_PAGE_BREAK_COMMAND } from './PageBreakPlugin'
+import { INSERT_COLLAPSIBLE_COMMAND } from './CollapsiblePlugin'
 
 // =============================================================================
 // Types
@@ -67,6 +77,12 @@ type ComponentPickerPluginProps = {
   onInsertInstagram?: () => void
   onInsertTable?: () => void
   onInsertLayout?: () => void
+  onInsertCallout?: () => void
+  onInsertButton?: () => void
+  onInsertPullQuote?: () => void
+  onInsertBookmark?: () => void
+  onInsertSteps?: () => void
+  onInsertTabs?: () => void
 }
 
 type CategoryType = 'basic' | 'list' | 'media' | 'layout' | 'format' | 'other'
@@ -170,6 +186,12 @@ export function ComponentPickerPlugin({
   onInsertInstagram,
   onInsertTable,
   onInsertLayout,
+  onInsertCallout,
+  onInsertButton,
+  onInsertPullQuote,
+  onInsertBookmark,
+  onInsertSteps,
+  onInsertTabs,
 }: ComponentPickerPluginProps) {
   const [editor] = useLexicalComposerContext()
   const [queryString, setQueryString] = useState<string | null>(null)
@@ -364,6 +386,54 @@ export function ComponentPickerPlugin({
             }),
           ]
         : []),
+      ...(onInsertCallout
+        ? [
+            new ComponentPickerOption('コールアウト', {
+              icon: <AlertCircle className="h-4 w-4" />,
+              keywords: ['callout', 'alert', 'note', 'chuui', 'info', 'warning'],
+              category: 'layout',
+              onSelect: onInsertCallout,
+            }),
+          ]
+        : []),
+      new ComponentPickerOption('折りたたみ', {
+        icon: <ChevronDown className="h-4 w-4" />,
+        keywords: ['collapsible', 'accordion', 'faq', 'oritakamu', 'toggle', 'details'],
+        category: 'layout',
+        onSelect: () => {
+          editor.dispatchCommand(INSERT_COLLAPSIBLE_COMMAND, undefined)
+        },
+      }),
+      ...(onInsertPullQuote
+        ? [
+            new ComponentPickerOption('プルクォート', {
+              icon: <Quote className="h-4 w-4" />,
+              keywords: ['pullquote', 'quote', 'inyou', 'blockquote', 'highlight'],
+              category: 'layout',
+              onSelect: onInsertPullQuote,
+            }),
+          ]
+        : []),
+      ...(onInsertSteps
+        ? [
+            new ComponentPickerOption('ステップ', {
+              icon: <Footprints className="h-4 w-4" />,
+              keywords: ['steps', 'howto', 'guide', 'junban', 'tejun', 'process'],
+              category: 'layout',
+              onSelect: onInsertSteps,
+            }),
+          ]
+        : []),
+      ...(onInsertTabs
+        ? [
+            new ComponentPickerOption('タブ', {
+              icon: <PanelTop className="h-4 w-4" />,
+              keywords: ['tabs', 'tabu', 'switch', 'panel', 'toggle'],
+              category: 'layout',
+              onSelect: onInsertTabs,
+            }),
+          ]
+        : []),
 
       // ========== テキスト変換 ==========
       new ComponentPickerOption('小文字', {
@@ -400,6 +470,34 @@ export function ComponentPickerPlugin({
           editor.dispatchCommand(INSERT_HORIZONTAL_RULE_COMMAND, undefined)
         },
       }),
+      new ComponentPickerOption('ページ区切り', {
+        icon: <Scissors className="h-4 w-4" />,
+        keywords: ['pagebreak', 'print', 'kukiri', 'page', 'insatsu'],
+        category: 'other',
+        onSelect: () => {
+          editor.dispatchCommand(INSERT_PAGE_BREAK_COMMAND, undefined)
+        },
+      }),
+      ...(onInsertButton
+        ? [
+            new ComponentPickerOption('ボタン', {
+              icon: <MousePointerClick className="h-4 w-4" />,
+              keywords: ['button', 'cta', 'botan', 'link', 'action'],
+              category: 'other',
+              onSelect: onInsertButton,
+            }),
+          ]
+        : []),
+      ...(onInsertBookmark
+        ? [
+            new ComponentPickerOption('ブックマーク', {
+              icon: <Link2 className="h-4 w-4" />,
+              keywords: ['bookmark', 'ogp', 'card', 'linkcard', 'embed', 'shiori'],
+              category: 'other',
+              onSelect: onInsertBookmark,
+            }),
+          ]
+        : []),
     ]
 
     // フィルタリング
@@ -415,7 +513,7 @@ export function ComponentPickerPlugin({
       )
       return titleMatch || keywordMatch
     })
-  }, [editor, queryString, onInsertImage, onInsertYouTube, onInsertX, onInsertInstagram, onInsertTable, onInsertLayout])
+  }, [editor, queryString, onInsertImage, onInsertYouTube, onInsertX, onInsertInstagram, onInsertTable, onInsertLayout, onInsertCallout, onInsertButton, onInsertPullQuote, onInsertBookmark, onInsertSteps, onInsertTabs])
 
   // カテゴリー別にグループ化
   const groupedOptions = useMemo(() => {

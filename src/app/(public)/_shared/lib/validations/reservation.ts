@@ -9,12 +9,12 @@ import { z } from 'zod'
 // 日付文字列のバリデーション（YYYY-MM-DD形式）
 const dateStringSchema = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, { message: '日付の形式が正しくありません' })
+  .regex(/^\d{4}-\d{2}-\d{2}$/, { error: '日付の形式が正しくありません' })
 
 // 時間文字列のバリデーション（HH:MM形式）
 const timeStringSchema = z
   .string()
-  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, { message: '時間の形式が正しくありません' })
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, { error: '時間の形式が正しくありません' })
 
 /**
  * 予約顧客情報スキーマ
@@ -22,21 +22,21 @@ const timeStringSchema = z
 export const customerInfoSchema = z.object({
   lastName: z
     .string()
-    .min(1, { message: '姓を入力してください' })
-    .max(50, { message: '姓は50文字以内で入力してください' }),
+    .min(1, { error: '姓を入力してください' })
+    .max(50, { error: '姓は50文字以内で入力してください' }),
   firstName: z
     .string()
-    .min(1, { message: '名を入力してください' })
-    .max(50, { message: '名は50文字以内で入力してください' }),
+    .min(1, { error: '名を入力してください' })
+    .max(50, { error: '名は50文字以内で入力してください' }),
   email: z
     .string()
-    .min(1, { message: 'メールアドレスを入力してください' })
-    .email({ message: '有効なメールアドレスを入力してください' }),
+    .min(1, { error: 'メールアドレスを入力してください' })
+    .email({ error: '有効なメールアドレスを入力してください' }),
   phoneNumber: z
     .string()
-    .min(1, { message: '電話番号を入力してください' })
-    .regex(/^[0-9-]+$/, { message: '電話番号は数字とハイフンのみで入力してください' })
-    .max(20, { message: '電話番号は20文字以内で入力してください' }),
+    .min(1, { error: '電話番号を入力してください' })
+    .regex(/^[0-9-]+$/, { error: '電話番号は数字とハイフンのみで入力してください' })
+    .max(20, { error: '電話番号は20文字以内で入力してください' }),
 })
 
 /**
@@ -87,44 +87,44 @@ export const reservationDateTimeSchema = z
  * 予約リクエストスキーマ（基本フィールド）
  */
 export const baseReservationSchema = z.object({
-  spaceId: z.string().uuid({ message: 'スペースIDが無効です' }),
+  spaceId: z.string().uuid({ error: 'スペースIDが無効です' }),
   date: dateStringSchema,
   startTime: timeStringSchema,
   endTime: timeStringSchema,
   lastName: z
     .string()
-    .min(1, { message: '姓を入力してください' })
-    .max(50, { message: '姓は50文字以内で入力してください' }),
+    .min(1, { error: '姓を入力してください' })
+    .max(50, { error: '姓は50文字以内で入力してください' }),
   firstName: z
     .string()
-    .min(1, { message: '名を入力してください' })
-    .max(50, { message: '名は50文字以内で入力してください' }),
+    .min(1, { error: '名を入力してください' })
+    .max(50, { error: '名は50文字以内で入力してください' }),
   // カナ（IMEで自動取得、任意）
   lastNameKana: z
     .string()
-    .max(50, { message: 'セイは50文字以内で入力してください' })
+    .max(50, { error: 'セイは50文字以内で入力してください' })
     .optional(),
   firstNameKana: z
     .string()
-    .max(50, { message: 'メイは50文字以内で入力してください' })
+    .max(50, { error: 'メイは50文字以内で入力してください' })
     .optional(),
   email: z
     .string()
-    .min(1, { message: 'メールアドレスを入力してください' })
-    .email({ message: '有効なメールアドレスを入力してください' }),
+    .min(1, { error: 'メールアドレスを入力してください' })
+    .email({ error: '有効なメールアドレスを入力してください' }),
   phoneNumber: z
     .string()
-    .min(1, { message: '電話番号を入力してください' })
-    .regex(/^[0-9-]+$/, { message: '電話番号は数字とハイフンのみで入力してください' })
-    .max(20, { message: '電話番号は20文字以内で入力してください' }),
+    .min(1, { error: '電話番号を入力してください' })
+    .regex(/^[0-9-]+$/, { error: '電話番号は数字とハイフンのみで入力してください' })
+    .max(20, { error: '電話番号は20文字以内で入力してください' }),
   notes: z
     .string()
-    .max(1000, { message: '備考は1000文字以内で入力してください' })
+    .max(1000, { error: '備考は1000文字以内で入力してください' })
     .optional(),
   // クーポンコード（オプション）
   couponCode: z
     .string()
-    .max(20, { message: 'クーポンコードは20文字以内で入力してください' })
+    .max(20, { error: 'クーポンコードは20文字以内で入力してください' })
     .optional(),
 })
 

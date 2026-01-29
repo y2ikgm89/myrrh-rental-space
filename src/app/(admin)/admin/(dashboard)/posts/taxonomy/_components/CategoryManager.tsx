@@ -72,12 +72,12 @@ type CategoryFormData = {
 }
 
 const categoryFormSchema = z.object({
-  name: z.string().min(1, 'カテゴリ名は必須です').max(50, 'カテゴリ名は50文字以内'),
+  name: z.string().min(1, { error: 'カテゴリ名は必須です' }).max(50, { error: 'カテゴリ名は50文字以内' }),
   slug: z
     .string()
-    .min(1, 'スラッグは必須です')
+    .min(1, { error: 'スラッグは必須です' })
     .max(50)
-    .regex(/^[a-z0-9-]+$/, 'スラッグは小文字英数字とハイフンのみ'),
+    .regex(/^[a-z0-9-]+$/, { error: 'スラッグは小文字英数字とハイフンのみ' }),
   description: z.string().max(200).optional(),
   order: z.number().int().min(0),
 }) satisfies z.ZodType<CategoryFormData>

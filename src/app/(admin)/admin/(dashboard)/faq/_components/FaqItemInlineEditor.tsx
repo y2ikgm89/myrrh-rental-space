@@ -70,9 +70,9 @@ import type { FaqEditorFormData } from '@/admin/components/editor/inline/types'
 // =============================================================================
 
 const formSchema = z.object({
-  question: z.string().min(1, '質問は必須です').max(500, '質問は500文字以内で入力してください'),
-  answer: z.string().min(1, '回答は必須です'),
-  categoryId: z.string().uuid('カテゴリを選択してください'),
+  question: z.string().min(1, { error: '質問は必須です' }).max(500, { error: '質問は500文字以内で入力してください' }),
+  answer: z.string().min(1, { error: '回答は必須です' }),
+  categoryId: z.string().uuid({ error: 'カテゴリを選択してください' }),
   order: z.number().int().min(0),
   isPublished: z.boolean(),
   metaDescription: z.string().optional(),

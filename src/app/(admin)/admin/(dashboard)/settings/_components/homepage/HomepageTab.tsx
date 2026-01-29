@@ -161,7 +161,7 @@ function SortableSectionItem({
       {/* Status Badge */}
       <div className="flex items-center gap-2">
         {section.isActive ? (
-          <span className="flex items-center gap-1 text-xs text-green-600 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded">
+          <span className="flex items-center gap-1 text-xs text-success bg-success/10 px-2 py-1 rounded">
             <Eye className="h-3 w-3" />
             表示
           </span>
@@ -273,7 +273,7 @@ function AddSectionDialog({
                     </p>
                   )}
                   {alreadyExists && !isCustom && (
-                    <p className="text-xs text-amber-600">
+                    <p className="text-xs text-warning">
                       既に存在します（再追加可能）
                     </p>
                   )}
@@ -302,7 +302,6 @@ interface HomepageTabProps {
 export function HomepageTab({ isInstagramConnected = false }: HomepageTabProps) {
   const [isPending, startTransition] = useTransition()
   const [sections, setSections] = useState<HomepageSectionData[] | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
   const [editingSection, setEditingSection] = useState<HomepageSectionData | null>(null)
   const [deletingSectionId, setDeletingSectionId] = useState<string | null>(null)
   const [showAddDialog, setShowAddDialog] = useState(false)
@@ -316,38 +315,70 @@ export function HomepageTab({ isInstagramConnected = false }: HomepageTabProps) 
   )
 
   // Load sections
-  const loadSections = async () => {
-    try {
-      const data = await getHomepageSections()
-      setSections(data)
-    } catch (error) {
-      logger.error('Failed to load sections', { error: error instanceof Error ? error.message : String(error) })
-      toast.error('セクションの読み込みに失敗しました')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
   useEffect(() => {
-    loadSections()
+    let cancelled = false
+
+    async function load() {
+      try {
+        const data = await getHomepageSections()
+        if (!cancelled) setSections(data)
+      } catch (error) {
+        logger.error('Failed to load sections', {
+          error: error instanceof Error ? error.message : String(error),
+        })
+        if (!cancelled) toast.error('セクションの読み込みに失敗しました')
+      }
+    }
+
+    load()
+    return () => { cancelled = true }
   }, [])
 
-  // Handlers
-  const handleToggle = (id: string, isActive: boolean) => {
-    // Optimistic update
-    setSections((prev) =>
-      prev?.map((s) => (s.id === id ? { ...s, isActive } : s)) ?? null
-    )
+  // Reload sections from server (used to revert optimistic updates on error)
+  function reloadSections() {
+    getHomepageSections().then(setSections).catch(() => {})
+  }
 
+  // Shared action handler: execute action, toast result, reload on success
+  // React 19: nested startTransition is required for state updates after await
+  function runActionAndReload(action: () => Promise<{ success: boolean; message?: string; error?: string }>) {
     startTransition(async () => {
-      const result = await toggleHomepageSection(id, isActive)
+      const result = await action()
+      if (result.success) {
+        toast.success(result.message)
+        const data = await getHomepageSections()
+        startTransition(() => {
+          setSections(data)
+        })
+      } else {
+        toast.error(result.error)
+      }
+    })
+  }
+
+  // Shared optimistic handler: apply optimistic update, execute action, revert on error
+  function runOptimisticAction(
+    optimisticUpdate: () => void,
+    action: () => Promise<{ success: boolean; message?: string; error?: string }>,
+  ) {
+    optimisticUpdate()
+    startTransition(async () => {
+      const result = await action()
       if (result.success) {
         toast.success(result.message)
       } else {
         toast.error(result.error)
-        loadSections() // Revert on error
+        reloadSections()
       }
     })
+  }
+
+  // Handlers
+  const handleToggle = (id: string, isActive: boolean) => {
+    runOptimisticAction(
+      () => setSections((prev) => prev?.map((s) => (s.id === id ? { ...s, isActive } : s)) ?? null),
+      () => toggleHomepageSection(id, isActive),
+    )
   }
 
   const handleDeleteConfirm = () => {
@@ -355,43 +386,20 @@ export function HomepageTab({ isInstagramConnected = false }: HomepageTabProps) 
     const id = deletingSectionId
     setDeletingSectionId(null)
 
-    startTransition(async () => {
-      const result = await deleteHomepageSection(id)
-      if (result.success) {
-        toast.success(result.message)
-        loadSections()
-      } else {
-        toast.error(result.error)
-      }
-    })
+    runOptimisticAction(
+      () => setSections((prev) => prev?.filter((s) => s.id !== id) ?? null),
+      () => deleteHomepageSection(id),
+    )
   }
 
   const handleAddSection = (type: HomepageSectionType) => {
-    startTransition(async () => {
-      const result = await createHomepageSection({
-        type,
-        config: defaultSectionConfigs[type],
-        isActive: true,
-      })
-      if (result.success) {
-        toast.success(result.message)
-        loadSections()
-      } else {
-        toast.error(result.error)
-      }
-    })
+    runActionAndReload(() =>
+      createHomepageSection({ type, config: defaultSectionConfigs[type], isActive: true })
+    )
   }
 
   const handleInitializeDefaults = () => {
-    startTransition(async () => {
-      const result = await initializeDefaultSections()
-      if (result.success) {
-        toast.success(result.message)
-        loadSections()
-      } else {
-        toast.error(result.error)
-      }
-    })
+    runActionAndReload(() => initializeDefaultSections())
   }
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -414,18 +422,18 @@ export function HomepageTab({ isInstagramConnected = false }: HomepageTabProps) 
       const result = await updateSectionOrder({ sections: orderUpdates })
       if (!result.success) {
         toast.error(result.error)
-        loadSections() // Revert on error
+        reloadSections()
       }
     })
   }
 
   const handleEditComplete = () => {
     setEditingSection(null)
-    loadSections()
+    reloadSections()
   }
 
   // Loading state
-  if (isLoading) {
+  if (sections === null) {
     return (
       <div className="space-y-4">
         {[1, 2, 3, 4].map((i) => (
@@ -436,7 +444,7 @@ export function HomepageTab({ isInstagramConnected = false }: HomepageTabProps) 
   }
 
   // No sections - show initialize button
-  if (!sections || sections.length === 0) {
+  if (sections.length === 0) {
     return (
       <div className="text-center py-12">
         <div className="p-4 rounded-full bg-muted/50 w-16 h-16 mx-auto mb-4 flex items-center justify-center">

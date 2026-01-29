@@ -82,17 +82,17 @@ export function LoginForm(): ReactElement {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-5">
       {error && (
-        <div className="bg-destructive/10 border border-destructive/50 text-destructive px-4 py-3 rounded-md text-sm">
+        <div className="bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded-md text-sm">
           {error}
         </div>
       )}
 
-      <div>
+      <div className="space-y-1.5">
         <label
           htmlFor="email"
-          className="block text-sm font-medium text-gray-700 mb-1"
+          className="block text-sm font-medium text-foreground"
         >
           メールアドレス
         </label>
@@ -103,15 +103,15 @@ export function LoginForm(): ReactElement {
           onChange={(e) => setEmail(e.target.value)}
           required
           autoComplete="email"
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+          className="w-full h-10 px-3 py-2 bg-white border border-input rounded-md shadow-sm text-foreground placeholder:text-muted-foreground transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring/50 focus:ring-offset-1 focus:border-primary"
           placeholder="admin@example.com"
         />
       </div>
 
-      <div>
+      <div className="space-y-1.5">
         <label
           htmlFor="password"
-          className="block text-sm font-medium text-gray-700 mb-1"
+          className="block text-sm font-medium text-foreground"
         >
           パスワード
         </label>
@@ -122,7 +122,7 @@ export function LoginForm(): ReactElement {
           onChange={(e) => setPassword(e.target.value)}
           required
           autoComplete="current-password"
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+          className="w-full h-10 px-3 py-2 bg-white border border-input rounded-md shadow-sm text-foreground placeholder:text-muted-foreground transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring/50 focus:ring-offset-1 focus:border-primary"
           placeholder="••••••••"
         />
       </div>
@@ -133,11 +133,11 @@ export function LoginForm(): ReactElement {
           type="checkbox"
           checked={rememberMe}
           onChange={(e) => setRememberMe(e.target.checked)}
-          className="h-4 w-4 text-gray-900 focus:ring-gray-900 border-gray-300 rounded cursor-pointer"
+          className="h-4 w-4 rounded border-input text-primary focus:ring-primary/50 cursor-pointer transition-colors duration-200"
         />
         <label
           htmlFor="remember-me"
-          className="ml-2 block text-sm text-gray-700 cursor-pointer select-none"
+          className="ml-2 block text-sm text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors duration-200"
         >
           メールアドレスを保存する
         </label>
@@ -146,7 +146,7 @@ export function LoginForm(): ReactElement {
       <button
         type="submit"
         disabled={isLoading}
-        className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-900 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full h-10 flex items-center justify-center rounded-md shadow-sm text-sm font-medium text-primary-foreground bg-primary transition-all duration-200 hover:bg-primary/90 hover:-translate-y-px hover:shadow-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-sm"
       >
         {isLoading ? 'ログイン中...' : 'ログイン'}
       </button>
