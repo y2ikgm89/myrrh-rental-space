@@ -1,40 +1,59 @@
 /**
- * ホームページ
+ * Homepage — DB-driven section rendering
  *
- * レンタルスペースサービスのトップページ
- * SEO最適化: 動的メタデータ + WebSite構造化データ
+ * Fetches sections from DB via getHomepageSections() and renders
+ * each through HomepageSectionRenderer.
  *
- * HomepageSectionモデルベースの動的セクションレンダリング
+ * SEO: Dynamic metadata + WebSite JSON-LD
  */
 
 import type { Metadata } from 'next'
-import { Suspense, type ReactElement } from 'react'
-import { connection } from 'next/server'
-import { HomepageSections } from '@/public/components/sections'
-import { SectionInspectorSidebar } from '@/public/components/section-inspector'
+import type { ReactElement } from 'react'
 import { WebSiteJsonLd } from '@/public/components/seo/JsonLd'
-import { generateHomeMetadata, getWebSiteJsonLdData } from '@/public/lib/seo'
-import { getPublicHomepageSections } from '@/public/actions/homepage'
-import { getPostUrlPrefix } from '@/shared/lib/settings/public'
-import { isAdmin } from '@/shared/lib/auth'
+import { getWebSiteJsonLdData, getSeoSettings } from '@/public/lib/seo'
+import { SITE_DEFAULTS, getBaseUrl } from '@/shared/lib/constants'
+import { getHomepageSections } from '@/public/actions/section'
+import { HomepageSectionRenderer } from './_shared/components/sections/HomepageSectionRenderer'
 
-/**
- * ホームページメタデータ生成
- * Settings DBから取得した設定を使用
- */
+const BASE_URL = getBaseUrl()
+
 export async function generateMetadata(): Promise<Metadata> {
-  return generateHomeMetadata()
+  const settings = await getSeoSettings()
+
+  const siteName = settings?.siteName ?? SITE_DEFAULTS.name
+  const description =
+    settings?.defaultOgpDescription ??
+    settings?.defaultMetaDescription ??
+    settings?.siteDescription ??
+    SITE_DEFAULTS.description
+  const title = settings?.defaultOgpTitle ?? siteName
+  const image = settings?.defaultOgpImageUrl ?? `${BASE_URL}/og-image.png`
+
+  return {
+    title: siteName,
+    description,
+    openGraph: {
+      title,
+      description,
+      url: `${BASE_URL}/`,
+      siteName,
+      images: [{ url: image }],
+      type: 'website',
+      locale: 'ja_JP',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [image],
+    },
+  }
 }
 
 export default async function HomePage(): Promise<ReactElement> {
-  // Dynamic rendering - データベースから動的にコンテンツを取得
-  await connection()
-
-  const [webSiteData, sections, postPrefix, userIsAdmin] = await Promise.all([
+  const [webSiteData, sections] = await Promise.all([
     getWebSiteJsonLdData(),
-    getPublicHomepageSections(),
-    getPostUrlPrefix(),
-    isAdmin(),
+    getHomepageSections(),
   ])
 
   return (
@@ -44,12 +63,9 @@ export default async function HomePage(): Promise<ReactElement> {
         description={webSiteData.description}
         url={webSiteData.url}
       />
-      <HomepageSections sections={sections} postPrefix={postPrefix} isAdmin={userIsAdmin} />
-      {userIsAdmin && (
-        <Suspense fallback={null}>
-          <SectionInspectorSidebar sections={sections} />
-        </Suspense>
-      )}
+      {sections.map((section) => (
+        <HomepageSectionRenderer key={section.id} section={section} />
+      ))}
     </>
   )
 }

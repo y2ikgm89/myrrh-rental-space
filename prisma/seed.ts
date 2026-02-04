@@ -19,17 +19,13 @@
 import 'dotenv/config'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { PrismaClient, Prisma, Role } from '../src/shared/generated/prisma/client'
-import { Pool } from 'pg'
 import { hashPassword } from 'better-auth/crypto'
 import { syncPermissionsToDb } from '../src/app/(admin)/admin/(dashboard)/_shared/lib/permissions'
 
-// PostgreSQL 接続プール
-const pool = new Pool({
+// Prisma アダプター（PrismaPg が Pool ライフサイクルを内部管理）
+const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
 })
-
-// Prisma アダプター
-const adapter = new PrismaPg(pool)
 
 // Prisma Client
 const prisma = new PrismaClient({
@@ -80,7 +76,7 @@ async function clearAllData() {
     prisma.coupon.deleteMany(),
 
     // サイト設定
-    prisma.homepageSection.deleteMany(),
+    prisma.section.deleteMany(),
     prisma.navigationItem.deleteMany(),
     prisma.announcementBar.deleteMany(),
     prisma.socialLink.deleteMany(),
@@ -1548,72 +1544,93 @@ async function seedSocialLinks() {
 // =============================================================================
 
 async function seedHomepageSections() {
-  const existingCount = await prisma.homepageSection.count()
+  const existingCount = await prisma.section.count({ where: { pageId: null } })
   if (existingCount > 0) {
     console.log('⏭️ Homepage sections already exist')
     return
   }
 
-  const sections: Prisma.HomepageSectionCreateInput[] = [
+  const sections: Prisma.SectionCreateManyInput[] = [
     {
-      type: 'HERO',
+      type: 'HERO_PARALLAX',
       config: {
-        title: '理想のスペースを、あなたに。',
-        subtitle: 'ビジネスからプライベートまで、あらゆるシーンに対応するレンタルスペース',
-        backgroundImageUrl: '',
-        ctaPrimary: { text: 'スペースを探す', url: '/spaces' },
-        ctaSecondary: { text: 'お問い合わせ', url: '/contact' },
+        title: '洗練された空間で 特別なひとときを',
+        subtitle: '厳選されたレンタルスペースが、あなたの大切な瞬間を彩ります。',
+        backgroundImageUrl: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=1600&q=80',
+        parallaxSpeed: 0.3,
+        overlayGradient: true,
+        scrollIndicator: true,
       },
+      design: {},
       order: 0,
       isActive: true,
     },
     {
-      type: 'SPACE_LIST',
-      config: { maxItems: 6, showOnlyPublished: true },
+      type: 'CONCEPT',
+      config: {
+        heading: '空間が、体験を変える',
+        body: '洗練されたデザインと上質な設備が調和する空間。\nビジネスミーティングからプライベートパーティーまで、\nあらゆるシーンに最適な環境をご用意しています。',
+        imageUrl: 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=1000&q=80',
+        imagePosition: 'right',
+      },
+      design: {},
       order: 1,
       isActive: true,
     },
     {
-      type: 'NEWS',
-      config: { title: 'お知らせ', maxItems: 3, showViewAllLink: true },
+      type: 'SPACE_SHOWCASE',
+      config: {
+        title: '厳選されたスペース',
+        maxItems: 3,
+        showOnlyPublished: true,
+      },
+      design: {},
       order: 2,
       isActive: true,
     },
     {
-      type: 'POST',
-      config: { title: '最新の記事', maxItems: 3, showViewAllLink: true },
-      order: 3,
-      isActive: true,
-    },
-    {
-      type: 'FAQ',
+      type: 'FEATURES',
       config: {
-        title: 'よくあるご質問',
-        maxItems: 5,
+        title: '選ばれる理由',
         items: [
-          { question: '予約のキャンセルはできますか？', answer: 'はい、予約日の48時間前までは無料でキャンセル可能です。' },
-          { question: '支払い方法は何がありますか？', answer: 'クレジットカード、銀行振込に対応しております。' },
-          { question: '利用時間の延長はできますか？', answer: '空き状況に応じて可能です。' },
+          {
+            icon: 'clock',
+            title: '柔軟な利用プラン',
+            description: '1時間単位でご利用いただけます。当日予約にも対応し、急なご要望にもお応えします。',
+          },
+          {
+            icon: 'shield',
+            title: '安心のサポート体制',
+            description: '専任スタッフが常駐し、設備の使い方からレイアウト変更まで丁寧にサポートいたします。',
+          },
+          {
+            icon: 'sparkles',
+            title: '上質な空間デザイン',
+            description: 'プロのデザイナーが手がけた内装で、どの角度から撮影しても美しい空間をご提供します。',
+          },
         ],
+        columns: 3,
       },
-      order: 4,
+      design: {},
+      order: 3,
       isActive: true,
     },
     {
       type: 'CTA',
       config: {
-        title: 'ご予約・お問い合わせ',
-        description: 'お気軽にお問い合わせください',
-        ctaPrimary: { text: '予約する', url: '/reservation' },
-        ctaSecondary: { text: 'お問い合わせ', url: '/contact' },
+        title: 'あなたの特別な一日を 私たちと共に',
+        description: 'お気軽にご相談ください。専任スタッフが最適なスペースをご提案いたします。',
+        ctaPrimary: { text: 'Reserve Now', url: '/reservation' },
+        ctaSecondary: { text: 'Contact Us', url: '/contact' },
       },
-      order: 5,
+      design: {},
+      order: 4,
       isActive: true,
     },
   ]
 
   for (const section of sections) {
-    await prisma.homepageSection.create({ data: section })
+    await prisma.section.create({ data: section })
   }
 
   console.log('✅ Created homepage sections')
@@ -1782,5 +1799,4 @@ main()
   })
   .finally(async () => {
     await prisma.$disconnect()
-    await pool.end()
   })
