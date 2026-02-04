@@ -17,6 +17,75 @@
 
 ## 完了した計画
 
+### 078 - 全セクション型 v3 実装 + [slug] ルート復元 (2026-02-04) ✅
+
+残り 12 セクション型の公開コンポーネントを作成し、SectionRenderer を統一化。[slug] 動的ページルートを復元。
+
+**実装内容**:
+- [x] Step 1: HomepageSectionRenderer → SectionRenderer リネーム（全ページ共通化）
+- [x] Step 2: DB 依存セクション用データ取得関数追加（spaces, news, posts, FAQ, pages）
+- [x] Step 3: Config-only セクション 6 種（StandardHero, Custom, Testimonial, Gallery, Map, Embed）
+- [x] Step 4: DB 依存セクション 4 種（SpaceList, NewsList, PostList, FaqList）
+- [x] Step 5: 特殊セクション 2 種（ContactForm, Instagram stub）
+- [x] Step 6: SectionRenderer 全 17 type switch-case 実装
+- [x] Step 7: [slug] 動的ページルート復元（generateStaticParams, BreadcrumbJsonLd, ensurePageSections）
+- [x] 検証: type-check / lint / build 成功
+
+**新規ファイル（12 コンポーネント）**:
+- `src/app/(public)/_components/StandardHeroSection.tsx` — 汎用ヒーロー（Client）
+- `src/app/(public)/_components/CustomSection.tsx` — Lexical HTML レンダリング（Server）
+- `src/app/(public)/_components/TestimonialSection.tsx` — 口コミ（Client）
+- `src/app/(public)/_components/GallerySection.tsx` — ギャラリー + ライトボックス（Client）
+- `src/app/(public)/_components/MapSection.tsx` — Google Maps embed（Server）
+- `src/app/(public)/_components/EmbedSection.tsx` — iframe / HTML embed（Server）
+- `src/app/(public)/_components/SpaceListSection.tsx` — スペース一覧（Client）
+- `src/app/(public)/_components/NewsListSection.tsx` — ニュース一覧（Client）
+- `src/app/(public)/_components/PostListSection.tsx` — ブログ記事一覧（Client）
+- `src/app/(public)/_components/FaqListSection.tsx` — FAQ アコーディオン + JSON-LD（Client）
+- `src/app/(public)/_components/ContactFormSection.tsx` — お問い合わせフォーム（Client）
+- `src/app/(public)/_components/InstagramSection.tsx` — Instagram stub（Client）
+
+**変更ファイル**:
+- `src/app/(public)/_shared/components/sections/SectionRenderer.tsx` — 全 17 type 対応
+- `src/app/(public)/_shared/actions/section.ts` — 6 関数追加（getListSpaces 等）
+- `src/app/(public)/page.tsx` — import 更新
+- `src/app/(public)/[slug]/page.tsx` — 動的ページルート復元
+
+**コミット**: a6de79c
+
+**技術**: Zod config getters / `'use cache'` + cacheTag / `connection()` for PPR / GSAP matchMedia reduced-motion / FAQ JSON-LD
+
+---
+
+### 077 - ホームページ DB 連携 (2026-02-04) ✅
+
+v3 ホームページを静的ダミーデータから DB 駆動に移行。HomepageSectionRenderer で SectionType → v3 コンポーネント出し分け。
+
+**実装内容**:
+- [x] Step 1: HomepageSectionRenderer 作成（SectionType → v3 コンポーネント出し分け）
+- [x] Step 2: v3 コンポーネント props 化（HeroSection, ConceptSection, SpaceShowcase, FeaturesSection, CTASection）
+- [x] Step 3: homepage page.tsx を DB 駆動に更新
+- [x] Step 4: seed データを v3 セクションに更新
+- [x] Step 5: dummy-data.ts 削除
+- [x] 検証: type-check / lint / build 成功
+
+**新規ファイル**:
+- `src/app/(public)/_shared/components/sections/HomepageSectionRenderer.tsx`
+
+**変更ファイル**:
+- `src/app/(public)/_components/` — 5 コンポーネント props 化
+- `src/app/(public)/_shared/actions/section.ts` — `getShowcaseSpaces()` 追加
+- `src/app/(public)/page.tsx` — DB 駆動化
+- `prisma/seed.ts` — v3 セクション seed
+
+**コミット**: fc7ea84
+
+**技術**: Zod config getters / `'use cache'` + cacheTag / Prisma Decimal 変換
+
+**計画書**: `docs/plans/077-homepage-db-integration.md`
+
+---
+
 ### 076 - カスタムページURL統一 (2026-01-29) ✅
 
 `/p/` プレフィックスを廃止し、カスタムページを `/[slug]` に統一。専用ページは維持。

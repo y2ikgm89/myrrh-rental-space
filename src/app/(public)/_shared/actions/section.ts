@@ -8,6 +8,7 @@
 import { cacheLife, cacheTag } from 'next/cache'
 import { prisma } from '@/shared/lib/prisma'
 import { CACHE_TAGS } from '@/shared/lib/constants'
+import { toPlainArray } from '@/shared/lib/serialize'
 import type { SectionType } from '@/shared/generated/prisma/enums'
 import { PostStatus } from '@/shared/generated/prisma/enums'
 
@@ -138,7 +139,7 @@ export async function getListSpaces(maxItems: number, showOnlyPublished: boolean
     take: maxItems,
   })
 
-  return spaces
+  return toPlainArray(spaces)
 }
 
 /**
