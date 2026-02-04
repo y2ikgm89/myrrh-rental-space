@@ -1,145 +1,232 @@
 /**
- * セクションレンダラー
+ * SectionRenderer — DB Section → v3 コンポーネント出し分け
  *
- * HomepageSectionDataに基づいて適切なセクションコンポーネントをレンダリング
+ * Server Component。PublicSection を受け取り、section.type に応じて
+ * v3 コンポーネントを出し分ける。全ページ共通で使用。
  */
 
-import { Suspense, type ReactElement } from 'react'
-import { HomepageSectionType } from '@/shared/lib/validations/enums'
-import type { HomepageSectionData } from '@/public/actions/homepage'
+import type { ReactElement } from 'react'
+import { SectionType } from '@/shared/generated/prisma/enums'
 import {
   getHeroConfig,
-  getSpaceListConfig,
-  getNewsConfig,
-  getPostsConfig,
-  getFaqConfig,
-  getCtaConfig,
+  getHeroParallaxConfig,
   getCustomConfig,
+  getConceptConfig,
+  getSpaceListConfig,
+  getSpaceShowcaseConfig,
+  getNewsListConfig,
+  getPostListConfig,
+  getFaqListConfig,
+  getFeaturesConfig,
+  getTestimonialConfig,
+  getGalleryConfig,
+  getCtaConfig,
+  getContactFormConfig,
+  getMapConfig,
+  getEmbedConfig,
   getInstagramConfig,
-} from '@/shared/lib/validations/homepage-section'
-import { ContentRenderer } from '@/public/components/ContentRenderer'
-import { InlineEditableWrapper } from '@/public/components/inline-editor'
-import { HeroSection } from './HeroSection'
-import { SpaceListSection } from './SpaceListSection'
-import { NewsSectionRenderer } from './NewsSectionRenderer'
-import { PostSectionRenderer } from './PostSectionRenderer'
-import { FAQSectionRenderer } from './FAQSectionRenderer'
-import { CTASectionRenderer } from './CTASectionRenderer'
-import { CustomSection } from './CustomSection'
-import { InstagramSectionRenderer } from './InstagramSectionRenderer'
+} from '@/shared/lib/validations/section'
+import type { PublicSection } from '@/public/actions/section'
+import {
+  getShowcaseSpaces,
+  getListSpaces,
+  getPublishedNews,
+  getPublishedPosts,
+  getPublishedFaqItems,
+} from '@/public/actions/section'
+
+// v3 components
+import { HeroSection } from '../../../_components/HeroSection'
+import { StandardHeroSection } from '../../../_components/StandardHeroSection'
+import { ConceptSection } from '../../../_components/ConceptSection'
+import { CustomSection } from '../../../_components/CustomSection'
+import { SpaceShowcase } from '../../../_components/SpaceShowcase'
+import { SpaceListSection } from '../../../_components/SpaceListSection'
+import { FeaturesSection } from '../../../_components/FeaturesSection'
+import { CTASection } from '../../../_components/CTASection'
+import { TestimonialSection } from '../../../_components/TestimonialSection'
+import { GallerySection } from '../../../_components/GallerySection'
+import { MapSection } from '../../../_components/MapSection'
+import { EmbedSection } from '../../../_components/EmbedSection'
+import { NewsListSection } from '../../../_components/NewsListSection'
+import { PostListSection } from '../../../_components/PostListSection'
+import { FaqListSection } from '../../../_components/FaqListSection'
+import { ContactFormSection } from '../../../_components/ContactFormSection'
+import { InstagramSection } from '../../../_components/InstagramSection'
+import type { SpaceData } from '../../../_components/SpaceShowcase'
+import type { SpaceListData } from '../../../_components/SpaceListSection'
+import type { NewsData } from '../../../_components/NewsListSection'
+import type { PostData } from '../../../_components/PostListSection'
+import type { FaqData } from '../../../_components/FaqListSection'
 
 interface SectionRendererProps {
-  section: HomepageSectionData
-  postPrefix: string
-  /** 管理者かどうか（インライン編集用） */
-  isAdmin?: boolean
+  readonly section: PublicSection
 }
 
-export function SectionRenderer({ section, postPrefix, isAdmin = false }: SectionRendererProps): ReactElement | null {
+export async function SectionRenderer({
+  section,
+}: SectionRendererProps): Promise<ReactElement | null> {
   switch (section.type) {
-    case HomepageSectionType.HERO: {
+    // =========================================================================
+    // Hero variants
+    // =========================================================================
+
+    case SectionType.HERO: {
       const config = getHeroConfig(section.config)
+      return <StandardHeroSection config={config} />
+    }
+
+    case SectionType.HERO_PARALLAX: {
+      const config = getHeroParallaxConfig(section.config)
       return <HeroSection config={config} />
     }
 
-    case HomepageSectionType.SPACE_LIST: {
-      const config = getSpaceListConfig(section.config)
-      return (
-        <SpaceListSection
-          title={section.title}
-          config={config}
-        />
-      )
-    }
+    // =========================================================================
+    // Content
+    // =========================================================================
 
-    case HomepageSectionType.NEWS: {
-      const config = getNewsConfig(section.config)
-      return (
-        <NewsSectionRenderer
-          title={section.title}
-          config={config}
-        />
-      )
-    }
-
-    case HomepageSectionType.POST: {
-      const config = getPostsConfig(section.config)
-      return (
-        <PostSectionRenderer
-          title={section.title}
-          config={config}
-          postPrefix={postPrefix}
-        />
-      )
-    }
-
-    case HomepageSectionType.FAQ: {
-      const config = getFaqConfig(section.config)
-      return (
-        <FAQSectionRenderer
-          title={section.title}
-          config={config}
-        />
-      )
-    }
-
-    case HomepageSectionType.CTA: {
-      const config = getCtaConfig(section.config)
-      return <CTASectionRenderer config={config} />
-    }
-
-    case HomepageSectionType.CUSTOM: {
+    case SectionType.CUSTOM: {
       const config = getCustomConfig(section.config)
-      const contentSlot = section.content ? (
-        <Suspense fallback={<ContentRenderer html={section.content} />}>
-          <InlineEditableWrapper
-            contentType="homepage-section"
-            contentId={section.id}
-            initialContent={section.content}
-            isAdmin={isAdmin}
-          >
-            <ContentRenderer html={section.content} />
-          </InlineEditableWrapper>
-        </Suspense>
-      ) : undefined
-      return (
-        <CustomSection
-          title={section.title}
-          content={section.content}
-          config={config}
-          contentSlot={contentSlot}
-        />
-      )
+      return <CustomSection config={config} content={section.content} title={section.title} />
     }
 
-    case HomepageSectionType.INSTAGRAM: {
+    case SectionType.CONCEPT: {
+      const config = getConceptConfig(section.config)
+      return <ConceptSection config={config} />
+    }
+
+    // =========================================================================
+    // Lists (DB-dependent)
+    // =========================================================================
+
+    case SectionType.SPACE_LIST: {
+      const config = getSpaceListConfig(section.config)
+      const rawSpaces = await getListSpaces(config.maxItems, config.showOnlyPublished)
+      const spaces: SpaceListData[] = rawSpaces.map((s) => ({
+        id: s.id,
+        slug: s.slug,
+        name: s.name,
+        description: s.description,
+        capacity: s.capacity,
+        hourlyPrice: s.hourlyPrice != null ? Number(s.hourlyPrice) : null,
+        area: s.area != null ? Number(s.area) : null,
+        mainImageUrl: s.mainImageUrl,
+      }))
+      return <SpaceListSection config={config} spaces={spaces} />
+    }
+
+    case SectionType.SPACE_SHOWCASE: {
+      const config = getSpaceShowcaseConfig(section.config)
+      const rawSpaces = await getShowcaseSpaces(config.maxItems, config.showOnlyPublished)
+      const spaces: SpaceData[] = rawSpaces.map((s) => ({
+        id: s.id,
+        name: s.name,
+        nameJa: s.name,
+        tagline: s.description,
+        capacity: s.capacity,
+        hourlyPrice: s.hourlyPrice != null ? Number(s.hourlyPrice) : null,
+        area: s.area != null ? Number(s.area) : null,
+        imageUrl: s.mainImageUrl,
+        imageAlt: s.name,
+        slug: s.slug,
+      }))
+      return <SpaceShowcase config={config} spaces={spaces} />
+    }
+
+    case SectionType.NEWS_LIST: {
+      const config = getNewsListConfig(section.config)
+      const rawNews = await getPublishedNews(config.maxItems)
+      const news: NewsData[] = rawNews.map((n) => ({
+        id: n.id,
+        slug: n.slug,
+        title: n.title,
+        publishedAt: n.publishedAt,
+      }))
+      return <NewsListSection config={config} news={news} />
+    }
+
+    case SectionType.POST_LIST: {
+      const config = getPostListConfig(section.config)
+      const rawPosts = await getPublishedPosts(config.maxItems, config.categoryId)
+      const posts: PostData[] = rawPosts.map((p) => ({
+        id: p.id,
+        slug: p.slug,
+        title: p.title,
+        excerpt: p.excerpt,
+        thumbnailUrl: p.thumbnailUrl,
+        publishedAt: p.publishedAt,
+        categoryName: p.category.name,
+      }))
+      return <PostListSection config={config} posts={posts} />
+    }
+
+    case SectionType.FAQ_LIST: {
+      const config = getFaqListConfig(section.config)
+      // Dual source: config.items (inline) or DB
+      const hasInlineItems = config.items != null && config.items.length > 0
+      const items: FaqData[] = hasInlineItems
+        ? config.items!.map((item, index) => ({
+            id: `inline-${index}`,
+            question: item.question,
+            answer: item.answer,
+          }))
+        : (await getPublishedFaqItems(config.maxItems, config.categoryId)).map((f) => ({
+            id: f.id,
+            question: f.question,
+            answer: f.answer,
+          }))
+      return <FaqListSection config={config} items={items} />
+    }
+
+    // =========================================================================
+    // Features & Social proof
+    // =========================================================================
+
+    case SectionType.FEATURES: {
+      const config = getFeaturesConfig(section.config)
+      return <FeaturesSection config={config} />
+    }
+
+    case SectionType.TESTIMONIAL: {
+      const config = getTestimonialConfig(section.config)
+      return <TestimonialSection config={config} />
+    }
+
+    case SectionType.GALLERY: {
+      const config = getGalleryConfig(section.config)
+      return <GallerySection config={config} />
+    }
+
+    // =========================================================================
+    // Functional
+    // =========================================================================
+
+    case SectionType.CTA: {
+      const config = getCtaConfig(section.config)
+      return <CTASection config={config} />
+    }
+
+    case SectionType.CONTACT_FORM: {
+      const config = getContactFormConfig(section.config)
+      return <ContactFormSection config={config} />
+    }
+
+    case SectionType.MAP: {
+      const config = getMapConfig(section.config)
+      return <MapSection config={config} />
+    }
+
+    case SectionType.EMBED: {
+      const config = getEmbedConfig(section.config)
+      return <EmbedSection config={config} />
+    }
+
+    case SectionType.INSTAGRAM: {
       const config = getInstagramConfig(section.config)
-      return (
-        <InstagramSectionRenderer
-          title={section.title}
-          config={config}
-        />
-      )
+      return <InstagramSection config={config} />
     }
 
     default:
       return null
   }
-}
-
-interface HomepageSectionsProps {
-  sections: HomepageSectionData[]
-  postPrefix: string
-  /** 管理者かどうか（インライン編集用） */
-  isAdmin?: boolean
-}
-
-export function HomepageSections({ sections, postPrefix, isAdmin = false }: HomepageSectionsProps): ReactElement {
-  return (
-    <>
-      {sections.map((section) => (
-        <SectionRenderer key={section.id} section={section} postPrefix={postPrefix} isAdmin={isAdmin} />
-      ))}
-    </>
-  )
 }

@@ -2,7 +2,7 @@
  * Homepage — DB-driven section rendering
  *
  * Fetches sections from DB via getHomepageSections() and renders
- * each through HomepageSectionRenderer.
+ * each through SectionRenderer.
  *
  * SEO: Dynamic metadata + WebSite JSON-LD
  */
@@ -13,7 +13,7 @@ import { WebSiteJsonLd } from '@/public/components/seo/JsonLd'
 import { getWebSiteJsonLdData, getSeoSettings } from '@/public/lib/seo'
 import { SITE_DEFAULTS, getBaseUrl } from '@/shared/lib/constants'
 import { getHomepageSections } from '@/public/actions/section'
-import { HomepageSectionRenderer } from './_shared/components/sections/HomepageSectionRenderer'
+import { SectionRenderer } from './_shared/components/sections/SectionRenderer'
 
 const BASE_URL = getBaseUrl()
 
@@ -64,7 +64,7 @@ export default async function HomePage(): Promise<ReactElement> {
         url={webSiteData.url}
       />
       {sections.map((section) => (
-        <HomepageSectionRenderer key={section.id} section={section} />
+        <SectionRenderer key={section.id} section={section} />
       ))}
     </>
   )
