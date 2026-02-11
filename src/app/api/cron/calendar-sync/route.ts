@@ -24,6 +24,7 @@ import {
 import { sendWebhookRenewalNotification } from '@/shared/lib/email-service'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
 import { fireAndForget } from '@/shared/lib/async-utils'
+import { CalendarSyncMethod } from '@/shared/generated/prisma/enums'
 
 /**
  * カレンダー同期用Cronエンドポイント
@@ -82,7 +83,7 @@ export async function GET() {
 
     // 同期方式を確認（pollingまたはbothの場合のみ実行）
     const settings = await getTwoWaySyncSettings()
-    if (settings.syncMethod === 'webhook') {
+    if (settings.syncMethod === CalendarSyncMethod.webhook) {
       return NextResponse.json({
         success: true,
         message: 'Polling is disabled (webhook only)',

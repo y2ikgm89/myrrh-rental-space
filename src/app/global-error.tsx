@@ -25,7 +25,6 @@ interface GlobalErrorProps {
 
 export default function GlobalError({ error, reset }: GlobalErrorProps) {
   useEffect(() => {
-    // エラーログサービスに送信（将来的にSentryなどに置き換え）
     console.error('Global error:', error)
   }, [error])
 
@@ -38,11 +37,11 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
   return (
     <html lang="ja">
       <body className={`${notoSansJP.variable} font-sans antialiased`}>
-        <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 px-4">
+        <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
           <div className="w-full max-w-md text-center">
             <div className="mb-8">
               <svg
-                className="mx-auto h-24 w-24 text-red-500"
+                className="mx-auto h-24 w-24 text-destructive"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -56,18 +55,18 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
               </svg>
             </div>
 
-            <h1 className="mb-4 text-2xl font-bold text-gray-900">
+            <h1 className="mb-4 text-2xl font-bold text-foreground">
               予期しないエラーが発生しました
             </h1>
 
-            <p className="mb-8 text-gray-600">
+            <p className="mb-8 text-muted-foreground">
               申し訳ございません。システムエラーが発生しました。
               <br />
               しばらく時間をおいてから再度お試しください。
             </p>
 
             {error.digest && (
-              <p className="mb-6 text-sm text-gray-500">
+              <p className="mb-6 text-sm text-muted-foreground/70">
                 エラーID: {error.digest}
               </p>
             )}
@@ -75,7 +74,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
               <button
                 onClick={handleReset}
-                className="rounded-lg bg-primary-600 px-6 py-3 font-medium text-white transition-colors hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+                className="rounded-lg bg-primary px-6 py-3 font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
               >
                 再試行する
               </button>
@@ -83,7 +82,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
               {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
               <a
                 href="/"
-                className="rounded-lg border border-gray-300 bg-white px-6 py-3 font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+                className="rounded-lg border border-border bg-card px-6 py-3 font-medium text-card-foreground transition-colors hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
               >
                 ホームに戻る
               </a>

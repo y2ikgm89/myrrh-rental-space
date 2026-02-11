@@ -17,6 +17,7 @@ import { prisma } from '@/shared/lib/prisma'
 import { syncFromCalendar } from '@/shared/lib/calendar-sync'
 import { isTwoWaySyncEnabled, getTwoWaySyncSettings } from '@/shared/lib/google-calendar'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
+import { CalendarSyncMethod } from '@/shared/generated/prisma/enums'
 
 /**
  * Google Calendar Push Notification Webhook
@@ -106,7 +107,7 @@ export async function POST(request: Request) {
 
     // 同期方式を確認（webhookまたはbothの場合のみ実行）
     const syncSettings = await getTwoWaySyncSettings()
-    if (syncSettings.syncMethod === 'polling') {
+    if (syncSettings.syncMethod === CalendarSyncMethod.polling) {
       return NextResponse.json({ success: true, pollingOnly: true })
     }
 

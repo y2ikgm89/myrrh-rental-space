@@ -180,7 +180,7 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
       return createResponse()
     }
 
-    // category-name構造: /posts/[category]/[slug] → /posts/[slug]
+    // category_name構造: /posts/[category]/[slug] → /posts/[slug]
     // Note: POST_RESERVED_SUBPATHS は上で既にチェック済み
     if (segments.length === 3) {
       const url = req.nextUrl.clone()
@@ -188,7 +188,7 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
       return NextResponse.rewrite(url)
     }
 
-    // date-name構造: /posts/[year]/[month]/[slug] → /posts/[slug]
+    // date_name構造: /posts/[year]/[month]/[slug] → /posts/[slug]
     if (segments.length === 4) {
       const [, year, month, slug] = segments
       const yearNum = parseInt(year, 10)
