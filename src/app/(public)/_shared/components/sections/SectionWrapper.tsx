@@ -62,6 +62,8 @@ interface SectionWrapperProps {
   readonly design: SectionDesign
   readonly children: ReactNode
   readonly className?: string
+  /** 追加の inline style（config.backgroundColor 等） */
+  readonly style?: React.CSSProperties
   /** セクション固有のデフォルト padding を上書きしたくない場合に true */
   readonly skipPadding?: boolean
   /** コンテナ div を省略する場合に true（Hero 等の特殊レイアウト用） */
@@ -72,6 +74,7 @@ export function SectionWrapper({
   design,
   children,
   className,
+  style: styleProp,
   skipPadding,
   skipContainer,
 }: SectionWrapperProps): ReactElement {
@@ -83,8 +86,11 @@ export function SectionWrapper({
   const alignClass = design.textAlign !== 'left' ? textAlignMap[design.textAlign] : ''
 
   const hasBgImage = design.background === 'image' && design.backgroundImageUrl
-  const bgStyle = hasBgImage
+  const bgImageStyle = hasBgImage
     ? { backgroundImage: `url(${design.backgroundImageUrl})` }
+    : undefined
+  const mergedStyle = bgImageStyle || styleProp
+    ? { ...bgImageStyle, ...styleProp }
     : undefined
 
   const showOverlay = hasBgImage && design.backgroundOverlayOpacity > 0
@@ -94,7 +100,7 @@ export function SectionWrapper({
       className={['relative', paddingClass, bgClass, alignClass, design.customClass, className]
         .filter(Boolean)
         .join(' ')}
-      style={bgStyle}
+      style={mergedStyle}
     >
       {showOverlay && (
         <div

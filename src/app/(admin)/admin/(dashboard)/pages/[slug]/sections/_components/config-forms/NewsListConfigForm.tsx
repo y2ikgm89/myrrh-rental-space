@@ -19,6 +19,8 @@ import {
   type NewsListConfig,
   type NewsListConfigInput,
 } from '@/shared/lib/validations/section'
+import { newsLayoutLabels } from '@/shared/lib/validations/section-options'
+import { keysOf } from '@/shared/lib/serialize'
 import { FormActions, type ConfigFormProps } from './shared'
 
 export default function NewsListConfigForm({ section, onSave, isPending, onDirtyChange }: ConfigFormProps) {
@@ -57,12 +59,18 @@ export default function NewsListConfigForm({ section, onSave, isPending, onDirty
         </div>
 
         <div className="space-y-2">
+          <Label htmlFor="news-columns">カラム数（カードレイアウト時）</Label>
+          <Input id="news-columns" type="number" min={2} max={4} {...register('columns', { valueAsNumber: true })} disabled={isPending} />
+        </div>
+
+        <div className="space-y-2">
           <Label htmlFor="news-layout">レイアウト</Label>
           <Select defaultValue={config.layout} onValueChange={(v) => setValue('layout', parseNewsLayout(v))} disabled={isPending}>
             <SelectTrigger id="news-layout"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="list">リスト</SelectItem>
-              <SelectItem value="card">カード</SelectItem>
+              {keysOf(newsLayoutLabels).map((key) => (
+                <SelectItem key={key} value={key}>{newsLayoutLabels[key]}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

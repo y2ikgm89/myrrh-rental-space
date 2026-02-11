@@ -16,9 +16,13 @@ import {
   spaceListConfigSchema,
   getSpaceListConfig,
   parseSpaceLayout,
+  parseCardStyle,
+  parseSpaceImageAspect,
   type SpaceListConfig,
   type SpaceListConfigInput,
 } from '@/shared/lib/validations/section'
+import { cardStyleLabels, spaceLayoutLabels, spaceImageAspectLabels } from '@/shared/lib/validations/section-options'
+import { keysOf } from '@/shared/lib/serialize'
 import { FormActions, type ConfigFormProps } from './shared'
 
 export default function SpaceListConfigForm({ section, onSave, isPending, onDirtyChange }: ConfigFormProps) {
@@ -100,11 +104,49 @@ export default function SpaceListConfigForm({ section, onSave, isPending, onDirt
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="grid">グリッド</SelectItem>
-              <SelectItem value="list">リスト</SelectItem>
-              <SelectItem value="carousel">カルーセル</SelectItem>
+              {keysOf(spaceLayoutLabels).map((key) => (
+                <SelectItem key={key} value={key}>{spaceLayoutLabels[key]}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="space-card-style">カードスタイル</Label>
+            <Select
+              defaultValue={config.cardStyle}
+              onValueChange={(v) => setValue('cardStyle', parseCardStyle(v))}
+              disabled={isPending}
+            >
+              <SelectTrigger id="space-card-style">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {keysOf(cardStyleLabels).map((key) => (
+                  <SelectItem key={key} value={key}>{cardStyleLabels[key]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="space-image-aspect">画像比率</Label>
+            <Select
+              defaultValue={config.imageAspect}
+              onValueChange={(v) => setValue('imageAspect', parseSpaceImageAspect(v))}
+              disabled={isPending}
+            >
+              <SelectTrigger id="space-image-aspect">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {keysOf(spaceImageAspectLabels).map((key) => (
+                  <SelectItem key={key} value={key}>{spaceImageAspectLabels[key]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="space-y-2">

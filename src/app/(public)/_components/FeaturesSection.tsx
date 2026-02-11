@@ -1,10 +1,13 @@
 'use client'
 
 /**
- * FeaturesSection — Asymmetric hero-feature + 2-column grid
+ * FeaturesSection — Multiple layout modes for feature items
  *
- * Anti-AI layout: first feature as hero (horizontal, large icon),
- * remaining features in 2-column grid with left-aligned text.
+ * Layouts:
+ * - hero-first: first feature as horizontal hero, rest in 2-column grid
+ * - equal-grid: all items in uniform grid using config.columns
+ * - icon-left: all items in single-column list with icon left, text right
+ *
  * ScrollReveal stagger for sequential reveal.
  */
 
@@ -15,10 +18,10 @@ import { SectionLabel } from '@/public/components/ui/SectionLabel'
 import { ScrollReveal } from '@/public/components/animations/ScrollReveal'
 import { SectionWrapper, getTitleClasses, getTitleStyle, getTextStyle } from '@/public/components/sections/SectionWrapper'
 import { DURATION, EASE, STAGGER } from '@/public/lib/animations'
+import { getGridColsClass } from '@/public/lib/section-style-maps'
+import { parseFeaturesLayout } from '@/shared/lib/validations/section'
 import type { FeaturesConfig } from '@/shared/lib/validations/section'
 import type { SectionDesign } from '@/shared/lib/validations/section-design'
-
-type FeatureIcon = 'clock' | 'shield' | 'sparkles'
 
 function FeatureIcon({
   icon,
@@ -111,8 +114,13 @@ export function FeaturesSection({ config, design }: FeaturesSectionProps): React
   )
 
   const items = config.items
+  if (items.length === 0) return <></>
+
+  const layout = parseFeaturesLayout(config.layout)
+
+  // hero-first requires at least 1 item for the hero
   const heroFeature = items[0]
-  if (items.length === 0 || !heroFeature) return <></>
+  if (layout === 'hero-first' && !heroFeature) return <></>
 
   const restFeatures = items.slice(1)
 
@@ -130,30 +138,82 @@ export function FeaturesSection({ config, design }: FeaturesSectionProps): React
         </ScrollReveal>
       </div>
 
-      <div ref={gridRef} className="space-y-8 md:space-y-12">
-        {/* Hero feature — horizontal layout on md+ */}
-        <div
-          data-feature=""
-          className="grid gap-5 md:grid-cols-[auto_1fr] md:items-start md:gap-8"
-        >
-          <FeatureIcon icon={heroFeature.icon} size="hero" />
-          <div>
-            <h3 className="font-heading text-xl tracking-tight md:text-2xl">
-              {heroFeature.title}
-            </h3>
-            <p
-              className="mt-3 max-w-lg text-sm leading-relaxed text-muted-foreground md:text-base"
-              style={getTextStyle(design)}
+      <div ref={gridRef}>
+        {layout === 'hero-first' && heroFeature && (
+          <div className="space-y-8 md:space-y-12">
+            {/* Hero feature — horizontal layout on md+ */}
+            <div
+              data-feature=""
+              className="grid gap-5 md:grid-cols-[auto_1fr] md:items-start md:gap-8"
             >
-              {heroFeature.description}
-            </p>
-          </div>
-        </div>
+              <FeatureIcon icon={heroFeature.icon} size="hero" />
+              <div>
+                <h3 className="font-heading text-xl tracking-tight md:text-2xl">
+                  {heroFeature.title}
+                </h3>
+                <p
+                  className="mt-3 max-w-lg text-sm leading-relaxed text-muted-foreground md:text-base"
+                  style={getTextStyle(design)}
+                >
+                  {heroFeature.description}
+                </p>
+              </div>
+            </div>
 
-        {/* Remaining features — 2 columns */}
-        {restFeatures.length > 0 && (
-          <div className="grid gap-8 md:grid-cols-2 md:gap-10">
-            {restFeatures.map((feature, index) => (
+            {/* Remaining features — 2 columns */}
+            {restFeatures.length > 0 && (
+              <div className="grid gap-8 md:grid-cols-2 md:gap-10">
+                {restFeatures.map((feature, index) => (
+                  <div
+                    key={`feature-${index}`}
+                    data-feature=""
+                    className="flex items-start gap-4"
+                  >
+                    <FeatureIcon icon={feature.icon} />
+                    <div>
+                      <h3 className="font-heading text-lg tracking-tight">
+                        {feature.title}
+                      </h3>
+                      <p
+                        className="mt-2 text-sm leading-relaxed text-muted-foreground"
+                        style={getTextStyle(design)}
+                      >
+                        {feature.description}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {layout === 'equal-grid' && (
+          <div className={`grid gap-8 ${getGridColsClass(config.columns)}`}>
+            {items.map((feature, index) => (
+              <div
+                key={`feature-${index}`}
+                data-feature=""
+                className="flex flex-col items-start gap-3"
+              >
+                <FeatureIcon icon={feature.icon} />
+                <h3 className="font-heading text-lg tracking-tight">
+                  {feature.title}
+                </h3>
+                <p
+                  className="text-sm leading-relaxed text-muted-foreground"
+                  style={getTextStyle(design)}
+                >
+                  {feature.description}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {layout === 'icon-left' && (
+          <div className="flex flex-col gap-6">
+            {items.map((feature, index) => (
               <div
                 key={`feature-${index}`}
                 data-feature=""

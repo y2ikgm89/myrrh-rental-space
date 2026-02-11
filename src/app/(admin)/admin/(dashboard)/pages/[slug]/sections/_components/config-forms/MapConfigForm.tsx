@@ -16,9 +16,12 @@ import {
   mapConfigSchema,
   getMapConfig,
   parseMapHeight,
+  parseBorderRadius,
   type MapConfig,
   type MapConfigInput,
 } from '@/shared/lib/validations/section'
+import { borderRadiusLabels, mapHeightLabels } from '@/shared/lib/validations/section-options'
+import { keysOf } from '@/shared/lib/serialize'
 import { FormActions, type ConfigFormProps } from './shared'
 
 export default function MapConfigForm({ section, onSave, isPending, onDirtyChange }: ConfigFormProps) {
@@ -119,12 +122,30 @@ export default function MapConfigForm({ section, onSave, isPending, onDirtyChang
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="sm">小</SelectItem>
-                <SelectItem value="md">中</SelectItem>
-                <SelectItem value="lg">大</SelectItem>
+                {keysOf(mapHeightLabels).map((key) => (
+                  <SelectItem key={key} value={key}>{mapHeightLabels[key]}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="map-border-radius">角丸</Label>
+          <Select
+            defaultValue={config.borderRadius}
+            onValueChange={(v) => setValue('borderRadius', parseBorderRadius(v))}
+            disabled={isPending}
+          >
+            <SelectTrigger id="map-border-radius">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {keysOf(borderRadiusLabels).map((key) => (
+                <SelectItem key={key} value={key}>{borderRadiusLabels[key]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="flex items-center gap-2">

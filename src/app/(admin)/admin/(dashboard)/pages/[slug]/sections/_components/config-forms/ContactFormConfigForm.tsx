@@ -2,13 +2,26 @@
 
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Input, Label, Switch, Textarea } from '@/admin/components/ui'
+import {
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Switch,
+  Textarea,
+} from '@/admin/components/ui'
 import {
   contactFormConfigSchema,
   getContactFormConfig,
+  parseContactFormVariant,
   type ContactFormConfig,
   type ContactFormConfigInput,
 } from '@/shared/lib/validations/section'
+import { contactFormVariantLabels } from '@/shared/lib/validations/section-options'
+import { keysOf } from '@/shared/lib/serialize'
 import { FormActions, type ConfigFormProps } from './shared'
 
 export default function ContactFormConfigForm({ section, onSave, isPending, onDirtyChange }: ConfigFormProps) {
@@ -59,6 +72,24 @@ export default function ContactFormConfigForm({ section, onSave, isPending, onDi
             rows={2}
             disabled={isPending}
           />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="contact-variant">バリエーション</Label>
+          <Select
+            defaultValue={config.variant}
+            onValueChange={(v) => setValue('variant', parseContactFormVariant(v))}
+            disabled={isPending}
+          >
+            <SelectTrigger id="contact-variant">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {keysOf(contactFormVariantLabels).map((key) => (
+                <SelectItem key={key} value={key}>{contactFormVariantLabels[key]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-2">

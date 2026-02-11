@@ -14,7 +14,9 @@ import { gsap } from '@/public/lib/gsap-config'
 import { SplitText } from '@/public/components/animations/SplitText'
 import { MagneticButton } from '@/public/components/animations/MagneticButton'
 import { ScrollIndicator } from '@/public/components/layouts/ScrollIndicator'
-import { DURATION, EASE, PARALLAX, SCROLL_TRIGGER } from '@/public/lib/animations'
+import { DURATION, EASE, SCROLL_TRIGGER } from '@/public/lib/animations'
+import { CONTENT_POSITION_MAP, OVERLAY_STYLE_MAP, HERO_PARALLAX_HEIGHT_MAP } from '@/public/lib/section-style-maps'
+import { parseContentPosition, parseOverlayStyle, parseHeroParallaxHeight } from '@/shared/lib/validations/section'
 import type { HeroParallaxConfig } from '@/shared/lib/validations/section'
 import type { SectionDesign } from '@/shared/lib/validations/section-design'
 import { getTitleClasses, getTitleStyle, getTextStyle } from '@/public/components/sections/SectionWrapper'
@@ -54,13 +56,14 @@ export function HeroSection({ config, design }: HeroSectionProps): ReactElement 
           },
         )
 
-        // Parallax background
+        // Parallax background — config.parallaxSpeed controls displacement (0..1 → 0..200px)
+        const displacement = config.parallaxSpeed * 200
         gsap.set(image, { scale: 1.15 })
         gsap.fromTo(
           image,
-          { y: -PARALLAX.subtle * 80 },
+          { y: -displacement },
           {
-            y: PARALLAX.subtle * 80,
+            y: displacement,
             ease: 'none',
             scrollTrigger: {
               trigger: section,
@@ -73,11 +76,20 @@ export function HeroSection({ config, design }: HeroSectionProps): ReactElement 
     { scope: sectionRef },
   )
 
+  const heightClass = HERO_PARALLAX_HEIGHT_MAP[parseHeroParallaxHeight(config.height)]
+  const positionClasses = CONTENT_POSITION_MAP[parseContentPosition(config.contentPosition)]
+  // When overlayGradient is disabled, fall back from 'gradient' to 'solid'
+  const effectiveOverlayStyle = !config.overlayGradient && config.overlayStyle === 'gradient'
+    ? 'solid'
+    : config.overlayStyle
+  const overlayStyle = parseOverlayStyle(effectiveOverlayStyle)
+  const overlayClass = OVERLAY_STYLE_MAP[overlayStyle]
+
   return (
     <section
       ref={sectionRef}
       data-hero=""
-      className="relative flex h-screen items-center justify-center overflow-hidden pt-[var(--header-height)]"
+      className={`relative flex ${heightClass} ${positionClasses} overflow-hidden pt-[var(--header-height)]`}
     >
       {/* Background image with parallax */}
       <div className="absolute inset-0">
@@ -93,16 +105,18 @@ export function HeroSection({ config, design }: HeroSectionProps): ReactElement 
         </div>
       </div>
 
-      {/* Gradient overlay */}
-      <div
-        className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/40 to-background"
-        aria-hidden="true"
-      />
+      {/* Overlay */}
+      {overlayStyle !== 'none' && (
+        <div
+          className={`absolute inset-0 ${overlayClass}`}
+          aria-hidden="true"
+        />
+      )}
 
       {/* Content */}
       <div
         ref={contentRef}
-        className="relative z-10 px-5 text-center md:px-8"
+        className="relative z-10 px-5 md:px-8"
       >
         {config.tagline && (
           <p className="mb-6 text-[11px] uppercase tracking-[0.3em] text-primary-dark md:tracking-[0.4em]">
@@ -116,12 +130,12 @@ export function HeroSection({ config, design }: HeroSectionProps): ReactElement 
           </SplitText>
         </h1>
 
-        <p className="mx-auto mt-6 max-w-lg text-sm leading-relaxed text-muted-foreground md:mt-8 md:text-base" style={getTextStyle(design)}>
+        <p className={`mt-6 max-w-lg text-sm leading-relaxed text-muted-foreground md:mt-8 md:text-base${config.contentPosition === 'center' ? ' mx-auto' : ''}`} style={getTextStyle(design)}>
           {config.subtitle}
         </p>
 
         {config.buttons.length > 0 && (
-          <div className="mt-8 flex flex-col items-center gap-4 md:mt-12">
+          <div className={`mt-8 flex flex-col gap-4 md:mt-12${config.contentPosition === 'center' ? ' items-center' : ' items-start'}`}>
             {config.buttons.map((btn, i) => (
               <MagneticButton key={i} href={btn.url}>
                 {btn.text}

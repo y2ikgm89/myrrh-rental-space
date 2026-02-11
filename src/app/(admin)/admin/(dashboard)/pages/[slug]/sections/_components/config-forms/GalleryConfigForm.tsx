@@ -21,9 +21,13 @@ import {
   getGalleryConfig,
   parseGalleryLayout,
   parseGalleryGap,
+  parseGalleryImageAspect,
+  parseGalleryHoverEffect,
   type GalleryConfig,
   type GalleryConfigInput,
 } from '@/shared/lib/validations/section'
+import { galleryLayoutLabels, galleryGapLabels, galleryImageAspectLabels, galleryHoverEffectLabels } from '@/shared/lib/validations/section-options'
+import { keysOf } from '@/shared/lib/serialize'
 import { FormActions, type ConfigFormProps } from './shared'
 
 export default function GalleryConfigForm({ section, onSave, isPending, onDirtyChange }: ConfigFormProps) {
@@ -99,9 +103,9 @@ export default function GalleryConfigForm({ section, onSave, isPending, onDirtyC
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="grid">グリッド</SelectItem>
-                <SelectItem value="masonry">メイソンリー</SelectItem>
-                <SelectItem value="carousel">カルーセル</SelectItem>
+                {keysOf(galleryLayoutLabels).map((key) => (
+                  <SelectItem key={key} value={key}>{galleryLayoutLabels[key]}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -129,10 +133,47 @@ export default function GalleryConfigForm({ section, onSave, isPending, onDirtyC
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">なし</SelectItem>
-                <SelectItem value="sm">小</SelectItem>
-                <SelectItem value="md">中</SelectItem>
-                <SelectItem value="lg">大</SelectItem>
+                {keysOf(galleryGapLabels).map((key) => (
+                  <SelectItem key={key} value={key}>{galleryGapLabels[key]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="gallery-image-aspect">画像比率</Label>
+            <Select
+              defaultValue={config.imageAspect}
+              onValueChange={(v) => setValue('imageAspect', parseGalleryImageAspect(v))}
+              disabled={isPending}
+            >
+              <SelectTrigger id="gallery-image-aspect">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {keysOf(galleryImageAspectLabels).map((key) => (
+                  <SelectItem key={key} value={key}>{galleryImageAspectLabels[key]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="gallery-hover-effect">ホバーエフェクト</Label>
+            <Select
+              defaultValue={config.hoverEffect}
+              onValueChange={(v) => setValue('hoverEffect', parseGalleryHoverEffect(v))}
+              disabled={isPending}
+            >
+              <SelectTrigger id="gallery-hover-effect">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {keysOf(galleryHoverEffectLabels).map((key) => (
+                  <SelectItem key={key} value={key}>{galleryHoverEffectLabels[key]}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

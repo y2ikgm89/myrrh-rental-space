@@ -28,6 +28,8 @@ import {
   type TestimonialConfig,
   type TestimonialConfigInput,
 } from '@/shared/lib/validations/section'
+import { testimonialLayoutLabels, testimonialVariantLabels } from '@/shared/lib/validations/section-options'
+import { keysOf } from '@/shared/lib/serialize'
 import { FormActions, type ConfigFormProps } from './shared'
 
 export default function TestimonialConfigForm({ section, onSave, isPending, onDirtyChange }: ConfigFormProps) {
@@ -103,9 +105,9 @@ export default function TestimonialConfigForm({ section, onSave, isPending, onDi
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="grid">グリッド</SelectItem>
-                <SelectItem value="carousel">カルーセル</SelectItem>
-                <SelectItem value="list">リスト</SelectItem>
+                {keysOf(testimonialLayoutLabels).map((key) => (
+                  <SelectItem key={key} value={key}>{testimonialLayoutLabels[key]}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -121,9 +123,9 @@ export default function TestimonialConfigForm({ section, onSave, isPending, onDi
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="default">デフォルト</SelectItem>
-                <SelectItem value="card">カード</SelectItem>
-                <SelectItem value="minimal">ミニマル</SelectItem>
+                {keysOf(testimonialVariantLabels).map((key) => (
+                  <SelectItem key={key} value={key}>{testimonialVariantLabels[key]}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -267,7 +269,7 @@ export default function TestimonialConfigForm({ section, onSave, isPending, onDi
                         <Star
                           className={`h-5 w-5 ${
                             star <= (field.rating ?? 0)
-                              ? 'fill-yellow-400 text-yellow-400'
+                              ? 'fill-warning text-warning'
                               : 'text-muted-foreground'
                           }`}
                         />

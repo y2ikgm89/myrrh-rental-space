@@ -14,6 +14,8 @@ import { ScrollReveal } from '@/public/components/animations/ScrollReveal'
 import { SectionLabel } from '@/public/components/ui/SectionLabel'
 import { SectionWrapper, getTitleClasses, getTitleStyle, getTextStyle } from '@/public/components/sections/SectionWrapper'
 import { DURATION, EASE, STAGGER } from '@/public/lib/animations'
+import { CARD_STYLE_MAP, IMAGE_ASPECT_MAP, getGridColsClass } from '@/public/lib/section-style-maps'
+import { parseCardStyle, parseShowcaseImageAspect } from '@/shared/lib/validations/section'
 import type { SpaceShowcaseConfig } from '@/shared/lib/validations/section'
 import type { SectionDesign } from '@/shared/lib/validations/section-design'
 
@@ -84,21 +86,21 @@ export function SpaceShowcase({ config, spaces, design }: SpaceShowcaseProps): R
         </ScrollReveal>
       </div>
 
-      <div ref={gridRef} className="grid gap-6 md:grid-cols-3 md:gap-8">
+      <div ref={gridRef} className={`grid gap-6 ${getGridColsClass(config.columns)} md:gap-8`}>
         {spaces.map((space) => (
           <div
             key={space.id}
             data-space-card=""
-            className="group overflow-hidden rounded-lg border border-border bg-card transition-shadow duration-300 hover:shadow-lg"
+            className={`group overflow-hidden ${CARD_STYLE_MAP[parseCardStyle(config.cardStyle)]} transition-shadow duration-300 hover:shadow-lg`}
           >
-            <div className="aspect-[4/3] overflow-hidden">
+            <div className={`${IMAGE_ASPECT_MAP[parseShowcaseImageAspect(config.imageAspect)]} overflow-hidden`}>
               <Image
                 src={space.imageUrl}
                 alt={space.imageAlt}
                 width={400}
                 height={300}
                 className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                sizes="(max-width: 768px) 100vw, 33vw"
+                sizes={`(max-width: 768px) 100vw, ${Math.round(100 / config.columns)}vw`}
               />
             </div>
             <div className="p-5 md:p-6">

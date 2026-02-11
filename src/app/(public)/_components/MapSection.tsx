@@ -9,7 +9,9 @@ import type { ReactElement } from 'react'
 import { ScrollReveal } from '@/public/components/animations/ScrollReveal'
 import { SectionWrapper, getTitleClasses, getTitleStyle, getTextStyle } from '@/public/components/sections/SectionWrapper'
 import { SectionLabel } from '@/public/components/ui/SectionLabel'
+import { BORDER_RADIUS_MAP } from '@/public/lib/section-style-maps'
 import type { MapConfig } from '@/shared/lib/validations/section'
+import { parseBorderRadius } from '@/shared/lib/validations/section'
 import type { SectionDesign } from '@/shared/lib/validations/section-design'
 
 const HEIGHT_MAP = {
@@ -25,11 +27,11 @@ interface MapSectionProps {
 
 function buildMapEmbedUrl(config: MapConfig): string | null {
   if (config.latitude != null && config.longitude != null) {
-    return `https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d3000!2d${config.longitude}!3d${config.latitude}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sja!2sjp!4v1`
+    return `https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d3000!2d${config.longitude}!3d${config.latitude}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sja!2sjp!4v1&z=${config.zoom}`
   }
   if (config.address) {
     const q = encodeURIComponent(config.address)
-    return `https://www.google.com/maps/embed/v1/place?key=&q=${q}`
+    return `https://www.google.com/maps/embed/v1/place?key=&q=${q}&zoom=${config.zoom}`
   }
   return null
 }
@@ -52,7 +54,7 @@ export function MapSection({ config, design }: MapSectionProps): ReactElement {
       )}
 
       <ScrollReveal>
-        <div className={`overflow-hidden rounded-lg ${heightClass}`}>
+        <div className={`overflow-hidden ${BORDER_RADIUS_MAP[parseBorderRadius(config.borderRadius)]} ${heightClass}`}>
           {embedUrl ? (
             <iframe
               src={embedUrl}

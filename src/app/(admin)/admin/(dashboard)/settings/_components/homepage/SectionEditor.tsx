@@ -7,7 +7,6 @@
  */
 
 import Image from 'next/image'
-import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import { useForm, useWatch } from 'react-hook-form'
@@ -56,6 +55,11 @@ import {
   ctaConfigSchema,
   customConfigSchema,
   instagramConfigSchema,
+  testimonialConfigSchema,
+  galleryConfigSchema,
+  contactFormConfigSchema,
+  mapConfigSchema,
+  embedConfigSchema,
   getHeroConfig,
   getHeroParallaxConfig,
   getConceptConfig,
@@ -68,6 +72,11 @@ import {
   getCtaConfig,
   getCustomConfig,
   getInstagramConfig,
+  getTestimonialConfig,
+  getGalleryConfig,
+  getContactFormConfig,
+  getMapConfig,
+  getEmbedConfig,
   type HeroConfig,
   type HeroParallaxConfig,
   type ConceptConfig,
@@ -80,6 +89,11 @@ import {
   type CtaConfig,
   type CustomConfig,
   type InstagramConfig,
+  type TestimonialConfig,
+  type GalleryConfig,
+  type ContactFormConfig,
+  type MapConfig,
+  type EmbedConfig,
   type HeroConfigInput,
   type HeroParallaxConfigInput,
   type ConceptConfigInput,
@@ -92,8 +106,78 @@ import {
   type CtaConfigInput,
   type CustomConfigInput,
   type InstagramConfigInput,
+  type TestimonialConfigInput,
+  type GalleryConfigInput,
+  type ContactFormConfigInput,
+  type MapConfigInput,
+  type EmbedConfigInput,
   type CTAButtonItem,
+  parseContentPosition,
+  parseHeroParallaxHeight,
+  parseOverlayStyle,
+  parseConceptLayout,
+  parseImageAspect,
+  parseCardStyle,
+  parseShowcaseImageAspect,
+  parseFeaturesLayout,
+  parseGapSize,
+  parseSpaceImageAspect,
+  parseContainerWidth,
+  parseFaqInitialOpen,
+  parsePostImageAspect,
+  parseHeroVariant,
+  parseHeroHeight,
+  parseCtaVariant,
+  parseTestimonialVariant,
+  parseTestimonialLayout,
+  parseGalleryLayout,
+  parseGalleryImageAspect,
+  parseGalleryGap,
+  parseGalleryHoverEffect,
+  parseContactFormVariant,
+  parseBorderRadius,
+  parseMapHeight,
+  parseEmbedAspectRatio,
+  parseMaxWidth,
+  parseFaqVariant,
+  parseSpaceLayout,
+  parseNewsLayout,
+  parsePostLayout,
 } from '@/admin/lib/validations/homepage-section'
+import {
+  contentPositionLabels,
+  heroParallaxHeightLabels,
+  overlayStyleLabels,
+  conceptLayoutLabels,
+  imageAspectLabels,
+  cardStyleLabels,
+  featuresLayoutLabels,
+  gapSizeLabels,
+  containerWidthLabels,
+  faqInitialOpenLabels,
+  heroVariantLabels,
+  heroHeightLabels,
+  showcaseImageAspectLabels,
+  spaceImageAspectLabels,
+  postImageAspectLabels,
+  testimonialVariantLabels,
+  testimonialLayoutLabels,
+  galleryLayoutLabels,
+  galleryImageAspectLabels,
+  galleryGapLabels,
+  galleryHoverEffectLabels,
+  contactFormVariantLabels,
+  borderRadiusLabels,
+  mapHeightLabels,
+  embedAspectRatioLabels,
+  maxWidthLabels,
+  ctaVariantLabels,
+  spaceLayoutLabels,
+  newsLayoutLabels,
+  postLayoutLabels,
+  faqVariantLabels,
+} from '@/shared/lib/validations/section-options'
+import { keysOf } from '@/shared/lib/serialize'
 import { CTAButtonEditor } from '@/shared/components/cta-button-editor'
 import dynamic from 'next/dynamic'
 import { EDITOR_PROSE_CLASSES } from '@/shared/lib/styles/prose'
@@ -263,6 +347,68 @@ function HeroParallaxConfigForm({
             onChange={handleButtonsChange}
             disabled={isPending}
           />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="space-y-2">
+            <Label htmlFor="hero-parallax-position">コンテンツ配置</Label>
+            <Select
+              defaultValue={config.contentPosition}
+              onValueChange={(v) => setValue('contentPosition', parseContentPosition(v))}
+              disabled={isPending}
+            >
+              <SelectTrigger id="hero-parallax-position">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {keysOf(contentPositionLabels).map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {contentPositionLabels[key]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="hero-parallax-height">セクション高さ</Label>
+            <Select
+              defaultValue={config.height}
+              onValueChange={(v) => setValue('height', parseHeroParallaxHeight(v))}
+              disabled={isPending}
+            >
+              <SelectTrigger id="hero-parallax-height">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {keysOf(heroParallaxHeightLabels).map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {heroParallaxHeightLabels[key]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="hero-parallax-overlay-style">オーバーレイスタイル</Label>
+            <Select
+              defaultValue={config.overlayStyle}
+              onValueChange={(v) => setValue('overlayStyle', parseOverlayStyle(v))}
+              disabled={isPending}
+            >
+              <SelectTrigger id="hero-parallax-overlay-style">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {keysOf(overlayStyleLabels).map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {overlayStyleLabels[key]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="space-y-2">
@@ -498,6 +644,48 @@ function ConceptConfigForm({
             </label>
           </div>
         </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="concept-layout">レイアウト</Label>
+            <Select
+              defaultValue={config.layout}
+              onValueChange={(v) => setValue('layout', parseConceptLayout(v))}
+              disabled={isPending}
+            >
+              <SelectTrigger id="concept-layout">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {keysOf(conceptLayoutLabels).map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {conceptLayoutLabels[key]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="concept-image-aspect">画像アスペクト比</Label>
+            <Select
+              defaultValue={config.imageAspect}
+              onValueChange={(v) => setValue('imageAspect', parseImageAspect(v))}
+              disabled={isPending}
+            >
+              <SelectTrigger id="concept-image-aspect">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {keysOf(imageAspectLabels).map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {imageAspectLabels[key]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </div>
 
       <Button type="submit" disabled={isPending}>
@@ -527,6 +715,7 @@ function SpaceShowcaseConfigForm({
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<SpaceShowcaseConfigInput, unknown, SpaceShowcaseConfig>({
     resolver: zodResolver(spaceShowcaseConfigSchema),
@@ -581,6 +770,60 @@ function SpaceShowcaseConfigForm({
             disabled={isPending}
           />
           <Label htmlFor="showcase-published">公開済みスペースのみ表示</Label>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="space-y-2">
+            <Label htmlFor="showcase-columns">カラム数</Label>
+            <Input
+              id="showcase-columns"
+              type="number"
+              min={2}
+              max={4}
+              {...register('columns', { valueAsNumber: true })}
+              disabled={isPending}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="showcase-card-style">カードスタイル</Label>
+            <Select
+              defaultValue={config.cardStyle}
+              onValueChange={(v) => setValue('cardStyle', parseCardStyle(v))}
+              disabled={isPending}
+            >
+              <SelectTrigger id="showcase-card-style">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {keysOf(cardStyleLabels).map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {cardStyleLabels[key]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="showcase-image-aspect">画像アスペクト比</Label>
+            <Select
+              defaultValue={config.imageAspect}
+              onValueChange={(v) => setValue('imageAspect', parseShowcaseImageAspect(v))}
+              disabled={isPending}
+            >
+              <SelectTrigger id="showcase-image-aspect">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {keysOf(showcaseImageAspectLabels).map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {showcaseImageAspectLabels[key]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
@@ -675,6 +918,26 @@ function FeaturesConfigForm({
             {...register('columns', { valueAsNumber: true })}
             disabled={isPending}
           />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="features-layout">レイアウト</Label>
+          <Select
+            defaultValue={config.layout}
+            onValueChange={(v) => setValue('layout', parseFeaturesLayout(v))}
+            disabled={isPending}
+          >
+            <SelectTrigger id="features-layout">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {keysOf(featuresLayoutLabels).map((key) => (
+                <SelectItem key={key} value={key}>
+                  {featuresLayoutLabels[key]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-3">
@@ -804,6 +1067,8 @@ function HeroConfigForm({
   })
 
   const backgroundImageUrl = useWatch({ control, name: 'backgroundImageUrl' })
+  const variant = useWatch({ control, name: 'variant' })
+  const overlay = useWatch({ control, name: 'overlay' })
 
   const bgPicker = useSingleMediaPicker({
     defaultUsage: 'GENERAL',
@@ -895,6 +1160,100 @@ function HeroConfigForm({
           </div>
         </div>
 
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="hero-variant">バリエーション</Label>
+            <Select
+              defaultValue={config.variant}
+              onValueChange={(v) => setValue('variant', parseHeroVariant(v))}
+              disabled={isPending}
+            >
+              <SelectTrigger id="hero-variant">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {keysOf(heroVariantLabels).map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {heroVariantLabels[key]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="hero-height">高さ</Label>
+            <Select
+              defaultValue={config.height}
+              onValueChange={(v) => setValue('height', parseHeroHeight(v))}
+              disabled={isPending}
+            >
+              <SelectTrigger id="hero-height">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {keysOf(heroHeightLabels).map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {heroHeightLabels[key]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Switch
+            id="hero-overlay"
+            checked={overlay}
+            onCheckedChange={(checked) => setValue('overlay', checked)}
+            disabled={isPending}
+          />
+          <Label htmlFor="hero-overlay">オーバーレイ</Label>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="hero-overlay-opacity">オーバーレイ不透明度（%）</Label>
+          <Input
+            id="hero-overlay-opacity"
+            type="number"
+            min={0}
+            max={100}
+            {...register('overlayOpacity', { valueAsNumber: true })}
+            disabled={isPending}
+          />
+        </div>
+
+        {variant === 'video' && (
+          <div className="space-y-2">
+            <Label htmlFor="hero-video-url">動画URL</Label>
+            <Input
+              id="hero-video-url"
+              {...register('videoUrl')}
+              placeholder="https://example.com/video.mp4"
+              disabled={isPending}
+            />
+          </div>
+        )}
+
+        {variant === 'parallax' && (
+          <div className="space-y-2">
+            <Label htmlFor="hero-parallax-speed-inline">パララックス速度</Label>
+            <Input
+              id="hero-parallax-speed-inline"
+              type="number"
+              step={0.1}
+              min={0}
+              max={1}
+              {...register('parallaxSpeed', { valueAsNumber: true })}
+              disabled={isPending}
+            />
+            <p className="text-xs text-muted-foreground">
+              0（効果なし）〜 1（最大）
+            </p>
+          </div>
+        )}
+
         <div className="space-y-2">
           <Label>ボタン</Label>
           <CTAButtonEditor
@@ -956,12 +1315,25 @@ function SpaceListConfigForm({
         </div>
 
         <div className="space-y-2">
+          <Label htmlFor="space-title">タイトル</Label>
+          <Input
+            id="space-title"
+            {...register('title')}
+            placeholder="スペース一覧"
+            disabled={isPending}
+          />
+          {errors.title && (
+            <p className="text-sm text-destructive">{errors.title.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
           <Label htmlFor="space-max">最大表示件数</Label>
           <Input
             id="space-max"
             type="number"
             min={1}
-            max={12}
+            max={24}
             {...register('maxItems', { valueAsNumber: true })}
             disabled={isPending}
           />
@@ -1011,6 +1383,80 @@ function SpaceListConfigForm({
             </div>
           </div>
         )}
+
+        <div className="space-y-2">
+          <Label htmlFor="space-layout">レイアウト</Label>
+          <Select
+            defaultValue={config.layout}
+            onValueChange={(v) => setValue('layout', parseSpaceLayout(v))}
+            disabled={isPending}
+          >
+            <SelectTrigger id="space-layout">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {keysOf(spaceLayoutLabels).map((key) => (
+                <SelectItem key={key} value={key}>
+                  {spaceLayoutLabels[key]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="space-columns">カラム数</Label>
+          <Input
+            id="space-columns"
+            type="number"
+            min={1}
+            max={4}
+            {...register('columns', { valueAsNumber: true })}
+            disabled={isPending}
+          />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="space-card-style">カードスタイル</Label>
+            <Select
+              defaultValue={config.cardStyle}
+              onValueChange={(v) => setValue('cardStyle', parseCardStyle(v))}
+              disabled={isPending}
+            >
+              <SelectTrigger id="space-card-style">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {keysOf(cardStyleLabels).map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {cardStyleLabels[key]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="space-image-aspect">画像アスペクト比</Label>
+            <Select
+              defaultValue={config.imageAspect}
+              onValueChange={(v) => setValue('imageAspect', parseSpaceImageAspect(v))}
+              disabled={isPending}
+            >
+              <SelectTrigger id="space-image-aspect">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {keysOf(spaceImageAspectLabels).map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {spaceImageAspectLabels[key]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </div>
 
       <Button type="submit" disabled={isPending}>
@@ -1079,8 +1525,40 @@ function NewsListConfigForm({
             id="news-max"
             type="number"
             min={1}
-            max={10}
+            max={20}
             {...register('maxItems', { valueAsNumber: true })}
+            disabled={isPending}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="news-layout">レイアウト</Label>
+          <Select
+            defaultValue={config.layout}
+            onValueChange={(v) => setValue('layout', parseNewsLayout(v))}
+            disabled={isPending}
+          >
+            <SelectTrigger id="news-layout">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {keysOf(newsLayoutLabels).map((key) => (
+                <SelectItem key={key} value={key}>
+                  {newsLayoutLabels[key]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="news-columns">カラム数（カードレイアウト時）</Label>
+          <Input
+            id="news-columns"
+            type="number"
+            min={2}
+            max={4}
+            {...register('columns', { valueAsNumber: true })}
             disabled={isPending}
           />
         </div>
@@ -1185,10 +1663,62 @@ function PostListConfigForm({
             id="posts-max"
             type="number"
             min={1}
-            max={10}
+            max={20}
             {...register('maxItems', { valueAsNumber: true })}
             disabled={isPending}
           />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="posts-layout">レイアウト</Label>
+          <Select
+            defaultValue={config.layout}
+            onValueChange={(v) => setValue('layout', parsePostLayout(v))}
+            disabled={isPending}
+          >
+            <SelectTrigger id="posts-layout">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {keysOf(postLayoutLabels).map((key) => (
+                <SelectItem key={key} value={key}>
+                  {postLayoutLabels[key]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="posts-columns">カラム数</Label>
+          <Input
+            id="posts-columns"
+            type="number"
+            min={1}
+            max={4}
+            {...register('columns', { valueAsNumber: true })}
+            disabled={isPending}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="posts-image-aspect">画像アスペクト比</Label>
+          <Select
+            defaultValue={config.imageAspect}
+            onValueChange={(v) => setValue('imageAspect', parsePostImageAspect(v))}
+            disabled={isPending}
+          >
+            <SelectTrigger id="posts-image-aspect">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {keysOf(postImageAspectLabels).map((key) => (
+                <SelectItem key={key} value={key}>
+                  {postImageAspectLabels[key]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="flex items-center gap-2">
@@ -1304,10 +1834,72 @@ function FaqListConfigForm({
             id="faq-max"
             type="number"
             min={1}
-            max={20}
+            max={50}
             {...register('maxItems', { valueAsNumber: true })}
             disabled={isPending}
           />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="faq-variant">バリエーション</Label>
+          <Select
+            defaultValue={config.variant}
+            onValueChange={(v) => setValue('variant', parseFaqVariant(v))}
+            disabled={isPending}
+          >
+            <SelectTrigger id="faq-variant">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {keysOf(faqVariantLabels).map((key) => (
+                <SelectItem key={key} value={key}>
+                  {faqVariantLabels[key]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="faq-container-width">コンテナ幅</Label>
+            <Select
+              defaultValue={config.containerWidth}
+              onValueChange={(v) => setValue('containerWidth', parseContainerWidth(v))}
+              disabled={isPending}
+            >
+              <SelectTrigger id="faq-container-width">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {keysOf(containerWidthLabels).map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {containerWidthLabels[key]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="faq-initial-open">初期開閉状態</Label>
+            <Select
+              defaultValue={config.initialOpen}
+              onValueChange={(v) => setValue('initialOpen', parseFaqInitialOpen(v))}
+              disabled={isPending}
+            >
+              <SelectTrigger id="faq-initial-open">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {keysOf(faqInitialOpenLabels).map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {faqInitialOpenLabels[key]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -1420,6 +2012,26 @@ function CtaConfigForm({
         </div>
 
         <div className="space-y-2">
+          <Label htmlFor="cta-variant">バリエーション</Label>
+          <Select
+            defaultValue={config.variant}
+            onValueChange={(v) => setValue('variant', parseCtaVariant(v))}
+            disabled={isPending}
+          >
+            <SelectTrigger id="cta-variant">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {keysOf(ctaVariantLabels).map((key) => (
+                <SelectItem key={key} value={key}>
+                  {ctaVariantLabels[key]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
           <Label>ボタン</Label>
           <CTAButtonEditor
             buttons={buttons}
@@ -1528,6 +2140,7 @@ function InstagramConfigForm({
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<InstagramConfigInput, unknown, InstagramConfig>({
     resolver: zodResolver(instagramConfigSchema),
@@ -1560,14 +2173,742 @@ function InstagramConfigForm({
           )}
         </div>
 
-        <div className="rounded-lg border bg-muted/50 p-4">
-          <p className="text-sm text-muted-foreground">
-            フィードの詳細設定（表示件数、レイアウト、カラム数など）は
-            <Link href="/admin/settings/api" className="ml-1 text-primary hover:underline">
-              API設定 &gt; Instagram
-            </Link>
-            で管理できます。
-          </p>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="space-y-2">
+            <Label htmlFor="instagram-columns">カラム数</Label>
+            <Input
+              id="instagram-columns"
+              type="number"
+              min={3}
+              max={6}
+              {...register('columns', { valueAsNumber: true })}
+              disabled={isPending}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="instagram-count">表示件数</Label>
+            <Input
+              id="instagram-count"
+              type="number"
+              min={6}
+              max={12}
+              {...register('count', { valueAsNumber: true })}
+              disabled={isPending}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="instagram-gap">ギャップ</Label>
+            <Select
+              defaultValue={config.gap}
+              onValueChange={(v) => setValue('gap', parseGapSize(v))}
+              disabled={isPending}
+            >
+              <SelectTrigger id="instagram-gap">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {keysOf(gapSizeLabels).map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {gapSizeLabels[key]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
+
+      <Button type="submit" disabled={isPending}>
+        <Save className="h-4 w-4 mr-2" />
+        {isPending ? '保存中...' : '保存'}
+      </Button>
+    </form>
+  )
+}
+
+// =============================================================================
+// Testimonial Config Form
+// =============================================================================
+
+function TestimonialConfigForm({
+  config,
+  onSave,
+  isPending,
+}: {
+  config: TestimonialConfig
+  onSave: (config: TestimonialConfig) => void
+  isPending: boolean
+}) {
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    formState: { errors },
+  } = useForm<TestimonialConfigInput, unknown, TestimonialConfig>({
+    resolver: zodResolver(testimonialConfigSchema),
+    defaultValues: config,
+  })
+
+  return (
+    <form onSubmit={handleSubmit(onSave)} className="space-y-6">
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="testimonial-section-label">セクションラベル（英語装飾）</Label>
+          <Input
+            id="testimonial-section-label"
+            {...register('sectionLabel')}
+            placeholder="Testimonials"
+            disabled={isPending}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="testimonial-title">タイトル</Label>
+          <Input
+            id="testimonial-title"
+            {...register('title')}
+            placeholder="お客様の声"
+            disabled={isPending}
+          />
+          {errors.title && (
+            <p className="text-sm text-destructive">{errors.title.message}</p>
+          )}
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="testimonial-variant">バリエーション</Label>
+            <Select
+              defaultValue={config.variant}
+              onValueChange={(v) => setValue('variant', parseTestimonialVariant(v))}
+              disabled={isPending}
+            >
+              <SelectTrigger id="testimonial-variant">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {keysOf(testimonialVariantLabels).map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {testimonialVariantLabels[key]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="testimonial-layout">レイアウト</Label>
+            <Select
+              defaultValue={config.layout}
+              onValueChange={(v) => setValue('layout', parseTestimonialLayout(v))}
+              disabled={isPending}
+            >
+              <SelectTrigger id="testimonial-layout">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {keysOf(testimonialLayoutLabels).map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {testimonialLayoutLabels[key]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
+
+      <Button type="submit" disabled={isPending}>
+        <Save className="h-4 w-4 mr-2" />
+        {isPending ? '保存中...' : '保存'}
+      </Button>
+    </form>
+  )
+}
+
+// =============================================================================
+// Gallery Config Form
+// =============================================================================
+
+function GalleryConfigForm({
+  config,
+  onSave,
+  isPending,
+}: {
+  config: GalleryConfig
+  onSave: (config: GalleryConfig) => void
+  isPending: boolean
+}) {
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    control,
+    formState: { errors },
+  } = useForm<GalleryConfigInput, unknown, GalleryConfig>({
+    resolver: zodResolver(galleryConfigSchema),
+    defaultValues: config,
+  })
+
+  const enableLightbox = useWatch({ control, name: 'enableLightbox' })
+
+  return (
+    <form onSubmit={handleSubmit(onSave)} className="space-y-6">
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="gallery-section-label">セクションラベル（英語装飾）</Label>
+          <Input
+            id="gallery-section-label"
+            {...register('sectionLabel')}
+            placeholder="Gallery"
+            disabled={isPending}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="gallery-title">タイトル</Label>
+          <Input
+            id="gallery-title"
+            {...register('title')}
+            placeholder="ギャラリー"
+            disabled={isPending}
+          />
+          {errors.title && (
+            <p className="text-sm text-destructive">{errors.title.message}</p>
+          )}
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="gallery-layout">レイアウト</Label>
+            <Select
+              defaultValue={config.layout}
+              onValueChange={(v) => setValue('layout', parseGalleryLayout(v))}
+              disabled={isPending}
+            >
+              <SelectTrigger id="gallery-layout">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {keysOf(galleryLayoutLabels).map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {galleryLayoutLabels[key]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="gallery-columns">カラム数</Label>
+            <Input
+              id="gallery-columns"
+              type="number"
+              min={1}
+              max={6}
+              {...register('columns', { valueAsNumber: true })}
+              disabled={isPending}
+            />
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="gallery-gap">ギャップ</Label>
+            <Select
+              defaultValue={config.gap}
+              onValueChange={(v) => setValue('gap', parseGalleryGap(v))}
+              disabled={isPending}
+            >
+              <SelectTrigger id="gallery-gap">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {keysOf(galleryGapLabels).map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {galleryGapLabels[key]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="gallery-image-aspect">画像アスペクト比</Label>
+            <Select
+              defaultValue={config.imageAspect}
+              onValueChange={(v) => setValue('imageAspect', parseGalleryImageAspect(v))}
+              disabled={isPending}
+            >
+              <SelectTrigger id="gallery-image-aspect">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {keysOf(galleryImageAspectLabels).map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {galleryImageAspectLabels[key]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="gallery-hover-effect">ホバーエフェクト</Label>
+          <Select
+            defaultValue={config.hoverEffect}
+            onValueChange={(v) => setValue('hoverEffect', parseGalleryHoverEffect(v))}
+            disabled={isPending}
+          >
+            <SelectTrigger id="gallery-hover-effect">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {keysOf(galleryHoverEffectLabels).map((key) => (
+                <SelectItem key={key} value={key}>
+                  {galleryHoverEffectLabels[key]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Switch
+            id="gallery-lightbox"
+            checked={enableLightbox}
+            onCheckedChange={(checked) => setValue('enableLightbox', checked)}
+            disabled={isPending}
+          />
+          <Label htmlFor="gallery-lightbox">ライトボックスを有効化</Label>
+        </div>
+      </div>
+
+      <Button type="submit" disabled={isPending}>
+        <Save className="h-4 w-4 mr-2" />
+        {isPending ? '保存中...' : '保存'}
+      </Button>
+    </form>
+  )
+}
+
+// =============================================================================
+// ContactForm Config Form
+// =============================================================================
+
+function ContactFormConfigForm({
+  config,
+  onSave,
+  isPending,
+}: {
+  config: ContactFormConfig
+  onSave: (config: ContactFormConfig) => void
+  isPending: boolean
+}) {
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    control,
+    formState: { errors },
+  } = useForm<ContactFormConfigInput, unknown, ContactFormConfig>({
+    resolver: zodResolver(contactFormConfigSchema),
+    defaultValues: config,
+  })
+
+  const showNameField = useWatch({ control, name: 'showNameField' })
+  const showPhoneField = useWatch({ control, name: 'showPhoneField' })
+  const showSubjectField = useWatch({ control, name: 'showSubjectField' })
+
+  return (
+    <form onSubmit={handleSubmit(onSave)} className="space-y-6">
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="contact-section-label">セクションラベル（英語装飾）</Label>
+          <Input
+            id="contact-section-label"
+            {...register('sectionLabel')}
+            placeholder="Contact"
+            disabled={isPending}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="contact-title">タイトル</Label>
+          <Input
+            id="contact-title"
+            {...register('title')}
+            placeholder="お問い合わせ"
+            disabled={isPending}
+          />
+          {errors.title && (
+            <p className="text-sm text-destructive">{errors.title.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="contact-description">説明（任意）</Label>
+          <Textarea
+            id="contact-description"
+            {...register('description')}
+            placeholder="お気軽にお問い合わせください"
+            rows={2}
+            disabled={isPending}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="contact-variant">バリエーション</Label>
+          <Select
+            defaultValue={config.variant}
+            onValueChange={(v) => setValue('variant', parseContactFormVariant(v))}
+            disabled={isPending}
+          >
+            <SelectTrigger id="contact-variant">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {keysOf(contactFormVariantLabels).map((key) => (
+                <SelectItem key={key} value={key}>
+                  {contactFormVariantLabels[key]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="contact-submit-text">送信ボタンテキスト</Label>
+          <Input
+            id="contact-submit-text"
+            {...register('submitButtonText')}
+            placeholder="送信する"
+            disabled={isPending}
+          />
+        </div>
+
+        <div className="space-y-3">
+          <Label>表示フィールド</Label>
+          <div className="flex items-center gap-2">
+            <Switch
+              id="contact-show-name"
+              checked={showNameField}
+              onCheckedChange={(checked) => setValue('showNameField', checked)}
+              disabled={isPending}
+            />
+            <Label htmlFor="contact-show-name">名前フィールドを表示</Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch
+              id="contact-show-phone"
+              checked={showPhoneField}
+              onCheckedChange={(checked) => setValue('showPhoneField', checked)}
+              disabled={isPending}
+            />
+            <Label htmlFor="contact-show-phone">電話番号フィールドを表示</Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch
+              id="contact-show-subject"
+              checked={showSubjectField}
+              onCheckedChange={(checked) => setValue('showSubjectField', checked)}
+              disabled={isPending}
+            />
+            <Label htmlFor="contact-show-subject">件名フィールドを表示</Label>
+          </div>
+        </div>
+      </div>
+
+      <Button type="submit" disabled={isPending}>
+        <Save className="h-4 w-4 mr-2" />
+        {isPending ? '保存中...' : '保存'}
+      </Button>
+    </form>
+  )
+}
+
+// =============================================================================
+// Map Config Form
+// =============================================================================
+
+function MapConfigForm({
+  config,
+  onSave,
+  isPending,
+}: {
+  config: MapConfig
+  onSave: (config: MapConfig) => void
+  isPending: boolean
+}) {
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    control,
+    formState: { errors },
+  } = useForm<MapConfigInput, unknown, MapConfig>({
+    resolver: zodResolver(mapConfigSchema),
+    defaultValues: config,
+  })
+
+  const showAddressBelow = useWatch({ control, name: 'showAddressBelow' })
+
+  return (
+    <form onSubmit={handleSubmit(onSave)} className="space-y-6">
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="map-section-label">セクションラベル（英語装飾）</Label>
+          <Input
+            id="map-section-label"
+            {...register('sectionLabel')}
+            placeholder="Location"
+            disabled={isPending}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="map-title">タイトル</Label>
+          <Input
+            id="map-title"
+            {...register('title')}
+            placeholder="アクセス"
+            disabled={isPending}
+          />
+          {errors.title && (
+            <p className="text-sm text-destructive">{errors.title.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="map-address">住所</Label>
+          <Input
+            id="map-address"
+            {...register('address')}
+            placeholder="東京都渋谷区..."
+            disabled={isPending}
+          />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="map-latitude">緯度</Label>
+            <Input
+              id="map-latitude"
+              type="number"
+              step={0.000001}
+              {...register('latitude', { valueAsNumber: true })}
+              disabled={isPending}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="map-longitude">経度</Label>
+            <Input
+              id="map-longitude"
+              type="number"
+              step={0.000001}
+              {...register('longitude', { valueAsNumber: true })}
+              disabled={isPending}
+            />
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="space-y-2">
+            <Label htmlFor="map-zoom">ズームレベル</Label>
+            <Input
+              id="map-zoom"
+              type="number"
+              min={1}
+              max={20}
+              {...register('zoom', { valueAsNumber: true })}
+              disabled={isPending}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="map-height">高さ</Label>
+            <Select
+              defaultValue={config.height}
+              onValueChange={(v) => setValue('height', parseMapHeight(v))}
+              disabled={isPending}
+            >
+              <SelectTrigger id="map-height">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {keysOf(mapHeightLabels).map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {mapHeightLabels[key]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="map-border-radius">角丸</Label>
+            <Select
+              defaultValue={config.borderRadius}
+              onValueChange={(v) => setValue('borderRadius', parseBorderRadius(v))}
+              disabled={isPending}
+            >
+              <SelectTrigger id="map-border-radius">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {keysOf(borderRadiusLabels).map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {borderRadiusLabels[key]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Switch
+            id="map-show-address"
+            checked={showAddressBelow}
+            onCheckedChange={(checked) => setValue('showAddressBelow', checked)}
+            disabled={isPending}
+          />
+          <Label htmlFor="map-show-address">住所を地図の下に表示</Label>
+        </div>
+      </div>
+
+      <Button type="submit" disabled={isPending}>
+        <Save className="h-4 w-4 mr-2" />
+        {isPending ? '保存中...' : '保存'}
+      </Button>
+    </form>
+  )
+}
+
+// =============================================================================
+// Embed Config Form
+// =============================================================================
+
+function EmbedConfigForm({
+  config,
+  onSave,
+  isPending,
+}: {
+  config: EmbedConfig
+  onSave: (config: EmbedConfig) => void
+  isPending: boolean
+}) {
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    formState: { errors },
+  } = useForm<EmbedConfigInput, unknown, EmbedConfig>({
+    resolver: zodResolver(embedConfigSchema),
+    defaultValues: config,
+  })
+
+  return (
+    <form onSubmit={handleSubmit(onSave)} className="space-y-6">
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="embed-section-label">セクションラベル（英語装飾）</Label>
+          <Input
+            id="embed-section-label"
+            {...register('sectionLabel')}
+            placeholder="Media"
+            disabled={isPending}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="embed-title">タイトル</Label>
+          <Input
+            id="embed-title"
+            {...register('title')}
+            placeholder="動画"
+            disabled={isPending}
+          />
+          {errors.title && (
+            <p className="text-sm text-destructive">{errors.title.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="embed-url">埋め込みURL</Label>
+          <Input
+            id="embed-url"
+            type="url"
+            {...register('embedUrl')}
+            placeholder="https://www.youtube.com/embed/..."
+            disabled={isPending}
+          />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="space-y-2">
+            <Label htmlFor="embed-aspect-ratio">アスペクト比</Label>
+            <Select
+              defaultValue={config.aspectRatio}
+              onValueChange={(v) => setValue('aspectRatio', parseEmbedAspectRatio(v))}
+              disabled={isPending}
+            >
+              <SelectTrigger id="embed-aspect-ratio">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {keysOf(embedAspectRatioLabels).map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {embedAspectRatioLabels[key]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="embed-max-width">最大幅</Label>
+            <Select
+              defaultValue={config.maxWidth}
+              onValueChange={(v) => setValue('maxWidth', parseMaxWidth(v))}
+              disabled={isPending}
+            >
+              <SelectTrigger id="embed-max-width">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {keysOf(maxWidthLabels).map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {maxWidthLabels[key]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="embed-border-radius">角丸</Label>
+            <Select
+              defaultValue={config.borderRadius}
+              onValueChange={(v) => setValue('borderRadius', parseBorderRadius(v))}
+              disabled={isPending}
+            >
+              <SelectTrigger id="embed-border-radius">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {keysOf(borderRadiusLabels).map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {borderRadiusLabels[key]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
@@ -1699,6 +3040,46 @@ export function SectionEditor({ section, onBack, onSave, showHeader = true }: Se
         return (
           <InstagramConfigForm
             config={getInstagramConfig(config)}
+            onSave={(c) => handleConfigSave(c)}
+            isPending={isPending}
+          />
+        )
+      case SectionType.TESTIMONIAL:
+        return (
+          <TestimonialConfigForm
+            config={getTestimonialConfig(config)}
+            onSave={(c) => handleConfigSave(c)}
+            isPending={isPending}
+          />
+        )
+      case SectionType.GALLERY:
+        return (
+          <GalleryConfigForm
+            config={getGalleryConfig(config)}
+            onSave={(c) => handleConfigSave(c)}
+            isPending={isPending}
+          />
+        )
+      case SectionType.CONTACT_FORM:
+        return (
+          <ContactFormConfigForm
+            config={getContactFormConfig(config)}
+            onSave={(c) => handleConfigSave(c)}
+            isPending={isPending}
+          />
+        )
+      case SectionType.MAP:
+        return (
+          <MapConfigForm
+            config={getMapConfig(config)}
+            onSave={(c) => handleConfigSave(c)}
+            isPending={isPending}
+          />
+        )
+      case SectionType.EMBED:
+        return (
+          <EmbedConfigForm
+            config={getEmbedConfig(config)}
             onSave={(c) => handleConfigSave(c)}
             isPending={isPending}
           />

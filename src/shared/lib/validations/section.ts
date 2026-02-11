@@ -14,6 +14,43 @@ import {
   createCtaButtonItemSchema,
   transformCtaFields,
 } from './section-design'
+import {
+  imageAspectValues,
+  cardStyleValues,
+  borderRadiusValues,
+  containerWidthValues,
+  gapSizeValues,
+  contentPositionValues,
+  overlayStyleValues,
+  heroParallaxHeightValues,
+  featuresLayoutValues,
+  faqInitialOpenValues,
+  galleryHoverEffectValues,
+  conceptLayoutValues,
+  heroHeightValues,
+  heroVariantValues,
+  paddingValues,
+  imagePositionValues,
+  textAlignValues,
+  spaceLayoutValues,
+  newsLayoutValues,
+  postLayoutValues,
+  ctaVariantValues,
+  testimonialLayoutValues,
+  testimonialVariantValues,
+  galleryLayoutValues,
+  galleryGapValues,
+  contactFormVariantValues,
+  faqVariantValues,
+  mapHeightValues,
+  embedAspectRatioValues,
+  spaceImageAspectValues,
+  showcaseImageAspectValues,
+  postImageAspectValues,
+  galleryImageAspectValues,
+  maxWidthValues,
+  type ImageAspect,
+} from './section-options'
 
 export { SectionType }
 export type { CTAButtonItem, SectionDesign, SectionDesignInput, TitleSize, TextAlign } from './section-design'
@@ -26,7 +63,7 @@ export { ctaButtonVariants, ctaButtonSizes, sectionDesignSchema, defaultSectionD
 const safeUrlSchema = createSafeUrlSchema(500)
 const { ctaButtonSchema, optionalCtaButtonSchema } = createCtaSchemas(safeUrlSchema)
 const ctaButtonItemSchema = createCtaButtonItemSchema(safeUrlSchema)
-const maxWidthSchema = z.enum(['sm', 'md', 'lg', 'xl', 'full']).default('lg')
+const maxWidthSchema = z.enum(maxWidthValues).default('lg')
 
 // =============================================================================
 // セクションタイプ別 config スキーマ
@@ -42,10 +79,10 @@ const heroConfigRawSchema = z.object({
   buttons: z.array(ctaButtonItemSchema).optional(),
   ctaPrimary: ctaButtonSchema.optional(),
   ctaSecondary: optionalCtaButtonSchema,
-  height: z.enum(['sm', 'md', 'lg', 'full']).default('md'),
+  height: z.enum(heroHeightValues).default('md'),
   overlay: z.boolean().default(true),
   overlayOpacity: z.number().min(0).max(100).default(40),
-  variant: z.enum(['default', 'minimal', 'split', 'video', 'parallax']).default('default'),
+  variant: z.enum(heroVariantValues).default('default'),
   videoUrl: z.string().url().optional().or(z.literal('')),
   parallaxSpeed: z.number().min(0).max(1).default(0.5),
 })
@@ -64,6 +101,9 @@ export const heroParallaxConfigSchema = z.object({
   parallaxSpeed: z.number().min(0).max(1).default(0.3),
   overlayGradient: z.boolean().default(true),
   scrollIndicator: z.boolean().default(true),
+  contentPosition: z.enum(contentPositionValues).default('center'),
+  height: z.enum(heroParallaxHeightValues).default('full'),
+  overlayStyle: z.enum(overlayStyleValues).default('gradient'),
 })
 
 // --- Content ---
@@ -74,7 +114,7 @@ export const customConfigSchema = z.object({
   maxWidth: maxWidthSchema,
   containerClass: z.string().max(200).optional(),
   backgroundColor: z.string().max(50).optional(),
-  padding: z.enum(['none', 'sm', 'md', 'lg']).default('md'),
+  padding: z.enum(paddingValues).default('md'),
 })
 
 /** Concept セクション設定（v3） */
@@ -83,8 +123,10 @@ export const conceptConfigSchema = z.object({
   heading: z.string().max(100, { error: '見出しは100文字以内です' }).default('空間が、体験を変える'),
   body: z.string().max(1000, { error: '本文は1000文字以内です' }).default('洗練されたデザインと上質な設備が調和する空間。\nビジネスミーティングからプライベートパーティーまで、\nあらゆるシーンに最適な環境をご用意しています。'),
   imageUrl: z.string().url({ error: '有効なURLを入力してください' }).optional().or(z.literal('')),
-  imagePosition: z.enum(['left', 'right']).default('right'),
-  textAlign: z.enum(['left', 'center', 'right']).default('left'),
+  imagePosition: z.enum(imagePositionValues).default('right'),
+  textAlign: z.enum(textAlignValues).default('left'),
+  layout: z.enum(conceptLayoutValues).default('side-by-side'),
+  imageAspect: z.enum(imageAspectValues).default('original'),
 })
 
 // --- Lists ---
@@ -98,8 +140,10 @@ export const spaceListConfigSchema = z.object({
   showViewAllLink: z.boolean().default(true),
   viewAllText: z.string().max(50, { error: 'テキストは50文字以内です' }).default('全てのスペースを見る'),
   viewAllUrl: z.string().max(200, { error: 'URLは200文字以内です' }).default('/spaces'),
-  layout: z.enum(['grid', 'list', 'carousel']).default('grid'),
+  layout: z.enum(spaceLayoutValues).default('grid'),
   columns: z.number().int().min(1).max(4).default(3),
+  cardStyle: z.enum(cardStyleValues).default('bordered'),
+  imageAspect: z.enum(spaceImageAspectValues).default('4:3'),
 })
 
 /** SpaceShowcase セクション設定（v3） */
@@ -108,6 +152,9 @@ export const spaceShowcaseConfigSchema = z.object({
   title: z.string().max(100, { error: 'タイトルは100文字以内です' }).default('Our Spaces'),
   maxItems: z.number().int().min(1).max(12).default(3),
   showOnlyPublished: z.boolean().default(true),
+  columns: z.number().int().min(2).max(4).default(3),
+  cardStyle: z.enum(cardStyleValues).default('bordered'),
+  imageAspect: z.enum(showcaseImageAspectValues).default('4:3'),
 })
 
 /** NewsList セクション設定 */
@@ -118,7 +165,8 @@ export const newsListConfigSchema = z.object({
   showViewAllLink: z.boolean().default(true),
   viewAllText: z.string().max(50, { error: 'テキストは50文字以内です' }).default('全てのお知らせ'),
   viewAllUrl: z.string().max(200, { error: 'URLは200文字以内です' }).default('/news'),
-  layout: z.enum(['list', 'card']).default('list'),
+  layout: z.enum(newsLayoutValues).default('list'),
+  columns: z.number().int().min(2).max(4).default(2),
 })
 
 /** PostList セクション設定 */
@@ -130,8 +178,9 @@ export const postListConfigSchema = z.object({
   viewAllText: z.string().max(50, { error: 'テキストは50文字以内です' }).default('全ての記事'),
   viewAllUrl: z.string().max(200, { error: 'URLは200文字以内です' }).default('/posts'),
   categoryId: z.string().uuid().optional(),
-  layout: z.enum(['grid', 'list']).default('grid'),
+  layout: z.enum(postLayoutValues).default('grid'),
   columns: z.number().int().min(1).max(4).default(3),
+  imageAspect: z.enum(postImageAspectValues).default('16:9'),
 })
 
 /** FaqList セクション設定 */
@@ -151,7 +200,9 @@ export const faqListConfigSchema = z.object({
       })
     )
     .optional(),
-  variant: z.enum(['default', 'bordered', 'minimal']).default('default'),
+  variant: z.enum(faqVariantValues).default('default'),
+  containerWidth: z.enum(containerWidthValues).default('md'),
+  initialOpen: z.enum(faqInitialOpenValues).default('none'),
 })
 
 // --- Features ---
@@ -170,6 +221,7 @@ export const featuresConfigSchema = z.object({
     )
     .default([]),
   columns: z.number().int().min(1).max(4).default(3),
+  layout: z.enum(featuresLayoutValues).default('hero-first'),
 })
 
 /** Testimonial セクション設定 */
@@ -187,9 +239,9 @@ export const testimonialConfigSchema = z.object({
       })
     )
     .default([]),
-  layout: z.enum(['grid', 'carousel', 'list']).default('carousel'),
+  layout: z.enum(testimonialLayoutValues).default('carousel'),
   showRating: z.boolean().default(true),
-  variant: z.enum(['default', 'card', 'minimal']).default('default'),
+  variant: z.enum(testimonialVariantValues).default('default'),
 })
 
 /** Gallery セクション設定 */
@@ -205,10 +257,12 @@ export const galleryConfigSchema = z.object({
       })
     )
     .default([]),
-  layout: z.enum(['grid', 'masonry', 'carousel']).default('grid'),
+  layout: z.enum(galleryLayoutValues).default('grid'),
   columns: z.number().int().min(1).max(6).default(3),
-  gap: z.enum(['none', 'sm', 'md', 'lg']).default('md'),
+  gap: z.enum(galleryGapValues).default('md'),
   enableLightbox: z.boolean().default(true),
+  imageAspect: z.enum(galleryImageAspectValues).default('original'),
+  hoverEffect: z.enum(galleryHoverEffectValues).default('zoom'),
 })
 
 // --- Functional ---
@@ -222,7 +276,7 @@ const ctaConfigRawSchema = z.object({
   ctaPrimary: ctaButtonSchema.optional(),
   ctaSecondary: optionalCtaButtonSchema,
   backgroundColor: z.string().max(50).optional(),
-  variant: z.enum(['default', 'centered', 'split']).default('default'),
+  variant: z.enum(ctaVariantValues).default('default'),
 })
 /** CTA セクション設定（出力: レガシーCTA → buttons[] 統一） */
 export const ctaConfigSchema = ctaConfigRawSchema.transform(transformCtaFields)
@@ -236,7 +290,7 @@ export const contactFormConfigSchema = z.object({
   showPhoneField: z.boolean().default(true),
   showSubjectField: z.boolean().default(true),
   submitButtonText: z.string().max(30).default('送信する'),
-  variant: z.enum(['default', 'minimal', 'split']).default('default'),
+  variant: z.enum(contactFormVariantValues).default('default'),
 })
 
 /** Map セクション設定 */
@@ -247,8 +301,9 @@ export const mapConfigSchema = z.object({
   latitude: z.number().min(-90).max(90).optional(),
   longitude: z.number().min(-180).max(180).optional(),
   zoom: z.number().int().min(1).max(20).default(15),
-  height: z.enum(['sm', 'md', 'lg']).default('md'),
+  height: z.enum(mapHeightValues).default('md'),
   showAddressBelow: z.boolean().default(true),
+  borderRadius: z.enum(borderRadiusValues).default('sm'),
 })
 
 /** Embed セクション設定 */
@@ -257,14 +312,18 @@ export const embedConfigSchema = z.object({
   title: z.string().max(100, { error: 'タイトルは100文字以内です' }).optional(),
   embedUrl: z.string().url({ error: '有効なURLを入力してください' }).optional().or(z.literal('')),
   embedCode: z.string().max(10000).optional(),
-  aspectRatio: z.enum(['16:9', '4:3', '1:1', 'auto']).default('16:9'),
+  aspectRatio: z.enum(embedAspectRatioValues).default('16:9'),
   maxWidth: maxWidthSchema,
+  borderRadius: z.enum(borderRadiusValues).default('sm'),
 })
 
 /** Instagram セクション設定 */
 export const instagramConfigSchema = z.object({
   sectionLabel: z.string().max(50, { error: 'ラベルは50文字以内です' }).default('Follow Us'),
   title: z.string().max(100, { error: 'タイトルは100文字以内です' }).default('Instagram'),
+  columns: z.number().int().min(3).max(6).default(6),
+  count: z.number().int().min(6).max(12).default(6),
+  gap: z.enum(gapSizeValues).default('md'),
 })
 
 // =============================================================================
@@ -482,19 +541,19 @@ export function getSafeConfig<T extends SectionType>(
 // Select値バリデーター（型アサーション不要）
 // =============================================================================
 
-const heroHeightSchema = z.enum(['sm', 'md', 'lg', 'full'])
-const maxWidthOptionsSchema = z.enum(['sm', 'md', 'lg', 'xl', 'full'])
-const paddingOptionsSchema = z.enum(['none', 'sm', 'md', 'lg'])
-const spaceLayoutOptionsSchema = z.enum(['grid', 'list', 'carousel'])
-const newsLayoutOptionsSchema = z.enum(['list', 'card'])
-const postLayoutOptionsSchema = z.enum(['grid', 'list'])
-const ctaVariantOptionsSchema = z.enum(['default', 'centered', 'split'])
-const galleryLayoutOptionsSchema = z.enum(['grid', 'masonry', 'carousel'])
-const galleryGapOptionsSchema = z.enum(['none', 'sm', 'md', 'lg'])
-const testimonialLayoutOptionsSchema = z.enum(['grid', 'carousel', 'list'])
-const testimonialVariantOptionsSchema = z.enum(['default', 'card', 'minimal'])
-const mapHeightOptionsSchema = z.enum(['sm', 'md', 'lg'])
-const embedAspectRatioOptionsSchema = z.enum(['16:9', '4:3', '1:1', 'auto'])
+const heroHeightSchema = z.enum(heroHeightValues)
+const maxWidthOptionsSchema = z.enum(maxWidthValues)
+const paddingOptionsSchema = z.enum(paddingValues)
+const spaceLayoutOptionsSchema = z.enum(spaceLayoutValues)
+const newsLayoutOptionsSchema = z.enum(newsLayoutValues)
+const postLayoutOptionsSchema = z.enum(postLayoutValues)
+const ctaVariantOptionsSchema = z.enum(ctaVariantValues)
+const galleryLayoutOptionsSchema = z.enum(galleryLayoutValues)
+const galleryGapOptionsSchema = z.enum(galleryGapValues)
+const testimonialLayoutOptionsSchema = z.enum(testimonialLayoutValues)
+const testimonialVariantOptionsSchema = z.enum(testimonialVariantValues)
+const mapHeightOptionsSchema = z.enum(mapHeightValues)
+const embedAspectRatioOptionsSchema = z.enum(embedAspectRatioValues)
 
 export function parseHeroHeight(value: string): HeroConfig['height'] {
   const result = heroHeightSchema.safeParse(value)
@@ -561,6 +620,141 @@ export function parseEmbedAspectRatio(value: string): EmbedConfig['aspectRatio']
   return result.success ? result.data : '16:9'
 }
 
+// --- Phase: variant/layout 拡張用パーサー ---
+
+const cardStyleOptionsSchema = z.enum(cardStyleValues)
+const borderRadiusOptionsSchema = z.enum(borderRadiusValues)
+const containerWidthOptionsSchema = z.enum(containerWidthValues)
+const gapSizeOptionsSchema = z.enum(gapSizeValues)
+const contentPositionOptionsSchema = z.enum(contentPositionValues)
+const overlayStyleOptionsSchema = z.enum(overlayStyleValues)
+const heroParallaxHeightOptionsSchema = z.enum(heroParallaxHeightValues)
+const featuresLayoutOptionsSchema = z.enum(featuresLayoutValues)
+const faqInitialOpenOptionsSchema = z.enum(faqInitialOpenValues)
+const galleryHoverEffectOptionsSchema = z.enum(galleryHoverEffectValues)
+const conceptLayoutOptionsSchema = z.enum(conceptLayoutValues)
+const imageAspectOptionsSchema = z.enum(imageAspectValues)
+const heroVariantOptionsSchema = z.enum(heroVariantValues)
+const contactFormVariantOptionsSchema = z.enum(contactFormVariantValues)
+const faqVariantOptionsSchema = z.enum(faqVariantValues)
+
+export function parseCardStyle(value: string): SpaceListConfig['cardStyle'] {
+  const result = cardStyleOptionsSchema.safeParse(value)
+  return result.success ? result.data : 'bordered'
+}
+
+export function parseBorderRadius(value: string): MapConfig['borderRadius'] {
+  const result = borderRadiusOptionsSchema.safeParse(value)
+  return result.success ? result.data : 'sm'
+}
+
+export function parseContainerWidth(value: string): FaqListConfig['containerWidth'] {
+  const result = containerWidthOptionsSchema.safeParse(value)
+  return result.success ? result.data : 'md'
+}
+
+export function parseGapSize(value: string): InstagramConfig['gap'] {
+  const result = gapSizeOptionsSchema.safeParse(value)
+  return result.success ? result.data : 'md'
+}
+
+export function parseContentPosition(value: string): HeroParallaxConfig['contentPosition'] {
+  const result = contentPositionOptionsSchema.safeParse(value)
+  return result.success ? result.data : 'center'
+}
+
+export function parseOverlayStyle(value: string): HeroParallaxConfig['overlayStyle'] {
+  const result = overlayStyleOptionsSchema.safeParse(value)
+  return result.success ? result.data : 'gradient'
+}
+
+export function parseHeroParallaxHeight(value: string): HeroParallaxConfig['height'] {
+  const result = heroParallaxHeightOptionsSchema.safeParse(value)
+  return result.success ? result.data : 'full'
+}
+
+export function parseFeaturesLayout(value: string): FeaturesConfig['layout'] {
+  const result = featuresLayoutOptionsSchema.safeParse(value)
+  return result.success ? result.data : 'hero-first'
+}
+
+export function parseFaqInitialOpen(value: string): FaqListConfig['initialOpen'] {
+  const result = faqInitialOpenOptionsSchema.safeParse(value)
+  return result.success ? result.data : 'none'
+}
+
+export function parseGalleryHoverEffect(value: string): GalleryConfig['hoverEffect'] {
+  const result = galleryHoverEffectOptionsSchema.safeParse(value)
+  return result.success ? result.data : 'zoom'
+}
+
+export function parseConceptLayout(value: string): ConceptConfig['layout'] {
+  const result = conceptLayoutOptionsSchema.safeParse(value)
+  return result.success ? result.data : 'side-by-side'
+}
+
+export function parseImageAspect(value: string): ImageAspect {
+  const result = imageAspectOptionsSchema.safeParse(value)
+  return result.success ? result.data : 'original'
+}
+
+const spaceImageAspectSchema = z.enum(spaceImageAspectValues)
+
+export function parseSpaceImageAspect(value: string): SpaceListConfig['imageAspect'] {
+  const result = spaceImageAspectSchema.safeParse(value)
+  return result.success ? result.data : '4:3'
+}
+
+const postImageAspectSchema = z.enum(postImageAspectValues)
+
+export function parsePostImageAspect(value: string): PostListConfig['imageAspect'] {
+  const result = postImageAspectSchema.safeParse(value)
+  return result.success ? result.data : '16:9'
+}
+
+const galleryImageAspectSchema = z.enum(galleryImageAspectValues)
+
+export function parseGalleryImageAspect(value: string): GalleryConfig['imageAspect'] {
+  const result = galleryImageAspectSchema.safeParse(value)
+  return result.success ? result.data : 'original'
+}
+
+const showcaseImageAspectSchema = z.enum(showcaseImageAspectValues)
+
+export function parseShowcaseImageAspect(value: string): SpaceShowcaseConfig['imageAspect'] {
+  const result = showcaseImageAspectSchema.safeParse(value)
+  return result.success ? result.data : '4:3'
+}
+
+export function parseHeroVariant(value: string): HeroConfig['variant'] {
+  const result = heroVariantOptionsSchema.safeParse(value)
+  return result.success ? result.data : 'default'
+}
+
+export function parseContactFormVariant(value: string): ContactFormConfig['variant'] {
+  const result = contactFormVariantOptionsSchema.safeParse(value)
+  return result.success ? result.data : 'default'
+}
+
+export function parseFaqVariant(value: string): FaqListConfig['variant'] {
+  const result = faqVariantOptionsSchema.safeParse(value)
+  return result.success ? result.data : 'default'
+}
+
+const imagePositionOptionsSchema = z.enum(imagePositionValues)
+
+export function parseImagePosition(value: string): ConceptConfig['imagePosition'] {
+  const result = imagePositionOptionsSchema.safeParse(value)
+  return result.success ? result.data : 'right'
+}
+
+const textAlignOptionsSchema = z.enum(textAlignValues)
+
+export function parseTextAlign(value: string): ConceptConfig['textAlign'] {
+  const result = textAlignOptionsSchema.safeParse(value)
+  return result.success ? result.data : 'left'
+}
+
 // =============================================================================
 // デフォルト設定
 // =============================================================================
@@ -590,6 +784,9 @@ export const defaultSectionConfigs: {
     parallaxSpeed: 0.3,
     overlayGradient: true,
     scrollIndicator: true,
+    contentPosition: 'center',
+    height: 'full',
+    overlayStyle: 'gradient',
   },
   [SectionType.CUSTOM]: {
     sectionLabel: 'Contents',
@@ -604,6 +801,8 @@ export const defaultSectionConfigs: {
     imageUrl: '',
     imagePosition: 'right',
     textAlign: 'left',
+    layout: 'side-by-side',
+    imageAspect: 'original',
   },
   [SectionType.SPACE_LIST]: {
     sectionLabel: 'Spaces',
@@ -615,12 +814,17 @@ export const defaultSectionConfigs: {
     viewAllUrl: '/spaces',
     layout: 'grid',
     columns: 3,
+    cardStyle: 'bordered',
+    imageAspect: '4:3',
   },
   [SectionType.SPACE_SHOWCASE]: {
     sectionLabel: 'Spaces',
     title: 'Our Spaces',
     maxItems: 3,
     showOnlyPublished: true,
+    columns: 3,
+    cardStyle: 'bordered',
+    imageAspect: '4:3',
   },
   [SectionType.NEWS_LIST]: {
     sectionLabel: 'News',
@@ -630,6 +834,7 @@ export const defaultSectionConfigs: {
     viewAllText: '全てのお知らせ',
     viewAllUrl: '/news',
     layout: 'list',
+    columns: 2,
   },
   [SectionType.POST_LIST]: {
     sectionLabel: 'Blog',
@@ -640,6 +845,7 @@ export const defaultSectionConfigs: {
     viewAllUrl: '/posts',
     layout: 'grid',
     columns: 3,
+    imageAspect: '16:9',
   },
   [SectionType.FAQ_LIST]: {
     sectionLabel: 'FAQ',
@@ -649,12 +855,15 @@ export const defaultSectionConfigs: {
     viewAllText: '全てのFAQ',
     viewAllUrl: '/faq',
     variant: 'default',
+    containerWidth: 'md',
+    initialOpen: 'none',
   },
   [SectionType.FEATURES]: {
     sectionLabel: 'Features',
     title: 'Features',
     items: [],
     columns: 3,
+    layout: 'hero-first',
   },
   [SectionType.TESTIMONIAL]: {
     sectionLabel: 'Testimonials',
@@ -671,6 +880,8 @@ export const defaultSectionConfigs: {
     columns: 3,
     gap: 'md',
     enableLightbox: true,
+    imageAspect: 'original',
+    hoverEffect: 'zoom',
   },
   [SectionType.CTA]: {
     sectionLabel: 'Ready to Begin?',
@@ -695,15 +906,20 @@ export const defaultSectionConfigs: {
     zoom: 15,
     height: 'md',
     showAddressBelow: true,
+    borderRadius: 'sm',
   },
   [SectionType.EMBED]: {
     sectionLabel: 'Media',
     aspectRatio: '16:9',
     maxWidth: 'lg',
+    borderRadius: 'sm',
   },
   [SectionType.INSTAGRAM]: {
     sectionLabel: 'Follow Us',
     title: 'Instagram',
+    columns: 6,
+    count: 6,
+    gap: 'md',
   },
 }
 

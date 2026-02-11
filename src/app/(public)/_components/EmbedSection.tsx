@@ -9,7 +9,9 @@ import type { ReactElement } from 'react'
 import { ScrollReveal } from '@/public/components/animations/ScrollReveal'
 import { SectionWrapper, getTitleClasses, getTitleStyle } from '@/public/components/sections/SectionWrapper'
 import { SectionLabel } from '@/public/components/ui/SectionLabel'
+import { BORDER_RADIUS_MAP } from '@/public/lib/section-style-maps'
 import type { EmbedConfig } from '@/shared/lib/validations/section'
+import { parseBorderRadius } from '@/shared/lib/validations/section'
 import type { SectionDesign } from '@/shared/lib/validations/section-design'
 
 const MAX_WIDTH_MAP = {
@@ -35,6 +37,7 @@ interface EmbedSectionProps {
 export function EmbedSection({ config, design }: EmbedSectionProps): ReactElement {
   const maxWidthClass = MAX_WIDTH_MAP[config.maxWidth] ?? MAX_WIDTH_MAP.lg
   const aspectClass = ASPECT_RATIO_MAP[config.aspectRatio] ?? ASPECT_RATIO_MAP['16:9']
+  const radiusClass = BORDER_RADIUS_MAP[parseBorderRadius(config.borderRadius)]
 
   return (
     <SectionWrapper design={design} skipContainer>
@@ -52,7 +55,7 @@ export function EmbedSection({ config, design }: EmbedSectionProps): ReactElemen
 
         <ScrollReveal>
           {config.embedUrl ? (
-            <div className={`overflow-hidden rounded-lg ${aspectClass}`}>
+            <div className={`overflow-hidden ${radiusClass} ${aspectClass}`}>
               <iframe
                 src={config.embedUrl}
                 className="h-full w-full border-0"
@@ -64,11 +67,11 @@ export function EmbedSection({ config, design }: EmbedSectionProps): ReactElemen
           ) : config.embedCode ? (
             /* embedCode is admin-configured content, sanitized at input time */
             <div
-              className={`overflow-hidden rounded-lg ${aspectClass}`}
+              className={`overflow-hidden ${radiusClass} ${aspectClass}`}
               dangerouslySetInnerHTML={{ __html: config.embedCode }}
             />
           ) : (
-            <div className="flex h-48 items-center justify-center rounded-lg bg-muted">
+            <div className={`flex h-48 items-center justify-center ${radiusClass} bg-muted`}>
               <p className="text-sm text-muted-foreground">
                 埋め込みURLまたはコードを設定してください。
               </p>

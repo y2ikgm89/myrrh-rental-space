@@ -22,6 +22,8 @@ import {
   type CtaConfigInput,
   type CTAButtonItem,
 } from '@/shared/lib/validations/section'
+import { ctaVariantLabels } from '@/shared/lib/validations/section-options'
+import { keysOf } from '@/shared/lib/serialize'
 import { FormActions, type ConfigFormProps } from './shared'
 
 export default function CtaConfigForm({ section, onSave, isPending, onDirtyChange }: ConfigFormProps) {
@@ -67,11 +69,16 @@ export default function CtaConfigForm({ section, onSave, isPending, onDirtyChang
           <Select defaultValue={config.variant} onValueChange={(v) => setValue('variant', parseCtaVariant(v))} disabled={isPending}>
             <SelectTrigger id="cta-variant"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="default">デフォルト</SelectItem>
-              <SelectItem value="centered">中央揃え</SelectItem>
-              <SelectItem value="split">分割</SelectItem>
+              {keysOf(ctaVariantLabels).map((key) => (
+                <SelectItem key={key} value={key}>{ctaVariantLabels[key]}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="cta-bg-color">背景色（任意）</Label>
+          <Input id="cta-bg-color" {...register('backgroundColor')} placeholder="例: #f5f5f5" disabled={isPending} />
         </div>
 
         <div className="space-y-2">

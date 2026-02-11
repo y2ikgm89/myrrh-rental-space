@@ -17,6 +17,8 @@ import { SplitText } from '@/public/components/animations/SplitText'
 import { SectionLabel } from '@/public/components/ui/SectionLabel'
 import { SectionWrapper, getTitleClasses, getTitleStyle, getTextStyle } from '@/public/components/sections/SectionWrapper'
 import { DURATION, EASE, STAGGER } from '@/public/lib/animations'
+import { CARD_STYLE_MAP, IMAGE_ASPECT_MAP, getCardGridColsClass } from '@/public/lib/section-style-maps'
+import { parseCardStyle, parseSpaceImageAspect } from '@/shared/lib/validations/section'
 import type { SpaceListConfig } from '@/shared/lib/validations/section'
 import type { SectionDesign } from '@/shared/lib/validations/section-design'
 
@@ -36,13 +38,6 @@ interface SpaceListSectionProps {
   readonly spaces: readonly SpaceListData[]
   readonly design: SectionDesign
 }
-
-const COLUMNS_MAP = {
-  1: 'grid-cols-1',
-  2: 'grid-cols-1 sm:grid-cols-2',
-  3: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
-  4: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
-} as const
 
 export function SpaceListSection({ config, spaces, design }: SpaceListSectionProps): ReactElement {
   const gridRef = useRef<HTMLDivElement>(null)
@@ -86,7 +81,7 @@ export function SpaceListSection({ config, spaces, design }: SpaceListSectionPro
     ? 'flex gap-6 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4 -mx-5 px-5 md:-mx-8 md:px-8'
     : isList
       ? 'flex flex-col gap-4'
-      : `grid gap-6 ${COLUMNS_MAP[colKey as keyof typeof COLUMNS_MAP]}`
+      : `grid gap-6 ${getCardGridColsClass(colKey)}`
 
   return (
     <SectionWrapper design={design}>
@@ -107,11 +102,11 @@ export function SpaceListSection({ config, spaces, design }: SpaceListSectionPro
               key={space.id}
               href={`/spaces/${space.slug}`}
               data-space-list-card=""
-              className={`group overflow-hidden rounded-lg border border-border bg-card transition-shadow duration-300 hover:shadow-lg ${
+              className={`group overflow-hidden ${CARD_STYLE_MAP[parseCardStyle(config.cardStyle)]} transition-shadow duration-300 hover:shadow-lg ${
                 isCarousel ? 'min-w-[280px] snap-center md:min-w-[320px]' : ''
               } ${isList ? 'flex' : ''}`}
             >
-              <div className={`overflow-hidden ${isList ? 'w-1/3 min-w-[120px]' : 'aspect-[4/3]'}`}>
+              <div className={`overflow-hidden ${isList ? 'w-1/3 min-w-[120px]' : IMAGE_ASPECT_MAP[parseSpaceImageAspect(config.imageAspect)]}`}>
                 <Image
                   src={space.mainImageUrl}
                   alt={space.name}

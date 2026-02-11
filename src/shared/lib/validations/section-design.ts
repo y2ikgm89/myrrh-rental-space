@@ -6,6 +6,7 @@
  */
 
 import { z } from 'zod'
+import { textAlignValues } from './section-options'
 
 // =============================================================================
 // URL / CTAボタン共通スキーマ
@@ -213,9 +214,8 @@ export function isTitleSize(value: string): value is TitleSize {
   return titleSizeSet.has(value)
 }
 
-/** テキスト揃え */
-const textAlignValues = ['left', 'center', 'right'] as const
-export type TextAlign = (typeof textAlignValues)[number]
+/** テキスト揃え（section-options.ts から import） */
+export type { TextAlign } from './section-options'
 
 /**
  * セクション共通デザインスキーマ

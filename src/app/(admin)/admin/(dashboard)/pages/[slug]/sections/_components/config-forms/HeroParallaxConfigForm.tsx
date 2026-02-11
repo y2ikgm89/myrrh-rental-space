@@ -14,26 +14,30 @@ import {
   SelectTrigger,
   SelectValue,
   Switch,
-  Textarea,
 } from '@/admin/components/ui'
 import { ImagePlus } from 'lucide-react'
 import { useSingleMediaPicker } from '@/admin/hooks/use-media-picker'
 import { CTAButtonEditor } from '@/shared/components/cta-button-editor'
 import {
-  heroConfigSchema,
-  getHeroConfig,
-  parseHeroHeight,
-  parseHeroVariant,
-  type HeroConfig,
-  type HeroConfigInput,
+  heroParallaxConfigSchema,
+  getHeroParallaxConfig,
+  parseContentPosition,
+  parseOverlayStyle,
+  parseHeroParallaxHeight,
+  type HeroParallaxConfig,
+  type HeroParallaxConfigInput,
   type CTAButtonItem,
 } from '@/shared/lib/validations/section'
-import { heroVariantLabels, heroHeightLabels } from '@/shared/lib/validations/section-options'
+import {
+  contentPositionLabels,
+  overlayStyleLabels,
+  heroParallaxHeightLabels,
+} from '@/shared/lib/validations/section-options'
 import { keysOf } from '@/shared/lib/serialize'
 import { FormActions, type ConfigFormProps } from './shared'
 
-export default function HeroConfigForm({ section, onSave, isPending, onDirtyChange }: ConfigFormProps) {
-  const config = getHeroConfig(section.config)
+export default function HeroParallaxConfigForm({ section, onSave, isPending, onDirtyChange }: ConfigFormProps) {
+  const config = getHeroParallaxConfig(section.config)
 
   const {
     register,
@@ -41,13 +45,12 @@ export default function HeroConfigForm({ section, onSave, isPending, onDirtyChan
     setValue,
     control,
     formState: { errors, isDirty },
-  } = useForm<HeroConfigInput, unknown, HeroConfig>({
-    resolver: zodResolver(heroConfigSchema),
+  } = useForm<HeroParallaxConfigInput, unknown, HeroParallaxConfig>({
+    resolver: zodResolver(heroParallaxConfigSchema),
     defaultValues: config,
   })
 
   const backgroundImageUrl = useWatch({ control, name: 'backgroundImageUrl' })
-  const variant = useWatch({ control, name: 'variant' })
 
   const [buttons, setButtons] = useState<CTAButtonItem[]>(config.buttons)
   const handleButtonsChange = (newButtons: CTAButtonItem[]) => {
@@ -69,11 +72,24 @@ export default function HeroConfigForm({ section, onSave, isPending, onDirtyChan
     <form onSubmit={handleSubmit((data) => onSave({ config: data }))} className="space-y-6">
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="hero-title">タイトル（任意）</Label>
+          <Label htmlFor="hero-parallax-tagline">タグライン</Label>
           <Input
-            id="hero-title"
+            id="hero-parallax-tagline"
+            {...register('tagline')}
+            placeholder="Luxury Rental Space"
+            disabled={isPending}
+          />
+          {errors.tagline && (
+            <p className="text-sm text-destructive">{errors.tagline.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="hero-parallax-title">タイトル</Label>
+          <Input
+            id="hero-parallax-title"
             {...register('title')}
-            placeholder="ページのメインタイトル"
+            placeholder="洗練された空間で 特別なひとときを"
             disabled={isPending}
           />
           {errors.title && (
@@ -82,14 +98,16 @@ export default function HeroConfigForm({ section, onSave, isPending, onDirtyChan
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="hero-subtitle">サブタイトル（任意）</Label>
-          <Textarea
-            id="hero-subtitle"
+          <Label htmlFor="hero-parallax-subtitle">サブタイトル</Label>
+          <Input
+            id="hero-parallax-subtitle"
             {...register('subtitle')}
-            placeholder="サブタイトルを入力"
-            rows={2}
+            placeholder="厳選されたレンタルスペースが、あなたの大切な瞬間を彩ります。"
             disabled={isPending}
           />
+          {errors.subtitle && (
+            <p className="text-sm text-destructive">{errors.subtitle.message}</p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -137,76 +155,99 @@ export default function HeroConfigForm({ section, onSave, isPending, onDirtyChan
 
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="space-y-2">
-            <Label htmlFor="hero-variant">バリエーション</Label>
+            <Label htmlFor="hero-parallax-content-position">コンテンツ配置</Label>
             <Select
-              defaultValue={config.variant}
-              onValueChange={(v) => setValue('variant', parseHeroVariant(v))}
+              defaultValue={config.contentPosition}
+              onValueChange={(v) => setValue('contentPosition', parseContentPosition(v))}
               disabled={isPending}
             >
-              <SelectTrigger id="hero-variant">
+              <SelectTrigger id="hero-parallax-content-position">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {keysOf(heroVariantLabels).map((key) => (
-                  <SelectItem key={key} value={key}>{heroVariantLabels[key]}</SelectItem>
+                {keysOf(contentPositionLabels).map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {contentPositionLabels[key]}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="hero-height">高さ</Label>
+            <Label htmlFor="hero-parallax-height">高さ</Label>
             <Select
               defaultValue={config.height}
-              onValueChange={(v) => setValue('height', parseHeroHeight(v))}
+              onValueChange={(v) => setValue('height', parseHeroParallaxHeight(v))}
               disabled={isPending}
             >
-              <SelectTrigger id="hero-height">
+              <SelectTrigger id="hero-parallax-height">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {keysOf(heroHeightLabels).map((key) => (
-                  <SelectItem key={key} value={key}>{heroHeightLabels[key]}</SelectItem>
+                {keysOf(heroParallaxHeightLabels).map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {heroParallaxHeightLabels[key]}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="hero-overlay-opacity">オーバーレイ透過度</Label>
-            <Input
-              id="hero-overlay-opacity"
-              type="number"
-              min={0}
-              max={100}
-              {...register('overlayOpacity', { valueAsNumber: true })}
+            <Label htmlFor="hero-parallax-overlay-style">オーバーレイ</Label>
+            <Select
+              defaultValue={config.overlayStyle}
+              onValueChange={(v) => setValue('overlayStyle', parseOverlayStyle(v))}
               disabled={isPending}
-            />
+            >
+              <SelectTrigger id="hero-parallax-overlay-style">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {keysOf(overlayStyleLabels).map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {overlayStyleLabels[key]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Switch
-            id="hero-overlay"
-            checked={config.overlay}
-            onCheckedChange={(checked) => setValue('overlay', checked)}
+        <div className="space-y-2">
+          <Label htmlFor="hero-parallax-speed">パララックス速度（0〜1）</Label>
+          <Input
+            id="hero-parallax-speed"
+            type="number"
+            min={0}
+            max={1}
+            step={0.1}
+            {...register('parallaxSpeed', { valueAsNumber: true })}
             disabled={isPending}
           />
-          <Label htmlFor="hero-overlay">オーバーレイを表示</Label>
         </div>
 
-        {variant === 'video' && (
-          <div className="space-y-2">
-            <Label htmlFor="hero-video-url">動画URL</Label>
-            <Input id="hero-video-url" {...register('videoUrl')} placeholder="https://..." disabled={isPending} />
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="hero-parallax-overlay-gradient"
+              checked={config.overlayGradient}
+              onCheckedChange={(checked) => setValue('overlayGradient', checked)}
+              disabled={isPending}
+            />
+            <Label htmlFor="hero-parallax-overlay-gradient">オーバーレイグラデーション</Label>
           </div>
-        )}
-        {variant === 'parallax' && (
-          <div className="space-y-2">
-            <Label htmlFor="hero-parallax-speed">パララックス速度</Label>
-            <Input id="hero-parallax-speed" type="number" min={0} max={1} step={0.1} {...register('parallaxSpeed', { valueAsNumber: true })} disabled={isPending} />
+          <div className="flex items-center gap-2">
+            <Switch
+              id="hero-parallax-scroll-indicator"
+              checked={config.scrollIndicator}
+              onCheckedChange={(checked) => setValue('scrollIndicator', checked)}
+              disabled={isPending}
+            />
+            <Label htmlFor="hero-parallax-scroll-indicator">スクロールインジケーター</Label>
           </div>
-        )}
+        </div>
 
         <div className="space-y-2">
           <Label>ボタン</Label>

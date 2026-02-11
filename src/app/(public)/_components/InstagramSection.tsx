@@ -15,7 +15,9 @@ import { SplitText } from '@/public/components/animations/SplitText'
 import { SectionWrapper, getTitleClasses, getTitleStyle, getTextStyle } from '@/public/components/sections/SectionWrapper'
 import { SectionLabel } from '@/public/components/ui/SectionLabel'
 import { DURATION, EASE, STAGGER } from '@/public/lib/animations'
+import { getGridColsClass, GAP_MAP } from '@/public/lib/section-style-maps'
 import type { InstagramConfig } from '@/shared/lib/validations/section'
+import { parseGapSize } from '@/shared/lib/validations/section'
 import type { SectionDesign } from '@/shared/lib/validations/section-design'
 
 interface InstagramSectionProps {
@@ -70,8 +72,8 @@ export function InstagramSection({ config, design }: InstagramSectionProps): Rea
         </h2>
       </div>
 
-      <div ref={gridRef} className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6 md:gap-4">
-        {Array.from({ length: 6 }, (_, i) => (
+      <div ref={gridRef} className={`grid grid-cols-2 ${getGridColsClass(config.columns)} ${GAP_MAP[parseGapSize(config.gap)]}`}>
+        {Array.from({ length: config.count }, (_, i) => (
           <div
             key={i}
             data-ig-placeholder=""

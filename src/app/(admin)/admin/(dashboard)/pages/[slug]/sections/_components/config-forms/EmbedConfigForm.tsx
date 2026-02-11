@@ -17,9 +17,12 @@ import {
   getEmbedConfig,
   parseEmbedAspectRatio,
   parseMaxWidth,
+  parseBorderRadius,
   type EmbedConfig,
   type EmbedConfigInput,
 } from '@/shared/lib/validations/section'
+import { borderRadiusLabels, embedAspectRatioLabels, maxWidthLabels } from '@/shared/lib/validations/section-options'
+import { keysOf } from '@/shared/lib/serialize'
 import { FormActions, type ConfigFormProps } from './shared'
 
 export default function EmbedConfigForm({ section, onSave, isPending, onDirtyChange }: ConfigFormProps) {
@@ -100,10 +103,9 @@ export default function EmbedConfigForm({ section, onSave, isPending, onDirtyCha
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="16:9">16:9（ワイド）</SelectItem>
-                <SelectItem value="4:3">4:3（スタンダード）</SelectItem>
-                <SelectItem value="1:1">1:1（正方形）</SelectItem>
-                <SelectItem value="auto">自動</SelectItem>
+                {keysOf(embedAspectRatioLabels).map((key) => (
+                  <SelectItem key={key} value={key}>{embedAspectRatioLabels[key]}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -119,14 +121,30 @@ export default function EmbedConfigForm({ section, onSave, isPending, onDirtyCha
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="sm">小 (640px)</SelectItem>
-                <SelectItem value="md">中 (768px)</SelectItem>
-                <SelectItem value="lg">大 (1024px)</SelectItem>
-                <SelectItem value="xl">特大 (1280px)</SelectItem>
-                <SelectItem value="full">全幅</SelectItem>
+                {keysOf(maxWidthLabels).map((key) => (
+                  <SelectItem key={key} value={key}>{maxWidthLabels[key]}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="embed-border-radius">角丸</Label>
+          <Select
+            defaultValue={config.borderRadius}
+            onValueChange={(v) => setValue('borderRadius', parseBorderRadius(v))}
+            disabled={isPending}
+          >
+            <SelectTrigger id="embed-border-radius">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {keysOf(borderRadiusLabels).map((key) => (
+                <SelectItem key={key} value={key}>{borderRadiusLabels[key]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

@@ -16,6 +16,7 @@ import { SplitText } from '@/public/components/animations/SplitText'
 import { SectionLabel } from '@/public/components/ui/SectionLabel'
 import { SectionWrapper, getTitleClasses, getTitleStyle, getTextStyle } from '@/public/components/sections/SectionWrapper'
 import { DURATION, EASE, STAGGER } from '@/public/lib/animations'
+import { getGridColsClass } from '@/public/lib/section-style-maps'
 import type { NewsListConfig } from '@/shared/lib/validations/section'
 import type { SectionDesign } from '@/shared/lib/validations/section-design'
 
@@ -96,7 +97,7 @@ export function NewsListSection({ config, news, design }: NewsListSectionProps):
 
         <div
           ref={listRef}
-          className={isCard ? 'grid gap-6 md:grid-cols-2' : 'divide-y divide-border'}
+          className={isCard ? `grid gap-6 ${getGridColsClass(config.columns)}` : 'divide-y divide-border'}
         >
           {news.map((item) =>
             isCard ? (

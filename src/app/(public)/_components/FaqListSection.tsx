@@ -17,6 +17,8 @@ import { SplitText } from '@/public/components/animations/SplitText'
 import { SectionLabel } from '@/public/components/ui/SectionLabel'
 import { SectionWrapper, getTitleClasses, getTitleStyle } from '@/public/components/sections/SectionWrapper'
 import { DURATION, EASE, STAGGER } from '@/public/lib/animations'
+import { CONTAINER_WIDTH_MAP } from '@/public/lib/section-style-maps'
+import { parseContainerWidth, parseFaqInitialOpen } from '@/shared/lib/validations/section'
 import type { FaqListConfig } from '@/shared/lib/validations/section'
 import type { SectionDesign } from '@/shared/lib/validations/section-design'
 
@@ -41,7 +43,7 @@ const VARIANT_STYLES = {
   },
   bordered: {
     container: 'space-y-3',
-    item: 'rounded-lg border border-border bg-card p-4 shadow-sm',
+    item: 'rounded-lg border border-border bg-card p-4 hover:shadow-md transition-shadow',
     summary: 'flex w-full cursor-pointer items-center justify-between gap-4 text-left font-heading text-base font-medium md:text-lg [&::marker]:content-none [&::-webkit-details-marker]:hidden',
     marker: true,
   },
@@ -90,13 +92,14 @@ export function FaqListSection({ config, items, design }: FaqListSectionProps): 
   if (items.length === 0) return <></>
 
   const styles = VARIANT_STYLES[config.variant] ?? VARIANT_STYLES.default
+  const containerWidth = CONTAINER_WIDTH_MAP[parseContainerWidth(config.containerWidth)]
+  const initialOpen = parseFaqInitialOpen(config.initialOpen)
 
-  // NOTE: dangerouslySetInnerHTML usage below is pre-existing code for FAQ answers
-  // and FAQ JSON-LD schema, both sourced from admin-managed content.
+  // NOTE: pre-existing dangerouslySetInnerHTML for admin-managed FAQ content
   return (
     <>
       <SectionWrapper design={design}>
-        <div className="mx-auto max-w-3xl">
+        <div className={`mx-auto ${containerWidth}`}>
           <div className="mb-10 text-center md:mb-14">
             <ScrollReveal>
               {config.sectionLabel && <SectionLabel>{config.sectionLabel}</SectionLabel>}
@@ -109,8 +112,8 @@ export function FaqListSection({ config, items, design }: FaqListSectionProps): 
           </div>
 
           <div ref={listRef} className={styles.container}>
-            {items.map((item) => (
-              <details key={item.id} data-faq-item="" className={`group ${styles.item}`}>
+            {items.map((item, index) => (
+              <details key={item.id} data-faq-item="" className={`group ${styles.item}`} open={initialOpen === 'all' || (initialOpen === 'first' && index === 0)}>
                 <summary className={styles.summary}>
                   <span>{item.question}</span>
                   {styles.marker && (

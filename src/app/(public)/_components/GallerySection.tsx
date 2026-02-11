@@ -16,6 +16,14 @@ import { SplitText } from '@/public/components/animations/SplitText'
 import { SectionWrapper, getTitleClasses, getTitleStyle, getTextStyle } from '@/public/components/sections/SectionWrapper'
 import { SectionLabel } from '@/public/components/ui/SectionLabel'
 import { DURATION, EASE, STAGGER } from '@/public/lib/animations'
+import {
+  IMAGE_ASPECT_MAP,
+  GALLERY_GAP_MAP,
+  GALLERY_HOVER_EFFECT_MAP,
+  getGalleryGridColsClass,
+  getMasonryColsClass,
+} from '@/public/lib/section-style-maps'
+import { parseGalleryImageAspect, parseGalleryHoverEffect } from '@/shared/lib/validations/section'
 import type { GalleryConfig } from '@/shared/lib/validations/section'
 import type { SectionDesign } from '@/shared/lib/validations/section-design'
 
@@ -23,31 +31,6 @@ interface GallerySectionProps {
   readonly config: GalleryConfig
   readonly design: SectionDesign
 }
-
-const COLUMNS_MAP = {
-  1: 'grid-cols-1',
-  2: 'grid-cols-1 sm:grid-cols-2',
-  3: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
-  4: 'grid-cols-2 lg:grid-cols-4',
-  5: 'grid-cols-2 md:grid-cols-3 lg:grid-cols-5',
-  6: 'grid-cols-2 md:grid-cols-3 lg:grid-cols-6',
-} as const
-
-const GAP_MAP = {
-  none: 'gap-0',
-  sm: 'gap-2',
-  md: 'gap-4',
-  lg: 'gap-6',
-} as const
-
-const MASONRY_COLUMNS_MAP = {
-  1: 'columns-1',
-  2: 'columns-1 sm:columns-2',
-  3: 'columns-1 sm:columns-2 lg:columns-3',
-  4: 'columns-2 lg:columns-4',
-  5: 'columns-2 md:columns-3 lg:columns-5',
-  6: 'columns-2 md:columns-3 lg:columns-6',
-} as const
 
 export function GallerySection({ config, design }: GallerySectionProps): ReactElement {
   const gridRef = useRef<HTMLDivElement>(null)
@@ -107,17 +90,22 @@ export function GallerySection({ config, design }: GallerySectionProps): ReactEl
 
   if (config.images.length === 0) return <></>
 
-  const gapClass = GAP_MAP[config.gap] ?? GAP_MAP.md
+  const gapClass = GALLERY_GAP_MAP[config.gap] ?? GALLERY_GAP_MAP.md
   const colKey = Math.min(Math.max(config.columns, 1), 6)
 
   const isMasonry = config.layout === 'masonry'
   const isCarousel = config.layout === 'carousel'
 
+  const imageAspect = parseGalleryImageAspect(config.imageAspect)
+  const aspectClass = IMAGE_ASPECT_MAP[imageAspect]
+  const hoverEffect = parseGalleryHoverEffect(config.hoverEffect)
+  const hoverClasses = GALLERY_HOVER_EFFECT_MAP[hoverEffect]
+
   const layoutClass = isCarousel
     ? `flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4 -mx-5 px-5 md:-mx-8 md:px-8`
     : isMasonry
-      ? `${MASONRY_COLUMNS_MAP[colKey as keyof typeof MASONRY_COLUMNS_MAP]} ${gapClass}`
-      : `grid ${COLUMNS_MAP[colKey as keyof typeof COLUMNS_MAP]} ${gapClass}`
+      ? `${getMasonryColsClass(colKey)} ${gapClass}`
+      : `grid ${getGalleryGridColsClass(colKey)} ${gapClass}`
 
   return (
     <SectionWrapper design={design}>
@@ -139,14 +127,14 @@ export function GallerySection({ config, design }: GallerySectionProps): ReactEl
           <div
             key={index}
             data-gallery-item=""
-            className={`group overflow-hidden rounded-lg ${
+            className={`rounded-lg ${hoverClasses.wrapper} ${
               isCarousel ? 'min-w-[280px] snap-center md:min-w-[320px]' : ''
             } ${isMasonry ? 'mb-4 break-inside-avoid' : ''}`}
           >
             <button
               type="button"
               onClick={() => openLightbox(index)}
-              className="block w-full overflow-hidden"
+              className={`relative block w-full overflow-hidden ${aspectClass}`}
               disabled={!config.enableLightbox}
               aria-label={image.alt ?? `ギャラリー画像 ${index + 1} を拡大表示`}
             >
@@ -155,9 +143,12 @@ export function GallerySection({ config, design }: GallerySectionProps): ReactEl
                 alt={image.alt ?? ''}
                 width={600}
                 height={400}
-                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                className={`h-full w-full object-cover transition-transform duration-500 ${hoverEffect === 'zoom' ? 'group-hover:scale-105' : ''}`}
                 sizes={`(max-width: 768px) 100vw, ${Math.round(100 / colKey)}vw`}
               />
+              {hoverClasses.overlay && (
+                <div className={`absolute inset-0 bg-foreground/20 ${hoverClasses.overlay}`} />
+              )}
             </button>
             {image.caption && (
               <p className="mt-2 text-xs text-muted-foreground" style={getTextStyle(design)}>{image.caption}</p>

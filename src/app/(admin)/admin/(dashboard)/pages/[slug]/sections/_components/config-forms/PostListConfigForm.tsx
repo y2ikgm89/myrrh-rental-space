@@ -16,9 +16,12 @@ import {
   postListConfigSchema,
   getPostListConfig,
   parsePostLayout,
+  parsePostImageAspect,
   type PostListConfig,
   type PostListConfigInput,
 } from '@/shared/lib/validations/section'
+import { postLayoutLabels, postImageAspectLabels } from '@/shared/lib/validations/section-options'
+import { keysOf } from '@/shared/lib/serialize'
 import { FormActions, type ConfigFormProps } from './shared'
 
 export default function PostListConfigForm({ section, onSave, isPending, onDirtyChange }: ConfigFormProps) {
@@ -67,8 +70,27 @@ export default function PostListConfigForm({ section, onSave, isPending, onDirty
           <Select defaultValue={config.layout} onValueChange={(v) => setValue('layout', parsePostLayout(v))} disabled={isPending}>
             <SelectTrigger id="post-layout"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="grid">グリッド</SelectItem>
-              <SelectItem value="list">リスト</SelectItem>
+              {keysOf(postLayoutLabels).map((key) => (
+                <SelectItem key={key} value={key}>{postLayoutLabels[key]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="post-image-aspect">画像比率</Label>
+          <Select
+            defaultValue={config.imageAspect}
+            onValueChange={(v) => setValue('imageAspect', parsePostImageAspect(v))}
+            disabled={isPending}
+          >
+            <SelectTrigger id="post-image-aspect">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {keysOf(postImageAspectLabels).map((key) => (
+                <SelectItem key={key} value={key}>{postImageAspectLabels[key]}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

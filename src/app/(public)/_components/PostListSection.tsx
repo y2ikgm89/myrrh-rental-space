@@ -17,6 +17,8 @@ import { SplitText } from '@/public/components/animations/SplitText'
 import { SectionLabel } from '@/public/components/ui/SectionLabel'
 import { SectionWrapper, getTitleClasses, getTitleStyle, getTextStyle } from '@/public/components/sections/SectionWrapper'
 import { DURATION, EASE, STAGGER } from '@/public/lib/animations'
+import { IMAGE_ASPECT_MAP, getCardGridColsClass } from '@/public/lib/section-style-maps'
+import { parsePostImageAspect } from '@/shared/lib/validations/section'
 import type { PostListConfig } from '@/shared/lib/validations/section'
 import type { SectionDesign } from '@/shared/lib/validations/section-design'
 
@@ -35,13 +37,6 @@ interface PostListSectionProps {
   readonly posts: readonly PostData[]
   readonly design: SectionDesign
 }
-
-const COLUMNS_MAP = {
-  1: 'grid-cols-1',
-  2: 'grid-cols-1 sm:grid-cols-2',
-  3: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
-  4: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
-} as const
 
 export function PostListSection({ config, posts, design }: PostListSectionProps): ReactElement {
   const gridRef = useRef<HTMLDivElement>(null)
@@ -97,7 +92,7 @@ export function PostListSection({ config, posts, design }: PostListSectionProps)
 
         <div
           ref={gridRef}
-          className={isList ? 'flex flex-col gap-4' : `grid gap-6 ${COLUMNS_MAP[colKey as keyof typeof COLUMNS_MAP]}`}
+          className={isList ? 'flex flex-col gap-4' : `grid gap-6 ${getCardGridColsClass(colKey)}`}
         >
           {posts.map((post) => (
             <Link
@@ -108,7 +103,7 @@ export function PostListSection({ config, posts, design }: PostListSectionProps)
                 isList ? 'flex' : ''
               }`}
             >
-              <div className={`overflow-hidden ${isList ? 'w-1/3 min-w-[120px]' : 'aspect-[16/9]'}`}>
+              <div className={`overflow-hidden ${isList ? 'w-1/3 min-w-[120px]' : IMAGE_ASPECT_MAP[parsePostImageAspect(config.imageAspect)]}`}>
                 <Image
                   src={post.thumbnailUrl}
                   alt={post.title}
