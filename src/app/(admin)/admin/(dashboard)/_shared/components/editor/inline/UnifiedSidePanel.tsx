@@ -22,6 +22,12 @@ import {
 import { SidePanelShell } from './SidePanelShell'
 import type { UnifiedSidePanelProps } from './content-types/types'
 
+type TabCount = 2 | 3 | 4 | 5
+const VALID_TAB_COUNTS = new Set<number>([2, 3, 4, 5])
+function isValidTabCount(n: number): n is TabCount {
+  return VALID_TAB_COUNTS.has(n)
+}
+
 const styles = tv({
   slots: {
     tabsList: 'grid w-full',
@@ -53,22 +59,18 @@ export function UnifiedSidePanel<T extends FieldValues>({
   disabled,
   extraProps = {},
 }: UnifiedSidePanelProps<T>) {
-  const tabCount = config.tabs.length as 2 | 3 | 4 | 5
+  const tabCount = isValidTabCount(config.tabs.length) ? config.tabs.length : undefined
   const classes = styles({ tabCount })
 
   // 最初のタブをデフォルト値として使用
   const defaultTab = config.tabs[0]?.id ?? 'basic'
 
-  // 新旧両方の設定形式に対応
-  const panelTitle = 'title' in config ? config.title : (config as { sidePanelTitle?: string }).sidePanelTitle ?? '設定'
-  const panelWidth = 'width' in config ? config.width : (config as { sidePanelWidth?: 'default' | 'narrow' }).sidePanelWidth ?? 'default'
-
   return (
     <SidePanelShell
       isOpen={isOpen}
       onClose={onClose}
-      title={panelTitle}
-      width={panelWidth}
+      title={config.title}
+      width={config.width}
     >
       <Tabs defaultValue={defaultTab} className="w-full">
         <TabsList className={classes.tabsList()}>

@@ -3,40 +3,41 @@
 /**
  * ページセクション Server Actions
  *
- * PageSectionモデルを使用したSlice-based CMS
+ * 統一 Section モデル（pageId 指定でページセクション判別）
  */
 
+import type { Prisma } from '@/shared/generated/prisma/client'
 import { prisma } from '@/shared/lib/prisma'
 import { updateTag } from 'next/cache'
-import { CACHE_TAGS } from '@/shared/lib/constants'
+import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
 import { createSuccess, createFailure } from '@/admin/types/server-actions'
 import { withPermission } from '@/admin/lib/server-action-helpers'
 import { getSession, getRoleFromSession } from '@/shared/lib/auth'
 import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'
 import { logPermissionDenied } from '@/admin/lib/audit'
 import {
-  PageSectionType,
-  createPageSectionSchema,
-  updatePageSectionSchema,
+  SectionType,
+  createSectionSchema,
+  updateSectionSchema,
   updateSectionOrderSchema,
   validateSectionConfig,
   defaultSectionConfigs,
-  type CreatePageSectionInput,
-  type UpdatePageSectionInput,
+  type CreateSectionInput,
+  type UpdateSectionInput,
   type UpdateSectionOrderInput,
-  type PageSectionConfig,
-} from '@/shared/lib/validations/page-section'
+  type SectionConfig,
+} from '@/shared/lib/validations/section'
 
 /**
- * PrismaのJson型をPageSectionConfigに変換（ランタイムバリデーション付き）
+ * PrismaのJson型をSectionConfigに変換（ランタイムバリデーション付き）
  */
-function parseSectionConfig(type: PageSectionType, config: unknown): PageSectionConfig {
+function parseSectionConfig(type: SectionType, config: unknown): SectionConfig {
   const result = validateSectionConfig(type, config)
   if (result.success) {
-    return result.data as PageSectionConfig
+    // Safe widening: validated individual config type → SectionConfig union
+    return result.data as SectionConfig
   }
-  // バリデーション失敗時はデフォルト設定にフォールバック
-  return defaultSectionConfigs[type] as PageSectionConfig
+  return defaultSectionConfigs[type]
 }
 
 // =============================================================================
@@ -46,9 +47,10 @@ function parseSectionConfig(type: PageSectionType, config: unknown): PageSection
 export type PageSectionData = {
   id: string
   pageId: string
-  type: PageSectionType
+  type: SectionType
   title: string | null
-  config: PageSectionConfig
+  config: SectionConfig
+  design: unknown
   content: string | null
   order: number
   isActive: boolean
@@ -60,6 +62,24 @@ export type PageWithSections = {
   id: string
   slug: string
   title: string
+  sections: PageSectionData[]
+}
+
+/**
+ * ページ編集画面用の統合型
+ * PageData + sections を1クエリで取得した結果
+ */
+export type PageForEdit = {
+  id: string
+  slug: string
+  title: string
+  isPublished: boolean
+  isSystem: boolean
+  metaDescription: string | null
+  metaKeywords: string | null
+  ogpTitle: string | null
+  ogpDescription: string | null
+  ogpImageUrl: string | null
   sections: PageSectionData[]
 }
 
@@ -81,9 +101,11 @@ async function checkReadPermission(): Promise<boolean> {
 }
 
 function revalidatePages(pageId?: string) {
+  updateTag(CACHE_TAGS.SECTIONS)
+  updateTag(CACHE_TAGS.PAGE_SECTIONS)
   updateTag(CACHE_TAGS.PAGES)
   if (pageId) {
-    updateTag(`page:${pageId}`)
+    updateTag(getCacheTag.pages.detail(pageId))
   }
 }
 
@@ -98,13 +120,14 @@ export async function getPageSections(pageId: string): Promise<PageSectionData[]
   const hasAccess = await checkReadPermission()
   if (!hasAccess) return null
 
-  const sections = await prisma.pageSection.findMany({
+  const sections = await prisma.section.findMany({
     where: { pageId },
     orderBy: { order: 'asc' },
   })
 
   return sections.map((section) => ({
     ...section,
+    pageId: section.pageId!,
     config: parseSectionConfig(section.type, section.config),
   }))
 }
@@ -133,6 +156,57 @@ export async function getPageWithSections(slug: string): Promise<PageWithSection
     title: page.title,
     sections: page.sections.map((section) => ({
       ...section,
+      pageId: section.pageId!,
+      config: parseSectionConfig(section.type, section.config),
+    })),
+  }
+}
+
+/**
+ * ページ編集画面用: ページ + セクションを1クエリで取得
+ *
+ * getPageWithSections + getPageBySlug の統合版。
+ * 編集画面で2回クエリを発行する冗長性を解消。
+ */
+export async function getPageForEdit(slug: string): Promise<PageForEdit | null> {
+  const hasAccess = await checkReadPermission()
+  if (!hasAccess) return null
+
+  const page = await prisma.page.findUnique({
+    where: { slug },
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      isPublished: true,
+      isSystemPage: true,
+      metaDescription: true,
+      metaKeywords: true,
+      ogpTitle: true,
+      ogpDescription: true,
+      ogpImageUrl: true,
+      sections: {
+        orderBy: { order: 'asc' },
+      },
+    },
+  })
+
+  if (!page) return null
+
+  return {
+    id: page.id,
+    slug: page.slug,
+    title: page.title,
+    isPublished: page.isPublished,
+    isSystem: page.isSystemPage,
+    metaDescription: page.metaDescription,
+    metaKeywords: page.metaKeywords,
+    ogpTitle: page.ogpTitle,
+    ogpDescription: page.ogpDescription,
+    ogpImageUrl: page.ogpImageUrl,
+    sections: page.sections.map((section) => ({
+      ...section,
+      pageId: section.pageId!,
       config: parseSectionConfig(section.type, section.config),
     })),
   }
@@ -142,7 +216,7 @@ export async function getPageWithSections(slug: string): Promise<PageWithSection
  * 公開用: ページのアクティブなセクションを取得
  */
 export async function getPublicPageSections(pageId: string): Promise<PageSectionData[]> {
-  const sections = await prisma.pageSection.findMany({
+  const sections = await prisma.section.findMany({
     where: {
       pageId,
       isActive: true,
@@ -152,6 +226,7 @@ export async function getPublicPageSections(pageId: string): Promise<PageSection
 
   return sections.map((section) => ({
     ...section,
+    pageId: section.pageId!,
     config: parseSectionConfig(section.type, section.config),
   }))
 }
@@ -163,14 +238,15 @@ export async function getPageSection(id: string): Promise<PageSectionData | null
   const hasAccess = await checkReadPermission()
   if (!hasAccess) return null
 
-  const section = await prisma.pageSection.findUnique({
+  const section = await prisma.section.findUnique({
     where: { id },
   })
 
-  if (!section) return null
+  if (!section || !section.pageId) return null
 
   return {
     ...section,
+    pageId: section.pageId,
     config: parseSectionConfig(section.type, section.config),
   }
 }
@@ -182,16 +258,20 @@ export async function getPageSection(id: string): Promise<PageSectionData | null
 /**
  * セクションを作成
  */
-export const createPageSection = withPermission<[CreatePageSectionInput], { id: string }>(
+export const createPageSection = withPermission<[CreateSectionInput], { id: string }>(
   'page',
   'update'
 )(async (_user, input) => {
-  const parsed = createPageSectionSchema.safeParse(input)
+  const parsed = createSectionSchema.safeParse(input)
   if (!parsed.success) {
     return createFailure(parsed.error.issues[0].message)
   }
 
-  const { pageId, type, title, config, content, order, isActive } = parsed.data
+  const { pageId, type, title, config, design, content, order, isActive } = parsed.data
+
+  if (!pageId) {
+    return createFailure('ページIDは必須です')
+  }
 
   // ページ存在確認
   const page = await prisma.page.findUnique({
@@ -210,18 +290,19 @@ export const createPageSection = withPermission<[CreatePageSectionInput], { id: 
   }
 
   // 次のorder値を取得
-  const maxOrder = await prisma.pageSection.aggregate({
+  const maxOrder = await prisma.section.aggregate({
     where: { pageId },
     _max: { order: true },
   })
   const nextOrder = order ?? (maxOrder._max.order ?? -1) + 1
 
-  const section = await prisma.pageSection.create({
+  const section = await prisma.section.create({
     data: {
       pageId,
       type,
       title,
       config: configValidation.data,
+      design: (design ?? {}) as Prisma.InputJsonObject,
       content,
       order: nextOrder,
       isActive,
@@ -239,38 +320,38 @@ export const createPageSection = withPermission<[CreatePageSectionInput], { id: 
 /**
  * セクションを更新
  */
-export const updatePageSection = withPermission<[string, UpdatePageSectionInput], void>(
+export const updatePageSection = withPermission<[string, UpdateSectionInput], void>(
   'page',
   'update'
 )(async (_user, id, input) => {
-  const parsed = updatePageSectionSchema.safeParse(input)
+  const parsed = updateSectionSchema.safeParse(input)
   if (!parsed.success) {
     return createFailure(parsed.error.issues[0].message)
   }
 
-  const existing = await prisma.pageSection.findUnique({
+  const existing = await prisma.section.findUnique({
     where: { id },
   })
 
-  if (!existing) {
+  if (!existing || !existing.pageId) {
     return createFailure('セクションが見つかりません')
   }
 
   // 設定を検証（configが更新される場合）
-  let validatedConfig: object | undefined
   if (parsed.data.config) {
     const configValidation = validateSectionConfig(existing.type, parsed.data.config)
     if (!configValidation.success) {
       return createFailure(`設定エラー: ${configValidation.error.issues[0].message}`)
     }
-    validatedConfig = configValidation.data
+    parsed.data.config = configValidation.data
   }
 
-  await prisma.pageSection.update({
+  await prisma.section.update({
     where: { id },
     data: {
       title: parsed.data.title,
-      config: validatedConfig,
+      config: parsed.data.config as object | undefined,
+      design: parsed.data.design as object | undefined,
       content: parsed.data.content,
       isActive: parsed.data.isActive,
     },
@@ -287,15 +368,15 @@ export const togglePageSection = withPermission<[string, boolean], void>(
   'page',
   'update'
 )(async (_user, id, isActive) => {
-  const existing = await prisma.pageSection.findUnique({
+  const existing = await prisma.section.findUnique({
     where: { id },
   })
 
-  if (!existing) {
+  if (!existing || !existing.pageId) {
     return createFailure('セクションが見つかりません')
   }
 
-  await prisma.pageSection.update({
+  await prisma.section.update({
     where: { id },
     data: { isActive },
   })
@@ -328,7 +409,7 @@ export const updatePageSectionOrder = withPermission<[string, UpdateSectionOrder
 
   await prisma.$transaction(
     parsed.data.sections.map((item) =>
-      prisma.pageSection.update({
+      prisma.section.update({
         where: { id: item.id },
         data: { order: item.order },
       })
@@ -350,15 +431,15 @@ export const deletePageSection = withPermission<[string], void>(
   'page',
   'update'
 )(async (_user, id) => {
-  const existing = await prisma.pageSection.findUnique({
+  const existing = await prisma.section.findUnique({
     where: { id },
   })
 
-  if (!existing) {
+  if (!existing || !existing.pageId) {
     return createFailure('セクションが見つかりません')
   }
 
-  await prisma.pageSection.delete({
+  await prisma.section.delete({
     where: { id },
   })
 
@@ -366,3 +447,60 @@ export const deletePageSection = withPermission<[string], void>(
   return createSuccess('セクションを削除しました')
 })
 
+// =============================================================================
+// Duplicate Actions
+// =============================================================================
+
+/**
+ * セクションを複製
+ */
+export const duplicatePageSection = withPermission<[string], PageSectionData>(
+  'page',
+  'update'
+)(async (_user, id) => {
+  const existing = await prisma.section.findUnique({
+    where: { id },
+  })
+
+  if (!existing || !existing.pageId) {
+    return createFailure('セクションが見つかりません')
+  }
+
+  // 末尾の order を取得
+  const maxOrderSection = await prisma.section.findFirst({
+    where: { pageId: existing.pageId },
+    orderBy: { order: 'desc' },
+    select: { order: true },
+  })
+
+  const newOrder = (maxOrderSection?.order ?? 0) + 1
+
+  const duplicated = await prisma.section.create({
+    data: {
+      pageId: existing.pageId,
+      type: existing.type,
+      title: existing.title ? `コピー - ${existing.title}` : null,
+      config: existing.config ?? undefined,
+      design: existing.design ?? undefined,
+      content: existing.content,
+      order: newOrder,
+      isActive: existing.isActive,
+    },
+  })
+
+  revalidatePages(existing.pageId)
+
+  return createSuccess<PageSectionData>('セクションを複製しました', {
+    id: duplicated.id,
+    pageId: duplicated.pageId ?? '',
+    type: existing.type,
+    title: duplicated.title,
+    config: parseSectionConfig(existing.type, duplicated.config),
+    design: duplicated.design,
+    content: duplicated.content,
+    order: duplicated.order,
+    isActive: duplicated.isActive,
+    createdAt: duplicated.createdAt,
+    updatedAt: duplicated.updatedAt,
+  })
+})
