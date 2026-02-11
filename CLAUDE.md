@@ -108,6 +108,10 @@
 | Zod | 4.3.6 | `{ error: }` パラメータ, z.fromJSONSchema() |
 | nuqs | 2.8.8 | createSearchParamsCache, Zod 4統合 |
 | Lexical | 0.40.0 | React 19対応, Node transforms, mergeRegister本体移動 |
+| GSAP | 3.14.2 | ScrollTrigger, @gsap/react 2.1 |
+| Three.js | 0.182.0 | @react-three/fiber 9.5, @react-three/drei 10.7 |
+| PixiJS | 8.16.0 | 2D WebGLレンダラー |
+| Lenis | 1.3.17 | スムーススクロール |
 
 ### 構造
 

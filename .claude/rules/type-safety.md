@@ -1,11 +1,58 @@
 # 型安全ルール
 
+## noUncheckedIndexedAccess（有効）
+
+`tsconfig.json` で `noUncheckedIndexedAccess: true` を有効化済み。
+配列・オブジェクトのインデックスアクセスは `T | undefined` を返す。
+
+### 修正パターン
+
+```typescript
+// NG: そのままアクセス（コンパイルエラー）
+const first = items[0]       // T | undefined
+first.name                   // Error: possibly undefined
+
+// OK: ガード句
+const first = items[0]
+if (!first) return           // or continue, throw
+first.name                   // T（narrowed）
+
+// OK: nullish coalescing
+const name = items[0]?.name ?? 'default'
+
+// OK: 分割代入デフォルト値
+const [localPart = '', domain = ''] = email.split('@')
+
+// OK: ループ内ガード
+for (let i = 0; i < arr.length; i++) {
+  const item = arr[i]
+  if (!item) continue
+  // item は T 型
+}
+```
+
+### Record 型のアクセス
+
+`Record<string, V>` のプロパティアクセスも `V | undefined` を返す。
+定数オブジェクトからデフォルト値を取得する場合はエクスポートされた定数を使用:
+
+```typescript
+// NG: Record アクセス（undefined の可能性）
+const style = TYPE_STYLES[type]  // V | undefined
+
+// OK: デフォルト定数をエクスポートして使用
+export const DEFAULT_TYPE_STYLE = { bg: '...', text: '...' }
+const style = TYPE_STYLES[type] ?? DEFAULT_TYPE_STYLE
+```
+
 ## 型アサーション（`as`）禁止
 
 以下の例外を除き、型アサーションを使用しない:
 
 - DOM要素のイベントターゲット（`event.target as HTMLElement`）
 - 外部ライブラリの型要件（Prisma生成コード等）
+- Prisma JSON型キャスト（`{} as Prisma.InputJsonObject` — Prisma APIの型制約）
+- SectionConfig union widening（`result.data as SectionConfig` — Zod safeParse結果の個別型→union型。コメントで意図明記必須）
 
 ## 代替手段
 

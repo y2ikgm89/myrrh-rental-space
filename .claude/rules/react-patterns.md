@@ -2,9 +2,12 @@
 
 > React 19.2 / React Compiler 1.0 対応
 
-## React 19.2 新機能
+## React 19.2 新機能（利用可能・未採用）
 
-### useEffectEvent（推奨）
+> 以下の機能は React 19.2 で利用可能だが、本コードベースでは未採用。
+> 新規実装で必要になった場合に採用を検討する。
+
+### useEffectEvent
 
 Effect内で最新のprops/stateにアクセスしつつ、依存配列に含めない場合に使用:
 
@@ -33,7 +36,7 @@ function ChatRoom({ roomId, theme }) {
 - Effect内でローカルに呼び出す（propsとして渡さない）
 - リンターエラー回避目的での乱用禁止
 
-### Activity コンポーネント
+### Activity コンポーネント（未採用）
 
 UIと内部状態の非表示/復元:
 

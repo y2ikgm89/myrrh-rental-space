@@ -44,6 +44,10 @@ Thumbs.db
 *.swp
 *.swo
 
+# Python
+__pycache__/
+*.pyc
+
 # Debug logs
 *.log
 npm-debug.log*

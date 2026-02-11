@@ -23,6 +23,9 @@
     "test:unit": "bun test __tests__/unit",
     "test:integration": "bun test __tests__/integration",
     "test:all": "bun run --parallel test:unit test:integration",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
+    "e2e:headless": "playwright test",
     "docs": "typedoc",
     "docs:watch": "typedoc --watch"
   },
