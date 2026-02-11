@@ -113,11 +113,11 @@ interface CreateUserOptions {
   password: string
   name: string
   role: Role
-  assignedPages?: string[]
+  pageIds?: string[]
 }
 
 async function createOrUpdateUserWithCredential(options: CreateUserOptions): Promise<boolean> {
-  const { email, password, name, role, assignedPages = [] } = options
+  const { email, password, name, role, pageIds = [] } = options
   const hashedPassword = await hashPassword(password)
 
   const existingUser = await prisma.user.findUnique({
@@ -129,7 +129,14 @@ async function createOrUpdateUserWithCredential(options: CreateUserOptions): Pro
     // ユーザー更新
     await prisma.user.update({
       where: { email },
-      data: { role, name, assignedPages },
+      data: {
+        role,
+        name,
+        pageAssignments: {
+          deleteMany: {},
+          create: pageIds.map((pageId) => ({ pageId })),
+        },
+      },
     })
 
     // credential account のパスワード更新 or 作成
@@ -164,7 +171,9 @@ async function createOrUpdateUserWithCredential(options: CreateUserOptions): Pro
       name,
       role,
       emailVerified: true,
-      assignedPages,
+      pageAssignments: {
+        create: pageIds.map((pageId) => ({ pageId })),
+      },
       accounts: {
         create: {
           accountId: userId,
@@ -1290,7 +1299,7 @@ async function seedBlog() {
     return
   }
 
-  const posts: Prisma.PostUncheckedCreateInput[] = [
+  const posts: (Prisma.PostUncheckedCreateInput & { tagNames: string[] })[] = [
     {
       title: 'レンタルスペースを活用したセミナー開催のコツ',
       slug: 'seminar-tips',
@@ -1310,7 +1319,7 @@ async function seedBlog() {
       thumbnailUrl: 'https://placehold.co/800x600/fef3c7/f59e0b?text=Blog+1',
       categoryId: tipsCategory.id,
       authorId: author.id,
-      tags: ['セミナー', '会場選び', 'ビジネス'],
+      tagNames: ['セミナー', '会場選び', 'ビジネス'],
       status: 'PUBLISHED',
       publishedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
     },
@@ -1330,7 +1339,7 @@ async function seedBlog() {
       thumbnailUrl: 'https://placehold.co/800x600/e2e8f0/64748b?text=Meeting+Room',
       categoryId: tipsCategory.id,
       authorId: author.id,
-      tags: ['会議', '生産性', 'ビジネス'],
+      tagNames: ['会議', '生産性', 'ビジネス'],
       status: 'PUBLISHED',
       publishedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
     },
@@ -1352,7 +1361,7 @@ async function seedBlog() {
       thumbnailUrl: 'https://placehold.co/800x600/fce7f3/ec4899?text=Blog+3',
       categoryId: caseStudyCategory.id,
       authorId: author.id,
-      tags: ['活用事例', '研修', 'IT企業'],
+      tagNames: ['活用事例', '研修', 'IT企業'],
       status: 'PUBLISHED',
       publishedAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000),
     },
@@ -1370,7 +1379,7 @@ async function seedBlog() {
       thumbnailUrl: 'https://placehold.co/800x600/dcfce7/22c55e?text=Coworking',
       categoryId: tipsCategory.id,
       authorId: author.id,
-      tags: ['リモートワーク', 'コワーキング', '働き方'],
+      tagNames: ['リモートワーク', 'コワーキング', '働き方'],
       status: 'PUBLISHED',
       publishedAt: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000),
     },
@@ -1386,19 +1395,37 @@ async function seedBlog() {
       thumbnailUrl: 'https://placehold.co/800x600/fef3c7/f59e0b?text=Trends',
       categoryId: tipsCategory.id,
       authorId: author.id,
-      tags: ['トレンド', 'オフィス', '働き方改革'],
+      tagNames: ['トレンド', 'オフィス', '働き方改革'],
       status: 'DRAFT',
       publishedAt: null,
     },
   ]
 
-  for (const post of posts) {
-    const existing = await prisma.post.findUnique({ where: { slug: post.slug } })
+  for (const { tagNames, ...postData } of posts) {
+    const existing = await prisma.post.findUnique({ where: { slug: postData.slug } })
     if (!existing) {
-      await prisma.post.create({ data: post })
-      console.log(`✅ Created blog post: ${post.title.slice(0, 30)}...`)
+      // タグを先にfindOrCreate
+      const tagIds = await Promise.all(
+        tagNames.map(async (name: string) => {
+          let tag = await prisma.postTag.findFirst({ where: { name } })
+          if (!tag) {
+            tag = await prisma.postTag.create({ data: { name, slug: name } })
+          }
+          return tag.id
+        })
+      )
+
+      await prisma.post.create({
+        data: {
+          ...postData,
+          postTags: {
+            create: tagIds.map((tagId) => ({ tagId })),
+          },
+        },
+      })
+      console.log(`✅ Created blog post: ${postData.title.slice(0, 30)}...`)
     } else {
-      console.log(`⏭️ Skipped existing blog post: ${post.title.slice(0, 30)}...`)
+      console.log(`⏭️ Skipped existing blog post: ${postData.title.slice(0, 30)}...`)
     }
   }
 }
@@ -1497,9 +1524,9 @@ async function seedNavigation() {
 
 async function seedAnnouncementBar() {
   const announcements = [
-    { message: '【お知らせ】年末年始の営業日程を掲載しました', type: 'info', linkUrl: '/news', linkText: '詳細を見る', priority: 0 },
-    { message: 'オープン記念！今月末まで全スペース20%OFF', type: 'promo', linkUrl: '/spaces', linkText: 'スペースを見る', priority: 1 },
-    { message: '1月15日（水）は設備点検のため休館いたします', type: 'warning', priority: 2, isActive: false },
+    { message: '【お知らせ】年末年始の営業日程を掲載しました', type: 'info' as const, linkUrl: '/news', linkText: '詳細を見る', priority: 0 },
+    { message: 'オープン記念！今月末まで全スペース20%OFF', type: 'promo' as const, linkUrl: '/spaces', linkText: 'スペースを見る', priority: 1 },
+    { message: '1月15日（水）は設備点検のため休館いたします', type: 'warning' as const, priority: 2, isActive: false },
   ]
 
   for (const announcement of announcements) {

@@ -73,30 +73,29 @@ enum LayoutWidth {
   CUSTOM
 }
 
-enum HomepageSectionType {
+enum SectionType {
+  // Hero variants
   HERO // ヒーローセクション
-  SPACE_LIST // スペース一覧
-  NEWS // お知らせ一覧
-  POST // 記事一覧
-  FAQ // FAQ
-  CTA // Call to Action
-  CUSTOM // カスタム（Lexicalフルコンテンツ）
-  INSTAGRAM // Instagramフィード
-}
-
-enum PageSectionType {
-  HERO // ヒーローセクション
+  HERO_PARALLAX // パララックスヒーロー（v3）
+  // Content
   CUSTOM // Lexicalリッチテキスト
-  CONTACT_FORM // お問い合わせフォーム
-  FAQ_LIST // FAQ一覧
+  CONCEPT // コンセプトセクション（v3）
+  // Lists
   SPACE_LIST // スペース一覧
+  SPACE_SHOWCASE // スペースショーケース（v3）
   NEWS_LIST // お知らせ一覧
   POST_LIST // 記事一覧
-  CTA // Call to Action
-  GALLERY // ギャラリー
+  FAQ_LIST // FAQ一覧
+  // Features
+  FEATURES // 特徴セクション（v3）
   TESTIMONIAL // 体験談・レビュー
+  GALLERY // ギャラリー
+  // Functional
+  CTA // Call to Action
+  CONTACT_FORM // お問い合わせフォーム
   MAP // 地図
   EMBED // 埋め込み（iframe）
+  INSTAGRAM // Instagramフィード
 }
 
 enum PostStatus {
@@ -104,13 +103,6 @@ enum PostStatus {
   PUBLISHED
   ARCHIVED
 }
-
-// NewsStatus enum は isPublished (Boolean) に置き換え - 削除予定
-// enum NewsStatus {
-//   DRAFT
-//   PUBLISHED
-//   ARCHIVED
-// }
 
 enum TermsType {
   TERMS_OF_USE // 利用規約
@@ -131,6 +123,98 @@ enum CouponType {
   FIXED_AMOUNT // 定額割引 (例: ¥1,000)
 }
 
+// --- 新規 Enum（String → Enum 変換） ---
+
+enum AnnouncementBarType {
+  info
+  warning
+  promo
+}
+
+enum DiscountType {
+  none
+  percentage
+  fixed
+}
+
+enum DurationDiscountOverride {
+  inherit
+  enabled
+  disabled
+}
+
+enum TaxRateType {
+  standard
+  reduced
+}
+
+// @map required: hyphens in DB values
+enum HeaderScrollBehavior {
+  auto_hide      @map("auto-hide")
+  always_visible @map("always-visible")
+  hide_on_scroll @map("hide-on-scroll")
+}
+
+enum HeaderBackgroundMode {
+  solid       @map("solid")
+  transparent @map("transparent")
+}
+
+enum TaxDisplayMode {
+  tax_excluded
+  tax_included
+  both
+}
+
+enum TaxInputMode {
+  tax_excluded
+  tax_included
+}
+
+enum CalendarSyncMethod {
+  polling
+  webhook
+  both
+}
+
+enum AnalyticsType {
+  ga4
+  gtm
+}
+
+enum DiscountCombinationMode {
+  best
+  both
+}
+
+// @map required: hyphens in DB values
+enum PostPermalinkStructure {
+  post_name     @map("post-name")
+  date_name     @map("date-name")
+  category_name @map("category-name")
+}
+
+enum AnnouncementBarAnimation {
+  fade
+  slideX
+  slideY
+}
+
+enum AnnouncementBarDesignStyle {
+  solid
+  gradient
+  outlined
+  glass
+  minimal
+  striped
+}
+
+enum InstagramFeedLayout {
+  grid
+  masonry
+  slider
+}
+
 // ==============================================
 // Better Auth Models
 // ==============================================
@@ -145,23 +229,48 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  // RBAC: EDITOR用の割り当てページID（JSON配列）
-  assignedPages Json @default("[]") // ["page-id-1", "page-id-2"]
-
   // Relations
   accounts        Account[]
   sessions        Session[]
   reservations    Reservation[]
-  posts       Post[]
+  posts           Post[]
   postComments    PostComment[]
   icalTokens      ICalToken[]
   auditLogs       AuditLog[]
   mediaFiles      Media[]
   termsAgreements TermsAgreement[]
 
+  // RBAC: EDITOR用の割り当てページ（中間テーブル）
+  pageAssignments UserPageAssignment[]
+
+  // FK: createdBy / resolvedBy / deletedBy リレーション
+  createdNewsVersions     NewsVersion[]          @relation("NewsVersionCreator")
+  createdPostVersions     PostVersion[]          @relation("PostVersionCreator")
+  createdCommentThreads   EditorCommentThread[]  @relation("CommentThreadCreator")
+  resolvedCommentThreads  EditorCommentThread[]  @relation("CommentThreadResolver")
+  createdEditorComments   EditorComment[]        @relation("EditorCommentCreator")
+  deletedEditorComments   EditorComment[]        @relation("EditorCommentDeleter")
+  deletedPostComments     PostComment[]          @relation("PostCommentDeleter")
+  createdTermsVersions    TermsVersion[]         @relation("TermsVersionCreator")
+  publishedTermsVersions  TermsVersion[]         @relation("TermsVersionPublisher")
+  createdStaffInvitations StaffInvitation[]      @relation("StaffInvitationCreator")
+  createdLoginTokens      LoginToken[]           @relation("LoginTokenCreator")
+
   // OR検索用インデックス
   @@index([name])
   @@map("user")
+}
+
+/// EDITOR用のページ割り当て（中間テーブル）
+model UserPageAssignment {
+  userId String
+  pageId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  page   Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@id([userId, pageId])
+  @@index([pageId])
+  @@map("user_page_assignments")
 }
 
 model Account {
@@ -216,12 +325,15 @@ model Verification {
 model LoginToken {
   id        String    @id @default(uuid())
   token     String    @unique
-  createdBy String
+  createdBy String? // 作成者ID（User.id）- ユーザー削除時にnull化
   usedAt    DateTime?
   expiresAt DateTime
   createdAt DateTime  @default(now())
 
-  @@index([token])
+  // Relations
+  creator User? @relation("LoginTokenCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+
+  // @unique が自動的にインデックスを作成するため @@index([token]) は不要
   @@index([expiresAt])
   @@index([usedAt])
   @@map("login_tokens")
@@ -236,9 +348,12 @@ model StaffInvitation {
   usedAt    DateTime? // 使用済み = パスワード設定完了
   expiresAt DateTime
   createdAt DateTime  @default(now())
-  createdBy String
+  createdBy String? // 作成者ID（User.id）- ユーザー削除時にnull化
 
-  @@index([token])
+  // Relations
+  creator User? @relation("StaffInvitationCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+
+  // @unique が自動的にインデックスを作成するため @@index([token]) は不要
   @@index([email])
   @@index([expiresAt])
   @@map("staff_invitations")
@@ -322,13 +437,13 @@ model Space {
   // 規約設定
   termsId String? // 任意の規約参照
 
-  // 割引設定
-  discountType             String   @default("none") // "none" | "percentage" | "fixed"
-  discountValue            Decimal? @db.Decimal(10, 2)
-  durationDiscountOverride String   @default("inherit") // "inherit" | "enabled" | "disabled"
+  // 割引設定（Enum化）
+  discountType             DiscountType             @default(none)
+  discountValue            Decimal?                 @db.Decimal(10, 2)
+  durationDiscountOverride DurationDiscountOverride  @default(inherit)
 
-  // 税率設定
-  taxRateType String @default("standard") // "standard" | "reduced"
+  // 税率設定（Enum化）
+  taxRateType TaxRateType @default(standard)
 
   // 場所・カテゴリー設定
   locationId String? // 場所（建物）参照
@@ -361,7 +476,6 @@ model Reservation {
   status        ReservationStatus @default(PENDING)
   totalPrice    Decimal?          @db.Decimal(10, 2)
   notes         String?           @db.Text
-  termsAgreedAt DateTime? // 規約同意日時（レガシー互換）
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
@@ -393,9 +507,11 @@ model Reservation {
 
   @@index([spaceId])
   @@index([customerId])
+  @@index([userId])
   @@index([startTime])
   @@index([endTime])
   @@index([status])
+  @@index([createdAt])
   @@index([spaceId, startTime, endTime])
   @@index([customerId, startTime])
   @@index([couponId])
@@ -470,7 +586,7 @@ model Coupon {
   // Relations
   reservations Reservation[]
 
-  @@index([code])
+  // @unique が自動的にインデックスを作成するため @@index([code]) は不要
   @@index([validFrom, validUntil])
   @@index([isActive])
   @@map("coupons")
@@ -486,6 +602,7 @@ model Inquiry {
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 
+  @@index([email])
   @@index([status])
   @@index([createdAt])
   @@map("inquiries")
@@ -518,6 +635,7 @@ model News {
   // OR検索用インデックス
   @@index([title])
   @@index([isPublished, publishedAt])
+  @@index([createdAt])
   @@map("news")
 }
 
@@ -528,10 +646,11 @@ model NewsVersion {
   version   Int // 自動インクリメント（News内でユニーク）
   content   String   @db.Text // HTMLスナップショット
   createdAt DateTime @default(now())
-  createdBy String? // 作成者ID（User.id）
+  createdBy String? // 作成者ID（User.id）- ユーザー削除時にnull化
 
   // Relations
-  news News @relation(fields: [newsId], references: [id], onDelete: Cascade)
+  news    News  @relation(fields: [newsId], references: [id], onDelete: Cascade)
+  creator User? @relation("NewsVersionCreator", fields: [createdBy], references: [id], onDelete: SetNull)
 
   @@unique([newsId, version])
   @@index([newsId, createdAt])
@@ -539,19 +658,19 @@ model NewsVersion {
 }
 
 model AnnouncementBar {
-  id        String    @id @default(uuid())
-  message   String    @db.VarChar(200)
-  type      String    @default("info") // info, warning, promo
+  id        String              @id @default(uuid())
+  message   String              @db.VarChar(200)
+  type      AnnouncementBarType @default(info)
   linkUrl   String?
   linkText  String?
   bgColor   String? // カスタム背景色 (hex)
   textColor String? // カスタム文字色 (hex)
-  isActive  Boolean   @default(true)
-  priority  Int       @default(0)
+  isActive  Boolean             @default(true)
+  priority  Int                 @default(0)
   startAt   DateTime?
   endAt     DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
 
   @@index([isActive, priority])
   @@index([startAt, endAt])
@@ -571,14 +690,13 @@ model Post {
   thumbnailUrl       String
   ogpImageUrl        String?
   categoryId         String
-  tags               Json        @default("[]")
   metaDescription    String?
   metaKeywords       String?
   ogpTitle           String?
   ogpDescription     String?
   publishedAt        DateTime?
   status             PostStatus  @default(DRAFT)
-  authorId           String
+  authorId           String? // ユーザー削除時にnull化
   viewCount          Int         @default(0)
   contentWidth       LayoutWidth?
   contentWidthCustom Int? // CUSTOMの場合の幅（px）
@@ -586,17 +704,31 @@ model Post {
   updatedAt          DateTime    @updatedAt
 
   // Relations
-  category PostCategory   @relation(fields: [categoryId], references: [id])
-  author   User           @relation(fields: [authorId], references: [id])
+  category PostCategory   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  author   User?          @relation(fields: [authorId], references: [id], onDelete: SetNull)
   comments PostComment[]
   versions PostVersion[]
+  postTags PostTagOnPost[]
 
   // OR検索用インデックス
   @@index([title])
+  @@index([authorId])
   @@index([status, publishedAt])
   @@index([categoryId, status, publishedAt])
   @@index([viewCount])
   @@map("posts")
+}
+
+/// Post ↔ PostTag 中間テーブル（JSON配列からの正規化）
+model PostTagOnPost {
+  postId String
+  tagId  String
+  post   Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag    PostTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+  @@index([tagId])
+  @@map("post_tag_on_posts")
 }
 
 /// Postのバージョン履歴
@@ -606,10 +738,11 @@ model PostVersion {
   version   Int // 自動インクリメント（Post内でユニーク）
   content   String   @db.Text // HTMLスナップショット
   createdAt DateTime @default(now())
-  createdBy String? // 作成者ID（User.id）
+  createdBy String? // 作成者ID（User.id）- ユーザー削除時にnull化
 
   // Relations
-  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post    Post  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  creator User? @relation("PostVersionCreator", fields: [createdBy], references: [id], onDelete: SetNull)
 
   @@unique([postId, version])
   @@index([postId, createdAt])
@@ -646,6 +779,9 @@ model PostTag {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  // Relations
+  posts PostTagOnPost[]
+
   @@map("post_tags")
 }
 
@@ -678,6 +814,7 @@ model PostComment {
   // Relations
   post          Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
   user          User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  deleter       User?        @relation("PostCommentDeleter", fields: [deletedBy], references: [id], onDelete: SetNull)
   parentComment PostComment? @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: Cascade)
   replies       PostComment[] @relation("CommentReplies")
 
@@ -718,32 +855,35 @@ model Page {
   updatedAt          DateTime     @updatedAt
 
   // Relations
-  sections PageSection[]
+  sections    Section[]
+  assignments UserPageAssignment[]
 
   @@index([isPublished, isActive])
   @@index([isSystemPage])
   @@map("pages")
 }
 
-/// ページセクション（Slice-based CMS）
-model PageSection {
-  id        String          @id @default(uuid())
-  pageId    String
-  type      PageSectionType
+/// 統一セクション（ホームページ + カスタムページ共通）
+/// pageId = null でホームページセクション判別
+model Section {
+  id        String      @id @default(uuid())
+  pageId    String? // null = ホームページ
+  type      SectionType
+  order     Int         @default(0) // 表示順序（DnDで変更可能）
+  isActive  Boolean     @default(true) // ON/OFF制御
   title     String? // セクション見出し（表示用）
-  config    Json            @default("{}") // タイプ別設定（JSON Schema で型安全）
-  content   String?         @db.Text // Lexical HTML（CUSTOM等で使用）
-  order     Int             @default(0) // 表示順序（DnDで変更可能）
-  isActive  Boolean         @default(true) // ON/OFF制御
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
+  content   String?     @db.Text // Lexical HTML（CUSTOM等で使用）
+  config    Json        @default("{}") // タイプ別設定（Zodで型安全）
+  design    Json        @default("{}") // ビジュアル設定（共通）
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
 
   // Relations
-  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  page Page? @relation(fields: [pageId], references: [id], onDelete: Cascade)
 
   @@index([pageId, order, isActive])
   @@index([type])
-  @@map("page_sections")
+  @@map("sections")
 }
 
 model NavigationItem {
@@ -763,6 +903,7 @@ model NavigationItem {
   children NavigationItem[] @relation("NavigationHierarchy")
 
   @@index([type, order])
+  @@index([parentId])
   @@map("navigation_items")
 }
 
@@ -828,6 +969,7 @@ model FaqItem {
   category FaqCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@index([categoryId, order])
+  @@index([categoryId, isPublished, order])
   @@index([isPublished])
   @@map("faq_items")
 }
@@ -882,8 +1024,14 @@ model Settings {
   specialHolidays Json? // 特別休業日（日付リスト）
   holidayNotice   String? @db.Text // 休業日のお知らせ
 
-  // Legacy field - keeping for backwards compatibility
-  defaultBusinessHours Json?
+  // MEO Settings (ローカル検索最適化)
+  latitude              Float?   // 緯度（例: 35.6812）
+  longitude             Float?   // 経度（例: 139.7671）
+  priceRange            String?  // 価格帯（例: "¥1,000〜¥5,000/時間"）
+  googleBusinessPlaceId String?  // Google Business Profile Place ID
+  googleReviewUrl       String?  // Google口コミ投稿URL
+  businessAttributes    Json?    // 施設属性 {"wifi": true, "parking": true, ...}
+  paymentAccepted       String?  // 決済方法（例: "現金, クレジットカード, 電子マネー"）
 
   // Email Settings
   senderEmail                       String?
@@ -901,10 +1049,12 @@ model Settings {
   defaultOgpDescription  String?
 
   // Layout Settings (レイアウト設定)
-  containerWidth       LayoutWidth?
-  containerWidthCustom Int? // CUSTOMの場合の幅（px）
-  contentWidth         LayoutWidth?
-  contentWidthCustom   Int? // CUSTOMの場合の幅（px）
+  containerWidth        LayoutWidth?
+  containerWidthCustom  Int? // CUSTOMの場合の幅（px）
+  contentWidth          LayoutWidth?
+  contentWidthCustom    Int? // CUSTOMの場合の幅（px）
+  headerScrollBehavior  HeaderScrollBehavior @default(always_visible)
+  headerBackgroundMode  HeaderBackgroundMode @default(solid)
 
   // Sidebar Settings (サイドバー設定)
   sidebarEnabled      Boolean @default(true) // サイドバー全体の有効/無効
@@ -913,11 +1063,11 @@ model Settings {
   sidebarPopularCount Int     @default(5) // 人気記事の表示件数
 
   // Permalink Settings (パーマリンク設定)
-  postPermalinkStructure String  @default("post-name") // post-name | date-name | category-name
-  postUrlPrefixEnabled   Boolean @default(true) // true: /posts/slug, false: /slug
+  postPermalinkStructure PostPermalinkStructure @default(post_name)
+  postUrlPrefixEnabled   Boolean                @default(true) // true: /posts/slug, false: /slug
 
-  // Analytics Settings
-  analyticsType         String? // "ga4" | "gtm" | null
+  // Analytics Settings（Enum化）
+  analyticsType         AnalyticsType? // ga4 | gtm | null
   googleAnalyticsId     String? // GA4 Measurement ID (G-XXXXXXXXXX)
   googleTagManagerId    String? // GTM Container ID (GTM-XXXXXXX)
   googleSearchConsoleId String? // GSC verification meta tag
@@ -933,19 +1083,19 @@ model Settings {
   sendReservationConfirmationEmail Boolean @default(true)
   sendAdminNotificationEmail       Boolean @default(true)
 
-  // Discount Settings (割引設定)
-  durationDiscountEnabled Boolean @default(false) // 長時間割引の有効/無効
-  durationDiscountRules   Json    @default("[]") // 割引ルール配列 [{ hours: 4, discountRate: 10 }, ...]
-  discountCombinationMode String  @default("best") // "best" = 最もお得な割引のみ, "both" = 両方適用
-  showOriginalPrice       Boolean @default(true) // 割引前価格の表示
-  discountWarningEnabled  Boolean @default(true) // 併用時の警告表示
+  // Discount Settings (割引設定) - Enum化
+  durationDiscountEnabled Boolean                @default(false)
+  durationDiscountRules   Json                   @default("[]")
+  discountCombinationMode DiscountCombinationMode @default(best)
+  showOriginalPrice       Boolean                @default(true)
+  discountWarningEnabled  Boolean                @default(true)
 
-  // Tax Settings (消費税設定)
-  taxStandardRate     Decimal @default(10) @db.Decimal(5, 2) // 標準税率（%）
-  taxReducedRate      Decimal @default(8) @db.Decimal(5, 2) // 軽減税率（%）
-  taxDisplayModeAdmin String  @default("both") // 管理画面: "tax_excluded" | "tax_included" | "both"
-  taxDisplayModePublic String @default("tax_included") // 公開ページ: "tax_excluded" | "tax_included" | "both"
-  taxInputMode        String  @default("tax_excluded") // 入力モード: "tax_excluded" | "tax_included"
+  // Tax Settings (消費税設定) - Enum化
+  taxStandardRate      Decimal        @default(10) @db.Decimal(5, 2)
+  taxReducedRate       Decimal        @default(8) @db.Decimal(5, 2)
+  taxDisplayModeAdmin  TaxDisplayMode @default(both)
+  taxDisplayModePublic TaxDisplayMode @default(tax_included)
+  taxInputMode         TaxInputMode   @default(tax_excluded)
 
   // Terms Agreement Settings
   termsAgreementEnabled   Boolean @default(true) // 規約同意チェック有効
@@ -984,14 +1134,14 @@ model Settings {
   cookieConsentRejectText String?
   cookieConsentPolicyUrl  String?
 
-  // Announcement Bar Carousel Settings
-  announcementBarAnimation         String  @default("fade") // fade, slideX, slideY
-  announcementBarDuration          Int     @default(5000) // ミリ秒
-  announcementBarAutoPlay          Boolean @default(true)
-  announcementBarPauseOnHover      Boolean @default(true)
-  announcementBarShowArrows        Boolean @default(true)
-  announcementBarShowIndicator     Boolean @default(true)
-  announcementBarDesignStyle       String  @default("solid") // solid, gradient, outlined, glass, minimal, striped
+  // Announcement Bar Carousel Settings - Enum化
+  announcementBarAnimation         AnnouncementBarAnimation    @default(fade)
+  announcementBarDuration          Int                         @default(5000)
+  announcementBarAutoPlay          Boolean                     @default(true)
+  announcementBarPauseOnHover      Boolean                     @default(true)
+  announcementBarShowArrows        Boolean                     @default(true)
+  announcementBarShowIndicator     Boolean                     @default(true)
+  announcementBarDesignStyle       AnnouncementBarDesignStyle   @default(solid)
   // Announcement Bar Common Color Settings
   announcementBarBgColor           String? // 共通背景色（カスタム）
   announcementBarTextColor         String? // 共通文字色（カスタム）
@@ -1002,6 +1152,7 @@ model Settings {
   announcementBarGradientAnimation Boolean @default(false) // グラデーションアニメーション
   // Glass Design Settings
   announcementBarGlassAnimation    Boolean @default(false) // グラス（シマー）アニメーション
+  announcementBarSticky            Boolean @default(false) // スクロール時に固定表示
 
   // ==============================================
   // External Service API Keys
@@ -1034,6 +1185,14 @@ model Settings {
   customApiKeys Json? @default("{}")
 
   // ==============================================
+  // Google OAuth (ログイン & カレンダー共通)
+  // ==============================================
+  googleOAuthClientId         String?
+  googleOAuthClientSecret     String?   @db.Text // 暗号化保存
+  googleOAuthLastTestedAt     DateTime?
+  googleOAuthConnectionStatus String? // 'connected' | 'error'
+
+  // ==============================================
   // Google Calendar Integration
   // ==============================================
 
@@ -1060,10 +1219,10 @@ model Settings {
   // Google Calendar 双方向同期（Phase 4）
   // ==============================================
 
-  // 同期方式設定
-  googleCalendarTwoWaySyncEnabled  Boolean @default(false) // 双方向同期有効
-  googleCalendarSyncMethod         String  @default("polling") // "polling" | "webhook" | "both"
-  googleCalendarPollingIntervalMin Int     @default(5) // ポーリング間隔（分）
+  // 同期方式設定 - Enum化
+  googleCalendarTwoWaySyncEnabled  Boolean            @default(false)
+  googleCalendarSyncMethod         CalendarSyncMethod @default(polling)
+  googleCalendarPollingIntervalMin Int                @default(5)
 
   // 同期状態
   googleCalendarSyncToken    String?   @db.Text // 増分同期用トークン
@@ -1076,19 +1235,19 @@ model Settings {
   googleCalendarWebhookToken      String? // Webhook 認証トークン (x-goog-channel-token)
 
   // ==============================================
-  // Instagram連携
+  // Instagram連携 - Enum化
   // ==============================================
-  instagramAccessToken     String?   @db.Text // Encrypted
+  instagramAccessToken     String?            @db.Text // Encrypted
   instagramTokenExpiresAt  DateTime?
   instagramUserId          String?
-  instagramUsername        String?
+  instagramUsername         String?
   instagramAccountType     String?
-  instagramFeedEnabled     Boolean   @default(false)
-  instagramFeedLayout      String    @default("grid")
-  instagramFeedColumns     Int       @default(4)
-  instagramFeedMaxItems    Int       @default(8)
-  instagramShowCaption     Boolean   @default(false)
-  instagramShowViewAll     Boolean   @default(true)
+  instagramFeedEnabled     Boolean            @default(false)
+  instagramFeedLayout      InstagramFeedLayout @default(grid)
+  instagramFeedColumns     Int                @default(4)
+  instagramFeedMaxItems    Int                @default(8)
+  instagramShowCaption     Boolean            @default(false)
+  instagramShowViewAll     Boolean            @default(true)
 
   // ==============================================
   // robots.txt設定
@@ -1105,7 +1264,7 @@ model Settings {
 
 /// Instagram投稿のキャッシュ
 model InstagramPost {
-  id           String   @id @default(cuid())
+  id           String   @id @default(uuid())
   postId       String   @unique // Instagram投稿ID
   postUrl      String // 投稿URL
   mediaUrl     String? // メディアURL
@@ -1139,32 +1298,10 @@ model ICalToken {
   space Space? @relation(fields: [spaceId], references: [id], onDelete: Cascade)
   user  User   @relation(fields: [createdBy], references: [id], onDelete: Cascade)
 
-  @@index([token])
+  // @unique が自動的にインデックスを作成するため @@index([token]) は不要
   @@index([spaceId])
   @@index([createdBy])
   @@map("ical_tokens")
-}
-
-// =============================================================================
-// Homepage Section Models
-// =============================================================================
-
-/// ホームページセクション（統一モデル）
-/// 各セクションタイプに応じた設定をconfigに格納
-model HomepageSection {
-  id        String              @id @default(uuid())
-  type      HomepageSectionType
-  title     String? // セクション見出し（表示用）
-  config    Json                @default("{}") // タイプ別設定（JSON Schema で型安全）
-  content   String?             @db.Text // Lexical HTML（CUSTOM, FAQ等で使用）
-  order     Int                 @default(0) // 表示順序（DnDで変更可能）
-  isActive  Boolean             @default(true) // ON/OFF制御
-  createdAt DateTime            @default(now())
-  updatedAt DateTime            @updatedAt
-
-  @@index([order, isActive])
-  @@index([type])
-  @@map("homepage_sections")
 }
 
 // =============================================================================
@@ -1352,7 +1489,7 @@ model Terms {
 
   @@index([type, isActive])
   @@index([type, isSiteWide])
-  @@index([slug])
+  // @unique が自動的にインデックスを作成するため @@index([slug]) は不要
   @@map("terms")
 }
 
@@ -1364,14 +1501,16 @@ model TermsVersion {
   content          String      @db.Text // Lexical HTML（リッチテキスト）
   status           TermsStatus @default(DRAFT)
   publishedAt      DateTime? // 公開日時
-  publishedBy      String? // 公開者ID（User.id）
+  publishedBy      String? // 公開者ID（User.id）- ユーザー削除時にnull化
   isCurrentVersion Boolean     @default(false) // 現在の有効バージョン
   createdAt        DateTime    @default(now())
-  createdBy        String // 作成者ID（User.id）
+  createdBy        String? // 作成者ID（User.id）- ユーザー削除時にnull化
 
   // Relations
   terms      Terms            @relation(fields: [termsId], references: [id], onDelete: Cascade)
   agreements TermsAgreement[]
+  creator    User?            @relation("TermsVersionCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+  publisher  User?            @relation("TermsVersionPublisher", fields: [publishedBy], references: [id], onDelete: SetNull)
 
   @@unique([termsId, version])
   @@index([termsId, isCurrentVersion])
@@ -1422,13 +1561,15 @@ model EditorCommentThread {
   quotedText  String              @db.Text // マークされたテキスト（参照用）
   status      EditorCommentStatus @default(ACTIVE)
   resolvedAt  DateTime? // 解決日時
-  resolvedBy  String? // 解決者ID（User.id）
+  resolvedBy  String? // 解決者ID（User.id）- ユーザー削除時にnull化
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
-  createdBy   String // 作成者ID（User.id）
+  createdBy   String? // 作成者ID（User.id）- ユーザー削除時にnull化
 
   // Relations
   comments EditorComment[]
+  creator  User?           @relation("CommentThreadCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+  resolver User?           @relation("CommentThreadResolver", fields: [resolvedBy], references: [id], onDelete: SetNull)
 
   // 同一コンテンツ内でmarkIdは一意
   @@unique([markId, contentType, contentId])
@@ -1445,13 +1586,15 @@ model EditorComment {
   content   String    @db.Text // コメント本文
   isDeleted Boolean   @default(false) // ソフトデリート
   deletedAt DateTime? // 削除日時
-  deletedBy String? // 削除者ID（User.id）
+  deletedBy String? // 削除者ID（User.id）- ユーザー削除時にnull化
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  createdBy String // 作成者ID（User.id）
+  createdBy String? // 作成者ID（User.id）- ユーザー削除時にnull化
 
   // Relations
-  thread EditorCommentThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  thread  EditorCommentThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  creator User?               @relation("EditorCommentCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+  deleter User?               @relation("EditorCommentDeleter", fields: [deletedBy], references: [id], onDelete: SetNull)
 
   @@index([threadId, createdAt])
   @@index([createdBy])
