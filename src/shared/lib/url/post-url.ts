@@ -7,12 +7,14 @@
  * @module shared/lib/url/post-url
  */
 
+import { PostPermalinkStructure } from '@/shared/generated/prisma/enums'
+
 // =============================================================================
 // Types
 // =============================================================================
 
 /** パーマリンク構造タイプ */
-export type PermalinkStructure = 'post-name' | 'date-name' | 'category-name'
+export type PermalinkStructure = PostPermalinkStructure
 
 /** URL生成に必要な記事データ */
 export interface PostUrlData {
@@ -43,17 +45,17 @@ export interface PermalinkConfig {
  *
  * @example
  * ```ts
- * // プレフィックス有効 + post-name: /posts/article-title
- * generatePostUrl(post, { structure: 'post-name', prefix: '/posts' })
+ * // プレフィックス有効 + post_name: /posts/article-title
+ * generatePostUrl(post, { structure: 'post_name', prefix: '/posts' })
  *
- * // プレフィックス無効 + post-name: /article-title
- * generatePostUrl(post, { structure: 'post-name', prefix: '' })
+ * // プレフィックス無効 + post_name: /article-title
+ * generatePostUrl(post, { structure: 'post_name', prefix: '' })
  *
- * // プレフィックス有効 + date-name: /posts/2026/01/article-title
- * generatePostUrl(post, { structure: 'date-name', prefix: '/posts' })
+ * // プレフィックス有効 + date_name: /posts/2026/01/article-title
+ * generatePostUrl(post, { structure: 'date_name', prefix: '/posts' })
  *
- * // プレフィックス有効 + category-name: /posts/category-slug/article-title
- * generatePostUrl(post, { structure: 'category-name', prefix: '/posts' })
+ * // プレフィックス有効 + category_name: /posts/category-slug/article-title
+ * generatePostUrl(post, { structure: 'category_name', prefix: '/posts' })
  * ```
  */
 export function generatePostUrl(
@@ -65,7 +67,7 @@ export function generatePostUrl(
 
   let path: string
   switch (structure) {
-    case 'date-name': {
+    case PostPermalinkStructure.date_name: {
       // /2026/01/article-title
       const date = publishedAt ? new Date(publishedAt) : new Date()
       const year = date.getFullYear()
@@ -74,14 +76,14 @@ export function generatePostUrl(
       break
     }
 
-    case 'category-name': {
+    case PostPermalinkStructure.category_name: {
       // /category-slug/article-title
       const categorySlug = category?.slug ?? 'uncategorized'
       path = `/${categorySlug}/${slug}`
       break
     }
 
-    case 'post-name':
+    case PostPermalinkStructure.post_name:
     default:
       // /article-title
       path = `/${slug}`
@@ -143,11 +145,11 @@ export function generateTagUrl(tagSlug: string, prefix: string): string {
  */
 export function getUrlPattern(structure: PermalinkStructure): string {
   switch (structure) {
-    case 'date-name':
+    case PostPermalinkStructure.date_name:
       return '/:year/:month/:slug'
-    case 'category-name':
+    case PostPermalinkStructure.category_name:
       return '/:category/:slug'
-    case 'post-name':
+    case PostPermalinkStructure.post_name:
     default:
       return '/:slug'
   }
@@ -168,21 +170,21 @@ export function extractSlugFromUrl(
   const segments = pathname.split('/').filter(Boolean)
 
   switch (structure) {
-    case 'date-name':
+    case PostPermalinkStructure.date_name:
       // /2026/01/article-title → segments = ['2026', '01', 'article-title']
       if (segments.length === 3) {
         return segments[2]
       }
       break
 
-    case 'category-name':
+    case PostPermalinkStructure.category_name:
       // /category-slug/article-title → segments = ['category-slug', 'article-title']
       if (segments.length === 2 && !isReservedPath(segments[0])) {
         return segments[1]
       }
       break
 
-    case 'post-name':
+    case PostPermalinkStructure.post_name:
     default:
       // /article-title → segments = ['article-title']
       if (segments.length === 1 && !isReservedPath(segments[0])) {
@@ -208,7 +210,7 @@ export function matchesPostUrl(
   const segments = pathname.split('/').filter(Boolean)
 
   switch (structure) {
-    case 'date-name': {
+    case PostPermalinkStructure.date_name: {
       // /yyyy/mm/slug の形式
       if (segments.length !== 3) return false
       const year = parseInt(segments[0], 10)
@@ -222,11 +224,11 @@ export function matchesPostUrl(
       )
     }
 
-    case 'category-name':
+    case PostPermalinkStructure.category_name:
       // /category/slug の形式（カテゴリが予約語でないこと）
       return segments.length === 2 && !isReservedPath(segments[0])
 
-    case 'post-name':
+    case PostPermalinkStructure.post_name:
     default:
       // /slug の形式（予約語でないこと）
       return segments.length === 1 && !isReservedPath(segments[0])

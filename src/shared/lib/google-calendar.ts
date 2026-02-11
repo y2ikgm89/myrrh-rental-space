@@ -21,6 +21,8 @@ import { google, calendar_v3 } from 'googleapis'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from './errors'
 import { safeDecrypt, encryptApiKey } from '@/shared/lib/crypto'
 import { prisma } from '@/shared/lib/prisma'
+import { getGoogleOAuthCredentials } from '@/shared/lib/google-oauth-credentials'
+import { CalendarSyncMethod } from '@/shared/generated/prisma/enums'
 
 // =============================================================================
 // Types
@@ -133,9 +135,14 @@ export async function getOAuthClient(
   }
 
   try {
+    const credentials = await getGoogleOAuthCredentials()
+    if (!credentials) {
+      return null
+    }
+
     const oauth2Client = new google.auth.OAuth2(
-      process.env.GOOGLE_CLIENT_ID,
-      process.env.GOOGLE_CLIENT_SECRET
+      credentials.clientId,
+      credentials.clientSecret
     )
 
     oauth2Client.setCredentials({
@@ -790,7 +797,7 @@ export async function stopWebhookWatch(
 
 export interface TwoWaySyncSettings {
   enabled: boolean
-  syncMethod: 'polling' | 'webhook' | 'both'
+  syncMethod: CalendarSyncMethod
   pollingIntervalMin: number
   lastSyncedAt: Date | null
   webhookExpiration: Date | null
@@ -812,9 +819,9 @@ export async function getTwoWaySyncSettings(): Promise<TwoWaySyncSettings> {
   })
 
   const syncMethod = settings?.googleCalendarSyncMethod
-  const validMethod = syncMethod === 'polling' || syncMethod === 'webhook' || syncMethod === 'both'
+  const validMethod = syncMethod === CalendarSyncMethod.polling || syncMethod === CalendarSyncMethod.webhook || syncMethod === CalendarSyncMethod.both
     ? syncMethod
-    : 'polling'
+    : CalendarSyncMethod.polling
 
   return {
     enabled: settings?.googleCalendarTwoWaySyncEnabled ?? false,
@@ -903,7 +910,7 @@ export async function renewWebhookIfNeeded(): Promise<WebhookRenewalResult> {
   }
 
   // Webhook方式でない場合はスキップ
-  if (settings.googleCalendarSyncMethod !== 'webhook' && settings.googleCalendarSyncMethod !== 'both') {
+  if (settings.googleCalendarSyncMethod !== CalendarSyncMethod.webhook && settings.googleCalendarSyncMethod !== CalendarSyncMethod.both) {
     return { success: true, renewed: false }
   }
 

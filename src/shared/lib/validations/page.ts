@@ -29,6 +29,7 @@ export interface SystemPageDefinition {
 }
 
 export const SYSTEM_PAGES: readonly SystemPageDefinition[] = [
+  { slug: 'home', title: 'ホームページ', description: 'トップページ' },
   { slug: 'privacy', title: 'プライバシーポリシー', description: '個人情報の取り扱いについて' },
   { slug: 'about', title: '会社概要', description: '会社・サービスについて' },
   { slug: 'faq', title: 'よくある質問', description: 'FAQ' },
@@ -106,7 +107,7 @@ export const updatePageSchema = z.object({
   ogpImageUrl: z.string().url({ error: '有効なURLを入力してください' }).optional().or(z.literal('')),
   isPublished: z.boolean().default(true),
   publishedAt: z.coerce.date().optional(),
-  contentWidth: z.nativeEnum(LayoutWidth).optional(),
+  contentWidth: z.enum(LayoutWidth).optional(),
   contentWidthCustom: z.number().int().min(320).max(1920).optional(),
   showSidebar: z.boolean().nullable().optional(),
 })

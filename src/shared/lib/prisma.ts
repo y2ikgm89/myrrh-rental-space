@@ -14,7 +14,6 @@ import {
   type Reservation as PrismaReservation,
   type Customer as PrismaCustomer,
 } from '@/shared/generated/prisma/client'
-import { Pool } from 'pg'
 import type { Decimal } from '@prisma/client/runtime/client'
 
 export { Role, Prisma }
@@ -38,25 +37,17 @@ export type Space = ConvertDecimalFields<PrismaSpace>
 export type Reservation = ConvertDecimalFields<PrismaReservation>
 export type Customer = ConvertDecimalFields<PrismaCustomer>
 
-// PostgreSQL 接続プール
-// Prisma 7 では pg driver のデフォルト設定を使用するため、明示的にタイムアウトを設定
-const pool = new Pool({
+// Prisma アダプター（PrismaPg が Pool ライフサイクルを内部管理）
+const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
-  // 接続タイムアウト（デフォルト: 0=無限 → 10秒に設定）
   connectionTimeoutMillis: 10000,
-  // アイドル接続のタイムアウト（デフォルト: 10秒）
   idleTimeoutMillis: 10000,
-  // 最大接続数（環境変数で設定可能、デフォルト: 本番3、開発5）
-  // Cloud Run等のサーバーレス環境では控えめな値を推奨
   max: process.env.DATABASE_POOL_MAX
     ? Number(process.env.DATABASE_POOL_MAX)
     : process.env.NODE_ENV === 'production'
       ? 3
       : 5,
 })
-
-// Prisma アダプター
-const adapter = new PrismaPg(pool)
 
 // グローバル変数（型は src/shared/types/global.d.ts で定義）
 const globalForPrisma = globalThis

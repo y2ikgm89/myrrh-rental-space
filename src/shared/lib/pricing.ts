@@ -8,6 +8,14 @@
  */
 
 import type { CouponType } from '@/shared/generated/prisma/enums'
+import {
+  DiscountType,
+  DurationDiscountOverride,
+  TaxRateType,
+  TaxDisplayMode,
+  TaxInputMode,
+  DiscountCombinationMode,
+} from '@/shared/generated/prisma/enums'
 import type { Decimal } from '@/shared/generated/prisma/runtime/client'
 
 // Coupon型の簡易定義（Prismaのモデルに依存しない）
@@ -35,84 +43,12 @@ export type DurationDiscountRule = {
 }
 
 /**
- * スペース固有割引タイプ
- */
-export type SpaceDiscountType = 'none' | 'percentage' | 'fixed'
-
-const VALID_SPACE_DISCOUNT_TYPES = new Set<string>(['none', 'percentage', 'fixed'])
-
-/**
- * スペース割引タイプの型ガード
- */
-export function isValidSpaceDiscountType(value: unknown): value is SpaceDiscountType {
-  return typeof value === 'string' && VALID_SPACE_DISCOUNT_TYPES.has(value)
-}
-
-/**
- * スペース割引タイプを取得（無効な場合はデフォルト値）
- */
-export function getSpaceDiscountTypeOrDefault(
-  value: string | null | undefined,
-  defaultValue: SpaceDiscountType = 'none'
-): SpaceDiscountType {
-  return value && isValidSpaceDiscountType(value) ? value : defaultValue
-}
-
-/**
- * 長時間割引オーバーライド設定
- */
-export type DurationDiscountOverride = 'inherit' | 'enabled' | 'disabled'
-
-const VALID_DURATION_DISCOUNT_OVERRIDES = new Set<string>(['inherit', 'enabled', 'disabled'])
-
-/**
- * 長時間割引オーバーライドの型ガード
- */
-export function isValidDurationDiscountOverride(value: unknown): value is DurationDiscountOverride {
-  return typeof value === 'string' && VALID_DURATION_DISCOUNT_OVERRIDES.has(value)
-}
-
-/**
- * 長時間割引オーバーライドを取得（無効な場合はデフォルト値）
- */
-export function getDurationDiscountOverrideOrDefault(
-  value: string | null | undefined,
-  defaultValue: DurationDiscountOverride = 'inherit'
-): DurationDiscountOverride {
-  return value && isValidDurationDiscountOverride(value) ? value : defaultValue
-}
-
-/**
  * スペース割引設定
  */
 export type SpaceDiscountSettings = {
-  discountType: SpaceDiscountType
+  discountType: DiscountType
   discountValue: number | null
   durationDiscountOverride: DurationDiscountOverride
-}
-
-/**
- * 割引併用モード
- */
-export type DiscountCombinationMode = 'best' | 'both'
-
-const VALID_DISCOUNT_COMBINATION_MODES = new Set<string>(['best', 'both'])
-
-/**
- * 割引併用モードの型ガード
- */
-export function isValidDiscountCombinationMode(value: unknown): value is DiscountCombinationMode {
-  return typeof value === 'string' && VALID_DISCOUNT_COMBINATION_MODES.has(value)
-}
-
-/**
- * 割引併用モードを取得（無効な場合はデフォルト値）
- */
-export function getDiscountCombinationModeOrDefault(
-  value: string | null | undefined,
-  defaultValue: DiscountCombinationMode = 'best'
-): DiscountCombinationMode {
-  return value && isValidDiscountCombinationMode(value) ? value : defaultValue
 }
 
 /**
@@ -125,7 +61,7 @@ export type PriceCalculation = {
   couponDiscount: number // クーポン割引額
   totalPrice: number // 最終価格
   totalDiscountRate: number // 総割引率（%）
-  appliedSpaceDiscount: { type: SpaceDiscountType; value: number } | null // 適用されたスペース割引
+  appliedSpaceDiscount: { type: DiscountType; value: number } | null // 適用されたスペース割引
   appliedDurationRule: DurationDiscountRule | null // 適用された長時間割引ルール
   appliedCoupon: { id: string; code: string; name: string; type: CouponType; discountValue: number } | null // 適用されたクーポン
   warnings: string[] // 警告メッセージ
@@ -159,18 +95,18 @@ export type PriceCalculationParams = {
 export function calculateSpaceDiscount(
   basePrice: number,
   settings: SpaceDiscountSettings | null | undefined
-): { discount: number; applied: { type: SpaceDiscountType; value: number } | null } {
-  if (!settings || settings.discountType === 'none' || settings.discountValue == null) {
+): { discount: number; applied: { type: DiscountType; value: number } | null } {
+  if (!settings || settings.discountType === DiscountType.none || settings.discountValue == null) {
     return { discount: 0, applied: null }
   }
 
   const discountValue = Number(settings.discountValue)
 
-  if (settings.discountType === 'percentage') {
+  if (settings.discountType === DiscountType.percentage) {
     const discount = Math.floor(basePrice * (discountValue / 100))
     return {
       discount,
-      applied: { type: 'percentage', value: discountValue },
+      applied: { type: DiscountType.percentage, value: discountValue },
     }
   }
 
@@ -178,7 +114,7 @@ export function calculateSpaceDiscount(
   const discount = Math.min(discountValue, basePrice) // 割引額が価格を超えないように
   return {
     discount,
-    applied: { type: 'fixed', value: discountValue },
+    applied: { type: DiscountType.fixed, value: discountValue },
   }
 }
 
@@ -276,11 +212,11 @@ export function calculateReservationPrice(
   let appliedDurationRule: DurationDiscountRule | null = null
 
   // オーバーライド設定を判定
-  const durationOverride = spaceDiscount?.durationDiscountOverride ?? 'inherit'
+  const durationOverride = spaceDiscount?.durationDiscountOverride ?? DurationDiscountOverride.inherit
   const effectiveDurationEnabled =
-    durationOverride === 'inherit'
+    durationOverride === DurationDiscountOverride.inherit
       ? durationDiscountEnabled
-      : durationOverride === 'enabled'
+      : durationOverride === DurationDiscountOverride.enabled
 
   if (effectiveDurationEnabled && durationRules.length > 0) {
     // スペース割引適用後の価格に対して長時間割引を計算
@@ -312,7 +248,7 @@ export function calculateReservationPrice(
   let finalDurationDiscount = durationDiscount
   let finalCouponDiscount = couponDiscount
 
-  if (combinationMode === 'best' && durationDiscount > 0 && couponDiscount > 0) {
+  if (combinationMode === DiscountCombinationMode.best && durationDiscount > 0 && couponDiscount > 0) {
     // 最もお得な割引のみ適用（長時間割引 vs クーポン割引）
     if (durationDiscount >= couponDiscount) {
       finalCouponDiscount = 0
@@ -325,7 +261,7 @@ export function calculateReservationPrice(
     if (showWarning) {
       warnings.push('より大きな割引が自動的に適用されました')
     }
-  } else if (combinationMode === 'both' && durationDiscount > 0 && couponDiscount > 0) {
+  } else if (combinationMode === DiscountCombinationMode.both && durationDiscount > 0 && couponDiscount > 0) {
     // 両方適用（クーポンの併用設定を確認）
     if (coupon && !coupon.canCombineWithDurationDiscount) {
       // クーポンが併用不可の場合、クーポンを優先
@@ -440,7 +376,7 @@ export function formatDiscountSummary(calculation: PriceCalculation): string[] {
 
   if (calculation.appliedSpaceDiscount) {
     const label =
-      calculation.appliedSpaceDiscount.type === 'percentage'
+      calculation.appliedSpaceDiscount.type === DiscountType.percentage
         ? `${calculation.appliedSpaceDiscount.value}%OFF`
         : `¥${calculation.appliedSpaceDiscount.value.toLocaleString()}OFF`
     summaries.push(`スペース割引（${label}）: -¥${calculation.spaceDiscount.toLocaleString()}`)
@@ -470,78 +406,6 @@ export function formatDiscountSummary(calculation: PriceCalculation): string[] {
 // =============================================================================
 
 /**
- * 税率タイプ
- */
-export type TaxRateType = 'standard' | 'reduced'
-
-const VALID_TAX_RATE_TYPES = new Set<string>(['standard', 'reduced'])
-
-/**
- * 税率タイプの型ガード
- */
-export function isValidTaxRateType(value: unknown): value is TaxRateType {
-  return typeof value === 'string' && VALID_TAX_RATE_TYPES.has(value)
-}
-
-/**
- * 税率タイプを取得（無効な場合はデフォルト値）
- */
-export function getTaxRateTypeOrDefault(
-  value: string | null | undefined,
-  defaultValue: TaxRateType = 'standard'
-): TaxRateType {
-  return value && isValidTaxRateType(value) ? value : defaultValue
-}
-
-/**
- * 税表示モード
- */
-export type TaxDisplayMode = 'tax_excluded' | 'tax_included' | 'both'
-
-const VALID_TAX_DISPLAY_MODES = new Set<string>(['tax_excluded', 'tax_included', 'both'])
-
-/**
- * 税表示モードの型ガード
- */
-export function isValidTaxDisplayMode(value: unknown): value is TaxDisplayMode {
-  return typeof value === 'string' && VALID_TAX_DISPLAY_MODES.has(value)
-}
-
-/**
- * 税表示モードを取得（無効な場合はデフォルト値）
- */
-export function getTaxDisplayModeOrDefault(
-  value: string | null | undefined,
-  defaultValue: TaxDisplayMode = 'both'
-): TaxDisplayMode {
-  return value && isValidTaxDisplayMode(value) ? value : defaultValue
-}
-
-/**
- * 税入力モード
- */
-export type TaxInputMode = 'tax_excluded' | 'tax_included'
-
-const VALID_TAX_INPUT_MODES = new Set<string>(['tax_excluded', 'tax_included'])
-
-/**
- * 税入力モードの型ガード
- */
-export function isValidTaxInputMode(value: unknown): value is TaxInputMode {
-  return typeof value === 'string' && VALID_TAX_INPUT_MODES.has(value)
-}
-
-/**
- * 税入力モードを取得（無効な場合はデフォルト値）
- */
-export function getTaxInputModeOrDefault(
-  value: string | null | undefined,
-  defaultValue: TaxInputMode = 'tax_excluded'
-): TaxInputMode {
-  return value && isValidTaxInputMode(value) ? value : defaultValue
-}
-
-/**
  * 税設定
  */
 export type TaxSettings = {
@@ -558,9 +422,9 @@ export type TaxSettings = {
 export const DEFAULT_TAX_SETTINGS: TaxSettings = {
   standardRate: 10,
   reducedRate: 8,
-  displayModeAdmin: 'both',
-  displayModePublic: 'tax_included',
-  inputMode: 'tax_excluded',
+  displayModeAdmin: TaxDisplayMode.both,
+  displayModePublic: TaxDisplayMode.tax_included,
+  inputMode: TaxInputMode.tax_excluded,
 }
 
 /**
@@ -570,7 +434,7 @@ export function getTaxRate(
   taxRateType: TaxRateType,
   settings: TaxSettings = DEFAULT_TAX_SETTINGS
 ): number {
-  return taxRateType === 'reduced' ? settings.reducedRate : settings.standardRate
+  return taxRateType === TaxRateType.reduced ? settings.reducedRate : settings.standardRate
 }
 
 /**
@@ -648,11 +512,11 @@ export function formatPriceWithTax(options: TaxPriceDisplayOptions): string {
   const taxIncludedPrice = calculateTaxIncludedPrice(taxExcludedPrice, taxRate)
 
   switch (displayMode) {
-    case 'tax_excluded':
+    case TaxDisplayMode.tax_excluded:
       return `¥${taxExcludedPrice.toLocaleString('ja-JP')}（税抜）`
-    case 'tax_included':
+    case TaxDisplayMode.tax_included:
       return `¥${taxIncludedPrice.toLocaleString('ja-JP')}（税込）`
-    case 'both':
+    case TaxDisplayMode.both:
       return `¥${taxIncludedPrice.toLocaleString('ja-JP')}（税込）/ ¥${taxExcludedPrice.toLocaleString('ja-JP')}（税抜）`
   }
 }
@@ -661,6 +525,6 @@ export function formatPriceWithTax(options: TaxPriceDisplayOptions): string {
  * 税率ラベルを取得
  */
 export function getTaxRateLabel(taxRateType: TaxRateType, taxRate: number): string {
-  const typeLabel = taxRateType === 'reduced' ? '軽減税率' : '標準税率'
+  const typeLabel = taxRateType === TaxRateType.reduced ? '軽減税率' : '標準税率'
   return `${typeLabel}（${taxRate}%）`
 }

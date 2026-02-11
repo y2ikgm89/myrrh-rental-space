@@ -6,6 +6,7 @@
 
 import { z } from 'zod'
 import type { Prisma } from '@/shared/generated/prisma/client'
+import { DiscountType, DurationDiscountOverride, TaxRateType } from '@/shared/generated/prisma/enums'
 
 const stringArraySchema = z.array(z.string())
 
@@ -154,38 +155,59 @@ export function parseBusinessHours(
 /**
  * Space discount type validation
  */
-const discountTypes = ['none', 'percentage', 'fixed'] as const
-export type DiscountType = typeof discountTypes[number]
+const discountTypeValues = Object.values(DiscountType)
+const discountTypeSet = new Set<string>(discountTypeValues)
 
 export function parseDiscountType(value: unknown): DiscountType {
-  if (typeof value === 'string' && discountTypes.includes(value as DiscountType)) {
+  if (typeof value === 'string' && discountTypeSet.has(value)) {
     return value as DiscountType
   }
-  return 'none'
+  return DiscountType.none
 }
 
 /**
  * Duration discount override validation
  */
-const durationDiscountOverrides = ['inherit', 'enabled', 'disabled'] as const
-export type DurationDiscountOverride = typeof durationDiscountOverrides[number]
+const durationDiscountOverrideValues = Object.values(DurationDiscountOverride)
+const durationDiscountOverrideSet = new Set<string>(durationDiscountOverrideValues)
 
 export function parseDurationDiscountOverride(value: unknown): DurationDiscountOverride {
-  if (typeof value === 'string' && durationDiscountOverrides.includes(value as DurationDiscountOverride)) {
+  if (typeof value === 'string' && durationDiscountOverrideSet.has(value)) {
     return value as DurationDiscountOverride
   }
-  return 'inherit'
+  return DurationDiscountOverride.inherit
 }
 
 /**
  * Tax rate type validation
  */
-const taxRateTypes = ['standard', 'reduced'] as const
-export type TaxRateType = typeof taxRateTypes[number]
+const taxRateTypeValues = Object.values(TaxRateType)
+const taxRateTypeSet = new Set<string>(taxRateTypeValues)
 
 export function parseTaxRateType(value: unknown): TaxRateType {
-  if (typeof value === 'string' && taxRateTypes.includes(value as TaxRateType)) {
+  if (typeof value === 'string' && taxRateTypeSet.has(value)) {
     return value as TaxRateType
   }
-  return 'standard'
+  return TaxRateType.standard
+}
+
+// =============================================================================
+// Business Attributes (MEO)
+// =============================================================================
+
+/**
+ * JSON値をRecord<string, boolean>にパース（施設属性用）
+ */
+export function parseBusinessAttributes(value: unknown): Record<string, boolean> | null {
+  if (value === null || value === undefined) return null
+  if (typeof value !== 'object' || Array.isArray(value)) return null
+
+  const record = value as Record<string, unknown>
+  const result: Record<string, boolean> = {}
+  for (const [key, val] of Object.entries(record)) {
+    if (typeof val === 'boolean') {
+      result[key] = val
+    }
+  }
+  return Object.keys(result).length > 0 ? result : null
 }

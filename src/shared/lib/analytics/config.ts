@@ -9,10 +9,13 @@
 
 import { cacheLife, cacheTag } from 'next/cache'
 import { prisma } from '@/shared/lib/prisma'
+import { CACHE_TAGS } from '@/shared/lib/constants'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
+import { isValidAnalyticsType } from '@/shared/lib/validations/enums'
+import type { AnalyticsType } from '@/shared/generated/prisma/enums'
 
 export type AnalyticsConfig = {
-  analyticsType: 'ga4' | 'gtm' | null
+  analyticsType: AnalyticsType | null
   googleAnalyticsId: string | null
   googleTagManagerId: string | null
   googleSearchConsoleId: string | null
@@ -44,7 +47,7 @@ function getDefaultAnalyticsConfig(): AnalyticsConfig {
 export async function getAnalyticsConfig(): Promise<AnalyticsConfig> {
   'use cache'
   cacheLife('hours')
-  cacheTag('analytics-config', 'settings')
+  cacheTag(CACHE_TAGS.ANALYTICS_CONFIG, CACHE_TAGS.SETTINGS)
 
   try {
     const settings = await prisma.settings.findUnique({
@@ -65,7 +68,7 @@ export async function getAnalyticsConfig(): Promise<AnalyticsConfig> {
 
     // プレーンオブジェクトとして返す（シリアライズ可能）
     return {
-      analyticsType: (settings.analyticsType as 'ga4' | 'gtm' | null) ?? null,
+      analyticsType: isValidAnalyticsType(settings.analyticsType) ? settings.analyticsType : null,
       googleAnalyticsId: settings.googleAnalyticsId ?? null,
       googleTagManagerId: settings.googleTagManagerId ?? null,
       googleSearchConsoleId: settings.googleSearchConsoleId ?? null,

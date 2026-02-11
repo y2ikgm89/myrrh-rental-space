@@ -5,13 +5,15 @@
  */
 
 import type { CSSProperties } from 'react'
+import { AnnouncementBarAnimation, AnnouncementBarDesignStyle } from '@/shared/generated/prisma/enums'
+import { isValidAnnouncementBarAnimation, isValidAnnouncementBarDesignStyle } from '@/shared/lib/validations/enums'
 
 // =============================================================================
 // Types
 // =============================================================================
 
-export type DesignStyle = 'solid' | 'gradient' | 'outlined' | 'glass' | 'minimal' | 'striped'
-export type AnimationType = 'fade' | 'slideX' | 'slideY'
+export type DesignStyle = AnnouncementBarDesignStyle
+export type AnimationType = AnnouncementBarAnimation
 
 export interface TypeColorConfig {
   bg: string
@@ -30,25 +32,25 @@ export interface TypeColorConfig {
  */
 export const TYPE_STYLES: Record<string, TypeColorConfig> = {
   info: {
-    bg: 'bg-blue-600',
-    text: 'text-white',
-    hover: 'hover:text-blue-100',
-    gradient: 'from-blue-600 to-indigo-600',
+    bg: 'bg-info',
+    text: 'text-info-foreground',
+    hover: 'hover:text-info-foreground/80',
+    gradient: 'from-info to-info/80',
     hex: '#2563eb',
   },
   warning: {
-    bg: 'bg-amber-500',
-    text: 'text-black',
-    hover: 'hover:text-amber-900',
-    gradient: 'from-amber-500 to-orange-500',
+    bg: 'bg-warning',
+    text: 'text-warning-foreground',
+    hover: 'hover:text-warning-foreground/80',
+    gradient: 'from-warning to-warning/80',
     hex: '#f59e0b',
   },
   promo: {
-    bg: 'bg-green-600',
-    text: 'text-white',
-    hover: 'hover:text-green-100',
-    gradient: 'from-green-600 to-emerald-500',
-    hex: '#16a34a',
+    bg: 'bg-success',
+    text: 'text-success-foreground',
+    hover: 'hover:text-success-foreground/80',
+    gradient: 'from-success to-success/80',
+    hex: '#15803d',
   },
 }
 
@@ -88,26 +90,6 @@ export const DESIGN_STYLE_CLASSES: Record<DesignStyle, {
   },
 }
 
-/**
- * アニメーションバリアント (Framer Motion用)
- */
-export const ANIMATION_VARIANTS = {
-  fade: {
-    initial: { opacity: 0 },
-    animate: { opacity: 1 },
-    exit: { opacity: 0 },
-  },
-  slideX: {
-    initial: { opacity: 0, x: 50 },
-    animate: { opacity: 1, x: 0 },
-    exit: { opacity: 0, x: -50 },
-  },
-  slideY: {
-    initial: { opacity: 0, y: -20 },
-    animate: { opacity: 1, y: 0 },
-    exit: { opacity: 0, y: 20 },
-  },
-}
 
 // =============================================================================
 // Helper Functions
@@ -198,43 +180,16 @@ export function getGlassShimmerStyle(animate: boolean): CSSProperties {
 // Validation Helpers
 // =============================================================================
 
-const VALID_ANIMATIONS: readonly AnimationType[] = ['fade', 'slideX', 'slideY'] as const
-const VALID_ANIMATIONS_SET = new Set<string>(VALID_ANIMATIONS)
-
-const VALID_DESIGN_STYLES: readonly DesignStyle[] = [
-  'solid',
-  'gradient',
-  'outlined',
-  'glass',
-  'minimal',
-  'striped',
-] as const
-const VALID_DESIGN_STYLES_SET = new Set<string>(VALID_DESIGN_STYLES)
-
-/**
- * AnimationType型ガード
- */
-function isValidAnimation(value: string): value is AnimationType {
-  return VALID_ANIMATIONS_SET.has(value)
-}
-
-/**
- * DesignStyle型ガード
- */
-function isValidDesignStyle(value: string): value is DesignStyle {
-  return VALID_DESIGN_STYLES_SET.has(value)
-}
-
 /**
  * アニメーションタイプをバリデートする
  */
 export function validateAnimation(value: string): AnimationType {
-  return isValidAnimation(value) ? value : 'fade'
+  return isValidAnnouncementBarAnimation(value) ? value : AnnouncementBarAnimation.fade
 }
 
 /**
  * デザインスタイルをバリデートする
  */
 export function validateDesignStyle(value: string): DesignStyle {
-  return isValidDesignStyle(value) ? value : 'solid'
+  return isValidAnnouncementBarDesignStyle(value) ? value : AnnouncementBarDesignStyle.solid
 }

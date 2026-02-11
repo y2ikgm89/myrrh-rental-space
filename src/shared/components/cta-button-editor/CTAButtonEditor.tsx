@@ -9,7 +9,6 @@
  * CSS変数に依存しないスタイリング（src/shared/ 配置のため）
  */
 
-import { useCallback } from 'react'
 import { ArrowUp, ArrowDown, Trash2, Plus } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 import type {
@@ -68,42 +67,33 @@ export function CTAButtonEditor({
   disabled = false,
   compact = false,
 }: CTAButtonEditorProps) {
-  const updateButton = useCallback(
-    (index: number, updates: Partial<CTAButtonItem>) => {
-      const next = buttons.map((btn, i) =>
-        i === index ? { ...btn, ...updates } : btn
-      )
-      onChange(next)
-    },
-    [buttons, onChange]
-  )
+  const updateButton = (index: number, updates: Partial<CTAButtonItem>) => {
+    const next = buttons.map((btn, i) =>
+      i === index ? { ...btn, ...updates } : btn
+    )
+    onChange(next)
+  }
 
-  const removeButton = useCallback(
-    (index: number) => {
-      onChange(buttons.filter((_, i) => i !== index))
-    },
-    [buttons, onChange]
-  )
+  const removeButton = (index: number) => {
+    onChange(buttons.filter((_, i) => i !== index))
+  }
 
-  const moveButton = useCallback(
-    (index: number, direction: 'up' | 'down') => {
-      const target = direction === 'up' ? index - 1 : index + 1
-      if (target < 0 || target >= buttons.length) return
-      const next = [...buttons]
-      const temp = next[index]
-      next[index] = next[target]
-      next[target] = temp
-      onChange(next)
-    },
-    [buttons, onChange]
-  )
+  const moveButton = (index: number, direction: 'up' | 'down') => {
+    const target = direction === 'up' ? index - 1 : index + 1
+    if (target < 0 || target >= buttons.length) return
+    const next = [...buttons]
+    const temp = next[index]
+    next[index] = next[target]
+    next[target] = temp
+    onChange(next)
+  }
 
-  const addButton = useCallback(() => {
+  const addButton = () => {
     if (buttons.length >= maxButtons) return
     // 2番目以降はsecondaryをデフォルトに
     const variant: CTAButtonVariant = buttons.length === 0 ? 'primary' : 'secondary'
     onChange([...buttons, { ...DEFAULT_BUTTON, variant }])
-  }, [buttons, maxButtons, onChange])
+  }
 
   return (
     <div className={compact ? 'space-y-2' : 'space-y-3'}>
@@ -352,7 +342,7 @@ function ColorInput({ label, value, onChange, disabled, compact }: ColorInputPro
             compact
               ? 'w-full rounded border bg-transparent px-2 py-0.5 font-mono text-xs outline-none'
               : 'w-full rounded-md border bg-transparent px-2 py-1 font-mono text-xs outline-none',
-            valid ? 'border-current/15 focus:border-current/40' : 'border-red-400'
+            valid ? 'border-current/15 focus:border-current/40' : 'border-destructive'
           )}
         />
         {value && valid && (

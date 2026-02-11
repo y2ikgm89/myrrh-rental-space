@@ -1,24 +1,12 @@
 import { z } from 'zod'
 import { TermsType, TermsStatus } from '@/shared/generated/prisma/enums'
-
-// ==============================================
-// Type Guards
-// ==============================================
-
-/**
- * TermsType型ガード（Set-basedパターン）
- */
-const TERMS_TYPE_VALUES = new Set<string>(Object.values(TermsType))
-
-export function isTermsType(value: unknown): value is TermsType {
-  return typeof value === 'string' && TERMS_TYPE_VALUES.has(value)
-}
+import { isValidTermsType } from '@/shared/lib/validations/enums'
 
 /**
  * 文字列をTermsTypeに変換（無効な値はundefined）
  */
 export function parseTermsType(value: unknown): TermsType | undefined {
-  return isTermsType(value) ? value : undefined
+  return isValidTermsType(value) ? value : undefined
 }
 
 // ==============================================
@@ -53,7 +41,7 @@ export function getTermsTypeDefaults(type: string): { title: string; slug: strin
  * 規約作成スキーマ
  */
 export const createTermsSchema = z.object({
-  type: z.nativeEnum(TermsType),
+  type: z.enum(TermsType),
   title: z
     .string()
     .min(1, { error: 'タイトルを入力してください' })
@@ -281,7 +269,7 @@ export interface TermsVersionDetail {
   publishedBy: string | null
   isCurrentVersion: boolean
   createdAt: Date
-  createdBy: string
+  createdBy: string | null
 }
 
 /**

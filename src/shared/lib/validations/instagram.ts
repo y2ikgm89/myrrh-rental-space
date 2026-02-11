@@ -7,6 +7,7 @@
  */
 
 import { z } from 'zod'
+import { InstagramFeedLayout } from '@/shared/generated/prisma/enums'
 
 // =============================================================================
 // Settings Schema
@@ -17,7 +18,7 @@ import { z } from 'zod'
  */
 export const instagramSettingsSchema = z.object({
   feedEnabled: z.boolean(),
-  feedLayout: z.enum(['grid', 'carousel', 'card']),
+  feedLayout: z.enum(InstagramFeedLayout),
   feedColumns: z.number().int().min(2).max(6),
   feedMaxItems: z.number().int().min(1).max(24),
   showCaption: z.boolean(),

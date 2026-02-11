@@ -24,7 +24,7 @@ export const couponCodeSchema = z
 /**
  * クーポンタイプ
  */
-export const couponTypeSchema = z.nativeEnum(CouponType)
+export const couponTypeSchema = z.enum(CouponType)
 
 /**
  * 割引値のバリデーション（タイプに応じた範囲チェック）

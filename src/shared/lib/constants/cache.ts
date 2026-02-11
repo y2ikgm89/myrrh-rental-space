@@ -102,14 +102,48 @@ export const CACHE_TAGS = {
   NAVIGATION: 'navigation',
   /** アナウンスバー */
   ANNOUNCEMENT_BAR: 'announcement-bar',
+  /** セクション全体 */
+  SECTIONS: 'sections',
   /** ホームページセクション */
   HOMEPAGE_SECTIONS: 'homepage-sections',
+  /** ページセクション */
+  PAGE_SECTIONS: 'page-sections',
   /** 利用規約 */
   TERMS: 'terms',
   /** スタッフ */
   STAFF: 'staff',
   /** クーポン */
   COUPONS: 'coupons',
+  /** ビジネス設定（営業時間・NAP情報等） */
+  BUSINESS_SETTINGS: 'business-settings',
+  /** Cookie同意設定 */
+  COOKIE_CONSENT: 'cookie-consent',
+  /** パーマリンク設定 */
+  PERMALINK: 'permalink',
+  /** robots.txt設定 */
+  ROBOTS_TXT: 'robots-txt',
+  /** レイアウト全般設定 */
+  LAYOUT: 'layout',
+  /** レイアウト詳細設定（コンテンツ幅等） */
+  LAYOUT_SETTINGS: 'layout-settings',
+  /** アナリティクス設定 */
+  ANALYTICS_CONFIG: 'analytics-config',
+  /** SEO設定（メタデータファクトリ用） */
+  SEO_SETTINGS: 'seo-settings',
+  /** 組織設定（JSON-LD用） */
+  ORGANIZATION_SETTINGS: 'organization-settings',
+  /** ソーシャルリンク */
+  SOCIAL_LINKS: 'social-links',
+  /** ページSEO */
+  PAGE_SEO: 'page-seo',
+  /** サイドバーデータ */
+  SIDEBAR_DATA: 'sidebar-data',
+  /** サイドバー設定 */
+  SIDEBAR_SETTINGS: 'sidebar-settings',
+  /** Instagramフィード */
+  INSTAGRAM_FEED: 'instagram-feed',
+  /** キャンセルポリシー */
+  CANCELLATION_POLICY: 'cancellation-policy',
 } as const
 
 /**
@@ -167,6 +201,17 @@ export const getCacheTag = {
   coupons: {
     list: () => CACHE_TAGS.COUPONS,
     detail: (id: string) => `${CACHE_TAGS.COUPONS}-${id}`,
+  },
+  media: {
+    list: () => CACHE_TAGS.MEDIA,
+    detail: (id: string) => `${CACHE_TAGS.MEDIA}-${id}`,
+  },
+  staff: {
+    list: () => CACHE_TAGS.STAFF,
+    detail: (id: string) => `${CACHE_TAGS.STAFF}-${id}`,
+  },
+  pageSeo: {
+    detail: (slug: string) => `${CACHE_TAGS.PAGE_SEO}-${slug}`,
   },
 } as const
 

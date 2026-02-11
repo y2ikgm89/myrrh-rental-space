@@ -11,8 +11,10 @@
 
 import { cacheLife, cacheTag } from 'next/cache'
 import { prisma } from '@/shared/lib/prisma'
+import { CACHE_TAGS } from '@/shared/lib/constants'
 import { safeFetch, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
 import { toPlainObject, toPlainArray } from '@/shared/lib/serialize'
+import { AnnouncementBarAnimation, AnnouncementBarDesignStyle, PostPermalinkStructure } from '@/shared/generated/prisma/enums'
 
 /** お知らせバー設定のデフォルト値 */
 interface AnnouncementBarSettings {
@@ -29,22 +31,24 @@ interface AnnouncementBarSettings {
   announcementBarStripeAnimation: boolean
   announcementBarGradientAnimation: boolean
   announcementBarGlassAnimation: boolean
+  announcementBarSticky: boolean
 }
 
 const DEFAULT_ANNOUNCEMENT_BAR_SETTINGS: AnnouncementBarSettings = {
-  announcementBarAnimation: 'fade',
+  announcementBarAnimation: AnnouncementBarAnimation.fade,
   announcementBarDuration: 5000,
   announcementBarAutoPlay: true,
   announcementBarPauseOnHover: true,
   announcementBarShowArrows: true,
   announcementBarShowIndicator: true,
-  announcementBarDesignStyle: 'solid',
+  announcementBarDesignStyle: AnnouncementBarDesignStyle.solid,
   announcementBarBgColor: null,
   announcementBarTextColor: null,
   announcementBarStripeColor: null,
   announcementBarStripeAnimation: false,
   announcementBarGradientAnimation: false,
   announcementBarGlassAnimation: false,
+  announcementBarSticky: false,
 }
 
 /**
@@ -54,7 +58,7 @@ const DEFAULT_ANNOUNCEMENT_BAR_SETTINGS: AnnouncementBarSettings = {
 export async function getCookieConsentSettings() {
   'use cache'
   cacheLife('hours')
-  cacheTag('cookie-consent', 'settings')
+  cacheTag(CACHE_TAGS.COOKIE_CONSENT, CACHE_TAGS.SETTINGS)
 
   const result = await safeFetch({
     fetch: () =>
@@ -84,7 +88,7 @@ export async function getCookieConsentSettings() {
 export async function getPublicBusinessSettings() {
   'use cache'
   cacheLife('hours')
-  cacheTag('business-settings', 'settings')
+  cacheTag(CACHE_TAGS.BUSINESS_SETTINGS, CACHE_TAGS.SETTINGS)
 
   const result = await safeFetch({
     fetch: () =>
@@ -108,6 +112,13 @@ export async function getPublicBusinessSettings() {
           prefecture: true,
           city: true,
           streetAddress: true,
+          buildingName: true,
+          businessHours: true,
+          holidayNotice: true,
+          googleReviewUrl: true,
+          googleBusinessPlaceId: true,
+          businessAttributes: true,
+          paymentAccepted: true,
         },
       }),
     fallback: null,
@@ -126,11 +137,12 @@ export async function getPublicBusinessSettings() {
 export async function getAnnouncementBarCarouselSettingsCached() {
   'use cache'
   cacheLife('hours')
-  cacheTag('announcement-bar', 'settings')
+  cacheTag(CACHE_TAGS.ANNOUNCEMENT_BAR, CACHE_TAGS.SETTINGS)
 
   const result = await safeFetch({
     fetch: async () => {
-      const settings = await prisma.settings.findFirst({
+      const settings = await prisma.settings.findUnique({
+        where: { id: 'singleton' },
         select: {
           announcementBarAnimation: true,
           announcementBarDuration: true,
@@ -145,6 +157,7 @@ export async function getAnnouncementBarCarouselSettingsCached() {
           announcementBarStripeAnimation: true,
           announcementBarGradientAnimation: true,
           announcementBarGlassAnimation: true,
+          announcementBarSticky: true,
         },
       })
       return settings ?? DEFAULT_ANNOUNCEMENT_BAR_SETTINGS
@@ -167,7 +180,7 @@ export async function getAnnouncementBarCarouselSettingsCached() {
 export async function getActiveAnnouncementBarsCached() {
   'use cache'
   cacheLife('minutes')
-  cacheTag('announcement-bar')
+  cacheTag(CACHE_TAGS.ANNOUNCEMENT_BAR)
 
   const result = await safeFetch({
     fetch: () =>
@@ -191,7 +204,7 @@ export async function getActiveAnnouncementBarsCached() {
 export async function getPermalinkSettings() {
   'use cache'
   cacheLife('hours')
-  cacheTag('permalink', 'settings')
+  cacheTag(CACHE_TAGS.PERMALINK, CACHE_TAGS.SETTINGS)
 
   const result = await safeFetch({
     fetch: () =>
@@ -202,7 +215,7 @@ export async function getPermalinkSettings() {
           postPermalinkStructure: true,
         },
       }),
-    fallback: { postUrlPrefixEnabled: true, postPermalinkStructure: 'post-name' },
+    fallback: { postUrlPrefixEnabled: true, postPermalinkStructure: PostPermalinkStructure.post_name },
     category: ErrorCategory.DATABASE,
     severity: ErrorSeverity.LOW,
     operationName: 'getPermalinkSettings',
@@ -225,7 +238,7 @@ export async function getPostUrlPrefix(): Promise<string> {
 export async function getPublicRobotsTxtSettings() {
   'use cache'
   cacheLife('hours')
-  cacheTag('robots-txt', 'settings')
+  cacheTag(CACHE_TAGS.ROBOTS_TXT, CACHE_TAGS.SETTINGS)
 
   const result = await safeFetch({
     fetch: () =>
@@ -252,7 +265,7 @@ export async function getPublicRobotsTxtSettings() {
 export async function getLayoutSettings() {
   'use cache'
   cacheLife('hours')
-  cacheTag('layout', 'settings')
+  cacheTag(CACHE_TAGS.LAYOUT, CACHE_TAGS.SETTINGS)
 
   const result = await safeFetch({
     fetch: () =>

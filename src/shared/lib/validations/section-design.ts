@@ -1,8 +1,8 @@
 /**
- * セクション共通デザインパラメータスキーマ
+ * セクション共通スキーマ
  *
- * homepage-section.ts と page-section.ts の両方で使用
- * アニメーション、レスポンシブ、スペーシング設定を共通化
+ * section.ts で使用
+ * URL / CTA ボタン / HEXカラーバリデーション / デザイン設定
  */
 
 import { z } from 'zod'
@@ -178,67 +178,90 @@ export function transformCtaFields<
 }
 
 // =============================================================================
-// 共通デザインパラメータ
+// セクション design JSON スキーマ
 // =============================================================================
 
-/**
- * アニメーション設定
- * IntersectionObserver + CSS トランジションで実装
- */
-export const animationSchema = z
-  .object({
-    type: z
-      .enum(['none', 'fade', 'slide-up', 'slide-left', 'zoom'])
-      .default('none'),
-    duration: z.number().min(0).max(3000).default(600),
-    delay: z.number().min(0).max(2000).default(0),
-    easing: z
-      .enum(['ease', 'ease-in', 'ease-out', 'ease-in-out', 'linear'])
-      .default('ease-out'),
-  })
-  .default({ type: 'none', duration: 600, delay: 0, easing: 'ease-out' })
+/** セクション間隔 */
+const sectionSpacingValues = ['none', 'sm', 'md', 'lg', 'xl'] as const
+export type SectionSpacing = (typeof sectionSpacingValues)[number]
 
-/**
- * レスポンシブ表示制御
- */
-export const responsiveSchema = z
-  .object({
-    hideOnMobile: z.boolean().default(false),
-    hideOnDesktop: z.boolean().default(false),
-  })
-  .default({ hideOnMobile: false, hideOnDesktop: false })
+/** 背景スタイル */
+const sectionBgValues = ['default', 'surface', 'accent', 'primary', 'dark', 'image', 'gradient'] as const
+export type SectionBg = (typeof sectionBgValues)[number]
 
-/**
- * スペーシング設定
- */
-export const spacingSchema = z
-  .object({
-    paddingTop: z.enum(['none', 'sm', 'md', 'lg', 'xl']).default('md'),
-    paddingBottom: z.enum(['none', 'sm', 'md', 'lg', 'xl']).default('md'),
-  })
-  .default({ paddingTop: 'md', paddingBottom: 'md' })
+/** コンテナ最大幅 */
+const sectionMaxWidthValues = ['sm', 'md', 'lg', 'xl', 'full'] as const
+export type SectionMaxWidth = (typeof sectionMaxWidthValues)[number]
 
-/**
- * デザインパラメータのデフォルト値
- */
-export const defaultDesignParams = {
-  animation: { type: 'none', duration: 600, delay: 0, easing: 'ease-out' },
-  responsive: { hideOnMobile: false, hideOnDesktop: false },
-  spacing: { paddingTop: 'md', paddingBottom: 'md' },
-  customClass: '',
-} satisfies DesignParams
+/** アニメーションプリセット */
+const sectionAnimationValues = ['none', 'fade', 'slide-up', 'parallax'] as const
+export type SectionAnimation = (typeof sectionAnimationValues)[number]
 
-// =============================================================================
-// 型定義
-// =============================================================================
+const sectionAnimationSet = new Set<string>(sectionAnimationValues)
 
-export type AnimationConfig = z.output<typeof animationSchema>
-export type ResponsiveConfig = z.output<typeof responsiveSchema>
-export type SpacingConfig = z.output<typeof spacingSchema>
-
-export interface DesignParams {
-  animation: AnimationConfig
-  responsive: ResponsiveConfig
-  spacing: SpacingConfig
-  customClass: string
+export function isSectionAnimation(value: string): value is SectionAnimation {
+  return sectionAnimationSet.has(value)
 }
+
+/** タイトルサイズ */
+export const titleSizeValues = ['sm', 'md', 'lg', 'xl', '2xl', '3xl'] as const
+export type TitleSize = (typeof titleSizeValues)[number]
+
+const titleSizeSet = new Set<string>(titleSizeValues)
+
+export function isTitleSize(value: string): value is TitleSize {
+  return titleSizeSet.has(value)
+}
+
+/** テキスト揃え */
+const textAlignValues = ['left', 'center', 'right'] as const
+export type TextAlign = (typeof textAlignValues)[number]
+
+/**
+ * セクション共通デザインスキーマ
+ * Section.design JSON フィールドのバリデーション
+ */
+export const sectionDesignSchema = z.object({
+  // 間隔
+  paddingTop: z.enum(sectionSpacingValues).default('lg'),
+  paddingBottom: z.enum(sectionSpacingValues).default('lg'),
+  // 背景
+  background: z.enum(sectionBgValues).default('default'),
+  backgroundImageUrl: z.string().url().optional().or(z.literal('')),
+  backgroundOverlayOpacity: z.number().min(0).max(100).default(0),
+  // コンテナ
+  maxWidth: z.enum(sectionMaxWidthValues).default('lg'),
+  // テキストスタイリング
+  titleColor: optionalHexColorSchema,
+  titleSize: z.enum(titleSizeValues).default('lg'),
+  textColor: optionalHexColorSchema,
+  textAlign: z.enum(textAlignValues).default('left'),
+  // アニメーション
+  animation: z.enum(sectionAnimationValues).default('fade'),
+  // カスタムCSS
+  customClass: z.string().max(200).optional(),
+})
+
+export type SectionDesign = z.infer<typeof sectionDesignSchema>
+export type SectionDesignInput = z.input<typeof sectionDesignSchema>
+
+/** デフォルトデザイン設定 */
+export const defaultSectionDesign: SectionDesign = {
+  paddingTop: 'lg',
+  paddingBottom: 'lg',
+  background: 'default',
+  backgroundOverlayOpacity: 0,
+  maxWidth: 'lg',
+  titleSize: 'lg',
+  textAlign: 'left',
+  animation: 'fade',
+}
+
+/**
+ * design JSON を安全にパース
+ */
+export function parseSectionDesign(value: unknown): SectionDesign {
+  const result = sectionDesignSchema.safeParse(value)
+  return result.success ? result.data : defaultSectionDesign
+}
+

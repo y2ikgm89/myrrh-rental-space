@@ -156,3 +156,86 @@ export async function loadAdminAuditLogSearchParams(searchParams: Promise<Search
   await adminAuditLogSearchParamsCache.parse(searchParams)
   return adminAuditLogSearchParamsCache.all()
 }
+
+/** 管理画面クーポン検索パラメータキャッシュ */
+const adminCouponSearchParamsCache = createSearchParamsCache({
+  search: parseAsQuery,
+  status: parseAsString.withDefault(''),
+  type: parseAsString.withDefault(''),
+  page: parseAsPage,
+})
+
+/** 管理画面クーポン検索パラメータローダー */
+export async function loadAdminCouponSearchParams(searchParams: Promise<SearchParams>) {
+  await adminCouponSearchParamsCache.parse(searchParams)
+  return adminCouponSearchParamsCache.all()
+}
+
+/** 管理画面メディア検索パラメータキャッシュ */
+const adminMediaSearchParamsCache = createSearchParamsCache({
+  search: parseAsQuery,
+  type: parseAsString.withDefault(''),
+  usage: parseAsString.withDefault(''),
+  view: parseAsString.withDefault('grid'),
+  page: parseAsPage,
+})
+
+/** 管理画面メディア検索パラメータローダー */
+export async function loadAdminMediaSearchParams(searchParams: Promise<SearchParams>) {
+  await adminMediaSearchParamsCache.parse(searchParams)
+  return adminMediaSearchParamsCache.all()
+}
+
+/** 管理画面コメント検索パラメータキャッシュ */
+const adminCommentSearchParamsCache = createSearchParamsCache({
+  search: parseAsQuery,
+  status: parseAsString.withDefault(''),
+  page: parseAsPage,
+  perPage: parseAsPerPage,
+})
+
+/** 管理画面コメント検索パラメータローダー */
+export async function loadAdminCommentSearchParams(searchParams: Promise<SearchParams>) {
+  await adminCommentSearchParamsCache.parse(searchParams)
+  return adminCommentSearchParamsCache.all()
+}
+
+/** 管理画面ページ管理検索パラメータキャッシュ */
+const adminPageSearchParamsCache = createSearchParamsCache({
+  q: parseAsQuery,
+  status: parseAsString.withDefault('all'),
+  type: parseAsString.withDefault('all'),
+  page: parseAsPage,
+  perPage: parseAsInteger.withDefault(20),
+  sort: parseAsSortOrder,
+})
+
+/** 管理画面ページ管理検索パラメータローダー */
+export async function loadAdminPageSearchParams(searchParams: Promise<SearchParams>) {
+  await adminPageSearchParamsCache.parse(searchParams)
+  return adminPageSearchParamsCache.all()
+}
+
+/** 管理画面ページ管理パーサー（Client Component用） */
+export const adminPageParsers = {
+  q: parseAsQuery,
+  status: parseAsString.withDefault('all'),
+  type: parseAsString.withDefault('all'),
+  page: parseAsPage,
+  perPage: parseAsInteger.withDefault(20),
+  sort: parseAsSortOrder,
+}
+
+/** 管理画面カレンダー検索パラメータキャッシュ */
+const adminCalendarSearchParamsCache = createSearchParamsCache({
+  view: parseAsString.withDefault(''),
+  date: parseAsString.withDefault(''),
+  spaceId: parseAsString.withDefault(''),
+  status: parseAsString.withDefault(''),
+})
+
+/** 管理画面カレンダー検索パラメータローダー */
+export async function loadAdminCalendarSearchParams(searchParams: Promise<SearchParams>) {
+  await adminCalendarSearchParamsCache.parse(searchParams)
+  return adminCalendarSearchParamsCache.all()
+}

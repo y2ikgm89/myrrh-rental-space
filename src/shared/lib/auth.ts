@@ -10,7 +10,14 @@
  * - **複数認証方式**: Email/Password、Google OAuth
  * - **監査ログ**: ログイン成功/失敗の自動記録
  *
- * ## シングルトンパターン
+ * ## 遅延非同期初期化パターン
+ * Better Auth の `betterAuth()` はモジュールロード時に同期的にシングルトン生成される。
+ * Google OAuth 資格情報は DB に保存されるため非同期読取が必要。
+ *
+ * - `baseAuth`: 型推論専用（socialProviders なしで同期生成）
+ * - `getAuth()`: 実リクエスト用（DB から資格情報を読み、キャッシュ済みインスタンスを返す）
+ * - `resetAuthInstance()`: 管理画面で設定変更時にキャッシュ破棄
+ *
  * 開発環境のホットリロード時も単一インスタンスを維持し、
  * AsyncLocalStorage の重複初期化警告を回避
  *
@@ -30,6 +37,7 @@ import { AuditAction } from '@/shared/generated/prisma/enums'
 import { SESSION_CONFIG, getAppUrl } from './constants'
 import { isRecord } from './serialize'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from './errors'
+import type { GoogleOAuthCredentials } from './google-oauth-credentials'
 
 /**
  * 監査ログを記録（非同期、失敗無視）
@@ -60,8 +68,10 @@ async function logAuthEvent(
 
 /**
  * Better Auth インスタンス作成関数
+ *
+ * @param credentials - Google OAuth 資格情報（nullの場合はsocialProvidersなし）
  */
-function createAuth() {
+function createAuth(credentials?: GoogleOAuthCredentials | null) {
   return betterAuth({
     database: prismaAdapter(prisma, {
       provider: 'postgresql',
@@ -77,18 +87,22 @@ function createAuth() {
     emailAndPassword: {
       enabled: true,
     },
-    socialProviders: {
-      google: {
-        clientId: process.env.GOOGLE_CLIENT_ID!,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-        scope: [
-          'openid',
-          'email',
-          'profile',
-          'https://www.googleapis.com/auth/calendar.events',
-        ],
-      },
-    },
+    ...(credentials
+      ? {
+          socialProviders: {
+            google: {
+              clientId: credentials.clientId,
+              clientSecret: credentials.clientSecret,
+              scope: [
+                'openid',
+                'email',
+                'profile',
+                'https://www.googleapis.com/auth/calendar.events',
+              ],
+            },
+          },
+        }
+      : {}),
     user: {
       additionalFields: {
         role: {
@@ -115,29 +129,66 @@ function createAuth() {
   })
 }
 
-// グローバル変数の型定義（auth.ts内で定義することで$Inferが正しく機能）
+/**
+ * Better Auth インスタンスの型（インスタンス生成なしで型推論）
+ *
+ * `ReturnType<typeof createAuth>` で関数の戻り値型を取得し、
+ * indexed access type で `$Infer` にアクセス。
+ * モジュールロード時の不要な副作用（DB接続等）を回避。
+ */
+type AuthInstance = ReturnType<typeof createAuth>
+
+// グローバル変数の型定義
 declare global {
-  var auth: ReturnType<typeof createAuth> | undefined
+  var authInstance: AuthInstance | undefined
 }
 
 const globalForAuth = globalThis
 
 /**
- * Better Auth インスタンス（シングルトン）
+ * Better Auth インスタンスを非同期で取得（遅延初期化）
  *
- * 開発環境のホットリロード時も単一インスタンスを維持し、
- * AsyncLocalStorage の重複初期化警告を回避
+ * DB から Google OAuth 資格情報を読み、キャッシュ済みインスタンスを返す。
+ * 初回呼出し時のみ DB 読取が発生し、以降はキャッシュを使用。
  */
-export const auth = globalForAuth.auth ?? createAuth()
+export async function getAuth(): Promise<AuthInstance> {
+  if (globalForAuth.authInstance) {
+    return globalForAuth.authInstance
+  }
 
-if (process.env.NODE_ENV !== 'production') {
-  globalForAuth.auth = auth
+  let credentials: GoogleOAuthCredentials | null = null
+  try {
+    // 動的インポートでcircular dependency回避
+    const { getGoogleOAuthCredentials } = await import('./google-oauth-credentials')
+    credentials = await getGoogleOAuthCredentials()
+  } catch (error) {
+    // ビルド時やDB不可の場合はcredentialsなしで初期化
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.LOW,
+      context: { operation: 'getAuth', note: 'initializing without Google OAuth' },
+    })
+  }
+
+  const instance = createAuth(credentials)
+  globalForAuth.authInstance = instance
+  return instance
+}
+
+/**
+ * Auth インスタンスのキャッシュを破棄
+ *
+ * 管理画面で Google OAuth 設定を変更した後に呼び出し、
+ * 次回リクエストで新しい資格情報で再構築させる。
+ */
+export function resetAuthInstance(): void {
+  globalForAuth.authInstance = undefined
 }
 
 /**
  * セッション型
  */
-export type Session = typeof auth.$Infer.Session
+export type Session = AuthInstance['$Infer']['Session']
 
 /**
  * Better Auth のユーザー型（role を Role enum に変換）
@@ -204,6 +255,7 @@ export function getSessionUser(session: Session | null): User | null {
  * Next.js公式ベストプラクティス: Data Access Layer (DAL) パターン
  */
 export const verifySession = cache(async (): Promise<User> => {
+  const auth = await getAuth()
   const session = await auth.api.getSession({
     headers: await headers(),
   })
@@ -231,6 +283,7 @@ export const verifyAdminSession = cache(async (): Promise<User> => {
  * リダイレクトなし版（オプショナル認証用）
  */
 export const getCurrentUser = cache(async (): Promise<User | undefined> => {
+  const auth = await getAuth()
   const session = await auth.api.getSession({
     headers: await headers(),
   })
@@ -251,6 +304,7 @@ export const isAdmin = cache(async (): Promise<boolean> => {
  * Server Actions など cache() が適さない場所で使用
  */
 export async function getSession(): Promise<Session | null> {
+  const auth = await getAuth()
   return auth.api.getSession({
     headers: await headers(),
   })

@@ -139,6 +139,7 @@ function validateProductionEnv(): void {
     { name: 'ENCRYPTION_KEY', value: serverEnv.ENCRYPTION_KEY },
     { name: 'CRON_SECRET', value: serverEnv.CRON_SECRET },
     { name: 'ADMIN_LOGIN_TOKEN', value: serverEnv.ADMIN_LOGIN_TOKEN },
+    // GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET は DB 管理に移行（環境変数はフォールバック）
   ]
 
   const missing = requiredInProd

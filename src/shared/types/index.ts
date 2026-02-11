@@ -2,16 +2,6 @@
  * 共有型定義エクスポート
  */
 
-// JSON fields
-export {
-  type TimeSlot,
-  type DayOfWeek,
-  type BusinessHours,
-  DAYS_OF_WEEK,
-  isBusinessHours,
-  parseBusinessHours,
-} from './json-fields'
-
 // Prisma types
 export {
   LayoutWidth,

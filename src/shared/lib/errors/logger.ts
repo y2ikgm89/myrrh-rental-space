@@ -18,6 +18,19 @@ interface ErrorDetails {
   environment: string | undefined
 }
 
+/** Extract a useful message from any thrown value */
+function extractMessage(error: unknown): string {
+  if (error instanceof Error) return error.message
+  if (typeof error === 'string') return error
+  // Non-Error objects (e.g. Next.js cache serialization errors): stringify for visibility
+  try {
+    const json = JSON.stringify(error)
+    return json === '{}' ? `[non-Error object: ${Object.getPrototypeOf(error)?.constructor?.name ?? typeof error}]` : json
+  } catch {
+    return String(error)
+  }
+}
+
 /**
  * エラーをログ出力
  *
@@ -25,7 +38,7 @@ interface ErrorDetails {
  */
 export function logError(error: unknown, logContext: ErrorLogContext): void {
   const errorDetails: ErrorDetails = {
-    message: error instanceof Error ? error.message : String(error),
+    message: extractMessage(error),
     stack: error instanceof Error ? error.stack : undefined,
     category: logContext.category,
     severity: logContext.severity,

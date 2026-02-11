@@ -2,7 +2,7 @@
  * Server Actions 共通型定義
  *
  * admin/public両方で使用する基本的な型とヘルパー
- * admin固有の認可ロジック（withAuth, withPermission等）は@/admin/types/server-actionsを使用
+ * admin固有の認可ロジック（withPermission, withRole等）は@/admin/types/server-actionsを使用
  */
 
 // =============================================================================

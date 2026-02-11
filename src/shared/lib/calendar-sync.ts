@@ -33,6 +33,7 @@ import { sendCalendarSyncRejectionEmail } from '@/shared/lib/email-service'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { ACTIVE_RESERVATION_STATUSES } from '@/shared/lib/validations/enums'
+import { CalendarSyncMethod } from '@/shared/generated/prisma/enums'
 
 // =============================================================================
 // Types
@@ -700,7 +701,7 @@ export async function getSyncStatus(): Promise<{
   return {
     enabled: settings?.googleCalendarTwoWaySyncEnabled ?? false,
     lastSyncedAt: settings?.googleCalendarLastSyncedAt ?? null,
-    syncMethod: settings?.googleCalendarSyncMethod ?? 'polling',
+    syncMethod: settings?.googleCalendarSyncMethod ?? CalendarSyncMethod.polling,
     webhookActive: !!settings?.googleCalendarWebhookChannelId,
     webhookExpiration: settings?.googleCalendarWebhookExpiration ?? null,
   }

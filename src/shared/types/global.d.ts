@@ -12,6 +12,10 @@ import type { PrismaClient } from '@/shared/generated/prisma/client'
 declare global {
   // Prisma シングルトン
   var prisma: PrismaClient | undefined
+
+  // Google Analytics gtag（@next/third-parties が注入）
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  var gtag: ((...args: any[]) => void) | undefined
 }
 
 export {}
