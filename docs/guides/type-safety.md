@@ -4,7 +4,7 @@
 
 **最終更新**: 2026-01-08
 
-**注意**: このドキュメントは、公式ドキュメント（TypeScript 5.9、Zod 4.3、Prisma 7、Next.js 16、React 19、nuqs 2.8.6）の最新情報を確認して作成されています。
+**注意**: このドキュメントは、公式ドキュメント（TypeScript 5.9、Zod 4.3、Prisma 7、Next.js 16、React 19、nuqs 2.8.8）の最新情報を確認して作成されています。
 
 ---
 
@@ -33,7 +33,7 @@
 - **TypeScript 5.9.3**: 型システムの基盤
 - **Prisma 7.2.0**: データベーススキーマから型を自動生成
 - **Zod 4.3.5**: ランタイムバリデーションと型推論
-- **nuqs 2.8.6**: URLクエリパラメータの型安全な管理
+- **nuqs 2.8.8**: URLクエリパラメータの型安全な管理
 - **React 19.2.3 + Next.js 16.1.1**: Server Components、Server Actionsの型安全性
 
 ---
@@ -1266,7 +1266,7 @@ export function SpaceCard({ space, onSelect, className }: SpaceCardProps) {
 
 ## 18. 更新履歴
 
-- **2026-01-08**: nuqsバージョンを2.8.5から2.8.6に更新（nuqs.mdとの整合性）、ドキュメント相互参照パスを修正（BEST_PRACTICES.md、PROJECT_STRUCTURE.md、API.md、README.md、PRISMA_7.mdへのパスを正しいディレクトリに変更）
+- **2026-01-08**: nuqsバージョンを2.8.5から2.8.8に更新（nuqs.mdとの整合性）、ドキュメント相互参照パスを修正（BEST_PRACTICES.md、PROJECT_STRUCTURE.md、API.md、README.md、PRISMA_7.mdへのパスを正しいディレクトリに変更）
 - **2026-01-06**: 公式ドキュメント確認後、最新情報を反映（Prisma 7のドライバーアダプター、React 19の`use`フックの注意事項、nuqsのネストされたServer Componentsでの使用、Zodの`safeParse`の推奨事項）
 - **2026-01-06**: 初版作成、型安全・型定義の包括的な要件定義を追加
 

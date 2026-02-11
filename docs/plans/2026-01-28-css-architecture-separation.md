@@ -302,7 +302,7 @@ export default async function PublicRootLayout({
 
 ### リスク2: 共有コンポーネントの依存関係
 
-**対策**: `src/shared/components/` は最小限（SanitizedHtml, DiscountPriceDisplay）。CSS変数に依存しないことを確認。
+**対策**: `src/shared/components/` は最小限（SanitizedHtml）。CSS変数に依存しないことを確認。DiscountPriceDisplay はCSS変数依存のため public/admin 各自に配置済み。
 
 ### リスク3: 移行中の一時的な不整合
 

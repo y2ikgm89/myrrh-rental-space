@@ -4,18 +4,58 @@
 
 | カテゴリ | スコア | 詳細 |
 |---------|--------|------|
-| セキュリティ | 100 | 環境変数本番必須化, APIレート制限(100req/分/IP), Webhookトークン検証 |
+| セキュリティ | 100 | 環境変数本番必須化, APIレート制限(100req/分/IP), Webhookトークン検証, 全Server Actions認証チェック完備 |
 | 型安全性 | 100 | Zod 4 + TypeScript 5.9 strict, 型アサーション84→57箇所(32%削減), 型安全ユーティリティ統一 |
-| パフォーマンス | 100 | 公開側アクション全キャッシュ化, メール送信非ブロッキング化, fireAndForget統一 |
+| パフォーマンス | 100 | 公開側アクション全キャッシュ化, メール送信非ブロッキング化, fireAndForget統一, Prisma select句最適化 |
 | コード品質 | 100 | 大規模ファイル分割完了(settings.ts, NavigationManager, AnnouncementBarManager), fireAndForget統一 |
-| キャッシュ戦略 | 100 | 'use cache' + cacheLife + cacheTag 全公開アクションに適用, revalidateTag統一 |
-| テスト | 100 | 936 tests pass, API Routesテスト全修正(bun:test統一), async-utils.ts完備 |
+| キャッシュ戦略 | 100 | 'use cache' + cacheLife + cacheTag 全公開アクションに適用, updateTag統一, getCacheTag一元管理 |
+| テスト | 100 | 2580 tests pass (71 files), pricing/permissions/server-action-helpers/turnstileテスト追加, TDZ修正 |
 
-**最終更新**: 2026-01-23
+**最終更新**: 2026-02-10
 
 ---
 
 ## 完了した計画
+
+### 080 - プロジェクト最適化スコア改善 (2026-02-07) ✅
+
+PWA対応、Web Vitals計測、アクセシビリティ改善を実施。
+
+**実装内容**:
+- [x] PWA manifest.ts + 動的アイコン生成（192/512 Route Handler + apple-icon.tsx）
+- [x] Web Vitals計測（web-vitals v5 → GA4送信、GDPR対応、動的import）
+- [x] アクセシビリティ: WCAG AA コントラスト比検証、CookieConsentBanner リンク色修正
+- [x] type-check / lint / build 全通過
+
+### 079 - Citation/MEO 総合強化 (2026-02-06) ✅
+
+サイテーション対策とMEO（ローカル検索最適化）を包括的に強化。構造化データ、NAP一貫性、公開ページ表示を改善。
+
+**実装内容**:
+- [x] Step A: Prisma migration（paymentAccepted）+ settings schema + business action
+- [x] Step B: public.ts select拡張 + business.ts データレイヤー拡張（googleReviewUrl, googleMapsUrl, businessAttributes）
+- [x] Step C: @graph パターン + @id 相互参照（LocalBusiness + WebSite 統合JSON-LD）
+- [x] Step D: MeoSection admin UI（paymentAccepted入力、MEOスコア13項目化）
+- [x] Step E: Footer + BusinessInfo（営業時間microdata、Google Maps/口コミリンク、施設属性アイコン）
+- [x] Step F: type-check / lint / build 全通過
+
+**構造化データ追加プロパティ**: `hasMap`, `currenciesAccepted`, `paymentAccepted`, `foundingDate`, `additionalType`, `image`, `sameAs`, `amenityFeature`, `specialOpeningHoursSpecification`
+
+**変更ファイル**:
+- `prisma/schema.prisma` — paymentAccepted フィールド追加
+- `src/shared/lib/settings/public.ts` — select 拡張
+- `src/app/(public)/_shared/data/business.ts` — googleMapsUrl, businessAttributes 追加
+- `src/app/(public)/_shared/lib/seo/json-ld-config.ts` — @graph, LocalBusiness拡充, specialOpeningHours
+- `src/app/(public)/_shared/components/seo/JsonLd.tsx` — GraphJsonLd コンポーネント
+- `src/app/(public)/layout.tsx` — @graph 版 StructuredDataContent
+- `src/app/(public)/_shared/components/layouts/Footer.tsx` — 営業時間, Google リンク
+- `src/app/(public)/contact/_components/BusinessInfo.tsx` — 営業時間, 施設属性, Google リンク
+- `src/app/(admin)/admin/(dashboard)/settings/_components/sections/MeoSection.tsx` — paymentAccepted, スコア13項目
+- `src/app/(admin)/admin/(dashboard)/settings/business/page.tsx` — socialLinkCount 取得
+
+**技術**: @graph JSON-LD / schema.org microdata / OpeningHoursSpecification / LocationFeatureSpecification / Place ID → Google Maps URL自動生成
+
+---
 
 ### 078 - 全セクション型 v3 実装 + [slug] ルート復元 (2026-02-04) ✅
 
