@@ -374,8 +374,9 @@ export function CommentPlugin({
                   const node = $getNodeByKey(nodeKey)
                   if ($isMarkNode(node)) {
                     const ids = node.getIDs()
-                    if (ids.length > 0) {
-                      editor.dispatchCommand(CLICK_MARK_COMMAND, ids[0])
+                    const firstId = ids[0]
+                    if (firstId) {
+                      editor.dispatchCommand(CLICK_MARK_COMMAND, firstId)
                     }
                   }
                 })

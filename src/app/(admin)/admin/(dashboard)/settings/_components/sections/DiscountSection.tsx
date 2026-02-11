@@ -84,7 +84,9 @@ export function DiscountSection({ settings }: DiscountSectionProps) {
 
   const updateRule = (index: number, field: keyof DurationRule, value: number) => {
     const newRules = [...formData.durationDiscountRules]
-    newRules[index] = { ...newRules[index], [field]: value }
+    const current = newRules[index]
+    if (!current) return
+    newRules[index] = { ...current, [field]: value }
     setFormData({ ...formData, durationDiscountRules: newRules })
   }
 

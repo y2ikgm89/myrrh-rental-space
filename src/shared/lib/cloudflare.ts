@@ -191,15 +191,17 @@ export async function purgeCloudflareCache(
   let totalPurged = 0
   for (let i = 0; i < results.length; i++) {
     const result = results[i]
+    const batch = batches[i]
+    if (!result || !batch) continue
     if (!result.success) {
       logger.warn('Cloudflare cache purge failed', {
         error: result.error,
-        urls: batches[i],
+        urls: batch,
         purgedBeforeFailure: totalPurged,
       })
-      return { ...result, purgedFiles: totalPurged }
+      return { success: result.success, error: result.error, purgedFiles: totalPurged }
     }
-    totalPurged += batches[i].length
+    totalPurged += batch.length
   }
 
   logger.info('Cloudflare cache purged', { count: totalPurged })

@@ -153,7 +153,7 @@ export const createAnnouncementBar = withPermission<
 >('announcementBar', 'create')(async (user, data): Promise<ActionResult<{ id: string }>> => {
   const parsed = announcementBarSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   const {
@@ -201,7 +201,7 @@ export const updateAnnouncementBar = withPermission<
 >('announcementBar', 'update')(async (user, id, data): Promise<ActionResult<void>> => {
   const parsed = announcementBarSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   const existing = await prisma.announcementBar.findUnique({

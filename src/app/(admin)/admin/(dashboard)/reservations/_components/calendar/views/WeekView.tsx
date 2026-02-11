@@ -91,7 +91,7 @@ export function WeekView({ dateRange, events, onEventClick }: WeekViewProps) {
 
               {/* イベント */}
               <div className="absolute inset-0 px-0.5">
-                {eventsByDay[dayIndex].map((event) => (
+                {(eventsByDay[dayIndex] ?? []).map((event) => (
                   <EventCell
                     key={event.id}
                     event={event}

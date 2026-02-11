@@ -30,14 +30,16 @@ export interface TypeColorConfig {
 /**
  * タイプ別のデフォルトカラー設定
  */
+export const DEFAULT_TYPE_STYLE: TypeColorConfig = {
+  bg: 'bg-info',
+  text: 'text-info-foreground',
+  hover: 'hover:text-info-foreground/80',
+  gradient: 'from-info to-info/80',
+  hex: '#2563eb',
+}
+
 export const TYPE_STYLES: Record<string, TypeColorConfig> = {
-  info: {
-    bg: 'bg-info',
-    text: 'text-info-foreground',
-    hover: 'hover:text-info-foreground/80',
-    gradient: 'from-info to-info/80',
-    hex: '#2563eb',
-  },
+  info: DEFAULT_TYPE_STYLE,
   warning: {
     bg: 'bg-warning',
     text: 'text-warning-foreground',
@@ -64,11 +66,11 @@ export const DESIGN_STYLE_CLASSES: Record<DesignStyle, {
 }> = {
   solid: {
     container: '',
-    containerWithBg: (type) => TYPE_STYLES[type]?.bg || TYPE_STYLES.info.bg,
+    containerWithBg: (type) => TYPE_STYLES[type]?.bg ?? DEFAULT_TYPE_STYLE.bg,
   },
   gradient: {
     container: 'bg-gradient-to-r',
-    containerWithBg: (type) => TYPE_STYLES[type]?.gradient || TYPE_STYLES.info.gradient,
+    containerWithBg: (type) => TYPE_STYLES[type]?.gradient ?? DEFAULT_TYPE_STYLE.gradient,
   },
   outlined: {
     container: 'bg-transparent border-y',
@@ -86,7 +88,7 @@ export const DESIGN_STYLE_CLASSES: Record<DesignStyle, {
   },
   striped: {
     container: '',
-    containerWithBg: (type) => TYPE_STYLES[type]?.bg || TYPE_STYLES.info.bg,
+    containerWithBg: (type) => TYPE_STYLES[type]?.bg ?? DEFAULT_TYPE_STYLE.bg,
   },
 }
 
@@ -145,7 +147,7 @@ export function getStripedStyle(
  * @returns HEX色
  */
 export function getTypeHexColor(type: string): string {
-  return TYPE_STYLES[type]?.hex || TYPE_STYLES.info.hex
+  return TYPE_STYLES[type]?.hex ?? DEFAULT_TYPE_STYLE.hex
 }
 
 /**

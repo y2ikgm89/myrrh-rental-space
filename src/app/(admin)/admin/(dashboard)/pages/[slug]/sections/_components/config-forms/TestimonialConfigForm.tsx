@@ -56,8 +56,9 @@ export default function TestimonialConfigForm({ section, onSave, isPending, onDi
   const authorImagePicker = useSingleMediaPicker({
     defaultUsage: 'GENERAL',
     onSelect: (media) => {
-      if (activeImageIndex !== null && media.length > 0) {
-        setValue(`items.${activeImageIndex}.authorImageUrl`, media[0].url)
+      const selected = media[0]
+      if (activeImageIndex !== null && selected) {
+        setValue(`items.${activeImageIndex}.authorImageUrl`, selected.url)
       }
       setActiveImageIndex(null)
     },
@@ -214,7 +215,7 @@ export default function TestimonialConfigForm({ section, onSave, isPending, onDi
                     {watchedItems?.[index]?.authorImageUrl ? (
                       <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border">
                         <Image
-                          src={watchedItems[index].authorImageUrl}
+                          src={watchedItems[index]?.authorImageUrl ?? ''}
                           alt=""
                           fill
                           className="object-cover"

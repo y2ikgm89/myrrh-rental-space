@@ -1,7 +1,7 @@
 'use client'
 
 import {
-  TYPE_STYLES,
+  DEFAULT_TYPE_STYLE,
   getStripedStyle,
 } from '@/shared/lib/announcement-bar-utils'
 import { cn } from '@/shared/lib/utils'
@@ -19,7 +19,7 @@ export function DesignPreview({
   gradientAnimation,
   glassAnimation,
 }: DesignPreviewProps): React.ReactElement {
-  const defaultColors = TYPE_STYLES.info
+  const defaultColors = DEFAULT_TYPE_STYLE
 
   // スタイル計算
   const customStyles: React.CSSProperties = {}
@@ -60,6 +60,8 @@ export function DesignPreview({
         return 'bg-transparent border-b border-border'
       case AnnouncementBarDesignStyle.striped:
         return !bgColor ? defaultColors.bg : ''
+      default:
+        return ''
     }
   }
 
@@ -74,6 +76,8 @@ export function DesignPreview({
       case AnnouncementBarDesignStyle.outlined:
       case AnnouncementBarDesignStyle.minimal:
         return 'text-foreground'
+      default:
+        return ''
     }
   }
 

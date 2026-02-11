@@ -260,10 +260,12 @@ export function convertToOpeningHoursSpecification(
 
   const specs: OpeningHoursSpec[] = []
   for (const [timeRange, days] of groupMap) {
-    const [opens, closes] = timeRange.split('-')
+    const [opens = '', closes = ''] = timeRange.split('-')
+    const firstDay = days[0]
+    if (!firstDay) continue
     specs.push({
       '@type': 'OpeningHoursSpecification',
-      dayOfWeek: days.length === 1 ? days[0] : days,
+      dayOfWeek: days.length === 1 ? firstDay : days,
       opens,
       closes,
     })
@@ -393,7 +395,7 @@ export async function getLocalBusinessJsonLdData(): Promise<LocalBusinessJsonLdD
 
   // foundingDate: ISO 8601形式
   const foundingDate = settings?.establishedDate
-    ? new Date(settings.establishedDate).toISOString().split('T')[0]
+    ? (new Date(settings.establishedDate).toISOString().split('T')[0] ?? undefined)
     : undefined
 
   return {

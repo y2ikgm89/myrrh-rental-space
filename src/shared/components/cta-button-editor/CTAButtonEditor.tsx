@@ -82,9 +82,11 @@ export function CTAButtonEditor({
     const target = direction === 'up' ? index - 1 : index + 1
     if (target < 0 || target >= buttons.length) return
     const next = [...buttons]
-    const temp = next[index]
-    next[index] = next[target]
-    next[target] = temp
+    const current = next[index]
+    const swapWith = next[target]
+    if (!current || !swapWith) return
+    next[index] = swapWith
+    next[target] = current
     onChange(next)
   }
 

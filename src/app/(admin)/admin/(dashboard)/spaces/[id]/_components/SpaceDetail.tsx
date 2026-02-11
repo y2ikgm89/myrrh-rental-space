@@ -265,14 +265,16 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
           )}
 
           {/* 画像 */}
-          <Image
-            src={allImages[selectedIndex]}
-            alt={`${space.name} - 画像${selectedIndex + 1}`}
-            width={1920}
-            height={1080}
-            className="max-w-full max-h-[90vh] object-contain rounded-lg"
-            onClick={(e) => e.stopPropagation()}
-          />
+          {allImages[selectedIndex] && (
+            <Image
+              src={allImages[selectedIndex]}
+              alt={`${space.name} - 画像${selectedIndex + 1}`}
+              width={1920}
+              height={1080}
+              className="max-w-full max-h-[90vh] object-contain rounded-lg"
+              onClick={(e) => e.stopPropagation()}
+            />
+          )}
 
           {/* 次へボタン */}
           {allImages.length > 1 && (

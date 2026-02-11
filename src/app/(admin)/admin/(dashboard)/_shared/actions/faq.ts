@@ -111,7 +111,7 @@ export const createFaqCategory = withPermission<
 >('faq', 'create')(async (user, data): Promise<ActionResult<{ id: string }>> => {
   const parsed = faqCategoryFormSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   // スラッグの重複チェック
@@ -152,7 +152,7 @@ export const updateFaqCategory = withPermission<
 >('faq', 'update')(async (user, id, data): Promise<ActionResult<void>> => {
   const parsed = faqCategoryFormSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   const existing = await prisma.faqCategory.findUnique({
@@ -352,7 +352,7 @@ export const createFaqItem = withPermission<
 >('faq', 'create')(async (user, data): Promise<ActionResult<{ id: string }>> => {
   const parsed = faqItemFormSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   // カテゴリの存在確認
@@ -394,7 +394,7 @@ export const updateFaqItem = withPermission<
 >('faq', 'update')(async (user, id, data): Promise<ActionResult<void>> => {
   const parsed = faqItemFormSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   const existing = await prisma.faqItem.findUnique({

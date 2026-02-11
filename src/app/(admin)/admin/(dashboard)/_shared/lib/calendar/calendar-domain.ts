@@ -193,7 +193,7 @@ export function layoutOverlappingEvents(
 
       for (const column of columns) {
         const lastInColumn = column[column.length - 1]
-        if (lastInColumn.endTime <= event.startTime) {
+        if (lastInColumn && lastInColumn.endTime <= event.startTime) {
           column.push(event)
           placed = true
           break
@@ -269,13 +269,13 @@ export function getSpaceColorClass(spaceId: string, index?: number): string {
   ]
 
   if (index !== undefined) {
-    return colors[index % colors.length]
+    return colors[index % colors.length] ?? colors[0] ?? 'border-l-blue-500'
   }
 
   const hash = spaceId
     .split('')
     .reduce((acc, char) => acc + char.charCodeAt(0), 0)
-  return colors[hash % colors.length]
+  return colors[hash % colors.length] ?? colors[0] ?? 'border-l-blue-500'
 }
 
 /**

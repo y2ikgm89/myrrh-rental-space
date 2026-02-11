@@ -144,7 +144,7 @@ export async function createCommentThread(
   if (!validation.success) {
     return {
       success: false,
-      error: validation.error.issues[0].message,
+      error: validation.error.issues[0]?.message ?? 'バリデーションエラー',
     }
   }
 
@@ -232,7 +232,7 @@ export async function addComment(
   if (!validation.success) {
     return {
       success: false,
-      error: validation.error.issues[0].message,
+      error: validation.error.issues[0]?.message ?? 'バリデーションエラー',
     }
   }
 

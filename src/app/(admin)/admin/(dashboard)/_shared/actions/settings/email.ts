@@ -32,7 +32,7 @@ export const updateEmailSettings = withPermission<[data: EmailSettingsInput], vo
 )(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = emailSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   const updateData = {
@@ -61,7 +61,7 @@ export const updateNotificationSettings = withPermission<[data: NotificationSett
 )(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = notificationSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   await prisma.settings.upsert({

@@ -176,7 +176,7 @@ export const createHomepageSection = withPermission<[CreateSectionInput], { id: 
 )(async (_user, input) => {
   const parsed = createSectionSchema.safeParse({ ...input, pageId: undefined })
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   const { type, title, config, design, content, order, isActive } = parsed.data
@@ -184,7 +184,7 @@ export const createHomepageSection = withPermission<[CreateSectionInput], { id: 
   // 設定を検証
   const configValidation = validateSectionConfig(type, config)
   if (!configValidation.success) {
-    return createFailure(`設定エラー: ${configValidation.error.issues[0].message}`)
+    return createFailure(`設定エラー: ${configValidation.error.issues[0]?.message ?? 'バリデーションエラー'}`)
   }
 
   // 次のorder値を取得
@@ -224,7 +224,7 @@ export const updateHomepageSection = withPermission<[string, UpdateSectionInput]
 )(async (_user, id, input) => {
   const parsed = updateSectionSchema.safeParse(input)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   const existing = await prisma.section.findUnique({
@@ -239,7 +239,7 @@ export const updateHomepageSection = withPermission<[string, UpdateSectionInput]
   if (parsed.data.config) {
     const configValidation = validateSectionConfig(existing.type, parsed.data.config)
     if (!configValidation.success) {
-      return createFailure(`設定エラー: ${configValidation.error.issues[0].message}`)
+      return createFailure(`設定エラー: ${configValidation.error.issues[0]?.message ?? 'バリデーションエラー'}`)
     }
     parsed.data.config = configValidation.data
   }
@@ -292,7 +292,7 @@ export const updateSectionOrder = withPermission<[UpdateSectionOrderInput], void
 )(async (_user, input) => {
   const parsed = updateSectionOrderSchema.safeParse(input)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   await prisma.$transaction(

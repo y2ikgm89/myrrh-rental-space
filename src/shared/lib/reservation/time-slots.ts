@@ -36,15 +36,15 @@ async function getBusinessHoursSettings(): Promise<BusinessHours | null> {
  * 日付から曜日キーを取得
  */
 function getWeekdayKey(date: Date): WeekdayKey {
-  return WEEKDAY_KEYS[date.getDay()]
+  return WEEKDAY_KEYS[date.getDay()] ?? 'sunday'
 }
 
 /**
  * 時刻文字列を時・分に分解
  */
 function parseTime(time: string): { hour: number; minute: number } {
-  const [h, m] = time.split(':').map(Number)
-  return { hour: h, minute: m }
+  const parts = time.split(':').map(Number)
+  return { hour: parts[0] ?? 0, minute: parts[1] ?? 0 }
 }
 
 /**
@@ -165,7 +165,7 @@ export async function getAvailableTimeSlots(
     const endHour = reservation.endTime.getHours()
 
     for (const slot of slots) {
-      const slotHour = parseInt(slot.time.split(':')[0], 10)
+      const slotHour = parseInt(slot.time.split(':')[0] ?? '0', 10)
       // スロットが予約時間内にある場合は unavailable
       if (slotHour >= startHour && slotHour < endHour) {
         slot.available = false
@@ -181,7 +181,7 @@ export async function getAvailableTimeSlots(
   if (date === today) {
     const currentHour = now.getHours()
     for (const slot of slots) {
-      const slotHour = parseInt(slot.time.split(':')[0], 10)
+      const slotHour = parseInt(slot.time.split(':')[0] ?? '0', 10)
       // 現在時刻以前のスロットは予約不可（現在のスロットは予約可能）
       if (slotHour < currentHour) {
         slot.available = false
@@ -242,7 +242,7 @@ export async function getAvailableDatesInMonth(
     // 過去の日付はスキップ
     if (date < today) continue
 
-    const dateString = date.toISOString().split('T')[0]
+    const dateString = date.toISOString().split('T')[0] ?? ''
 
     // 営業日かどうか判定（DBアクセスなし）
     if (!await isBusinessDay(dateString, businessHours)) continue

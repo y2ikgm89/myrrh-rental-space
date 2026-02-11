@@ -153,8 +153,9 @@ function HeroParallaxConfigForm({
   const bgPicker = useSingleMediaPicker({
     defaultUsage: 'GENERAL',
     onSelect: (media) => {
-      if (media.length > 0) {
-        setValue('backgroundImageUrl', media[0].url)
+      const selected = media[0]
+      if (selected) {
+        setValue('backgroundImageUrl', selected.url)
       }
     },
   })
@@ -341,8 +342,9 @@ function ConceptConfigForm({
   const imgPicker = useSingleMediaPicker({
     defaultUsage: 'GENERAL',
     onSelect: (media) => {
-      if (media.length > 0) {
-        setValue('imageUrl', media[0].url)
+      const selected = media[0]
+      if (selected) {
+        setValue('imageUrl', selected.url)
       }
     },
   })
@@ -723,8 +725,11 @@ function FeaturesConfigForm({
                   value={item.icon ?? 'sparkles'}
                   onValueChange={(val) => {
                     const newItems = [...items]
-                    newItems[index] = { ...newItems[index], icon: val }
-                    setValue('items', newItems)
+                    const current = newItems[index]
+                    if (current) {
+                      newItems[index] = { ...current, icon: val }
+                      setValue('items', newItems)
+                    }
                   }}
                   disabled={isPending}
                 >
@@ -803,8 +808,9 @@ function HeroConfigForm({
   const bgPicker = useSingleMediaPicker({
     defaultUsage: 'GENERAL',
     onSelect: (media) => {
-      if (media.length > 0) {
-        setValue('backgroundImageUrl', media[0].url)
+      const selected = media[0]
+      if (selected) {
+        setValue('backgroundImageUrl', selected.url)
       }
     },
   })

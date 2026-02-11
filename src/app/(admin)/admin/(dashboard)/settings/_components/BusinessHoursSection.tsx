@@ -104,7 +104,7 @@ function hasOverlappingSlots(slots: BusinessTimeSlot[]): boolean {
     for (let j = i + 1; j < slots.length; j++) {
       const a = slots[i]
       const b = slots[j]
-      if (a.openTime < b.closeTime && a.closeTime > b.openTime) {
+      if (a && b && a.openTime < b.closeTime && a.closeTime > b.openTime) {
         return true
       }
     }
@@ -174,6 +174,7 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
 
       for (let i = 0; i < day.slots.length; i++) {
         const slot = day.slots[i]
+        if (!slot) continue
         // 時刻フォーマットチェック
         if (!TIME_REGEX.test(slot.openTime)) {
           errors.push({ day: key, slotIndex: i, field: 'openTime', message: '不正な時刻形式' })
@@ -230,7 +231,8 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
   // 時間帯を追加
   const handleAddSlot = (day: keyof BusinessHours) => {
     setBusinessHours((prev) => {
-      const lastSlot = prev[day].slots[prev[day].slots.length - 1]
+      const daySlots = prev[day].slots
+      const lastSlot = daySlots[daySlots.length - 1]
       const newSlot: BusinessTimeSlot = lastSlot
         ? { openTime: lastSlot.closeTime, closeTime: '21:00' }
         : { ...DEFAULT_SLOT }

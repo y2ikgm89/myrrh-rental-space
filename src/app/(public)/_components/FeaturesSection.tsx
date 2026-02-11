@@ -111,9 +111,9 @@ export function FeaturesSection({ config, design }: FeaturesSectionProps): React
   )
 
   const items = config.items
-  if (items.length === 0) return <></>
-
   const heroFeature = items[0]
+  if (items.length === 0 || !heroFeature) return <></>
+
   const restFeatures = items.slice(1)
 
   return (

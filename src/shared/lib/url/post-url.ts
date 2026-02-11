@@ -170,26 +170,33 @@ export function extractSlugFromUrl(
   const segments = pathname.split('/').filter(Boolean)
 
   switch (structure) {
-    case PostPermalinkStructure.date_name:
+    case PostPermalinkStructure.date_name: {
       // /2026/01/article-title → segments = ['2026', '01', 'article-title']
-      if (segments.length === 3) {
-        return segments[2]
+      const slug = segments[2]
+      if (segments.length === 3 && slug) {
+        return slug
       }
       break
+    }
 
-    case PostPermalinkStructure.category_name:
+    case PostPermalinkStructure.category_name: {
       // /category-slug/article-title → segments = ['category-slug', 'article-title']
-      if (segments.length === 2 && !isReservedPath(segments[0])) {
-        return segments[1]
+      const first = segments[0]
+      const second = segments[1]
+      if (segments.length === 2 && first && !isReservedPath(first) && second) {
+        return second
       }
       break
+    }
 
     case PostPermalinkStructure.post_name:
-    default:
+    default: {
       // /article-title → segments = ['article-title']
-      if (segments.length === 1 && !isReservedPath(segments[0])) {
-        return segments[0]
+      const first = segments[0]
+      if (segments.length === 1 && first && !isReservedPath(first)) {
+        return first
       }
+    }
   }
 
   return null
@@ -213,25 +220,33 @@ export function matchesPostUrl(
     case PostPermalinkStructure.date_name: {
       // /yyyy/mm/slug の形式
       if (segments.length !== 3) return false
-      const year = parseInt(segments[0], 10)
-      const month = parseInt(segments[1], 10)
+      const seg0 = segments[0]
+      const seg1 = segments[1]
+      const seg2 = segments[2]
+      if (!seg0 || !seg1 || !seg2) return false
+      const year = parseInt(seg0, 10)
+      const month = parseInt(seg1, 10)
       return (
         year >= 2000 &&
         year <= 2100 &&
         month >= 1 &&
         month <= 12 &&
-        !isReservedPath(segments[2])
+        !isReservedPath(seg2)
       )
     }
 
-    case PostPermalinkStructure.category_name:
+    case PostPermalinkStructure.category_name: {
       // /category/slug の形式（カテゴリが予約語でないこと）
-      return segments.length === 2 && !isReservedPath(segments[0])
+      const first = segments[0]
+      return segments.length === 2 && !!first && !isReservedPath(first)
+    }
 
     case PostPermalinkStructure.post_name:
-    default:
+    default: {
       // /slug の形式（予約語でないこと）
-      return segments.length === 1 && !isReservedPath(segments[0])
+      const first = segments[0]
+      return segments.length === 1 && !!first && !isReservedPath(first)
+    }
   }
 }
 

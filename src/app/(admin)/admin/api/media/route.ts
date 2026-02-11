@@ -38,16 +38,18 @@ export async function GET(request: Request): Promise<NextResponse> {
     })
 
     if (!filtersResult.success) {
+      const firstIssue = filtersResult.error.issues[0]
       return NextResponse.json(
-        { error: filtersResult.error.issues[0].message },
+        { error: firstIssue?.message ?? 'バリデーションエラー' },
         { status: 400 }
       )
     }
 
     const paginationResult = mediaPaginationSchema.safeParse({ page, limit })
     if (!paginationResult.success) {
+      const firstIssue = paginationResult.error.issues[0]
       return NextResponse.json(
-        { error: paginationResult.error.issues[0].message },
+        { error: firstIssue?.message ?? 'バリデーションエラー' },
         { status: 400 }
       )
     }

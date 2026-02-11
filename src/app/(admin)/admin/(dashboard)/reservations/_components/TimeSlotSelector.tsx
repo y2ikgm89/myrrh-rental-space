@@ -123,7 +123,7 @@ export function TimeSlotSelector({
       // 開始時間より後の時間のみ選択可能
       if (startTime && time > startTime) {
         // 終了時間は次の時間枠（例: 10:00 を選んだら 11:00 まで）
-        const [hourStr] = time.split(':')
+        const hourStr = time.split(':')[0] ?? '0'
         const endHour = parseInt(hourStr, 10) + 1
         const endTimeStr = `${endHour.toString().padStart(2, '0')}:00`
         onEndTimeChange(endTimeStr)
@@ -138,8 +138,8 @@ export function TimeSlotSelector({
 
   const calculateDuration = (): number | null => {
     if (!startTime || !endTime) return null
-    const [startHour] = startTime.split(':').map(Number)
-    const [endHour] = endTime.split(':').map(Number)
+    const startHour = Number(startTime.split(':')[0] ?? '0')
+    const endHour = Number(endTime.split(':')[0] ?? '0')
     return endHour - startHour
   }
 
@@ -166,7 +166,7 @@ export function TimeSlotSelector({
         />
         {errors?.date && (
           <p id="date-error" className={styles.errorText()}>
-            {errors.date[0]}
+            {errors.date[0] ?? ''}
           </p>
         )}
       </div>
@@ -245,10 +245,10 @@ export function TimeSlotSelector({
           </div>
 
           {errors?.startTime && (
-            <p className={styles.errorText()}>{errors.startTime[0]}</p>
+            <p className={styles.errorText()}>{errors.startTime[0] ?? ''}</p>
           )}
           {errors?.endTime && (
-            <p className={styles.errorText()}>{errors.endTime[0]}</p>
+            <p className={styles.errorText()}>{errors.endTime[0] ?? ''}</p>
           )}
 
           {startTime && endTime && duration && (

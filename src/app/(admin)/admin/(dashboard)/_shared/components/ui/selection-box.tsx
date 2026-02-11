@@ -89,6 +89,7 @@ function SelectionBox({
 
     if (nextIndex !== null) {
       const nextOption = options[nextIndex]
+      if (!nextOption) return
       onChange(nextOption.value)
       // フォーカスを次の要素に移動
       const nextButton = document.querySelector(

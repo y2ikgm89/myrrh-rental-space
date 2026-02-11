@@ -189,7 +189,7 @@ export const createPost = withPermission<[CreatePostInput], { id: string }>(
 )(async (user, data) => {
     const parsed = createPostSchema.safeParse(data)
     if (!parsed.success) {
-      return createFailure(parsed.error.issues[0].message)
+      return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
     }
 
     // スラッグの使用可能チェック（予約パス＋全コンテンツタイプ横断）
@@ -231,7 +231,7 @@ export const updatePost = withPermission<[string, UpdatePostInput], void>(
 )(async (user, id, data) => {
     const parsed = updatePostSchema.safeParse(data)
     if (!parsed.success) {
-      return createFailure(parsed.error.issues[0].message)
+      return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
     }
 
     const existingPost = await prisma.post.findUnique({
@@ -555,7 +555,7 @@ export const createPostCategory = withPermission<[PostCategoryInput], { id: stri
 )(async (user, data) => {
     const parsed = postCategorySchema.safeParse(data)
     if (!parsed.success) {
-      return createFailure(parsed.error.issues[0].message)
+      return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
     }
 
     // スラッグの重複チェック
@@ -589,7 +589,7 @@ export const updatePostCategory = withPermission<[string, PostCategoryInput], vo
 )(async (user, id, data) => {
     const parsed = postCategorySchema.safeParse(data)
     if (!parsed.success) {
-      return createFailure(parsed.error.issues[0].message)
+      return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
     }
 
     const existingCategory = await prisma.postCategory.findUnique({
@@ -801,7 +801,7 @@ export const createPostTag = withPermission<[PostTagInput], { id: string }>(
 )(async (user, data) => {
   const parsed = postTagSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   // 名前の重複チェック
@@ -838,7 +838,7 @@ export const updatePostTag = withPermission<[string, PostTagInput], void>(
 )(async (user, id, data) => {
   const parsed = postTagSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   // 既存タグと重複チェックを並列実行

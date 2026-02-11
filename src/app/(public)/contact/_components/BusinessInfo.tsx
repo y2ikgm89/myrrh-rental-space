@@ -101,14 +101,18 @@ function parseBusinessHoursForDisplay(businessHours: unknown): BusinessHoursDisp
   const result: BusinessHoursDisplay[] = []
   for (const [time, labels] of groups) {
     const keys = groupKeys.get(time) ?? []
-    const [opens, closes] = time.split('-')
+    const [opens = '', closes = ''] = time.split('-')
     const abbrevs = keys.map((k) => DAY_ABBREV[k] ?? k)
+    const firstAbbrev = abbrevs[0] ?? ''
+    const lastAbbrev = abbrevs[abbrevs.length - 1] ?? ''
     const microdataContent = abbrevs.length > 1
-      ? `${abbrevs[0]}-${abbrevs[abbrevs.length - 1]} ${opens}-${closes}`
-      : `${abbrevs[0]} ${opens}-${closes}`
+      ? `${firstAbbrev}-${lastAbbrev} ${opens}-${closes}`
+      : `${firstAbbrev} ${opens}-${closes}`
 
+    const firstLabel = labels[0] ?? ''
+    const lastLabel = labels[labels.length - 1] ?? ''
     result.push({
-      label: labels.length > 1 ? `${labels[0]}〜${labels[labels.length - 1]}` : labels[0],
+      label: labels.length > 1 ? `${firstLabel}〜${lastLabel}` : firstLabel,
       time: `${opens} - ${closes}`,
       microdataContent,
     })

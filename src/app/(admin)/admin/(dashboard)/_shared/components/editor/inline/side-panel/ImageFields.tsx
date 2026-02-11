@@ -32,8 +32,9 @@ export function ImageFields({
   const thumbnailPicker = useSingleMediaPicker({
     defaultUsage: 'POST',
     onSelect: (media) => {
-      if (media.length > 0) {
-        setValue('thumbnailUrl', media[0].url)
+      const selected = media[0]
+      if (selected) {
+        setValue('thumbnailUrl', selected.url)
       }
     },
   })
@@ -41,8 +42,9 @@ export function ImageFields({
   const ogpPicker = useSingleMediaPicker({
     defaultUsage: 'POST',
     onSelect: (media) => {
-      if (media.length > 0) {
-        setValue('ogpImageUrl', media[0].url)
+      const selected = media[0]
+      if (selected) {
+        setValue('ogpImageUrl', selected.url)
       }
     },
   })

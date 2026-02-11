@@ -789,6 +789,7 @@ async function seedReservations() {
   for (const res of reservations) {
     const space = spaces[res.spaceIndex % spaces.length]
     const customer = customers[res.customerIndex % customers.length]
+    if (!space || !customer) continue
 
     const date = new Date(now)
     date.setDate(date.getDate() + res.daysOffset)
@@ -1244,6 +1245,7 @@ async function seedFaq() {
 
     for (let i = 0; i < items.length; i++) {
       const item = items[i]
+      if (!item) continue
       const existing = await prisma.faqItem.findFirst({
         where: { categoryId: faqCategory.id, question: item.question },
       })
@@ -1452,6 +1454,7 @@ async function seedBlogComments() {
   for (let i = 0; i < comments.length; i++) {
     const post = posts[i % posts.length]
     const comment = comments[i]
+    if (!post || !comment) continue
 
     const existing = await prisma.postComment.findFirst({
       where: { postId: post.id, guestEmail: comment.guestEmail },
@@ -1779,36 +1782,39 @@ Examples:
   }
 
   const mode = args[0]
+  const arg1 = args[1]
+  const arg2 = args[2]
+  const arg3 = args[3]
 
   console.log('')
   console.log('🌱 Starting seed...')
   console.log('')
 
   if (mode === '--admin') {
-    if (args.length < 3) {
+    if (!arg1 || !arg2) {
       console.error('Error: --admin requires <email> and <password>')
       process.exit(1)
     }
-    await seedAdmin(args[1], args[2], args[3] || 'Administrator')
+    await seedAdmin(arg1, arg2, arg3 ?? 'Administrator')
   } else if (mode === '--demo') {
     await seedDemo()
   } else if (mode === '--fresh') {
-    if (args.length < 3) {
+    if (!arg1 || !arg2) {
       console.error('Error: --fresh requires <email> and <password>')
       process.exit(1)
     }
     await clearAllData()
-    await seedAll(args[1], args[2], args[3] || 'Administrator')
+    await seedAll(arg1, arg2, arg3 ?? 'Administrator')
   } else if (mode === '--all') {
-    if (args.length < 3) {
+    if (!arg1 || !arg2) {
       console.error('Error: --all requires <email> and <password>')
       process.exit(1)
     }
-    await seedAll(args[1], args[2], args[3] || 'Administrator')
+    await seedAll(arg1, arg2, arg3 ?? 'Administrator')
   } else {
     // Legacy mode
-    if (args.length >= 2 && !args[0].startsWith('--')) {
-      await seedAdmin(args[0], args[1], args[2] || 'Administrator')
+    if (mode && arg1 && !mode.startsWith('--')) {
+      await seedAdmin(mode, arg1, arg2 ?? 'Administrator')
     } else {
       console.error('Unknown option:', mode)
       process.exit(1)

@@ -51,7 +51,7 @@ export const updateMaintenanceSettings = withPermission<[data: MaintenanceSettin
 )(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = maintenanceSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   await prisma.settings.upsert({
@@ -78,7 +78,7 @@ export const updateCookieConsentSettings = withPermission<[data: CookieConsentSe
 )(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = cookieConsentSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   await prisma.settings.upsert({
@@ -141,7 +141,7 @@ export const updateTermsAgreementSettings = withPermission<[data: TermsAgreement
 )(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = termsAgreementSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   await prisma.settings.upsert({
@@ -203,7 +203,7 @@ export const updateReservationSettings = withPermission<[data: ReservationSettin
 )(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = reservationSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   // cancellationTermsIdが指定されている場合、有効なCANCELLATIONタイプか検証
@@ -250,7 +250,7 @@ export const updateSidebarSettings = withPermission<[data: SidebarSettingsInput]
 )(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = sidebarSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   await prisma.settings.upsert({
@@ -331,7 +331,7 @@ export const updateAnnouncementBarCarouselSettings = withPermission<[data: Annou
 )(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = announcementBarCarouselSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   await prisma.settings.upsert({
@@ -381,7 +381,7 @@ export const updatePermalinkSettings = withPermission<[data: PermalinkSettingsIn
 )(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = permalinkSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   await prisma.settings.upsert({
@@ -409,7 +409,7 @@ export const updateHeaderSettings = withPermission<[data: HeaderSettingsInput], 
 )(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = headerSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   await prisma.settings.upsert({

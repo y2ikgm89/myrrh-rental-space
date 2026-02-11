@@ -360,7 +360,9 @@ function parsePermissionKey(permKey: PermissionKey): { resource: Resource; actio
   const parts = permKey.split(':')
   if (parts.length !== 2) return null
 
-  const [resource, action] = parts
+  const resource = parts[0]
+  const action = parts[1]
+  if (!resource || !action) return null
   if (!isValidResource(resource) || !isValidAction(action)) return null
 
   return { resource, action }

@@ -156,7 +156,7 @@ export const createUser = withPermission<[CreateUserInput], { id: string }>(
 )(async (_user: User, data: CreateUserInput): Promise<ActionResult<{ id: string }>> => {
   const parsed = createUserSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   // メールアドレスの重複チェック
@@ -201,7 +201,7 @@ export const updateUser = withPermission<[string, UpdateUserInput], void>(
 )(async (_user: User, id: string, data: UpdateUserInput): Promise<ActionResult<void>> => {
   const parsed = updateUserSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   const existing = await prisma.user.findUnique({

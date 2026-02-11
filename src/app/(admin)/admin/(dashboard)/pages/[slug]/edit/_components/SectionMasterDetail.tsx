@@ -71,8 +71,9 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
           const sectionList = data ?? []
           setSections(sectionList)
           // 初回ロード: セクションがあり未選択なら最初を自動選択
-          if (!selectedId && sectionList.length > 0) {
-            setSelectedId(sectionList[0].id)
+          const firstSection = sectionList[0]
+          if (!selectedId && firstSection) {
+            setSelectedId(firstSection.id)
           }
         }
       } catch (error) {
@@ -150,10 +151,11 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
     // 選択中のセクションが削除された場合、次のセクションを選択
     if (selectedId === id) {
       const remaining = sections?.filter((s) => s.id !== id) ?? []
-      if (remaining.length > 0) {
-        const deletedIndex = sections?.findIndex((s) => s.id === id) ?? 0
-        const nextIndex = Math.min(deletedIndex, remaining.length - 1)
-        setSelectedId(remaining[nextIndex].id)
+      const deletedIndex = sections?.findIndex((s) => s.id === id) ?? 0
+      const nextIndex = Math.min(deletedIndex, remaining.length - 1)
+      const nextSection = remaining[nextIndex]
+      if (nextSection) {
+        setSelectedId(nextSection.id)
       } else {
         setSelectedId(null)
       }
@@ -201,8 +203,9 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
         const sectionList = data ?? []
         setSections(sectionList)
         // 複製されたセクションは末尾に追加されるので最後を選択
-        if (sectionList.length > 0) {
-          setSelectedId(sectionList[sectionList.length - 1].id)
+        const lastSection = sectionList[sectionList.length - 1]
+        if (lastSection) {
+          setSelectedId(lastSection.id)
           setShowMobileList(false)
         }
       } else {
@@ -229,8 +232,9 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
       const data = await getPageSections(page.id)
       const sectionList = data ?? []
       setSections(sectionList)
-      if (sectionList.length > 0) {
-        setSelectedId(sectionList[sectionList.length - 1].id)
+      const lastNewSection = sectionList[sectionList.length - 1]
+      if (lastNewSection) {
+        setSelectedId(lastNewSection.id)
         setShowMobileList(false)
       }
     })

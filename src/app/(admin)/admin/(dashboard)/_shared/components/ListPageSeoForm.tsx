@@ -75,8 +75,9 @@ export function ListPageSeoForm({ slug, seoData }: ListPageSeoFormProps) {
   const ogpPicker = useSingleMediaPicker({
     defaultUsage: 'GENERAL',
     onSelect: (media) => {
-      if (media.length > 0) {
-        setValue('ogpImageUrl', media[0].url)
+      const selected = media[0]
+      if (selected) {
+        setValue('ogpImageUrl', selected.url)
       }
     },
   })

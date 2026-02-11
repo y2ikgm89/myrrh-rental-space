@@ -86,6 +86,7 @@ function hasOverlappingSlots(slots: Array<{ openTime: string; closeTime: string 
     for (let j = i + 1; j < slots.length; j++) {
       const a = slots[i]
       const b = slots[j]
+      if (!a || !b) continue
       // 時間帯が重複している場合
       if (a.openTime < b.closeTime && a.closeTime > b.openTime) {
         return true

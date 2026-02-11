@@ -230,7 +230,7 @@ export async function uploadMedia(
   // Validate metadata
   const parsed = mediaUploadSchema.safeParse(metadata)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   // Infer media type from file
@@ -312,7 +312,7 @@ export async function updateMedia(
 
   const parsed = mediaUpdateSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   const existing = await prisma.media.findUnique({

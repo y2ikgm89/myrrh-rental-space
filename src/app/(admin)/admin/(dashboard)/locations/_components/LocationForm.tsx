@@ -153,8 +153,9 @@ export function LocationForm({ location, mode }: LocationFormProps) {
   const mainImagePicker = useSingleMediaPicker({
     defaultUsage: 'SPACE',
     onSelect: (media) => {
-      if (media.length > 0) {
-        setValue('imageUrl', media[0].url)
+      const selected = media[0]
+      if (selected) {
+        setValue('imageUrl', selected.url)
       }
     },
   })

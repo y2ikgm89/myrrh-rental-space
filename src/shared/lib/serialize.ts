@@ -303,7 +303,7 @@ export function formatSerializedDate(
  * ```
  */
 export function toDateString(date: Date): string {
-  return date.toISOString().split('T')[0]
+  return date.toISOString().split('T')[0] ?? ''
 }
 
 // =============================================================================
@@ -374,7 +374,7 @@ export function safeArrayAccess<T>(arr: T[] | undefined | null, index = 0): T | 
  */
 export function safeCharAt(str: string | undefined | null, index = 0, fallback = ''): string {
   if (!str || str.length <= index) return fallback
-  return str[index]
+  return str[index] ?? fallback
 }
 
 

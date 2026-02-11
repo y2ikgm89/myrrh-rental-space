@@ -304,8 +304,8 @@ export function TabsPlugin({ isOpen, onClose }: TabsPluginProps) {
 
       // 最初のタブのコンテンツを選択
       const panels = tabsContainer.getChildren().filter($isTabPanelNode)
-      if (panels.length > 0) {
-        const firstPanel = panels[0]
+      const firstPanel = panels[0]
+      if (firstPanel) {
         const paragraph = firstPanel.getChildAtIndex(0)
         if (paragraph) {
           paragraph.selectEnd()

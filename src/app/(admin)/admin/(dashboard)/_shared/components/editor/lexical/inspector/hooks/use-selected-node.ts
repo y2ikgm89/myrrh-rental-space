@@ -87,8 +87,9 @@ export function useSelectedNode(): SelectedNodeInfo {
       // NodeSelection: DecoratorNode（Button, Image等）が選択された場合
       if ($isNodeSelection(selection)) {
         const nodes = selection.getNodes()
-        if (nodes.length === 1) {
-          const info = getInspectableInfo(nodes[0])
+        const singleNode = nodes.length === 1 ? nodes[0] : undefined
+        if (singleNode) {
+          const info = getInspectableInfo(singleNode)
           if (info) {
             setSelectedNode(info)
             return

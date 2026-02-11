@@ -54,8 +54,9 @@ export default function HeroConfigForm({ section, onSave, isPending, onDirtyChan
   const bgPicker = useSingleMediaPicker({
     defaultUsage: 'GENERAL',
     onSelect: (media) => {
-      if (media.length > 0) {
-        setValue('backgroundImageUrl', media[0].url)
+      const selected = media[0]
+      if (selected) {
+        setValue('backgroundImageUrl', selected.url)
       }
     },
   })

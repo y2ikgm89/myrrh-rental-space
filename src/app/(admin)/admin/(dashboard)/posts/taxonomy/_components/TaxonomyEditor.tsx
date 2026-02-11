@@ -148,8 +148,9 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
   const mediaPicker = useSingleMediaPicker({
     defaultUsage: 'POST',
     onSelect: (media: SelectedMedia[]) => {
-      if (media.length > 0) {
-        setValue('ogpImageUrl', media[0].url, { shouldDirty: true })
+      const selected = media[0]
+      if (selected) {
+        setValue('ogpImageUrl', selected.url, { shouldDirty: true })
       }
     },
   })
@@ -516,8 +517,9 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
   const mediaPicker = useSingleMediaPicker({
     defaultUsage: 'POST',
     onSelect: (media: SelectedMedia[]) => {
-      if (media.length > 0) {
-        setValue('ogpImageUrl', media[0].url, { shouldDirty: true })
+      const selected = media[0]
+      if (selected) {
+        setValue('ogpImageUrl', selected.url, { shouldDirty: true })
       }
     },
   })

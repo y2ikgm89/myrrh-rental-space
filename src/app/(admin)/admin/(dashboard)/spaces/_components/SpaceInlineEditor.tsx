@@ -395,8 +395,9 @@ export function SpaceInlineEditor({
   const mainImagePicker = useSingleMediaPicker({
     defaultUsage: 'SPACE',
     onSelect: (media) => {
-      if (media.length > 0) {
-        setValue('mainImageUrl', media[0].url, { shouldDirty: true })
+      const selected = media[0]
+      if (selected) {
+        setValue('mainImageUrl', selected.url, { shouldDirty: true })
       }
     },
   })

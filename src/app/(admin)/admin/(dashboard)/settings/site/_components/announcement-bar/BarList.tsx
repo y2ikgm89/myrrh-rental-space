@@ -19,13 +19,14 @@ import {
 import type { BarListProps } from './types'
 
 function TypeBadge({ type }: { type: string }) {
+  const defaultBadge = { label: 'お知らせ', className: 'bg-primary/10 text-primary' }
   const config: Record<string, { label: string; className: string }> = {
-    info: { label: 'お知らせ', className: 'bg-primary/10 text-primary' },
+    info: defaultBadge,
     warning: { label: '重要', className: 'bg-warning/10 text-warning' },
     promo: { label: 'キャンペーン', className: 'bg-success/10 text-success' },
   }
 
-  const { label, className } = config[type] || config.info
+  const { label, className } = config[type] ?? defaultBadge
 
   return <Badge className={className}>{label}</Badge>
 }

@@ -65,7 +65,7 @@ export const updateRobotsTxtSettings = withPermission<[data: RobotsTxtSettingsIn
 )(async (_user, data): Promise<ActionResult<{ warnings: string[] }>> => {
   const parsed = robotsTxtSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   const { robotsTxtEnabled, robotsTxtCustom } = parsed.data

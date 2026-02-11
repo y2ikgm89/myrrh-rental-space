@@ -58,7 +58,7 @@ export const updateStripeSettings = withPermission<[data: StripeSettingsInput], 
 )(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = stripeSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   // シークレットキーを暗号化

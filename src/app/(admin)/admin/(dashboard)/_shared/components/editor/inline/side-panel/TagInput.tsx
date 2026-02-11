@@ -165,6 +165,7 @@ export function TagInput({
         e.preventDefault()
         if (highlightedIndex >= 0 && highlightedIndex < suggestions.length) {
           const item = suggestions[highlightedIndex]
+          if (!item) break
           if (item.type === 'existing' && item.tag) {
             addTag(item.tag.name)
           } else if (item.type === 'create' && item.name) {
@@ -196,11 +197,13 @@ export function TagInput({
         setHighlightedIndex(-1)
         break
 
-      case 'Backspace':
-        if (!inputValue && value.length > 0) {
-          removeTag(value[value.length - 1])
+      case 'Backspace': {
+        const lastTag = value[value.length - 1]
+        if (!inputValue && lastTag) {
+          removeTag(lastTag)
         }
         break
+      }
     }
   }
 

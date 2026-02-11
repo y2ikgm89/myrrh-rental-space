@@ -176,31 +176,33 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
     }
 
     // /posts/category/[slug] または /posts/tag/[slug]: 既存ルートで処理
-    if (segments.length === 3 && POST_RESERVED_SUBPATHS.has(segments[1])) {
+    const seg1 = segments[1]
+    if (segments.length === 3 && seg1 && POST_RESERVED_SUBPATHS.has(seg1)) {
       return createResponse()
     }
 
     // category_name構造: /posts/[category]/[slug] → /posts/[slug]
     // Note: POST_RESERVED_SUBPATHS は上で既にチェック済み
-    if (segments.length === 3) {
+    const seg2 = segments[2]
+    if (segments.length === 3 && seg2) {
       const url = req.nextUrl.clone()
-      url.pathname = `/posts/${segments[2]}`
+      url.pathname = `/posts/${seg2}`
       return NextResponse.rewrite(url)
     }
 
     // date_name構造: /posts/[year]/[month]/[slug] → /posts/[slug]
     if (segments.length === 4) {
-      const [, year, month, slug] = segments
-      const yearNum = parseInt(year, 10)
-      const monthNum = parseInt(month, 10)
+      const year = segments[1]
+      const month = segments[2]
+      const slug = segments[3]
 
-      if (
+      if (year && month && slug &&
         /^\d{4}$/.test(year) &&
         /^\d{1,2}$/.test(month) &&
-        yearNum >= 2000 &&
-        yearNum <= 2100 &&
-        monthNum >= 1 &&
-        monthNum <= 12
+        parseInt(year, 10) >= 2000 &&
+        parseInt(year, 10) <= 2100 &&
+        parseInt(month, 10) >= 1 &&
+        parseInt(month, 10) <= 12
       ) {
         const url = req.nextUrl.clone()
         url.pathname = `/posts/${slug}`

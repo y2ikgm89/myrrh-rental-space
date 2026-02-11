@@ -132,7 +132,7 @@ export const createNews = withPermission<[CreateNewsInput], { id: string }>(
 )(async (_user, data) => {
   const parsed = createNewsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   const { slug, title, content } = parsed.data
@@ -171,7 +171,7 @@ export const updateNews = withPermission<[string, UpdateNewsInput], void>(
 )(async (_user, id, data) => {
   const parsed = updateNewsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   const existingNews = await prisma.news.findUnique({

@@ -95,7 +95,13 @@ export function decrypt(ciphertext: string): string {
     throw new Error('Invalid ciphertext format')
   }
 
-  const [, purpose, ivBase64, authTagBase64, encryptedBase64] = parts
+  const purpose = parts[1]
+  const ivBase64 = parts[2]
+  const authTagBase64 = parts[3]
+  const encryptedBase64 = parts[4]
+  if (!purpose || !ivBase64 || !authTagBase64 || !encryptedBase64) {
+    throw new Error('Invalid ciphertext format')
+  }
   const derivedKey = deriveKey(getMasterKey(), purpose)
   const aad = Buffer.from(`v${VERSION}:${purpose}`, 'utf8')
 
@@ -122,8 +128,11 @@ export function isEncrypted(value: string): boolean {
   if (parts.length !== 5 || parts[0] !== `v${VERSION}`) return false
 
   try {
-    const iv = Buffer.from(parts[2], ENCODING)
-    const authTag = Buffer.from(parts[3], ENCODING)
+    const ivPart = parts[2]
+    const authTagPart = parts[3]
+    if (!ivPart || !authTagPart) return false
+    const iv = Buffer.from(ivPart, ENCODING)
+    const authTag = Buffer.from(authTagPart, ENCODING)
     return iv.length === IV_LENGTH && authTag.length === AUTH_TAG_LENGTH
   } catch {
     return false

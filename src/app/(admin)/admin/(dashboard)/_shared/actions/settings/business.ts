@@ -36,7 +36,7 @@ export const updateBusinessInfo = withPermission<[data: BusinessInfoInput], void
 )(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = businessInfoSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   const updateData = {
@@ -66,7 +66,7 @@ export const updateContactInfo = withPermission<[data: ContactInfoInput], void>(
 )(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = contactInfoSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   const updateData = {
@@ -94,7 +94,7 @@ export const updateBusinessHoursSettings = withPermission<[data: BusinessHoursSe
 )(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = businessHoursSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   // Prisma JSON null の適切な変換
@@ -126,7 +126,7 @@ export const updateMeoSettings = withPermission<[data: MeoSettingsInput], void>(
 )(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = meoSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   const meoData = {

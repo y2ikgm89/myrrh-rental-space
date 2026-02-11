@@ -47,9 +47,10 @@ const IMAGE: TextMatchTransformer = {
   importRegExp: /!(?:\[([^\[\]]*)\])(?:\(([^()]+)\))/,
   regExp: /!(?:\[([^\[\]]*)\])(?:\(([^()]+)\))$/,
   replace: (textNode, match) => {
-    const [, alt, src] = match
-    if (!isValidImageUrl(src)) return
-    textNode.replace($createImageNode({ src: src.trim(), alt: alt || '' }))
+    const alt = match[1]
+    const src = match[2]
+    if (!src || !isValidImageUrl(src)) return
+    textNode.replace($createImageNode({ src: src.trim(), alt: alt ?? '' }))
   },
   trigger: ')',
   type: 'text-match',
@@ -62,8 +63,8 @@ const YOUTUBE: TextMatchTransformer = {
   importRegExp: /@\[youtube\]\(([A-Za-z0-9_-]{11})\)/,
   regExp: /@\[youtube\]\(([A-Za-z0-9_-]{11})\)$/,
   replace: (textNode, match) => {
-    const [, videoId] = match
-    if (!isValidYouTubeId(videoId)) return
+    const videoId = match[1]
+    if (!videoId || !isValidYouTubeId(videoId)) return
     textNode.replace($createYouTubeNode({ videoId }))
   },
   trigger: ')',

@@ -135,7 +135,7 @@ export async function getDefaultsForTermsType(
   const usedNumbers = new Set<number>([1])
   for (const term of similarTerms) {
     const match = term.slug.match(new RegExp(`^${defaults.slug}-(\\d+)$`))
-    if (match) {
+    if (match?.[1]) {
       usedNumbers.add(parseInt(match[1], 10))
     }
   }
@@ -195,7 +195,7 @@ export const createTerms = withPermission<[CreateTermsInput], { id: string }>('t
   async (_user, input): Promise<ActionResult<{ id: string }>> => {
     const validation = createTermsSchema.safeParse(input)
     if (!validation.success) {
-      return createFailure(validation.error.issues[0].message)
+      return createFailure(validation.error.issues[0]?.message ?? 'バリデーションエラー')
     }
 
     // slug重複チェック
@@ -232,7 +232,7 @@ export const createTermsWithVersion = withPermission<
 
     const validation = createTermsSchema.safeParse(termsInput)
     if (!validation.success) {
-      return createFailure(validation.error.issues[0].message)
+      return createFailure(validation.error.issues[0]?.message ?? 'バリデーションエラー')
     }
 
     if (!content.trim()) {
@@ -283,7 +283,7 @@ export const updateTerms = withPermission<[string, UpdateTermsInput]>('terms', '
   async (_user, id, input): Promise<ActionResult<void>> => {
     const validation = updateTermsSchema.safeParse(input)
     if (!validation.success) {
-      return createFailure(validation.error.issues[0].message)
+      return createFailure(validation.error.issues[0]?.message ?? 'バリデーションエラー')
     }
 
     // slug重複チェック（自分以外）
@@ -397,7 +397,7 @@ export const createTermsVersion = withPermission<
   async (user, input): Promise<ActionResult<{ id: string; version: number }>> => {
     const validation = createTermsVersionSchema.safeParse(input)
     if (!validation.success) {
-      return createFailure(validation.error.issues[0].message)
+      return createFailure(validation.error.issues[0]?.message ?? 'バリデーションエラー')
     }
 
     // 最新バージョン番号を取得
@@ -440,7 +440,7 @@ export const updateTermsVersion = withPermission<[string, UpdateTermsVersionInpu
 )(async (_user, versionId, input): Promise<ActionResult<void>> => {
   const validation = updateTermsVersionSchema.safeParse(input)
   if (!validation.success) {
-    return createFailure(validation.error.issues[0].message)
+    return createFailure(validation.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   const version = await prisma.termsVersion.findUnique({
@@ -612,7 +612,7 @@ export const updateSiteWideTermsSeo = withPermission<[UpdateTermsSeoInput]>('ter
   async (_user, input): Promise<ActionResult<void>> => {
     const validation = updateTermsSeoSchema.safeParse(input)
     if (!validation.success) {
-      return createFailure(validation.error.issues[0].message)
+      return createFailure(validation.error.issues[0]?.message ?? 'バリデーションエラー')
     }
 
     const terms = await prisma.terms.findFirst({

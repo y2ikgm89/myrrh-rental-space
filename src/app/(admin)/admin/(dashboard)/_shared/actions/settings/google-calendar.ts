@@ -72,7 +72,7 @@ export const updateGoogleCalendarSettings = withPermission<[data: GoogleCalendar
 )(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = googleCalendarSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   // カレンダーIDのバリデーション
@@ -285,7 +285,7 @@ export const updateTwoWaySyncSettings = withPermission<[data: TwoWaySyncSettings
 )(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = twoWaySyncSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   await prisma.settings.upsert({

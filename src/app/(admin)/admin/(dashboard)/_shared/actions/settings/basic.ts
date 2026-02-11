@@ -152,7 +152,7 @@ export async function getSettings(): Promise<SettingsData | null> {
       const email = extractServiceAccountEmail(decrypted)
       if (email) {
         // メールアドレスをマスク（例: ser****@project.iam.gserviceaccount.com）
-        const [localPart, domain] = email.split('@')
+        const [localPart = '', domain = ''] = email.split('@')
         googleCalendarServiceAccountEmailMasked =
           localPart.slice(0, 3) + '****@' + domain
       }
@@ -212,7 +212,7 @@ export const updateBasicInfo = withPermission<[data: BasicInfoInput], void>(
 )(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = basicInfoSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   await prisma.settings.upsert({
@@ -236,7 +236,7 @@ export const updateLayoutSettings = withPermission<[data: LayoutSettingsInput], 
 )(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = layoutSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   // CUSTOMを選択している場合はカスタム値が必須
@@ -281,7 +281,7 @@ export const updateSeoSettings = withPermission<[data: SeoSettingsInput], void>(
 )(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = seoSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   await prisma.settings.upsert({

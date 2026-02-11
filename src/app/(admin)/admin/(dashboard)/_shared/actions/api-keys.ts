@@ -225,7 +225,7 @@ export const updateResendSettings = withPermission<[ResendSettingsInput]>(
 )(async (_user, data) => {
   const parsed = resendSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   const updateData: Record<string, unknown> = {}
@@ -328,7 +328,7 @@ export const updateTurnstileSettings = withPermission<[TurnstileSettingsInput]>(
 )(async (_user, data) => {
   const parsed = turnstileSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   const updateData: Record<string, unknown> = {}
@@ -440,7 +440,7 @@ export const updateGoogleMapsSettings = withPermission<[GoogleMapsSettingsInput]
 )(async (_user, data) => {
   const parsed = googleMapsSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   const updateData: Record<string, unknown> = {}
@@ -569,7 +569,7 @@ export const updateCloudflareSettings = withPermission<[CloudflareSettingsInput]
 )(async (_user, data) => {
   const parsed = cloudflareSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   const updateData: Record<string, unknown> = {}
@@ -682,7 +682,7 @@ export const addCustomApiKey = withPermission<[CustomApiKeyInput]>(
 )(async (_user, data) => {
   const parsed = customApiKeySchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   const settings = await prisma.settings.findUnique({
@@ -809,7 +809,7 @@ export const updateGoogleOAuthSettings = withPermission<[GoogleOAuthSettingsInpu
 )(async (_user, data) => {
   const parsed = googleOAuthSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   const updateData: Record<string, unknown> = {}

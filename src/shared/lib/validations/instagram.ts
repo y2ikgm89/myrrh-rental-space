@@ -88,5 +88,5 @@ export const instagramPostIdSchema = z
  */
 export function extractInstagramShortcode(url: string): string | null {
   const match = url.match(/instagram\.com\/(p|reel)\/([\w-]+)/)
-  return match ? match[2] : null
+  return match?.[2] ?? null
 }

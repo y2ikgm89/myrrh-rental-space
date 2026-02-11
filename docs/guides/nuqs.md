@@ -377,7 +377,7 @@ const handleCategoryChange = (category: string | null) => {
 
 ### プロジェクトドキュメント
 
-- [`Plans.md`](../../Plans.md) - 実装計画
+- [`docs/plans/README.md`](../plans/README.md) - 実装計画
 - [`coding-standards.md`](coding-standards.md) - コーディング規約
 - [`docs/requirements/type-safety.md`](./type-safety.md) - 型安全性要件
 

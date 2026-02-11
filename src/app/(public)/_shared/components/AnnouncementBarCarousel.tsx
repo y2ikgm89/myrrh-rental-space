@@ -20,6 +20,7 @@ import { gsap } from '@/public/lib/gsap-config'
 import { cn } from '@/shared/lib/utils'
 import {
   TYPE_STYLES,
+  DEFAULT_TYPE_STYLE,
   DESIGN_STYLE_CLASSES,
   getStripedStyle,
   getTypeHexColor,
@@ -302,7 +303,7 @@ export function AnnouncementBarCarousel({ bars, settings }: AnnouncementBarCarou
   }
 
   // スタイル計算（共通カラー設定を優先）
-  const defaultStyle = TYPE_STYLES[currentBar.type] ?? TYPE_STYLES.info
+  const defaultStyle = TYPE_STYLES[currentBar.type] ?? DEFAULT_TYPE_STYLE
   // 共通カラー設定があればそれを使用
   const bgColor = settings.bgColor || null
   const textColor = settings.textColor || null

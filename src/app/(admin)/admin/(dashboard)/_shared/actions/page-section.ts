@@ -264,7 +264,7 @@ export const createPageSection = withPermission<[CreateSectionInput], { id: stri
 )(async (_user, input) => {
   const parsed = createSectionSchema.safeParse(input)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   const { pageId, type, title, config, design, content, order, isActive } = parsed.data
@@ -286,7 +286,7 @@ export const createPageSection = withPermission<[CreateSectionInput], { id: stri
   // 設定を検証
   const configValidation = validateSectionConfig(type, config)
   if (!configValidation.success) {
-    return createFailure(`設定エラー: ${configValidation.error.issues[0].message}`)
+    return createFailure(`設定エラー: ${configValidation.error.issues[0]?.message ?? 'バリデーションエラー'}`)
   }
 
   // 次のorder値を取得
@@ -326,7 +326,7 @@ export const updatePageSection = withPermission<[string, UpdateSectionInput], vo
 )(async (_user, id, input) => {
   const parsed = updateSectionSchema.safeParse(input)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   const existing = await prisma.section.findUnique({
@@ -341,7 +341,7 @@ export const updatePageSection = withPermission<[string, UpdateSectionInput], vo
   if (parsed.data.config) {
     const configValidation = validateSectionConfig(existing.type, parsed.data.config)
     if (!configValidation.success) {
-      return createFailure(`設定エラー: ${configValidation.error.issues[0].message}`)
+      return createFailure(`設定エラー: ${configValidation.error.issues[0]?.message ?? 'バリデーションエラー'}`)
     }
     parsed.data.config = configValidation.data
   }
@@ -394,7 +394,7 @@ export const updatePageSectionOrder = withPermission<[string, UpdateSectionOrder
 )(async (_user, pageId, input) => {
   const parsed = updateSectionOrderSchema.safeParse(input)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   // ページ存在確認

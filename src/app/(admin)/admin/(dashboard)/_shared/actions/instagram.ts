@@ -159,7 +159,7 @@ export const updateInstagramSettings = withPermission<[InstagramSettingsInput], 
 )(async (_user, data) => {
     const parsed = instagramSettingsSchema.safeParse(data)
     if (!parsed.success) {
-      return createFailure(parsed.error.issues[0].message)
+      return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
     }
 
     await prisma.settings.upsert({
@@ -201,7 +201,7 @@ export const saveManualToken = withPermission<[string], { username: string | und
 )(async (_user, token) => {
     const parsed = instagramTokenSchema.safeParse(token)
     if (!parsed.success) {
-      return createFailure(parsed.error.issues[0].message)
+      return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
     }
 
     // トークンをテストしてユーザー情報を取得
@@ -262,7 +262,7 @@ export const testInstagramConnectionAction = withPermission<
 >('settings', 'update')(async (_user, token) => {
     const parsed = instagramTokenSchema.safeParse(token)
     if (!parsed.success) {
-      return createFailure(parsed.error.issues[0].message)
+      return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
     }
 
     const result = await testInstagramConnection(parsed.data)
@@ -318,7 +318,7 @@ export const addInstagramPost = withPermission<[string], void>(
 )(async (_user, url) => {
     const parsed = instagramPostUrlSchema.safeParse(url)
     if (!parsed.success) {
-      return createFailure(parsed.error.issues[0].message)
+      return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
     }
 
     const shortcode = extractInstagramShortcode(parsed.data)

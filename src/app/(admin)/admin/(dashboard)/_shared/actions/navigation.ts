@@ -133,7 +133,7 @@ export const createNavigationItem = withPermission<[data: NavigationItemInput], 
 )(async (_user, data): Promise<ActionResult<{ id: string }>> => {
   const parsed = navigationItemSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   const item = await prisma.navigationItem.create({
@@ -157,7 +157,7 @@ export const updateNavigationItem = withPermission<[id: string, data: Navigation
 )(async (_user, id, data): Promise<ActionResult<void>> => {
   const parsed = navigationItemSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   const existing = await prisma.navigationItem.findUnique({
@@ -317,7 +317,7 @@ export const createSocialLink = withPermission<[data: SocialLinkInput], { id: st
 )(async (_user, data): Promise<ActionResult<{ id: string }>> => {
   const parsed = socialLinkSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   const link = await prisma.socialLink.create({
@@ -341,7 +341,7 @@ export const updateSocialLink = withPermission<[id: string, data: SocialLinkInpu
 )(async (_user, id, data): Promise<ActionResult<void>> => {
   const parsed = socialLinkSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0].message)
+    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
   }
 
   const existing = await prisma.socialLink.findUnique({
