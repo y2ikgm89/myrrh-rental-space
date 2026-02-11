@@ -14,17 +14,17 @@ import { LayoutWidth } from '@/shared/types/prisma'
 
 // post.ts 内で定義されているスキーマを再現
 const createPostSchema = z.object({
-  title: z.string().min(1, 'タイトルは必須です').max(200, 'タイトルは200文字以内'),
+  title: z.string().min(1, { error: 'タイトルは必須です' }).max(200, { error: 'タイトルは200文字以内' }),
   slug: z
     .string()
-    .min(1, 'スラッグは必須です')
+    .min(1, { error: 'スラッグは必須です' })
     .max(200)
-    .regex(/^[a-z0-9-]+$/, 'スラッグは小文字英数字とハイフンのみ'),
-  excerpt: z.string().min(1, '抜粋は必須です').max(500, '抜粋は500文字以内'),
+    .regex(/^[a-z0-9-]+$/, { error: 'スラッグは小文字英数字とハイフンのみ' }),
+  excerpt: z.string().min(1, { error: '抜粋は必須です' }).max(500, { error: '抜粋は500文字以内' }),
   content: z.string().default(''),
-  thumbnailUrl: z.string().min(1, 'サムネイルURLは必須です'),
+  thumbnailUrl: z.string().min(1, { error: 'サムネイルURLは必須です' }),
   ogpImageUrl: z.string().nullable().optional(),
-  categoryId: z.string().uuid('カテゴリを選択してください'),
+  categoryId: z.string().uuid({ error: 'カテゴリを選択してください' }),
   tags: z.array(z.string()).default([]),
   metaDescription: z.string().max(160).nullable().optional(),
   metaKeywords: z.string().nullable().optional(),
@@ -33,33 +33,33 @@ const createPostSchema = z.object({
 })
 
 const updatePostSchema = z.object({
-  title: z.string().min(1, 'タイトルは必須です').max(200, 'タイトルは200文字以内'),
+  title: z.string().min(1, { error: 'タイトルは必須です' }).max(200, { error: 'タイトルは200文字以内' }),
   slug: z
     .string()
-    .min(1, 'スラッグは必須です')
+    .min(1, { error: 'スラッグは必須です' })
     .max(200)
-    .regex(/^[a-z0-9-]+$/, 'スラッグは小文字英数字とハイフンのみ'),
-  excerpt: z.string().min(1, '抜粋は必須です').max(500, '抜粋は500文字以内'),
-  content: z.string().min(1, '本文は必須です'),
-  thumbnailUrl: z.string().min(1, 'サムネイルURLは必須です'),
+    .regex(/^[a-z0-9-]+$/, { error: 'スラッグは小文字英数字とハイフンのみ' }),
+  excerpt: z.string().min(1, { error: '抜粋は必須です' }).max(500, { error: '抜粋は500文字以内' }),
+  content: z.string().min(1, { error: '本文は必須です' }),
+  thumbnailUrl: z.string().min(1, { error: 'サムネイルURLは必須です' }),
   ogpImageUrl: z.string().nullable().optional(),
-  categoryId: z.string().uuid('カテゴリを選択してください'),
+  categoryId: z.string().uuid({ error: 'カテゴリを選択してください' }),
   tags: z.array(z.string()).default([]),
   metaDescription: z.string().max(160).nullable().optional(),
   metaKeywords: z.string().nullable().optional(),
   ogpTitle: z.string().max(60).nullable().optional(),
   ogpDescription: z.string().max(160).nullable().optional(),
-  contentWidth: z.nativeEnum(LayoutWidth).nullable().optional(),
+  contentWidth: z.enum(LayoutWidth).nullable().optional(),
   contentWidthCustom: z.number().int().min(320).max(1920).nullable().optional(),
 })
 
 const postCategorySchema = z.object({
-  name: z.string().min(1, 'カテゴリ名は必須です').max(50, 'カテゴリ名は50文字以内'),
+  name: z.string().min(1, { error: 'カテゴリ名は必須です' }).max(50, { error: 'カテゴリ名は50文字以内' }),
   slug: z
     .string()
-    .min(1, 'スラッグは必須です')
+    .min(1, { error: 'スラッグは必須です' })
     .max(50)
-    .regex(/^[a-z0-9-]+$/, 'スラッグは小文字英数字とハイフンのみ'),
+    .regex(/^[a-z0-9-]+$/, { error: 'スラッグは小文字英数字とハイフンのみ' }),
   description: z.string().max(200).nullable().optional(),
   order: z.number().int().min(0).default(0),
 })

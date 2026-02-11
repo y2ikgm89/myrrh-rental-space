@@ -13,36 +13,36 @@ import { LayoutWidth } from '@/shared/types/prisma'
 
 // page.ts で使用されているスキーマを再現
 const updatePageSeoSchema = z.object({
-  title: z.string().min(1, 'タイトルは必須です').max(200, 'タイトルは200文字以内です'),
-  metaDescription: z.string().max(160, 'メタディスクリプションは160文字以内です').optional(),
-  metaKeywords: z.string().max(200, 'メタキーワードは200文字以内です').optional(),
-  ogpTitle: z.string().max(100, 'OGPタイトルは100文字以内です').optional(),
-  ogpDescription: z.string().max(200, 'OGP説明は200文字以内です').optional(),
-  ogpImageUrl: z.string().url('有効なURLを入力してください').optional().or(z.literal('')),
+  title: z.string().min(1, { error: 'タイトルは必須です' }).max(200, { error: 'タイトルは200文字以内です' }),
+  metaDescription: z.string().max(160, { error: 'メタディスクリプションは160文字以内です' }).optional(),
+  metaKeywords: z.string().max(200, { error: 'メタキーワードは200文字以内です' }).optional(),
+  ogpTitle: z.string().max(100, { error: 'OGPタイトルは100文字以内です' }).optional(),
+  ogpDescription: z.string().max(200, { error: 'OGP説明は200文字以内です' }).optional(),
+  ogpImageUrl: z.string().url({ error: '有効なURLを入力してください' }).optional().or(z.literal('')),
 })
 
 const updatePageSchema = z.object({
-  title: z.string().min(1, 'タイトルは必須です').max(200, 'タイトルは200文字以内です'),
-  description: z.string().max(500, '説明は500文字以内です').optional(),
-  metaDescription: z.string().max(160, 'メタディスクリプションは160文字以内です').optional(),
-  metaKeywords: z.string().max(200, 'メタキーワードは200文字以内です').optional(),
-  ogpTitle: z.string().max(100, 'OGPタイトルは100文字以内です').optional(),
-  ogpDescription: z.string().max(200, 'OGP説明は200文字以内です').optional(),
-  ogpImageUrl: z.string().url('有効なURLを入力してください').optional().or(z.literal('')),
+  title: z.string().min(1, { error: 'タイトルは必須です' }).max(200, { error: 'タイトルは200文字以内です' }),
+  description: z.string().max(500, { error: '説明は500文字以内です' }).optional(),
+  metaDescription: z.string().max(160, { error: 'メタディスクリプションは160文字以内です' }).optional(),
+  metaKeywords: z.string().max(200, { error: 'メタキーワードは200文字以内です' }).optional(),
+  ogpTitle: z.string().max(100, { error: 'OGPタイトルは100文字以内です' }).optional(),
+  ogpDescription: z.string().max(200, { error: 'OGP説明は200文字以内です' }).optional(),
+  ogpImageUrl: z.string().url({ error: '有効なURLを入力してください' }).optional().or(z.literal('')),
   isPublished: z.boolean().default(true),
   publishedAt: z.coerce.date().optional(),
-  contentWidth: z.nativeEnum(LayoutWidth).optional(),
+  contentWidth: z.enum(LayoutWidth).optional(),
   contentWidthCustom: z.number().int().min(320).max(1920).optional(),
 })
 
 const createPageSchema = z.object({
   slug: z
     .string()
-    .min(1, 'スラッグは必須です')
-    .max(100, 'スラッグは100文字以内です')
-    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'スラッグは半角英数字とハイフンのみ使用可能です'),
-  title: z.string().min(1, 'タイトルは必須です').max(200, 'タイトルは200文字以内です'),
-  description: z.string().max(500, '説明は500文字以内です').optional(),
+    .min(1, { error: 'スラッグは必須です' })
+    .max(100, { error: 'スラッグは100文字以内です' })
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, { error: 'スラッグは半角英数字とハイフンのみ使用可能です' }),
+  title: z.string().min(1, { error: 'タイトルは必須です' }).max(200, { error: 'タイトルは200文字以内です' }),
+  description: z.string().max(500, { error: '説明は500文字以内です' }).optional(),
   isPublished: z.boolean().default(false),
 })
 

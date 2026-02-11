@@ -7,29 +7,34 @@
  */
 
 import { describe, test, expect } from 'bun:test'
-import { HomepageSectionType } from '@/shared/lib/validations/enums'
 import {
+  SectionType,
   validateSectionConfig,
   defaultSectionConfigs,
-} from '@/shared/lib/validations/homepage-section'
+} from '@/shared/lib/validations/section'
 
 // =============================================================================
-// HomepageSectionType Tests
+// SectionType Tests
 // =============================================================================
 
 describe('Homepage Public Action Integration', () => {
-  describe('HomepageSectionType enum', () => {
+  describe('SectionType enum', () => {
     test('全てのセクションタイプが定義されている', () => {
-      const expectedTypes = ['HERO', 'SPACE_LIST', 'NEWS', 'POSTS', 'FAQ', 'CTA', 'CUSTOM', 'INSTAGRAM']
+      const expectedTypes = [
+        'HERO', 'HERO_PARALLAX', 'CUSTOM', 'CONCEPT',
+        'SPACE_LIST', 'SPACE_SHOWCASE', 'NEWS_LIST', 'POST_LIST', 'FAQ_LIST',
+        'FEATURES', 'TESTIMONIAL', 'GALLERY',
+        'CTA', 'CONTACT_FORM', 'MAP', 'EMBED', 'INSTAGRAM',
+      ]
 
       expectedTypes.forEach((type) => {
-        expect(Object.values(HomepageSectionType)).toContain(type)
+        expect(Object.values(SectionType)).toContain(type)
       })
     })
 
     test('セクションタイプ数', () => {
-      const typeCount = Object.values(HomepageSectionType).length
-      expect(typeCount).toBe(8)
+      const typeCount = Object.values(SectionType).length
+      expect(typeCount).toBe(17)
     })
   })
 
@@ -44,7 +49,7 @@ describe('Homepage Public Action Integration', () => {
           ctaSecondary: { text: 'お問い合わせ', url: '/contact' },
         }
 
-        const result = validateSectionConfig(HomepageSectionType.HERO, config)
+        const result = validateSectionConfig(SectionType.HERO, config)
         expect(result.success).toBe(true)
       })
 
@@ -53,7 +58,7 @@ describe('Homepage Public Action Integration', () => {
           title: 'ヒーローセクション',
           ctaPrimary: { text: 'ボタン', url: '/link' },
         }
-        const result = validateSectionConfig(HomepageSectionType.HERO, config)
+        const result = validateSectionConfig(SectionType.HERO, config)
         expect(result.success).toBe(true)
       })
     })
@@ -65,13 +70,13 @@ describe('Homepage Public Action Integration', () => {
           showOnlyPublished: true,
         }
 
-        const result = validateSectionConfig(HomepageSectionType.SPACE_LIST, config)
+        const result = validateSectionConfig(SectionType.SPACE_LIST, config)
         expect(result.success).toBe(true)
       })
 
       test('カスタムmaxItems', () => {
         const config = { maxItems: 12 }
-        const result = validateSectionConfig(HomepageSectionType.SPACE_LIST, config)
+        const result = validateSectionConfig(SectionType.SPACE_LIST, config)
         expect(result.success).toBe(true)
         if (result.success) {
           expect(result.data.maxItems).toBe(12)
@@ -87,20 +92,20 @@ describe('Homepage Public Action Integration', () => {
           showViewAllLink: true,
         }
 
-        const result = validateSectionConfig(HomepageSectionType.NEWS, config)
+        const result = validateSectionConfig(SectionType.NEWS_LIST, config)
         expect(result.success).toBe(true)
       })
     })
 
-    describe('POSTS section', () => {
-      test('有効なPOSTS設定', () => {
+    describe('POST_LIST section', () => {
+      test('有効なPOST_LIST設定', () => {
         const config = {
           title: '最新の記事',
           maxItems: 3,
           showViewAllLink: true,
         }
 
-        const result = validateSectionConfig(HomepageSectionType.POSTS, config)
+        const result = validateSectionConfig(SectionType.POST_LIST, config)
         expect(result.success).toBe(true)
       })
     })
@@ -112,7 +117,7 @@ describe('Homepage Public Action Integration', () => {
           maxItems: 5,
         }
 
-        const result = validateSectionConfig(HomepageSectionType.FAQ, config)
+        const result = validateSectionConfig(SectionType.FAQ_LIST, config)
         expect(result.success).toBe(true)
       })
     })
@@ -126,7 +131,7 @@ describe('Homepage Public Action Integration', () => {
           ctaSecondary: { text: '詳細を見る', url: '/about' },
         }
 
-        const result = validateSectionConfig(HomepageSectionType.CTA, config)
+        const result = validateSectionConfig(SectionType.CTA, config)
         expect(result.success).toBe(true)
       })
     })
@@ -137,13 +142,13 @@ describe('Homepage Public Action Integration', () => {
           containerClass: 'custom-section-class',
         }
 
-        const result = validateSectionConfig(HomepageSectionType.CUSTOM, config)
+        const result = validateSectionConfig(SectionType.CUSTOM, config)
         expect(result.success).toBe(true)
       })
 
       test('空のCUSTOM設定', () => {
         const config = {}
-        const result = validateSectionConfig(HomepageSectionType.CUSTOM, config)
+        const result = validateSectionConfig(SectionType.CUSTOM, config)
         expect(result.success).toBe(true)
       })
     })
@@ -151,24 +156,24 @@ describe('Homepage Public Action Integration', () => {
 
   describe('defaultSectionConfigs', () => {
     test('全セクションタイプにデフォルト設定がある', () => {
-      Object.values(HomepageSectionType).forEach((type) => {
+      Object.values(SectionType).forEach((type) => {
         expect(defaultSectionConfigs[type]).toBeDefined()
       })
     })
 
     test('SPACE_LISTのデフォルト設定', () => {
-      const config = defaultSectionConfigs[HomepageSectionType.SPACE_LIST]
+      const config = defaultSectionConfigs[SectionType.SPACE_LIST]
       expect(config).toHaveProperty('maxItems')
       expect(config.maxItems).toBeGreaterThan(0)
     })
 
     test('NEWSのデフォルト設定', () => {
-      const config = defaultSectionConfigs[HomepageSectionType.NEWS]
+      const config = defaultSectionConfigs[SectionType.NEWS_LIST]
       expect(config).toHaveProperty('maxItems')
     })
 
-    test('POSTSのデフォルト設定', () => {
-      const config = defaultSectionConfigs[HomepageSectionType.POSTS]
+    test('POST_LISTのデフォルト設定', () => {
+      const config = defaultSectionConfigs[SectionType.POST_LIST]
       expect(config).toHaveProperty('maxItems')
     })
   })
@@ -177,11 +182,11 @@ describe('Homepage Public Action Integration', () => {
     test('無効な設定はデフォルトにフォールバック', () => {
       // 無効な型の設定をテスト
       const invalidConfig = 'not-an-object'
-      const result = validateSectionConfig(HomepageSectionType.HERO, invalidConfig)
+      const result = validateSectionConfig(SectionType.HERO, invalidConfig)
 
       if (!result.success) {
         // フォールバック先のデフォルト設定を確認
-        const defaultConfig = defaultSectionConfigs[HomepageSectionType.HERO]
+        const defaultConfig = defaultSectionConfigs[SectionType.HERO]
         expect(defaultConfig).toBeDefined()
       }
     })
@@ -192,10 +197,10 @@ describe('Homepage Public Action Integration', () => {
         showPrice: true, // 有効
       }
 
-      const result = validateSectionConfig(HomepageSectionType.SPACE_LIST, config)
+      const result = validateSectionConfig(SectionType.SPACE_LIST, config)
       // バリデーション結果に応じてフォールバック
       if (!result.success) {
-        const defaultConfig = defaultSectionConfigs[HomepageSectionType.SPACE_LIST]
+        const defaultConfig = defaultSectionConfigs[SectionType.SPACE_LIST]
         expect(defaultConfig.maxItems).toBeGreaterThan(0)
       }
     })
@@ -205,9 +210,9 @@ describe('Homepage Public Action Integration', () => {
     test('有効なセクションデータ構造', () => {
       const sectionData = {
         id: 'section-123',
-        type: HomepageSectionType.HERO,
+        type: SectionType.HERO,
         title: 'ヒーローセクション',
-        config: defaultSectionConfigs[HomepageSectionType.HERO],
+        config: defaultSectionConfigs[SectionType.HERO],
         content: null,
         order: 1,
         isActive: true,
@@ -216,7 +221,7 @@ describe('Homepage Public Action Integration', () => {
       }
 
       expect(sectionData.id).toBe('section-123')
-      expect(sectionData.type).toBe(HomepageSectionType.HERO)
+      expect(sectionData.type).toBe(SectionType.HERO)
       expect(sectionData.isActive).toBe(true)
       expect(sectionData.order).toBe(1)
       expect(sectionData.createdAt).toBeInstanceOf(Date)

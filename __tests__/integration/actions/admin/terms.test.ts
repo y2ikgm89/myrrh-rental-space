@@ -13,49 +13,49 @@ import { TermsType, TermsStatus } from '@/shared/generated/prisma/enums'
 
 // terms.ts 内で使用されているスキーマを再現
 const createTermsSchema = z.object({
-  type: z.nativeEnum(TermsType),
+  type: z.enum(TermsType),
   title: z
     .string()
-    .min(1, 'タイトルを入力してください')
-    .max(100, 'タイトルは100文字以内で入力してください'),
+    .min(1, { error: 'タイトルを入力してください' })
+    .max(100, { error: 'タイトルは100文字以内で入力してください' }),
   slug: z
     .string()
-    .min(1, 'スラッグを入力してください')
-    .max(50, 'スラッグは50文字以内で入力してください')
-    .regex(/^[a-z0-9-]+$/, 'スラッグは小文字英数字とハイフンのみ使用可能です'),
+    .min(1, { error: 'スラッグを入力してください' })
+    .max(50, { error: 'スラッグは50文字以内で入力してください' })
+    .regex(/^[a-z0-9-]+$/, { error: 'スラッグは小文字英数字とハイフンのみ使用可能です' }),
   isActive: z.boolean().default(true),
 })
 
 const updateTermsSchema = createTermsSchema.partial()
 
 const createTermsVersionSchema = z.object({
-  termsId: z.string().uuid('規約IDが無効です'),
-  content: z.string().min(1, 'コンテンツを入力してください'),
+  termsId: z.string().uuid({ error: '規約IDが無効です' }),
+  content: z.string().min(1, { error: 'コンテンツを入力してください' }),
 })
 
 const updateTermsVersionSchema = z.object({
-  content: z.string().min(1, 'コンテンツを入力してください'),
+  content: z.string().min(1, { error: 'コンテンツを入力してください' }),
 })
 
 const publishTermsVersionSchema = z.object({
-  versionId: z.string().uuid('バージョンIDが無効です'),
+  versionId: z.string().uuid({ error: 'バージョンIDが無効です' }),
 })
 
 const recordTermsAgreementSchema = z.object({
-  termsId: z.string().uuid('規約IDが無効です'),
-  versionId: z.string().uuid('バージョンIDが無効です'),
-  reservationId: z.string().uuid('予約IDが無効です').optional(),
-  userId: z.string().uuid('ユーザーIDが無効です').optional(),
+  termsId: z.string().uuid({ error: '規約IDが無効です' }),
+  versionId: z.string().uuid({ error: 'バージョンIDが無効です' }),
+  reservationId: z.string().uuid({ error: '予約IDが無効です' }).optional(),
+  userId: z.string().uuid({ error: 'ユーザーIDが無効です' }).optional(),
   guestName: z.string().optional(),
-  guestEmail: z.string().email('メールアドレスが無効です').optional(),
+  guestEmail: z.string().email({ error: 'メールアドレスが無効です' }).optional(),
   ipAddress: z.string().optional(),
   userAgent: z.string().optional(),
 })
 
 const agreeToTermsSchema = z.object({
   versionIds: z
-    .array(z.string().uuid('バージョンIDが無効です'))
-    .min(1, '規約に同意してください'),
+    .array(z.string().uuid({ error: 'バージョンIDが無効です' }))
+    .min(1, { error: '規約に同意してください' }),
 })
 
 // 有効なUUID

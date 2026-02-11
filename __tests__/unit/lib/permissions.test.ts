@@ -4,7 +4,20 @@
  * src/lib/permissions.ts のユニットテスト
  */
 
-import { describe, test, expect } from 'bun:test'
+import { describe, test, expect, mock, beforeEach } from 'bun:test'
+import { Role } from '@/shared/generated/prisma/enums'
+
+// prismaのモック
+const mockFindMany = mock(() => Promise.resolve([]))
+mock.module('@/shared/lib/prisma', () => ({
+  prisma: {
+    userPageAssignment: {
+      findMany: mockFindMany,
+    },
+  },
+  Role,
+}))
+
 import {
   hasPermission,
   canAccessAdmin,
@@ -20,7 +33,6 @@ import {
   EDITOR_USER,
   VIEWER_USER,
   REGULAR_USER,
-  createEditorWithPages,
 } from '../../fixtures/users'
 
 describe('hasPermission', () => {
@@ -168,70 +180,82 @@ describe('userHasPermission', () => {
 })
 
 describe('userHasResourceAccess', () => {
+  beforeEach(() => {
+    mockFindMany.mockReset()
+    mockFindMany.mockResolvedValue([])
+  })
+
   describe('SUPER_ADMIN/ADMIN', () => {
-    test('全リソースにアクセス可能', () => {
+    test('全リソースにアクセス可能', async () => {
       expect(
-        userHasResourceAccess(SUPER_ADMIN_USER, 'page', 'update', 'any-page-id')
+        await userHasResourceAccess(SUPER_ADMIN_USER, 'page', 'update', 'any-page-id')
       ).toBe(true)
       expect(
-        userHasResourceAccess(ADMIN_USER, 'page', 'update', 'any-page-id')
+        await userHasResourceAccess(ADMIN_USER, 'page', 'update', 'any-page-id')
       ).toBe(true)
       expect(
-        userHasResourceAccess(ADMIN_USER, 'post', 'update', 'any-post-id')
+        await userHasResourceAccess(ADMIN_USER, 'post', 'update', 'any-post-id')
       ).toBe(true)
     })
   })
 
   describe('EDITOR', () => {
-    test('割り当てられたリソースにのみアクセス可能', () => {
-      const editor = createEditorWithPages(['page-1', 'page-2'])
+    test('割り当てられたリソースにのみアクセス可能', async () => {
+      mockFindMany.mockResolvedValue([
+        { pageId: 'page-1' },
+        { pageId: 'page-2' },
+      ])
 
-      expect(userHasResourceAccess(editor, 'page', 'update', 'page-1')).toBe(true)
-      expect(userHasResourceAccess(editor, 'page', 'update', 'page-2')).toBe(true)
-      expect(userHasResourceAccess(editor, 'page', 'update', 'page-3')).toBe(false)
+      expect(await userHasResourceAccess(EDITOR_USER, 'page', 'update', 'page-1')).toBe(true)
+      expect(await userHasResourceAccess(EDITOR_USER, 'page', 'update', 'page-2')).toBe(true)
+      expect(await userHasResourceAccess(EDITOR_USER, 'page', 'update', 'page-3')).toBe(false)
     })
 
-    test('権限のないリソースタイプにはアクセス不可', () => {
-      const editor = createEditorWithPages(['page-1'])
+    test('権限のないリソースタイプにはアクセス不可', async () => {
+      mockFindMany.mockResolvedValue([
+        { pageId: 'page-1' },
+      ])
 
       // EDITORはspaceの権限を持たない
-      expect(userHasResourceAccess(editor, 'space', 'update', 'page-1')).toBe(false)
+      expect(await userHasResourceAccess(EDITOR_USER, 'space', 'update', 'page-1')).toBe(false)
     })
 
-    test('リソースIDなしの場合はアクセス不可', () => {
-      const editor = createEditorWithPages(['page-1'])
+    test('リソースIDなしの場合は許可（一覧表示など）', async () => {
+      mockFindMany.mockResolvedValue([
+        { pageId: 'page-1' },
+      ])
 
-      expect(userHasResourceAccess(editor, 'page', 'update', undefined)).toBe(false)
+      expect(await userHasResourceAccess(EDITOR_USER, 'page', 'update', undefined)).toBe(true)
     })
 
-    test('assignedPagesが空の場合は全てアクセス不可', () => {
-      const editor = createEditorWithPages([])
+    test('assignedPagesが空の場合は全てアクセス不可', async () => {
+      mockFindMany.mockResolvedValue([])
 
-      expect(userHasResourceAccess(editor, 'page', 'update', 'page-1')).toBe(false)
+      expect(await userHasResourceAccess(EDITOR_USER, 'page', 'update', 'page-1')).toBe(false)
     })
   })
 
   describe('VIEWER', () => {
-    test('読み取り権限のあるリソースには全てアクセス可能', () => {
+    test('読み取り権限のあるリソースには全てアクセス可能', async () => {
       expect(
-        userHasResourceAccess(VIEWER_USER, 'space', 'read', 'any-space-id')
+        await userHasResourceAccess(VIEWER_USER, 'space', 'read', 'any-space-id')
       ).toBe(true)
       expect(
-        userHasResourceAccess(VIEWER_USER, 'reservation', 'read', 'any-id')
+        await userHasResourceAccess(VIEWER_USER, 'reservation', 'read', 'any-id')
       ).toBe(true)
     })
 
-    test('書き込み権限にはアクセス不可', () => {
+    test('書き込み権限にはアクセス不可', async () => {
       expect(
-        userHasResourceAccess(VIEWER_USER, 'space', 'update', 'any-space-id')
+        await userHasResourceAccess(VIEWER_USER, 'space', 'update', 'any-space-id')
       ).toBe(false)
     })
   })
 
   describe('USER', () => {
-    test('管理リソースには一切アクセス不可', () => {
+    test('管理リソースには一切アクセス不可', async () => {
       expect(
-        userHasResourceAccess(REGULAR_USER, 'space', 'read', 'any-id')
+        await userHasResourceAccess(REGULAR_USER, 'space', 'read', 'any-id')
       ).toBe(false)
     })
   })

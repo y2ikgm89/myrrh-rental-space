@@ -14,19 +14,19 @@ import { z } from 'zod'
 const faqCategoryFormSchema = z.object({
   name: z
     .string()
-    .min(1, 'カテゴリ名を入力してください')
-    .max(100, 'カテゴリ名は100文字以内で入力してください'),
+    .min(1, { error: 'カテゴリ名を入力してください' })
+    .max(100, { error: 'カテゴリ名は100文字以内で入力してください' }),
   slug: z
     .string()
-    .min(1, 'スラッグを入力してください')
-    .max(100, 'スラッグは100文字以内で入力してください')
+    .min(1, { error: 'スラッグを入力してください' })
+    .max(100, { error: 'スラッグは100文字以内で入力してください' })
     .regex(
       /^[a-z0-9-]+$/,
-      'スラッグは半角英数字とハイフンのみ使用できます'
+      { error: 'スラッグは半角英数字とハイフンのみ使用できます' }
     ),
   description: z
     .string()
-    .max(500, '説明は500文字以内で入力してください')
+    .max(500, { error: '説明は500文字以内で入力してください' })
     .nullable()
     .optional(),
   order: z.number().int().min(0),
@@ -34,15 +34,15 @@ const faqCategoryFormSchema = z.object({
 })
 
 const faqItemFormSchema = z.object({
-  categoryId: z.string().uuid('カテゴリを選択してください'),
+  categoryId: z.string().uuid({ error: 'カテゴリを選択してください' }),
   question: z
     .string()
-    .min(1, '質問を入力してください')
-    .max(500, '質問は500文字以内で入力してください'),
+    .min(1, { error: '質問を入力してください' })
+    .max(500, { error: '質問は500文字以内で入力してください' }),
   answer: z
     .string()
-    .min(1, '回答を入力してください')
-    .max(10000, '回答は10000文字以内で入力してください'),
+    .min(1, { error: '回答を入力してください' })
+    .max(10000, { error: '回答は10000文字以内で入力してください' }),
   order: z.number().int().min(0),
   isActive: z.boolean(),
 })

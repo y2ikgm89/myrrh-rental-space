@@ -13,6 +13,9 @@ import {
   inferMediaType,
   isAllowedMimeType,
   isAllowedFileSize,
+  validateFile,
+  parseMediaTypeFilter,
+  parseMediaUsageFilter,
   MAX_FILE_SIZES,
   ALLOWED_MIME_TYPES,
 } from '@/admin/lib/validations/media'
@@ -371,5 +374,132 @@ describe('constants', () => {
     expect(ALLOWED_MIME_TYPES.VIDEO).toContain('video/mp4')
     expect(ALLOWED_MIME_TYPES.DOCUMENT).toContain('application/pdf')
     expect(ALLOWED_MIME_TYPES.OTHER).toEqual([])
+  })
+})
+
+// =============================================================================
+// validateFile
+// =============================================================================
+
+describe('validateFile', () => {
+  /**
+   * テスト用のFile-likeオブジェクトを作成するヘルパー
+   * ブラウザ環境のFileコンストラクタに依存しないようにする
+   */
+  function createMockFile(name: string, type: string, size: number): File {
+    const blob = new Blob(['x'.repeat(size)], { type })
+    return new File([blob], name, { type })
+  }
+
+  describe('正常系', () => {
+    test('許可されたJPEG画像はvalidを返す', () => {
+      const file = createMockFile('test.jpg', 'image/jpeg', 1024)
+      const result = validateFile(file)
+      expect(result.valid).toBe(true)
+    })
+
+    test('許可されたPNG画像はvalidを返す', () => {
+      const file = createMockFile('test.png', 'image/png', 1024)
+      const result = validateFile(file)
+      expect(result.valid).toBe(true)
+    })
+
+    test('許可されたPDFはvalidを返す', () => {
+      const file = createMockFile('doc.pdf', 'application/pdf', 1024)
+      const result = validateFile(file)
+      expect(result.valid).toBe(true)
+    })
+
+    test('許可されたMP4動画はvalidを返す', () => {
+      const file = createMockFile('video.mp4', 'video/mp4', 1024)
+      const result = validateFile(file)
+      expect(result.valid).toBe(true)
+    })
+  })
+
+  describe('MIMEタイプエラー', () => {
+    test('許可されていないMIMEタイプはエラーを返す', () => {
+      const file = createMockFile('test.bmp', 'image/bmp', 1024)
+      const result = validateFile(file, 'IMAGE')
+      expect(result.valid).toBe(false)
+      if (!result.valid) {
+        expect(result.error).toContain('対応していないファイル形式')
+      }
+    })
+  })
+
+  describe('ファイルサイズエラー', () => {
+    test('IMAGEの10MB超過はエラーを返す', () => {
+      const file = createMockFile('large.jpg', 'image/jpeg', 10 * 1024 * 1024 + 1)
+      const result = validateFile(file, 'IMAGE')
+      expect(result.valid).toBe(false)
+      if (!result.valid) {
+        expect(result.error).toContain('10MB以下')
+      }
+    })
+  })
+
+  describe('type指定', () => {
+    test('type指定ありで正しいMIMEタイプはvalid', () => {
+      const file = createMockFile('test.jpg', 'image/jpeg', 1024)
+      const result = validateFile(file, 'IMAGE')
+      expect(result.valid).toBe(true)
+    })
+
+    test('type指定なしでMIMEタイプから自動推定', () => {
+      const file = createMockFile('test.jpg', 'image/jpeg', 1024)
+      const result = validateFile(file)
+      expect(result.valid).toBe(true)
+    })
+  })
+})
+
+// =============================================================================
+// parseMediaTypeFilter
+// =============================================================================
+
+describe('parseMediaTypeFilter', () => {
+  test('有効なMediaType値はそのまま返す', () => {
+    expect(parseMediaTypeFilter('IMAGE')).toBe('IMAGE')
+    expect(parseMediaTypeFilter('VIDEO')).toBe('VIDEO')
+    expect(parseMediaTypeFilter('DOCUMENT')).toBe('DOCUMENT')
+    expect(parseMediaTypeFilter('OTHER')).toBe('OTHER')
+  })
+
+  test('無効な値はundefinedを返す', () => {
+    expect(parseMediaTypeFilter('INVALID')).toBeUndefined()
+    expect(parseMediaTypeFilter('image')).toBeUndefined()
+  })
+
+  test('null/undefined/空文字はundefinedを返す', () => {
+    expect(parseMediaTypeFilter(null)).toBeUndefined()
+    expect(parseMediaTypeFilter(undefined)).toBeUndefined()
+    expect(parseMediaTypeFilter('')).toBeUndefined()
+  })
+})
+
+// =============================================================================
+// parseMediaUsageFilter
+// =============================================================================
+
+describe('parseMediaUsageFilter', () => {
+  test('有効なMediaUsage値はそのまま返す', () => {
+    expect(parseMediaUsageFilter('POST')).toBe('POST')
+    expect(parseMediaUsageFilter('NEWS')).toBe('NEWS')
+    expect(parseMediaUsageFilter('PAGE')).toBe('PAGE')
+    expect(parseMediaUsageFilter('SPACE')).toBe('SPACE')
+    expect(parseMediaUsageFilter('SITE')).toBe('SITE')
+    expect(parseMediaUsageFilter('GENERAL')).toBe('GENERAL')
+  })
+
+  test('無効な値はundefinedを返す', () => {
+    expect(parseMediaUsageFilter('INVALID')).toBeUndefined()
+    expect(parseMediaUsageFilter('post')).toBeUndefined()
+  })
+
+  test('null/undefined/空文字はundefinedを返す', () => {
+    expect(parseMediaUsageFilter(null)).toBeUndefined()
+    expect(parseMediaUsageFilter(undefined)).toBeUndefined()
+    expect(parseMediaUsageFilter('')).toBeUndefined()
   })
 })

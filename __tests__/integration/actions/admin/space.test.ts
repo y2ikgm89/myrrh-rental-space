@@ -15,6 +15,7 @@ const VALID_UUID = '550e8400-e29b-41d4-a716-446655440000'
 
 // 有効なスペース作成データ
 const VALID_SPACE_INPUT: SpaceFormData = {
+  slug: 'test-space',
   name: 'テストスペース',
   description: 'これはテスト用のスペースの説明です。10文字以上必要です。',
   address: '東京都渋谷区渋谷1-1-1',
@@ -28,6 +29,17 @@ const VALID_SPACE_INPUT: SpaceFormData = {
   facilities: ['Wi-Fi', 'プロジェクター', 'ホワイトボード'],
   isPublished: false,
   termsId: null,
+  locationId: null,
+  categoryId: null,
+  discountType: 'none',
+  discountValue: null,
+  durationDiscountOverride: 'inherit',
+  taxRateType: 'standard',
+  metaDescription: null,
+  metaKeywords: null,
+  ogpTitle: null,
+  ogpDescription: null,
+  ogpImageUrl: null,
 }
 
 describe('Space Admin Action Integration', () => {
@@ -40,6 +52,7 @@ describe('Space Admin Action Integration', () => {
 
       test('最小限の必須フィールドのみでOK', () => {
         const minimalInput = {
+          slug: 'test-space',
           name: 'スペース',
           description: '10文字以上の説明文です。',
           address: '東京都渋谷区',
@@ -63,6 +76,7 @@ describe('Space Admin Action Integration', () => {
 
       test('imageUrlsデフォルトは空配列', () => {
         const input = {
+          slug: 'test-space',
           name: 'スペース',
           description: '10文字以上の説明文です。',
           address: '東京都渋谷区',
@@ -79,6 +93,7 @@ describe('Space Admin Action Integration', () => {
 
       test('facilitiesデフォルトは空配列', () => {
         const input = {
+          slug: 'test-space',
           name: 'スペース',
           description: '10文字以上の説明文です。',
           address: '東京都渋谷区',
@@ -95,6 +110,7 @@ describe('Space Admin Action Integration', () => {
 
       test('isPublishedデフォルトはfalse', () => {
         const input = {
+          slug: 'test-space',
           name: 'スペース',
           description: '10文字以上の説明文です。',
           address: '東京都渋谷区',
@@ -106,6 +122,108 @@ describe('Space Admin Action Integration', () => {
         expect(result.success).toBe(true)
         if (result.success) {
           expect(result.data.isPublished).toBe(false)
+        }
+      })
+
+      test('discountTypeデフォルトはnone', () => {
+        const input = {
+          slug: 'test-space',
+          name: 'スペース',
+          description: '10文字以上の説明文です。',
+          address: '東京都渋谷区',
+          capacity: 1,
+          hourlyPrice: 0,
+          mainImageUrl: 'https://example.com/image.jpg',
+        }
+        const result = spaceFormSchema.safeParse(input)
+        expect(result.success).toBe(true)
+        if (result.success) {
+          expect(result.data.discountType).toBe('none')
+        }
+      })
+
+      test('durationDiscountOverrideデフォルトはinherit', () => {
+        const input = {
+          slug: 'test-space',
+          name: 'スペース',
+          description: '10文字以上の説明文です。',
+          address: '東京都渋谷区',
+          capacity: 1,
+          hourlyPrice: 0,
+          mainImageUrl: 'https://example.com/image.jpg',
+        }
+        const result = spaceFormSchema.safeParse(input)
+        expect(result.success).toBe(true)
+        if (result.success) {
+          expect(result.data.durationDiscountOverride).toBe('inherit')
+        }
+      })
+
+      test('taxRateTypeデフォルトはstandard', () => {
+        const input = {
+          slug: 'test-space',
+          name: 'スペース',
+          description: '10文字以上の説明文です。',
+          address: '東京都渋谷区',
+          capacity: 1,
+          hourlyPrice: 0,
+          mainImageUrl: 'https://example.com/image.jpg',
+        }
+        const result = spaceFormSchema.safeParse(input)
+        expect(result.success).toBe(true)
+        if (result.success) {
+          expect(result.data.taxRateType).toBe('standard')
+        }
+      })
+    })
+
+    describe('slug', () => {
+      test('空のスラッグはエラー', () => {
+        const result = spaceFormSchema.safeParse({
+          ...VALID_SPACE_INPUT,
+          slug: '',
+        })
+        expect(result.success).toBe(false)
+        if (!result.success) {
+          expect(result.error.issues[0].message).toContain('スラッグを入力')
+        }
+      })
+
+      test('有効なスラッグはOK', () => {
+        const result = spaceFormSchema.safeParse({
+          ...VALID_SPACE_INPUT,
+          slug: 'my-space-01',
+        })
+        expect(result.success).toBe(true)
+      })
+
+      test('大文字を含むスラッグはエラー', () => {
+        const result = spaceFormSchema.safeParse({
+          ...VALID_SPACE_INPUT,
+          slug: 'My-Space',
+        })
+        expect(result.success).toBe(false)
+        if (!result.success) {
+          expect(result.error.issues[0].message).toContain('小文字英数字とハイフンのみ')
+        }
+      })
+
+      test('100文字のスラッグはOK', () => {
+        const result = spaceFormSchema.safeParse({
+          ...VALID_SPACE_INPUT,
+          slug: 'a'.repeat(100),
+        })
+        expect(result.success).toBe(true)
+      })
+
+      test('101文字のスラッグはエラー', () => {
+        const result = spaceFormSchema.safeParse({
+          ...VALID_SPACE_INPUT,
+          slug: 'a'.repeat(101),
+        })
+        expect(result.success).toBe(false)
+        if (!result.success) {
+          expect(result.error.issues[0].message).toContain('100文字以内')
         }
       })
     })
@@ -470,6 +588,116 @@ describe('Space Admin Action Integration', () => {
         if (!result.success) {
           expect(result.error.issues[0].message).toContain('利用規約ID')
         }
+      })
+    })
+
+    describe('discountType', () => {
+      test('percentageは有効', () => {
+        const result = spaceFormSchema.safeParse({
+          ...VALID_SPACE_INPUT,
+          discountType: 'percentage',
+        })
+        expect(result.success).toBe(true)
+      })
+
+      test('fixedは有効', () => {
+        const result = spaceFormSchema.safeParse({
+          ...VALID_SPACE_INPUT,
+          discountType: 'fixed',
+        })
+        expect(result.success).toBe(true)
+      })
+
+      test('無効な割引タイプはエラー', () => {
+        const result = spaceFormSchema.safeParse({
+          ...VALID_SPACE_INPUT,
+          discountType: 'invalid',
+        })
+        expect(result.success).toBe(false)
+      })
+    })
+
+    describe('discountValue', () => {
+      test('割引値0はOK', () => {
+        const result = spaceFormSchema.safeParse({
+          ...VALID_SPACE_INPUT,
+          discountValue: 0,
+        })
+        expect(result.success).toBe(true)
+      })
+
+      test('割引値nullはOK', () => {
+        const result = spaceFormSchema.safeParse({
+          ...VALID_SPACE_INPUT,
+          discountValue: null,
+        })
+        expect(result.success).toBe(true)
+      })
+
+      test('負の割引値はエラー', () => {
+        const result = spaceFormSchema.safeParse({
+          ...VALID_SPACE_INPUT,
+          discountValue: -1,
+        })
+        expect(result.success).toBe(false)
+        if (!result.success) {
+          expect(result.error.issues[0].message).toContain('0以上')
+        }
+      })
+
+      test('1000001の割引値はエラー', () => {
+        const result = spaceFormSchema.safeParse({
+          ...VALID_SPACE_INPUT,
+          discountValue: 1000001,
+        })
+        expect(result.success).toBe(false)
+        if (!result.success) {
+          expect(result.error.issues[0].message).toContain('1000000以下')
+        }
+      })
+    })
+
+    describe('durationDiscountOverride', () => {
+      test('enabledは有効', () => {
+        const result = spaceFormSchema.safeParse({
+          ...VALID_SPACE_INPUT,
+          durationDiscountOverride: 'enabled',
+        })
+        expect(result.success).toBe(true)
+      })
+
+      test('disabledは有効', () => {
+        const result = spaceFormSchema.safeParse({
+          ...VALID_SPACE_INPUT,
+          durationDiscountOverride: 'disabled',
+        })
+        expect(result.success).toBe(true)
+      })
+
+      test('無効なオーバーライド値はエラー', () => {
+        const result = spaceFormSchema.safeParse({
+          ...VALID_SPACE_INPUT,
+          durationDiscountOverride: 'invalid',
+        })
+        expect(result.success).toBe(false)
+      })
+    })
+
+    describe('taxRateType', () => {
+      test('reducedは有効', () => {
+        const result = spaceFormSchema.safeParse({
+          ...VALID_SPACE_INPUT,
+          taxRateType: 'reduced',
+        })
+        expect(result.success).toBe(true)
+      })
+
+      test('無効な税率タイプはエラー', () => {
+        const result = spaceFormSchema.safeParse({
+          ...VALID_SPACE_INPUT,
+          taxRateType: 'invalid',
+        })
+        expect(result.success).toBe(false)
       })
     })
   })

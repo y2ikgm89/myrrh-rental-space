@@ -16,7 +16,6 @@ export interface MockUser {
   role: Role
   emailVerified: boolean
   image: string | null
-  assignedPages?: string[]
   createdAt: Date
   updatedAt: Date
 }

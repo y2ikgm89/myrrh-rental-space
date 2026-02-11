@@ -9,6 +9,7 @@ import { spaceFormSchema, defaultSpaceFormValues } from '@/admin/lib/validations
 
 // 有効なスペースデータ
 const VALID_SPACE_INPUT = {
+  slug: 'test-space',
   name: 'テストスペース',
   description: 'これはテスト用のスペースの説明文です。10文字以上必要です。',
   address: '東京都渋谷区1-2-3',
@@ -33,6 +34,7 @@ describe('spaceFormSchema', () => {
 
     test('オプショナルフィールドを省略可能', () => {
       const minimalInput = {
+        slug: 'test-space',
         name: 'テストスペース',
         description: 'これはテスト用のスペースの説明文です。',
         address: '東京都渋谷区1-2-3',
@@ -46,6 +48,7 @@ describe('spaceFormSchema', () => {
 
     test('デフォルト値が適用される', () => {
       const input = {
+        slug: 'test-space',
         name: 'テストスペース',
         description: 'これはテスト用のスペースの説明文です。',
         address: '東京都渋谷区1-2-3',
@@ -471,6 +474,7 @@ describe('spaceFormSchema', () => {
 describe('defaultSpaceFormValues', () => {
   test('デフォルト値が正しく定義されている', () => {
     expect(defaultSpaceFormValues).toEqual({
+      slug: '',
       name: '',
       description: '',
       address: '',
@@ -486,6 +490,12 @@ describe('defaultSpaceFormValues', () => {
       termsId: null,
       locationId: null,
       categoryId: null,
+      // 割引設定
+      discountType: 'none',
+      discountValue: null,
+      durationDiscountOverride: 'inherit',
+      // 税率設定
+      taxRateType: 'standard',
       metaDescription: null,
       metaKeywords: null,
       ogpTitle: null,

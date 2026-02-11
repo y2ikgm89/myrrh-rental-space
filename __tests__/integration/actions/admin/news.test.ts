@@ -13,14 +13,14 @@ import { LayoutWidth } from '@/shared/types/prisma'
 
 // news.ts 内で定義されているスキーマを再現
 const createNewsSchema = z.object({
-  title: z.string().min(1, 'タイトルは必須です').max(200, 'タイトルは200文字以内で入力してください'),
+  title: z.string().min(1, { error: 'タイトルは必須です' }).max(200, { error: 'タイトルは200文字以内で入力してください' }),
   content: z.string().default(''),
 })
 
 const updateNewsSchema = z.object({
-  title: z.string().min(1, 'タイトルは必須です').max(200, 'タイトルは200文字以内で入力してください'),
-  content: z.string().min(1, '本文は必須です'),
-  contentWidth: z.nativeEnum(LayoutWidth).nullable().optional(),
+  title: z.string().min(1, { error: 'タイトルは必須です' }).max(200, { error: 'タイトルは200文字以内で入力してください' }),
+  content: z.string().min(1, { error: '本文は必須です' }),
+  contentWidth: z.enum(LayoutWidth).nullable().optional(),
   contentWidthCustom: z.number().int().min(320).max(1920).nullable().optional(),
 })
 

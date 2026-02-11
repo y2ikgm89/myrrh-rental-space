@@ -30,7 +30,7 @@ describe('instagramSettingsSchema', () => {
     })
 
     test('全てのレイアウトタイプは許可', () => {
-      const layouts = ['grid', 'carousel', 'card'] as const
+      const layouts = ['grid', 'masonry', 'slider'] as const
       for (const layout of layouts) {
         const result = instagramSettingsSchema.safeParse({
           feedEnabled: true,

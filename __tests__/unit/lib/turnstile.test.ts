@@ -13,6 +13,13 @@ import {
   mock,
 } from 'bun:test'
 
+// モック用prismaクライアント（mock.module より前に定義してTDZを回避）
+const mockPrismaClient = {
+  settings: {
+    findUnique: mock(() => Promise.resolve(null)),
+  },
+}
+
 // prismaモジュールをモック
 mock.module('@/shared/lib/prisma', () => ({
   prisma: mockPrismaClient,
@@ -21,14 +28,8 @@ mock.module('@/shared/lib/prisma', () => ({
 // cryptoモジュールをモック（復号処理）
 mock.module('@/shared/lib/crypto', () => ({
   decrypt: (value: string) => value, // 暗号化された値をそのまま返す（テスト用）
+  isEncrypted: (_value: string) => true, // テスト用: 暗号化済みとみなす
 }))
-
-// モック用prismaクライアント
-const mockPrismaClient = {
-  settings: {
-    findUnique: mock(() => Promise.resolve(null)),
-  },
-}
 
 // モジュールモック
 const mockFetch = mock<typeof fetch>(() => Promise.resolve(new Response()))

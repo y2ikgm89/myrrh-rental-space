@@ -1,20 +1,18 @@
 /**
  * Server Actions HOFテスト
  *
- * src/types/server-actions.ts の高階関数テスト
+ * server-action-helpers.ts の高階関数テスト
  * 認証・認可・監査ログの統合動作を検証
  */
 
-import { describe, test, expect, beforeEach, mock, spyOn } from 'bun:test'
-import { Role, AuditAction } from '@/shared/generated/prisma/enums'
-import type { User } from '@/shared/lib/auth'
+import { describe, test, expect, beforeEach, mock } from 'bun:test'
+import { Role } from '@/shared/generated/prisma/enums'
 import {
   SUPER_ADMIN_USER,
   ADMIN_USER,
   EDITOR_USER,
   VIEWER_USER,
   REGULAR_USER,
-  createEditorWithPages,
 } from '../../fixtures/users'
 
 // モック関数の定義
@@ -26,6 +24,7 @@ const mockGetSessionUser = mock((session: unknown) => {
 const mockHasPermission = mock(() => true)
 const mockUserHasResourceAccess = mock(() => true)
 const mockCanAccessAdmin = mock(() => true)
+const mockIsEditorRole = mock((role: unknown) => role === Role.EDITOR)
 const mockLogUserAction = mock(() => Promise.resolve())
 const mockLogPermissionDenied = mock(() => Promise.resolve())
 
@@ -39,6 +38,7 @@ mock.module('@/admin/lib/permissions', () => ({
   hasPermission: mockHasPermission,
   userHasResourceAccess: mockUserHasResourceAccess,
   canAccessAdmin: mockCanAccessAdmin,
+  isEditorRole: mockIsEditorRole,
 }))
 
 mock.module('@/admin/lib/audit', () => ({
@@ -48,15 +48,17 @@ mock.module('@/admin/lib/audit', () => ({
 
 // モック後にインポート
 const {
-  withAuth,
   withPermission,
   withReadPermission,
   withRole,
+} = await import('@/admin/lib/server-action-helpers')
+
+const {
   createSuccess,
   createFailure,
   isActionSuccess,
   isActionFailure,
-} = await import('@/admin/types/server-actions')
+} = await import('@/shared/types/server-actions')
 
 describe('createSuccess / createFailure', () => {
   test('createSuccess: データなし', () => {
@@ -118,67 +120,13 @@ describe('isActionSuccess / isActionFailure', () => {
   })
 })
 
-describe('withAuth', () => {
-  beforeEach(() => {
-    mockGetSession.mockReset()
-    mockCanAccessAdmin.mockReset()
-  })
-
-  test('未認証の場合はエラーを返す', async () => {
-    mockGetSession.mockImplementation(() => null)
-
-    const action = withAuth(async (user) => {
-      return createSuccess('OK')
-    })
-
-    const result = await action()
-    expect(result.success).toBe(false)
-    if (!result.success) {
-      expect(result.error).toContain('ログイン')
-    }
-  })
-
-  test('管理者権限がない場合はエラーを返す', async () => {
-    mockGetSession.mockImplementation(() => ({
-      user: REGULAR_USER,
-    }))
-    mockCanAccessAdmin.mockImplementation(() => false)
-
-    const action = withAuth(async (user) => {
-      return createSuccess('OK')
-    })
-
-    const result = await action()
-    expect(result.success).toBe(false)
-    if (!result.success) {
-      expect(result.error).toContain('管理者権限')
-    }
-  })
-
-  test('認証済み管理者の場合は関数を実行', async () => {
-    mockGetSession.mockImplementation(() => ({
-      user: ADMIN_USER,
-    }))
-    mockCanAccessAdmin.mockImplementation(() => true)
-
-    const action = withAuth(async (user, data: string) => {
-      return createSuccess('OK', { user: user.id, data })
-    })
-
-    const result = await action('test-data')
-    expect(result.success).toBe(true)
-    if (result.success && 'data' in result) {
-      expect(result.data).toEqual({ user: ADMIN_USER.id, data: 'test-data' })
-    }
-  })
-})
-
 describe('withPermission', () => {
   beforeEach(() => {
     mockGetSession.mockReset()
     mockCanAccessAdmin.mockReset()
     mockHasPermission.mockReset()
     mockUserHasResourceAccess.mockReset()
+    mockIsEditorRole.mockReset()
     mockLogUserAction.mockReset()
     mockLogPermissionDenied.mockReset()
 
@@ -186,6 +134,7 @@ describe('withPermission', () => {
     mockCanAccessAdmin.mockImplementation(() => true)
     mockHasPermission.mockImplementation(() => true)
     mockUserHasResourceAccess.mockImplementation(() => true)
+    mockIsEditorRole.mockImplementation((role: unknown) => role === Role.EDITOR)
   })
 
   test('未認証の場合はエラーを返す', async () => {
@@ -279,11 +228,26 @@ describe('withPermission', () => {
     expect(mockLogUserAction).not.toHaveBeenCalled()
   })
 
+  test('認証済み管理者の場合は関数を実行しデータを返す', async () => {
+    mockGetSession.mockImplementation(() => ({
+      user: ADMIN_USER,
+    }))
+
+    const action = withPermission('space', 'read')(async (user, data: string) => {
+      return createSuccess('OK', { user: user.id, data })
+    })
+
+    const result = await action('test-data')
+    expect(result.success).toBe(true)
+    if (result.success && 'data' in result) {
+      expect(result.data).toEqual({ user: ADMIN_USER.id, data: 'test-data' })
+    }
+  })
+
   describe('checkResourceAccess', () => {
     test('EDITORはリソースアクセス権をチェック', async () => {
-      const editor = createEditorWithPages(['page-1', 'page-2'])
       mockGetSession.mockImplementation(() => ({
-        user: editor,
+        user: EDITOR_USER,
       }))
       mockUserHasResourceAccess.mockImplementation(() => true)
 
@@ -299,9 +263,8 @@ describe('withPermission', () => {
     })
 
     test('EDITORが割り当てられていないリソースにはアクセス不可', async () => {
-      const editor = createEditorWithPages(['page-1'])
       mockGetSession.mockImplementation(() => ({
-        user: editor,
+        user: EDITOR_USER,
       }))
       mockUserHasResourceAccess.mockImplementation(() => false)
 
@@ -535,10 +498,12 @@ describe('HOFの組み合わせテスト', () => {
     mockGetSession.mockReset()
     mockCanAccessAdmin.mockReset()
     mockHasPermission.mockReset()
+    mockIsEditorRole.mockReset()
     mockLogUserAction.mockReset()
 
     mockCanAccessAdmin.mockImplementation(() => true)
     mockHasPermission.mockImplementation(() => true)
+    mockIsEditorRole.mockImplementation((role: unknown) => role === Role.EDITOR)
   })
 
   test('典型的なCRUD操作シナリオ: Create', async () => {

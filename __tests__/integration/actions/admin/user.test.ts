@@ -22,19 +22,19 @@ const ROLE_VALUES: readonly RoleValue[] = [
 ]
 
 const createUserSchema = z.object({
-  email: z.string().email('有効なメールアドレスを入力してください'),
-  password: z.string().min(8, 'パスワードは8文字以上必要です'),
-  name: z.string().min(1, '名前は必須です').max(100),
+  email: z.string().email({ error: '有効なメールアドレスを入力してください' }),
+  password: z.string().min(8, { error: 'パスワードは8文字以上必要です' }),
+  name: z.string().min(1, { error: '名前は必須です' }).max(100),
   role: z.enum(ROLE_VALUES),
 })
 
 const updateUserSchema = z.object({
-  email: z.string().email('有効なメールアドレスを入力してください'),
-  name: z.string().min(1, '名前は必須です').max(100),
+  email: z.string().email({ error: '有効なメールアドレスを入力してください' }),
+  name: z.string().min(1, { error: '名前は必須です' }).max(100),
   role: z.enum(ROLE_VALUES),
   password: z
     .string()
-    .min(8, 'パスワードは8文字以上必要です')
+    .min(8, { error: 'パスワードは8文字以上必要です' })
     .optional()
     .or(z.literal('')),
 })

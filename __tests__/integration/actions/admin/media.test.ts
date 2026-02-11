@@ -37,22 +37,22 @@ const MediaUsageEnum = z.enum(['POST', 'NEWS', 'PAGE', 'SPACE', 'SITE', 'GENERAL
 const mediaUploadSchema = z.object({
   type: MediaTypeEnum.default('IMAGE'),
   usage: MediaUsageEnum.default('GENERAL'),
-  alt: z.string().max(200, '代替テキストは200文字以内で入力してください').optional(),
-  title: z.string().max(100, 'タイトルは100文字以内で入力してください').optional(),
-  description: z.string().max(500, '説明は500文字以内で入力してください').optional(),
+  alt: z.string().max(200, { error: '代替テキストは200文字以内で入力してください' }).optional(),
+  title: z.string().max(100, { error: 'タイトルは100文字以内で入力してください' }).optional(),
+  description: z.string().max(500, { error: '説明は500文字以内で入力してください' }).optional(),
   tags: z
-    .array(z.string().max(50, 'タグは50文字以内で入力してください'))
-    .max(10, 'タグは最大10個まで設定できます')
+    .array(z.string().max(50, { error: 'タグは50文字以内で入力してください' }))
+    .max(10, { error: 'タグは最大10個まで設定できます' })
     .default([]),
 })
 
 const mediaUpdateSchema = z.object({
-  alt: z.string().max(200, '代替テキストは200文字以内で入力してください').optional(),
-  title: z.string().max(100, 'タイトルは100文字以内で入力してください').optional(),
-  description: z.string().max(500, '説明は500文字以内で入力してください').optional(),
+  alt: z.string().max(200, { error: '代替テキストは200文字以内で入力してください' }).optional(),
+  title: z.string().max(100, { error: 'タイトルは100文字以内で入力してください' }).optional(),
+  description: z.string().max(500, { error: '説明は500文字以内で入力してください' }).optional(),
   tags: z
-    .array(z.string().max(50, 'タグは50文字以内で入力してください'))
-    .max(10, 'タグは最大10個まで設定できます')
+    .array(z.string().max(50, { error: 'タグは50文字以内で入力してください' }))
+    .max(10, { error: 'タグは最大10個まで設定できます' })
     .optional(),
   usage: MediaUsageEnum.optional(),
 })

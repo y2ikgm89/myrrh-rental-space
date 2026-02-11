@@ -16,8 +16,8 @@ describe('action-helpers', () => {
   describe('extractFieldErrors', () => {
     test('ZodErrorからフィールドエラーを抽出する', () => {
       const schema = z.object({
-        name: z.string().min(1, '名前は必須です'),
-        email: z.string().email('有効なメールアドレスを入力してください'),
+        name: z.string().min(1, { error: '名前は必須です' }),
+        email: z.string().email({ error: '有効なメールアドレスを入力してください' }),
       })
 
       const result = schema.safeParse({ name: '', email: 'invalid' })
@@ -33,8 +33,8 @@ describe('action-helpers', () => {
       const schema = z.object({
         password: z
           .string()
-          .min(8, '8文字以上必要です')
-          .regex(/[A-Z]/, '大文字を含める必要があります'),
+          .min(8, { error: '8文字以上必要です' })
+          .regex(/[A-Z]/, { error: '大文字を含める必要があります' }),
       })
 
       const result = schema.safeParse({ password: 'short' })
@@ -50,7 +50,7 @@ describe('action-helpers', () => {
     test('ネストされたパスはトップレベルフィールドのみ抽出する', () => {
       const schema = z.object({
         address: z.object({
-          city: z.string().min(1, '市区町村は必須です'),
+          city: z.string().min(1, { error: '市区町村は必須です' }),
         }),
       })
 
@@ -66,7 +66,7 @@ describe('action-helpers', () => {
   describe('createValidationError', () => {
     test('ActionFailure形式のレスポンスを生成する', () => {
       const schema = z.object({
-        name: z.string().min(1, '必須'),
+        name: z.string().min(1, { error: '必須' }),
       })
 
       const result = schema.safeParse({ name: '' })
@@ -220,7 +220,7 @@ describe('action-helpers', () => {
 
     test('バリデーション失敗時はエラーを返す', async () => {
       const schema = z.object({
-        name: z.string().min(1, '名前は必須です'),
+        name: z.string().min(1, { error: '名前は必須です' }),
       })
       const handler = mock(() => Promise.resolve({ success: true }))
 

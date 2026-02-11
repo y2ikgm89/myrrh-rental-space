@@ -34,7 +34,6 @@ export const EDITOR_USER: MockUser = {
   role: Role.EDITOR,
   emailVerified: true,
   image: null,
-  assignedPages: [],
   createdAt: new Date('2024-01-01'),
   updatedAt: new Date('2024-01-01'),
 }
@@ -59,14 +58,4 @@ export const REGULAR_USER: MockUser = {
   image: null,
   createdAt: new Date('2024-01-01'),
   updatedAt: new Date('2024-01-01'),
-}
-
-/**
- * 指定ページに割り当てられたEDITORを作成
- */
-export function createEditorWithPages(pageIds: string[]): MockUser {
-  return {
-    ...EDITOR_USER,
-    assignedPages: pageIds,
-  }
 }
