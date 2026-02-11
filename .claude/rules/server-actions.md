@@ -53,12 +53,12 @@ async function getPopularPosts() {
 
 | プリセット | stale | revalidate | expire |
 |-----------|-------|------------|--------|
-| `'seconds'` | - | 1秒 | 60秒 |
+| `'seconds'` | 30秒 | 1秒 | 60秒 |
 | `'minutes'` | 5分 | 1分 | 1時間 |
 | `'hours'` | 5分 | 1時間 | 1日 |
 | `'days'` | 5分 | 1日 | 1週間 |
 | `'weeks'` | 5分 | 1週間 | 1ヶ月 |
-| `'max'` | 5分 | 1ヶ月 | 無期限 |
+| `'max'` | 5分 | 1ヶ月 | 1年 |
 
 ## キャッシュ無効化パターン
 
@@ -119,14 +119,20 @@ revalidatePath('/admin', 'layout')
 
 ### 4. キャッシュタグ命名規則
 
-`@/shared/lib/constants/cache.ts` で一元管理:
+`@/shared/lib/constants/cache.ts` で一元管理。**cacheTag / revalidateTag / updateTag すべてで定数使用必須**:
 
 ```typescript
 import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
 
-// 定数を使用（マジックストリング禁止）
-revalidateTag(CACHE_TAGS.POSTS)        // OK
-revalidateTag('posts')                  // NG
+// OK: 定数を使用
+cacheTag(CACHE_TAGS.POSTS)
+cacheTag(CACHE_TAGS.SETTINGS, CACHE_TAGS.LAYOUT_SETTINGS)
+revalidateTag(CACHE_TAGS.POSTS)
+
+// NG: マジックストリング
+cacheTag('posts')
+cacheTag('settings', 'layout-settings')
+revalidateTag('posts')
 ```
 
 ## Server Action実装
@@ -136,6 +142,7 @@ revalidateTag('posts')                  // NG
 ```typescript
 'use server'
 
+import { z } from 'zod'
 import { updateTag } from 'next/cache'
 import { CACHE_TAGS } from '@/shared/lib/constants'
 import { checkPermission } from '@/admin/lib/action-auth'
@@ -149,7 +156,7 @@ export async function createPost(input: PostInput): Promise<ActionResult<Post>> 
   // 2. バリデーション
   const validated = postSchema.safeParse(input)
   if (!validated.success) {
-    return { success: false, error: validated.error.flatten() }
+    return { success: false, error: z.flattenError(validated.error) }
   }
 
   try {
@@ -177,9 +184,42 @@ export type ActionResult<T = void> =
   | { success: false; error: string | ZodFlattenedError }
 ```
 
+## 公開データ取得パターン（'use cache' + safeFetch）
+
+認証不要の公開データ取得関数では `safeFetch` + `toPlainObject` を使用:
+
+```typescript
+import { cacheLife, cacheTag } from 'next/cache'
+import { prisma } from '@/shared/lib/prisma'
+import { CACHE_TAGS } from '@/shared/lib/constants'
+import { safeFetch, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
+import { toPlainObject } from '@/shared/lib/serialize'
+
+export async function getPublicBusinessSettings() {
+  'use cache'
+  cacheLife('hours')
+  cacheTag(CACHE_TAGS.BUSINESS_SETTINGS, CACHE_TAGS.SETTINGS)
+
+  const result = await safeFetch({
+    fetch: () =>
+      prisma.settings.findUnique({
+        where: { id: 'singleton' },
+        select: { businessName: true, phoneNumber: true },
+      }),
+    fallback: null,
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: 'getPublicBusinessSettings',
+  })
+
+  return toPlainObject(result)  // React 19: Symbolプロパティ除去
+}
+```
+
 ## 禁止事項
 
 1. **マジックストリングのタグ名禁止**
+   - `cacheTag('posts')` → `cacheTag(CACHE_TAGS.POSTS)`
    - `revalidateTag('posts')` → `revalidateTag(CACHE_TAGS.POSTS)`
 
 2. **認証チェック漏れ禁止**

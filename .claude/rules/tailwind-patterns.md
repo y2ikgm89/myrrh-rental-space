@@ -21,35 +21,33 @@ src/app/
 
 ### admin.css（管理画面専用）
 
-Swiss Industrial Adminテーマ。全顧客共通で固定:
+管理画面テーマ。全顧客共通で固定（→ `project-design-config.md` §管理画面テーマ）:
 
 ```css
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
 @theme {
-  /* Trust Blue パレット */
-  --color-primary: oklch(0.55 0.20 260);
-  --color-background: oklch(0.98 0.005 250);
-
-  /* サイドバー専用 */
-  --color-sidebar-bg: oklch(0.18 0.03 260);
-  --color-sidebar-accent: oklch(0.55 0.20 260);
+  /* 管理画面カラー — project-design-config.md 参照 */
+  --color-primary: oklch(...);
+  --color-background: oklch(...);
+  --color-sidebar-bg: oklch(...);
+  --color-sidebar-accent: oklch(...);
 }
 ```
 
 ### public.css（公開ページ専用）
 
-顧客ブランドに合わせてAI生成でカスタマイズ:
+顧客ブランドに合わせてカスタマイズ（→ `project-design-config.md` §カラーパレット）:
 
 ```css
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
 @theme {
-  /* 顧客ブランドカラー（AI生成で変更） */
-  --color-brand-primary: oklch(0.65 0.15 145);
-  --color-primary: var(--color-brand-primary);
+  /* 顧客ブランドカラー — project-design-config.md 参照 */
+  --color-primary: oklch(...);
+  --color-background: oklch(...);
 }
 ```
 

@@ -17,10 +17,12 @@
 | タイミング | コマンド |
 |-----------|---------|
 | 作業中 | `bun run type-check` |
-| 完了報告前 | `bun run type-check && bun run lint` |
-| コミット/PR前 | `bun run type-check && bun run lint && bun run build` |
+| 完了報告前 | `bun run validate` |
+| コミット/PR前 | `bun run validate && bun run build` |
 
 ### 詳細ルール
+
+#### 常時ロード（全作業共通）
 
 - `.claude/rules/type-safety.md` - 型安全ルール
 - `.claude/rules/implementation-quality.md` - 実装品質ルール
@@ -32,8 +34,23 @@
 - `.claude/rules/zod-patterns.md` - Zod 4 バリデーション
 - `.claude/rules/nuqs-patterns.md` - nuqs URL状態管理
 - `.claude/rules/tailwind-patterns.md` - Tailwind CSS 4 / CSS-first設定
-- `.claude/rules/lexical-patterns.md` - Lexical 0.39 エディタ実装
-- `.claude/rules/ui-ux-patterns.md` - UI/UX スキル使用ガイドライン
+
+#### 条件付きロード（対象ファイル作業時のみ）
+
+| ルール | 対象パス |
+|--------|---------|
+| `anti-ai-design.md` - Anti-AI デザイン強制 | `src/app/(public*)/**` |
+| `project-design-config.md` - プロジェクト固有デザイン値 | `src/app/(public*)/**` |
+| `design-system-memory.md` - デザイン記憶プロトコル | `src/app/(public*)/**` |
+| `gsap-patterns.md` - GSAP / ScrollTrigger / Lenis | `src/app/(public*)/**` |
+| `visual-effects-patterns.md` - エフェクトアーキテクチャ | `src/app/(public*)/**` |
+| `threejs-patterns.md` - Three.js / R3F | `src/app/(public*)/**` |
+| `pixijs-patterns.md` - PixiJS v8 | `src/app/(public*)/**` |
+| `lexical-patterns.md` - Lexical 0.40 エディタ | `src/app/(admin)/**/lexical/**` |
+| `seo-patterns.md` - SEO / 構造化データ / NAP | `src/app/(public*)/**/seo/**`, `**/layouts/**` |
+| `ui-ux-patterns.md` - UI/UX スキル使用ガイドライン | `src/app/(public*\|admin)/**` |
+
+> 詳細リファレンス: `docs/reference/claude-rules/` に配置（必要時に参照）
 
 ---
 
@@ -48,69 +65,29 @@
                   ↑ 全工程でsuperpowersが自動介入
 ```
 
-### 自動発動スキル
+### 自動発動スキル（主要）
 
-| スキル | 発動タイミング | 推奨ツール |
-|--------|----------------|-----------|
-| - | 要件確認時 | `AskUserQuestion` |
-| - | コードベース調査時 | `code-explorer`, `serena` * |
-| `brainstorming` | 機能追加・設計時 | `context7`, `WebSearch`, `WebFetch` |
-| `ui-ux-pro-max` | UI/UXデザイン方針決定時 | `search.py` * |
-| `frontend-design` | フロントエンドUI実装時 | - |
-| `writing-plans` | 計画作成時 | - |
-| `executing-plans` | 計画実行時 | - |
-| `test-driven-development` | 実装時 | `serena` |
-| - | 実装後の整理 | `code-simplifier` |
-| `systematic-debugging` | バグ調査時 | `serena`, `code-explorer` |
-| `verification-before-completion` | 完了報告前 | `playwright`, `bun run test` |
-| `requesting-code-review` | レビュー依頼時 | - |
-| `receiving-code-review` | レビュー対応時 | - |
-| `finishing-a-development-branch` | ブランチ完了時 | - |
-| - | 実装完了後 | ドキュメント更新 * |
+| スキル | 発動タイミング |
+|--------|----------------|
+| `brainstorming` | 機能追加・設計時 |
+| `frontend-design` | フロントエンドUI実装時 |
+| `test-driven-development` | 実装時 |
+| `verification-before-completion` | 完了報告前（**常に必須**） |
+| `finishing-a-development-branch` | ブランチ完了時 |
 
-\* **ドキュメント更新対象:** `docs/plans/NNN-title.md`作成 → `docs/plans/README.md`更新 → `docs/requirements/`（必要時） → `docs/architecture/`（設計変更時）
+> 他: `writing-plans`, `executing-plans`, `systematic-debugging`, `requesting-code-review`, `receiving-code-review` も自動発動
 
-\* **コードベース調査ツール使い分け:**
-- `serena`: シンボル参照追跡・定義ジャンプ・構造化コードの深い分析（LSPベース）
-- `code-explorer`: 広範なキーワード検索・ファイル構造探索・探索範囲が不明確な場合
+### ツール使い分け
 
-\* **ui-ux-pro-max検索:**
-```bash
-python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --domain <domain> --stack nextjs
-```
-ドメイン: `product`, `style`, `typography`, `color`, `landing`, `chart`, `ux`
-
-### superpowers使用基準
-
-| 状況 | 判断 |
-|------|------|
-| 原因明確なバグ修正 | 省略可 |
-| 1-2ファイルの小規模修正 | 省略可 |
-| ユーザーが具体的に指示 | 省略可 |
-| `verification-before-completion` | **常に必須** |
-
-### MCPツール
-
-| ツール | 用途 | 優先度 |
-|--------|------|--------|
-| `serena` | セマンティックコード分析・シンボル操作・リファクタリング | 🟡 推奨 |
-| `context7` | ライブラリAPI・最新ドキュメント取得 | 🟡 推奨 |
-| `playwright` | E2Eテスト・ブラウザ操作 | 🟡 推奨 |
-| `WebSearch` | 最新情報・エラー解決検索 | 🟢 必要時 |
-| `WebFetch` | 公開URL・GitHubリポジトリ取得 | 🟢 必要時 |
+- **コードベース調査**: `serena`（LSPベース深い分析）, `code-explorer`（広範な探索）
+- **MCP**: `serena`, `context7`, `playwright` 推奨。`WebSearch`, `WebFetch` 必要時
+- **ui-ux-pro-max**: `python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --domain <domain> --stack nextjs`
+  - ドメイン: `product`, `style`, `typography`, `color`, `landing`, `chart`, `ux`
+- **ドキュメント更新**: `docs/plans/NNN-title.md` → `docs/plans/README.md` → `docs/requirements/`（必要時） → `docs/architecture/`（設計変更時）
 
 ### 手動コマンド（必要時のみ）
 
-| コマンド | 用途 |
-|---------|------|
-| `/superpowers:brainstorm` | 設計を明示的に開始 |
-| `/superpowers:write-plan` | 計画作成を明示的に開始 |
-| `/superpowers:execute-plan` | 計画実行を明示的に開始 |
-| `/superpowers:using-git-worktrees` | 隔離開発環境作成 |
-| `/ui-ux-pro-max` | UI/UXデザイン方針決定 |
-| `/frontend-design` | フロントエンドUI実装 |
-| `code-explorer` | コードベース深掘り分析 |
-| `code-simplifier` | コード整理・簡略化 |
+`/superpowers:brainstorm`, `/superpowers:write-plan`, `/superpowers:execute-plan`, `/superpowers:using-git-worktrees`, `/ui-ux-pro-max`, `/frontend-design`, `/parallax-section`, `code-explorer`, `code-simplifier`
 
 ---
 
@@ -120,45 +97,47 @@ python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --domain <dom
 
 | 技術 | バージョン | 備考 |
 |------|-----------|------|
-| Next.js | 16.1.4 | `'use cache'`, `updateTag`, PPR対応 |
-| React | 19.2.3 | React Compiler 1.0, `<Activity>`, `useEffectEvent` |
+| Next.js | 16.1.6 | `'use cache'`, `updateTag`, PPR対応 |
+| React | 19.2.4 | React Compiler 1.0, `<Activity>`, `useEffectEvent` |
 | TypeScript | 5.9.3 | TS 7.0 (Go native) プレビュー利用可 |
 | Bun | 1.3.x | Bun.SQL, HTML直接実行 |
 | Prisma | 7.3.0 | 型生成98%削減, mapped enums |
 | PostgreSQL | - | Supabase経由 |
-| Better Auth | 1.4.17 | RBAC, Auth.js統合 |
+| Better Auth | 1.4.18 | RBAC, Auth.js統合 |
 | Tailwind CSS | 4.1.18 | CSS-first設定, @theme |
 | Zod | 4.3.6 | `{ error: }` パラメータ, z.fromJSONSchema() |
-| nuqs | 2.8.6 | createSearchParamsCache, Zod 4統合 |
-| Lexical | 0.39.0 | React 19対応, Node transforms |
+| nuqs | 2.8.8 | createSearchParamsCache, Zod 4統合 |
+| Lexical | 0.40.0 | React 19対応, Node transforms, mergeRegister本体移動 |
 
 ### 構造
 
 **Multiple Root Layouts アーキテクチャ（Next.js 16 推奨パターン）**
 
 ```
-src/app/
-├── (admin)/                              # 管理画面ルートグループ
-│   ├── layout.tsx                        # Admin Root Layout (html/body)
-│   ├── _styles/admin.css                 # 管理画面専用テーマ（固定）
-│   └── admin/(dashboard)/_shared/        # 管理画面共有コンポーネント
+src/
+├── app/
+│   ├── (admin)/                          # 管理画面ルートグループ
+│   │   ├── layout.tsx                    # Admin Root Layout (html/body)
+│   │   ├── _styles/admin.css             # 管理画面専用テーマ（固定）
+│   │   └── admin/(dashboard)/_shared/    # 管理画面共有コンポーネント
+│   │
+│   └── (public)/                         # 公開ページルートグループ
+│       ├── layout.tsx                    # Public Root Layout (html/body)
+│       ├── _styles/public.css            # 公開ページテーマ（AI生成対象）
+│       ├── [slug]/page.tsx               # セクションベースページ（統一ルート）
+│       └── _shared/                      # 公開ページ共有コンポーネント
 │
-├── (public)/                             # 公開ページルートグループ
-│   ├── layout.tsx                        # Public Root Layout (html/body)
-│   ├── _styles/public.css                # 公開ページテーマ（AI生成対象）
-│   ├── [slug]/page.tsx                   # セクションベースページ（統一ルート）
-│   └── _shared/                          # 公開ページ共有コンポーネント
-│
-└── src/shared/                           # 両方で共有（CSS変数非依存）
+└── shared/                               # 両方で共有（CSS変数非依存）
 ```
 
 | パス | 用途 |
 |------|------|
-| `src/app/(admin)/_styles/admin.css` | 管理画面専用テーマ（Swiss Industrial Admin） |
-| `src/app/(public)/_styles/public.css` | 公開ページテーマ（AI生成でカスタマイズ） |
+| `src/app/(admin)/_styles/admin.css` | 管理画面専用テーマ |
+| `src/app/(public)/_styles/public.css` | 公開ページテーマ |
 | `src/app/(admin)/admin/(dashboard)/_shared/` | 管理画面専用コンポーネント |
 | `src/app/(public)/_shared/` | 公開ページ専用コンポーネント |
 | `src/app/(public)/[slug]/` | 統一ページルート（セクションシステム） |
+| `src/app/(public-*)/` | 追加の公開ページルートグループ |
 | `src/shared/` | 共有（CSS変数に依存しないコード） |
 | `docs/{requirements,architecture,plans}/` | ドキュメント |
 
@@ -170,9 +149,7 @@ src/app/
 - `/spaces/[slug]` - スペース詳細
 - `/[slug]` - カスタムページ（DBで管理）
 
-**注意**:
-- 公開ページ ↔ 管理画面の遷移はフルページリロード（異なるRoot Layout間の仕様）
-- 旧URLの `/p/[slug]` は廃止済み
+**注意**: 公開ページ ↔ 管理画面の遷移はフルページリロード（異なるRoot Layout間の仕様）
 
 ### エイリアス
 
@@ -183,7 +160,9 @@ src/app/
 ```bash
 bun dev                    # 開発サーバー
 bun run test               # テスト
-bun run type-check && bun run lint && bun run build  # 検証
+bun run test:all           # Unit + Integration 並列テスト
+bun run validate           # type-check + lint 並列検証
+bun run validate && bun run build  # 完全検証
 bunx --bun prisma migrate dev --name <name>  # マイグレーション
 bun run db:generate        # Prismaスキーマ再生成
 ```
@@ -194,17 +173,3 @@ bun run db:generate        # Prismaスキーマ再生成
 - Zodバリデーション必須
 - 命名: コンポーネント`PascalCase.tsx`、その他`kebab-case.ts`
 - コミット: `<type>(<scope>): <subject>`
-
----
-
-## セットアップ（初回のみ）
-
-```bash
-# superpowersインストール
-/plugin marketplace add obra/superpowers-marketplace
-/plugin install superpowers@superpowers-marketplace
-
-# ui-ux-pro-max（プロジェクトローカル、インストール済み）
-# CLIでインストール: npm install -g uipro-cli && uipro init --ai claude
-# 配置: .claude/skills/ui-ux-pro-max/
-```

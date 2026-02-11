@@ -1,3 +1,8 @@
+---
+paths:
+  - src/app/(admin)/**/lexical/**
+---
+
 # Lexical エディタ実装パターン
 
 > Next.js 16 / React 19 / Turbopack / React Compiler 対応
@@ -11,25 +16,27 @@
 
 | 技術 | バージョン | 互換性 |
 |------|-----------|--------|
-| Lexical | 0.39.0 | React 17+対応 |
-| React | 19.2.3 | ✅ peerDependencies対応 |
-| React Compiler | 1.0.0 | ✅ useCallback使用推奨 |
+| Lexical | 0.40.0 | React 17+対応 |
+| React | 19.2.4 | ✅ peerDependencies対応 |
+| React Compiler | 1.0.0 | ✅ 自動メモ化（useCallback基本不要） |
 | Turbopack | Next.js 16 default | ✅ optimizePackageImports設定済み |
 
 ## React 19 + React Compiler対応
 
-### useCallback必須パターン
+### useCallback は基本不要
 
-React Compilerと互換性を保つため、コールバック関数はuseCallbackでラップ:
+React Compiler が自動メモ化するため、手動での `useCallback` は不要。
+ただし、`useSyncExternalStore` の subscribe 等、外部ライブラリが参照同一性を要求する場合は明示的に使用:
 
 ```typescript
-// OK: React Compiler互換
-const openDialog = useCallback(() => {
-  setIsOpen(true)
-}, [])
-
-// NG: メモ化されない
+// OK: React Compiler が自動メモ化（推奨）
 const openDialog = () => setIsOpen(true)
+
+// OK: 外部ライブラリ要件で明示的に使用
+const subscribe = useCallback((callback) => {
+  window.addEventListener('storage', callback)
+  return () => window.removeEventListener('storage', callback)
+}, [])
 ```
 
 ### React 19 StrictMode対応
@@ -118,9 +125,10 @@ const [editorState, setEditorState] = useState()
 class CustomNode extends DecoratorNode<ReactElement> {
   static getType(): string           // ノードタイプ識別子
   static clone(node: CustomNode)     // ノード複製
-  static importJSON(data)            // JSONデシリアライズ
+  static importJSON(data)            // JSONデシリアライズ（updateFromJSON呼出推奨）
   static importDOM()                 // HTMLインポート
   exportJSON()                       // JSONシリアライズ
+  updateFromJSON(serializedNode)     // JSONからプロパティ更新（v0.33.0+推奨）
   exportDOM()                        // HTMLエクスポート
   createDOM(config)                  // DOM要素作成
   updateDOM()                        // DOM更新判定
@@ -143,7 +151,7 @@ export function $createImageNode({
   width?: number
   height?: number
 }): ImageNode {
-  return new ImageNode(src, alt, width, height)
+  return $applyNodeReplacement(new ImageNode(src, alt, width, height))
 }
 
 // 型ガード
@@ -158,19 +166,70 @@ export function $isImageNode(node: LexicalNode | null): node is ImageNode {
 - **__プレフィックス**: プライベートプロパティに必須
 - **getWritable() / getLatest()**: 不変性維持に必要
 
+### シリアライゼーションパターン（v0.40.0 推奨）
+
+**Serialized型**: `Spread<>` ではなく `interface extends` を使用:
+
+```typescript
+// NG: Spread<> パターン（旧）
+import type { SerializedLexicalNode, Spread } from 'lexical'
+export type SerializedFooNode = Spread<{ bar: string }, SerializedLexicalNode>
+
+// OK: interface extends パターン（v0.40.0 推奨）
+import type { SerializedDecoratorNode } from 'lexical'
+export interface SerializedFooNode extends SerializedDecoratorNode {
+  bar: string
+}
+```
+
+**importJSON**: ファクトリ関数 + `updateFromJSON` チェーン:
+
+```typescript
+// NG: ファクトリ関数のみ（旧）
+static importJSON(serializedNode: SerializedFooNode): FooNode {
+  return $createFooNode({ bar: serializedNode.bar })
+}
+
+// OK: updateFromJSON チェーン（v0.40.0 推奨）
+static importJSON(serializedNode: SerializedFooNode): FooNode {
+  return $createFooNode({ bar: serializedNode.bar }).updateFromJSON(serializedNode)
+}
+```
+
+**exportJSON**: `super.exportJSON()` が `type` と `version` を自動提供:
+
+```typescript
+// NG: 手動で type/version を設定（旧）
+exportJSON(): SerializedFooNode {
+  return { type: 'foo', version: 1, bar: this.__bar }
+}
+
+// OK: super.exportJSON() でスプレッド（v0.40.0 推奨）
+exportJSON(): SerializedFooNode {
+  return { ...super.exportJSON(), bar: this.__bar }
+}
+```
+
+### NodeState API（v0.33.0+ 実験的）
+
+v0.33.0で `$config` + `createState` による NodeState API が導入された。
+ボイラープレート削減と自動シリアライゼーションが可能だが、**実験的APIのため安定化を待って移行を検討**。
+レガシーパターン（`$applyNodeReplacement` + 手動 `importJSON`/`exportJSON`）は引き続き有効。
+
 ## プラグイン実装パターン
 
 ### 直接更新パターン（推奨: ダイアログ付きプラグイン）
 
 ```typescript
 // コマンド登録不要。ダイアログから直接editor.update()を呼び出す
-const handleSubmit = useCallback(() => {
+// React Compiler が自動メモ化するため useCallback 不要
+const handleSubmit = () => {
   editor.update(() => {
     const node = $createCustomNode(formData)
     $insertNodes([node])
   })
   onClose()
-}, [editor, formData, onClose])
+}
 ```
 
 ### コマンド登録パターン（ツールバーボタン等から直接呼び出す場合）
@@ -201,7 +260,11 @@ function CustomPlugin() {
 
 ### リスナー登録
 
+`mergeRegister` は v0.40.0 から `lexical` 本体に移動（`@lexical/utils` からの旧パスも互換性あり）:
+
 ```typescript
+import { mergeRegister } from 'lexical'  // v0.40.0+: lexical本体からimport
+
 useEffect(() => {
   return mergeRegister(
     editor.registerUpdateListener(({ editorState }) => {
@@ -300,7 +363,12 @@ const initialConfig = {
 4. **メモリリーク**: リスナーは必ず `mergeRegister` で登録解除
 5. **型アサーション禁止**: 型ガード関数 `$isXxxNode()` を使用
 6. **制御コンポーネント化禁止**: EditorStateを親コンポーネントで管理しない
-7. **LexicalErrorBoundary省略禁止**: RichTextPluginには必須
+7. **LexicalErrorBoundary省略禁止**: RichTextPluginには必須（v0.36+ は named export: `{ LexicalErrorBoundary }`）
+8. **RichTextPlugin の placeholder prop 使用禁止**: ContentEditable に直接 `placeholder` を渡す
+9. **`@lexical/utils` からの `mergeRegister` / `$findMatchingParent` import禁止**: v0.40.0で `lexical` 本体に移動。`import { mergeRegister } from 'lexical'` を使用
+10. **`Spread<>` 型の使用禁止**: `interface extends SerializedDecoratorNode` / `SerializedElementNode` を使用
+11. **`exportJSON` での手動 `type` / `version` 設定禁止**: `...super.exportJSON()` で自動提供
+12. **`importJSON` での `updateFromJSON` チェーン漏れ禁止**: ファクトリ関数の戻り値に `.updateFromJSON(serializedNode)` を付与
 
 ## ファイル命名規則
 

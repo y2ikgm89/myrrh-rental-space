@@ -1,6 +1,6 @@
 ---
 name: lexical-plugin
-description: Lexicalエディタ用カスタムプラグインを作成。ダイアログ付き/コマンドのみ/リスナーのみの3パターン。React Compiler互換。
+description: Creates custom Lexical editor plugins in dialog, command, or listener patterns. Use when adding new editor behaviors like insert menus, keyboard shortcuts, content transformations, or event handling. Generates React Compiler compatible plugin code with proper command registration.
 argument-hint: <PluginName> [dialog|command|listener]
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep
@@ -45,7 +45,7 @@ Lexicalエディタ用のカスタムプラグインを作成します。
 
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { $insertNodes } from 'lexical'
 import {
@@ -72,7 +72,7 @@ export function ${PluginName}Plugin({ isOpen, onClose }: ${PluginName}PluginProp
   })
 
   // 直接更新パターン（コマンド登録不要）
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = () => {
     if (!formData./* validation */) return
 
     editor.update(() => {
@@ -81,7 +81,7 @@ export function ${PluginName}Plugin({ isOpen, onClose }: ${PluginName}PluginProp
     })
     onClose()
     setFormData({/* reset */})
-  }, [editor, formData, onClose])
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -118,17 +118,17 @@ export function ${PluginName}Plugin({ isOpen, onClose }: ${PluginName}PluginProp
   )
 }
 
-// ダイアログ状態管理フック（useCallback使用でReact Compiler最適化）
+// ダイアログ状態管理フック（React Compilerが自動メモ化）
 export function use${PluginName}Dialog() {
   const [isOpen, setIsOpen] = useState(false)
 
-  const open${PluginName}Dialog = useCallback(() => {
+  const open${PluginName}Dialog = () => {
     setIsOpen(true)
-  }, [])
+  }
 
-  const close${PluginName}Dialog = useCallback(() => {
+  const close${PluginName}Dialog = () => {
     setIsOpen(false)
-  }, [])
+  }
 
   return {
     is${PluginName}DialogOpen: isOpen,
@@ -196,7 +196,7 @@ export function ${PluginName}Plugin() {
 
 import { useEffect } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { mergeRegister } from '@lexical/utils'
+import { mergeRegister } from 'lexical'
 
 export function ${PluginName}Plugin() {
   const [editor] = useLexicalComposerContext()
@@ -260,3 +260,12 @@ const {
 - **リスナー登録解除**: mergeRegister使用必須
 - **$関数**: read/update クロージャ内でのみ使用可能
 - **型アサーション禁止**: `.claude/rules/type-safety.md` 準拠
+
+## Definition of Done
+
+- [ ] `bun run type-check` 通過
+- [ ] `bun run lint` 通過
+- [ ] 既存テストが壊れていないこと
+- [ ] `plugins/index.ts` にエクスポート追加
+- [ ] `LexicalEditor.tsx` に統合（JSX + フック）
+- [ ] リスナー登録に `mergeRegister` 使用（解除漏れ防止）

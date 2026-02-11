@@ -1,3 +1,9 @@
+---
+paths:
+  - src/app/(public*)/**
+  - src/app/(admin)/**
+---
+
 # UI/UX パターンルール
 
 > ui-ux-pro-max / frontend-design スキル対応
@@ -16,10 +22,10 @@
 │   ├── search.py               # 検索スクリプト
 │   └── core.py                 # コアロジック
 └── data/                       # デザインデータベース
-    ├── styles.csv              # 50種類のスタイル
-    ├── colors.csv              # 21種類のパレット
-    ├── typography.csv          # 50種類のフォントペアリング
-    ├── charts.csv              # 20種類のチャート
+    ├── styles.csv              # 57種類のスタイル
+    ├── colors.csv              # 95種類のパレット
+    ├── typography.csv          # 56種類のフォントペアリング
+    ├── charts.csv              # 24種類のチャート
     ├── ux-guidelines.csv       # UXガイドライン
     └── stacks/                 # スタック別ガイドライン
 ```
@@ -218,8 +224,38 @@ python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --stack nextj
 5. **絵文字アイコン禁止**
    - Lucide React のSVGアイコンを使用
 
+## 関連ルール・スキル
+
+### Anti-AI デザイン
+
+公開ページ UI 実装時は `.claude/rules/anti-ai-design.md` が自動ロードされる。
+セルフレビュー質問（6問中3問以上 yes 必須）を必ず実施すること。
+
+### frontend-design スキル
+
+コンポーネント / ページの新規実装前に `/frontend-design <ComponentName>` を実行し、
+Design Brief を作成してから実装に入る。
+
+- スキル定義: `.claude/skills/frontend-design/SKILL.md`
+- Anti-AI パターンカタログ: `.claude/skills/frontend-design/reference/anti-ai-patterns.md`
+
+### Design System Memory
+
+公開ページ UI 作業開始時に Serena memory `design-system` を読み取り、
+既存のデザイン方針に従う。詳細は `.claude/rules/design-system-memory.md` 参照。
+
+### マイクロインタラクション
+
+hover、focus、modal 等のインタラクションパターンは
+`docs/reference/claude-rules/micro-interactions-reference.md` を参照。
+CSS 優先、GSAP は orchestrated sequence のみ。
+
 ## 参考
 
 - `.claude/skills/ui-ux-pro-max/SKILL.md` - スキル詳細
+- `.claude/skills/frontend-design/SKILL.md` - デザイン分析スキル
+- `.claude/rules/anti-ai-design.md` - Anti-AI 強制ルール
+- `.claude/rules/design-system-memory.md` - デザイン記憶プロトコル
+- `docs/reference/claude-rules/micro-interactions-reference.md` - マイクロインタラクション
 - `.claude/rules/tailwind-patterns.md` - Tailwind CSS 4ルール
 - `.claude/rules/react-patterns.md` - React 19パターン

@@ -25,12 +25,14 @@ const cspDirectives: Record<string, string[]> = {
     'https://*.supabase.co', // Supabase Storage
     'https://img.youtube.com', // YouTube thumbnails
     'https://placehold.co', // Placeholder images
+    'https://images.unsplash.com', // Unsplash images
   ],
   'font-src': ["'self'"],
   'connect-src': [
     "'self'",
     'https://*.supabase.co', // Supabase API
     'https://api.stripe.com', // Stripe API
+    'https://unpkg.com', // detect-gpu benchmarks
     ...(isDev ? ['ws://localhost:*'] : []), // 開発環境: WebSocket HMR
   ],
   'frame-src': [
@@ -87,6 +89,10 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'placehold.co',
       },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+      },
     ],
     formats: ['image/avif', 'image/webp'],
     // placehold.co等のSVGプレースホルダー画像を許可（開発/シード用）
@@ -142,7 +148,18 @@ const nextConfig: NextConfig = {
       // Charts
       'recharts',
       // Animation
-      'motion',
+      'gsap',
+      'gsap/ScrollTrigger',
+      '@gsap/react',
+      'lenis',
+      // Three.js / React Three Fiber
+      'three',
+      '@react-three/fiber',
+      '@react-three/drei',
+      // PixiJS
+      'pixi.js',
+      // GPU detection
+      'detect-gpu',
       // DnD
       '@dnd-kit/core',
       '@dnd-kit/sortable',

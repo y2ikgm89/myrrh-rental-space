@@ -1,6 +1,6 @@
 ---
 name: lexical-node
-description: Lexicalエディタ用カスタムノードを作成。DecoratorNode/ElementNodeの実装、exportDOM/importDOM、型安全なファクトリ関数。
+description: Creates custom Lexical editor nodes with DecoratorNode or ElementNode patterns. Use when adding new content types to the rich text editor, such as embeds, callouts, or interactive elements. Implements exportDOM/importDOM, type-safe factory functions, and React Compiler compatible patterns.
 argument-hint: <NodeName> [decorator|element]
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep
@@ -53,17 +53,16 @@ import type {
   EditorConfig,
   LexicalNode,
   NodeKey,
-  SerializedLexicalNode,
-  Spread,
+  SerializedDecoratorNode,
 } from 'lexical'
-import { DecoratorNode } from 'lexical'
+import { $applyNodeReplacement, DecoratorNode } from 'lexical'
 
-export type Serialized${NodeName}Node = Spread<
-  {
-    // プロパティ定義（JSON serializable のみ）
-  },
-  SerializedLexicalNode
->
+// interface extends パターン（v0.40.0 推奨）
+// Spread<> は使用しない
+export interface Serialized${NodeName}Node extends SerializedDecoratorNode {
+  // プロパティ定義（JSON serializable のみ）
+  prop: string
+}
 
 function ${NodeName}Component({
   nodeKey,
@@ -96,8 +95,11 @@ export class ${NodeName}Node extends DecoratorNode<ReactElement> {
     return new ${NodeName}Node(node.__prop, node.__key)
   }
 
+  // importJSON: ファクトリ関数 + updateFromJSON チェーン（v0.40.0 推奨）
   static importJSON(serializedNode: Serialized${NodeName}Node): ${NodeName}Node {
-    return $create${NodeName}Node({ prop: serializedNode.prop })
+    return $create${NodeName}Node({
+      prop: serializedNode.prop,
+    }).updateFromJSON(serializedNode)
   }
 
   static importDOM(): DOMConversionMap | null {
@@ -111,10 +113,10 @@ export class ${NodeName}Node extends DecoratorNode<ReactElement> {
     this.__prop = prop
   }
 
+  // exportJSON: super.exportJSON() が type/version を自動提供
   exportJSON(): Serialized${NodeName}Node {
     return {
-      type: '${nodeName.toLowerCase()}',
-      version: 1,
+      ...super.exportJSON(),
       prop: this.__prop,
     }
   }
@@ -141,12 +143,13 @@ export class ${NodeName}Node extends DecoratorNode<ReactElement> {
 }
 
 // オブジェクトパラメータパターン（推奨）
+// $applyNodeReplacement でノード置換フックを適用（Lexical 公式推奨）
 export function $create${NodeName}Node({
   prop,
 }: {
   prop: string
 }): ${NodeName}Node {
-  return new ${NodeName}Node(prop)
+  return $applyNodeReplacement(new ${NodeName}Node(prop))
 }
 
 export function $is${NodeName}Node(
@@ -202,3 +205,13 @@ export const editorTheme: EditorThemeClasses = {
 - **exportDOM/importDOM**: 公開ページ表示に必須
 - **型アサーション禁止**: `.claude/rules/type-safety.md` 準拠
 - **React Compiler互換**: `.claude/rules/react-patterns.md` 準拠
+
+## Definition of Done
+
+- [ ] `bun run type-check` 通過
+- [ ] `bun run lint` 通過
+- [ ] 既存テストが壊れていないこと
+- [ ] `exportJSON()` / `importJSON()` が正しく往復変換
+- [ ] `exportDOM()` / `importDOM()` が正しく往復変換
+- [ ] `nodes/index.ts` にエクスポート追加
+- [ ] `LexicalEditor.tsx` の initialConfig.nodes に登録

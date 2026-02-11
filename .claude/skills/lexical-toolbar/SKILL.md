@@ -1,6 +1,6 @@
 ---
 name: lexical-toolbar
-description: Lexicalエディタのツールバーに新規ボタンを追加。ダイアログ表示/直接挿入/フォーマット変更の3パターン。
+description: Adds new toolbar buttons to the Lexical editor with dialog, direct-insert, or format-toggle patterns. Use when extending the editor toolbar with new actions like inserting tables, code blocks, dividers, or custom formatting options.
 argument-hint: <FeatureName>
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep
@@ -37,19 +37,19 @@ Lexicalエディタのツールバーに新規ボタンを追加します。
 
 ```typescript
 // plugins/${FeatureName}Plugin.tsx
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 
-// useCallback使用でReact Compiler最適化
+// React Compiler が自動メモ化するため useCallback 不要
 export function use${FeatureName}Dialog() {
   const [isOpen, setIsOpen] = useState(false)
 
-  const open${FeatureName}Dialog = useCallback(() => {
+  const open${FeatureName}Dialog = () => {
     setIsOpen(true)
-  }, [])
+  }
 
-  const close${FeatureName}Dialog = useCallback(() => {
+  const close${FeatureName}Dialog = () => {
     setIsOpen(false)
-  }, [])
+  }
 
   return {
     is${FeatureName}DialogOpen: isOpen,
@@ -197,13 +197,14 @@ editor.update(() => {
 const [is${FeatureName}Active, setIs${FeatureName}Active] = useState(false)
 
 // updateToolbarで更新
-const updateToolbar = useCallback(() => {
+// React Compiler が自動メモ化するため useCallback 不要
+const updateToolbar = () => {
   const selection = $getSelection()
   if ($isRangeSelection(selection)) {
     const node = selection.anchor.getNode()
     setIs${FeatureName}Active($is${FeatureName}Node(node) || $is${FeatureName}Node(node.getParent()))
   }
-}, [])
+}
 
 // ボタンのvariant
 <Button
@@ -222,3 +223,12 @@ const updateToolbar = useCallback(() => {
 - **title属性必須**: ツールチップ設定
 - **React Compiler互換**: `.claude/rules/react-patterns.md` 準拠
 - **型アサーション禁止**: `.claude/rules/type-safety.md` 準拠
+
+## Definition of Done
+
+- [ ] `bun run type-check` 通過
+- [ ] `bun run lint` 通過
+- [ ] 既存テストが壊れていないこと
+- [ ] ツールバーボタンに `type="button"` 設定
+- [ ] ツールバーボタンに `title` 属性（ツールチップ）設定
+- [ ] アイコンサイズ `h-4 w-4`、ボタンサイズ `h-8 w-8` 統一

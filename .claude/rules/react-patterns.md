@@ -49,6 +49,33 @@ function App() {
 }
 ```
 
+## forwardRef 禁止（React 19 不要）
+
+React 19 では `ref` は通常のpropとして渡せるため、`forwardRef` は不要:
+
+```typescript
+// NG: React 18以前のパターン
+const Input = forwardRef<HTMLInputElement, InputProps>((props, ref) => (
+  <input ref={ref} {...props} />
+))
+Input.displayName = 'Input'
+
+// OK: React 19 パターン（ref は通常の prop）
+function Input({ ref, ...props }: InputProps & { ref?: Ref<HTMLInputElement> }) {
+  return <input ref={ref} {...props} />
+}
+
+// OK: ComponentPropsWithRef で Radix UI 等の型を継承
+function RadioGroup({ ref, className, ...props }: ComponentPropsWithRef<typeof Root>) {
+  return <Root className={cn('grid gap-2', className)} {...props} ref={ref} />
+}
+```
+
+**ルール:**
+- `forwardRef` / `React.forwardRef` の使用禁止
+- `displayName` の手動設定不要（名前付き関数なら自動推論）
+- `ComponentPropsWithoutRef` → `ComponentPropsWithRef` に変更
+
 ## React Compiler 互換性
 
 React Compiler（Next.js 16でデフォルト有効）と互換性のあるコードを書く。
@@ -103,6 +130,27 @@ const subscribe = useCallback((callback) => {
   return () => window.removeEventListener('storage', callback)
 }, [])
 ```
+
+### useCallback + ref.current の衝突
+
+`useCallback` 内で `ref.current` を参照すると、React Compiler が推論する依存（`ref.current`）と手動の依存配列が一致せず `react-hooks/preserve-manual-memoization` エラーになる。
+
+```typescript
+// NG: React Compiler エラー — ref.current が依存配列に不足
+const stateRef = useRef(true)
+const handleMove = useCallback((e: React.MouseEvent) => {
+  if (!stateRef.current) return
+  doSomething(e)
+}, [])  // Compiler: "inferred dependency stateRef.current"
+
+// OK: useCallback を除去（React Compiler が自動メモ化）
+const handleMove = (e: React.MouseEvent) => {
+  if (!stateRef.current) return
+  doSomething(e)
+}
+```
+
+**ルール**: ref を参照するイベントハンドラでは `useCallback` を使わずプレーン関数で定義する。GSAP アニメーション系のイベントハンドラで特に頻出（→ `gsap-patterns.md` パターン C）。
 
 ## 参考
 

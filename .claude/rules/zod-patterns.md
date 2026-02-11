@@ -63,7 +63,7 @@ export type PostInput = z.infer<typeof postSchema>
 export async function createPost(input: unknown): Promise<ActionResult<Post>> {
   const validated = postSchema.safeParse(input)
   if (!validated.success) {
-    return { success: false, error: validated.error.flatten() }
+    return { success: false, error: z.flattenError(validated.error) }
   }
 
   const post = await prisma.post.create({ data: validated.data })
@@ -105,27 +105,74 @@ const optionalUrlSchema = z.string().url().optional().or(z.literal(''))
 const safeUrlSchema = z.string()
   .refine(
     (val) => !val || val.startsWith('/') || val.startsWith('http'),
-    'URLは/または http で始まる必要があります'
+    { error: 'URLは/または http で始まる必要があります' }
   )
+```
+
+## Prisma Enum バリデーション
+
+### z.enum() で Prisma enum を使用
+
+Zod 4 では `z.nativeEnum()` は非推奨。`z.enum()` が Prisma 7 生成の `as const` オブジェクトを直接受け付ける:
+
+```typescript
+import { z } from 'zod'
+import { DiscountType, TaxRateType } from '@/shared/generated/prisma/enums'
+
+// NG: z.nativeEnum()（Zod 4 非推奨）
+z.nativeEnum(DiscountType)
+
+// NG: 文字列リテラル配列
+z.enum(['none', 'percentage', 'fixed'])
+
+// OK: Prisma enum を z.enum() に渡す
+z.enum(DiscountType)
+
+// OK: デフォルト値もenum定数で
+z.enum(DiscountType).default(DiscountType.none)
+z.enum(TaxRateType).default(TaxRateType.standard)
+```
+
+### Zodスキーマ内のデフォルト値
+
+```typescript
+// NG: 文字列リテラルのデフォルト
+discountType: z.enum(DiscountType).default('none')
+
+// OK: enum定数のデフォルト
+discountType: z.enum(DiscountType).default(DiscountType.none)
 ```
 
 ## 型ガードパターン
 
-### Enum型ガード
+### Prisma Enum型ガード（`enums.ts` から import）
+
+全Prisma enumの型ガードは `enums.ts` に集約。ローカル定義禁止:
 
 ```typescript
-// @/shared/lib/validations/enums.ts
-const STATUS_VALUES = ['draft', 'published', 'archived'] as const
-type Status = typeof STATUS_VALUES[number]
+import { isValidDiscountType, getValidDiscountType } from '@/shared/lib/validations/enums'
 
-const STATUS_SET = new Set<string>(STATUS_VALUES)
-
-export function isStatus(value: unknown): value is Status {
-  return typeof value === 'string' && STATUS_SET.has(value)
+// isValid* — boolean判定
+if (isValidDiscountType(input)) {
+  // input は DiscountType 型
 }
 
-// 使用例
-const status = isStatus(input) ? input : 'draft'
+// getValid* — デフォルト値付きパース（推奨）
+const type = getValidDiscountType(input)  // デフォルト: DiscountType.none
+const type = getValidDiscountType(input, DiscountType.percentage)  // カスタムデフォルト
+```
+
+### ローカルEnum型ガード（Prisma enumが存在しない場合のみ）
+
+```typescript
+// Prisma enum にない値のみローカル定義可
+const CONNECTION_METHODS = ['oauth', 'manual'] as const
+type ConnectionMethod = (typeof CONNECTION_METHODS)[number]
+const CONNECTION_METHOD_SET = new Set<string>(CONNECTION_METHODS)
+
+function isConnectionMethod(value: string): value is ConnectionMethod {
+  return CONNECTION_METHOD_SET.has(value)
+}
 ```
 
 ### unknownからのパース
@@ -148,7 +195,7 @@ function isStringArray(value: unknown): value is string[] {
 ```typescript
 import { zodResolver } from '@hookform/resolvers/zod'
 
-const { form } = useForm({
+const form = useForm({
   resolver: zodResolver(postSchema),
   defaultValues: {
     title: '',
@@ -168,6 +215,12 @@ const { form } = useForm({
 
 3. **バリデーションなしのServer Action禁止**
    - 必ず`safeParse`でバリデーション
+
+4. **z.nativeEnum() 禁止（Zod 4 非推奨）**
+   - `z.enum(PrismaEnum)` を使用
+
+5. **Zodデフォルト値での文字列リテラル禁止（Prisma enum存在時）**
+   - `.default('none')` → `.default(DiscountType.none)`
 
 ## ファイル配置
 
