@@ -15,7 +15,6 @@ import type {
   LexicalNode,
   NodeKey,
   SerializedElementNode,
-  Spread,
 } from 'lexical'
 import { $applyNodeReplacement, ElementNode, $createParagraphNode, $isElementNode } from 'lexical'
 
@@ -23,13 +22,10 @@ import { $applyNodeReplacement, ElementNode, $createParagraphNode, $isElementNod
 // Types
 // =============================================================================
 
-export type SerializedTabPanelNode = Spread<
-  {
-    tabIndex: number
-    isActive: boolean
-  },
-  SerializedElementNode
->
+export interface SerializedTabPanelNode extends SerializedElementNode {
+  tabIndex: number
+  isActive: boolean
+}
 
 // =============================================================================
 // Constants
@@ -69,6 +65,7 @@ export class TabPanelNode extends ElementNode {
 
   static importJSON(serializedNode: SerializedTabPanelNode): TabPanelNode {
     return $createTabPanelNode(serializedNode.tabIndex, serializedNode.isActive)
+      .updateFromJSON(serializedNode)
   }
 
   static importDOM(): DOMConversionMap | null {
@@ -95,7 +92,6 @@ export class TabPanelNode extends ElementNode {
   exportJSON(): SerializedTabPanelNode {
     return {
       ...super.exportJSON(),
-      type: 'tab-panel',
       tabIndex: this.__tabIndex,
       isActive: this.__isActive,
     }

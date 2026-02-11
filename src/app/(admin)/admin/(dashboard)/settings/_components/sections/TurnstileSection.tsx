@@ -7,6 +7,7 @@
  */
 
 import { useState, useTransition } from 'react'
+import { useConfirm } from '@/admin/contexts/confirm-context'
 import {
   Button,
   Card,
@@ -40,6 +41,7 @@ interface TurnstileSectionProps {
 // =============================================================================
 
 export function TurnstileSection({ config }: TurnstileSectionProps) {
+  const confirm = useConfirm()
   const { handleResult, refresh } = useRefreshOnSuccess()
   const [isPending, startTransition] = useTransition()
   const [isTesting, setIsTesting] = useState(false)
@@ -113,8 +115,14 @@ export function TurnstileSection({ config }: TurnstileSectionProps) {
     }
   }
 
-  const handleClearKeys = () => {
-    if (!confirm('Turnstileキーをクリアしますか？')) return
+  const handleClearKeys = async () => {
+    const confirmed = await confirm({
+      title: 'キーをクリアしますか？',
+      description: 'Turnstileキーをクリアしますか？',
+      confirmLabel: 'クリア',
+      variant: 'destructive',
+    })
+    if (!confirmed) return
 
     startTransition(async () => {
       const result = await clearTurnstileKeys()
@@ -131,7 +139,7 @@ export function TurnstileSection({ config }: TurnstileSectionProps) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <svg
-            className="h-5 w-5 text-orange-500"
+            className="h-5 w-5 text-warning"
             viewBox="0 0 24 24"
             fill="currentColor"
           >
@@ -207,8 +215,8 @@ export function TurnstileSection({ config }: TurnstileSectionProps) {
             <div className="flex items-center gap-2">
               {config.connectionStatus === 'connected' ? (
                 <>
-                  <span className="h-2 w-2 rounded-full bg-green-500" />
-                  <span className="text-sm font-medium text-green-700">
+                  <span className="h-2 w-2 rounded-full bg-success" />
+                  <span className="text-sm font-medium text-success">
                     検証済み
                   </span>
                 </>
@@ -233,7 +241,7 @@ export function TurnstileSection({ config }: TurnstileSectionProps) {
         {testResult && (
           <StatusBanner success={testResult.success}>
             <p
-              className={`text-sm ${testResult.success ? 'text-green-700' : 'text-destructive'}`}
+              className={`text-sm ${testResult.success ? 'text-success' : 'text-destructive'}`}
             >
               {testResult.message}
             </p>

@@ -6,10 +6,11 @@ import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
 import { createSuccess, createFailure } from '@/admin/types/server-actions'
 import { withPermission } from '@/admin/lib/server-action-helpers'
 import type { PostWhereInput } from '@/shared/types/prisma'
-import { parseStringArray } from '@/shared/lib/json-validators'
 import { PostStatus } from '@/shared/generated/prisma/enums'
 import { checkReadPermissionFor } from '@/admin/lib/permissions'
 import { purgePostCache } from '@/shared/lib/cloudflare'
+import { fireAndForget } from '@/shared/lib/async-utils'
+import { ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
 import { checkSlugAvailability, getSlugErrorMessage } from '@/shared/lib/slug-validation'
 
 import {
@@ -104,6 +105,13 @@ export async function getPosts(
             email: true,
           },
         },
+        postTags: {
+          include: {
+            tag: {
+              select: { id: true, name: true, slug: true },
+            },
+          },
+        },
       },
       orderBy: {
         [sortBy]: sortOrder,
@@ -113,10 +121,10 @@ export async function getPosts(
     }),
   ])
 
-  // tags の型変換
+  // postTags をフラット化
   const formattedPosts: PostData[] = posts.map((post) => ({
     ...post,
-    tags: parseStringArray(post.tags),
+    postTags: post.postTags.map((pt) => pt.tag),
   }))
 
   return {
@@ -154,6 +162,13 @@ export async function getPostById(id: string): Promise<PostData | null> {
           email: true,
         },
       },
+      postTags: {
+        include: {
+          tag: {
+            select: { id: true, name: true, slug: true },
+          },
+        },
+      },
     },
   })
 
@@ -161,7 +176,7 @@ export async function getPostById(id: string): Promise<PostData | null> {
 
   return {
     ...post,
-    tags: parseStringArray(post.tags),
+    postTags: post.postTags.map((pt) => pt.tag),
   }
 }
 
@@ -185,18 +200,23 @@ export const createPost = withPermission<[CreatePostInput], { id: string }>(
       return createFailure(getSlugErrorMessage(slugCheck.reason))
     }
 
+    const { tags, ...postData } = parsed.data
+
     const post = await prisma.post.create({
       data: {
-        ...parsed.data,
+        ...postData,
         status: PostStatus.DRAFT,
         authorId: user.id,
+        postTags: {
+          create: tags.map((tagId) => ({ tagId })),
+        },
       },
     })
 
     updateTag(CACHE_TAGS.POSTS)
 
     // Cloudflare CDN キャッシュパージ
-    void purgePostCache(post.slug)
+    fireAndForget(purgePostCache(post.slug), { operation: 'purgePostCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
     return createSuccess('投稿記事を作成しました', { id: post.id })
   }
@@ -216,6 +236,7 @@ export const updatePost = withPermission<[string, UpdatePostInput], void>(
 
     const existingPost = await prisma.post.findUnique({
       where: { id },
+      select: { id: true, slug: true },
     })
 
     if (!existingPost) {
@@ -231,7 +252,7 @@ export const updatePost = withPermission<[string, UpdatePostInput], void>(
       return createFailure(getSlugErrorMessage(slugCheck.reason))
     }
 
-    const { contentWidth, contentWidthCustom, ...rest } = parsed.data
+    const { contentWidth, contentWidthCustom, tags, ...rest } = parsed.data
 
     // 旧 slug でのキャッシュ無効化のため、更新前の slug を保持
     const oldSlug = existingPost.slug
@@ -242,6 +263,10 @@ export const updatePost = withPermission<[string, UpdatePostInput], void>(
         ...rest,
         contentWidth: contentWidth ?? null,
         contentWidthCustom: contentWidthCustom ?? null,
+        postTags: {
+          deleteMany: {},
+          create: tags.map((tagId) => ({ tagId })),
+        },
       },
     })
 
@@ -253,9 +278,9 @@ export const updatePost = withPermission<[string, UpdatePostInput], void>(
     }
 
     // Cloudflare CDN キャッシュパージ
-    void purgePostCache(oldSlug)
+    fireAndForget(purgePostCache(oldSlug), { operation: 'purgePostCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
     if (parsed.data.slug !== oldSlug) {
-      void purgePostCache(parsed.data.slug)
+      fireAndForget(purgePostCache(parsed.data.slug), { operation: 'purgePostCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
     }
 
     return createSuccess('投稿記事を保存しました')
@@ -271,6 +296,7 @@ export const deletePost = withPermission<[string], void>(
 )(async (user, id) => {
     const post = await prisma.post.findUnique({
       where: { id },
+      select: { id: true, slug: true },
     })
 
     if (!post) {
@@ -285,7 +311,7 @@ export const deletePost = withPermission<[string], void>(
     updateTag(getCacheTag.posts.detail(post.slug))
 
     // Cloudflare CDN キャッシュパージ
-    void purgePostCache(post.slug)
+    fireAndForget(purgePostCache(post.slug), { operation: 'purgePostCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
     return createSuccess('投稿記事を削除しました')
   }
@@ -300,6 +326,7 @@ export const publishPost = withPermission<[string], void>(
 )(async (user, id) => {
     const post = await prisma.post.findUnique({
       where: { id },
+      select: { id: true, slug: true, publishedAt: true, content: true },
     })
 
     if (!post) {
@@ -337,7 +364,7 @@ export const publishPost = withPermission<[string], void>(
     updateTag(getCacheTag.posts.detail(post.slug))
 
     // Cloudflare CDN キャッシュパージ
-    void purgePostCache(post.slug)
+    fireAndForget(purgePostCache(post.slug), { operation: 'purgePostCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
     return createSuccess(`公開しました（バージョン ${nextVersion}）`)
   }
@@ -369,7 +396,7 @@ export const unpublishPost = withPermission<[string], void>(
     updateTag(getCacheTag.posts.detail(post.slug))
 
     // Cloudflare CDN キャッシュパージ
-    void purgePostCache(post.slug)
+    fireAndForget(purgePostCache(post.slug), { operation: 'purgePostCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
     return createSuccess('下書きに戻しました')
   }
@@ -467,7 +494,7 @@ export const restorePostVersion = withPermission<[string, number], void>(
     updateTag(getCacheTag.posts.detail(post.slug))
 
     // Cloudflare CDN キャッシュパージ
-    void purgePostCache(post.slug)
+    fireAndForget(purgePostCache(post.slug), { operation: 'purgePostCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
     return createSuccess(`バージョン ${version} を復元しました（下書き状態）`)
   }
@@ -547,7 +574,7 @@ export const createPostCategory = withPermission<[PostCategoryInput], { id: stri
     updateTag(CACHE_TAGS.POSTS)
 
     // Cloudflare CDN キャッシュパージ（カテゴリ一覧に影響）
-    void purgePostCache()
+    fireAndForget(purgePostCache(), { operation: 'purgePostCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
     return createSuccess('カテゴリを作成しました', { id: category.id })
   }
@@ -593,7 +620,7 @@ export const updatePostCategory = withPermission<[string, PostCategoryInput], vo
     updateTag(CACHE_TAGS.POSTS)
 
     // Cloudflare CDN キャッシュパージ（カテゴリ一覧に影響）
-    void purgePostCache()
+    fireAndForget(purgePostCache(), { operation: 'purgePostCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
     return createSuccess('カテゴリを更新しました')
   }
@@ -631,7 +658,7 @@ export const deletePostCategory = withPermission<[string], void>(
     updateTag(CACHE_TAGS.POSTS)
 
     // Cloudflare CDN キャッシュパージ（カテゴリ一覧に影響）
-    void purgePostCache()
+    fireAndForget(purgePostCache(), { operation: 'purgePostCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
     return createSuccess('カテゴリを削除しました')
   }
@@ -657,7 +684,7 @@ export const updatePostCategoryOrder = withPermission<[{ id: string; order: numb
     updateTag(CACHE_TAGS.POSTS)
 
     // Cloudflare CDN キャッシュパージ（カテゴリ一覧に影響）
-    void purgePostCache()
+    fireAndForget(purgePostCache(), { operation: 'purgePostCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
     return createSuccess('順序を更新しました')
   }
@@ -725,7 +752,6 @@ export async function getPublishedPosts(
 
 /**
  * タグ一覧を取得
- * N+1問題を回避: 全記事のタグを一度に取得してメモリ上で集計
  */
 export async function getPostTags(): Promise<PostTagData[]> {
   const hasPermission = await checkReadPermission()
@@ -733,29 +759,16 @@ export async function getPostTags(): Promise<PostTagData[]> {
     return []
   }
 
-  // タグと記事を並列取得（2クエリのみ）
-  const [tags, posts] = await Promise.all([
-    prisma.postTag.findMany({
-      orderBy: { name: 'asc' },
-    }),
-    prisma.post.findMany({
-      select: { tags: true },
-    }),
-  ])
+  const tags = await prisma.postTag.findMany({
+    include: {
+      _count: {
+        select: { posts: true },
+      },
+    },
+    orderBy: { name: 'asc' },
+  })
 
-  // メモリ上でタグごとの使用回数を集計
-  const tagCountMap = new Map<string, number>()
-  for (const post of posts) {
-    const postTags = parseStringArray(post.tags)
-    for (const tagName of postTags) {
-      tagCountMap.set(tagName, (tagCountMap.get(tagName) || 0) + 1)
-    }
-  }
-
-  return tags.map((tag) => ({
-    ...tag,
-    _count: { posts: tagCountMap.get(tag.name) || 0 },
-  }))
+  return tags
 }
 
 /**
@@ -769,20 +782,14 @@ export async function getPostTagById(id: string): Promise<PostTagData | null> {
 
   const tag = await prisma.postTag.findUnique({
     where: { id },
-  })
-
-  if (!tag) return null
-
-  const count = await prisma.post.count({
-    where: {
-      tags: { array_contains: [tag.name] },
+    include: {
+      _count: {
+        select: { posts: true },
+      },
     },
   })
 
-  return {
-    ...tag,
-    _count: { posts: count },
-  }
+  return tag
 }
 
 /**
@@ -838,7 +845,7 @@ export const updatePostTag = withPermission<[string, PostTagInput], void>(
   const [existingTag, duplicates] = await Promise.all([
     prisma.postTag.findUnique({
       where: { id },
-      select: { id: true, name: true },
+      select: { id: true },
     }),
     // 名前またはスラッグの重複を一度に検索
     prisma.postTag.findFirst({
@@ -865,53 +872,18 @@ export const updatePostTag = withPermission<[string, PostTagInput], void>(
     return createFailure('このスラッグは既に使用されています')
   }
 
-  // タグ名が変更された場合、関連する記事のtagsも更新
-  if (existingTag.name !== parsed.data.name) {
-    // インタラクティブトランザクションで一括更新
-    await prisma.$transaction(async (tx) => {
-      // タグを更新
-      await tx.postTag.update({
-        where: { id },
-        data: parsed.data,
-      })
-
-      // 影響を受ける記事を取得
-      const postsWithTag = await tx.post.findMany({
-        where: {
-          tags: { array_contains: [existingTag.name] },
-        },
-        select: { id: true, tags: true },
-      })
-
-      // 記事のタグを一括更新（Promise.allで並列実行）
-      if (postsWithTag.length > 0) {
-        await Promise.all(
-          postsWithTag.map((post) => {
-            const tags = parseStringArray(post.tags)
-            const updatedTags = tags.map((t) =>
-              t === existingTag.name ? parsed.data.name : t
-            )
-            return tx.post.update({
-              where: { id: post.id },
-              data: { tags: updatedTags },
-            })
-          })
-        )
-      }
-    })
-  } else {
-    await prisma.postTag.update({
-      where: { id },
-      data: parsed.data,
-    })
-  }
+  // リレーションベースのため、タグレコードの更新のみで済む
+  await prisma.postTag.update({
+    where: { id },
+    data: parsed.data,
+  })
 
   // タグと関連記事のキャッシュを無効化
   updateTag(CACHE_TAGS.POSTS)
   updateTag(CACHE_TAGS.POST_TAGS)
 
   // Cloudflare CDN キャッシュパージ（タグ一覧に影響）
-  void purgePostCache()
+  fireAndForget(purgePostCache(), { operation: 'purgePostCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
   return createSuccess('タグを更新しました')
 })
@@ -925,22 +897,18 @@ export const deletePostTag = withPermission<[string], void>(
 )(async (user, id) => {
   const tag = await prisma.postTag.findUnique({
     where: { id },
-    select: { id: true, name: true },
+    include: {
+      _count: {
+        select: { posts: true },
+      },
+    },
   })
 
   if (!tag) {
     return createFailure('タグが見つかりません')
   }
 
-  // タグを使用している記事が存在するかチェック（findFirstで効率化）
-  const postUsingTag = await prisma.post.findFirst({
-    where: {
-      tags: { array_contains: [tag.name] },
-    },
-    select: { id: true },
-  })
-
-  if (postUsingTag) {
+  if (tag._count.posts > 0) {
     return createFailure('このタグは記事で使用されているため削除できません')
   }
 

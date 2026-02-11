@@ -15,6 +15,7 @@ import { safeDecrypt } from '@/shared/lib/crypto'
 import {
   parseBusinessHours,
   parseStringArrayOrNull,
+  parseBusinessAttributes,
 } from '@/shared/lib/json-validators'
 import { maskSecretKey } from '@/admin/lib/stripe'
 import { extractServiceAccountEmail } from '@/shared/lib/google-calendar'
@@ -78,7 +79,7 @@ export async function getPublicSettings(): Promise<SettingsData> {
     businessHours: parseBusinessHours(settings.businessHours),
     regularHolidays: parseStringArrayOrNull(settings.regularHolidays),
     specialHolidays: parseStringArrayOrNull(settings.specialHolidays),
-    defaultBusinessHours: parseBusinessHours(settings.defaultBusinessHours),
+
     stripeSecretKeyMasked: null, // 機密情報は公開しない
     stripeWebhookSecretMasked: null,
     googleCalendarServiceAccountEmailMasked: null,
@@ -99,6 +100,14 @@ export async function getPublicSettings(): Promise<SettingsData> {
     sidebarWidgets: settings.sidebarWidgets,
     sidebarRecentCount: settings.sidebarRecentCount,
     sidebarPopularCount: settings.sidebarPopularCount,
+    // MEO Settings (ローカル検索最適化)
+    latitude: settings.latitude,
+    longitude: settings.longitude,
+    priceRange: settings.priceRange,
+    googleBusinessPlaceId: settings.googleBusinessPlaceId,
+    googleReviewUrl: settings.googleReviewUrl,
+    businessAttributes: parseBusinessAttributes(settings.businessAttributes),
+    paymentAccepted: settings.paymentAccepted,
     // Tax Settings (Decimal → number変換)
     taxStandardRate: Number(settings.taxStandardRate),
     taxReducedRate: Number(settings.taxReducedRate),
@@ -156,7 +165,7 @@ export async function getSettings(): Promise<SettingsData | null> {
     businessHours: parseBusinessHours(settings.businessHours),
     regularHolidays: parseStringArrayOrNull(settings.regularHolidays),
     specialHolidays: parseStringArrayOrNull(settings.specialHolidays),
-    defaultBusinessHours: parseBusinessHours(settings.defaultBusinessHours),
+
     stripeSecretKeyMasked,
     stripeWebhookSecretMasked,
     googleCalendarServiceAccountEmailMasked,
@@ -177,6 +186,14 @@ export async function getSettings(): Promise<SettingsData | null> {
     sidebarWidgets: settings.sidebarWidgets,
     sidebarRecentCount: settings.sidebarRecentCount,
     sidebarPopularCount: settings.sidebarPopularCount,
+    // MEO Settings (ローカル検索最適化)
+    latitude: settings.latitude,
+    longitude: settings.longitude,
+    priceRange: settings.priceRange,
+    googleBusinessPlaceId: settings.googleBusinessPlaceId,
+    googleReviewUrl: settings.googleReviewUrl,
+    businessAttributes: parseBusinessAttributes(settings.businessAttributes),
+    paymentAccepted: settings.paymentAccepted,
     // Tax Settings (Decimal → number変換)
     taxStandardRate: Number(settings.taxStandardRate),
     taxReducedRate: Number(settings.taxReducedRate),

@@ -19,10 +19,10 @@ import { checkReadPermissionFor } from '@/admin/lib/permissions'
 import { discountSettingsSchema, type DiscountSettingsInput } from './schemas'
 import {
   parseDurationDiscountRules,
-  getDiscountCombinationModeOrDefault,
   type DurationDiscountRule,
-  type DiscountCombinationMode,
 } from '@/shared/lib/pricing'
+import { getValidDiscountCombinationMode } from '@/shared/lib/validations/enums'
+import { DiscountCombinationMode } from '@/shared/generated/prisma/enums'
 
 // =============================================================================
 // Types
@@ -43,7 +43,7 @@ export type DiscountSettingsData = {
 const DEFAULT_DISCOUNT_SETTINGS: DiscountSettingsData = {
   durationDiscountEnabled: false,
   durationDiscountRules: [],
-  discountCombinationMode: 'best',
+  discountCombinationMode: DiscountCombinationMode.best,
   showOriginalPrice: true,
   discountWarningEnabled: true,
 }
@@ -139,7 +139,7 @@ async function getDiscountSettingsFromDb(): Promise<DiscountSettingsData> {
   return {
     durationDiscountEnabled: settings.durationDiscountEnabled,
     durationDiscountRules: parseDurationDiscountRules(settings.durationDiscountRules),
-    discountCombinationMode: getDiscountCombinationModeOrDefault(settings.discountCombinationMode),
+    discountCombinationMode: getValidDiscountCombinationMode(settings.discountCombinationMode),
     showOriginalPrice: settings.showOriginalPrice,
     discountWarningEnabled: settings.discountWarningEnabled,
   }

@@ -8,9 +8,8 @@
 
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { mergeRegister } from '@lexical/utils'
 import {
   $createParagraphNode,
   $getSelection,
@@ -18,6 +17,7 @@ import {
   COMMAND_PRIORITY_LOW,
   KEY_ARROW_DOWN_COMMAND,
   KEY_ARROW_UP_COMMAND,
+  mergeRegister,
 } from 'lexical'
 import {
   $createPullQuoteNode,
@@ -56,8 +56,8 @@ const STYLE_OPTIONS = [
 export function usePullQuoteDialog() {
   const [isPullQuoteDialogOpen, setIsPullQuoteDialogOpen] = useState(false)
 
-  const openPullQuoteDialog = useCallback(() => setIsPullQuoteDialogOpen(true), [])
-  const closePullQuoteDialog = useCallback(() => setIsPullQuoteDialogOpen(false), [])
+  const openPullQuoteDialog = () => setIsPullQuoteDialogOpen(true)
+  const closePullQuoteDialog = () => setIsPullQuoteDialogOpen(false)
 
   return {
     isPullQuoteDialogOpen,
@@ -181,11 +181,11 @@ export function PullQuotePlugin({ isOpen, onClose }: PullQuotePluginProps) {
     )
   }, [editor])
 
-  const resetForm = useCallback(() => {
+  const resetForm = () => {
     setSelectedStyle('classic')
-  }, [])
+  }
 
-  const handleInsert = useCallback(() => {
+  const handleInsert = () => {
     editor.update(() => {
       const selection = $getSelection()
       if (!$isRangeSelection(selection)) return
@@ -211,12 +211,12 @@ export function PullQuotePlugin({ isOpen, onClose }: PullQuotePluginProps) {
 
     resetForm()
     onClose()
-  }, [editor, selectedStyle, resetForm, onClose])
+  }
 
-  const handleClose = useCallback(() => {
+  const handleClose = () => {
     resetForm()
     onClose()
-  }, [resetForm, onClose])
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>

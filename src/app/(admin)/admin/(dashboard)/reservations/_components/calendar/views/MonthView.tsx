@@ -59,7 +59,7 @@ export function MonthView({
   const isExpanded = (dayId: string) => expandedDay === `${monthKey}-${dayId}`
 
   return (
-    <div className="flex h-full flex-col rounded-lg border bg-white">
+    <div className="flex h-full flex-col rounded-lg border bg-card">
       {/* 曜日ヘッダー */}
       <div className="grid grid-cols-7 border-b bg-muted/50">
         {weekdays.map((day, index) => (

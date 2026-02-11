@@ -38,7 +38,7 @@ export function LocationTable({ locations }: LocationTableProps) {
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border bg-white">
+    <div className="overflow-hidden rounded-lg border bg-card">
       <Table>
         <TableHeader>
           <TableRow>

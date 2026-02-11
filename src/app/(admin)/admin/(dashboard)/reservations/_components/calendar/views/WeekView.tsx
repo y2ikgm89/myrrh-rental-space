@@ -34,7 +34,7 @@ export function WeekView({ dateRange, events, onEventClick }: WeekViewProps) {
   const gridHeight = timeSlots.length * PIXELS_PER_HOUR
 
   return (
-    <div className="flex h-full flex-col rounded-lg border bg-white">
+    <div className="flex h-full flex-col rounded-lg border bg-card">
       {/* ヘッダー */}
       <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b bg-muted/50">
         <div className="border-r p-2" />

@@ -15,7 +15,6 @@ import type {
   LexicalNode,
   NodeKey,
   SerializedElementNode,
-  Spread,
 } from 'lexical'
 import { $applyNodeReplacement, ElementNode, $createParagraphNode, $isElementNode } from 'lexical'
 
@@ -23,12 +22,9 @@ import { $applyNodeReplacement, ElementNode, $createParagraphNode, $isElementNod
 // Types
 // =============================================================================
 
-export type SerializedTabsContainerNode = Spread<
-  {
-    activeIndex: number
-  },
-  SerializedElementNode
->
+export interface SerializedTabsContainerNode extends SerializedElementNode {
+  activeIndex: number
+}
 
 // =============================================================================
 // Constants
@@ -64,7 +60,7 @@ export class TabsContainerNode extends ElementNode {
   }
 
   static importJSON(serializedNode: SerializedTabsContainerNode): TabsContainerNode {
-    return $createTabsContainerNode(serializedNode.activeIndex)
+    return $createTabsContainerNode(serializedNode.activeIndex).updateFromJSON(serializedNode)
   }
 
   static importDOM(): DOMConversionMap | null {
@@ -90,7 +86,6 @@ export class TabsContainerNode extends ElementNode {
   exportJSON(): SerializedTabsContainerNode {
     return {
       ...super.exportJSON(),
-      type: 'tabs-container',
       activeIndex: this.__activeIndex,
     }
   }

@@ -11,6 +11,7 @@ import {
   getResendConfig,
   getTurnstileConfig,
   getGoogleMapsConfig,
+  getGoogleOAuthConfig,
   getCloudflareConfig,
   getCustomApiKeys,
 } from '@/admin/actions/api-keys'
@@ -22,6 +23,7 @@ import {
   ResendSection,
   TurnstileSection,
   GoogleMapsSection,
+  GoogleOAuthSection,
   CloudflareSection,
   CustomApiKeysSection,
   GoogleCalendarSection,
@@ -37,11 +39,12 @@ import type { ReactElement } from 'react'
 async function ApiSettingsContent(): Promise<ReactElement> {
   await connection()
 
-  const [resendConfig, turnstileConfig, googleMapsConfig, cloudflareConfig, customApiKeys, settings, instagramConfig] =
+  const [resendConfig, turnstileConfig, googleMapsConfig, googleOAuthConfig, cloudflareConfig, customApiKeys, settings, instagramConfig] =
     await Promise.all([
       getResendConfig(),
       getTurnstileConfig(),
       getGoogleMapsConfig(),
+      getGoogleOAuthConfig(),
       getCloudflareConfig(),
       getCustomApiKeys(),
       getSettings(),
@@ -71,6 +74,11 @@ async function ApiSettingsContent(): Promise<ReactElement> {
       value: 'google-maps',
       label: 'Google Maps',
       content: <GoogleMapsSection config={googleMapsConfig} />,
+    },
+    {
+      value: 'google-oauth',
+      label: 'Google OAuth',
+      content: <GoogleOAuthSection config={googleOAuthConfig} />,
     },
     ...(settings
       ? [

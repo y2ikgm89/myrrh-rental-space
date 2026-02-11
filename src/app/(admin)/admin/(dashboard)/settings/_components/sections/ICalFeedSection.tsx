@@ -7,6 +7,7 @@
  */
 
 import { useState, useTransition, useEffect } from 'react'
+import { useConfirm } from '@/admin/contexts/confirm-context'
 import { toast } from 'sonner'
 import {
   Button,
@@ -64,6 +65,7 @@ interface SpaceOption {
 // =============================================================================
 
 export function ICalFeedSection({ onUpdate }: ICalFeedSectionProps) {
+  const confirm = useConfirm()
   const [isPending, startTransition] = useTransition()
   const [tokens, setTokens] = useState<ICalTokenWithRelations[]>([])
   const [spaces, setSpaces] = useState<SpaceOption[]>([])
@@ -141,10 +143,14 @@ export function ICalFeedSection({ onUpdate }: ICalFeedSectionProps) {
     })
   }
 
-  const handleDeleteToken = (id: string, name: string) => {
-    if (!confirm(`トークン「${name}」を削除しますか？\nこのURLで購読しているカレンダーは更新されなくなります。`)) {
-      return
-    }
+  const handleDeleteToken = async (id: string, name: string) => {
+    const confirmed = await confirm({
+      title: 'トークンを削除しますか？',
+      description: `トークン「${name}」を削除しますか？このURLで購読しているカレンダーは更新されなくなります。`,
+      confirmLabel: '削除',
+      variant: 'destructive',
+    })
+    if (!confirmed) return
 
     startTransition(async () => {
       const result = await deleteICalToken(id)

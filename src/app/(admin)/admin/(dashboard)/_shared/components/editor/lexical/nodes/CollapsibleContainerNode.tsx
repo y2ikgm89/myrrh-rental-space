@@ -15,7 +15,6 @@ import type {
   LexicalNode,
   NodeKey,
   SerializedElementNode,
-  Spread,
 } from 'lexical'
 import { $applyNodeReplacement, ElementNode, $isElementNode, $createParagraphNode } from 'lexical'
 
@@ -23,12 +22,9 @@ import { $applyNodeReplacement, ElementNode, $isElementNode, $createParagraphNod
 // Types
 // =============================================================================
 
-export type SerializedCollapsibleContainerNode = Spread<
-  {
-    open: boolean
-  },
-  SerializedElementNode
->
+export interface SerializedCollapsibleContainerNode extends SerializedElementNode {
+  open: boolean
+}
 
 // =============================================================================
 // DOM Conversion
@@ -57,7 +53,7 @@ export class CollapsibleContainerNode extends ElementNode {
   }
 
   static importJSON(serializedNode: SerializedCollapsibleContainerNode): CollapsibleContainerNode {
-    return $createCollapsibleContainerNode(serializedNode.open)
+    return $createCollapsibleContainerNode(serializedNode.open).updateFromJSON(serializedNode)
   }
 
   static importDOM(): DOMConversionMap | null {
@@ -77,7 +73,6 @@ export class CollapsibleContainerNode extends ElementNode {
   exportJSON(): SerializedCollapsibleContainerNode {
     return {
       ...super.exportJSON(),
-      type: 'collapsible-container',
       open: this.__open,
     }
   }

@@ -6,7 +6,7 @@
 
 'use client'
 
-import { useCallback, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 
@@ -23,9 +23,9 @@ export function InspectorSection({
 }: InspectorSectionProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen)
 
-  const toggleOpen = useCallback(() => {
+  const toggleOpen = () => {
     setIsOpen((prev) => !prev)
-  }, [])
+  }
 
   return (
     <div className="border-b border-border">

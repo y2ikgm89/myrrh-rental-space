@@ -15,7 +15,7 @@ export function CommentStats({ stats }: Props) {
   return (
     <div className="grid gap-4 md:grid-cols-3">
       {/* 総コメント数 */}
-      <div className="rounded-lg border bg-white p-4">
+      <div className="rounded-lg border bg-card p-4">
         <div className="flex items-center gap-2 text-muted-foreground mb-2">
           <MessageCircle className="w-4 h-4" />
           <span className="text-sm font-medium">総コメント数</span>
@@ -24,7 +24,7 @@ export function CommentStats({ stats }: Props) {
       </div>
 
       {/* 今日のコメント */}
-      <div className="rounded-lg border bg-white p-4">
+      <div className="rounded-lg border bg-card p-4">
         <div className="flex items-center gap-2 text-muted-foreground mb-2">
           <Clock className="w-4 h-4" />
           <span className="text-sm font-medium">今日のコメント</span>
@@ -35,7 +35,7 @@ export function CommentStats({ stats }: Props) {
       </div>
 
       {/* 削除済み */}
-      <div className="rounded-lg border bg-white p-4">
+      <div className="rounded-lg border bg-card p-4">
         <div className="flex items-center gap-2 text-muted-foreground mb-2">
           <Trash2 className="w-4 h-4" />
           <span className="text-sm font-medium">削除済み</span>

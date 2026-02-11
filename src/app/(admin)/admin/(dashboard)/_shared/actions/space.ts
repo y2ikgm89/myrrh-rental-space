@@ -18,7 +18,10 @@ import { parseStringArray, parseBusinessHours, parseDiscountType, parseDurationD
 import { checkReadPermissionFor } from '@/admin/lib/permissions'
 import { ACTIVE_RESERVATION_STATUSES } from '@/shared/lib/validations/enums'
 import { purgeSpaceCache } from '@/shared/lib/cloudflare'
+import { fireAndForget } from '@/shared/lib/async-utils'
+import { ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
 import { checkSlugAvailability, getSlugErrorMessage } from '@/shared/lib/slug-validation'
+import { DiscountType, DurationDiscountOverride, TaxRateType } from '@/shared/generated/prisma/enums'
 
 // =============================================================================
 // Helper Functions
@@ -325,11 +328,11 @@ export const createSpace = withPermission<[input: SpaceFormData], { id: string }
       locationId: data.locationId || null,
       categoryId: data.categoryId || null,
       // 割引設定
-      discountType: data.discountType ?? 'none',
+      discountType: data.discountType ?? DiscountType.none,
       discountValue: data.discountValue ?? null,
-      durationDiscountOverride: data.durationDiscountOverride ?? 'inherit',
+      durationDiscountOverride: data.durationDiscountOverride ?? DurationDiscountOverride.inherit,
       // 税率設定
-      taxRateType: data.taxRateType ?? 'standard',
+      taxRateType: data.taxRateType ?? TaxRateType.standard,
       // SEO フィールド
       metaDescription: data.metaDescription || null,
       metaKeywords: data.metaKeywords || null,
@@ -343,7 +346,7 @@ export const createSpace = withPermission<[input: SpaceFormData], { id: string }
   updateTag(CACHE_TAGS.SPACES)
 
   // Cloudflare CDN キャッシュパージ（設定がある場合のみ実行）
-  void purgeSpaceCache(space.id)
+  fireAndForget(purgeSpaceCache(space.id), { operation: 'purgeSpaceCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
   return createSuccess('スペースを作成しました', { id: space.id })
 })
@@ -362,6 +365,7 @@ export const updateSpace = withPermission<[id: string, input: SpaceFormData], vo
 
   const existingSpace = await prisma.space.findUnique({
     where: { id },
+    select: { id: true, publishedAt: true, isPublished: true },
   })
 
   if (!existingSpace) {
@@ -408,11 +412,11 @@ export const updateSpace = withPermission<[id: string, input: SpaceFormData], vo
       locationId: data.locationId || null,
       categoryId: data.categoryId || null,
       // 割引設定
-      discountType: data.discountType ?? 'none',
+      discountType: data.discountType ?? DiscountType.none,
       discountValue: data.discountValue ?? null,
-      durationDiscountOverride: data.durationDiscountOverride ?? 'inherit',
+      durationDiscountOverride: data.durationDiscountOverride ?? DurationDiscountOverride.inherit,
       // 税率設定
-      taxRateType: data.taxRateType ?? 'standard',
+      taxRateType: data.taxRateType ?? TaxRateType.standard,
       // SEO フィールド
       metaDescription: data.metaDescription || null,
       metaKeywords: data.metaKeywords || null,
@@ -427,7 +431,7 @@ export const updateSpace = withPermission<[id: string, input: SpaceFormData], vo
   updateTag(getCacheTag.spaces.detail(id))
 
   // Cloudflare CDN キャッシュパージ
-  void purgeSpaceCache(id)
+  fireAndForget(purgeSpaceCache(id), { operation: 'purgeSpaceCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
   return createSuccess('スペースを更新しました')
 })
@@ -441,6 +445,7 @@ export const updateSpacePublish = withPermission<[id: string, isPublished: boole
 )(async (_user, id, isPublished): Promise<ActionResult<void>> => {
   const space = await prisma.space.findUnique({
     where: { id },
+    select: { id: true },
   })
 
   if (!space) {
@@ -459,7 +464,7 @@ export const updateSpacePublish = withPermission<[id: string, isPublished: boole
   updateTag(getCacheTag.spaces.detail(id))
 
   // Cloudflare CDN キャッシュパージ
-  void purgeSpaceCache(id)
+  fireAndForget(purgeSpaceCache(id), { operation: 'purgeSpaceCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
   return createSuccess('公開状態を更新しました')
 })
@@ -507,7 +512,7 @@ export const deleteSpace = withPermission<[id: string], void>(
   updateTag(CACHE_TAGS.SPACES)
 
   // Cloudflare CDN キャッシュパージ
-  void purgeSpaceCache(id)
+  fireAndForget(purgeSpaceCache(id), { operation: 'purgeSpaceCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
   return createSuccess('スペースを削除しました')
 })
@@ -522,6 +527,7 @@ export const toggleSpacePublished = withPermission<[id: string], void>(
 )(async (_user, id): Promise<ActionResult<void>> => {
   const space = await prisma.space.findUnique({
     where: { id },
+    select: { id: true, isPublished: true },
   })
 
   if (!space) {
@@ -542,7 +548,7 @@ export const toggleSpacePublished = withPermission<[id: string], void>(
   updateTag(getCacheTag.spaces.detail(id))
 
   // Cloudflare CDN キャッシュパージ
-  void purgeSpaceCache(id)
+  fireAndForget(purgeSpaceCache(id), { operation: 'purgeSpaceCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
   return createSuccess(newIsPublished ? 'スペースを公開しました' : 'スペースを非公開にしました')
 })

@@ -15,7 +15,6 @@ import type {
   LexicalNode,
   NodeKey,
   SerializedElementNode,
-  Spread,
 } from 'lexical'
 import { $applyNodeReplacement, ElementNode, $createParagraphNode, $isElementNode } from 'lexical'
 
@@ -27,12 +26,9 @@ export type StepsStyle = 'numbered' | 'icon' | 'timeline'
 
 export const STEPS_STYLES: readonly StepsStyle[] = ['numbered', 'icon', 'timeline'] as const
 
-export type SerializedStepsContainerNode = Spread<
-  {
-    stepsStyle: StepsStyle
-  },
-  SerializedElementNode
->
+export interface SerializedStepsContainerNode extends SerializedElementNode {
+  stepsStyle: StepsStyle
+}
 
 // =============================================================================
 // Type Guard (Set-based pattern for type safety)
@@ -84,7 +80,7 @@ export class StepsContainerNode extends ElementNode {
   }
 
   static importJSON(serializedNode: SerializedStepsContainerNode): StepsContainerNode {
-    return $createStepsContainerNode(serializedNode.stepsStyle)
+    return $createStepsContainerNode(serializedNode.stepsStyle).updateFromJSON(serializedNode)
   }
 
   static importDOM(): DOMConversionMap | null {
@@ -110,7 +106,6 @@ export class StepsContainerNode extends ElementNode {
   exportJSON(): SerializedStepsContainerNode {
     return {
       ...super.exportJSON(),
-      type: 'steps-container',
       stepsStyle: this.__stepsStyle,
     }
   }

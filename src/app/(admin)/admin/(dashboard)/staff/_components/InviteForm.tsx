@@ -97,10 +97,10 @@ export function InviteForm() {
 
   if (success) {
     return (
-      <div className="rounded-md bg-green-50 p-6 text-center">
-        <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+      <div className="rounded-md bg-success/10 p-6 text-center">
+        <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-success/20 mb-4">
           <svg
-            className="h-6 w-6 text-green-600"
+            className="h-6 w-6 text-success"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -113,11 +113,11 @@ export function InviteForm() {
             />
           </svg>
         </div>
-        <h3 className="text-lg font-medium text-green-800">招待メールを送信しました</h3>
-        <p className="mt-2 text-sm text-green-700">
+        <h3 className="text-lg font-medium text-success">招待メールを送信しました</h3>
+        <p className="mt-2 text-sm text-success/80">
           スタッフにメールが届き、パスワードを設定するとログインできるようになります。
         </p>
-        <p className="mt-4 text-xs text-green-600">
+        <p className="mt-4 text-xs text-success">
           スタッフ一覧に戻ります...
         </p>
       </div>
@@ -132,7 +132,7 @@ export function InviteForm() {
         </div>
       )}
 
-      <div className="rounded-md bg-blue-50 p-4 text-sm text-blue-700">
+      <div className="rounded-md bg-info/10 p-4 text-sm text-info">
         <p className="font-medium">招待フローについて</p>
         <p className="mt-1">
           メールアドレスを入力して招待を送信すると、スタッフ宛に招待メールが届きます。

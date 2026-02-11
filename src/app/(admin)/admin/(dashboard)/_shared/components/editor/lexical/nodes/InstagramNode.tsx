@@ -15,7 +15,6 @@ import type {
   LexicalNode,
   NodeKey,
   SerializedLexicalNode,
-  Spread,
 } from 'lexical'
 import { $applyNodeReplacement, DecoratorNode } from 'lexical'
 
@@ -23,13 +22,9 @@ import { $applyNodeReplacement, DecoratorNode } from 'lexical'
 // Types
 // =============================================================================
 
-export type SerializedInstagramNode = Spread<
-  {
-    postId: string
-    version: 1
-  },
-  SerializedLexicalNode
->
+export interface SerializedInstagramNode extends SerializedLexicalNode {
+  postId: string
+}
 
 // =============================================================================
 // Validation
@@ -115,7 +110,7 @@ export class InstagramNode extends DecoratorNode<ReactElement> {
   static importJSON(serializedNode: SerializedInstagramNode): InstagramNode {
     return $createInstagramNode({
       postId: serializedNode.postId,
-    })
+    }).updateFromJSON(serializedNode)
   }
 
   static importDOM(): DOMConversionMap | null {
@@ -150,9 +145,7 @@ export class InstagramNode extends DecoratorNode<ReactElement> {
   exportJSON(): SerializedInstagramNode {
     return {
       ...super.exportJSON(),
-      type: 'instagram',
       postId: this.__postId,
-      version: 1,
     }
   }
 

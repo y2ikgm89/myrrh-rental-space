@@ -18,7 +18,6 @@ import type {
   LexicalNode,
   NodeKey,
   SerializedLexicalNode,
-  Spread,
 } from 'lexical'
 import { $applyNodeReplacement, DecoratorNode } from 'lexical'
 
@@ -34,17 +33,14 @@ export const BUTTON_VARIANTS: readonly ButtonVariant[] = ['primary', 'secondary'
 export const BUTTON_SIZES: readonly ButtonSize[] = ['sm', 'md', 'lg'] as const
 export const BUTTON_ALIGNMENTS: readonly ButtonAlignment[] = ['left', 'center', 'right'] as const
 
-export type SerializedButtonNode = Spread<
-  {
-    text: string
-    href: string
-    variant: ButtonVariant
-    size: ButtonSize
-    alignment: ButtonAlignment
-    openInNewTab: boolean
-  },
-  SerializedLexicalNode
->
+export interface SerializedButtonNode extends SerializedLexicalNode {
+  text: string
+  href: string
+  variant: ButtonVariant
+  size: ButtonSize
+  alignment: ButtonAlignment
+  openInNewTab: boolean
+}
 
 // =============================================================================
 // Type Guards (Set-based pattern for type safety)
@@ -191,7 +187,7 @@ export class ButtonNode extends DecoratorNode<ReactElement> {
       size: serializedNode.size,
       alignment: serializedNode.alignment,
       openInNewTab: serializedNode.openInNewTab,
-    })
+    }).updateFromJSON(serializedNode)
   }
 
   static importDOM(): DOMConversionMap | null {
@@ -230,7 +226,6 @@ export class ButtonNode extends DecoratorNode<ReactElement> {
   exportJSON(): SerializedButtonNode {
     return {
       ...super.exportJSON(),
-      type: 'button',
       text: this.__text,
       href: this.__href,
       variant: this.__variant,

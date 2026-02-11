@@ -16,9 +16,11 @@ import {
   businessInfoSchema,
   contactInfoSchema,
   businessHoursSettingsSchema,
+  meoSettingsSchema,
   type BusinessInfoInput,
   type ContactInfoInput,
   type BusinessHoursSettingsInput,
+  type MeoSettingsInput,
 } from './schemas'
 
 // =============================================================================
@@ -113,4 +115,37 @@ export const updateBusinessHoursSettings = withPermission<[data: BusinessHoursSe
   updateTag(CACHE_TAGS.RESERVATIONS)
 
   return createSuccess('営業時間設定を更新しました')
+})
+
+/**
+ * MEO設定を更新
+ */
+export const updateMeoSettings = withPermission<[data: MeoSettingsInput], void>(
+  'settings',
+  'update'
+)(async (_user, data): Promise<ActionResult<void>> => {
+  const parsed = meoSettingsSchema.safeParse(data)
+  if (!parsed.success) {
+    return createFailure(parsed.error.issues[0].message)
+  }
+
+  const meoData = {
+    latitude: parsed.data.latitude,
+    longitude: parsed.data.longitude,
+    priceRange: parsed.data.priceRange,
+    googleBusinessPlaceId: parsed.data.googleBusinessPlaceId,
+    googleReviewUrl: parsed.data.googleReviewUrl || null,
+    businessAttributes: parsed.data.businessAttributes ?? Prisma.JsonNull,
+    paymentAccepted: parsed.data.paymentAccepted || null,
+  }
+
+  await prisma.settings.upsert({
+    where: { id: 'singleton' },
+    create: { id: 'singleton', ...meoData },
+    update: meoData,
+  })
+
+  updateTag(CACHE_TAGS.SETTINGS)
+
+  return createSuccess('MEO設定を更新しました')
 })

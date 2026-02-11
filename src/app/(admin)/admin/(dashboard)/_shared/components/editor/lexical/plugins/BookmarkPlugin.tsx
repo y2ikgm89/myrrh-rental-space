@@ -8,7 +8,7 @@
 
 'use client'
 
-import { useCallback, useState, useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { $getSelection, $isRangeSelection, $insertNodes } from 'lexical'
 import { Loader2, ExternalLink, AlertCircle } from 'lucide-react'
@@ -32,8 +32,8 @@ import {
 export function useBookmarkDialog() {
   const [isBookmarkDialogOpen, setIsBookmarkDialogOpen] = useState(false)
 
-  const openBookmarkDialog = useCallback(() => setIsBookmarkDialogOpen(true), [])
-  const closeBookmarkDialog = useCallback(() => setIsBookmarkDialogOpen(false), [])
+  const openBookmarkDialog = () => setIsBookmarkDialogOpen(true)
+  const closeBookmarkDialog = () => setIsBookmarkDialogOpen(false)
 
   return {
     isBookmarkDialogOpen,

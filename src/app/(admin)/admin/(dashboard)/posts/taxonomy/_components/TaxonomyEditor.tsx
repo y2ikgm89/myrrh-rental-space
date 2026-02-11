@@ -6,7 +6,7 @@
  * 通常の管理画面内で表示されるシンプルなフォーム
  */
 
-import { useState, useTransition, useCallback } from 'react'
+import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -154,23 +154,23 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
     },
   })
 
-  const handleClearOgpImage = useCallback(() => {
+  const handleClearOgpImage = () => {
     setValue('ogpImageUrl', '', { shouldDirty: true })
-  }, [setValue])
+  }
 
-  const handleGenerateSlug = useCallback(() => {
+  const handleGenerateSlug = () => {
     const name = getValues('name')
     if (name) {
       const slug = generateSlug(name, 'category')
       setValue('slug', slug, { shouldDirty: true })
     }
-  }, [getValues, setValue])
+  }
 
-  const handleBack = useCallback(() => {
+  const handleBack = () => {
     router.push(config.backUrl)
-  }, [router, config.backUrl])
+  }
 
-  const onSubmit = useCallback((formData: CategoryFormData) => {
+  const onSubmit = (formData: CategoryFormData) => {
     startTransition(async () => {
       const result = await updatePostCategory(data.id, {
         name: formData.name,
@@ -190,9 +190,9 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
         toast.error(result.error)
       }
     })
-  }, [data.id, reset, router, config.label])
+  }
 
-  const handleDelete = useCallback(() => {
+  const handleDelete = () => {
     startTransition(async () => {
       const result = await deletePostCategory(data.id)
       if (result.success) {
@@ -202,7 +202,7 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
         toast.error(result.error)
       }
     })
-  }, [data.id, router, config.label, config.backUrl])
+  }
 
   const archiveUrl = `${config.urlPrefix}${currentSlug}`
 
@@ -522,23 +522,23 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
     },
   })
 
-  const handleClearOgpImage = useCallback(() => {
+  const handleClearOgpImage = () => {
     setValue('ogpImageUrl', '', { shouldDirty: true })
-  }, [setValue])
+  }
 
-  const handleGenerateSlug = useCallback(() => {
+  const handleGenerateSlug = () => {
     const name = getValues('name')
     if (name) {
       const slug = generateSlug(name, 'tag')
       setValue('slug', slug, { shouldDirty: true })
     }
-  }, [getValues, setValue])
+  }
 
-  const handleBack = useCallback(() => {
+  const handleBack = () => {
     router.push(config.backUrl)
-  }, [router, config.backUrl])
+  }
 
-  const onSubmit = useCallback((formData: TagFormData) => {
+  const onSubmit = (formData: TagFormData) => {
     startTransition(async () => {
       const result = await updatePostTag(data.id, {
         name: formData.name,
@@ -557,9 +557,9 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
         toast.error(result.error)
       }
     })
-  }, [data.id, reset, router, config.label])
+  }
 
-  const handleDelete = useCallback(() => {
+  const handleDelete = () => {
     startTransition(async () => {
       const result = await deletePostTag(data.id)
       if (result.success) {
@@ -569,7 +569,7 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
         toast.error(result.error)
       }
     })
-  }, [data.id, router, config.label, config.backUrl])
+  }
 
   const archiveUrl = `${config.urlPrefix}${currentSlug}`
 

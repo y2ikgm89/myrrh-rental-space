@@ -9,7 +9,7 @@
 
 'use client'
 
-import { startTransition, useCallback, useEffect, useState } from 'react'
+import { startTransition, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { MessageSquare, Plus, X } from 'lucide-react'
 import { Button } from '@/admin/components/ui/button'
@@ -46,7 +46,12 @@ type CommentPanelProps = {
   onPendingCommentSubmit?: (comment: string) => void
 }
 
-type TabValue = 'active' | 'resolved'
+const TAB_VALUES = ['active', 'resolved'] as const
+type TabValue = (typeof TAB_VALUES)[number]
+const TAB_VALUE_SET = new Set<string>(TAB_VALUES)
+function isTabValue(value: string): value is TabValue {
+  return TAB_VALUE_SET.has(value)
+}
 
 /**
  * コメントパネルコンポーネント
@@ -69,8 +74,16 @@ export function CommentPanel({
   const [isLoading, setIsLoading] = useState(true)
   const [pendingCommentText, setPendingCommentText] = useState('')
 
+  // スレッド選択
+  const handleSelectThread = async (threadId: string) => {
+    const result = await getThreadDetail(threadId)
+    if (result.success) {
+      setExpandedThread(result.data)
+    }
+  }
+
   // スレッド一覧を取得
-  const loadThreads = useCallback(async () => {
+  const loadThreads = async () => {
     setIsLoading(true)
     const result = await getCommentThreads({
       contentType,
@@ -84,14 +97,6 @@ export function CommentPanel({
       toast.error(result.error)
     }
     setIsLoading(false)
-  }, [contentType, contentId, tab])
-
-  // スレッド選択
-  const handleSelectThread = async (threadId: string) => {
-    const result = await getThreadDetail(threadId)
-    if (result.success) {
-      setExpandedThread(result.data)
-    }
   }
 
   // 初回ロード・タブ変更時に再取得
@@ -99,16 +104,27 @@ export function CommentPanel({
     let ignore = false
 
     startTransition(async () => {
-      await loadThreads()
-      // ignore フラグは、コンポーネントがアンマウントされた後の状態更新を防ぐ
-      // loadThreads 内部で状態を更新するため、ここでは早期リターンのみ
+      setIsLoading(true)
+      const result = await getCommentThreads({
+        contentType,
+        contentId,
+        status: tab === 'active' ? 'ACTIVE' : 'RESOLVED',
+      })
+
       if (ignore) return
+
+      if (result.success) {
+        setThreads(result.data)
+      } else {
+        toast.error(result.error)
+      }
+      setIsLoading(false)
     })
 
     return () => {
       ignore = true
     }
-  }, [loadThreads])
+  }, [contentType, contentId, tab])
 
   // activeMarkId が変更されたら該当スレッドを開く
   useEffect(() => {
@@ -322,7 +338,7 @@ export function CommentPanel({
       )}
 
       {/* タブ */}
-      <Tabs value={tab} onValueChange={(v) => setTab(v as TabValue)} className="flex-1 flex flex-col">
+      <Tabs value={tab} onValueChange={(v) => { if (isTabValue(v)) setTab(v) }} className="flex-1 flex flex-col">
         <TabsList className="mx-4 mt-3 grid w-auto grid-cols-2">
           <TabsTrigger value="active" className="gap-1">
             未解決

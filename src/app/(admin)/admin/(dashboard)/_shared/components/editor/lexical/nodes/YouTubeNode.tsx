@@ -15,7 +15,6 @@ import type {
   LexicalNode,
   NodeKey,
   SerializedLexicalNode,
-  Spread,
 } from 'lexical'
 import { $applyNodeReplacement, DecoratorNode } from 'lexical'
 
@@ -23,12 +22,9 @@ import { $applyNodeReplacement, DecoratorNode } from 'lexical'
 // Types
 // =============================================================================
 
-export type SerializedYouTubeNode = Spread<
-  {
-    videoId: string
-  },
-  SerializedLexicalNode
->
+export interface SerializedYouTubeNode extends SerializedLexicalNode {
+  videoId: string
+}
 
 // =============================================================================
 // Component
@@ -91,7 +87,7 @@ export class YouTubeNode extends DecoratorNode<ReactElement> {
   }
 
   static importJSON(serializedNode: SerializedYouTubeNode): YouTubeNode {
-    return $createYouTubeNode({ videoId: serializedNode.videoId })
+    return $createYouTubeNode({ videoId: serializedNode.videoId }).updateFromJSON(serializedNode)
   }
 
   static importDOM(): DOMConversionMap | null {
@@ -111,7 +107,6 @@ export class YouTubeNode extends DecoratorNode<ReactElement> {
   exportJSON(): SerializedYouTubeNode {
     return {
       ...super.exportJSON(),
-      type: 'youtube',
       videoId: this.__videoId,
     }
   }

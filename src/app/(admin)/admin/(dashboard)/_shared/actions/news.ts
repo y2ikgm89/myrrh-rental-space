@@ -8,6 +8,8 @@ import { withPermission } from '@/admin/lib/server-action-helpers'
 import type { NewsWhereInput } from '@/shared/types/prisma'
 import { checkReadPermissionFor } from '@/admin/lib/permissions'
 import { purgeNewsCache } from '@/shared/lib/cloudflare'
+import { fireAndForget } from '@/shared/lib/async-utils'
+import { ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
 import { checkSlugAvailability, getSlugErrorMessage } from '@/shared/lib/slug-validation'
 
 // Types and schemas from centralized validation file
@@ -155,7 +157,7 @@ export const createNews = withPermission<[CreateNewsInput], { id: string }>(
   updateTag(CACHE_TAGS.NEWS)
 
   // Cloudflare CDN キャッシュパージ
-  void purgeNewsCache(news.id)
+  fireAndForget(purgeNewsCache(news.id), { operation: 'purgeNewsCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
   return createSuccess('お知らせを作成しました', { id: news.id })
 })
@@ -174,6 +176,7 @@ export const updateNews = withPermission<[string, UpdateNewsInput], void>(
 
   const existingNews = await prisma.news.findUnique({
     where: { id },
+    select: { id: true },
   })
 
   if (!existingNews) {
@@ -224,7 +227,7 @@ export const updateNews = withPermission<[string, UpdateNewsInput], void>(
   updateTag(getCacheTag.news.detail(id))
 
   // Cloudflare CDN キャッシュパージ
-  void purgeNewsCache(id)
+  fireAndForget(purgeNewsCache(id), { operation: 'purgeNewsCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
   return createSuccess('お知らせを保存しました')
 })
@@ -251,7 +254,7 @@ export const deleteNews = withPermission<[string], void>(
   updateTag(CACHE_TAGS.NEWS)
 
   // Cloudflare CDN キャッシュパージ
-  void purgeNewsCache(id)
+  fireAndForget(purgeNewsCache(id), { operation: 'purgeNewsCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
   return createSuccess('お知らせを削除しました')
 })
@@ -265,6 +268,7 @@ export const publishNews = withPermission<[string], void>(
 )(async (user, id) => {
   const news = await prisma.news.findUnique({
     where: { id },
+    select: { id: true, publishedAt: true, content: true },
   })
 
   if (!news) {
@@ -302,7 +306,7 @@ export const publishNews = withPermission<[string], void>(
   updateTag(getCacheTag.news.detail(id))
 
   // Cloudflare CDN キャッシュパージ
-  void purgeNewsCache(id)
+  fireAndForget(purgeNewsCache(id), { operation: 'purgeNewsCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
   return createSuccess(`公開しました（バージョン ${nextVersion}）`)
 })
@@ -333,7 +337,7 @@ export const unpublishNews = withPermission<[string], void>(
   updateTag(getCacheTag.news.detail(id))
 
   // Cloudflare CDN キャッシュパージ
-  void purgeNewsCache(id)
+  fireAndForget(purgeNewsCache(id), { operation: 'purgeNewsCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
   return createSuccess('下書きに戻しました')
 })
@@ -419,7 +423,7 @@ export const restoreNewsVersion = withPermission<[string, number], void>(
   updateTag(getCacheTag.news.detail(newsId))
 
   // Cloudflare CDN キャッシュパージ
-  void purgeNewsCache(newsId)
+  fireAndForget(purgeNewsCache(newsId), { operation: 'purgeNewsCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
   return createSuccess(`バージョン ${version} を復元しました（下書き状態）`)
 })

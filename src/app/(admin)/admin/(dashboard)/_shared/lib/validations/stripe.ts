@@ -40,7 +40,7 @@ export const stripeSettingsSchema = z
       .nullable()
       .optional()
       .refine((val) => !val || isValidPublishableKey(val), {
-        message: MESSAGES.publishableKey,
+        error: MESSAGES.publishableKey,
       }),
     stripeSecretKey: z
       .string()
@@ -48,7 +48,7 @@ export const stripeSettingsSchema = z
       .nullable()
       .optional()
       .refine((val) => !val || isValidSecretKey(val), {
-        message: MESSAGES.secretKey,
+        error: MESSAGES.secretKey,
       }),
     stripeWebhookSecret: z
       .string()
@@ -56,7 +56,7 @@ export const stripeSettingsSchema = z
       .nullable()
       .optional()
       .refine((val) => !val || isValidWebhookSecret(val), {
-        message: MESSAGES.webhookSecret,
+        error: MESSAGES.webhookSecret,
       }),
     stripeCurrency: z.enum(['jpy', 'usd', 'eur']).default('jpy'),
   })
@@ -68,7 +68,7 @@ export const stripeSettingsSchema = z
       return true
     },
     {
-      message: MESSAGES.keyModeMismatch,
+      error: MESSAGES.keyModeMismatch,
       path: ['stripeSecretKey'],
     }
   )
@@ -83,7 +83,7 @@ export const stripeConnectionTestSchema = z.object({
     .string()
     .min(1, { error: 'シークレットキーを入力してください' })
     .refine(isValidSecretKey, {
-      message: MESSAGES.secretKey,
+      error: MESSAGES.secretKey,
     }),
 })
 

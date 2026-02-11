@@ -101,7 +101,7 @@ function parseAuditLogMetadata(value: unknown): AuditLogMetadata {
 const filtersSchema = z.object({
   page: z.number().int().positive().optional().default(1),
   perPage: z.number().int().positive().max(100).optional().default(50),
-  action: z.nativeEnum(AuditAction).or(z.literal('ALL')).optional(),
+  action: z.enum(AuditAction).or(z.literal('ALL')).optional(),
   resource: z.string().optional(),
   userId: z.string().uuid().optional(),
   dateFrom: z.string().optional(),

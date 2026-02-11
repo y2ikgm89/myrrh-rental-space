@@ -18,7 +18,7 @@ export const createPostSchema = z
     content: z.string().default(''),
     thumbnailUrl: z.string().min(1, { error: 'サムネイルURLは必須です' }),
     categoryId: z.string().uuid({ error: 'カテゴリを選択してください' }),
-    tags: z.array(z.string()).default([]),
+    tags: z.array(z.string().uuid({ error: 'タグIDが不正です' })).default([]),
   })
   .merge(seoOgpFieldsSchema)
 
@@ -35,8 +35,8 @@ export const updatePostSchema = z
     content: z.string().min(1, { error: '本文は必須です' }),
     thumbnailUrl: z.string().min(1, { error: 'サムネイルURLは必須です' }),
     categoryId: z.string().uuid({ error: 'カテゴリを選択してください' }),
-    tags: z.array(z.string()).default([]),
-    contentWidth: z.nativeEnum(LayoutWidth).nullable().optional(),
+    tags: z.array(z.string().uuid({ error: 'タグIDが不正です' })).default([]),
+    contentWidth: z.enum(LayoutWidth).nullable().optional(),
     contentWidthCustom: z.number().int().min(320).max(1920).nullable().optional(),
   })
   .merge(seoOgpFieldsSchema)
@@ -55,7 +55,7 @@ export const postFormSchema = z
     thumbnailUrl: z.string().min(1, { error: 'サムネイルURLは必須です' }),
     categoryId: z.string().min(1, { error: 'カテゴリを選択してください' }),
     tags: z.string().optional(),
-    status: z.nativeEnum(PostStatus),
+    status: z.enum(PostStatus),
     publishedAt: z.string().optional(),
     contentWidth: z.string().optional(),
     contentWidthCustom: z.string().optional(),
@@ -117,7 +117,7 @@ export type PostData = {
   thumbnailUrl: string
   ogpImageUrl: string | null
   categoryId: string
-  tags: string[]
+  postTags: { id: string; name: string; slug: string }[]
   metaDescription: string | null
   metaKeywords: string | null
   ogpTitle: string | null
@@ -138,7 +138,7 @@ export type PostData = {
     id: string
     name: string | null
     email: string
-  }
+  } | null
 }
 
 /**

@@ -23,7 +23,8 @@ import { $applyNodeReplacement, ElementNode } from 'lexical'
 // Types
 // =============================================================================
 
-export type SerializedTabListNode = SerializedElementNode
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface SerializedTabListNode extends SerializedElementNode {}
 
 // =============================================================================
 // Constants
@@ -53,8 +54,8 @@ export class TabListNode extends ElementNode {
     return new TabListNode(node.__key)
   }
 
-  static importJSON(_serializedNode: SerializedTabListNode): TabListNode {
-    return $createTabListNode()
+  static importJSON(serializedNode: SerializedTabListNode): TabListNode {
+    return $createTabListNode().updateFromJSON(serializedNode)
   }
 
   static importDOM(): DOMConversionMap | null {
@@ -79,7 +80,6 @@ export class TabListNode extends ElementNode {
   exportJSON(): SerializedTabListNode {
     return {
       ...super.exportJSON(),
-      type: 'tab-list',
     }
   }
 

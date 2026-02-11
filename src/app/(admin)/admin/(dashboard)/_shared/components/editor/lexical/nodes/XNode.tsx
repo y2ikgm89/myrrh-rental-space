@@ -15,7 +15,6 @@ import type {
   LexicalNode,
   NodeKey,
   SerializedLexicalNode,
-  Spread,
 } from 'lexical'
 import { $applyNodeReplacement, DecoratorNode } from 'lexical'
 
@@ -23,13 +22,9 @@ import { $applyNodeReplacement, DecoratorNode } from 'lexical'
 // Types
 // =============================================================================
 
-export type SerializedXNode = Spread<
-  {
-    tweetId: string
-    version: 1
-  },
-  SerializedLexicalNode
->
+export interface SerializedXNode extends SerializedLexicalNode {
+  tweetId: string
+}
 
 // =============================================================================
 // Validation
@@ -104,7 +99,7 @@ export class XNode extends DecoratorNode<ReactElement> {
   }
 
   static importJSON(serializedNode: SerializedXNode): XNode {
-    return $createXNode({ tweetId: serializedNode.tweetId })
+    return $createXNode({ tweetId: serializedNode.tweetId }).updateFromJSON(serializedNode)
   }
 
   static importDOM(): DOMConversionMap | null {
@@ -128,9 +123,7 @@ export class XNode extends DecoratorNode<ReactElement> {
   exportJSON(): SerializedXNode {
     return {
       ...super.exportJSON(),
-      type: 'x',
       tweetId: this.__tweetId,
-      version: 1,
     }
   }
 

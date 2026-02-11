@@ -22,21 +22,11 @@ import {
 import { updateSeoSettings } from '@/admin/actions/settings'
 import type { SettingsData } from '@/admin/actions/settings'
 import { useRefreshOnSuccess } from '../hooks'
+import { AnalyticsType } from '@/shared/generated/prisma/enums'
+import { isValidAnalyticsType, getValidAnalyticsType } from '@/shared/lib/validations/enums'
 
 interface SeoSectionProps {
   settings: SettingsData
-}
-
-type AnalyticsType = 'ga4' | 'gtm' | null
-
-const VALID_ANALYTICS_TYPES = new Set<string>(['ga4', 'gtm'])
-
-function isValidAnalyticsType(value: unknown): value is 'ga4' | 'gtm' {
-  return typeof value === 'string' && VALID_ANALYTICS_TYPES.has(value)
-}
-
-function parseAnalyticsType(value: unknown): AnalyticsType {
-  return isValidAnalyticsType(value) ? value : null
 }
 
 const ANALYTICS_TYPE_OPTIONS = [
@@ -55,7 +45,7 @@ export function SeoSection({ settings }: SeoSectionProps) {
     defaultOgpTitle: settings.defaultOgpTitle || '',
     defaultOgpDescription: settings.defaultOgpDescription || '',
     // Analytics settings
-    analyticsType: parseAnalyticsType(settings.analyticsType),
+    analyticsType: getValidAnalyticsType(settings.analyticsType),
     googleAnalyticsId: settings.googleAnalyticsId || '',
     googleTagManagerId: settings.googleTagManagerId || '',
     gaPropertyId: settings.gaPropertyId || '',
@@ -163,7 +153,7 @@ export function SeoSection({ settings }: SeoSectionProps) {
             <SelectionBox
               options={ANALYTICS_TYPE_OPTIONS}
               value={formData.analyticsType ?? 'none'}
-              onChange={(value) => setFormData({ ...formData, analyticsType: value === 'none' ? null : (value as 'ga4' | 'gtm') })}
+              onChange={(value) => setFormData({ ...formData, analyticsType: value === 'none' ? null : isValidAnalyticsType(value) ? value : null })}
               columns={3}
               disabled={isPending}
               name="トラッキング方式"
@@ -173,7 +163,7 @@ export function SeoSection({ settings }: SeoSectionProps) {
             </p>
           </div>
 
-          {formData.analyticsType === 'ga4' && (
+          {formData.analyticsType === AnalyticsType.ga4 && (
             <div className="space-y-2">
               <Label htmlFor="googleAnalyticsId">GA4 Measurement ID</Label>
               <Input
@@ -189,7 +179,7 @@ export function SeoSection({ settings }: SeoSectionProps) {
             </div>
           )}
 
-          {formData.analyticsType === 'gtm' && (
+          {formData.analyticsType === AnalyticsType.gtm && (
             <div className="space-y-2">
               <Label htmlFor="googleTagManagerId">GTM Container ID</Label>
               <Input

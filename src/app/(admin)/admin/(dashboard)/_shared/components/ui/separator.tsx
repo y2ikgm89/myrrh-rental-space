@@ -1,15 +1,16 @@
 'use client'
 
-import { forwardRef, type HTMLAttributes } from 'react'
+import type { HTMLAttributes, Ref } from 'react'
 import { cn } from '@/shared/lib/utils'
 
 type SeparatorProps = HTMLAttributes<HTMLDivElement> & {
+  ref?: Ref<HTMLDivElement>
   orientation?: 'horizontal' | 'vertical'
   decorative?: boolean
 }
 
-const Separator = forwardRef<HTMLDivElement, SeparatorProps>(
-  ({ className, orientation = 'horizontal', decorative = true, ...props }, ref) => (
+function Separator({ ref, className, orientation = 'horizontal', decorative = true, ...props }: SeparatorProps) {
+  return (
     <div
       ref={ref}
       role={decorative ? 'none' : 'separator'}
@@ -22,7 +23,6 @@ const Separator = forwardRef<HTMLDivElement, SeparatorProps>(
       {...props}
     />
   )
-)
-Separator.displayName = 'Separator'
+}
 
 export { Separator }

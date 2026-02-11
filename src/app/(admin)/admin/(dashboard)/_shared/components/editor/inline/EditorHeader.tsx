@@ -23,7 +23,7 @@ const styles = tv({
     titleSection: 'flex items-center gap-2',
     title: 'text-base font-medium truncate max-w-[300px]',
     slug: 'text-sm text-muted-foreground',
-    dirtyIndicator: 'ml-2 text-xs text-amber-500',
+    dirtyIndicator: 'ml-2 text-xs text-warning',
   },
 })()
 
@@ -150,7 +150,7 @@ export function EditorHeader({
                 size="sm"
                 onClick={publishActions.onUnpublish}
                 disabled={isPending}
-                className="gap-1 text-amber-600 hover:text-amber-700"
+                className="gap-1 text-warning hover:text-warning/80"
               >
                 <GlobeLock className="h-4 w-4" />
                 <span className="hidden sm:inline">非公開にする</span>
@@ -162,7 +162,7 @@ export function EditorHeader({
                 size="sm"
                 onClick={publishActions.onPublish}
                 disabled={isPending || isDirty}
-                className="gap-1 bg-green-600 hover:bg-green-700"
+                className="gap-1 bg-success hover:bg-success/90"
               >
                 <Globe className="h-4 w-4" />
                 <span className="hidden sm:inline">公開する</span>

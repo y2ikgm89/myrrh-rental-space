@@ -1,37 +1,39 @@
 import { z } from 'zod'
-import {
-  type BusinessHours,
-  type DayOfWeek,
-  DAYS_OF_WEEK,
-  isBusinessHours,
-} from '@/shared/types'
+import type { BusinessHours } from '@/shared/lib/json-validators'
 
 /**
  * 場所（Location）バリデーションスキーマ
  */
 
 /**
- * TimeSlotスキーマ
+ * BusinessTimeSlotスキーマ（新形式: openTime/closeTime）
  */
-const timeSlotSchema = z.object({
-  open: z.string().regex(/^\d{2}:\d{2}$/, { error: '開店時刻は HH:MM 形式で入力してください' }),
-  close: z.string().regex(/^\d{2}:\d{2}$/, { error: '閉店時刻は HH:MM 形式で入力してください' }),
+const businessTimeSlotSchema = z.object({
+  openTime: z.string().regex(/^\d{2}:\d{2}$/, { error: '開店時刻は HH:MM 形式で入力してください' }),
+  closeTime: z.string().regex(/^\d{2}:\d{2}$/, { error: '閉店時刻は HH:MM 形式で入力してください' }),
+})
+
+/**
+ * BusinessHoursDayスキーマ（新形式: isOpen + slots配列）
+ */
+const businessHoursDaySchema = z.object({
+  isOpen: z.boolean(),
+  slots: z.array(businessTimeSlotSchema),
 })
 
 /**
  * BusinessHoursスキーマ
- * 各曜日に対してTimeSlot | nullを許容
+ * 各曜日に対して { isOpen, slots } を持つ
  */
-const businessHoursSchema = z
-  .object(
-    Object.fromEntries(
-      DAYS_OF_WEEK.map((day) => [day, timeSlotSchema.nullable()])
-    ) as Record<DayOfWeek, z.ZodNullable<typeof timeSlotSchema>>
-  )
-  .refine(
-    (value): value is BusinessHours => isBusinessHours(value),
-    '無効な営業時間形式です'
-  )
+const businessHoursSchema = z.object({
+  monday: businessHoursDaySchema,
+  tuesday: businessHoursDaySchema,
+  wednesday: businessHoursDaySchema,
+  thursday: businessHoursDaySchema,
+  friday: businessHoursDaySchema,
+  saturday: businessHoursDaySchema,
+  sunday: businessHoursDaySchema,
+})
 
 const imageUrlsSchema = z
   .array(z.string().url({ error: '有効なURLを入力してください' }))

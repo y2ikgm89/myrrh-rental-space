@@ -43,7 +43,12 @@ const DAYS_OF_WEEK: readonly DayOfWeek[] = [
 ]
 
 // テンプレート定義
-type TemplateKey = 'continuous' | 'lunch-break' | 'custom'
+const TEMPLATE_KEYS = ['continuous', 'lunch-break', 'custom'] as const
+type TemplateKey = (typeof TEMPLATE_KEYS)[number]
+const TEMPLATE_KEY_SET = new Set<string>(TEMPLATE_KEYS)
+function isTemplateKey(value: string): value is TemplateKey {
+  return TEMPLATE_KEY_SET.has(value)
+}
 
 interface Template {
   label: string
@@ -351,7 +356,7 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
           <div className="flex items-center gap-3">
             <Select
               value={selectedTemplate}
-              onValueChange={(v) => setSelectedTemplate(v as TemplateKey)}
+              onValueChange={(v) => { if (isTemplateKey(v)) setSelectedTemplate(v) }}
               disabled={isPending}
             >
               <SelectTrigger className="w-48">

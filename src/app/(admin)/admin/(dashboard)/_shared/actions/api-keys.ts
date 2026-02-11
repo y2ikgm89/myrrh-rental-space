@@ -31,16 +31,24 @@ import {
   maskTurnstileKey,
   maskGoogleMapsKey,
   maskCloudflareToken,
+  maskGoogleOAuthSecret,
   testResendConnection,
   testTurnstileConnection,
   testGoogleMapsConnection,
   testCloudflareConnection,
+  testGoogleOAuthConnection,
 } from '@/admin/lib/api-keys'
+import { resetAuthInstance } from '@/shared/lib/auth'
+import {
+  googleOAuthSettingsSchema,
+  type GoogleOAuthSettingsInput,
+} from '@/admin/lib/validations/api-keys'
 import type {
   ResendConfig,
   TurnstileConfig,
   GoogleMapsConfig,
   CloudflareConfig,
+  GoogleOAuthConfig,
   CustomApiKeyData,
   CustomApiKeysMap,
 } from '@/admin/types/api-keys'
@@ -761,3 +769,146 @@ export async function getCustomApiKeyValue(id: string): Promise<string | null> {
 
   return safeDecrypt(keysMap[id].keyValue)
 }
+
+// =============================================================================
+// Google OAuth (ログイン & カレンダー共通)
+// =============================================================================
+
+/**
+ * Google OAuth設定を取得
+ */
+export async function getGoogleOAuthConfig(): Promise<GoogleOAuthConfig> {
+  await verifyAdminSession()
+
+  const settings = await prisma.settings.findUnique({
+    where: { id: 'singleton' },
+    select: {
+      googleOAuthClientId: true,
+      googleOAuthClientSecret: true,
+      googleOAuthLastTestedAt: true,
+      googleOAuthConnectionStatus: true,
+    },
+  })
+
+  return {
+    clientId: settings?.googleOAuthClientId || null,
+    clientSecretMasked: settings?.googleOAuthClientSecret
+      ? maskGoogleOAuthSecret(safeDecrypt(settings.googleOAuthClientSecret) || '****')
+      : null,
+    lastTestedAt: settings?.googleOAuthLastTestedAt || null,
+    connectionStatus: parseConnectionStatus(settings?.googleOAuthConnectionStatus),
+  }
+}
+
+/**
+ * Google OAuth設定を更新
+ */
+export const updateGoogleOAuthSettings = withPermission<[GoogleOAuthSettingsInput]>(
+  'settings',
+  'update'
+)(async (_user, data) => {
+  const parsed = googleOAuthSettingsSchema.safeParse(data)
+  if (!parsed.success) {
+    return createFailure(parsed.error.issues[0].message)
+  }
+
+  const updateData: Record<string, unknown> = {}
+
+  if (parsed.data.googleOAuthClientId !== undefined) {
+    updateData.googleOAuthClientId = parsed.data.googleOAuthClientId
+  }
+
+  if (parsed.data.googleOAuthClientSecret) {
+    try {
+      updateData.googleOAuthClientSecret = encrypt(parsed.data.googleOAuthClientSecret)
+    } catch {
+      return createFailure('Client Secretの暗号化に失敗しました')
+    }
+  }
+
+  await prisma.settings.upsert({
+    where: { id: 'singleton' },
+    create: { id: 'singleton', ...updateData },
+    update: updateData,
+  })
+
+  // Auth インスタンスを再構築させる
+  resetAuthInstance()
+
+  updateTag(CACHE_TAGS.SETTINGS)
+  return createSuccess('Google OAuth設定を更新しました')
+})
+
+/**
+ * Google OAuth接続テスト
+ */
+export const testGoogleOAuthConnectionAction = withPermission<
+  [string, string],
+  { message: string }
+>(
+  'settings',
+  'update'
+)(async (_user, clientId, clientSecret) => {
+  const result = await testGoogleOAuthConnection(clientId, clientSecret)
+
+  if (result.success) {
+    await prisma.settings.upsert({
+      where: { id: 'singleton' },
+      create: {
+        id: 'singleton',
+        googleOAuthLastTestedAt: new Date(),
+        googleOAuthConnectionStatus: 'connected',
+      },
+      update: {
+        googleOAuthLastTestedAt: new Date(),
+        googleOAuthConnectionStatus: 'connected',
+      },
+    })
+
+    updateTag(CACHE_TAGS.SETTINGS)
+    return createSuccess(result.message || '接続に成功しました', {
+      message: result.message || '',
+    })
+  }
+
+  // エラー時もステータス更新
+  await prisma.settings.upsert({
+    where: { id: 'singleton' },
+    create: {
+      id: 'singleton',
+      googleOAuthLastTestedAt: new Date(),
+      googleOAuthConnectionStatus: 'error',
+    },
+    update: {
+      googleOAuthLastTestedAt: new Date(),
+      googleOAuthConnectionStatus: 'error',
+    },
+  })
+
+  updateTag(CACHE_TAGS.SETTINGS)
+  return createFailure(result.error || '接続テストに失敗しました')
+})
+
+/**
+ * Google OAuth設定をクリア
+ */
+export const clearGoogleOAuthKeys = withPermission<[]>(
+  'settings',
+  'update'
+)(async () => {
+  await prisma.settings.update({
+    where: { id: 'singleton' },
+    data: {
+      googleOAuthClientId: null,
+      googleOAuthClientSecret: null,
+      googleOAuthLastTestedAt: null,
+      googleOAuthConnectionStatus: null,
+    },
+  })
+
+  // Auth インスタンスを再構築させる（環境変数フォールバックに戻る）
+  resetAuthInstance()
+
+  updateTag(CACHE_TAGS.SETTINGS)
+  return createSuccess('Google OAuth設定をクリアしました')
+})

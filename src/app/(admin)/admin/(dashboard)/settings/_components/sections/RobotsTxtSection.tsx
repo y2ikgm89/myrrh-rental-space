@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition, useEffect } from 'react'
+import { useConfirm } from '@/admin/contexts/confirm-context'
 import {
   Button,
   Card,
@@ -23,6 +24,7 @@ import { useRefreshOnSuccess } from '../hooks'
 import { AlertTriangle, RotateCcw, Info } from 'lucide-react'
 
 export function RobotsTxtSection() {
+  const confirm = useConfirm()
   const { handleResult } = useRefreshOnSuccess()
   const [isPending, startTransition] = useTransition()
   const [isLoading, setIsLoading] = useState(true)
@@ -62,9 +64,15 @@ export function RobotsTxtSection() {
     })
   }
 
-  function handleReset() {
+  async function handleReset() {
     if (!data) return
-    if (!confirm('robots.txtをデフォルトに戻しますか？カスタム設定は削除されます。')) return
+    const confirmed = await confirm({
+      title: 'robots.txtをリセットしますか？',
+      description: 'robots.txtをデフォルトに戻しますか？カスタム設定は削除されます。',
+      confirmLabel: 'リセット',
+      variant: 'destructive',
+    })
+    if (!confirmed) return
 
     startTransition(async () => {
       const result = await resetRobotsTxtToDefault()
@@ -129,12 +137,12 @@ export function RobotsTxtSection() {
         </div>
 
         {formData.robotsTxtEnabled && warnings.length > 0 && (
-          <div className="rounded-lg border border-amber-500/50 bg-amber-50 p-4 dark:bg-amber-950/20">
+          <div className="rounded-lg border border-warning/50 bg-warning/10 p-4">
             <div className="flex items-start gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
               <div className="space-y-1">
-                <p className="text-sm font-medium text-amber-800 dark:text-amber-200">設定に関する警告</p>
-                <ul className="text-xs text-amber-700 dark:text-amber-300 list-disc list-inside space-y-1">
+                <p className="text-sm font-medium text-warning">設定に関する警告</p>
+                <ul className="text-xs text-warning/80 list-disc list-inside space-y-1">
                   {warnings.map((warning) => (
                     <li key={warning}>{warning}</li>
                   ))}

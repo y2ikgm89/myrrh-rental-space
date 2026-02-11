@@ -19,19 +19,15 @@ import {
   type LexicalNode,
   type NodeKey,
   type SerializedElementNode,
-  type Spread,
 } from 'lexical'
 
 // =============================================================================
 // Types
 // =============================================================================
 
-export type SerializedLayoutContainerNode = Spread<
-  {
-    templateColumns: string
-  },
-  SerializedElementNode
->
+export interface SerializedLayoutContainerNode extends SerializedElementNode {
+  templateColumns: string
+}
 
 // =============================================================================
 // DOM Conversion
@@ -76,7 +72,7 @@ export class LayoutContainerNode extends ElementNode {
   }
 
   static importJSON(json: SerializedLayoutContainerNode): LayoutContainerNode {
-    return $createLayoutContainerNode(json.templateColumns)
+    return $createLayoutContainerNode(json.templateColumns).updateFromJSON(json)
   }
 
   constructor(templateColumns: string = '1fr 1fr', key?: NodeKey) {
@@ -88,8 +84,6 @@ export class LayoutContainerNode extends ElementNode {
     return {
       ...super.exportJSON(),
       templateColumns: this.__templateColumns,
-      type: 'layout-container',
-      version: 1,
     }
   }
 

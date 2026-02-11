@@ -1,7 +1,7 @@
 /**
- * ホームページセクション バリデーションスキーマ
+ * セクション バリデーションスキーマ
  *
- * 共有バリデーションからre-export
+ * 統一セクション validation からre-export
  */
 
-export * from '@/shared/lib/validations/homepage-section'
+export * from '@/shared/lib/validations/section'

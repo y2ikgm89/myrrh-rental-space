@@ -1,6 +1,7 @@
 'use server'
 
 import { z } from 'zod'
+import { checkAdminAuth } from '@/admin/lib/action-auth'
 
 // =============================================================================
 // Types
@@ -253,6 +254,10 @@ function resolveUrl(baseUrl: string, relativeUrl: string): string {
  * @returns OGP情報またはエラー
  */
 export async function fetchOgp(url: string): Promise<FetchOgpResult> {
+  // 認証チェック
+  const auth = await checkAdminAuth()
+  if (!auth.success) return { success: false, error: '管理者権限が必要です' }
+
   // バリデーション
   const validated = urlSchema.safeParse(url)
   if (!validated.success) {

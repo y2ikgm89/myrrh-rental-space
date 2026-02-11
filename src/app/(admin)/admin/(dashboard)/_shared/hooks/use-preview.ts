@@ -4,7 +4,6 @@
  * エディタからプレビュー機能を使用するためのユーティリティ
  */
 
-import { useCallback } from 'react'
 import {
   type PostPreviewData,
   type NewsPreviewData,
@@ -120,36 +119,24 @@ export function clearPreviewData(
  * ```
  */
 export function usePreview<T extends ContentType>(contentType: T) {
-  const save = useCallback(
-    (identifier: string, data: PreviewDataMap[T] | AnyPreviewData) => {
-      // 外部ライブラリ型要件: PreviewDataMapの型はcontentTypeに依存するが、
-      // 統一エディターから呼ばれる場合はAnyPreviewData型で渡される
-      savePreviewData(contentType, identifier, data as PreviewDataMap[T])
-    },
-    [contentType]
-  )
+  const save = (identifier: string, data: PreviewDataMap[T] | AnyPreviewData) => {
+    // 外部ライブラリ型要件: PreviewDataMapの型はcontentTypeに依存するが、
+    // 統一エディターから呼ばれる場合はAnyPreviewData型で渡される
+    savePreviewData(contentType, identifier, data as PreviewDataMap[T])
+  }
 
-  const open = useCallback(
-    (identifier: string, basePath: string) => {
-      openPreview(contentType, identifier, basePath)
-    },
-    [contentType]
-  )
+  const open = (identifier: string, basePath: string) => {
+    openPreview(contentType, identifier, basePath)
+  }
 
-  const clear = useCallback(
-    (identifier: string) => {
-      clearPreviewData(contentType, identifier)
-    },
-    [contentType]
-  )
+  const clear = (identifier: string) => {
+    clearPreviewData(contentType, identifier)
+  }
 
-  const saveAndOpenPreview = useCallback(
-    (identifier: string, data: PreviewDataMap[T] | AnyPreviewData, basePath: string) => {
-      save(identifier, data)
-      open(identifier, basePath)
-    },
-    [save, open]
-  )
+  const saveAndOpenPreview = (identifier: string, data: PreviewDataMap[T] | AnyPreviewData, basePath: string) => {
+    save(identifier, data)
+    open(identifier, basePath)
+  }
 
   return {
     savePreviewData: save,

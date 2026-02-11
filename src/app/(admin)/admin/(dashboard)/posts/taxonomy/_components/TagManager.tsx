@@ -6,7 +6,7 @@
  * @description nuqs対応、検索・ソート・フィルター機能付き
  */
 
-import { useState, useTransition, useMemo } from 'react'
+import { useState, useTransition } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -159,7 +159,7 @@ export function TagManager({ initialTags }: TagManagerProps) {
   } = useTagFilters()
 
   // Filtered & Sorted Tags
-  const filteredTags = useMemo(() => {
+  const filteredTags = (() => {
     let result = [...tags]
 
     // Search filter
@@ -195,7 +195,7 @@ export function TagManager({ initialTags }: TagManagerProps) {
     })
 
     return result
-  }, [tags, filterParams])
+  })()
 
   // Form
   const form = useForm<TagFormData>({

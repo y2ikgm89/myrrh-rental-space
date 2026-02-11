@@ -8,7 +8,7 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
-import { Button } from '@/admin/components/ui'
+import { Button, Breadcrumb } from '@/admin/components/ui'
 
 interface SettingsLayoutProps {
   title: string
@@ -19,6 +19,13 @@ interface SettingsLayoutProps {
 export function SettingsLayout({ title, description, children }: SettingsLayoutProps) {
   return (
     <div className="space-y-6">
+      <Breadcrumb
+        items={[
+          { label: '設定', href: '/admin/settings' },
+          { label: title },
+        ]}
+      />
+
       {/* ヘッダー */}
       <div className="flex items-center gap-4">
         <Button asChild variant="ghost" size="icon">

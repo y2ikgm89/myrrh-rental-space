@@ -6,6 +6,7 @@
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { Button } from '@/admin/components/ui'
 
 export const metadata: Metadata = {
   title: 'ページが見つかりません',
@@ -30,12 +31,11 @@ export default function AdminNotFound() {
         </p>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <Link
-            href="/admin"
-            className="rounded-lg bg-foreground px-5 py-2.5 text-sm font-medium text-background transition-colors hover:bg-foreground/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-          >
-            ダッシュボードへ
-          </Link>
+          <Button asChild>
+            <Link href="/admin">
+              ダッシュボードへ
+            </Link>
+          </Button>
         </div>
 
         <div className="mt-8 border-t border-border/50 pt-6">

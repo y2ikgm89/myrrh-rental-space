@@ -6,8 +6,9 @@
  * @description nuqs を使用した型安全な URL パラメータ管理
  */
 
-import { useQueryStates, parseAsString, parseAsBoolean } from 'nuqs'
-import { useRef, useEffect, useCallback } from 'react'
+import { useQueryStates, parseAsString } from 'nuqs'
+import { parseAsBoolean } from '@/shared/lib/nuqs'
+import { useRef, useEffect } from 'react'
 
 // =============================================================================
 // Types
@@ -68,17 +69,14 @@ function useDebouncedCallback(
     }
   }, [])
 
-  return useCallback(
-    (value: string) => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-      }
-      timeoutRef.current = setTimeout(() => {
-        callback(value)
-      }, delayMs)
-    },
-    [callback, delayMs]
-  )
+  return (value: string) => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+    }
+    timeoutRef.current = setTimeout(() => {
+      callback(value)
+    }, delayMs)
+  }
 }
 
 // =============================================================================
@@ -97,18 +95,15 @@ export function useCategoryFilters() {
     }
   )
 
-  const setSearch = useCallback(
-    (value: string) => {
-      void setParams({ search: value || null })
-    },
-    [setParams]
-  )
+  const setSearch = (value: string) => {
+    void setParams({ search: value || null })
+  }
 
   const setSearchDebounced = useDebouncedCallback(setSearch, 300)
 
-  const reset = useCallback(() => {
+  const reset = () => {
     void setParams({ search: null })
-  }, [setParams])
+  }
 
   return {
     params: {
@@ -139,41 +134,32 @@ export function useTagFilters() {
     }
   )
 
-  const setSearch = useCallback(
-    (value: string) => {
-      void setParams({ search: value || null })
-    },
-    [setParams]
-  )
+  const setSearch = (value: string) => {
+    void setParams({ search: value || null })
+  }
 
   const setSearchDebounced = useDebouncedCallback(setSearch, 300)
 
-  const toggleSort = useCallback(
-    (field: TaxonomySortField) => {
-      if (params.sortBy === field) {
-        void setParams({ sortOrder: params.sortOrder === 'asc' ? 'desc' : 'asc' })
-      } else {
-        void setParams({ sortBy: field, sortOrder: 'asc' })
-      }
-    },
-    [params.sortBy, params.sortOrder, setParams]
-  )
+  const toggleSort = (field: TaxonomySortField) => {
+    if (params.sortBy === field) {
+      void setParams({ sortOrder: params.sortOrder === 'asc' ? 'desc' : 'asc' })
+    } else {
+      void setParams({ sortBy: field, sortOrder: 'asc' })
+    }
+  }
 
-  const setUnusedOnly = useCallback(
-    (value: boolean) => {
-      void setParams({ unusedOnly: value || null })
-    },
-    [setParams]
-  )
+  const setUnusedOnly = (value: boolean) => {
+    void setParams({ unusedOnly: value || null })
+  }
 
-  const reset = useCallback(() => {
+  const reset = () => {
     void setParams({
       search: null,
       sortBy: null,
       sortOrder: null,
       unusedOnly: null,
     })
-  }, [setParams])
+  }
 
   return {
     params: {

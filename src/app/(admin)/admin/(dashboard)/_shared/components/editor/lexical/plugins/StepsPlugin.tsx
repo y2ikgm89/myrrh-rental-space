@@ -9,9 +9,8 @@
 'use client'
 
 import type { ReactElement } from 'react'
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { mergeRegister } from '@lexical/utils'
 import {
   $createParagraphNode,
   $createTextNode,
@@ -20,6 +19,7 @@ import {
   COMMAND_PRIORITY_LOW,
   KEY_ARROW_DOWN_COMMAND,
   KEY_ARROW_UP_COMMAND,
+  mergeRegister,
 } from 'lexical'
 import {
   $createStepsContainerNode,
@@ -111,8 +111,8 @@ function StepNumberBadge({
 export function useStepsDialog() {
   const [isStepsDialogOpen, setIsStepsDialogOpen] = useState(false)
 
-  const openStepsDialog = useCallback(() => setIsStepsDialogOpen(true), [])
-  const closeStepsDialog = useCallback(() => setIsStepsDialogOpen(false), [])
+  const openStepsDialog = () => setIsStepsDialogOpen(true)
+  const closeStepsDialog = () => setIsStepsDialogOpen(false)
 
   return {
     isStepsDialogOpen,
@@ -259,12 +259,12 @@ export function StepsPlugin({ isOpen, onClose }: StepsPluginProps) {
     )
   }, [editor])
 
-  const resetForm = useCallback(() => {
+  const resetForm = () => {
     setSelectedStyle('numbered')
     setStepCount('3')
-  }, [])
+  }
 
-  const handleInsert = useCallback(() => {
+  const handleInsert = () => {
     editor.update(() => {
       const selection = $getSelection()
       if (!$isRangeSelection(selection)) return
@@ -309,12 +309,12 @@ export function StepsPlugin({ isOpen, onClose }: StepsPluginProps) {
 
     resetForm()
     onClose()
-  }, [editor, stepCount, selectedStyle, resetForm, onClose])
+  }
 
-  const handleClose = useCallback(() => {
+  const handleClose = () => {
     resetForm()
     onClose()
-  }, [resetForm, onClose])
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>

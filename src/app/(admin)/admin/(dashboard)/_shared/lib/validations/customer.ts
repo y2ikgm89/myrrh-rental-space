@@ -35,7 +35,7 @@ export type CustomerFormData = z.output<typeof customerFormSchema>
  */
 export const updateCustomerStatusSchema = z.object({
   id: z.string().uuid(),
-  status: z.nativeEnum(CustomerStatus),
+  status: z.enum(CustomerStatus),
 })
 
 export type UpdateCustomerStatusInput = z.infer<typeof updateCustomerStatusSchema>

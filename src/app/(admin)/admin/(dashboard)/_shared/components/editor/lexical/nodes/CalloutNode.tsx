@@ -15,7 +15,6 @@ import type {
   LexicalNode,
   NodeKey,
   SerializedElementNode,
-  Spread,
 } from 'lexical'
 import { $applyNodeReplacement, ElementNode, $createParagraphNode, $isElementNode } from 'lexical'
 
@@ -27,22 +26,19 @@ export type CalloutType = 'info' | 'warning' | 'error' | 'success'
 
 export const CALLOUT_TYPES: readonly CalloutType[] = ['info', 'warning', 'error', 'success'] as const
 
-export type SerializedCalloutNode = Spread<
-  {
-    calloutType: CalloutType
-  },
-  SerializedElementNode
->
+export interface SerializedCalloutNode extends SerializedElementNode {
+  calloutType: CalloutType
+}
 
 // =============================================================================
 // Constants
 // =============================================================================
 
 const CALLOUT_STYLES: Record<CalloutType, string> = {
-  info: 'bg-blue-50 border-blue-500 text-blue-900 dark:bg-blue-950 dark:text-blue-100',
-  warning: 'bg-yellow-50 border-yellow-500 text-yellow-900 dark:bg-yellow-950 dark:text-yellow-100',
-  error: 'bg-red-50 border-red-500 text-red-900 dark:bg-red-950 dark:text-red-100',
-  success: 'bg-green-50 border-green-500 text-green-900 dark:bg-green-950 dark:text-green-100',
+  info: 'bg-info/10 border-info text-foreground',
+  warning: 'bg-warning/10 border-warning text-foreground',
+  error: 'bg-destructive/10 border-destructive text-foreground',
+  success: 'bg-success/10 border-success text-foreground',
 }
 
 const CALLOUT_BASE_CLASS = 'my-4 p-4 rounded-lg border-l-4'
@@ -90,8 +86,7 @@ export class CalloutNode extends ElementNode {
   }
 
   static importJSON(serializedNode: SerializedCalloutNode): CalloutNode {
-    const node = $createCalloutNode(serializedNode.calloutType)
-    return node
+    return $createCalloutNode(serializedNode.calloutType).updateFromJSON(serializedNode)
   }
 
   static importDOM(): DOMConversionMap | null {
@@ -117,7 +112,6 @@ export class CalloutNode extends ElementNode {
   exportJSON(): SerializedCalloutNode {
     return {
       ...super.exportJSON(),
-      type: 'callout',
       calloutType: this.__calloutType,
     }
   }

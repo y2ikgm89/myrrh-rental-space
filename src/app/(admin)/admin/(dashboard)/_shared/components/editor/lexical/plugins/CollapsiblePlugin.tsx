@@ -25,10 +25,10 @@ import {
   KEY_ARROW_UP_COMMAND,
   createCommand,
   type LexicalCommand,
+  mergeRegister,
   type LexicalEditor,
   type NodeKey,
 } from 'lexical'
-import { mergeRegister } from '@lexical/utils'
 import {
   $createCollapsibleContainerNode,
   $isCollapsibleContainerNode,

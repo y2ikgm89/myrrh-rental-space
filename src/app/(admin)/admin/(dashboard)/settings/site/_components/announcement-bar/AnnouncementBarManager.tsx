@@ -28,6 +28,8 @@ import {
   validateAnimation,
   validateDesignStyle,
 } from '@/shared/lib/announcement-bar-utils'
+import { AnnouncementBarAnimation, AnnouncementBarDesignStyle, AnnouncementBarType } from '@/shared/generated/prisma/enums'
+import { isValidAnnouncementBarType } from '@/shared/lib/validations/enums'
 import { BarList } from './BarList'
 import { BarDialog, DeleteDialog } from './BarDialog'
 import { CarouselSettingsPanel } from './CarouselSettings'
@@ -39,7 +41,7 @@ import { isValidHexColor, type BarFormData, type CarouselSettings } from './type
 
 const barFormSchema = z.object({
   message: z.string().min(1, { error: 'メッセージは必須です' }).max(200, { error: 'メッセージは200文字以内' }),
-  type: z.enum(['info', 'warning', 'promo']),
+  type: z.enum(AnnouncementBarType),
   linkUrl: z.string().url({ error: '有効なURLを入力してください' }).or(z.literal('')),
   linkText: z.string().max(50, { error: 'リンクテキストは50文字以内' }),
   isActive: z.boolean(),
@@ -74,19 +76,20 @@ export function AnnouncementBarManager({
 
   // カルーセル設定のステート
   const [carouselSettings, setCarouselSettings] = useState<CarouselSettings>({
-    announcementBarAnimation: validateAnimation(initialCarouselSettings.announcementBarAnimation ?? 'fade'),
+    announcementBarAnimation: validateAnimation(initialCarouselSettings.announcementBarAnimation ?? AnnouncementBarAnimation.fade),
     announcementBarDuration: initialCarouselSettings.announcementBarDuration,
     announcementBarAutoPlay: initialCarouselSettings.announcementBarAutoPlay,
     announcementBarPauseOnHover: initialCarouselSettings.announcementBarPauseOnHover,
     announcementBarShowArrows: initialCarouselSettings.announcementBarShowArrows,
     announcementBarShowIndicator: initialCarouselSettings.announcementBarShowIndicator,
-    announcementBarDesignStyle: validateDesignStyle(initialCarouselSettings.announcementBarDesignStyle ?? 'solid'),
+    announcementBarDesignStyle: validateDesignStyle(initialCarouselSettings.announcementBarDesignStyle ?? AnnouncementBarDesignStyle.solid),
     announcementBarBgColor: initialCarouselSettings.announcementBarBgColor || '',
     announcementBarTextColor: initialCarouselSettings.announcementBarTextColor || '',
     announcementBarStripeColor: initialCarouselSettings.announcementBarStripeColor || '',
     announcementBarStripeAnimation: initialCarouselSettings.announcementBarStripeAnimation,
     announcementBarGradientAnimation: initialCarouselSettings.announcementBarGradientAnimation,
     announcementBarGlassAnimation: initialCarouselSettings.announcementBarGlassAnimation,
+    announcementBarSticky: initialCarouselSettings.announcementBarSticky ?? false,
   })
 
   const {
@@ -100,7 +103,7 @@ export function AnnouncementBarManager({
     resolver: zodResolver(barFormSchema),
     defaultValues: {
       message: '',
-      type: 'info',
+      type: AnnouncementBarType.info,
       linkUrl: '',
       linkText: '',
       isActive: true,
@@ -121,7 +124,7 @@ export function AnnouncementBarManager({
       setEditingBar(bar)
       reset({
         message: bar.message,
-        type: bar.type as 'info' | 'warning' | 'promo',
+        type: isValidAnnouncementBarType(bar.type) ? bar.type : AnnouncementBarType.info,
         linkUrl: bar.linkUrl || '',
         linkText: bar.linkText || '',
         isActive: bar.isActive,
@@ -133,7 +136,7 @@ export function AnnouncementBarManager({
       setEditingBar(null)
       reset({
         message: '',
-        type: 'info',
+        type: AnnouncementBarType.info,
         linkUrl: '',
         linkText: '',
         isActive: true,
@@ -241,6 +244,7 @@ export function AnnouncementBarManager({
         announcementBarStripeAnimation: carouselSettings.announcementBarStripeAnimation,
         announcementBarGradientAnimation: carouselSettings.announcementBarGradientAnimation,
         announcementBarGlassAnimation: carouselSettings.announcementBarGlassAnimation,
+        announcementBarSticky: carouselSettings.announcementBarSticky,
       })
       if (result.success) {
         toast.success('デザイン・カルーセル設定を保存しました')

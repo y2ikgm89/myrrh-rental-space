@@ -12,7 +12,7 @@
 
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
   $createParagraphNode,
@@ -165,8 +165,8 @@ function $onEscape(
 export function useLayoutDialog() {
   const [isLayoutDialogOpen, setIsLayoutDialogOpen] = useState(false)
 
-  const openLayoutDialog = useCallback(() => setIsLayoutDialogOpen(true), [])
-  const closeLayoutDialog = useCallback(() => setIsLayoutDialogOpen(false), [])
+  const openLayoutDialog = () => setIsLayoutDialogOpen(true)
+  const closeLayoutDialog = () => setIsLayoutDialogOpen(false)
 
   return {
     isLayoutDialogOpen,

@@ -10,6 +10,7 @@
 import { useState, useTransition, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import type { UseFormReturn, FieldValues } from 'react-hook-form'
+import { useConfirm } from '@/admin/contexts/confirm-context'
 import { useEditorPanels } from '../../hooks'
 import type { EditorCoreConfig, EditorCoreReturn } from './types'
 
@@ -32,6 +33,7 @@ export function useEditorCore<TFormData extends FieldValues>({
   listPath,
 }: EditorCoreConfig<TFormData>): EditorCoreReturn {
   const router = useRouter()
+  const confirm = useConfirm()
   const [isPending, startTransition] = useTransition()
   const [hasEditorChanges, setHasEditorChanges] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -43,12 +45,18 @@ export function useEditorCore<TFormData extends FieldValues>({
   const isDirty = form.formState.isDirty || hasEditorChanges
 
   // 戻るボタンハンドラー
-  const handleBack = useCallback(() => {
-    if (isDirty && !window.confirm('保存されていない変更があります。破棄してもよろしいですか？')) {
-      return
+  const handleBack = useCallback(async () => {
+    if (isDirty) {
+      const confirmed = await confirm({
+        title: '変更を破棄しますか？',
+        description: '保存されていない変更があります。破棄してもよろしいですか？',
+        confirmLabel: '破棄',
+        variant: 'destructive',
+      })
+      if (!confirmed) return
     }
     router.push(listPath)
-  }, [isDirty, listPath, router])
+  }, [isDirty, listPath, router, confirm])
 
   // startTransitionを非同期対応でラップ
   const wrappedStartTransition = useCallback((callback: () => void | Promise<void>) => {

@@ -2,7 +2,7 @@
 
 import { prisma } from '@/shared/lib/prisma'
 import { updateTag } from 'next/cache'
-import { CACHE_TAGS } from '@/shared/lib/constants'
+import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
 import { Role } from '@/shared/generated/prisma/enums'
 import type { Prisma } from '@/shared/generated/prisma/client'
 import { hashPassword } from 'better-auth/crypto'
@@ -246,7 +246,7 @@ export const updateUser = withPermission<[string, UpdateUserInput], void>(
   })
 
   updateTag(CACHE_TAGS.STAFF)
-  updateTag(`${CACHE_TAGS.STAFF}-${id}`)
+  updateTag(getCacheTag.staff.detail(id))
 
   return createSuccess('ユーザーを更新しました')
 })
@@ -319,7 +319,7 @@ export const updateUserRole = withRole<[string, Role], void>(Role.SUPER_ADMIN)(
     void logRoleChange(user.id, id, oldRole, role)
 
     updateTag(CACHE_TAGS.STAFF)
-    updateTag(`${CACHE_TAGS.STAFF}-${id}`)
+    updateTag(getCacheTag.staff.detail(id))
 
     return createSuccess('ロールを更新しました')
   }

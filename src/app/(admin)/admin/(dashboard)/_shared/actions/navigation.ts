@@ -11,6 +11,8 @@ import { getSession, getRoleFromSession } from '@/shared/lib/auth'
 import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'
 import { logPermissionDenied } from '@/admin/lib/audit'
 import { purgeHomeCache } from '@/shared/lib/cloudflare'
+import { fireAndForget } from '@/shared/lib/async-utils'
+import { ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
 
 // =============================================================================
 // Types
@@ -141,7 +143,7 @@ export const createNavigationItem = withPermission<[data: NavigationItemInput], 
   updateTag(CACHE_TAGS.NAVIGATION)
 
   // Cloudflare CDN キャッシュパージ（ナビゲーションは全ページに影響）
-  void purgeHomeCache()
+  fireAndForget(purgeHomeCache(), { operation: 'purgeHomeCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
   return createSuccess('ナビゲーションを作成しました', { id: item.id })
 })
@@ -174,7 +176,7 @@ export const updateNavigationItem = withPermission<[id: string, data: Navigation
   updateTag(CACHE_TAGS.NAVIGATION)
 
   // Cloudflare CDN キャッシュパージ（ナビゲーションは全ページに影響）
-  void purgeHomeCache()
+  fireAndForget(purgeHomeCache(), { operation: 'purgeHomeCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
   return createSuccess('ナビゲーションを更新しました')
 })
@@ -210,7 +212,7 @@ export const deleteNavigationItem = withPermission<[id: string], void>(
   updateTag(CACHE_TAGS.NAVIGATION)
 
   // Cloudflare CDN キャッシュパージ（ナビゲーションは全ページに影響）
-  void purgeHomeCache()
+  fireAndForget(purgeHomeCache(), { operation: 'purgeHomeCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
   return createSuccess('ナビゲーションを削除しました')
 })
@@ -240,7 +242,7 @@ export const updateNavigationOrder = withPermission<
   updateTag(CACHE_TAGS.NAVIGATION)
 
   // Cloudflare CDN キャッシュパージ（ナビゲーションは全ページに影響）
-  void purgeHomeCache()
+  fireAndForget(purgeHomeCache(), { operation: 'purgeHomeCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
   return createSuccess('順序を更新しました')
 })
@@ -264,7 +266,7 @@ export const updateSocialLinkOrder = withPermission<[items: { id: string; order:
   updateTag(CACHE_TAGS.NAVIGATION)
 
   // Cloudflare CDN キャッシュパージ（ナビゲーションは全ページに影響）
-  void purgeHomeCache()
+  fireAndForget(purgeHomeCache(), { operation: 'purgeHomeCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
   return createSuccess('順序を更新しました')
 })
@@ -325,7 +327,7 @@ export const createSocialLink = withPermission<[data: SocialLinkInput], { id: st
   updateTag(CACHE_TAGS.NAVIGATION)
 
   // Cloudflare CDN キャッシュパージ（ナビゲーションは全ページに影響）
-  void purgeHomeCache()
+  fireAndForget(purgeHomeCache(), { operation: 'purgeHomeCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
   return createSuccess('SNSリンクを作成しました', { id: link.id })
 })
@@ -358,7 +360,7 @@ export const updateSocialLink = withPermission<[id: string, data: SocialLinkInpu
   updateTag(CACHE_TAGS.NAVIGATION)
 
   // Cloudflare CDN キャッシュパージ（ナビゲーションは全ページに影響）
-  void purgeHomeCache()
+  fireAndForget(purgeHomeCache(), { operation: 'purgeHomeCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
   return createSuccess('SNSリンクを更新しました')
 })
@@ -385,7 +387,7 @@ export const deleteSocialLink = withPermission<[id: string], void>(
   updateTag(CACHE_TAGS.NAVIGATION)
 
   // Cloudflare CDN キャッシュパージ（ナビゲーションは全ページに影響）
-  void purgeHomeCache()
+  fireAndForget(purgeHomeCache(), { operation: 'purgeHomeCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
   return createSuccess('SNSリンクを削除しました')
 })

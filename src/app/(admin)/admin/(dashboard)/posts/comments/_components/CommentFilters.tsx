@@ -4,7 +4,7 @@
  * コメントフィルター
  */
 
-import { useRouter, useSearchParams, usePathname } from 'next/navigation'
+import { useQueryStates, parseAsString, parseAsInteger } from 'nuqs'
 import { Search, X } from 'lucide-react'
 import { Input, Button } from '@/admin/components/ui'
 import { getFormString } from '@/shared/lib/utils'
@@ -21,48 +21,30 @@ const STATUS_OPTIONS: readonly StatusOption[] = [
 ]
 
 export function CommentFilters() {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
+  const [params, setParams] = useQueryStates(
+    {
+      status: parseAsString.withDefault(''),
+      search: parseAsString.withDefault(''),
+      page: parseAsInteger.withDefault(1),
+    },
+    { history: 'push', shallow: false }
+  )
 
-  const currentStatus = searchParams.get('status') ?? 'ALL'
-  const currentSearch = searchParams.get('search') ?? ''
-
-  const createQueryString = (updates: Record<string, string | null>) => {
-    const params = new URLSearchParams(searchParams.toString())
-
-    for (const [key, value] of Object.entries(updates)) {
-      if (value === null || value === '') {
-        params.delete(key)
-      } else {
-        params.set(key, value)
-      }
-    }
-
-    // ページをリセット
-    if (!updates.page) {
-      params.delete('page')
-    }
-
-    return params.toString()
-  }
+  const currentStatus = params.status || 'ALL'
 
   function handleStatusChange(status: string) {
-    const query = createQueryString({ status: status === 'ALL' ? null : status })
-    router.push(`${pathname}${query ? `?${query}` : ''}`)
+    void setParams({ status: status === 'ALL' ? null : status, page: 1 })
   }
 
   function handleSearch(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
     const search = getFormString(formData, 'search')
-    const query = createQueryString({ search: search || null })
-    router.push(`${pathname}${query ? `?${query}` : ''}`)
+    void setParams({ search: search || null, page: 1 })
   }
 
   function handleClearSearch() {
-    const query = createQueryString({ search: null })
-    router.push(`${pathname}${query ? `?${query}` : ''}`)
+    void setParams({ search: null, page: 1 })
   }
 
   return (
@@ -88,10 +70,10 @@ export function CommentFilters() {
           <Input
             name="search"
             placeholder="コメント内容・投稿者名で検索"
-            defaultValue={currentSearch}
+            defaultValue={params.search}
             className="pl-9 w-64"
           />
-          {currentSearch && (
+          {params.search && (
             <button
               type="button"
               onClick={handleClearSearch}

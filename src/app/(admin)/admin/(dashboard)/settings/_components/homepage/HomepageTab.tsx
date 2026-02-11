@@ -10,6 +10,7 @@
  */
 
 import { useState, useTransition, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
   DndContext,
@@ -38,8 +39,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   Button,
-  Card,
-  CardContent,
   Switch,
 } from '@/admin/components/ui'
 import {
@@ -49,13 +48,21 @@ import {
   Trash2,
   Eye,
   EyeOff,
-  ExternalLink,
   Sparkles,
+  Layers,
   Layout,
+  LayoutList,
+  Lightbulb,
   Newspaper,
   FileText,
   HelpCircle,
+  Star,
+  MessageSquare,
+  Image,
   MousePointerClick,
+  Mail,
+  MapPin,
+  Code,
   Wand2,
   Instagram,
 } from 'lucide-react'
@@ -69,26 +76,34 @@ import {
   type HomepageSectionData,
 } from '@/admin/actions/homepage-settings'
 import {
+  SectionType,
   sectionTypeLabels,
   defaultSectionConfigs,
-  HomepageSectionType,
 } from '@/admin/lib/validations/homepage-section'
-import { SectionEditor } from './SectionEditor'
 import { logger } from '@/shared/lib/logger'
 
 // =============================================================================
 // Icons Mapping
 // =============================================================================
 
-const sectionTypeIcons: Record<HomepageSectionType, typeof Sparkles> = {
-  [HomepageSectionType.HERO]: Sparkles,
-  [HomepageSectionType.SPACE_LIST]: Layout,
-  [HomepageSectionType.NEWS]: Newspaper,
-  [HomepageSectionType.POST]: FileText,
-  [HomepageSectionType.FAQ]: HelpCircle,
-  [HomepageSectionType.CTA]: MousePointerClick,
-  [HomepageSectionType.CUSTOM]: Wand2,
-  [HomepageSectionType.INSTAGRAM]: Instagram,
+const sectionTypeIcons: Record<SectionType, typeof Sparkles> = {
+  [SectionType.HERO]: Sparkles,
+  [SectionType.HERO_PARALLAX]: Layers,
+  [SectionType.CUSTOM]: Wand2,
+  [SectionType.CONCEPT]: Lightbulb,
+  [SectionType.SPACE_LIST]: Layout,
+  [SectionType.SPACE_SHOWCASE]: LayoutList,
+  [SectionType.NEWS_LIST]: Newspaper,
+  [SectionType.POST_LIST]: FileText,
+  [SectionType.FAQ_LIST]: HelpCircle,
+  [SectionType.FEATURES]: Star,
+  [SectionType.TESTIMONIAL]: MessageSquare,
+  [SectionType.GALLERY]: Image,
+  [SectionType.CTA]: MousePointerClick,
+  [SectionType.CONTACT_FORM]: Mail,
+  [SectionType.MAP]: MapPin,
+  [SectionType.EMBED]: Code,
+  [SectionType.INSTAGRAM]: Instagram,
 }
 
 // =============================================================================
@@ -210,9 +225,9 @@ function SortableSectionItem({
 interface AddSectionDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onAdd: (type: HomepageSectionType) => void
+  onAdd: (type: SectionType) => void
   disabled: boolean
-  existingTypes: HomepageSectionType[]
+  existingTypes: SectionType[]
   isInstagramConnected: boolean
 }
 
@@ -224,12 +239,12 @@ function AddSectionDialog({
   existingTypes,
   isInstagramConnected,
 }: AddSectionDialogProps) {
-  const availableTypes = Object.values(HomepageSectionType).filter(
+  const availableTypes = Object.values(SectionType).filter(
     (type) => {
       // CUSTOMは複数追加可能
-      if (type === HomepageSectionType.CUSTOM) return true
+      if (type === SectionType.CUSTOM) return true
       // InstagramはAPI設定済みの場合のみ表示
-      if (type === HomepageSectionType.INSTAGRAM && !isInstagramConnected) return false
+      if (type === SectionType.INSTAGRAM && !isInstagramConnected) return false
       // それ以外は既存タイプでなければ表示
       return !existingTypes.includes(type)
     }
@@ -248,7 +263,7 @@ function AddSectionDialog({
           {availableTypes.map((type) => {
             const Icon = sectionTypeIcons[type]
             const label = sectionTypeLabels[type]
-            const isCustom = type === HomepageSectionType.CUSTOM
+            const isCustom = type === SectionType.CUSTOM
             const alreadyExists = existingTypes.includes(type)
 
             return (
@@ -300,9 +315,9 @@ interface HomepageTabProps {
 }
 
 export function HomepageTab({ isInstagramConnected = false }: HomepageTabProps) {
+  const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [sections, setSections] = useState<HomepageSectionData[] | null>(null)
-  const [editingSection, setEditingSection] = useState<HomepageSectionData | null>(null)
   const [deletingSectionId, setDeletingSectionId] = useState<string | null>(null)
   const [showAddDialog, setShowAddDialog] = useState(false)
 
@@ -336,7 +351,7 @@ export function HomepageTab({ isInstagramConnected = false }: HomepageTabProps) 
 
   // Reload sections from server (used to revert optimistic updates on error)
   function reloadSections() {
-    getHomepageSections().then(setSections).catch(() => {})
+    getHomepageSections().then(setSections).catch(() => { /* best-effort reload after optimistic revert */ })
   }
 
   // Shared action handler: execute action, toast result, reload on success
@@ -392,9 +407,9 @@ export function HomepageTab({ isInstagramConnected = false }: HomepageTabProps) 
     )
   }
 
-  const handleAddSection = (type: HomepageSectionType) => {
+  const handleAddSection = (type: SectionType) => {
     runActionAndReload(() =>
-      createHomepageSection({ type, config: defaultSectionConfigs[type], isActive: true })
+      createHomepageSection({ type, config: defaultSectionConfigs[type], design: {}, isActive: true })
     )
   }
 
@@ -425,11 +440,6 @@ export function HomepageTab({ isInstagramConnected = false }: HomepageTabProps) 
         reloadSections()
       }
     })
-  }
-
-  const handleEditComplete = () => {
-    setEditingSection(null)
-    reloadSections()
   }
 
   // Loading state
@@ -472,17 +482,6 @@ export function HomepageTab({ isInstagramConnected = false }: HomepageTabProps) 
     )
   }
 
-  // Section editor view
-  if (editingSection) {
-    return (
-      <SectionEditor
-        section={editingSection}
-        onBack={() => setEditingSection(null)}
-        onSave={handleEditComplete}
-      />
-    )
-  }
-
   // Main list view
   return (
     <div className="space-y-6">
@@ -515,7 +514,7 @@ export function HomepageTab({ isInstagramConnected = false }: HomepageTabProps) 
               <SortableSectionItem
                 key={section.id}
                 section={section}
-                onEdit={setEditingSection}
+                onEdit={(section) => router.push(`/admin/pages/homepage/edit/sections/${section.id}`)}
                 onToggle={handleToggle}
                 onDelete={setDeletingSectionId}
                 disabled={isPending}
@@ -524,28 +523,6 @@ export function HomepageTab({ isInstagramConnected = false }: HomepageTabProps) 
           </div>
         </SortableContext>
       </DndContext>
-
-      {/* Preview Link */}
-      <Card className="bg-muted/50">
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="font-medium">プレビュー</h4>
-              <p className="text-sm text-muted-foreground">
-                設定内容をホームページで確認
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              onClick={() => window.open('/', '_blank')}
-              disabled={isPending}
-            >
-              <ExternalLink className="h-4 w-4 mr-2" />
-              ホームページを開く
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Add Section Dialog */}
       <AddSectionDialog

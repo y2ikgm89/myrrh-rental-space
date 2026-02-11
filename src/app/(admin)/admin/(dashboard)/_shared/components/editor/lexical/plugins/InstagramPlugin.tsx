@@ -6,7 +6,7 @@
 
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { $insertNodes } from 'lexical'
 import {
@@ -74,7 +74,7 @@ export function InstagramPlugin({ isOpen, onClose }: InstagramPluginProps) {
 
   const postId = extractInstagramPostId(url)
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = () => {
     if (!postId) {
       setError('有効なInstagram URLまたは投稿IDを入力してください')
       return
@@ -88,18 +88,18 @@ export function InstagramPlugin({ isOpen, onClose }: InstagramPluginProps) {
     setUrl('')
     setError('')
     onClose()
-  }, [editor, postId, onClose])
+  }
 
-  const handleClose = useCallback(() => {
+  const handleClose = () => {
     setUrl('')
     setError('')
     onClose()
-  }, [onClose])
+  }
 
-  const handleUrlChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setUrl(e.target.value)
     setError('')
-  }, [])
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -160,8 +160,8 @@ export function InstagramPlugin({ isOpen, onClose }: InstagramPluginProps) {
 export function useInstagramDialog() {
   const [isOpen, setIsOpen] = useState(false)
 
-  const openInstagramDialog = useCallback(() => setIsOpen(true), [])
-  const closeInstagramDialog = useCallback(() => setIsOpen(false), [])
+  const openInstagramDialog = () => setIsOpen(true)
+  const closeInstagramDialog = () => setIsOpen(false)
 
   return {
     isInstagramDialogOpen: isOpen,

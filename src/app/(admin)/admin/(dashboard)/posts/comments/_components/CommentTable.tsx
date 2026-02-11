@@ -8,6 +8,7 @@
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
+import { useConfirm } from '@/admin/contexts/confirm-context'
 import { formatDistanceToNow } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { Trash2, RotateCcw, ExternalLink, User } from 'lucide-react'
@@ -38,6 +39,7 @@ export function CommentTable({ comments }: Props) {
   const [selected, setSelected] = useState<string[]>([])
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const confirm = useConfirm()
 
   // 全選択/解除
   function toggleAll() {
@@ -56,8 +58,14 @@ export function CommentTable({ comments }: Props) {
   }
 
   // 一括削除
-  function handleBulkDelete() {
-    if (!confirm(`選択した${selected.length}件のコメントを削除しますか？`)) return
+  async function handleBulkDelete() {
+    const confirmed = await confirm({
+      title: 'コメントを一括削除しますか？',
+      description: `選択した${selected.length}件のコメントを削除します。`,
+      confirmLabel: '削除',
+      variant: 'destructive',
+    })
+    if (!confirmed) return
 
     setError(null)
     startTransition(async () => {
@@ -71,8 +79,14 @@ export function CommentTable({ comments }: Props) {
   }
 
   // 単一削除
-  function handleDelete(id: string) {
-    if (!confirm('このコメントを削除しますか？')) return
+  async function handleDelete(id: string) {
+    const confirmed = await confirm({
+      title: 'コメントを削除しますか？',
+      description: 'このコメントを削除します。',
+      confirmLabel: '削除',
+      variant: 'destructive',
+    })
+    if (!confirmed) return
 
     setError(null)
     startTransition(async () => {
@@ -84,8 +98,13 @@ export function CommentTable({ comments }: Props) {
   }
 
   // 復元
-  function handleRestore(id: string) {
-    if (!confirm('このコメントを復元しますか？')) return
+  async function handleRestore(id: string) {
+    const confirmed = await confirm({
+      title: 'コメントを復元しますか？',
+      description: 'このコメントを復元します。',
+      confirmLabel: '復元',
+    })
+    if (!confirmed) return
 
     setError(null)
     startTransition(async () => {
@@ -108,7 +127,7 @@ export function CommentTable({ comments }: Props) {
   }
 
   return (
-    <div className="rounded-lg border bg-white">
+    <div className="rounded-lg border bg-card">
       {/* 一括操作バー */}
       {selected.length > 0 && (
         <div className="flex items-center gap-4 p-4 border-b bg-muted/50">
@@ -224,7 +243,7 @@ export function CommentTable({ comments }: Props) {
                     削除済み
                   </span>
                 ) : (
-                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-700">
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-success/10 text-success">
                     アクティブ
                   </span>
                 )}

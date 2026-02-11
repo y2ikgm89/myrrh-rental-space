@@ -7,6 +7,8 @@ import { createSuccess, createFailure, type ActionResult } from '@/admin/types/s
 import { withPermission } from '@/admin/lib/server-action-helpers'
 import { checkReadPermissionFor } from '@/admin/lib/permissions'
 import { purgeFaqCache } from '@/shared/lib/cloudflare'
+import { fireAndForget } from '@/shared/lib/async-utils'
+import { ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
 import {
   faqCategoryFormSchema,
   faqItemFormSchema,
@@ -136,7 +138,7 @@ export const createFaqCategory = withPermission<
   updateTag(CACHE_TAGS.FAQ)
 
   // Cloudflare CDN キャッシュパージ
-  void purgeFaqCache()
+  fireAndForget(purgeFaqCache(), { operation: 'purgeFaqCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
   return createSuccess('カテゴリを作成しました', { id: category.id })
 })
@@ -181,7 +183,7 @@ export const updateFaqCategory = withPermission<
   updateTag(CACHE_TAGS.FAQ)
 
   // Cloudflare CDN キャッシュパージ
-  void purgeFaqCache()
+  fireAndForget(purgeFaqCache(), { operation: 'purgeFaqCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
   return createSuccess('カテゴリを更新しました')
 })
@@ -213,7 +215,7 @@ export const deleteFaqCategory = withPermission<[id: string], void>(
   updateTag(CACHE_TAGS.FAQ)
 
   // Cloudflare CDN キャッシュパージ
-  void purgeFaqCache()
+  fireAndForget(purgeFaqCache(), { operation: 'purgeFaqCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
   return createSuccess('カテゴリを削除しました')
 })
@@ -237,7 +239,7 @@ export const reorderFaqCategories = withPermission<[orderedIds: string[]], void>
   updateTag(CACHE_TAGS.FAQ)
 
   // Cloudflare CDN キャッシュパージ
-  void purgeFaqCache()
+  fireAndForget(purgeFaqCache(), { operation: 'purgeFaqCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
   return createSuccess('順序を更新しました')
 })
@@ -378,7 +380,7 @@ export const createFaqItem = withPermission<
   updateTag(CACHE_TAGS.FAQ)
 
   // Cloudflare CDN キャッシュパージ
-  void purgeFaqCache()
+  fireAndForget(purgeFaqCache(), { operation: 'purgeFaqCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
   return createSuccess('質問を作成しました', { id: item.id })
 })
@@ -420,7 +422,7 @@ export const updateFaqItem = withPermission<
   updateTag(CACHE_TAGS.FAQ)
 
   // Cloudflare CDN キャッシュパージ
-  void purgeFaqCache()
+  fireAndForget(purgeFaqCache(), { operation: 'purgeFaqCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
   return createSuccess('質問を更新しました')
 })
@@ -447,7 +449,7 @@ export const deleteFaqItem = withPermission<[id: string], void>(
   updateTag(CACHE_TAGS.FAQ)
 
   // Cloudflare CDN キャッシュパージ
-  void purgeFaqCache()
+  fireAndForget(purgeFaqCache(), { operation: 'purgeFaqCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
   return createSuccess('質問を削除しました')
 })
@@ -471,7 +473,7 @@ export const reorderFaqItems = withPermission<
   updateTag(CACHE_TAGS.FAQ)
 
   // Cloudflare CDN キャッシュパージ
-  void purgeFaqCache()
+  fireAndForget(purgeFaqCache(), { operation: 'purgeFaqCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
   return createSuccess('順序を更新しました')
 })
@@ -485,6 +487,7 @@ export const toggleFaqItemPublished = withPermission<[id: string], void>(
 )(async (user, id): Promise<ActionResult<void>> => {
   const item = await prisma.faqItem.findUnique({
     where: { id },
+    select: { id: true, isPublished: true },
   })
 
   if (!item) {
@@ -499,7 +502,7 @@ export const toggleFaqItemPublished = withPermission<[id: string], void>(
   updateTag(CACHE_TAGS.FAQ)
 
   // Cloudflare CDN キャッシュパージ
-  void purgeFaqCache()
+  fireAndForget(purgeFaqCache(), { operation: 'purgeFaqCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
   return createSuccess('公開状態を変更しました')
 })

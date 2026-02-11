@@ -7,6 +7,7 @@
  */
 
 import { useState, useTransition } from 'react'
+import { useConfirm } from '@/admin/contexts/confirm-context'
 import {
   Button,
   Card,
@@ -40,6 +41,7 @@ interface GoogleMapsSectionProps {
 // =============================================================================
 
 export function GoogleMapsSection({ config }: GoogleMapsSectionProps) {
+  const confirm = useConfirm()
   const { handleResult, refresh } = useRefreshOnSuccess()
   const [isPending, startTransition] = useTransition()
   const [isTesting, setIsTesting] = useState(false)
@@ -105,8 +107,14 @@ export function GoogleMapsSection({ config }: GoogleMapsSectionProps) {
     }
   }
 
-  const handleClearKeys = () => {
-    if (!confirm('Google Maps APIキーをクリアしますか？')) return
+  const handleClearKeys = async () => {
+    const confirmed = await confirm({
+      title: 'APIキーをクリアしますか？',
+      description: 'Google Maps APIキーをクリアしますか？',
+      confirmLabel: 'クリア',
+      variant: 'destructive',
+    })
+    if (!confirmed) return
 
     startTransition(async () => {
       const result = await clearGoogleMapsKeys()
@@ -123,7 +131,7 @@ export function GoogleMapsSection({ config }: GoogleMapsSectionProps) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <svg
-            className="h-5 w-5 text-green-600"
+            className="h-5 w-5 text-success"
             viewBox="0 0 24 24"
             fill="currentColor"
           >
@@ -180,8 +188,8 @@ export function GoogleMapsSection({ config }: GoogleMapsSectionProps) {
             <div className="flex items-center gap-2">
               {config.connectionStatus === 'connected' ? (
                 <>
-                  <span className="h-2 w-2 rounded-full bg-green-500" />
-                  <span className="text-sm font-medium text-green-700">
+                  <span className="h-2 w-2 rounded-full bg-success" />
+                  <span className="text-sm font-medium text-success">
                     接続済み
                   </span>
                 </>
@@ -206,7 +214,7 @@ export function GoogleMapsSection({ config }: GoogleMapsSectionProps) {
         {testResult && (
           <StatusBanner success={testResult.success}>
             <p
-              className={`text-sm ${testResult.success ? 'text-green-700' : 'text-destructive'}`}
+              className={`text-sm ${testResult.success ? 'text-success' : 'text-destructive'}`}
             >
               {testResult.message}
             </p>

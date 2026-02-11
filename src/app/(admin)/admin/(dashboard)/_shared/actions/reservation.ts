@@ -42,7 +42,8 @@ import { checkReadPermissionFor } from '@/admin/lib/permissions'
 import { checkReservationOverlap } from '@/shared/lib/reservation'
 import { adminReservationSchema, type AdminReservationInput } from '@/admin/lib/validations/admin-reservation'
 import { extractFieldErrors } from '@/shared/lib/action-helpers'
-import { calculateReservationPrice, parseDurationDiscountRules, getDiscountCombinationModeOrDefault } from '@/shared/lib/pricing'
+import { calculateReservationPrice, parseDurationDiscountRules } from '@/shared/lib/pricing'
+import { getValidDiscountCombinationMode } from '@/shared/lib/validations/enums'
 import { incrementCouponUsage, validateCouponCode } from '@/shared/actions/coupon'
 
 // =============================================================================
@@ -689,22 +690,30 @@ export const createAdminReservation = withPermission<[AdminReservationInput]>(
   const startDateTime = new Date(`${date}T${startTime}:00`)
   const endDateTime = new Date(`${date}T${endTime}:00`)
 
-  // スペースの存在確認と料金情報取得
-  const space = await prisma.space.findUnique({
-    where: { id: spaceId, isActive: true },
-    select: { id: true, name: true, address: true, hourlyPrice: true },
-  })
+  // スペース確認・重複チェック・割引設定を並列取得
+  const [space, overlapCheck, settings] = await Promise.all([
+    prisma.space.findUnique({
+      where: { id: spaceId, isActive: true },
+      select: { id: true, name: true, address: true, hourlyPrice: true },
+    }),
+    checkReservationOverlap({
+      spaceId,
+      startTime: startDateTime,
+      endTime: endDateTime,
+    }),
+    prisma.settings.findUnique({
+      where: { id: 'singleton' },
+      select: {
+        durationDiscountEnabled: true,
+        durationDiscountRules: true,
+        discountCombinationMode: true,
+      },
+    }),
+  ])
 
   if (!space) {
     return createFailure('指定されたスペースが見つかりません')
   }
-
-  // 予約重複チェック
-  const overlapCheck = await checkReservationOverlap({
-    spaceId,
-    startTime: startDateTime,
-    endTime: endDateTime,
-  })
 
   if (overlapCheck.hasOverlap) {
     return createFailure('選択された時間帯は既に予約されています。別の時間帯をお選びください。')
@@ -714,16 +723,6 @@ export const createAdminReservation = withPermission<[AdminReservationInput]>(
   const hours = (endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60 * 60)
   const hourlyPrice = Number(space.hourlyPrice)
   const basePrice = Math.floor(hourlyPrice * hours)
-
-  // 割引設定を取得
-  const settings = await prisma.settings.findUnique({
-    where: { id: 'singleton' },
-    select: {
-      durationDiscountEnabled: true,
-      durationDiscountRules: true,
-      discountCombinationMode: true,
-    },
-  })
 
   // クーポン検証
   let validatedCoupon: {
@@ -751,7 +750,7 @@ export const createAdminReservation = withPermission<[AdminReservationInput]>(
     durationRules: parseDurationDiscountRules(settings?.durationDiscountRules),
     durationDiscountEnabled: settings?.durationDiscountEnabled ?? false,
     coupon: validatedCoupon,
-    combinationMode: getDiscountCombinationModeOrDefault(settings?.discountCombinationMode),
+    combinationMode: getValidDiscountCombinationMode(settings?.discountCombinationMode),
     showWarning: false,
   })
 

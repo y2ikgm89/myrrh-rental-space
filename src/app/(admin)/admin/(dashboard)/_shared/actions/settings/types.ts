@@ -4,7 +4,18 @@
  * @module admin/actions/settings/types
  */
 
-import type { LayoutWidth } from '@/shared/generated/prisma/enums'
+import type {
+  LayoutWidth,
+  AnalyticsType,
+  TaxDisplayMode,
+  TaxInputMode,
+  AnnouncementBarAnimation,
+  AnnouncementBarDesignStyle,
+  CalendarSyncMethod,
+  PostPermalinkStructure,
+  HeaderScrollBehavior,
+  HeaderBackgroundMode,
+} from '@/shared/generated/prisma/enums'
 import type {
   BusinessTimeSlot,
   BusinessHoursDay,
@@ -52,7 +63,6 @@ export type SettingsData = {
   regularHolidays: string[] | null
   specialHolidays: string[] | null
   holidayNotice: string | null
-  defaultBusinessHours: BusinessHours | null
   // Email Settings
   senderEmail: string | null
   senderName: string | null
@@ -63,7 +73,7 @@ export type SettingsData = {
   defaultOgpTitle: string | null
   defaultOgpDescription: string | null
   // Analytics Settings
-  analyticsType: string | null
+  analyticsType: AnalyticsType | null
   googleAnalyticsId: string | null
   googleTagManagerId: string | null
   googleSearchConsoleId: string | null
@@ -85,9 +95,9 @@ export type SettingsData = {
   // Tax Settings (消費税設定)
   taxStandardRate: number
   taxReducedRate: number
-  taxDisplayModeAdmin: string
-  taxDisplayModePublic: string
-  taxInputMode: string
+  taxDisplayModeAdmin: TaxDisplayMode
+  taxDisplayModePublic: TaxDisplayMode
+  taxInputMode: TaxInputMode
   // Terms Agreement Settings
   termsAgreementEnabled: boolean
   termsAgreementText: string | null
@@ -115,13 +125,13 @@ export type SettingsData = {
   cookieConsentRejectText: string | null
   cookieConsentPolicyUrl: string | null
   // Announcement Bar Carousel Settings
-  announcementBarAnimation: string
+  announcementBarAnimation: AnnouncementBarAnimation
   announcementBarDuration: number
   announcementBarAutoPlay: boolean
   announcementBarPauseOnHover: boolean
   announcementBarShowArrows: boolean
   announcementBarShowIndicator: boolean
-  announcementBarDesignStyle: string
+  announcementBarDesignStyle: AnnouncementBarDesignStyle
   // Announcement Bar Common Color Settings
   announcementBarBgColor: string | null
   announcementBarTextColor: string | null
@@ -143,7 +153,7 @@ export type SettingsData = {
   addToCalendarLinksEnabled: boolean
   // Two-Way Sync Settings
   googleCalendarTwoWaySyncEnabled: boolean
-  googleCalendarSyncMethod: string
+  googleCalendarSyncMethod: CalendarSyncMethod
   googleCalendarPollingIntervalMin: number
   googleCalendarLastSyncedAt: Date | null
   googleCalendarWebhookActive: boolean
@@ -158,9 +168,20 @@ export type SettingsData = {
   sidebarWidgets: unknown // JSON型（SidebarWidgetsとしてパース）
   sidebarRecentCount: number
   sidebarPopularCount: number
+  // MEO Settings (ローカル検索最適化)
+  latitude: number | null
+  longitude: number | null
+  priceRange: string | null
+  googleBusinessPlaceId: string | null
+  googleReviewUrl: string | null
+  businessAttributes: Record<string, boolean> | null
+  paymentAccepted: string | null
   // Permalink Settings
-  postPermalinkStructure: string | null
+  postPermalinkStructure: PostPermalinkStructure | null
   postUrlPrefixEnabled: boolean
+  // Header Settings
+  headerScrollBehavior: HeaderScrollBehavior
+  headerBackgroundMode: HeaderBackgroundMode
   createdAt: Date
   updatedAt: Date
 }

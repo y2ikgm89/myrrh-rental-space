@@ -7,7 +7,7 @@
  * アクセシビリティ対応（role="radiogroup", role="radio", aria-checked）
  */
 
-import { useCallback, useId, type ReactNode } from 'react'
+import { useId, type ReactNode } from 'react'
 import { cn } from '@/shared/lib/utils'
 
 // =============================================================================
@@ -57,52 +57,46 @@ function SelectionBox({
 }: SelectionBoxProps) {
   const groupId = useId()
 
-  const handleSelect = useCallback(
-    (optionValue: string) => {
-      if (!disabled) {
+  const handleSelect = (optionValue: string) => {
+    if (!disabled) {
+      onChange(optionValue)
+    }
+  }
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, optionValue: string) => {
+    if (disabled) return
+
+    const currentIndex = options.findIndex((opt) => opt.value === optionValue)
+    let nextIndex: number | null = null
+
+    switch (event.key) {
+      case 'ArrowDown':
+      case 'ArrowRight':
+        event.preventDefault()
+        nextIndex = (currentIndex + 1) % options.length
+        break
+      case 'ArrowUp':
+      case 'ArrowLeft':
+        event.preventDefault()
+        nextIndex = (currentIndex - 1 + options.length) % options.length
+        break
+      case ' ':
+      case 'Enter':
+        event.preventDefault()
         onChange(optionValue)
-      }
-    },
-    [disabled, onChange]
-  )
+        return
+    }
 
-  const handleKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLButtonElement>, optionValue: string) => {
-      if (disabled) return
-
-      const currentIndex = options.findIndex((opt) => opt.value === optionValue)
-      let nextIndex: number | null = null
-
-      switch (event.key) {
-        case 'ArrowDown':
-        case 'ArrowRight':
-          event.preventDefault()
-          nextIndex = (currentIndex + 1) % options.length
-          break
-        case 'ArrowUp':
-        case 'ArrowLeft':
-          event.preventDefault()
-          nextIndex = (currentIndex - 1 + options.length) % options.length
-          break
-        case ' ':
-        case 'Enter':
-          event.preventDefault()
-          onChange(optionValue)
-          return
-      }
-
-      if (nextIndex !== null) {
-        const nextOption = options[nextIndex]
-        onChange(nextOption.value)
-        // フォーカスを次の要素に移動
-        const nextButton = document.querySelector(
-          `[data-selection-box-id="${groupId}"][data-value="${nextOption.value}"]`
-        ) as HTMLButtonElement | null
-        nextButton?.focus()
-      }
-    },
-    [disabled, groupId, onChange, options]
-  )
+    if (nextIndex !== null) {
+      const nextOption = options[nextIndex]
+      onChange(nextOption.value)
+      // フォーカスを次の要素に移動
+      const nextButton = document.querySelector(
+        `[data-selection-box-id="${groupId}"][data-value="${nextOption.value}"]`
+      ) as HTMLButtonElement | null
+      nextButton?.focus()
+    }
+  }
 
   const gridColumnsClass = {
     1: 'grid-cols-1',

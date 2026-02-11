@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { seoOgpFieldsSchema, defaultSeoOgpValues } from '@/shared/lib/validations/seo'
-import type { SpaceDiscountType, DurationDiscountOverride } from '@/shared/lib/pricing'
+import { DiscountType, DurationDiscountOverride, TaxRateType } from '@/shared/generated/prisma/enums'
 
 /**
  * スペースフォーム用バリデーションスキーマ
@@ -26,12 +26,12 @@ const facilitiesSchema = z
 /**
  * スペース割引タイプ
  */
-export const spaceDiscountTypeSchema = z.enum(['none', 'percentage', 'fixed'])
+export const spaceDiscountTypeSchema = z.enum(DiscountType)
 
 /**
  * 長時間割引オーバーライド設定
  */
-export const durationDiscountOverrideSchema = z.enum(['inherit', 'enabled', 'disabled'])
+export const durationDiscountOverrideSchema = z.enum(DurationDiscountOverride)
 
 /**
  * スペース作成・編集フォームスキーマ
@@ -97,16 +97,16 @@ export const spaceFormSchema = z
     locationId: z.string().uuid({ error: '場所IDが無効です' }).optional().nullable(),
     categoryId: z.string().uuid({ error: 'カテゴリーIDが無効です' }).optional().nullable(),
     // 割引設定
-    discountType: spaceDiscountTypeSchema.default('none'),
+    discountType: spaceDiscountTypeSchema.default(DiscountType.none),
     discountValue: z
       .number()
       .min(0, { error: '割引値は0以上で入力してください' })
       .max(1000000, { error: '割引値は1000000以下で入力してください' })
       .optional()
       .nullable(),
-    durationDiscountOverride: durationDiscountOverrideSchema.default('inherit'),
+    durationDiscountOverride: durationDiscountOverrideSchema.default(DurationDiscountOverride.inherit),
     // 税率設定
-    taxRateType: z.enum(['standard', 'reduced']).default('standard'),
+    taxRateType: z.enum(TaxRateType).default(TaxRateType.standard),
   })
   .merge(seoOgpFieldsSchema)
 
@@ -156,11 +156,11 @@ export const defaultSpaceFormValues: SpaceFormInput = {
   locationId: null,
   categoryId: null,
   // 割引設定
-  discountType: 'none',
+  discountType: DiscountType.none,
   discountValue: null,
-  durationDiscountOverride: 'inherit',
+  durationDiscountOverride: DurationDiscountOverride.inherit,
   // 税率設定
-  taxRateType: 'standard',
+  taxRateType: TaxRateType.standard,
   ...defaultSeoOgpValues,
 }
 
@@ -195,11 +195,11 @@ export type SpaceWithStats = {
   locationId: string | null
   categoryId: string | null
   // 割引設定
-  discountType: SpaceDiscountType
+  discountType: DiscountType
   discountValue: number | null
   durationDiscountOverride: DurationDiscountOverride
   // 税率設定
-  taxRateType: 'standard' | 'reduced'
+  taxRateType: TaxRateType
   // SEO/OGP
   metaDescription: string | null
   metaKeywords: string | null

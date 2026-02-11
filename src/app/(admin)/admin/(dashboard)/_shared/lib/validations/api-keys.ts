@@ -17,7 +17,7 @@ export const resendSettingsSchema = z.object({
     .nullable()
     .optional()
     .refine((val) => !val || val.startsWith('re_'), {
-      message: 'Resend APIキーは re_ で始まる必要があります',
+      error: 'Resend APIキーは re_ で始まる必要があります',
     }),
 })
 
@@ -60,7 +60,7 @@ export const googleMapsSettingsSchema = z.object({
     .nullable()
     .optional()
     .refine((val) => !val || val.startsWith('AIza'), {
-      message: 'Google Maps APIキーは AIza で始まる必要があります',
+      error: 'Google Maps APIキーは AIza で始まる必要があります',
     }),
 })
 
@@ -99,6 +99,17 @@ export function isValidCloudflareZoneId(zoneId: string): boolean {
 export function isValidCloudflareApiToken(token: string): boolean {
   return token.length >= 40
 }
+
+// =============================================================================
+// Google OAuth
+// =============================================================================
+
+export const googleOAuthSettingsSchema = z.object({
+  googleOAuthClientId: z.string().max(200).nullable().optional(),
+  googleOAuthClientSecret: z.string().max(200).nullable().optional(),
+})
+
+export type GoogleOAuthSettingsInput = z.infer<typeof googleOAuthSettingsSchema>
 
 // =============================================================================
 // Custom API Keys

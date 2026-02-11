@@ -18,29 +18,39 @@ import {
   Quote,
   MapPin,
   Code,
+  Layers,
+  Lightbulb,
+  LayoutList,
+  Star,
+  Instagram,
 } from 'lucide-react'
-import { PageSectionType } from '@/shared/lib/validations/page-section'
+import { SectionType } from '@/shared/lib/validations/section'
 
 /**
  * セクションタイプからアイコンコンポーネントを取得
  */
-export const sectionTypeIconComponents: Record<PageSectionType, LucideIcon> = {
-  [PageSectionType.HERO]: Image,
-  [PageSectionType.CUSTOM]: FileText,
-  [PageSectionType.CONTACT_FORM]: Mail,
-  [PageSectionType.FAQ_LIST]: HelpCircle,
-  [PageSectionType.SPACE_LIST]: LayoutGrid,
-  [PageSectionType.NEWS_LIST]: Newspaper,
-  [PageSectionType.POST_LIST]: FileEdit,
-  [PageSectionType.CTA]: MousePointerClick,
-  [PageSectionType.GALLERY]: Images,
-  [PageSectionType.TESTIMONIAL]: Quote,
-  [PageSectionType.MAP]: MapPin,
-  [PageSectionType.EMBED]: Code,
+export const sectionTypeIconComponents: Record<SectionType, LucideIcon> = {
+  [SectionType.HERO]: Image,
+  [SectionType.HERO_PARALLAX]: Layers,
+  [SectionType.CUSTOM]: FileText,
+  [SectionType.CONCEPT]: Lightbulb,
+  [SectionType.CONTACT_FORM]: Mail,
+  [SectionType.FAQ_LIST]: HelpCircle,
+  [SectionType.SPACE_LIST]: LayoutGrid,
+  [SectionType.SPACE_SHOWCASE]: LayoutList,
+  [SectionType.NEWS_LIST]: Newspaper,
+  [SectionType.POST_LIST]: FileEdit,
+  [SectionType.FEATURES]: Star,
+  [SectionType.CTA]: MousePointerClick,
+  [SectionType.GALLERY]: Images,
+  [SectionType.TESTIMONIAL]: Quote,
+  [SectionType.MAP]: MapPin,
+  [SectionType.EMBED]: Code,
+  [SectionType.INSTAGRAM]: Instagram,
 }
 
 interface SectionTypeIconProps {
-  type: PageSectionType
+  type: SectionType
   className?: string
 }
 

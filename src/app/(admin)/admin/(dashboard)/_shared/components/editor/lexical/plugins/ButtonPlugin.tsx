@@ -8,7 +8,7 @@
 
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { $getSelection, $isRangeSelection, $insertNodes } from 'lexical'
 import {
@@ -62,8 +62,8 @@ const ALIGNMENT_OPTIONS = [
 export function useButtonDialog() {
   const [isButtonDialogOpen, setIsButtonDialogOpen] = useState(false)
 
-  const openButtonDialog = useCallback(() => setIsButtonDialogOpen(true), [])
-  const closeButtonDialog = useCallback(() => setIsButtonDialogOpen(false), [])
+  const openButtonDialog = () => setIsButtonDialogOpen(true)
+  const closeButtonDialog = () => setIsButtonDialogOpen(false)
 
   return {
     isButtonDialogOpen,
@@ -94,16 +94,16 @@ export function ButtonPlugin({ isOpen, onClose }: ButtonPluginProps) {
   const [alignment, setAlignment] = useState<ButtonAlignment>('center')
   const [openInNewTab, setOpenInNewTab] = useState(false)
 
-  const resetForm = useCallback(() => {
+  const resetForm = () => {
     setText('ボタン')
     setHref('')
     setVariant('primary')
     setSize('md')
     setAlignment('center')
     setOpenInNewTab(false)
-  }, [])
+  }
 
-  const handleInsert = useCallback(() => {
+  const handleInsert = () => {
     if (!text.trim() || !href.trim()) return
 
     editor.update(() => {
@@ -124,12 +124,12 @@ export function ButtonPlugin({ isOpen, onClose }: ButtonPluginProps) {
 
     resetForm()
     onClose()
-  }, [editor, text, href, variant, size, alignment, openInNewTab, resetForm, onClose])
+  }
 
-  const handleClose = useCallback(() => {
+  const handleClose = () => {
     resetForm()
     onClose()
-  }, [resetForm, onClose])
+  }
 
   const isValid = text.trim() !== '' && href.trim() !== ''
 

@@ -1,7 +1,8 @@
 'use client'
 
 import { Search } from 'lucide-react'
-import { useQueryStates, parseAsString, parseAsInteger, parseAsBoolean } from 'nuqs'
+import { useQueryStates, parseAsString, parseAsInteger } from 'nuqs'
+import { parseAsBoolean } from '@/shared/lib/nuqs'
 import { useRef, useEffect } from 'react'
 import { Checkbox, Label, Input } from '@/admin/components/ui'
 

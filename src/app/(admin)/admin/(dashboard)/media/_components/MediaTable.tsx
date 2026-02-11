@@ -40,7 +40,7 @@ export function MediaTable({ items }: Props) {
 
   return (
     <>
-      <div className="rounded-lg border bg-white overflow-hidden">
+      <div className="rounded-lg border bg-card overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>

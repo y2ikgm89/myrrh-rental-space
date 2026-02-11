@@ -7,6 +7,7 @@
  */
 
 import { useState, useTransition } from 'react'
+import { useConfirm } from '@/admin/contexts/confirm-context'
 import {
   Button,
   Card,
@@ -42,6 +43,7 @@ interface GoogleCalendarSectionProps {
 // =============================================================================
 
 export function GoogleCalendarSection({ settings }: GoogleCalendarSectionProps) {
+  const confirm = useConfirm()
   const { handleResult, refresh } = useRefreshOnSuccess()
   const [isPending, startTransition] = useTransition()
   const [isTesting, setIsTesting] = useState(false)
@@ -121,8 +123,14 @@ export function GoogleCalendarSection({ settings }: GoogleCalendarSectionProps) 
     }
   }
 
-  const handleClearCredentials = () => {
-    if (!confirm('サービスアカウント認証情報をクリアしますか？')) return
+  const handleClearCredentials = async () => {
+    const confirmed = await confirm({
+      title: '認証情報をクリアしますか？',
+      description: 'サービスアカウント認証情報をクリアしますか？',
+      confirmLabel: 'クリア',
+      variant: 'destructive',
+    })
+    if (!confirmed) return
 
     startTransition(async () => {
       const result = await clearGoogleCalendarServiceAccount()
@@ -243,8 +251,8 @@ export function GoogleCalendarSection({ settings }: GoogleCalendarSectionProps) 
               <div className="flex items-center gap-2">
                 {settings.googleCalendarConnectionStatus === 'connected' ? (
                   <>
-                    <span className="h-2 w-2 rounded-full bg-green-500" />
-                    <span className="text-sm font-medium text-green-700">接続済み</span>
+                    <span className="h-2 w-2 rounded-full bg-success" />
+                    <span className="text-sm font-medium text-success">接続済み</span>
                   </>
                 ) : (
                   <>
@@ -264,7 +272,7 @@ export function GoogleCalendarSection({ settings }: GoogleCalendarSectionProps) 
           {/* 接続テスト結果 */}
           {testResult && (
             <StatusBanner success={testResult.success}>
-              <p className={`text-sm ${testResult.success ? 'text-green-700' : 'text-destructive'}`}>
+              <p className={`text-sm ${testResult.success ? 'text-success' : 'text-destructive'}`}>
                 {testResult.message}
               </p>
               {testResult.calendarName && (

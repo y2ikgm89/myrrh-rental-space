@@ -34,7 +34,7 @@ export const updateNewsSchema = z
     slug: newsSlugSchema,
     title: z.string().min(1, { error: 'タイトルは必須です' }).max(200, { error: 'タイトルは200文字以内で入力してください' }),
     content: z.string().min(1, { error: '本文は必須です' }),
-    contentWidth: z.nativeEnum(LayoutWidth).nullable().optional(),
+    contentWidth: z.enum(LayoutWidth).nullable().optional(),
     contentWidthCustom: z.number().int().min(320).max(1920).nullable().optional(),
   })
   .merge(seoOgpFieldsSchema)

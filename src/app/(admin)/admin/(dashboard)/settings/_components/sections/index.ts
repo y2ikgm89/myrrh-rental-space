@@ -18,6 +18,7 @@ export { StripeSection } from './StripeSection'
 
 // Layout Settings
 export { LayoutSection } from './LayoutSection'
+export { HeaderSection } from './HeaderSection'
 export { SidebarSection } from './SidebarSection'
 
 // Posts Settings
@@ -27,12 +28,16 @@ export { PermalinkSection } from './PermalinkSection'
 export { ResendSection } from './ResendSection'
 export { TurnstileSection } from './TurnstileSection'
 export { GoogleMapsSection } from './GoogleMapsSection'
+export { GoogleOAuthSection } from './GoogleOAuthSection'
 export { CloudflareSection } from './CloudflareSection'
 export { GoogleCalendarSection } from './GoogleCalendarSection'
 export { ICalFeedSection } from './ICalFeedSection'
 export { TwoWaySyncSection } from './TwoWaySyncSection'
 export { CustomApiKeysSection } from './CustomApiKeysSection'
 export { InstagramSection } from './InstagramSection'
+
+// MEO Settings
+export { MeoSection } from './MeoSection'
 
 // 既存コンポーネント（親ディレクトリから再エクスポート）
 export { BusinessInfoSection } from '../BusinessInfoSection'

@@ -16,11 +16,11 @@ import {
 
 type Props = {
   searchParams: {
-    type?: string
-    usage?: string
-    search?: string
-    page?: string
-    view?: string
+    type: string
+    usage: string
+    search: string
+    view: string
+    page: number
   }
 }
 
@@ -28,11 +28,11 @@ export async function MediaListWrapper({ searchParams }: Props) {
   const filters: MediaFilters = {
     type: parseMediaTypeFilter(searchParams.type),
     usage: parseMediaUsageFilter(searchParams.usage),
-    search: searchParams.search,
+    search: searchParams.search || undefined,
   }
 
   const pagination: MediaPagination = {
-    page: searchParams.page ? parseInt(searchParams.page, 10) : 1,
+    page: searchParams.page,
     limit: 24,
   }
 

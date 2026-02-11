@@ -24,7 +24,7 @@ import {
 } from '@/admin/components/ui'
 import { updateTaxSettings, type TaxSettingsData } from '@/admin/actions/settings'
 import { useRefreshOnSuccess } from '../hooks'
-import type { TaxDisplayMode } from '@/shared/lib/pricing'
+import { TaxDisplayMode, TaxInputMode } from '@/shared/generated/prisma/enums'
 
 interface TaxSectionProps {
   settings: TaxSettingsData
@@ -129,7 +129,7 @@ export function TaxSection({ settings }: TaxSectionProps) {
             <Label>価格の入力方法</Label>
             <Select
               value={formData.taxInputMode}
-              onValueChange={(value: 'tax_excluded' | 'tax_included') =>
+              onValueChange={(value: TaxInputMode) =>
                 setFormData({ ...formData, taxInputMode: value })
               }
               disabled={isPending}
@@ -138,16 +138,16 @@ export function TaxSection({ settings }: TaxSectionProps) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="tax_excluded">
+                <SelectItem value={TaxInputMode.tax_excluded}>
                   税抜き価格で入力
                 </SelectItem>
-                <SelectItem value="tax_included">
+                <SelectItem value={TaxInputMode.tax_included}>
                   税込み価格で入力
                 </SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              {formData.taxInputMode === 'tax_excluded'
+              {formData.taxInputMode === TaxInputMode.tax_excluded
                 ? '入力した価格は税抜き価格として保存され、表示時に税込み価格が計算されます'
                 : '入力した価格は税込み価格として扱われ、内部で税抜き価格に換算して保存されます'}
             </p>
@@ -177,9 +177,9 @@ export function TaxSection({ settings }: TaxSectionProps) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="tax_excluded">税抜き価格のみ</SelectItem>
-                <SelectItem value="tax_included">税込み価格のみ</SelectItem>
-                <SelectItem value="both">両方表示</SelectItem>
+                <SelectItem value={TaxDisplayMode.tax_excluded}>税抜き価格のみ</SelectItem>
+                <SelectItem value={TaxDisplayMode.tax_included}>税込み価格のみ</SelectItem>
+                <SelectItem value={TaxDisplayMode.both}>両方表示</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -197,9 +197,9 @@ export function TaxSection({ settings }: TaxSectionProps) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="tax_excluded">税抜き価格のみ</SelectItem>
-                <SelectItem value="tax_included">税込み価格のみ</SelectItem>
-                <SelectItem value="both">両方表示</SelectItem>
+                <SelectItem value={TaxDisplayMode.tax_excluded}>税抜き価格のみ</SelectItem>
+                <SelectItem value={TaxDisplayMode.tax_included}>税込み価格のみ</SelectItem>
+                <SelectItem value={TaxDisplayMode.both}>両方表示</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">

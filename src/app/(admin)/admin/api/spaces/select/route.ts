@@ -6,6 +6,7 @@
  */
 
 import { NextResponse } from 'next/server'
+import { headers } from 'next/headers'
 import { checkPermission } from '@/admin/lib/action-auth'
 import { getSpacesForSelect } from '@/admin/actions/space'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
@@ -18,6 +19,9 @@ function getErrorStatus(message: string): number {
 }
 
 export async function GET(): Promise<NextResponse> {
+  // headers() を呼び出すことで Next.js に動的ルートと認識させる
+  await headers()
+
   try {
     const auth = await checkPermission('space', 'read')
     if (!auth.success) {

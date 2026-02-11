@@ -3,16 +3,17 @@
 /**
  * 新規ページ作成ダイアログ
  *
- * シンプルなページ作成モーダル
+ * - タイトルからスラッグ自動生成
+ * - リアルタイムスラッグ検証（debounce 500ms）
  */
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Plus, Loader2 } from 'lucide-react'
+import { Plus, Loader2, CheckCircle, XCircle } from 'lucide-react'
 import { Button } from '@/admin/components/ui'
 import {
   Dialog,
@@ -24,7 +25,7 @@ import {
 import { Input } from '@/admin/components/ui/input'
 import { Label } from '@/admin/components/ui/label'
 import { Textarea } from '@/admin/components/ui/textarea'
-import { createPage } from '@/admin/actions/page'
+import { createPage, checkPageSlugAvailability } from '@/admin/actions/page'
 import { logger } from '@/shared/lib/logger'
 
 const formSchema = z.object({
@@ -39,15 +40,37 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>
 
+/**
+ * タイトルからスラッグを自動生成
+ * 英数字のみ抽出してkebab-caseに変換
+ */
+function generateSlugFromTitle(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '') // 英数字・スペース・ハイフン以外を除去
+    .trim()
+    .replace(/\s+/g, '-') // スペース → ハイフン
+    .replace(/-+/g, '-') // 連続ハイフン → 単一
+    .replace(/^-|-$/g, '') // 先頭・末尾のハイフン除去
+}
+
+type SlugStatus = 'idle' | 'checking' | 'available' | 'unavailable'
+
 export function CreatePageDialog() {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const [isManualSlug, setIsManualSlug] = useState(false)
+  const [slugStatus, setSlugStatus] = useState<SlugStatus>('idle')
+  const [slugMessage, setSlugMessage] = useState('')
+  const slugCheckRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const {
     register,
     handleSubmit,
     reset,
+    control,
+    setValue,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -57,6 +80,54 @@ export function CreatePageDialog() {
       description: '',
     },
   })
+
+  const title = useWatch({ control, name: 'title' })
+  const slug = useWatch({ control, name: 'slug' })
+
+  // タイトル変更時にスラッグ自動生成
+  useEffect(() => {
+    if (!isManualSlug && title) {
+      const generated = generateSlugFromTitle(title)
+      if (generated) {
+        setValue('slug', generated, { shouldValidate: true })
+      }
+    }
+  }, [title, isManualSlug, setValue])
+
+  // スラッグ変更時にリアルタイム検証（debounce 500ms）
+  useEffect(() => {
+    if (slugCheckRef.current) {
+      clearTimeout(slugCheckRef.current)
+    }
+
+    if (!slug || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
+      startTransition(() => {
+        setSlugStatus('idle')
+        setSlugMessage('')
+      })
+      return
+    }
+
+    startTransition(() => {
+      setSlugStatus('checking')
+    })
+    slugCheckRef.current = setTimeout(async () => {
+      const result = await checkPageSlugAvailability(slug)
+      if (result.available) {
+        setSlugStatus('available')
+        setSlugMessage('')
+      } else {
+        setSlugStatus('unavailable')
+        setSlugMessage(result.message ?? 'このスラッグは使用できません')
+      }
+    }, 500)
+
+    return () => {
+      if (slugCheckRef.current) {
+        clearTimeout(slugCheckRef.current)
+      }
+    }
+  }, [slug])
 
   const onSubmit = (data: FormData) => {
     startTransition(async () => {
@@ -68,11 +139,11 @@ export function CreatePageDialog() {
           isPublished: false,
         })
 
-        if (result.success && result.slug) {
-          toast.success('ページを作成しました')
+        if (result.success) {
+          toast.success(result.message)
           setIsOpen(false)
           reset()
-          router.push(`/admin/pages/${result.slug}/edit`)
+          router.push(`/admin/pages/${result.data.slug}/edit`)
         } else if (!result.success) {
           toast.error(result.error || 'ページの作成に失敗しました')
         }
@@ -87,6 +158,9 @@ export function CreatePageDialog() {
     setIsOpen(open)
     if (!open) {
       reset()
+      setIsManualSlug(false)
+      setSlugStatus('idle')
+      setSlugMessage('')
     }
   }
 
@@ -105,25 +179,6 @@ export function CreatePageDialog() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="slug">
-              スラッグ <span className="text-destructive">*</span>
-            </Label>
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground">/</span>
-              <Input
-                id="slug"
-                placeholder="about-us"
-                {...register('slug')}
-                disabled={isPending}
-              />
-            </div>
-            {errors.slug && <p className="text-sm text-destructive">{errors.slug.message}</p>}
-            <p className="text-xs text-muted-foreground">
-              URLに使用されます（例: example.com/about-us）
-            </p>
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="title">
               タイトル <span className="text-destructive">*</span>
             </Label>
@@ -134,6 +189,46 @@ export function CreatePageDialog() {
               disabled={isPending}
             />
             {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="slug">
+              スラッグ <span className="text-destructive">*</span>
+            </Label>
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground">/</span>
+              <div className="relative flex-1">
+                <Input
+                  id="slug"
+                  placeholder="about-us"
+                  {...register('slug', {
+                    onChange: () => setIsManualSlug(true),
+                  })}
+                  disabled={isPending}
+                  className="pr-8"
+                />
+                {/* スラッグ検証ステータス */}
+                <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                  {slugStatus === 'checking' && (
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  )}
+                  {slugStatus === 'available' && (
+                    <CheckCircle className="h-4 w-4 text-success" />
+                  )}
+                  {slugStatus === 'unavailable' && (
+                    <XCircle className="h-4 w-4 text-destructive" />
+                  )}
+                </div>
+              </div>
+            </div>
+            {errors.slug && <p className="text-sm text-destructive">{errors.slug.message}</p>}
+            {slugStatus === 'unavailable' && slugMessage && (
+              <p className="text-sm text-destructive">{slugMessage}</p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              URLに使用されます（例: example.com/about-us）
+              {!isManualSlug && title && ' — タイトルから自動生成'}
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -159,7 +254,10 @@ export function CreatePageDialog() {
             >
               キャンセル
             </Button>
-            <Button type="submit" disabled={isPending}>
+            <Button
+              type="submit"
+              disabled={isPending || slugStatus === 'unavailable'}
+            >
               {isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />

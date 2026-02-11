@@ -14,11 +14,11 @@ const badgeVariants = tv({
         'border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80',
       outline: 'text-foreground',
       success:
-        'border-transparent bg-green-500 text-white hover:bg-green-600',
+        'border-transparent bg-success text-success-foreground hover:bg-success/80',
       warning:
-        'border-transparent bg-yellow-500 text-white hover:bg-yellow-600',
+        'border-transparent bg-warning text-warning-foreground hover:bg-warning/80',
       pending:
-        'border-transparent bg-blue-500 text-white hover:bg-blue-600',
+        'border-transparent bg-primary text-primary-foreground hover:bg-primary/80',
     },
   },
   defaultVariants: {

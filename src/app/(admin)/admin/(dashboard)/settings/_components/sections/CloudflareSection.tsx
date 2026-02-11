@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useConfirm } from '@/admin/contexts/confirm-context'
 import {
   Button,
   Card,
@@ -27,6 +28,7 @@ interface Props {
 }
 
 export function CloudflareSection({ config }: Props) {
+  const confirm = useConfirm()
   const { handleResult, refresh } = useRefreshOnSuccess()
   const [isPending, startTransition] = useTransition()
   const [isTesting, setIsTesting] = useState(false)
@@ -98,8 +100,14 @@ export function CloudflareSection({ config }: Props) {
     }
   }
 
-  const handleClearKeys = () => {
-    if (!confirm('Cloudflare設定をクリアしますか？')) return
+  const handleClearKeys = async () => {
+    const confirmed = await confirm({
+      title: '設定をクリアしますか？',
+      description: 'Cloudflare設定をクリアしますか？',
+      confirmLabel: 'クリア',
+      variant: 'destructive',
+    })
+    if (!confirmed) return
 
     startTransition(async () => {
       const result = await clearCloudflareKeys()
@@ -117,7 +125,7 @@ export function CloudflareSection({ config }: Props) {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <CloudIcon className="h-5 w-5 text-orange-500" />
+          <CloudIcon className="h-5 w-5 text-warning" />
           Cloudflare CDN
         </CardTitle>
         <CardDescription>
@@ -212,14 +220,14 @@ export function CloudflareSection({ config }: Props) {
               <span
                 className={`h-2 w-2 rounded-full ${
                   config.connectionStatus === 'connected'
-                    ? 'bg-green-500'
+                    ? 'bg-success'
                     : 'bg-destructive'
                 }`}
               />
               <span
                 className={`text-sm font-medium ${
                   config.connectionStatus === 'connected'
-                    ? 'text-green-700'
+                    ? 'text-success'
                     : 'text-destructive'
                 }`}
               >
@@ -237,7 +245,7 @@ export function CloudflareSection({ config }: Props) {
         {testResult && (
           <StatusBanner success={testResult.success}>
             <p
-              className={`text-sm ${testResult.success ? 'text-green-700' : 'text-destructive'}`}
+              className={`text-sm ${testResult.success ? 'text-success' : 'text-destructive'}`}
             >
               {testResult.message}
             </p>

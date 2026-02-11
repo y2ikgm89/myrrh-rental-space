@@ -18,6 +18,8 @@ import {
   SelectValue,
   Switch,
 } from '@/admin/components/ui'
+import { AnnouncementBarType } from '@/shared/generated/prisma/enums'
+import { isValidAnnouncementBarType } from '@/shared/lib/validations/enums'
 import type { BarDialogProps, DeleteDialogProps } from './types'
 
 export function BarDialog({
@@ -65,16 +67,20 @@ export function BarDialog({
               <Label htmlFor="type">タイプ</Label>
               <Select
                 value={formValues.type}
-                onValueChange={(value) => setValue('type', value as 'info' | 'warning' | 'promo')}
+                onValueChange={(value) => {
+                  if (isValidAnnouncementBarType(value)) {
+                    setValue('type', value)
+                  }
+                }}
                 disabled={isPending}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="info">お知らせ（青）</SelectItem>
-                  <SelectItem value="warning">重要（黄）</SelectItem>
-                  <SelectItem value="promo">キャンペーン（緑）</SelectItem>
+                  <SelectItem value={AnnouncementBarType.info}>お知らせ（青）</SelectItem>
+                  <SelectItem value={AnnouncementBarType.warning}>重要（黄）</SelectItem>
+                  <SelectItem value={AnnouncementBarType.promo}>キャンペーン（緑）</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">

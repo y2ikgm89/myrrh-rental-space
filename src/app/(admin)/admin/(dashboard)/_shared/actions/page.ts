@@ -22,6 +22,7 @@ import { prisma } from '@/shared/lib/prisma'
 import { verifyAdminSession } from '@/shared/lib/auth'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
 import { purgePageCache } from '@/shared/lib/cloudflare'
+import { fireAndForget } from '@/shared/lib/async-utils'
 import { checkSlugAvailability, getSlugErrorMessage } from '@/shared/lib/slug-validation'
 import {
   updatePageSchema,
@@ -33,34 +34,113 @@ import {
   type UpdatePageSeoInput,
   type CreatePageInput,
   type PageData,
-  type PageActionResult,
-} from '@/admin/lib/validations/page'
+} from '@/shared/lib/validations/page'
+import type { Prisma } from '@/shared/generated/prisma/client'
+import type { ActionResult } from '@/shared/types/server-actions'
 
 /**
  * 各専用管理ページで管理するページのスラッグ
  * これらはページ管理一覧には表示しない
+ * - home: ホームページ専用編集ページで管理（/admin/pages/homepage/edit）
  * - posts/news: 各専用管理ページでSEO設定を管理
  * - terms: Termsテーブルで管理（/admin/terms）
  */
-const PAGES_MANAGED_ELSEWHERE = ['posts', 'news', 'terms'] as const
+const PAGES_MANAGED_ELSEWHERE = ['home', 'posts', 'news', 'terms']
 
 /**
- * 管理画面用ページ一覧取得
- * @throws {Error} 認証が必要な場合
+ * ホームページセクションの最新更新日時を取得
  */
-export async function getPagesList(): Promise<PageData[]> {
+export async function getHomepageLastUpdated(): Promise<Date | null> {
   await verifyAdminSession()
 
-  const pages = await prisma.page.findMany({
-    where: {
-      isActive: true,
-      // posts/newsは各専用管理ページで管理するため除外
-      slug: { notIn: [...PAGES_MANAGED_ELSEWHERE] },
-    },
+  const latest = await prisma.section.findFirst({
+    where: { pageId: null },
     orderBy: { updatedAt: 'desc' },
+    select: { updatedAt: true },
   })
 
-  return pages
+  return latest?.updatedAt ?? null
+}
+
+/**
+ * ページ一覧取得パラメータ
+ */
+export type PagesListParams = {
+  query?: string
+  status?: string
+  type?: string
+  page?: number
+  perPage?: number
+  sortBy?: 'updatedAt' | 'title' | 'slug'
+  sortOrder?: 'asc' | 'desc'
+}
+
+/**
+ * ページ一覧取得結果
+ */
+export type PagesListResult = {
+  pages: PageData[]
+  total: number
+  page: number
+  perPage: number
+}
+
+/**
+ * 管理画面用ページ一覧取得（フィルタ・ページネーション対応）
+ * @throws {Error} 認証が必要な場合
+ */
+export async function getPagesList(params: PagesListParams = {}): Promise<PagesListResult> {
+  await verifyAdminSession()
+
+  const {
+    query,
+    status = 'all',
+    type = 'all',
+    page = 1,
+    perPage = 20,
+    sortBy = 'updatedAt',
+    sortOrder = 'desc',
+  } = params
+
+  // where条件を組み立て
+  const where: Prisma.PageWhereInput = {
+    isActive: true,
+    slug: { notIn: [...PAGES_MANAGED_ELSEWHERE] },
+  }
+
+  // テキスト検索
+  if (query) {
+    where.OR = [
+      { title: { contains: query, mode: 'insensitive' } },
+      { slug: { contains: query, mode: 'insensitive' } },
+    ]
+  }
+
+  // ステータスフィルター
+  if (status === 'published') {
+    where.isPublished = true
+  } else if (status === 'draft') {
+    where.isPublished = false
+  }
+
+  // 種別フィルター
+  if (type === 'system') {
+    where.isSystemPage = true
+  } else if (type === 'custom') {
+    where.isSystemPage = false
+  }
+
+  const [pages, total] = await Promise.all([
+    prisma.page.findMany({
+      where,
+      orderBy: { [sortBy]: sortOrder },
+      skip: (page - 1) * perPage,
+      take: perPage,
+    }),
+    prisma.page.count({ where }),
+  ])
+
+  return { pages, total, page, perPage }
 }
 
 /**
@@ -98,7 +178,7 @@ export async function getPageForPublic(slug: string): Promise<PageData | null> {
 export async function updatePage(
   slug: string,
   input: UpdatePageInput
-): Promise<PageActionResult> {
+): Promise<ActionResult> {
   try {
     await verifyAdminSession()
   } catch {
@@ -157,7 +237,7 @@ export async function updatePage(
     updateTag(getCacheTag.pages.detail(slug))
 
     // Cloudflare CDN キャッシュパージ
-    void purgePageCache(slug)
+    fireAndForget(purgePageCache(slug), { operation: 'purgePageCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
     return { success: true, message: 'ページを更新しました' }
   } catch (error) {
@@ -269,11 +349,35 @@ export async function ensureSystemPage(slug: string): Promise<PageData | null> {
 }
 
 /**
+ * スラッグの利用可否をチェック（クライアント用）
+ */
+export async function checkPageSlugAvailability(
+  slug: string
+): Promise<{ available: boolean; message?: string }> {
+  try {
+    await verifyAdminSession()
+  } catch {
+    return { available: false, message: 'ログインが必要です' }
+  }
+
+  if (!slug || slug.length === 0) {
+    return { available: false }
+  }
+
+  const slugCheck = await checkSlugAvailability(slug, { currentType: 'page' })
+  if (!slugCheck.available) {
+    return { available: false, message: getSlugErrorMessage(slugCheck.reason) }
+  }
+
+  return { available: true }
+}
+
+/**
  * 新規ページ作成
  */
 export async function createPage(
   input: CreatePageInput
-): Promise<PageActionResult & { slug?: string }> {
+): Promise<ActionResult<{ slug: string }>> {
   try {
     await verifyAdminSession()
   } catch {
@@ -327,12 +431,12 @@ export async function createPage(
     updateTag(CACHE_TAGS.PAGES)
 
     // Cloudflare CDN キャッシュパージ
-    void purgePageCache(page.slug)
+    fireAndForget(purgePageCache(page.slug), { operation: 'purgePageCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
     return {
       success: true,
       message: 'ページを作成しました',
-      slug: page.slug,
+      data: { slug: page.slug },
     }
   } catch (error) {
     logError(normalizeError(error), {
@@ -347,7 +451,7 @@ export async function createPage(
 /**
  * ページ削除（論理削除）
  */
-export async function deletePage(slug: string): Promise<PageActionResult> {
+export async function deletePage(slug: string): Promise<ActionResult> {
   try {
     await verifyAdminSession()
   } catch {
@@ -382,7 +486,7 @@ export async function deletePage(slug: string): Promise<PageActionResult> {
     updateTag(getCacheTag.pages.detail(slug))
 
     // Cloudflare CDN キャッシュパージ
-    void purgePageCache(slug)
+    fireAndForget(purgePageCache(slug), { operation: 'purgePageCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
     return { success: true, message: 'ページを削除しました' }
   } catch (error) {
@@ -400,7 +504,7 @@ export async function deletePage(slug: string): Promise<PageActionResult> {
  */
 export async function deletePagePermanently(
   slug: string
-): Promise<PageActionResult> {
+): Promise<ActionResult> {
   try {
     await verifyAdminSession()
   } catch {
@@ -431,7 +535,7 @@ export async function deletePagePermanently(
     updateTag(getCacheTag.pages.detail(slug))
 
     // Cloudflare CDN キャッシュパージ
-    void purgePageCache(slug)
+    fireAndForget(purgePageCache(slug), { operation: 'purgePageCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
     return { success: true, message: 'ページを完全に削除しました' }
   } catch (error) {
@@ -447,7 +551,7 @@ export async function deletePagePermanently(
 /**
  * ページ復元（論理削除からの復元）
  */
-export async function restorePage(slug: string): Promise<PageActionResult> {
+export async function restorePage(slug: string): Promise<ActionResult> {
   try {
     await verifyAdminSession()
   } catch {
@@ -479,7 +583,7 @@ export async function restorePage(slug: string): Promise<PageActionResult> {
     updateTag(CACHE_TAGS.PAGES)
 
     // Cloudflare CDN キャッシュパージ
-    void purgePageCache(slug)
+    fireAndForget(purgePageCache(slug), { operation: 'purgePageCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
     return { success: true, message: 'ページを復元しました' }
   } catch (error) {
@@ -511,7 +615,7 @@ export async function getDeletedPagesList(): Promise<PageData[]> {
  */
 export async function togglePagePublished(
   slug: string
-): Promise<PageActionResult> {
+): Promise<ActionResult> {
   try {
     await verifyAdminSession()
   } catch {
@@ -542,7 +646,7 @@ export async function togglePagePublished(
     updateTag(getCacheTag.pages.detail(slug))
 
     // Cloudflare CDN キャッシュパージ
-    void purgePageCache(slug)
+    fireAndForget(purgePageCache(slug), { operation: 'purgePageCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
     return {
       success: true,
@@ -559,12 +663,116 @@ export async function togglePagePublished(
 }
 
 /**
+ * ページ一括公開/非公開切り替え
+ */
+export async function bulkTogglePagePublished(
+  slugs: string[],
+  publish: boolean
+): Promise<ActionResult> {
+  try {
+    await verifyAdminSession()
+  } catch {
+    return { success: false, error: 'ログインが必要です' }
+  }
+
+  if (slugs.length === 0) {
+    return { success: false, error: '対象ページが選択されていません' }
+  }
+
+  try {
+    await prisma.page.updateMany({
+      where: {
+        slug: { in: slugs },
+        isActive: true,
+      },
+      data: {
+        isPublished: publish,
+        publishedAt: publish ? new Date() : null,
+      },
+    })
+
+    // キャッシュ無効化
+    updateTag(CACHE_TAGS.PAGES)
+    for (const slug of slugs) {
+      updateTag(getCacheTag.pages.detail(slug))
+    }
+
+    return {
+      success: true,
+      message: publish
+        ? `${slugs.length}件のページを公開しました`
+        : `${slugs.length}件のページを非公開にしました`,
+    }
+  } catch (error) {
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'bulkTogglePagePublished', slugs },
+    })
+    return { success: false, error: '一括操作中にエラーが発生しました' }
+  }
+}
+
+/**
+ * ページ一括削除（論理削除）
+ */
+export async function bulkDeletePages(
+  slugs: string[]
+): Promise<ActionResult> {
+  try {
+    await verifyAdminSession()
+  } catch {
+    return { success: false, error: 'ログインが必要です' }
+  }
+
+  if (slugs.length === 0) {
+    return { success: false, error: '対象ページが選択されていません' }
+  }
+
+  // システムページは除外
+  const deletableSlugs = slugs.filter((slug) => !isSystemPageSlug(slug))
+  if (deletableSlugs.length === 0) {
+    return { success: false, error: 'システムページは削除できません' }
+  }
+
+  try {
+    await prisma.page.updateMany({
+      where: {
+        slug: { in: deletableSlugs },
+        isActive: true,
+      },
+      data: {
+        isActive: false,
+        isPublished: false,
+      },
+    })
+
+    updateTag(CACHE_TAGS.PAGES)
+    for (const slug of deletableSlugs) {
+      updateTag(getCacheTag.pages.detail(slug))
+    }
+
+    return {
+      success: true,
+      message: `${deletableSlugs.length}件のページを削除しました`,
+    }
+  } catch (error) {
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'bulkDeletePages', slugs },
+    })
+    return { success: false, error: '一括削除中にエラーが発生しました' }
+  }
+}
+
+/**
  * システムページのSEO/OGP情報を更新
  */
 export async function updatePageSeo(
   slug: string,
   input: UpdatePageSeoInput
-): Promise<PageActionResult> {
+): Promise<ActionResult> {
   try {
     await verifyAdminSession()
   } catch {
@@ -615,9 +823,11 @@ export async function updatePageSeo(
     // キャッシュ無効化
     updateTag(CACHE_TAGS.PAGES)
     updateTag(getCacheTag.pages.detail(slug))
+    updateTag(CACHE_TAGS.PAGE_SEO)
+    updateTag(getCacheTag.pageSeo.detail(slug))
 
     // Cloudflare CDN キャッシュパージ
-    void purgePageCache(slug)
+    fireAndForget(purgePageCache(slug), { operation: 'purgePageCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
     return { success: true, message: 'SEO設定を更新しました' }
   } catch (error) {

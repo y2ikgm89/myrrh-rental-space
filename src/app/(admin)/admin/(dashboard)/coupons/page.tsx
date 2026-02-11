@@ -7,21 +7,11 @@ import { CouponTable } from './_components/CouponTable'
 import { Pagination, Button } from '@/admin/components/ui'
 import { LoadingState } from '@/admin/components/LoadingState'
 import { isValidCouponType } from '@/shared/lib/validations/enums'
+import { loadAdminCouponSearchParams } from '@/shared/lib/nuqs'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'クーポン管理 | Myrrh Rental Space',
-}
-
-type SearchParams = Promise<{
-  status?: string
-  type?: string
-  search?: string
-  page?: string
-}>
-
-type PageProps = {
-  searchParams: SearchParams
 }
 
 // クーポンステータスフィルターの型定義
@@ -33,14 +23,21 @@ function isValidCouponStatusFilter(value: unknown): value is CouponStatusFilter 
   return typeof value === 'string' && COUPON_STATUS_FILTERS_SET.has(value)
 }
 
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
+
+type PageProps = {
+  searchParams: SearchParams
+}
+
 async function CouponList({ searchParams }: { searchParams: SearchParams }) {
-  const params = await searchParams
+  const params = await loadAdminCouponSearchParams(searchParams)
   const status = isValidCouponStatusFilter(params.status) ? params.status : undefined
   const type = isValidCouponType(params.type) ? params.type : undefined
-  const search = params.search
-  const page = params.page ? parseInt(params.page, 10) : 1
 
-  const result = await getCoupons({ status, type, search }, { page, limit: 10 })
+  const result = await getCoupons(
+    { status, type, search: params.search || undefined },
+    { page: params.page, limit: 10 }
+  )
 
   return (
     <>

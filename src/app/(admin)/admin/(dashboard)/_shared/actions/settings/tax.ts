@@ -17,10 +17,10 @@ import { withPermission } from '@/admin/lib/server-action-helpers'
 import { checkReadPermissionFor } from '@/admin/lib/permissions'
 import { taxSettingsSchema, type TaxSettingsInput } from './schemas'
 import {
-  type TaxDisplayMode,
   type TaxSettings,
   DEFAULT_TAX_SETTINGS,
 } from '@/shared/lib/pricing'
+import { TaxDisplayMode, TaxInputMode } from '@/shared/generated/prisma/enums'
 
 // =============================================================================
 // Types
@@ -35,10 +35,10 @@ export type TaxSettingsData = TaxSettings
 const checkReadPermission = checkReadPermissionFor('settings')
 
 function parseTaxDisplayMode(value: string | null): TaxDisplayMode {
-  if (value === 'tax_excluded' || value === 'tax_included' || value === 'both') {
+  if (value === TaxDisplayMode.tax_excluded || value === TaxDisplayMode.tax_included || value === TaxDisplayMode.both) {
     return value
   }
-  return 'tax_included'
+  return TaxDisplayMode.tax_included
 }
 
 // =============================================================================
@@ -127,6 +127,6 @@ async function getTaxSettingsFromDb(): Promise<TaxSettingsData> {
     reducedRate: Number(settings.taxReducedRate),
     displayModeAdmin: parseTaxDisplayMode(settings.taxDisplayModeAdmin),
     displayModePublic: parseTaxDisplayMode(settings.taxDisplayModePublic),
-    inputMode: settings.taxInputMode === 'tax_included' ? 'tax_included' : 'tax_excluded',
+    inputMode: settings.taxInputMode === TaxInputMode.tax_included ? TaxInputMode.tax_included : TaxInputMode.tax_excluded,
   }
 }

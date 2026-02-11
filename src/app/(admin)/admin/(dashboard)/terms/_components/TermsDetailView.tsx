@@ -100,7 +100,7 @@ export function TermsDetailView({ terms, businessInfo }: TermsDetailViewProps) {
 
   const getStatusBadge = (status: string, isCurrentVersion: boolean) => {
     if (isCurrentVersion) {
-      return <Badge className="bg-green-600">現在のバージョン</Badge>
+      return <Badge className="bg-success">現在のバージョン</Badge>
     }
 
     switch (status) {

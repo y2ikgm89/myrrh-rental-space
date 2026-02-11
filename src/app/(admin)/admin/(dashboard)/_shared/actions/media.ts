@@ -16,7 +16,7 @@
  */
 
 import { updateTag } from 'next/cache'
-import { CACHE_TAGS } from '@/shared/lib/constants'
+import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
 import { prisma, Prisma } from '@/shared/lib/prisma'
 import { STORAGE_BUCKETS } from '@/shared/lib/supabase'
@@ -340,7 +340,7 @@ export async function updateMedia(
   })
 
   updateTag(CACHE_TAGS.MEDIA)
-  updateTag(`${CACHE_TAGS.MEDIA}-${id}`)
+  updateTag(getCacheTag.media.detail(id))
   logAction(user.id, 'update', 'media', id)
 
   return createSuccess('更新しました')

@@ -119,7 +119,7 @@ export function TermsList({ terms }: TermsListProps) {
                       <> · バージョン {term.currentVersion.version}</>
                     )}
                     {!term.currentVersion && (
-                      <span className="text-amber-600 ml-2">
+                      <span className="text-warning ml-2">
                         (公開済みバージョンなし)
                       </span>
                     )}

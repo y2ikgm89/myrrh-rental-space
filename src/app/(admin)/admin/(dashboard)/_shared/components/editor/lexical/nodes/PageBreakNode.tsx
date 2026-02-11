@@ -20,16 +20,16 @@ import type {
 import { $applyNodeReplacement, DecoratorNode } from 'lexical'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { useLexicalNodeSelection } from '@lexical/react/useLexicalNodeSelection'
-import { $getNodeByKey, CLICK_COMMAND, COMMAND_PRIORITY_LOW, KEY_BACKSPACE_COMMAND, KEY_DELETE_COMMAND } from 'lexical'
+import { $getNodeByKey, CLICK_COMMAND, COMMAND_PRIORITY_LOW, KEY_BACKSPACE_COMMAND, KEY_DELETE_COMMAND, mergeRegister } from 'lexical'
 import { useCallback, useEffect } from 'react'
-import { mergeRegister } from '@lexical/utils'
 import { Scissors } from 'lucide-react'
 
 // =============================================================================
 // Types
 // =============================================================================
 
-export type SerializedPageBreakNode = SerializedLexicalNode
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface SerializedPageBreakNode extends SerializedLexicalNode {}
 
 // =============================================================================
 // Component
@@ -126,8 +126,8 @@ export class PageBreakNode extends DecoratorNode<ReactElement> {
     return new PageBreakNode(node.__key)
   }
 
-  static importJSON(_serializedNode: SerializedPageBreakNode): PageBreakNode {
-    return $createPageBreakNode()
+  static importJSON(serializedNode: SerializedPageBreakNode): PageBreakNode {
+    return $createPageBreakNode().updateFromJSON(serializedNode)
   }
 
   static importDOM(): DOMConversionMap | null {
@@ -152,7 +152,6 @@ export class PageBreakNode extends DecoratorNode<ReactElement> {
   exportJSON(): SerializedPageBreakNode {
     return {
       ...super.exportJSON(),
-      type: 'page-break',
     }
   }
 

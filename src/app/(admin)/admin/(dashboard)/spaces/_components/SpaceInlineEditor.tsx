@@ -12,6 +12,7 @@
 import Image from 'next/image'
 import { useState, useTransition, useId } from 'react'
 import { useRouter } from 'next/navigation'
+import { useConfirm } from '@/admin/contexts/confirm-context'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -81,13 +82,16 @@ import {
   calculateTaxIncludedPrice,
   getTaxRate,
   getTaxRateLabel,
-  getTaxRateTypeOrDefault,
-  getSpaceDiscountTypeOrDefault,
-  getDurationDiscountOverrideOrDefault,
   type TaxSettings,
   DEFAULT_TAX_SETTINGS,
 } from '@/shared/lib/pricing'
+import {
+  getValidTaxRateType,
+  getValidDiscountType,
+  getValidDurationDiscountOverride,
+} from '@/shared/lib/validations/enums'
 import type { SpaceWithStats } from '@/admin/lib/validations/space'
+import { DiscountType, DurationDiscountOverride, TaxRateType } from '@/shared/generated/prisma/enums'
 
 const RichTextEditor = dynamic(
   () => import('@/admin/components/editor').then((mod) => ({ default: mod.RichTextEditor })),
@@ -115,9 +119,9 @@ const SELECT_NONE_VALUE = '__none__'
 // Schema
 // =============================================================================
 
-const discountTypeSchema = z.enum(['none', 'percentage', 'fixed'])
-const durationDiscountOverrideSchema = z.enum(['inherit', 'enabled', 'disabled'])
-const taxRateTypeSchema = z.enum(['standard', 'reduced'])
+const discountTypeSchema = z.enum(DiscountType)
+const durationDiscountOverrideSchema = z.enum(DurationDiscountOverride)
+const taxRateTypeSchema = z.enum(TaxRateType)
 
 const slugSchema = z
   .string()
@@ -267,6 +271,7 @@ export function SpaceInlineEditor({
   taxSettings = DEFAULT_TAX_SETTINGS,
 }: SpaceInlineEditorProps) {
   const router = useRouter()
+  const confirm = useConfirm()
   const [isPending, startTransition] = useTransition()
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -305,11 +310,11 @@ export function SpaceInlineEditor({
           locationId: space.locationId ?? undefined,
           categoryId: space.categoryId ?? undefined,
           // 割引設定
-          discountType: space.discountType ?? 'none',
+          discountType: space.discountType ?? DiscountType.none,
           discountValue: space.discountValue ?? undefined,
-          durationDiscountOverride: space.durationDiscountOverride ?? 'inherit',
+          durationDiscountOverride: space.durationDiscountOverride ?? DurationDiscountOverride.inherit,
           // 税率設定
-          taxRateType: getTaxRateTypeOrDefault(space.taxRateType),
+          taxRateType: getValidTaxRateType(space.taxRateType),
           // SEO フィールド
           metaDescription: space.metaDescription ?? '',
           metaKeywords: space.metaKeywords ?? '',
@@ -336,11 +341,11 @@ export function SpaceInlineEditor({
           locationId: undefined,
           categoryId: undefined,
           // 割引設定
-          discountType: 'none',
+          discountType: DiscountType.none,
           discountValue: undefined,
-          durationDiscountOverride: 'inherit',
+          durationDiscountOverride: DurationDiscountOverride.inherit,
           // 税率設定
-          taxRateType: 'standard',
+          taxRateType: TaxRateType.standard,
           // SEO フィールド
           metaDescription: '',
           metaKeywords: '',
@@ -367,15 +372,15 @@ export function SpaceInlineEditor({
 
   // 割引後価格を計算
   const calculateDiscountedPrice = (price: number): number => {
-    if (!price || discountType === 'none' || !discountValue) return price
-    if (discountType === 'percentage') return Math.round(price * (1 - discountValue / 100))
-    if (discountType === 'fixed') return Math.max(0, price - discountValue)
+    if (!price || discountType === DiscountType.none || !discountValue) return price
+    if (discountType === DiscountType.percentage) return Math.round(price * (1 - discountValue / 100))
+    if (discountType === DiscountType.fixed) return Math.max(0, price - discountValue)
     return price
   }
 
   const discountedHourlyPrice = calculateDiscountedPrice(hourlyPrice || 0)
   const discountedDailyPrice = dailyPrice ? calculateDiscountedPrice(dailyPrice) : null
-  const hasDiscount = discountType !== 'none' && discountValue && discountValue > 0
+  const hasDiscount = discountType !== DiscountType.none && discountValue && discountValue > 0
 
   // 税込価格計算
   const currentTaxRate = getTaxRate(taxRateType, taxSettings)
@@ -447,11 +452,11 @@ export function SpaceInlineEditor({
           locationId: data.locationId || undefined,
           categoryId: data.categoryId || undefined,
           // 割引設定
-          discountType: data.discountType ?? 'none',
-          discountValue: data.discountType !== 'none' ? data.discountValue ?? null : null,
-          durationDiscountOverride: data.durationDiscountOverride ?? 'inherit',
+          discountType: data.discountType ?? DiscountType.none,
+          discountValue: data.discountType !== DiscountType.none ? data.discountValue ?? null : null,
+          durationDiscountOverride: data.durationDiscountOverride ?? DurationDiscountOverride.inherit,
           // 税率設定
-          taxRateType: data.taxRateType ?? 'standard',
+          taxRateType: data.taxRateType ?? TaxRateType.standard,
           // SEO フィールド
           metaDescription: data.metaDescription || null,
           metaKeywords: data.metaKeywords || null,
@@ -534,10 +539,16 @@ export function SpaceInlineEditor({
     }
   }
 
-  const handleBack = () => {
+  const handleBack = async () => {
     const isUnsaved = isDirty || hasEditorChanges
-    if (isUnsaved && !window.confirm('保存されていない変更があります。破棄してもよろしいですか？')) {
-      return
+    if (isUnsaved) {
+      const confirmed = await confirm({
+        title: '変更を破棄しますか？',
+        description: '保存されていない変更があります。破棄してもよろしいですか？',
+        confirmLabel: '破棄',
+        variant: 'destructive',
+      })
+      if (!confirmed) return
     }
     router.push('/admin/spaces')
   }
@@ -840,7 +851,7 @@ export function SpaceInlineEditor({
                       <Select
                         value={discountType}
                         onValueChange={(value) => {
-                          const validated = getSpaceDiscountTypeOrDefault(value, 'none')
+                          const validated = getValidDiscountType(value, DiscountType.none)
                           setValue('discountType', validated, {
                             shouldDirty: true,
                           })
@@ -851,13 +862,13 @@ export function SpaceInlineEditor({
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">なし</SelectItem>
-                          <SelectItem value="percentage">パーセント割引</SelectItem>
-                          <SelectItem value="fixed">定額割引</SelectItem>
+                          <SelectItem value={DiscountType.none}>なし</SelectItem>
+                          <SelectItem value={DiscountType.percentage}>パーセント割引</SelectItem>
+                          <SelectItem value={DiscountType.fixed}>定額割引</SelectItem>
                         </SelectContent>
                       </Select>
 
-                      {discountType === 'percentage' && (
+                      {discountType === DiscountType.percentage && (
                         <div className="flex items-center gap-2">
                           <Input
                             type="number"
@@ -872,7 +883,7 @@ export function SpaceInlineEditor({
                         </div>
                       )}
 
-                      {discountType === 'fixed' && (
+                      {discountType === DiscountType.fixed && (
                         <div className="flex items-center gap-2">
                           <Input
                             type="number"
@@ -912,7 +923,7 @@ export function SpaceInlineEditor({
                     <Select
                       value={durationDiscountOverride}
                       onValueChange={(value) => {
-                        const validated = getDurationDiscountOverrideOrDefault(value, 'inherit')
+                        const validated = getValidDurationDiscountOverride(value, DurationDiscountOverride.inherit)
                         setValue('durationDiscountOverride', validated, { shouldDirty: true })
                       }}
                       disabled={isPending}
@@ -921,9 +932,9 @@ export function SpaceInlineEditor({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="inherit">グローバル設定に従う</SelectItem>
-                        <SelectItem value="enabled">このスペースは常に有効</SelectItem>
-                        <SelectItem value="disabled">このスペースは無効</SelectItem>
+                        <SelectItem value={DurationDiscountOverride.inherit}>グローバル設定に従う</SelectItem>
+                        <SelectItem value={DurationDiscountOverride.enabled}>このスペースは常に有効</SelectItem>
+                        <SelectItem value={DurationDiscountOverride.disabled}>このスペースは無効</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -937,7 +948,7 @@ export function SpaceInlineEditor({
                     <Select
                       value={taxRateType}
                       onValueChange={(value) => {
-                        const validated = getTaxRateTypeOrDefault(value)
+                        const validated = getValidTaxRateType(value)
                         setValue('taxRateType', validated, { shouldDirty: true })
                       }}
                       disabled={isPending}
@@ -946,10 +957,10 @@ export function SpaceInlineEditor({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="standard">
+                        <SelectItem value={TaxRateType.standard}>
                           標準税率（{taxSettings.standardRate}%）
                         </SelectItem>
-                        <SelectItem value="reduced">
+                        <SelectItem value={TaxRateType.reduced}>
                           軽減税率（{taxSettings.reducedRate}%）
                         </SelectItem>
                       </SelectContent>
@@ -1034,7 +1045,7 @@ export function SpaceInlineEditor({
                       {hasDiscount && (
                         <div className="pt-2 border-t border-border/50">
                           <p className="text-xs text-muted-foreground">
-                            固定割引: {discountType === 'percentage' ? `${discountValue}% OFF` : `¥${discountValue?.toLocaleString()}引`}
+                            固定割引: {discountType === DiscountType.percentage ? `${discountValue}% OFF` : `¥${discountValue?.toLocaleString()}引`}
                           </p>
                         </div>
                       )}

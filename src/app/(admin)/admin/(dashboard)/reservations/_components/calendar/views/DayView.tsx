@@ -31,7 +31,7 @@ export function DayView({ date, events, onEventClick }: DayViewProps) {
   const dayOfWeek = date.getDay()
 
   return (
-    <div className="flex h-full flex-col rounded-lg border bg-white">
+    <div className="flex h-full flex-col rounded-lg border bg-card">
       {/* ヘッダー */}
       <div className="grid grid-cols-[60px_1fr] border-b bg-muted/50">
         <div className="border-r p-2" />

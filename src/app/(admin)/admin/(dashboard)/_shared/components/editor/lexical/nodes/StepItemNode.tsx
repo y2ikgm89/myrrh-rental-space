@@ -15,7 +15,6 @@ import type {
   LexicalNode,
   NodeKey,
   SerializedElementNode,
-  Spread,
 } from 'lexical'
 import { $applyNodeReplacement, ElementNode, $createParagraphNode, $isElementNode } from 'lexical'
 
@@ -23,12 +22,9 @@ import { $applyNodeReplacement, ElementNode, $createParagraphNode, $isElementNod
 // Types
 // =============================================================================
 
-export type SerializedStepItemNode = Spread<
-  {
-    stepNumber: number
-  },
-  SerializedElementNode
->
+export interface SerializedStepItemNode extends SerializedElementNode {
+  stepNumber: number
+}
 
 // =============================================================================
 // Constants
@@ -64,7 +60,7 @@ export class StepItemNode extends ElementNode {
   }
 
   static importJSON(serializedNode: SerializedStepItemNode): StepItemNode {
-    return $createStepItemNode(serializedNode.stepNumber)
+    return $createStepItemNode(serializedNode.stepNumber).updateFromJSON(serializedNode)
   }
 
   static importDOM(): DOMConversionMap | null {
@@ -90,7 +86,6 @@ export class StepItemNode extends ElementNode {
   exportJSON(): SerializedStepItemNode {
     return {
       ...super.exportJSON(),
-      type: 'step-item',
       stepNumber: this.__stepNumber,
     }
   }

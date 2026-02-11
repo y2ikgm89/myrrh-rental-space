@@ -34,7 +34,7 @@ function TabsList({
       className={cn(
         'inline-flex h-10 items-center justify-start gap-1 rounded-lg bg-muted p-1 text-muted-foreground',
         // スクロール可能（モバイル対応）
-        'w-full overflow-x-auto scrollbar-hide',
+        'w-fit max-w-full overflow-x-auto scrollbar-hide',
         className
       )}
       {...props}

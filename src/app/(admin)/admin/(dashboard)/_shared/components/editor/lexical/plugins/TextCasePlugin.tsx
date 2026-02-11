@@ -18,10 +18,10 @@ import {
   $isRangeSelection,
   COMMAND_PRIORITY_CRITICAL,
   FORMAT_TEXT_COMMAND,
+  mergeRegister,
   SELECTION_CHANGE_COMMAND,
   type TextFormatType,
 } from 'lexical'
-import { mergeRegister } from '@lexical/utils'
 import {
   CaseLower,
   CaseUpper,

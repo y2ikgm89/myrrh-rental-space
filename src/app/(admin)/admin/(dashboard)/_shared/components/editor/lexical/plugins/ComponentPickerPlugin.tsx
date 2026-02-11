@@ -9,7 +9,7 @@
 
 'use client'
 
-import { useMemo, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
@@ -202,7 +202,7 @@ export function ComponentPickerPlugin({
   })
 
   // オプション定義（カテゴリー順）
-  const options = useMemo(() => {
+  const options = (() => {
     const allOptions: ComponentPickerOption[] = [
       // ========== 基本ブロック ==========
       new ComponentPickerOption('本文', {
@@ -513,10 +513,10 @@ export function ComponentPickerPlugin({
       )
       return titleMatch || keywordMatch
     })
-  }, [editor, queryString, onInsertImage, onInsertYouTube, onInsertX, onInsertInstagram, onInsertTable, onInsertLayout, onInsertCallout, onInsertButton, onInsertPullQuote, onInsertBookmark, onInsertSteps, onInsertTabs])
+  })()
 
   // カテゴリー別にグループ化
-  const groupedOptions = useMemo(() => {
+  const groupedOptions = (() => {
     const groups: { category: CategoryType; options: ComponentPickerOption[] }[] = []
     const categoryOrder: CategoryType[] = ['basic', 'list', 'media', 'layout', 'format', 'other']
 
@@ -528,7 +528,7 @@ export function ComponentPickerPlugin({
     }
 
     return groups
-  }, [options])
+  })()
 
   const onSelectOption = (
     selectedOption: ComponentPickerOption,

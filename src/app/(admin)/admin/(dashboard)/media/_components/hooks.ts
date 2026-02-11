@@ -6,6 +6,7 @@
 
 import { useTransition } from 'react'
 import { toast } from 'sonner'
+import { useConfirm } from '@/admin/contexts/confirm-context'
 import { deleteMedia } from '@/admin/actions/media'
 import type { MediaData } from '@/admin/types/media-picker'
 
@@ -27,9 +28,16 @@ export function useDeleteMedia(): {
   isPending: boolean
 } {
   const [isPending, startTransition] = useTransition()
+  const confirm = useConfirm()
 
-  const handleDelete = (item: MediaData) => {
-    if (!confirm(`「${item.filename}」を削除しますか？`)) return
+  const handleDelete = async (item: MediaData) => {
+    const confirmed = await confirm({
+      title: 'メディアを削除しますか？',
+      description: `「${item.filename}」を削除します。この操作は元に戻せません。`,
+      confirmLabel: '削除',
+      variant: 'destructive',
+    })
+    if (!confirmed) return
 
     startTransition(async () => {
       const result = await deleteMedia(item.id)

@@ -6,7 +6,6 @@
 
 'use client'
 
-import { useCallback } from 'react'
 import { $isBookmarkNode, type BookmarkNode } from '../../nodes/BookmarkNode'
 import { InspectorHeader } from '../InspectorHeader'
 import { InspectorSection } from '../InspectorSection'
@@ -35,20 +34,9 @@ export function BookmarkInspectorPanel({ nodeKey, node }: BookmarkInspectorPanel
   const description = node.getDescription()
   const siteName = node.getSiteName()
 
-  const handleTitleChange = useCallback(
-    (value: string) => updateNode((n) => n.setTitle(value)),
-    [updateNode]
-  )
-
-  const handleDescriptionChange = useCallback(
-    (value: string) => updateNode((n) => n.setDescription(value)),
-    [updateNode]
-  )
-
-  const handleSiteNameChange = useCallback(
-    (value: string) => updateNode((n) => n.setSiteName(value)),
-    [updateNode]
-  )
+  const handleTitleChange = (value: string) => updateNode((n) => n.setTitle(value))
+  const handleDescriptionChange = (value: string) => updateNode((n) => n.setDescription(value))
+  const handleSiteNameChange = (value: string) => updateNode((n) => n.setSiteName(value))
 
   return (
     <div>

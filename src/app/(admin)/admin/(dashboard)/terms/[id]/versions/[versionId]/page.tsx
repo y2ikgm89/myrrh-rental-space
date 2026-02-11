@@ -15,6 +15,7 @@ import {
   CardDescription,
   Button,
   Badge,
+  Breadcrumb,
 } from '@/admin/components/ui'
 import type { Metadata } from 'next'
 
@@ -49,7 +50,7 @@ export default async function VersionPreviewPage({
 
   const getStatusBadge = () => {
     if (version.isCurrentVersion) {
-      return <Badge className="bg-green-600">現在のバージョン</Badge>
+      return <Badge className="bg-success">現在のバージョン</Badge>
     }
 
     switch (version.status) {
@@ -70,6 +71,14 @@ export default async function VersionPreviewPage({
 
   return (
     <div className="space-y-6">
+      <Breadcrumb
+        items={[
+          { label: '利用規約', href: '/admin/terms' },
+          { label: terms.title, href: `/admin/terms/${id}` },
+          { label: `バージョン ${version.version}` },
+        ]}
+      />
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">
@@ -123,7 +132,7 @@ export default async function VersionPreviewPage({
           </div>
         </CardHeader>
         <CardContent>
-          <div className="border rounded-lg p-6 bg-white">
+          <div className="border rounded-lg p-6 bg-card">
             <SanitizedHtml
               html={version.content}
               className={cn(PROSE_CLASSES, 'prose-sm max-w-none')}

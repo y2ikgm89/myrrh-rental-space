@@ -150,3 +150,9 @@ export { Separator } from './separator'
 // Selection Box
 export { SelectionBox } from './selection-box'
 export type { SelectionBoxProps, SelectionBoxOption } from './selection-box'
+
+// Breadcrumb
+export { Breadcrumb } from './breadcrumb'
+
+// CharCount
+export { CharCount } from './CharCount'

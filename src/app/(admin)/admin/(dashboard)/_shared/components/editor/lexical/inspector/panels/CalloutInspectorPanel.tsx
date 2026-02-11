@@ -6,7 +6,6 @@
 
 'use client'
 
-import { useCallback } from 'react'
 import { $isCalloutNode, type CalloutNode, isCalloutType } from '../../nodes/CalloutNode'
 import { InspectorHeader } from '../InspectorHeader'
 import { InspectorSection } from '../InspectorSection'
@@ -41,14 +40,11 @@ export function CalloutInspectorPanel({ nodeKey, node }: CalloutInspectorPanelPr
   const updateNode = useNodeUpdater(nodeKey, $isCalloutNode)
   const calloutType = node.getCalloutType()
 
-  const handleTypeChange = useCallback(
-    (value: string) => {
-      if (isCalloutType(value)) {
-        updateNode((n) => n.setCalloutType(value))
-      }
-    },
-    [updateNode]
-  )
+  const handleTypeChange = (value: string) => {
+    if (isCalloutType(value)) {
+      updateNode((n) => n.setCalloutType(value))
+    }
+  }
 
   return (
     <div>

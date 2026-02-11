@@ -8,9 +8,8 @@
 
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { mergeRegister } from '@lexical/utils'
 import {
   $createParagraphNode,
   $createTextNode,
@@ -19,6 +18,7 @@ import {
   COMMAND_PRIORITY_LOW,
   KEY_ARROW_DOWN_COMMAND,
   KEY_ARROW_UP_COMMAND,
+  mergeRegister,
 } from 'lexical'
 import {
   $createTabsContainerNode,
@@ -57,8 +57,8 @@ const TAB_COUNT_OPTIONS = [
 export function useTabsDialog() {
   const [isTabsDialogOpen, setIsTabsDialogOpen] = useState(false)
 
-  const openTabsDialog = useCallback(() => setIsTabsDialogOpen(true), [])
-  const closeTabsDialog = useCallback(() => setIsTabsDialogOpen(false), [])
+  const openTabsDialog = () => setIsTabsDialogOpen(true)
+  const closeTabsDialog = () => setIsTabsDialogOpen(false)
 
   return {
     isTabsDialogOpen,
@@ -268,11 +268,11 @@ export function TabsPlugin({ isOpen, onClose }: TabsPluginProps) {
     }
   }, [editor])
 
-  const resetForm = useCallback(() => {
+  const resetForm = () => {
     setTabCount('3')
-  }, [])
+  }
 
-  const handleInsert = useCallback(() => {
+  const handleInsert = () => {
     editor.update(() => {
       const selection = $getSelection()
       if (!$isRangeSelection(selection)) return
@@ -315,12 +315,12 @@ export function TabsPlugin({ isOpen, onClose }: TabsPluginProps) {
 
     resetForm()
     onClose()
-  }, [editor, tabCount, resetForm, onClose])
+  }
 
-  const handleClose = useCallback(() => {
+  const handleClose = () => {
     resetForm()
     onClose()
-  }, [resetForm, onClose])
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>

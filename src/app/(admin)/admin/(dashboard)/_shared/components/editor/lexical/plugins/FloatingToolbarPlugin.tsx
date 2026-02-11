@@ -18,6 +18,7 @@ import {
   COMMAND_PRIORITY_LOW,
   FORMAT_ELEMENT_COMMAND,
   FORMAT_TEXT_COMMAND,
+  mergeRegister,
   SELECTION_CHANGE_COMMAND,
   type ElementFormatType,
   type LexicalEditor,
@@ -29,7 +30,6 @@ import {
   $getSelectionStyleValueForProperty,
   $patchStyleText,
 } from '@lexical/selection'
-import { mergeRegister } from '@lexical/utils'
 import {
   AlignCenter,
   AlignJustify,
@@ -169,10 +169,10 @@ function setFloatingElemPosition(
 
 type AlignmentType = 'left' | 'center' | 'right' | 'justify'
 
-const ALIGNMENT_TYPES = new Set<AlignmentType>(['left', 'center', 'right', 'justify'])
+const ALIGNMENT_TYPES = new Set<string>(['left', 'center', 'right', 'justify'])
 
 function isAlignmentType(value: string): value is AlignmentType {
-  return ALIGNMENT_TYPES.has(value as AlignmentType)
+  return ALIGNMENT_TYPES.has(value)
 }
 
 const ALIGNMENT_OPTIONS = [

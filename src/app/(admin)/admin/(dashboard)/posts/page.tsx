@@ -33,6 +33,7 @@ import {
 } from '@/admin/components/ui'
 import { LoadingState } from '@/admin/components/LoadingState'
 import { parsePostStatusFilter } from '@/shared/lib/validations/enums'
+import { createTypeGuard } from '@/shared/lib/serialize'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -42,6 +43,10 @@ export const metadata: Metadata = {
 // タブの型定義
 const POST_TABS = ['posts', 'categories', 'tags', 'comments'] as const
 type PostTab = (typeof POST_TABS)[number]
+
+// コメントステータスフィルター
+const COMMENT_STATUS_VALUES = ['ALL', 'ACTIVE', 'DELETED'] as const
+const isValidCommentStatus = createTypeGuard(COMMENT_STATUS_VALUES)
 
 const POST_TABS_SET = new Set<string>(POST_TABS)
 function isValidTab(tab: string | undefined): tab is PostTab {
@@ -123,7 +128,7 @@ async function CommentStatsWrapper() {
 
 async function CommentList({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams
-  const status = params.status as 'ALL' | 'ACTIVE' | 'DELETED' | undefined
+  const status = isValidCommentStatus(params.status) ? params.status : undefined
   const postId = params.postId
   const search = params.search
   const page = params.page ? parseInt(params.page, 10) : 1
@@ -220,7 +225,7 @@ export default async function PostsPage({ searchParams }: PageProps) {
             fallback={
               <div className="grid gap-4 md:grid-cols-3">
                 {[...Array(3)].map((_, i) => (
-                  <div key={i} className="rounded-lg border bg-white p-4">
+                  <div key={i} className="rounded-lg border bg-card p-4">
                     <div className="animate-pulse space-y-2">
                       <div className="h-4 bg-muted rounded w-20" />
                       <div className="h-8 bg-muted rounded w-16" />

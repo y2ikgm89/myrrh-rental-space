@@ -5,6 +5,7 @@ import {
   getStripedStyle,
 } from '@/shared/lib/announcement-bar-utils'
 import { cn } from '@/shared/lib/utils'
+import { AnnouncementBarDesignStyle } from '@/shared/generated/prisma/enums'
 import type { DesignPreviewProps } from './types'
 
 export function DesignPreview({
@@ -26,20 +27,20 @@ export function DesignPreview({
   if (textColor) customStyles.color = textColor
 
   // ストライプスタイル（共通ユーティリティを使用）
-  if (designStyle === 'striped') {
+  if (designStyle === AnnouncementBarDesignStyle.striped) {
     const baseColor = bgColor || defaultColors.hex
     const stripedStyles = getStripedStyle(baseColor, stripeColor, stripeAnimation)
     Object.assign(customStyles, stripedStyles)
   }
 
   // グラデーションアニメーション
-  if (designStyle === 'gradient' && gradientAnimation) {
+  if (designStyle === AnnouncementBarDesignStyle.gradient && gradientAnimation) {
     customStyles.backgroundSize = '200% 100%'
     customStyles.animation = 'gradient-flow 3s ease infinite'
   }
 
   // グラスアニメーション用
-  if (designStyle === 'glass' && glassAnimation) {
+  if (designStyle === AnnouncementBarDesignStyle.glass && glassAnimation) {
     customStyles.position = 'relative'
     customStyles.overflow = 'hidden'
   }
@@ -47,17 +48,17 @@ export function DesignPreview({
   // デザインスタイル別のクラス
   function getStyleClasses(): string {
     switch (designStyle) {
-      case 'solid':
+      case AnnouncementBarDesignStyle.solid:
         return !bgColor ? defaultColors.bg : ''
-      case 'gradient':
+      case AnnouncementBarDesignStyle.gradient:
         return `bg-gradient-to-r ${defaultColors.gradient}`
-      case 'outlined':
+      case AnnouncementBarDesignStyle.outlined:
         return 'bg-transparent border-y border-border'
-      case 'glass':
+      case AnnouncementBarDesignStyle.glass:
         return 'backdrop-blur-md bg-white/10 border-y border-white/20'
-      case 'minimal':
+      case AnnouncementBarDesignStyle.minimal:
         return 'bg-transparent border-b border-border'
-      case 'striped':
+      case AnnouncementBarDesignStyle.striped:
         return !bgColor ? defaultColors.bg : ''
     }
   }
@@ -65,20 +66,20 @@ export function DesignPreview({
   function getTextClasses(): string {
     if (textColor) return ''
     switch (designStyle) {
-      case 'solid':
-      case 'gradient':
-      case 'glass':
-      case 'striped':
+      case AnnouncementBarDesignStyle.solid:
+      case AnnouncementBarDesignStyle.gradient:
+      case AnnouncementBarDesignStyle.glass:
+      case AnnouncementBarDesignStyle.striped:
         return 'text-white'
-      case 'outlined':
-      case 'minimal':
+      case AnnouncementBarDesignStyle.outlined:
+      case AnnouncementBarDesignStyle.minimal:
         return 'text-foreground'
     }
   }
 
   return (
     <>
-      {designStyle === 'striped' && stripeAnimation && (
+      {designStyle === AnnouncementBarDesignStyle.striped && stripeAnimation && (
         <style>{`
           @keyframes stripe-slide {
             from { background-position: 0 0; }
@@ -86,7 +87,7 @@ export function DesignPreview({
           }
         `}</style>
       )}
-      {designStyle === 'gradient' && gradientAnimation && (
+      {designStyle === AnnouncementBarDesignStyle.gradient && gradientAnimation && (
         <style>{`
           @keyframes gradient-flow {
             0% { background-position: 0% 50%; }
@@ -95,7 +96,7 @@ export function DesignPreview({
           }
         `}</style>
       )}
-      {designStyle === 'glass' && glassAnimation && (
+      {designStyle === AnnouncementBarDesignStyle.glass && glassAnimation && (
         <style>{`
           @keyframes glass-shimmer {
             0% { transform: translateX(-100%); }
@@ -112,7 +113,7 @@ export function DesignPreview({
         style={customStyles}
       >
         {/* グラスシマーオーバーレイ */}
-        {designStyle === 'glass' && glassAnimation && (
+        {designStyle === AnnouncementBarDesignStyle.glass && glassAnimation && (
           <div
             className="pointer-events-none absolute inset-0 overflow-hidden"
             aria-hidden="true"

@@ -28,7 +28,7 @@ export function LoadingState({
   }
 
   return (
-    <div className="rounded-lg border bg-white p-12 text-center">
+    <div className="rounded-lg border bg-card p-12 text-center">
       <p className="text-muted-foreground">{message}</p>
     </div>
   )

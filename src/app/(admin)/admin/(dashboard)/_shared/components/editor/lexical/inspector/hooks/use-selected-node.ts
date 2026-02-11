@@ -21,10 +21,10 @@ import {
   $isNodeSelection,
   $isRangeSelection,
   SELECTION_CHANGE_COMMAND,
+  mergeRegister,
   COMMAND_PRIORITY_LOW,
   type LexicalNode,
 } from 'lexical'
-import { mergeRegister } from '@lexical/utils'
 
 import {
   getInspectableInfo,

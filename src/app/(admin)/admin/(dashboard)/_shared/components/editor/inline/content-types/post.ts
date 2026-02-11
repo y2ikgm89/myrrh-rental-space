@@ -90,7 +90,7 @@ function toFormData(data?: PostData): PostFormData {
     thumbnailUrl: data.thumbnailUrl,
     ogpImageUrl: data.ogpImageUrl ?? '',
     categoryId: data.categoryId,
-    tags: data.tags?.join(', ') ?? '',
+    tags: data.postTags?.map((t) => t.name).join(', ') ?? '',
     metaDescription: data.metaDescription ?? '',
     metaKeywords: data.metaKeywords ?? '',
     ogpTitle: data.ogpTitle ?? '',

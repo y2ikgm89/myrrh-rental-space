@@ -6,7 +6,7 @@
 
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { $insertNodes } from 'lexical'
 import {
@@ -142,8 +142,8 @@ export function YouTubePlugin({ isOpen, onClose }: YouTubePluginProps) {
 export function useYouTubeDialog() {
   const [isOpen, setIsOpen] = useState(false)
 
-  const openYouTubeDialog = useCallback(() => setIsOpen(true), [])
-  const closeYouTubeDialog = useCallback(() => setIsOpen(false), [])
+  const openYouTubeDialog = () => setIsOpen(true)
+  const closeYouTubeDialog = () => setIsOpen(false)
 
   return {
     isYouTubeDialogOpen: isOpen,

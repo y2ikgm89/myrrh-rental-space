@@ -8,7 +8,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useState, useCallback, useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -23,46 +23,72 @@ import {
   Input,
   Label,
   Switch,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
   Textarea,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/admin/components/ui'
-import { ArrowLeft, Save, ImagePlus } from 'lucide-react'
+import { DesignPanel } from './DesignPanel'
+import { ArrowLeft, Save, ImagePlus, Plus, Trash2, GripVertical } from 'lucide-react'
 import { useSingleMediaPicker } from '@/admin/hooks/use-media-picker'
 import {
   updateHomepageSection,
   type HomepageSectionData,
 } from '@/admin/actions/homepage-settings'
 import {
-  HomepageSectionType,
+  SectionType,
   sectionTypeLabels,
   heroConfigSchema,
+  heroParallaxConfigSchema,
+  conceptConfigSchema,
+  spaceShowcaseConfigSchema,
+  featuresConfigSchema,
   spaceListConfigSchema,
-  newsConfigSchema,
-  postsConfigSchema,
-  faqConfigSchema,
+  newsListConfigSchema,
+  postListConfigSchema,
+  faqListConfigSchema,
   ctaConfigSchema,
   customConfigSchema,
   instagramConfigSchema,
   getHeroConfig,
+  getHeroParallaxConfig,
+  getConceptConfig,
+  getSpaceShowcaseConfig,
+  getFeaturesConfig,
   getSpaceListConfig,
-  getNewsConfig,
-  getPostsConfig,
-  getFaqConfig,
+  getNewsListConfig,
+  getPostListConfig,
+  getFaqListConfig,
   getCtaConfig,
   getCustomConfig,
   getInstagramConfig,
   type HeroConfig,
+  type HeroParallaxConfig,
+  type ConceptConfig,
+  type SpaceShowcaseConfig,
+  type FeaturesConfig,
   type SpaceListConfig,
-  type NewsConfig,
-  type PostsConfig,
-  type FaqConfig,
+  type NewsListConfig,
+  type PostListConfig,
+  type FaqListConfig,
   type CtaConfig,
   type CustomConfig,
   type InstagramConfig,
   type HeroConfigInput,
+  type HeroParallaxConfigInput,
+  type ConceptConfigInput,
+  type SpaceShowcaseConfigInput,
+  type FeaturesConfigInput,
   type SpaceListConfigInput,
-  type NewsConfigInput,
-  type PostsConfigInput,
-  type FaqConfigInput,
+  type NewsListConfigInput,
+  type PostListConfigInput,
+  type FaqListConfigInput,
   type CtaConfigInput,
   type CustomConfigInput,
   type InstagramConfigInput,
@@ -92,6 +118,658 @@ interface SectionEditorProps {
   section: HomepageSectionData
   onBack: () => void
   onSave: () => void
+  /** false にするとエディタ内蔵ヘッダーを非表示（専用ページで使用） */
+  showHeader?: boolean
+}
+
+// =============================================================================
+// Hero Parallax Config Form
+// =============================================================================
+
+function HeroParallaxConfigForm({
+  config,
+  onSave,
+  isPending,
+}: {
+  config: HeroParallaxConfig
+  onSave: (config: HeroParallaxConfig) => void
+  isPending: boolean
+}) {
+  const [buttons, setButtons] = useState<CTAButtonItem[]>(config.buttons)
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    control,
+    formState: { errors },
+  } = useForm<HeroParallaxConfigInput, unknown, HeroParallaxConfig>({
+    resolver: zodResolver(heroParallaxConfigSchema),
+    defaultValues: config,
+  })
+
+  const backgroundImageUrl = useWatch({ control, name: 'backgroundImageUrl' })
+
+  const bgPicker = useSingleMediaPicker({
+    defaultUsage: 'GENERAL',
+    onSelect: (media) => {
+      if (media.length > 0) {
+        setValue('backgroundImageUrl', media[0].url)
+      }
+    },
+  })
+
+  const handleButtonsChange = (newButtons: CTAButtonItem[]) => {
+    setButtons(newButtons)
+    setValue('buttons', newButtons)
+  }
+
+  return (
+    <form onSubmit={handleSubmit(onSave)} className="space-y-6">
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="hero-parallax-tagline">タグライン</Label>
+          <Input
+            id="hero-parallax-tagline"
+            {...register('tagline')}
+            placeholder="Luxury Rental Space"
+            disabled={isPending}
+          />
+          {errors.tagline && (
+            <p className="text-sm text-destructive">{errors.tagline.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="hero-parallax-title">タイトル</Label>
+          <Input
+            id="hero-parallax-title"
+            {...register('title')}
+            placeholder="洗練された空間で 特別なひとときを"
+            disabled={isPending}
+          />
+          {errors.title && (
+            <p className="text-sm text-destructive">{errors.title.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="hero-parallax-subtitle">サブタイトル</Label>
+          <Textarea
+            id="hero-parallax-subtitle"
+            {...register('subtitle')}
+            placeholder="厳選されたレンタルスペースが、あなたの大切な瞬間を彩ります。"
+            rows={2}
+            disabled={isPending}
+          />
+          {errors.subtitle && (
+            <p className="text-sm text-destructive">{errors.subtitle.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label>背景画像（任意）</Label>
+          <div className="flex items-start gap-3">
+            {backgroundImageUrl ? (
+              <div className="relative h-20 w-36 shrink-0 overflow-hidden rounded-lg border">
+                <Image
+                  src={backgroundImageUrl}
+                  alt="背景画像"
+                  fill
+                  className="object-cover"
+                />
+              </div>
+            ) : (
+              <div className="flex h-20 w-36 shrink-0 items-center justify-center rounded-lg border border-dashed bg-muted">
+                <ImagePlus className="h-6 w-6 text-muted-foreground" />
+              </div>
+            )}
+            <div className="flex-1 space-y-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => bgPicker.openPicker()}
+                disabled={isPending}
+              >
+                <ImagePlus className="mr-1 h-3 w-3" />
+                画像を選択
+              </Button>
+              {backgroundImageUrl && (
+                <>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {backgroundImageUrl}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setValue('backgroundImageUrl', '')}
+                    disabled={isPending}
+                  >
+                    削除
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>ボタン</Label>
+          <CTAButtonEditor
+            buttons={buttons}
+            onChange={handleButtonsChange}
+            disabled={isPending}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="hero-parallax-speed">パララックス速度</Label>
+          <Input
+            id="hero-parallax-speed"
+            type="number"
+            step={0.1}
+            min={0}
+            max={1}
+            {...register('parallaxSpeed', { valueAsNumber: true })}
+            disabled={isPending}
+          />
+          <p className="text-xs text-muted-foreground">
+            0（効果なし）〜 1（最大）
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Switch
+            id="hero-parallax-overlay"
+            {...register('overlayGradient')}
+            disabled={isPending}
+          />
+          <Label htmlFor="hero-parallax-overlay">オーバーレイグラデーション</Label>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Switch
+            id="hero-parallax-scroll"
+            {...register('scrollIndicator')}
+            disabled={isPending}
+          />
+          <Label htmlFor="hero-parallax-scroll">スクロールインジケーター</Label>
+        </div>
+      </div>
+
+      <Button type="submit" disabled={isPending}>
+        <Save className="h-4 w-4 mr-2" />
+        {isPending ? '保存中...' : '保存'}
+      </Button>
+
+      {/* メディアピッカーダイアログ */}
+      <bgPicker.MediaPicker />
+    </form>
+  )
+}
+
+// =============================================================================
+// Concept Config Form
+// =============================================================================
+
+function ConceptConfigForm({
+  config,
+  onSave,
+  isPending,
+}: {
+  config: ConceptConfig
+  onSave: (config: ConceptConfig) => void
+  isPending: boolean
+}) {
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    control,
+    formState: { errors },
+  } = useForm<ConceptConfigInput, unknown, ConceptConfig>({
+    resolver: zodResolver(conceptConfigSchema),
+    defaultValues: config,
+  })
+
+  const imageUrl = useWatch({ control, name: 'imageUrl' })
+  const imagePosition = useWatch({ control, name: 'imagePosition' })
+  const textAlign = useWatch({ control, name: 'textAlign' })
+
+  const imgPicker = useSingleMediaPicker({
+    defaultUsage: 'GENERAL',
+    onSelect: (media) => {
+      if (media.length > 0) {
+        setValue('imageUrl', media[0].url)
+      }
+    },
+  })
+
+  return (
+    <form onSubmit={handleSubmit(onSave)} className="space-y-6">
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="concept-section-label">セクションラベル（英語装飾）</Label>
+          <Input
+            id="concept-section-label"
+            {...register('sectionLabel')}
+            placeholder="Our Philosophy"
+            disabled={isPending}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="concept-heading">見出し</Label>
+          <Input
+            id="concept-heading"
+            {...register('heading')}
+            placeholder="空間が、体験を変える"
+            disabled={isPending}
+          />
+          {errors.heading && (
+            <p className="text-sm text-destructive">{errors.heading.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="concept-body">本文</Label>
+          <Textarea
+            id="concept-body"
+            {...register('body')}
+            placeholder="コンセプトの本文を入力..."
+            rows={5}
+            disabled={isPending}
+          />
+          {errors.body && (
+            <p className="text-sm text-destructive">{errors.body.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label>画像（任意）</Label>
+          <div className="flex items-start gap-3">
+            {imageUrl ? (
+              <div className="relative h-20 w-36 shrink-0 overflow-hidden rounded-lg border">
+                <Image
+                  src={imageUrl}
+                  alt="コンセプト画像"
+                  fill
+                  className="object-cover"
+                />
+              </div>
+            ) : (
+              <div className="flex h-20 w-36 shrink-0 items-center justify-center rounded-lg border border-dashed bg-muted">
+                <ImagePlus className="h-6 w-6 text-muted-foreground" />
+              </div>
+            )}
+            <div className="flex-1 space-y-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => imgPicker.openPicker()}
+                disabled={isPending}
+              >
+                <ImagePlus className="mr-1 h-3 w-3" />
+                画像を選択
+              </Button>
+              {imageUrl && (
+                <>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {imageUrl}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setValue('imageUrl', '')}
+                    disabled={isPending}
+                  >
+                    削除
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>画像位置</Label>
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                value="left"
+                checked={imagePosition === 'left'}
+                onChange={() => setValue('imagePosition', 'left')}
+                disabled={isPending}
+              />
+              左
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                value="right"
+                checked={imagePosition === 'right'}
+                onChange={() => setValue('imagePosition', 'right')}
+                disabled={isPending}
+              />
+              右
+            </label>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>テキスト配置</Label>
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                value="left"
+                checked={textAlign === 'left'}
+                onChange={() => setValue('textAlign', 'left')}
+                disabled={isPending}
+              />
+              左寄せ
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                value="center"
+                checked={textAlign === 'center'}
+                onChange={() => setValue('textAlign', 'center')}
+                disabled={isPending}
+              />
+              中央
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                value="right"
+                checked={textAlign === 'right'}
+                onChange={() => setValue('textAlign', 'right')}
+                disabled={isPending}
+              />
+              右寄せ
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <Button type="submit" disabled={isPending}>
+        <Save className="h-4 w-4 mr-2" />
+        {isPending ? '保存中...' : '保存'}
+      </Button>
+
+      {/* メディアピッカーダイアログ */}
+      <imgPicker.MediaPicker />
+    </form>
+  )
+}
+
+// =============================================================================
+// Space Showcase Config Form
+// =============================================================================
+
+function SpaceShowcaseConfigForm({
+  config,
+  onSave,
+  isPending,
+}: {
+  config: SpaceShowcaseConfig
+  onSave: (config: SpaceShowcaseConfig) => void
+  isPending: boolean
+}) {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<SpaceShowcaseConfigInput, unknown, SpaceShowcaseConfig>({
+    resolver: zodResolver(spaceShowcaseConfigSchema),
+    defaultValues: config,
+  })
+
+  return (
+    <form onSubmit={handleSubmit(onSave)} className="space-y-6">
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="showcase-section-label">セクションラベル（英語装飾）</Label>
+          <Input
+            id="showcase-section-label"
+            {...register('sectionLabel')}
+            placeholder="Spaces"
+            disabled={isPending}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="showcase-title">タイトル</Label>
+          <Input
+            id="showcase-title"
+            {...register('title')}
+            placeholder="Our Spaces"
+            disabled={isPending}
+          />
+          {errors.title && (
+            <p className="text-sm text-destructive">{errors.title.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="showcase-max">最大表示件数</Label>
+          <Input
+            id="showcase-max"
+            type="number"
+            min={1}
+            max={12}
+            {...register('maxItems', { valueAsNumber: true })}
+            disabled={isPending}
+          />
+          {errors.maxItems && (
+            <p className="text-sm text-destructive">{errors.maxItems.message}</p>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Switch
+            id="showcase-published"
+            {...register('showOnlyPublished')}
+            disabled={isPending}
+          />
+          <Label htmlFor="showcase-published">公開済みスペースのみ表示</Label>
+        </div>
+      </div>
+
+      <Button type="submit" disabled={isPending}>
+        <Save className="h-4 w-4 mr-2" />
+        {isPending ? '保存中...' : '保存'}
+      </Button>
+    </form>
+  )
+}
+
+// =============================================================================
+// Features Config Form
+// =============================================================================
+
+const featureIconOptions = [
+  { value: 'clock', label: '時計' },
+  { value: 'shield', label: 'シールド' },
+  { value: 'sparkles', label: 'スパークル' },
+  { value: 'wifi', label: 'Wi-Fi' },
+  { value: 'star', label: 'スター' },
+  { value: 'heart', label: 'ハート' },
+  { value: 'zap', label: '電撃' },
+  { value: 'check', label: 'チェック' },
+] as const
+
+function FeaturesConfigForm({
+  config,
+  onSave,
+  isPending,
+}: {
+  config: FeaturesConfig
+  onSave: (config: FeaturesConfig) => void
+  isPending: boolean
+}) {
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    control,
+    formState: { errors },
+  } = useForm<FeaturesConfigInput, unknown, FeaturesConfig>({
+    resolver: zodResolver(featuresConfigSchema),
+    defaultValues: config,
+  })
+
+  const items = useWatch({ control, name: 'items' }) ?? []
+
+  const addItem = () => {
+    const newItems = [...items, { icon: 'sparkles', title: '', description: '' }]
+    setValue('items', newItems)
+  }
+
+  const removeItem = (index: number) => {
+    const newItems = items.filter((_, i) => i !== index)
+    setValue('items', newItems)
+  }
+
+  return (
+    <form onSubmit={handleSubmit(onSave)} className="space-y-6">
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="features-section-label">セクションラベル（英語装飾）</Label>
+          <Input
+            id="features-section-label"
+            {...register('sectionLabel')}
+            placeholder="Features"
+            disabled={isPending}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="features-title">タイトル</Label>
+          <Input
+            id="features-title"
+            {...register('title')}
+            placeholder="Features"
+            disabled={isPending}
+          />
+          {errors.title && (
+            <p className="text-sm text-destructive">{errors.title.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="features-columns">カラム数</Label>
+          <Input
+            id="features-columns"
+            type="number"
+            min={1}
+            max={4}
+            {...register('columns', { valueAsNumber: true })}
+            disabled={isPending}
+          />
+        </div>
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label>特徴アイテム</Label>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addItem}
+              disabled={isPending}
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              追加
+            </Button>
+          </div>
+
+          {items.length === 0 && (
+            <p className="text-sm text-muted-foreground py-4 text-center border border-dashed rounded-lg">
+              アイテムがありません。「追加」ボタンで特徴を追加してください。
+            </p>
+          )}
+
+          {items.map((item, index) => (
+            <div
+              key={index}
+              className="rounded-lg border p-4 space-y-3"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <GripVertical className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">アイテム {index + 1}</span>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeItem(index)}
+                  disabled={isPending}
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
+
+              <div className="space-y-2">
+                <Label>アイコン</Label>
+                <Select
+                  value={item.icon ?? 'sparkles'}
+                  onValueChange={(val) => {
+                    const newItems = [...items]
+                    newItems[index] = { ...newItems[index], icon: val }
+                    setValue('items', newItems)
+                  }}
+                  disabled={isPending}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {featureIconOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>タイトル</Label>
+                <Input
+                  {...register(`items.${index}.title`)}
+                  placeholder="特徴のタイトル"
+                  disabled={isPending}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>説明</Label>
+                <Textarea
+                  {...register(`items.${index}.description`)}
+                  placeholder="特徴の説明"
+                  rows={2}
+                  disabled={isPending}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <Button type="submit" disabled={isPending}>
+        <Save className="h-4 w-4 mr-2" />
+        {isPending ? '保存中...' : '保存'}
+      </Button>
+    </form>
+  )
 }
 
 // =============================================================================
@@ -131,13 +809,10 @@ function HeroConfigForm({
     },
   })
 
-  const handleButtonsChange = useCallback(
-    (newButtons: CTAButtonItem[]) => {
-      setButtons(newButtons)
-      setValue('buttons', newButtons)
-    },
-    [setValue]
-  )
+  const handleButtonsChange = (newButtons: CTAButtonItem[]) => {
+    setButtons(newButtons)
+    setValue('buttons', newButtons)
+  }
 
   return (
     <form onSubmit={handleSubmit(onSave)} className="space-y-6">
@@ -251,15 +926,29 @@ function SpaceListConfigForm({
   const {
     register,
     handleSubmit,
+    setValue,
+    control,
     formState: { errors },
   } = useForm<SpaceListConfigInput, unknown, SpaceListConfig>({
     resolver: zodResolver(spaceListConfigSchema),
     defaultValues: config,
   })
 
+  const showViewAllLink = useWatch({ control, name: 'showViewAllLink' })
+
   return (
     <form onSubmit={handleSubmit(onSave)} className="space-y-6">
       <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="space-section-label">セクションラベル（英語装飾）</Label>
+          <Input
+            id="space-section-label"
+            {...register('sectionLabel')}
+            placeholder="例: Spaces"
+            disabled={isPending}
+          />
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="space-max">最大表示件数</Label>
           <Input
@@ -283,6 +972,39 @@ function SpaceListConfigForm({
           />
           <Label htmlFor="space-published">公開済みスペースのみ表示</Label>
         </div>
+
+        <div className="flex items-center gap-2">
+          <Switch
+            id="space-view-all"
+            checked={showViewAllLink}
+            onCheckedChange={(checked) => setValue('showViewAllLink', checked)}
+            disabled={isPending}
+          />
+          <Label htmlFor="space-view-all">「すべて見る」リンクを表示</Label>
+        </div>
+
+        {showViewAllLink && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="space-view-all-text">「全て見る」テキスト</Label>
+              <Input
+                id="space-view-all-text"
+                {...register('viewAllText')}
+                placeholder="全てのスペースを見る"
+                disabled={isPending}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="space-view-all-url">「全て見る」リンク先</Label>
+              <Input
+                id="space-view-all-url"
+                {...register('viewAllUrl')}
+                placeholder="/spaces"
+                disabled={isPending}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <Button type="submit" disabled={isPending}>
@@ -297,27 +1019,41 @@ function SpaceListConfigForm({
 // News Config Form
 // =============================================================================
 
-function NewsConfigForm({
+function NewsListConfigForm({
   config,
   onSave,
   isPending,
 }: {
-  config: NewsConfig
-  onSave: (config: NewsConfig) => void
+  config: NewsListConfig
+  onSave: (config: NewsListConfig) => void
   isPending: boolean
 }) {
   const {
     register,
     handleSubmit,
+    setValue,
+    control,
     formState: { errors },
-  } = useForm<NewsConfigInput, unknown, NewsConfig>({
-    resolver: zodResolver(newsConfigSchema),
+  } = useForm<NewsListConfigInput, unknown, NewsListConfig>({
+    resolver: zodResolver(newsListConfigSchema),
     defaultValues: config,
   })
+
+  const showViewAllLink = useWatch({ control, name: 'showViewAllLink' })
 
   return (
     <form onSubmit={handleSubmit(onSave)} className="space-y-6">
       <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="news-section-label">セクションラベル（英語装飾）</Label>
+          <Input
+            id="news-section-label"
+            {...register('sectionLabel')}
+            placeholder="例: News"
+            disabled={isPending}
+          />
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="news-title">セクションタイトル</Label>
           <Input
@@ -346,11 +1082,35 @@ function NewsConfigForm({
         <div className="flex items-center gap-2">
           <Switch
             id="news-view-all"
-            {...register('showViewAllLink')}
+            checked={showViewAllLink}
+            onCheckedChange={(checked) => setValue('showViewAllLink', checked)}
             disabled={isPending}
           />
           <Label htmlFor="news-view-all">「すべて見る」リンクを表示</Label>
         </div>
+
+        {showViewAllLink && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="news-view-all-text">「全て見る」テキスト</Label>
+              <Input
+                id="news-view-all-text"
+                {...register('viewAllText')}
+                placeholder="全てのお知らせ"
+                disabled={isPending}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="news-view-all-url">「全て見る」リンク先</Label>
+              <Input
+                id="news-view-all-url"
+                {...register('viewAllUrl')}
+                placeholder="/news"
+                disabled={isPending}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <Button type="submit" disabled={isPending}>
@@ -365,27 +1125,41 @@ function NewsConfigForm({
 // Posts Config Form
 // =============================================================================
 
-function PostsConfigForm({
+function PostListConfigForm({
   config,
   onSave,
   isPending,
 }: {
-  config: PostsConfig
-  onSave: (config: PostsConfig) => void
+  config: PostListConfig
+  onSave: (config: PostListConfig) => void
   isPending: boolean
 }) {
   const {
     register,
     handleSubmit,
+    setValue,
+    control,
     formState: { errors },
-  } = useForm<PostsConfigInput, unknown, PostsConfig>({
-    resolver: zodResolver(postsConfigSchema),
+  } = useForm<PostListConfigInput, unknown, PostListConfig>({
+    resolver: zodResolver(postListConfigSchema),
     defaultValues: config,
   })
+
+  const showViewAllLink = useWatch({ control, name: 'showViewAllLink' })
 
   return (
     <form onSubmit={handleSubmit(onSave)} className="space-y-6">
       <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="posts-section-label">セクションラベル（英語装飾）</Label>
+          <Input
+            id="posts-section-label"
+            {...register('sectionLabel')}
+            placeholder="例: Blog"
+            disabled={isPending}
+          />
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="posts-title">セクションタイトル</Label>
           <Input
@@ -414,11 +1188,35 @@ function PostsConfigForm({
         <div className="flex items-center gap-2">
           <Switch
             id="posts-view-all"
-            {...register('showViewAllLink')}
+            checked={showViewAllLink}
+            onCheckedChange={(checked) => setValue('showViewAllLink', checked)}
             disabled={isPending}
           />
           <Label htmlFor="posts-view-all">「すべて見る」リンクを表示</Label>
         </div>
+
+        {showViewAllLink && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="posts-view-all-text">「全て見る」テキスト</Label>
+              <Input
+                id="posts-view-all-text"
+                {...register('viewAllText')}
+                placeholder="全ての記事"
+                disabled={isPending}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="posts-view-all-url">「全て見る」リンク先</Label>
+              <Input
+                id="posts-view-all-url"
+                {...register('viewAllUrl')}
+                placeholder="/posts"
+                disabled={isPending}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <Button type="submit" disabled={isPending}>
@@ -433,27 +1231,41 @@ function PostsConfigForm({
 // FAQ Config Form
 // =============================================================================
 
-function FaqConfigForm({
+function FaqListConfigForm({
   config,
   onSave,
   isPending,
 }: {
-  config: FaqConfig
-  onSave: (config: FaqConfig) => void
+  config: FaqListConfig
+  onSave: (config: FaqListConfig) => void
   isPending: boolean
 }) {
   const {
     register,
     handleSubmit,
+    setValue,
+    control,
     formState: { errors },
-  } = useForm<FaqConfigInput, unknown, FaqConfig>({
-    resolver: zodResolver(faqConfigSchema),
+  } = useForm<FaqListConfigInput, unknown, FaqListConfig>({
+    resolver: zodResolver(faqListConfigSchema),
     defaultValues: config,
   })
+
+  const showViewAllLink = useWatch({ control, name: 'showViewAllLink' })
 
   return (
     <form onSubmit={handleSubmit(onSave)} className="space-y-6">
       <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="faq-section-label">セクションラベル（英語装飾）</Label>
+          <Input
+            id="faq-section-label"
+            {...register('sectionLabel')}
+            placeholder="例: FAQ"
+            disabled={isPending}
+          />
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="faq-title">セクションタイトル</Label>
           <Input
@@ -491,6 +1303,39 @@ function FaqConfigForm({
             disabled={isPending}
           />
         </div>
+
+        <div className="flex items-center gap-2">
+          <Switch
+            id="faq-view-all"
+            checked={showViewAllLink}
+            onCheckedChange={(checked) => setValue('showViewAllLink', checked)}
+            disabled={isPending}
+          />
+          <Label htmlFor="faq-view-all">「すべて見る」リンクを表示</Label>
+        </div>
+
+        {showViewAllLink && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="faq-view-all-text">「全て見る」テキスト</Label>
+              <Input
+                id="faq-view-all-text"
+                {...register('viewAllText')}
+                placeholder="全てのFAQ"
+                disabled={isPending}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="faq-view-all-url">「全て見る」リンク先</Label>
+              <Input
+                id="faq-view-all-url"
+                {...register('viewAllUrl')}
+                placeholder="/faq"
+                disabled={isPending}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <Button type="submit" disabled={isPending}>
@@ -526,17 +1371,24 @@ function CtaConfigForm({
     defaultValues: config,
   })
 
-  const handleButtonsChange = useCallback(
-    (newButtons: CTAButtonItem[]) => {
-      setButtons(newButtons)
-      setValue('buttons', newButtons)
-    },
-    [setValue]
-  )
+  const handleButtonsChange = (newButtons: CTAButtonItem[]) => {
+    setButtons(newButtons)
+    setValue('buttons', newButtons)
+  }
 
   return (
     <form onSubmit={handleSubmit(onSave)} className="space-y-6">
       <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="cta-section-label">セクションラベル（英語装飾）</Label>
+          <Input
+            id="cta-section-label"
+            {...register('sectionLabel')}
+            placeholder="例: Ready to Begin?"
+            disabled={isPending}
+          />
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="cta-title">タイトル</Label>
           <Input
@@ -612,6 +1464,16 @@ function CustomConfigForm({
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
       <div className="space-y-4">
         <div className="space-y-2">
+          <Label htmlFor="custom-section-label">セクションラベル（英語装飾）</Label>
+          <Input
+            id="custom-section-label"
+            {...register('sectionLabel')}
+            placeholder="例: Contents"
+            disabled={isPending}
+          />
+        </div>
+
+        <div className="space-y-2">
           <Label htmlFor="custom-class">追加CSSクラス（任意）</Label>
           <Input
             id="custom-class"
@@ -670,6 +1532,16 @@ function InstagramConfigForm({
     <form onSubmit={handleSubmit(onSave)} className="space-y-6">
       <div className="space-y-4">
         <div className="space-y-2">
+          <Label htmlFor="instagram-section-label">セクションラベル（英語装飾）</Label>
+          <Input
+            id="instagram-section-label"
+            {...register('sectionLabel')}
+            placeholder="例: Follow Us"
+            disabled={isPending}
+          />
+        </div>
+
+        <div className="space-y-2">
           <Label htmlFor="instagram-title">セクションタイトル</Label>
           <Input
             id="instagram-title"
@@ -705,7 +1577,7 @@ function InstagramConfigForm({
 // Main Component
 // =============================================================================
 
-export function SectionEditor({ section, onBack, onSave }: SectionEditorProps) {
+export function SectionEditor({ section, onBack, onSave, showHeader = true }: SectionEditorProps) {
   const [isPending, startTransition] = useTransition()
   const label = sectionTypeLabels[section.type]
 
@@ -728,7 +1600,7 @@ export function SectionEditor({ section, onBack, onSave }: SectionEditorProps) {
     const { config } = section
 
     switch (section.type) {
-      case HomepageSectionType.HERO:
+      case SectionType.HERO:
         return (
           <HeroConfigForm
             config={getHeroConfig(config)}
@@ -736,7 +1608,39 @@ export function SectionEditor({ section, onBack, onSave }: SectionEditorProps) {
             isPending={isPending}
           />
         )
-      case HomepageSectionType.SPACE_LIST:
+      case SectionType.HERO_PARALLAX:
+        return (
+          <HeroParallaxConfigForm
+            config={getHeroParallaxConfig(config)}
+            onSave={(c) => handleConfigSave(c)}
+            isPending={isPending}
+          />
+        )
+      case SectionType.CONCEPT:
+        return (
+          <ConceptConfigForm
+            config={getConceptConfig(config)}
+            onSave={(c) => handleConfigSave(c)}
+            isPending={isPending}
+          />
+        )
+      case SectionType.SPACE_SHOWCASE:
+        return (
+          <SpaceShowcaseConfigForm
+            config={getSpaceShowcaseConfig(config)}
+            onSave={(c) => handleConfigSave(c)}
+            isPending={isPending}
+          />
+        )
+      case SectionType.FEATURES:
+        return (
+          <FeaturesConfigForm
+            config={getFeaturesConfig(config)}
+            onSave={(c) => handleConfigSave(c)}
+            isPending={isPending}
+          />
+        )
+      case SectionType.SPACE_LIST:
         return (
           <SpaceListConfigForm
             config={getSpaceListConfig(config)}
@@ -744,31 +1648,31 @@ export function SectionEditor({ section, onBack, onSave }: SectionEditorProps) {
             isPending={isPending}
           />
         )
-      case HomepageSectionType.NEWS:
+      case SectionType.NEWS_LIST:
         return (
-          <NewsConfigForm
-            config={getNewsConfig(config)}
+          <NewsListConfigForm
+            config={getNewsListConfig(config)}
             onSave={(c) => handleConfigSave(c)}
             isPending={isPending}
           />
         )
-      case HomepageSectionType.POST:
+      case SectionType.POST_LIST:
         return (
-          <PostsConfigForm
-            config={getPostsConfig(config)}
+          <PostListConfigForm
+            config={getPostListConfig(config)}
             onSave={(c) => handleConfigSave(c)}
             isPending={isPending}
           />
         )
-      case HomepageSectionType.FAQ:
+      case SectionType.FAQ_LIST:
         return (
-          <FaqConfigForm
-            config={getFaqConfig(config)}
+          <FaqListConfigForm
+            config={getFaqListConfig(config)}
             onSave={(c) => handleConfigSave(c)}
             isPending={isPending}
           />
         )
-      case HomepageSectionType.CTA:
+      case SectionType.CTA:
         return (
           <CtaConfigForm
             config={getCtaConfig(config)}
@@ -776,7 +1680,7 @@ export function SectionEditor({ section, onBack, onSave }: SectionEditorProps) {
             isPending={isPending}
           />
         )
-      case HomepageSectionType.CUSTOM:
+      case SectionType.CUSTOM:
         return (
           <CustomConfigForm
             config={getCustomConfig(config)}
@@ -785,7 +1689,7 @@ export function SectionEditor({ section, onBack, onSave }: SectionEditorProps) {
             isPending={isPending}
           />
         )
-      case HomepageSectionType.INSTAGRAM:
+      case SectionType.INSTAGRAM:
         return (
           <InstagramConfigForm
             config={getInstagramConfig(config)}
@@ -805,16 +1709,18 @@ export function SectionEditor({ section, onBack, onSave }: SectionEditorProps) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={onBack}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          戻る
-        </Button>
-        <div>
-          <h3 className="text-lg font-medium">{section.title || label}の設定</h3>
-          <p className="text-sm text-muted-foreground">{label}</p>
+      {showHeader && (
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" onClick={onBack}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            戻る
+          </Button>
+          <div>
+            <h3 className="text-lg font-medium">{section.title || label}の設定</h3>
+            <p className="text-sm text-muted-foreground">{label}</p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Title Edit */}
       <Card>
@@ -827,14 +1733,35 @@ export function SectionEditor({ section, onBack, onSave }: SectionEditorProps) {
         </CardContent>
       </Card>
 
-      {/* Config Form */}
-      <Card>
-        <CardHeader>
-          <CardTitle>セクション設定</CardTitle>
-          <CardDescription>{label}固有の設定</CardDescription>
-        </CardHeader>
-        <CardContent>{renderConfigForm()}</CardContent>
-      </Card>
+      {/* Content & Design Tabs */}
+      <Tabs defaultValue="content">
+        <TabsList>
+          <TabsTrigger value="content">コンテンツ</TabsTrigger>
+          <TabsTrigger value="design">デザイン</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="content">
+          <Card>
+            <CardHeader>
+              <CardTitle>セクション設定</CardTitle>
+              <CardDescription>{label}固有の設定</CardDescription>
+            </CardHeader>
+            <CardContent>{renderConfigForm()}</CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="design">
+          <Card>
+            <CardHeader>
+              <CardTitle>デザイン設定</CardTitle>
+              <CardDescription>余白・背景・テキストスタイリング・レイアウト</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DesignPanel section={section} onSave={onSave} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

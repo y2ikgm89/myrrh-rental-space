@@ -3,41 +3,44 @@
 /**
  * ホームページセクション Server Actions
  *
- * HomepageSectionモデルを使用した統一セクション管理
+ * 統一 Section モデル（pageId = null でホームページ判別）
  */
 
+import type { Prisma } from '@/shared/generated/prisma/client'
 import { prisma } from '@/shared/lib/prisma'
 import { updateTag } from 'next/cache'
 import { CACHE_TAGS } from '@/shared/lib/constants'
 import { createSuccess, createFailure } from '@/admin/types/server-actions'
 import { withPermission } from '@/admin/lib/server-action-helpers'
 import { getSession, getRoleFromSession } from '@/shared/lib/auth'
-import { HomepageSectionType } from '@/shared/lib/validations/enums'
 import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'
 import { logPermissionDenied } from '@/admin/lib/audit'
 import { purgeHomeCache } from '@/shared/lib/cloudflare'
+import { fireAndForget } from '@/shared/lib/async-utils'
+import { ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
 import {
-  createHomepageSectionSchema,
-  updateHomepageSectionSchema,
+  SectionType,
+  createSectionSchema,
+  updateSectionSchema,
   updateSectionOrderSchema,
   validateSectionConfig,
   defaultSectionConfigs,
-  defaultSectionOrder,
-  type CreateHomepageSectionInput,
-  type UpdateHomepageSectionInput,
+  defaultHomepageSectionOrder,
+  type CreateSectionInput,
+  type UpdateSectionInput,
   type UpdateSectionOrderInput,
   type SectionConfig,
-} from '@/admin/lib/validations/homepage-section'
+} from '@/shared/lib/validations/section'
 
 /**
  * PrismaのJson型をSectionConfigに変換（ランタイムバリデーション付き）
  */
-function parseSectionConfig(type: HomepageSectionType, config: unknown): SectionConfig {
+function parseSectionConfig(type: SectionType, config: unknown): SectionConfig {
   const result = validateSectionConfig(type, config)
   if (result.success) {
+    // Safe widening: validated individual config type → SectionConfig union
     return result.data as SectionConfig
   }
-  // バリデーション失敗時はデフォルト設定にフォールバック
   return defaultSectionConfigs[type]
 }
 
@@ -47,9 +50,10 @@ function parseSectionConfig(type: HomepageSectionType, config: unknown): Section
 
 export type HomepageSectionData = {
   id: string
-  type: HomepageSectionType
+  type: SectionType
   title: string | null
   config: SectionConfig
+  design: unknown
   content: string | null
   order: number
   isActive: boolean
@@ -75,11 +79,13 @@ async function checkReadPermission(): Promise<boolean> {
 }
 
 function revalidateHomepage() {
+  updateTag(CACHE_TAGS.SECTIONS)
+  updateTag(CACHE_TAGS.HOMEPAGE_SECTIONS)
   updateTag(CACHE_TAGS.PAGES)
   updateTag(CACHE_TAGS.SETTINGS)
 
   // Cloudflare CDN キャッシュパージ
-  void purgeHomeCache()
+  fireAndForget(purgeHomeCache(), { operation: 'purgeHomeCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 }
 
 // =============================================================================
@@ -87,13 +93,14 @@ function revalidateHomepage() {
 // =============================================================================
 
 /**
- * 全セクションを取得（管理画面用）
+ * 全ホームページセクションを取得（管理画面用）
  */
 export async function getHomepageSections(): Promise<HomepageSectionData[] | null> {
   const hasAccess = await checkReadPermission()
   if (!hasAccess) return null
 
-  const sections = await prisma.homepageSection.findMany({
+  const sections = await prisma.section.findMany({
+    where: { pageId: null },
     orderBy: { order: 'asc' },
   })
 
@@ -104,11 +111,11 @@ export async function getHomepageSections(): Promise<HomepageSectionData[] | nul
 }
 
 /**
- * 公開用: アクティブなセクションを取得
+ * 公開用: アクティブなホームページセクションを取得
  */
 export async function getPublicHomepageSections(): Promise<HomepageSectionData[]> {
-  const sections = await prisma.homepageSection.findMany({
-    where: { isActive: true },
+  const sections = await prisma.section.findMany({
+    where: { pageId: null, isActive: true },
     orderBy: { order: 'asc' },
   })
 
@@ -125,11 +132,11 @@ export async function getHomepageSection(id: string): Promise<HomepageSectionDat
   const hasAccess = await checkReadPermission()
   if (!hasAccess) return null
 
-  const section = await prisma.homepageSection.findUnique({
+  const section = await prisma.section.findUnique({
     where: { id },
   })
 
-  if (!section) return null
+  if (!section || section.pageId !== null) return null
 
   return {
     ...section,
@@ -138,13 +145,13 @@ export async function getHomepageSection(id: string): Promise<HomepageSectionDat
 }
 
 /**
- * タイプでセクションを取得
+ * タイプでホームページセクションを取得
  */
 export async function getHomepageSectionByType(
-  type: HomepageSectionType
+  type: SectionType
 ): Promise<HomepageSectionData | null> {
-  const section = await prisma.homepageSection.findFirst({
-    where: { type },
+  const section = await prisma.section.findFirst({
+    where: { type, pageId: null },
     orderBy: { order: 'asc' },
   })
 
@@ -161,18 +168,18 @@ export async function getHomepageSectionByType(
 // =============================================================================
 
 /**
- * セクションを作成
+ * ホームページセクションを作成
  */
-export const createHomepageSection = withPermission<[CreateHomepageSectionInput], { id: string }>(
+export const createHomepageSection = withPermission<[CreateSectionInput], { id: string }>(
   'settings',
   'update'
 )(async (_user, input) => {
-  const parsed = createHomepageSectionSchema.safeParse(input)
+  const parsed = createSectionSchema.safeParse({ ...input, pageId: undefined })
   if (!parsed.success) {
     return createFailure(parsed.error.issues[0].message)
   }
 
-  const { type, title, config, content, order, isActive } = parsed.data
+  const { type, title, config, design, content, order, isActive } = parsed.data
 
   // 設定を検証
   const configValidation = validateSectionConfig(type, config)
@@ -181,16 +188,19 @@ export const createHomepageSection = withPermission<[CreateHomepageSectionInput]
   }
 
   // 次のorder値を取得
-  const maxOrder = await prisma.homepageSection.aggregate({
+  const maxOrder = await prisma.section.aggregate({
+    where: { pageId: null },
     _max: { order: true },
   })
   const nextOrder = order ?? (maxOrder._max.order ?? -1) + 1
 
-  const section = await prisma.homepageSection.create({
+  const section = await prisma.section.create({
     data: {
+      pageId: null,
       type,
       title,
       config: configValidation.data,
+      design: (design ?? {}) as Prisma.InputJsonObject,
       content,
       order: nextOrder,
       isActive,
@@ -206,22 +216,22 @@ export const createHomepageSection = withPermission<[CreateHomepageSectionInput]
 // =============================================================================
 
 /**
- * セクションを更新
+ * ホームページセクションを更新
  */
-export const updateHomepageSection = withPermission<[string, UpdateHomepageSectionInput], void>(
+export const updateHomepageSection = withPermission<[string, UpdateSectionInput], void>(
   'settings',
   'update'
 )(async (_user, id, input) => {
-  const parsed = updateHomepageSectionSchema.safeParse(input)
+  const parsed = updateSectionSchema.safeParse(input)
   if (!parsed.success) {
     return createFailure(parsed.error.issues[0].message)
   }
 
-  const existing = await prisma.homepageSection.findUnique({
+  const existing = await prisma.section.findUnique({
     where: { id },
   })
 
-  if (!existing) {
+  if (!existing || existing.pageId !== null) {
     return createFailure('セクションが見つかりません')
   }
 
@@ -234,11 +244,12 @@ export const updateHomepageSection = withPermission<[string, UpdateHomepageSecti
     parsed.data.config = configValidation.data
   }
 
-  await prisma.homepageSection.update({
+  await prisma.section.update({
     where: { id },
     data: {
       title: parsed.data.title,
       config: parsed.data.config as object | undefined,
+      design: parsed.data.design as object | undefined,
       content: parsed.data.content,
       isActive: parsed.data.isActive,
     },
@@ -255,15 +266,15 @@ export const toggleHomepageSection = withPermission<[string, boolean], void>(
   'settings',
   'update'
 )(async (_user, id, isActive) => {
-  const existing = await prisma.homepageSection.findUnique({
+  const existing = await prisma.section.findUnique({
     where: { id },
   })
 
-  if (!existing) {
+  if (!existing || existing.pageId !== null) {
     return createFailure('セクションが見つかりません')
   }
 
-  await prisma.homepageSection.update({
+  await prisma.section.update({
     where: { id },
     data: { isActive },
   })
@@ -273,7 +284,7 @@ export const toggleHomepageSection = withPermission<[string, boolean], void>(
 })
 
 /**
- * セクションの順序を更新（DnD用）
+ * ホームページセクションの順序を更新（DnD用）
  */
 export const updateSectionOrder = withPermission<[UpdateSectionOrderInput], void>(
   'settings',
@@ -286,7 +297,7 @@ export const updateSectionOrder = withPermission<[UpdateSectionOrderInput], void
 
   await prisma.$transaction(
     parsed.data.sections.map((item) =>
-      prisma.homepageSection.update({
+      prisma.section.update({
         where: { id: item.id },
         data: { order: item.order },
       })
@@ -302,21 +313,21 @@ export const updateSectionOrder = withPermission<[UpdateSectionOrderInput], void
 // =============================================================================
 
 /**
- * セクションを削除
+ * ホームページセクションを削除
  */
 export const deleteHomepageSection = withPermission<[string], void>(
   'settings',
   'update'
 )(async (_user, id) => {
-  const existing = await prisma.homepageSection.findUnique({
+  const existing = await prisma.section.findUnique({
     where: { id },
   })
 
-  if (!existing) {
+  if (!existing || existing.pageId !== null) {
     return createFailure('セクションが見つかりません')
   }
 
-  await prisma.homepageSection.delete({
+  await prisma.section.delete({
     where: { id },
   })
 
@@ -329,26 +340,27 @@ export const deleteHomepageSection = withPermission<[string], void>(
 // =============================================================================
 
 /**
- * デフォルトセクションを初期化
- * マイグレーション後に一度だけ実行
+ * デフォルトホームページセクションを初期化
  */
 export const initializeDefaultSections = withPermission<[], void>(
   'settings',
   'update'
 )(async () => {
-  // 既存セクションがある場合はスキップ
-  const existingCount = await prisma.homepageSection.count()
+  const existingCount = await prisma.section.count({
+    where: { pageId: null },
+  })
   if (existingCount > 0) {
     return createSuccess('既にセクションが存在します')
   }
 
-  // デフォルトセクションを作成
   await prisma.$transaction(
-    defaultSectionOrder.map((type, index) =>
-      prisma.homepageSection.create({
+    defaultHomepageSectionOrder.map((type, index) =>
+      prisma.section.create({
         data: {
+          pageId: null,
           type,
           config: defaultSectionConfigs[type],
+          design: {},
           order: index,
           isActive: true,
         },
@@ -359,4 +371,3 @@ export const initializeDefaultSections = withPermission<[], void>(
   revalidateHomepage()
   return createSuccess('デフォルトセクションを作成しました')
 })
-

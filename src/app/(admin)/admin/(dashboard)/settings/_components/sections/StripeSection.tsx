@@ -7,6 +7,7 @@
  */
 
 import { useState, useTransition } from 'react'
+import { useConfirm } from '@/admin/contexts/confirm-context'
 import {
   Button,
   Card,
@@ -31,7 +32,7 @@ import {
   clearStripeKeys,
 } from '@/admin/actions/settings'
 import type { SettingsData } from '@/admin/actions/settings'
-import { SUPPORTED_CURRENCIES } from '@/admin/lib/stripe'
+import { SUPPORTED_CURRENCIES, type SupportedCurrency } from '@/admin/lib/stripe'
 import { useRefreshOnSuccess } from '../hooks'
 import { StatusBanner } from '../shared/StatusBanner'
 import { formatDateTimeShort } from '@/shared/lib/utils'
@@ -39,6 +40,12 @@ import { formatDateTimeShort } from '@/shared/lib/utils'
 // =============================================================================
 // Types
 // =============================================================================
+
+const VALID_CURRENCIES = new Set<string>(SUPPORTED_CURRENCIES.map((c) => c.value))
+
+function isSupportedCurrency(value: unknown): value is SupportedCurrency {
+  return typeof value === 'string' && VALID_CURRENCIES.has(value)
+}
 
 interface StripeSectionProps {
   settings: SettingsData
@@ -49,6 +56,7 @@ interface StripeSectionProps {
 // =============================================================================
 
 export function StripeSection({ settings }: StripeSectionProps) {
+  const confirm = useConfirm()
   const { handleResult, refresh } = useRefreshOnSuccess()
   const [isPending, startTransition] = useTransition()
   const [isTesting, setIsTesting] = useState(false)
@@ -64,7 +72,7 @@ export function StripeSection({ settings }: StripeSectionProps) {
     stripePublishableKey: settings.stripePublishableKey || '',
     stripeSecretKey: '', // 常に空から開始（セキュリティ）
     stripeWebhookSecret: '', // 常に空から開始（セキュリティ）
-    stripeCurrency: settings.stripeCurrency as 'jpy' | 'usd' | 'eur',
+    stripeCurrency: isSupportedCurrency(settings.stripeCurrency) ? settings.stripeCurrency : 'jpy',
   })
 
   const [showSecretKeyInput, setShowSecretKeyInput] = useState(false)
@@ -131,8 +139,14 @@ export function StripeSection({ settings }: StripeSectionProps) {
     }
   }
 
-  const handleClearKeys = () => {
-    if (!confirm('Stripeの全てのキーをクリアしますか？')) return
+  const handleClearKeys = async () => {
+    const confirmed = await confirm({
+      title: 'Stripeキーをクリアしますか？',
+      description: 'Stripeの全てのキーをクリアしますか？',
+      confirmLabel: 'クリア',
+      variant: 'destructive',
+    })
+    if (!confirmed) return
 
     startTransition(async () => {
       const result = await clearStripeKeys()
@@ -341,8 +355,8 @@ export function StripeSection({ settings }: StripeSectionProps) {
             <div className="flex items-center gap-2">
               {settings.stripeConnectionStatus === 'connected' ? (
                 <>
-                  <span className="h-2 w-2 rounded-full bg-green-500" />
-                  <span className="text-sm font-medium text-green-700">接続済み</span>
+                  <span className="h-2 w-2 rounded-full bg-success" />
+                  <span className="text-sm font-medium text-success">接続済み</span>
                 </>
               ) : (
                 <>
@@ -367,7 +381,7 @@ export function StripeSection({ settings }: StripeSectionProps) {
         {/* 接続テスト結果 */}
         {testResult && (
           <StatusBanner success={testResult.success}>
-            <p className={`text-sm ${testResult.success ? 'text-green-700' : 'text-destructive'}`}>
+            <p className={`text-sm ${testResult.success ? 'text-success' : 'text-destructive'}`}>
               {testResult.message}
             </p>
             {testResult.mode && (

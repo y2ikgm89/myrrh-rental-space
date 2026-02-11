@@ -1,6 +1,7 @@
 'use client'
 
-import { useSearchParams, useRouter, usePathname } from 'next/navigation'
+import { useRef, useEffect } from 'react'
+import { useQueryStates, parseAsString, parseAsInteger } from 'nuqs'
 import { Search, X } from 'lucide-react'
 import {
   Button,
@@ -12,61 +13,57 @@ import {
   SelectValue,
 } from '@/admin/components/ui'
 
-// =============================================================================
-// Types
-// =============================================================================
-
-type FilterValue = {
-  status?: string
-  type?: string
-  search?: string
-}
-
-// =============================================================================
-// CouponFilters Component
-// =============================================================================
-
 export function CouponFilters() {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const currentValues: FilterValue = {
-    status: searchParams.get('status') ?? undefined,
-    type: searchParams.get('type') ?? undefined,
-    search: searchParams.get('search') ?? undefined,
-  }
+  const [params, setParams] = useQueryStates(
+    {
+      search: parseAsString.withDefault(''),
+      status: parseAsString.withDefault(''),
+      type: parseAsString.withDefault(''),
+      page: parseAsInteger.withDefault(1),
+    },
+    { history: 'push', shallow: false }
+  )
 
-  const updateFilters = (updates: Partial<FilterValue>) => {
-    const params = new URLSearchParams(searchParams.toString())
-
-    Object.entries(updates).forEach(([key, value]) => {
-      if (value) {
-        params.set(key, value)
-      } else {
-        params.delete(key)
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
       }
-    })
+    }
+  }, [])
 
-    // ページをリセット
-    params.delete('page')
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
 
-    router.push(`${pathname}?${params.toString()}`)
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
+      void setParams({ search: value || null, page: 1 })
+    }, 300)
   }
 
   const clearFilters = () => {
-    router.push(pathname)
+    void setParams({
+      search: null,
+      status: null,
+      type: null,
+      page: 1,
+    })
   }
 
-  const hasFilters = currentValues.status || currentValues.type || currentValues.search
+  const hasFilters = params.status || params.type || params.search
 
   return (
     <div className="flex flex-wrap items-center gap-3">
       {/* ステータスフィルター */}
       <Select
-        value={currentValues.status ?? 'all'}
+        value={params.status || 'all'}
         onValueChange={(value) =>
-          updateFilters({ status: value === 'all' ? undefined : value })
+          void setParams({ status: value === 'all' ? null : value, page: 1 })
         }
       >
         <SelectTrigger className="w-[140px]">
@@ -84,9 +81,9 @@ export function CouponFilters() {
 
       {/* タイプフィルター */}
       <Select
-        value={currentValues.type ?? 'all'}
+        value={params.type || 'all'}
         onValueChange={(value) =>
-          updateFilters({ type: value === 'all' ? undefined : value })
+          void setParams({ type: value === 'all' ? null : value, page: 1 })
         }
       >
         <SelectTrigger className="w-[160px]">
@@ -104,8 +101,8 @@ export function CouponFilters() {
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="コード・名称で検索..."
-          value={currentValues.search ?? ''}
-          onChange={(e) => updateFilters({ search: e.target.value || undefined })}
+          defaultValue={params.search}
+          onChange={handleSearchChange}
           className="pl-9"
         />
       </div>

@@ -27,7 +27,7 @@ type EmptyStateProps = {
  */
 export function EmptyState({ message, description, action }: EmptyStateProps) {
   return (
-    <div className="rounded-lg border bg-white p-12 text-center">
+    <div className="rounded-lg border bg-card p-12 text-center">
       <p className="text-muted-foreground">{message}</p>
       {description && (
         <p className="mt-1 text-sm text-muted-foreground">{description}</p>

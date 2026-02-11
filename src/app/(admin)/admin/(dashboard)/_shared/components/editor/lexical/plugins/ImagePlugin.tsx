@@ -6,7 +6,7 @@
 
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { $insertNodes } from 'lexical'
 import { MediaPickerDialog } from '@/admin/components/media-picker'
@@ -67,8 +67,8 @@ export function ImagePlugin({ isOpen, onClose }: ImagePluginProps) {
 export function useImageDialog() {
   const [isOpen, setIsOpen] = useState(false)
 
-  const openImageDialog = useCallback(() => setIsOpen(true), [])
-  const closeImageDialog = useCallback(() => setIsOpen(false), [])
+  const openImageDialog = () => setIsOpen(true)
+  const closeImageDialog = () => setIsOpen(false)
 
   return {
     isImageDialogOpen: isOpen,

@@ -18,7 +18,7 @@ export function StatusBanner({
   children,
 }: StatusBannerProps): ReactElement {
   const styles = success
-    ? 'border-green-200 bg-green-50'
+    ? 'border-success/20 bg-success/10'
     : 'border-destructive/50 bg-destructive/10'
 
   return <div className={`rounded-lg border p-4 ${styles}`}>{children}</div>

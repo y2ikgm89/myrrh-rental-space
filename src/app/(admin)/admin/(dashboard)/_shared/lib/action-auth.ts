@@ -111,7 +111,7 @@ export async function checkResourceAccess(
   const { user } = permResult
 
   if (isEditorRole(user.role)) {
-    if (!userHasResourceAccess(user as User & { assignedPages?: string[] }, resource, action, resourceId)) {
+    if (!(await userHasResourceAccess(user, resource, action, resourceId))) {
       void logPermissionDenied(user.id, resource, action, resourceId)
       return {
         success: false,

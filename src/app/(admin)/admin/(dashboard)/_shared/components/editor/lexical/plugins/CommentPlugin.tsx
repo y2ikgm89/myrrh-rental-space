@@ -9,7 +9,7 @@
 
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
   $getNodeByKey,
@@ -22,6 +22,7 @@ import {
   createCommand,
   type LexicalCommand,
   type LexicalEditor,
+  mergeRegister,
   type LexicalNode,
 } from 'lexical'
 import {
@@ -31,7 +32,6 @@ import {
   $wrapSelectionInMarkNode,
   MarkNode,
 } from '@lexical/mark'
-import { mergeRegister } from '@lexical/utils'
 import { MessageSquarePlus } from 'lucide-react'
 import { Button } from '@/admin/components/ui/button'
 import {
@@ -168,11 +168,11 @@ export function useCommentDialog(): UseCommentDialogReturn {
   const [isOpen, setIsOpen] = useState(false)
   const [pendingComment, setPendingComment] = useState<AddCommentPayload | null>(null)
 
-  const open = useCallback(() => setIsOpen(true), [])
-  const close = useCallback(() => {
+  const open = () => setIsOpen(true)
+  const close = () => {
     setIsOpen(false)
     setPendingComment(null)
-  }, [])
+  }
 
   return { isOpen, open, close, pendingComment, setPendingComment }
 }

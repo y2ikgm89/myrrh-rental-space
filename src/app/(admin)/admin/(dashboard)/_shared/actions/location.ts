@@ -8,7 +8,7 @@ import { withPermission } from '@/admin/lib/server-action-helpers'
 import { locationFormSchema } from '@/admin/lib/validations/location'
 import type { LocationFormInput, LocationWithStats, GetLocationsResult } from '@/admin/lib/validations/location'
 import { checkReadPermissionFor } from '@/admin/lib/permissions'
-import { parseBusinessHours, isBusinessHours, type BusinessHours } from '@/shared/types'
+import { parseBusinessHours, type BusinessHours } from '@/shared/lib/json-validators'
 import { parseStringArray } from '@/shared/lib/json-validators'
 import { createValidationError } from '@/shared/lib/action-helpers'
 
@@ -19,25 +19,22 @@ import { createValidationError } from '@/shared/lib/action-helpers'
 /**
  * BusinessHoursをPrisma JSON互換のプレーンオブジェクトに変換
  *
- * BusinessHours型は特定のキー（曜日）を持つ型であり、
- * PrismaのInputJsonValueは汎用的なインデックスシグネチャを持つ型のため、
- * 直接の型互換性がない。
- *
- * この関数では型ガードで検証後、プレーンオブジェクトに変換することで
- * 型アサーションなしにPrismaに渡せる形式を作成する。
+ * BusinessHours型（新形式: isOpen + slots配列）をPrismaのInputJsonValueに変換。
+ * 型の構造的非互換性（曜日キー vs インデックスシグネチャ）を解消する。
  */
 function businessHoursToJson(
   value: BusinessHours | null | undefined
 ): Prisma.InputJsonValue | typeof Prisma.JsonNull {
   if (value === null || value === undefined) return Prisma.JsonNull
-  if (!isBusinessHours(value)) return Prisma.JsonNull
 
-  // プレーンオブジェクトに変換（型互換性のため）
-  const result: Record<string, { open: string; close: string } | null> = {}
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const
+  const result: Record<string, { isOpen: boolean; slots: Array<{ openTime: string; closeTime: string }> }> = {}
   for (const day of days) {
-    const slot = value[day]
-    result[day] = slot ? { open: slot.open, close: slot.close } : null
+    const dayData = value[day]
+    result[day] = {
+      isOpen: dayData.isOpen,
+      slots: dayData.slots.map((slot) => ({ openTime: slot.openTime, closeTime: slot.closeTime })),
+    }
   }
   return result
 }

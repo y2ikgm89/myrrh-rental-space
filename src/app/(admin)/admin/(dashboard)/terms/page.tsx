@@ -51,7 +51,7 @@ async function TermsListContent() {
 
   if (!result.success) {
     return (
-      <div className="rounded-lg border bg-white p-12 text-center">
+      <div className="rounded-lg border bg-card p-12 text-center">
         <p className="text-destructive">{result.error}</p>
       </div>
     )

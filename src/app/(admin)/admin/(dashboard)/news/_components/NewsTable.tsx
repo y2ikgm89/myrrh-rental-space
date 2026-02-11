@@ -35,7 +35,7 @@ export function NewsTable({ news }: NewsTableProps) {
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border bg-white">
+    <div className="overflow-hidden rounded-lg border bg-card">
       <Table>
         <TableHeader>
           <TableRow>

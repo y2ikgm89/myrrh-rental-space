@@ -11,6 +11,7 @@
 import { Suspense } from 'react'
 import { connection } from 'next/server'
 import { getSettings, getDiscountSettings, getTaxSettings } from '@/admin/actions/settings'
+import { getSocialLinks } from '@/admin/actions/navigation'
 import { SettingsLayout } from '../_components/SettingsLayout'
 import { SettingsTabs } from '../_components/SettingsTabs'
 import {
@@ -20,6 +21,7 @@ import {
   DiscountSection,
   TaxSection,
   TermsAgreementSection,
+  MeoSection,
 } from '../_components/sections'
 import type { ReactElement } from 'react'
 
@@ -29,17 +31,18 @@ import type { ReactElement } from 'react'
 async function BusinessSettingsContent(): Promise<ReactElement> {
   await connection()
 
-  const [settings, discountSettings, taxSettings] = await Promise.all([
+  const [settings, discountSettings, taxSettings, socialLinks] = await Promise.all([
     getSettings(),
     getDiscountSettings(),
     getTaxSettings(),
+    getSocialLinks({ activeOnly: true }),
   ])
 
   if (!settings) {
     return (
       <SettingsLayout
         title="ビジネス設定"
-        description="事業者情報・営業時間・予約・割引・消費税設定"
+        description="事業者情報・営業時間・予約・割引・消費税・MEO設定"
       >
         <div className="text-center py-8 text-muted-foreground">
           設定を読み込めませんでした
@@ -79,12 +82,17 @@ async function BusinessSettingsContent(): Promise<ReactElement> {
       label: '消費税',
       content: <TaxSection settings={taxSettings} />,
     },
+    {
+      value: 'meo',
+      label: 'MEO対策',
+      content: <MeoSection settings={settings} socialLinkCount={socialLinks.length} />,
+    },
   ]
 
   return (
     <SettingsLayout
       title="ビジネス設定"
-      description="事業者情報・営業時間・予約・割引・消費税設定"
+      description="事業者情報・営業時間・予約・割引・消費税・MEO設定"
     >
       <SettingsTabs tabs={tabs} defaultTab="info" />
     </SettingsLayout>
@@ -98,7 +106,7 @@ function BusinessSettingsLoading(): ReactElement {
   return (
     <SettingsLayout
       title="ビジネス設定"
-      description="事業者情報・営業時間・予約・割引・消費税設定"
+      description="事業者情報・営業時間・予約・割引・消費税・MEO設定"
     >
       <div className="animate-pulse space-y-6">
         <div className="flex gap-1 h-10 bg-muted rounded-lg p-1">

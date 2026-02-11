@@ -6,7 +6,7 @@
 
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { $insertNodes } from 'lexical'
 import {
@@ -148,8 +148,8 @@ export function XPlugin({ isOpen, onClose }: XPluginProps) {
 export function useXDialog() {
   const [isOpen, setIsOpen] = useState(false)
 
-  const openXDialog = useCallback(() => setIsOpen(true), [])
-  const closeXDialog = useCallback(() => setIsOpen(false), [])
+  const openXDialog = () => setIsOpen(true)
+  const closeXDialog = () => setIsOpen(false)
 
   return {
     isXDialogOpen: isOpen,

@@ -15,7 +15,6 @@ import type {
   LexicalNode,
   NodeKey,
   SerializedElementNode,
-  Spread,
 } from 'lexical'
 import { $applyNodeReplacement, ElementNode, $createParagraphNode, $isElementNode } from 'lexical'
 
@@ -27,12 +26,9 @@ export type PullQuoteStyle = 'classic' | 'modern' | 'minimal'
 
 export const PULL_QUOTE_STYLES: readonly PullQuoteStyle[] = ['classic', 'modern', 'minimal'] as const
 
-export type SerializedPullQuoteNode = Spread<
-  {
-    quoteStyle: PullQuoteStyle
-  },
-  SerializedElementNode
->
+export interface SerializedPullQuoteNode extends SerializedElementNode {
+  quoteStyle: PullQuoteStyle
+}
 
 // =============================================================================
 // Type Guard (Set-based pattern for type safety)
@@ -84,7 +80,7 @@ export class PullQuoteNode extends ElementNode {
   }
 
   static importJSON(serializedNode: SerializedPullQuoteNode): PullQuoteNode {
-    return $createPullQuoteNode(serializedNode.quoteStyle)
+    return $createPullQuoteNode(serializedNode.quoteStyle).updateFromJSON(serializedNode)
   }
 
   static importDOM(): DOMConversionMap | null {
@@ -110,7 +106,6 @@ export class PullQuoteNode extends ElementNode {
   exportJSON(): SerializedPullQuoteNode {
     return {
       ...super.exportJSON(),
-      type: 'pull-quote',
       quoteStyle: this.__quoteStyle,
     }
   }

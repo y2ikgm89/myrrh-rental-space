@@ -42,9 +42,10 @@ type PageActionsProps = {
   title: string
   isPublished: boolean
   isSystemPage?: boolean
+  isHomepage?: boolean
 }
 
-export function PageActions({ slug, title, isPublished, isSystemPage = false }: PageActionsProps) {
+export function PageActions({ slug, title, isPublished, isSystemPage = false, isHomepage = false }: PageActionsProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -75,7 +76,7 @@ export function PageActions({ slug, title, isPublished, isSystemPage = false }: 
   }
 
   const handlePreview = () => {
-    window.open(`/${slug}`, '_blank')
+    window.open(isHomepage ? '/' : `/${slug}`, '_blank')
   }
 
   return (
@@ -97,23 +98,27 @@ export function PageActions({ slug, title, isPublished, isSystemPage = false }: 
             プレビュー
           </DropdownMenuItem>
 
-          <DropdownMenuSeparator />
+          {!isHomepage && (
+            <>
+              <DropdownMenuSeparator />
 
-          <DropdownMenuItem onClick={handleTogglePublished} disabled={isPending}>
-            {isPublished ? (
-              <>
-                <EyeOff className="h-4 w-4 mr-2" />
-                非公開にする
-              </>
-            ) : (
-              <>
-                <Eye className="h-4 w-4 mr-2" />
-                公開する
-              </>
-            )}
-          </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleTogglePublished} disabled={isPending}>
+                {isPublished ? (
+                  <>
+                    <EyeOff className="h-4 w-4 mr-2" />
+                    非公開にする
+                  </>
+                ) : (
+                  <>
+                    <Eye className="h-4 w-4 mr-2" />
+                    公開する
+                  </>
+                )}
+              </DropdownMenuItem>
+            </>
+          )}
 
-          {!isSystemPage && (
+          {!isSystemPage && !isHomepage && (
             <>
               <DropdownMenuSeparator />
               <DropdownMenuItem

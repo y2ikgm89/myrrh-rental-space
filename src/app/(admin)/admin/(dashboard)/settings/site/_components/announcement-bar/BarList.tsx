@@ -20,9 +20,9 @@ import type { BarListProps } from './types'
 
 function TypeBadge({ type }: { type: string }) {
   const config: Record<string, { label: string; className: string }> = {
-    info: { label: 'お知らせ', className: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' },
-    warning: { label: '重要', className: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300' },
-    promo: { label: 'キャンペーン', className: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' },
+    info: { label: 'お知らせ', className: 'bg-primary/10 text-primary' },
+    warning: { label: '重要', className: 'bg-warning/10 text-warning' },
+    promo: { label: 'キャンペーン', className: 'bg-success/10 text-success' },
   }
 
   const { label, className } = config[type] || config.info

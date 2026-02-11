@@ -73,7 +73,7 @@ export function MediaGrid({ items }: Props) {
                     handleDelete(item)
                   }}
                   disabled={isPending}
-                  className="p-1.5 rounded bg-red-500/80 hover:bg-red-500 transition-colors disabled:opacity-50"
+                  className="p-1.5 rounded bg-destructive/80 hover:bg-destructive transition-colors disabled:opacity-50"
                   title="削除"
                 >
                   <Trash2 className="h-4 w-4 text-white" />

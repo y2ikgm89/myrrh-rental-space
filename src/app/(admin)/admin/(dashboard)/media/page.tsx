@@ -4,6 +4,7 @@
 
 import { Suspense } from 'react'
 import type { Metadata } from 'next'
+import { loadAdminMediaSearchParams } from '@/shared/lib/nuqs'
 import { MediaFilters } from './_components/MediaFilters'
 import { MediaListWrapper } from './_components/MediaListWrapper'
 
@@ -11,19 +12,18 @@ export const metadata: Metadata = {
   title: 'メディア管理',
 }
 
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
+
 type PageProps = {
-  searchParams: Promise<{
-    type?: string
-    usage?: string
-    search?: string
-    page?: string
-    view?: string
-  }>
+  searchParams: SearchParams
+}
+
+async function MediaListWithLoader({ searchParams }: { searchParams: SearchParams }) {
+  const params = await loadAdminMediaSearchParams(searchParams)
+  return <MediaListWrapper searchParams={params} />
 }
 
 export default async function MediaPage({ searchParams }: PageProps) {
-  const params = await searchParams
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -41,7 +41,7 @@ export default async function MediaPage({ searchParams }: PageProps) {
 
       {/* Media List */}
       <Suspense fallback={<MediaGridSkeleton />}>
-        <MediaListWrapper searchParams={params} />
+        <MediaListWithLoader searchParams={searchParams} />
       </Suspense>
     </div>
   )

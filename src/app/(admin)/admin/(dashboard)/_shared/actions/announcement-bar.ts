@@ -10,6 +10,9 @@ import { getSession, getRoleFromSession } from '@/shared/lib/auth'
 import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'
 import { logPermissionDenied } from '@/admin/lib/audit'
 import { purgeHomeCache } from '@/shared/lib/cloudflare'
+import { fireAndForget } from '@/shared/lib/async-utils'
+import { ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
+import { AnnouncementBarType } from '@/shared/generated/prisma/enums'
 
 // =============================================================================
 // Types
@@ -42,7 +45,7 @@ export type GetAnnouncementBarsResult = {
 
 const announcementBarSchema = z.object({
   message: z.string().min(1, { error: 'メッセージは必須です' }).max(200, { error: 'メッセージは200文字以内で入力してください' }),
-  type: z.enum(['info', 'warning', 'promo']).default('info'),
+  type: z.enum(AnnouncementBarType).default(AnnouncementBarType.info),
   linkUrl: z.string().url({ error: '有効なURLを入力してください' }).or(z.literal('')).nullable().optional(),
   linkText: z.string().max(50, { error: 'リンクテキストは50文字以内' }).nullable().optional(),
   bgColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, { error: '有効な色コードを入力してください' }).transform(v => v.toLowerCase()).or(z.literal('')).nullable().optional(),
@@ -184,7 +187,7 @@ export const createAnnouncementBar = withPermission<
   updateTag(CACHE_TAGS.ANNOUNCEMENT_BAR)
 
   // Cloudflare CDN キャッシュパージ（アナウンスメントバーは全ページに影響）
-  void purgeHomeCache()
+  fireAndForget(purgeHomeCache(), { operation: 'purgeHomeCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
   return createSuccess('お知らせバーを作成しました', { id: bar.id })
 })
@@ -241,7 +244,7 @@ export const updateAnnouncementBar = withPermission<
   updateTag(CACHE_TAGS.ANNOUNCEMENT_BAR)
 
   // Cloudflare CDN キャッシュパージ（アナウンスメントバーは全ページに影響）
-  void purgeHomeCache()
+  fireAndForget(purgeHomeCache(), { operation: 'purgeHomeCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
   return createSuccess('お知らせバーを更新しました')
 })
@@ -268,7 +271,7 @@ export const deleteAnnouncementBar = withPermission<[id: string], void>(
   updateTag(CACHE_TAGS.ANNOUNCEMENT_BAR)
 
   // Cloudflare CDN キャッシュパージ（アナウンスメントバーは全ページに影響）
-  void purgeHomeCache()
+  fireAndForget(purgeHomeCache(), { operation: 'purgeHomeCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
   return createSuccess('お知らせバーを削除しました')
 })
@@ -298,7 +301,7 @@ export const toggleAnnouncementBarActive = withPermission<[id: string], void>(
   updateTag(CACHE_TAGS.ANNOUNCEMENT_BAR)
 
   // Cloudflare CDN キャッシュパージ（アナウンスメントバーは全ページに影響）
-  void purgeHomeCache()
+  fireAndForget(purgeHomeCache(), { operation: 'purgeHomeCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
   return createSuccess('状態を変更しました')
 })

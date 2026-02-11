@@ -22,7 +22,7 @@ import {
 import { Switch } from '@/admin/components/ui/switch'
 import { updateSidebarSettings } from '@/admin/actions/settings'
 import type { SettingsData } from '@/admin/actions/settings'
-import type { SidebarWidgets } from '@/admin/lib/validations/sidebar'
+import type { SidebarWidgets } from '@/shared/lib/validations/sidebar'
 
 // =============================================================================
 // Types

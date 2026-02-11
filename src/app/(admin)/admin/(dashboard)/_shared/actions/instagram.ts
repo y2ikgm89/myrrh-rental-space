@@ -25,6 +25,8 @@ import {
   getTokenExpiryDays,
   shouldRefreshToken,
 } from '@/shared/lib/instagram'
+import { InstagramFeedLayout } from '@/shared/generated/prisma/enums'
+import { getValidInstagramFeedLayout } from '@/shared/lib/validations/enums'
 
 // =============================================================================
 // Types
@@ -38,7 +40,7 @@ export type InstagramConfig = {
   tokenExpiryDays: number | null
   shouldRefreshToken: boolean
   feedEnabled: boolean
-  feedLayout: 'grid' | 'carousel' | 'card'
+  feedLayout: InstagramFeedLayout
   feedColumns: number
   feedMaxItems: number
   showCaption: boolean
@@ -56,19 +58,15 @@ export type InstagramPostData = {
 }
 
 // =============================================================================
-// Type Guards
+// Helpers
 // =============================================================================
 
-type FeedLayout = 'grid' | 'carousel' | 'card'
-
-const VALID_FEED_LAYOUTS = new Set<FeedLayout>(['grid', 'carousel', 'card'])
-
-function isFeedLayout(value: unknown): value is FeedLayout {
-  return typeof value === 'string' && VALID_FEED_LAYOUTS.has(value as FeedLayout)
-}
-
-function parseFeedLayout(value: unknown): FeedLayout {
-  return isFeedLayout(value) ? value : 'grid'
+function getMetadataString(
+  metadata: Record<string, unknown> | undefined,
+  key: string,
+): string | undefined {
+  const value = metadata?.[key]
+  return typeof value === 'string' ? value : undefined
 }
 
 // =============================================================================
@@ -118,7 +116,7 @@ export async function getInstagramConfig(): Promise<InstagramConfig> {
     tokenExpiryDays,
     shouldRefreshToken: needsRefresh,
     feedEnabled: settings?.instagramFeedEnabled ?? false,
-    feedLayout: parseFeedLayout(settings?.instagramFeedLayout),
+    feedLayout: getValidInstagramFeedLayout(settings?.instagramFeedLayout),
     feedColumns: settings?.instagramFeedColumns ?? 4,
     feedMaxItems: settings?.instagramFeedMaxItems ?? 8,
     showCaption: settings?.instagramShowCaption ?? false,
@@ -212,11 +210,10 @@ export const saveManualToken = withPermission<[string], { username: string | und
       return createFailure(testResult.error || '接続テストに失敗しました')
     }
 
-    const metadata = testResult.metadata as {
-      userId?: string
-      username?: string
-      accountType?: string
-    } | undefined
+    const metadata = testResult.metadata
+    const userId = getMetadataString(metadata, 'userId')
+    const username = getMetadataString(metadata, 'username')
+    const accountType = getMetadataString(metadata, 'accountType')
 
     // トークンを暗号化
     let encryptedToken: string
@@ -236,22 +233,22 @@ export const saveManualToken = withPermission<[string], { username: string | und
         id: 'singleton',
         instagramAccessToken: encryptedToken,
         instagramTokenExpiresAt: expiresAt,
-        instagramUserId: metadata?.userId || null,
-        instagramUsername: metadata?.username || null,
-        instagramAccountType: metadata?.accountType || null,
+        instagramUserId: userId || null,
+        instagramUsername: username || null,
+        instagramAccountType: accountType || null,
       },
       update: {
         instagramAccessToken: encryptedToken,
         instagramTokenExpiresAt: expiresAt,
-        instagramUserId: metadata?.userId || null,
-        instagramUsername: metadata?.username || null,
-        instagramAccountType: metadata?.accountType || null,
+        instagramUserId: userId || null,
+        instagramUsername: username || null,
+        instagramAccountType: accountType || null,
       },
     })
 
     updateTag(CACHE_TAGS.SETTINGS)
     return createSuccess('Instagramトークンを保存しました', {
-      username: metadata?.username,
+      username,
     })
   }
 )
@@ -271,9 +268,9 @@ export const testInstagramConnectionAction = withPermission<
     const result = await testInstagramConnection(parsed.data)
 
     if (result.success) {
-      const metadata = result.metadata as { username?: string } | undefined
+      const username = getMetadataString(result.metadata, 'username')
       return createSuccess(result.message || '接続テストに成功しました', {
-        username: metadata?.username,
+        username,
         message: result.message || '',
       })
     }

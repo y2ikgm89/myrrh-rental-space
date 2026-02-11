@@ -20,6 +20,7 @@ import {
   Switch,
 } from '@/admin/components/ui'
 import { updatePermalinkSettings } from '@/admin/actions/settings'
+import { PostPermalinkStructure } from '@/shared/generated/prisma/enums'
 import type { SelectionBoxOption } from '@/admin/components/ui'
 
 // =============================================================================
@@ -28,26 +29,24 @@ import type { SelectionBoxOption } from '@/admin/components/ui'
 
 type PermalinkSectionProps = {
   settings: {
-    postPermalinkStructure: string | null
+    postPermalinkStructure: PostPermalinkStructure | null
     postUrlPrefixEnabled: boolean
   }
 }
-
-type PermalinkStructure = 'post-name' | 'date-name' | 'category-name'
 
 // =============================================================================
 // Type Guards
 // =============================================================================
 
-const VALID_STRUCTURES: readonly PermalinkStructure[] = ['post-name', 'date-name', 'category-name']
+const VALID_STRUCTURES = Object.values(PostPermalinkStructure)
 const VALID_STRUCTURES_SET: ReadonlySet<string> = new Set(VALID_STRUCTURES)
 
-function isValidPermalinkStructure(value: unknown): value is PermalinkStructure {
+function isValidPermalinkStructure(value: unknown): value is PostPermalinkStructure {
   return typeof value === 'string' && VALID_STRUCTURES_SET.has(value)
 }
 
-function getValidPermalinkStructure(value: string | null): PermalinkStructure {
-  return isValidPermalinkStructure(value) ? value : 'post-name'
+function getValidPermalinkStructure(value: string | null): PostPermalinkStructure {
+  return isValidPermalinkStructure(value) ? value : PostPermalinkStructure.post_name
 }
 
 // =============================================================================
@@ -56,17 +55,17 @@ function getValidPermalinkStructure(value: string | null): PermalinkStructure {
 
 const PERMALINK_OPTIONS: SelectionBoxOption[] = [
   {
-    value: 'post-name',
+    value: PostPermalinkStructure.post_name,
     label: 'シンプル',
     description: '記事名のみのシンプルなURL',
   },
   {
-    value: 'date-name',
+    value: PostPermalinkStructure.date_name,
     label: '日付+記事名',
     description: '公開日が含まれるURL',
   },
   {
-    value: 'category-name',
+    value: PostPermalinkStructure.category_name,
     label: 'カテゴリ+記事名',
     description: 'カテゴリ階層を含むURL',
   },
@@ -79,7 +78,7 @@ const PERMALINK_OPTIONS: SelectionBoxOption[] = [
 export function PermalinkSection({ settings }: PermalinkSectionProps) {
   const [isPending, startTransition] = useTransition()
 
-  const [structure, setStructure] = useState<PermalinkStructure>(
+  const [structure, setStructure] = useState<PostPermalinkStructure>(
     getValidPermalinkStructure(settings.postPermalinkStructure)
   )
   const [prefixEnabled, setPrefixEnabled] = useState(settings.postUrlPrefixEnabled)
@@ -102,11 +101,11 @@ export function PermalinkSection({ settings }: PermalinkSectionProps) {
   const getPreviewUrl = () => {
     const prefix = prefixEnabled ? '/posts' : ''
     switch (structure) {
-      case 'date-name':
+      case PostPermalinkStructure.date_name:
         return `${prefix}/2026/01/article-title`
-      case 'category-name':
+      case PostPermalinkStructure.category_name:
         return `${prefix}/technology/article-title`
-      case 'post-name':
+      case PostPermalinkStructure.post_name:
       default:
         return `${prefix}/article-title`
     }
@@ -137,8 +136,8 @@ export function PermalinkSection({ settings }: PermalinkSectionProps) {
 
         {/* プレフィックス無効時の警告 */}
         {!prefixEnabled && (
-          <div className="rounded-md border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950">
-            <p className="text-sm text-amber-800 dark:text-amber-200">
+          <div className="rounded-md border border-warning/20 bg-warning/10 p-4">
+            <p className="text-sm text-warning-foreground">
               プレフィックスを無効にすると、投稿のスラッグがルートレベルで使用されます。
               既存の静的ページ（about, contact 等）や予約パスと衝突しないよう注意してください。
             </p>

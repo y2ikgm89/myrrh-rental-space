@@ -48,9 +48,9 @@ const ROLE_CONFIGS: RoleConfig[] = [
     id: 'SUPER_ADMIN',
     label: 'スーパー管理者',
     icon: Shield,
-    color: 'text-red-700',
-    bgColor: 'bg-red-50',
-    borderColor: 'border-red-200',
+    color: 'text-destructive',
+    bgColor: 'bg-destructive/10',
+    borderColor: 'border-destructive/20',
     description: 'システム全体を管理できる最上位の権限',
     capabilities: [
       'すべての機能へのフルアクセス',
@@ -65,9 +65,9 @@ const ROLE_CONFIGS: RoleConfig[] = [
     id: 'ADMIN',
     label: '管理者',
     icon: Settings,
-    color: 'text-blue-700',
-    bgColor: 'bg-blue-50',
-    borderColor: 'border-blue-200',
+    color: 'text-primary',
+    bgColor: 'bg-primary/10',
+    borderColor: 'border-primary/20',
     description: '日常的なコンテンツ管理を担当',
     capabilities: [
       'スペース・予約・顧客の管理',
@@ -85,9 +85,9 @@ const ROLE_CONFIGS: RoleConfig[] = [
     id: 'EDITOR',
     label: '編集者',
     icon: Edit,
-    color: 'text-amber-700',
-    bgColor: 'bg-amber-50',
-    borderColor: 'border-amber-200',
+    color: 'text-warning',
+    bgColor: 'bg-warning/10',
+    borderColor: 'border-warning/20',
     description: '割り当てられたコンテンツのみ編集可能',
     capabilities: [
       '割り当てられたページの編集',
@@ -146,14 +146,14 @@ function RoleCard({ config }: { config: RoleConfig }) {
       <CardContent className="space-y-4">
         {/* できること */}
         <div>
-          <h4 className="text-sm font-medium text-green-700 mb-2 flex items-center gap-1.5">
+          <h4 className="text-sm font-medium text-success mb-2 flex items-center gap-1.5">
             <Check className="h-4 w-4" />
             できること
           </h4>
           <ul className="space-y-1.5">
             {config.capabilities.map((item, i) => (
               <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                <span className="text-green-500 mt-0.5">•</span>
+                <span className="text-success mt-0.5">•</span>
                 {item}
               </li>
             ))}
@@ -163,14 +163,14 @@ function RoleCard({ config }: { config: RoleConfig }) {
         {/* 制限 */}
         {config.restrictions.length > 0 && (
           <div>
-            <h4 className="text-sm font-medium text-red-700 mb-2 flex items-center gap-1.5">
+            <h4 className="text-sm font-medium text-destructive mb-2 flex items-center gap-1.5">
               <X className="h-4 w-4" />
               制限
             </h4>
             <ul className="space-y-1.5">
               {config.restrictions.map((item, i) => (
                 <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                  <span className="text-red-400 mt-0.5">•</span>
+                  <span className="text-destructive/60 mt-0.5">•</span>
                   {item}
                 </li>
               ))}

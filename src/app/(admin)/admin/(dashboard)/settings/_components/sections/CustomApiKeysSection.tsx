@@ -7,6 +7,7 @@
  */
 
 import { useState, useTransition } from 'react'
+import { useConfirm } from '@/admin/contexts/confirm-context'
 import {
   Button,
   Card,
@@ -50,6 +51,7 @@ interface CustomApiKeysSectionProps {
 export function CustomApiKeysSection({
   keys,
 }: CustomApiKeysSectionProps) {
+  const confirm = useConfirm()
   const { handleResult } = useRefreshOnSuccess()
   const [isPending, startTransition] = useTransition()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -71,8 +73,14 @@ export function CustomApiKeysSection({
     })
   }
 
-  const handleDelete = (id: string, name: string) => {
-    if (!confirm(`「${name}」を削除しますか？`)) return
+  const handleDelete = async (id: string, name: string) => {
+    const confirmed = await confirm({
+      title: 'APIキーを削除しますか？',
+      description: `「${name}」を削除しますか？`,
+      confirmLabel: '削除',
+      variant: 'destructive',
+    })
+    if (!confirmed) return
 
     startTransition(async () => {
       const result = await deleteCustomApiKey(id)
@@ -87,7 +95,7 @@ export function CustomApiKeysSection({
           <div>
             <CardTitle className="flex items-center gap-2">
               <svg
-                className="h-5 w-5 text-blue-600"
+                className="h-5 w-5 text-primary"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"

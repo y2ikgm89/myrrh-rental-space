@@ -1,1 +1,2 @@
-export { PageEditTabs } from './PageEditTabs'
+export { SectionMasterDetail } from './SectionMasterDetail'
+export { PublishToggle } from './PublishToggle'

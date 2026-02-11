@@ -18,7 +18,6 @@ import {
   createUserSchema,
   updateUserSchema,
   type UserData,
-  type CreateUserInput,
 } from '@/admin/lib/validations/user'
 import { Role } from '@/shared/generated/prisma/enums'
 import { keysOf } from '@/shared/lib/serialize'
@@ -47,11 +46,17 @@ export function UserForm({ mode, user }: Props) {
         return updateUser(user.id, {
           email: data.email,
           name: data.name,
-          role: data.role as Role,
+          role: data.role,
           password: data.password || undefined,
         })
       }
-      return createUser(data as CreateUserInput)
+      // createUser パスでは createUserSchema で検証済み
+      return createUser({
+        email: data.email,
+        name: data.name,
+        role: data.role,
+        password: data.password ?? '',
+      })
     },
     {
       redirectTo: isEdit ? `/admin/staff/${user.id}` : '/admin/staff',

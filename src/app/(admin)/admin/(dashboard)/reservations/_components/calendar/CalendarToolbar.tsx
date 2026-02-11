@@ -34,7 +34,7 @@ export function CalendarToolbar({ state }: CalendarToolbarProps) {
   const dateLabel = formatDateLabel(currentDate, view)
 
   return (
-    <div className="flex flex-col gap-4 rounded-lg border bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-4 rounded-lg border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
       {/* 左: ビュー切替 */}
       <div className="flex gap-1">
         <Button

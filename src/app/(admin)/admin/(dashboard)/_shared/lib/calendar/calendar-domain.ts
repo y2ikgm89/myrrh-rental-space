@@ -243,13 +243,13 @@ export function getEventsForDay(
 export function getStatusColorClass(status: string): string {
   switch (status) {
     case 'PENDING':
-      return 'bg-yellow-100 border-l-yellow-500 text-yellow-800'
+      return 'bg-warning/10 border-l-warning text-warning-foreground'
     case 'CONFIRMED':
-      return 'bg-green-100 border-l-green-500 text-green-800'
+      return 'bg-success/10 border-l-success text-success'
     case 'CANCELLED':
-      return 'bg-gray-100 border-l-gray-400 text-gray-500 line-through'
+      return 'bg-muted border-l-muted-foreground text-muted-foreground line-through'
     default:
-      return 'bg-blue-100 border-l-blue-500 text-blue-800'
+      return 'bg-info/10 border-l-info text-info'
   }
 }
 
@@ -306,7 +306,7 @@ export function getWeekdayHeaders(): string[] {
  * 曜日の色クラスを取得
  */
 export function getWeekdayColorClass(dayIndex: number): string {
-  if (dayIndex === 0) return 'text-red-500' // 日曜
-  if (dayIndex === 6) return 'text-blue-500' // 土曜
+  if (dayIndex === 0) return 'text-destructive' // 日曜
+  if (dayIndex === 6) return 'text-info' // 土曜
   return ''
 }

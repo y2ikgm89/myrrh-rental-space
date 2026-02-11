@@ -233,12 +233,12 @@ export function userHasPermission(
  * @param resourceId リソースID
  * @returns 権限があればtrue
  */
-export function userHasResourceAccess(
+export async function userHasResourceAccess(
   user: User,
   resource: Resource,
   action: Action,
   resourceId?: string
-): boolean {
+): Promise<boolean> {
   // まず基本権限をチェック
   if (!userHasPermission(user, resource, action)) {
     return false
@@ -249,17 +249,20 @@ export function userHasResourceAccess(
     return true
   }
 
-  // EDITORはassignedPagesに含まれるリソースのみアクセス可能
+  // EDITORはpageAssignmentsに含まれるリソースのみアクセス可能
   // ただし、resourceIdなしの場合（一覧表示など）は許可
   // 一覧表示時はフィルタリングで対応
   if (!resourceId) {
     return true
   }
 
-  // assignedPagesが存在するか型安全にチェック
-  const userWithPages = user as { assignedPages?: string[] }
-  const assignedPages = userWithPages.assignedPages ?? []
-  return assignedPages.includes(resourceId)
+  // DBからページ割り当てを取得
+  const assignments = await prisma.userPageAssignment.findMany({
+    where: { userId: user.id },
+    select: { pageId: true },
+  })
+  const assignedPageIds = assignments.map((a) => a.pageId)
+  return assignedPageIds.includes(resourceId)
 }
 
 /**

@@ -172,7 +172,7 @@ export function ReservationSection({ settings }: ReservationSectionProps) {
             </Select>
 
             {cancellationPolicies.length === 0 && !isLoadingPolicies && (
-              <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
+              <div className="flex items-center gap-2 rounded-md border border-warning/20 bg-warning/10 p-3 text-sm text-warning-foreground">
                 <AlertCircle className="h-4 w-4 flex-shrink-0" />
                 <span>
                   キャンセルポリシーが登録されていません。先に利用規約管理で作成してください。

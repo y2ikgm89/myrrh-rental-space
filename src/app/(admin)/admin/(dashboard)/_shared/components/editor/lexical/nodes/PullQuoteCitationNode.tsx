@@ -22,7 +22,8 @@ import { $applyNodeReplacement, ElementNode, $createParagraphNode, $isElementNod
 // Types
 // =============================================================================
 
-export type SerializedPullQuoteCitationNode = SerializedElementNode
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface SerializedPullQuoteCitationNode extends SerializedElementNode {}
 
 // =============================================================================
 // Constants
@@ -52,8 +53,8 @@ export class PullQuoteCitationNode extends ElementNode {
     return new PullQuoteCitationNode(node.__key)
   }
 
-  static importJSON(_serializedNode: SerializedPullQuoteCitationNode): PullQuoteCitationNode {
-    return $createPullQuoteCitationNode()
+  static importJSON(serializedNode: SerializedPullQuoteCitationNode): PullQuoteCitationNode {
+    return $createPullQuoteCitationNode().updateFromJSON(serializedNode)
   }
 
   static importDOM(): DOMConversionMap | null {
@@ -78,7 +79,6 @@ export class PullQuoteCitationNode extends ElementNode {
   exportJSON(): SerializedPullQuoteCitationNode {
     return {
       ...super.exportJSON(),
-      type: 'pull-quote-citation',
     }
   }
 

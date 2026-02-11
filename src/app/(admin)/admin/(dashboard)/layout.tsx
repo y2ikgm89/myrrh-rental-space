@@ -12,7 +12,9 @@
 
 import { Suspense } from 'react'
 import { cacheLife, cacheTag } from 'next/cache'
+import { CACHE_TAGS } from '@/shared/lib/constants'
 import { AdminLayoutProvider } from '@/admin/contexts/admin-layout-context'
+import { ConfirmProvider } from '@/admin/contexts/confirm-context'
 import { ResponsiveSidebar } from './_components/ResponsiveSidebar'
 import { MainContent } from './_components/MainContent'
 import { TopBar } from './_components/TopBar'
@@ -25,7 +27,7 @@ const ADMIN_LOGIN_TOKEN = process.env.ADMIN_LOGIN_TOKEN || ''
 async function getAdminBrandingSettings() {
   'use cache'
   cacheLife('hours')
-  cacheTag('settings')
+  cacheTag(CACHE_TAGS.SETTINGS)
 
   const settings = await prisma.settings.findFirst({
     select: {
@@ -51,30 +53,32 @@ export default async function DashboardLayout({
 
   return (
     <AdminLayoutProvider>
-      <div className="min-h-screen bg-background">
-        {/* レスポンシブサイドバー */}
-        <ResponsiveSidebar
-          userInfo={
-            <Suspense fallback={<UserInfoSkeleton />}>
-              <UserInfo />
-            </Suspense>
-          }
-        />
+      <ConfirmProvider>
+        <div className="min-h-screen bg-background">
+          {/* レスポンシブサイドバー */}
+          <ResponsiveSidebar
+            userInfo={
+              <Suspense fallback={<UserInfoSkeleton />}>
+                <UserInfo />
+              </Suspense>
+            }
+          />
 
-        {/* メインコンテンツエリア */}
-        <MainContent
-          topBar={
-            <TopBar
-              token={ADMIN_LOGIN_TOKEN}
-              siteName={brandingSettings.siteName}
-              headerLogoUrl={brandingSettings.headerLogoUrl}
-              useHeaderLogo={brandingSettings.useHeaderLogo}
-            />
-          }
-        >
-          {children}
-        </MainContent>
-      </div>
+          {/* メインコンテンツエリア */}
+          <MainContent
+            topBar={
+              <TopBar
+                token={ADMIN_LOGIN_TOKEN}
+                siteName={brandingSettings.siteName}
+                headerLogoUrl={brandingSettings.headerLogoUrl}
+                useHeaderLogo={brandingSettings.useHeaderLogo}
+              />
+            }
+          >
+            {children}
+          </MainContent>
+        </div>
+      </ConfirmProvider>
     </AdminLayoutProvider>
   )
 }

@@ -6,7 +6,7 @@
  * @description nuqs対応、検索機能付き、D&D並べ替え対応
  */
 
-import { useState, useTransition, useMemo } from 'react'
+import { useState, useTransition } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -187,7 +187,7 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
   const { params: filterParams, setSearchDebounced, reset: resetFilters } = useCategoryFilters()
 
   // Filtered Categories
-  const filteredCategories = useMemo(() => {
+  const filteredCategories = (() => {
     if (!filterParams.search) return categories
 
     const searchLower = filterParams.search.toLowerCase()
@@ -197,7 +197,7 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
         cat.slug.toLowerCase().includes(searchLower) ||
         (cat.description && cat.description.toLowerCase().includes(searchLower))
     )
-  }, [categories, filterParams.search])
+  })()
 
   // D&D Sensors
   const sensors = useSensors(

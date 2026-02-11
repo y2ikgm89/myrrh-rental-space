@@ -7,9 +7,11 @@
  */
 
 import type { Metadata } from 'next'
+import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getSession } from '@/shared/lib/auth'
 import { LoginForm } from './LoginForm'
+import { CopyrightYear } from './CopyrightYear'
 import type { ReactElement } from 'react'
 
 export const metadata: Metadata = {
@@ -17,6 +19,8 @@ export const metadata: Metadata = {
 }
 
 export default async function LoginPage(): Promise<ReactElement> {
+  // Force dynamic rendering by reading headers (nextConfig.cacheComponents compatible)
+  await headers()
   const session = await getSession()
 
   // 既にログイン済みならダッシュボードへ
@@ -122,9 +126,7 @@ export default async function LoginPage(): Promise<ReactElement> {
           </div>
 
           {/* フッター */}
-          <p className="text-center text-xs text-muted-foreground mt-6">
-            © {new Date().getFullYear()} Myrrh Rental Space
-          </p>
+          <CopyrightYear />
         </div>
       </div>
     </div>

@@ -24,6 +24,8 @@ import {
 import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
 import { withPermission } from '@/admin/lib/server-action-helpers'
 import { purgeTermsCache } from '@/shared/lib/cloudflare'
+import { fireAndForget } from '@/shared/lib/async-utils'
+import { ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
 
 // =============================================================================
 // Terms CRUD
@@ -212,7 +214,7 @@ export const createTerms = withPermission<[CreateTermsInput], { id: string }>('t
     updateTag(CACHE_TAGS.TERMS)
 
     // Cloudflare CDN キャッシュパージ
-    void purgeTermsCache()
+    fireAndForget(purgeTermsCache(), { operation: 'purgeTermsCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
     return createSuccess('規約を作成しました', { id: terms.id })
   }
@@ -268,7 +270,7 @@ export const createTermsWithVersion = withPermission<
     updateTag(CACHE_TAGS.TERMS)
 
     // Cloudflare CDN キャッシュパージ
-    void purgeTermsCache()
+    fireAndForget(purgeTermsCache(), { operation: 'purgeTermsCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
     return createSuccess('規約を作成しました', result)
   }
@@ -306,7 +308,7 @@ export const updateTerms = withPermission<[string, UpdateTermsInput]>('terms', '
     updateTag(CACHE_TAGS.TERMS)
 
     // Cloudflare CDN キャッシュパージ
-    void purgeTermsCache()
+    fireAndForget(purgeTermsCache(), { operation: 'purgeTermsCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
     return createSuccess('規約を更新しました')
   }
@@ -333,7 +335,7 @@ export const deleteTerms = withPermission<[string]>('terms', 'delete')(
     updateTag(CACHE_TAGS.TERMS)
 
     // Cloudflare CDN キャッシュパージ
-    void purgeTermsCache()
+    fireAndForget(purgeTermsCache(), { operation: 'purgeTermsCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
     return createSuccess('規約を削除しました')
   }
@@ -361,7 +363,7 @@ export const toggleTermsActive = withPermission<[string]>('terms', 'update')(
     updateTag(CACHE_TAGS.TERMS)
 
     // Cloudflare CDN キャッシュパージ
-    void purgeTermsCache()
+    fireAndForget(purgeTermsCache(), { operation: 'purgeTermsCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
     return createSuccess(terms.isActive ? '規約を無効にしました' : '規約を有効にしました')
   }
@@ -420,7 +422,7 @@ export const createTermsVersion = withPermission<
     updateTag(CACHE_TAGS.TERMS)
 
     // Cloudflare CDN キャッシュパージ
-    void purgeTermsCache()
+    fireAndForget(purgeTermsCache(), { operation: 'purgeTermsCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
     return createSuccess(`バージョン ${nextVersion} を作成しました`, {
       id: version.id,
@@ -507,7 +509,7 @@ export const publishTermsVersion = withPermission<[string]>('terms', 'update')(
     updateTag(CACHE_TAGS.TERMS)
 
     // Cloudflare CDN キャッシュパージ
-    void purgeTermsCache()
+    fireAndForget(purgeTermsCache(), { operation: 'purgeTermsCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
     return createSuccess('バージョンを公開しました')
   }
@@ -539,7 +541,7 @@ export const archiveTermsVersion = withPermission<[string]>('terms', 'update')(
     updateTag(CACHE_TAGS.TERMS)
 
     // Cloudflare CDN キャッシュパージ
-    void purgeTermsCache()
+    fireAndForget(purgeTermsCache(), { operation: 'purgeTermsCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
     return createSuccess('バージョンをアーカイブしました')
   }
@@ -568,7 +570,7 @@ export const deleteTermsVersion = withPermission<[string]>('terms', 'delete')(
     updateTag(CACHE_TAGS.TERMS)
 
     // Cloudflare CDN キャッシュパージ
-    void purgeTermsCache()
+    fireAndForget(purgeTermsCache(), { operation: 'purgeTermsCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
     return createSuccess('バージョンを削除しました')
   }
@@ -638,7 +640,7 @@ export const updateSiteWideTermsSeo = withPermission<[UpdateTermsSeoInput]>('ter
     updateTag(CACHE_TAGS.TERMS)
 
     // Cloudflare CDN キャッシュパージ
-    void purgeTermsCache()
+    fireAndForget(purgeTermsCache(), { operation: 'purgeTermsCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
     return createSuccess('SEO設定を更新しました')
   }

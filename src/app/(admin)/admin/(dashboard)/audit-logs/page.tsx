@@ -94,12 +94,7 @@ export default async function AuditLogsPage({ searchParams }: Props) {
         </CardHeader>
         <CardContent>
           <Suspense fallback={<LoadingState variant="inline" />}>
-            <AuditLogFilters
-              action={params.action}
-              resource={params.resource}
-              dateFrom={params.dateFrom}
-              dateTo={params.dateTo}
-            />
+            <AuditLogFilters />
           </Suspense>
 
           <div className="mt-4 rounded-md border">

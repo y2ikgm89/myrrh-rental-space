@@ -10,6 +10,7 @@
 import { useEffect, startTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { Button } from '@/admin/components/ui'
 
 interface ErrorProps {
   error: Error & { digest?: string }
@@ -78,18 +79,14 @@ export default function AdminError({ error, reset }: ErrorProps) {
         )}
 
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <button
-            onClick={handleReset}
-            className="rounded-lg bg-foreground px-5 py-2.5 text-sm font-medium text-background transition-colors hover:bg-foreground/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-          >
+          <Button onClick={handleReset}>
             再試行
-          </button>
-          <Link
-            href="/admin"
-            className="rounded-lg border border-border bg-card px-5 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-          >
-            ダッシュボードへ
-          </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/admin">
+              ダッシュボードへ
+            </Link>
+          </Button>
         </div>
       </div>
     </div>

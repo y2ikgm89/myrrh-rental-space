@@ -26,13 +26,13 @@ export function formatChange(change: number): string {
  * 変化率に応じた色クラスを取得
  *
  * @example
- * getChangeColor(15)  // → 'text-green-600'
- * getChangeColor(-5)  // → 'text-red-600'
+ * getChangeColor(15)  // → 'text-success'
+ * getChangeColor(-5)  // → 'text-destructive'
  * getChangeColor(0)   // → 'text-muted-foreground'
  */
 export function getChangeColor(change: number): string {
-  if (change > 0) return 'text-green-600'
-  if (change < 0) return 'text-red-600'
+  if (change > 0) return 'text-success'
+  if (change < 0) return 'text-destructive'
   return 'text-muted-foreground'
 }
 

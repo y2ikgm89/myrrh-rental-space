@@ -22,7 +22,8 @@ import { $applyNodeReplacement, ElementNode, $createParagraphNode, $isElementNod
 // Types
 // =============================================================================
 
-export type SerializedStepTitleNode = SerializedElementNode
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface SerializedStepTitleNode extends SerializedElementNode {}
 
 // =============================================================================
 // Constants
@@ -52,8 +53,8 @@ export class StepTitleNode extends ElementNode {
     return new StepTitleNode(node.__key)
   }
 
-  static importJSON(_serializedNode: SerializedStepTitleNode): StepTitleNode {
-    return $createStepTitleNode()
+  static importJSON(serializedNode: SerializedStepTitleNode): StepTitleNode {
+    return $createStepTitleNode().updateFromJSON(serializedNode)
   }
 
   static importDOM(): DOMConversionMap | null {
@@ -78,7 +79,6 @@ export class StepTitleNode extends ElementNode {
   exportJSON(): SerializedStepTitleNode {
     return {
       ...super.exportJSON(),
-      type: 'step-title',
     }
   }
 

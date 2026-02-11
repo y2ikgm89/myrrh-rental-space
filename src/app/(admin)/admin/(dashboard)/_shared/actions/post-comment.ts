@@ -418,6 +418,7 @@ export async function restoreCommentAdmin(
  * 記事ごとのコメント数を取得
  */
 export async function getCommentCountByPost(postId: string): Promise<number> {
+  await verifyAdminSession()
   try {
     return await prisma.postComment.count({
       where: {

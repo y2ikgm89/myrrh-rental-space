@@ -73,7 +73,7 @@ function toEditorCommentThread(thread: {
   resolvedBy: string | null
   createdAt: Date
   updatedAt: Date
-  createdBy: string
+  createdBy: string | null
   comments: Array<{
     id: string
     threadId: string
@@ -83,7 +83,7 @@ function toEditorCommentThread(thread: {
     deletedBy: string | null
     createdAt: Date
     updatedAt: Date
-    createdBy: string
+    createdBy: string | null
   }>
 }): EditorCommentThread {
   return {
@@ -98,11 +98,11 @@ function toThreadListItem(thread: {
   quotedText: string
   status: EditorCommentStatus
   createdAt: Date
-  createdBy: string
+  createdBy: string | null
   comments: Array<{
     content: string
     createdAt: Date
-    createdBy: string
+    createdBy: string | null
   }>
   _count: { comments: number }
   createdByUser?: { name: string } | null
@@ -555,7 +555,11 @@ export async function getCommentThreads(
 
     // ユーザー情報を取得
     const userIds = [
-      ...new Set(threads.map((t) => t.createdBy)),
+      ...new Set(
+        threads
+          .map((t) => t.createdBy)
+          .filter((id): id is string => id !== null)
+      ),
     ]
 
     const users = await prisma.user.findMany({
@@ -567,7 +571,7 @@ export async function getCommentThreads(
 
     const items = threads.map((thread) => ({
       ...thread,
-      createdByUser: userMap.get(thread.createdBy) ?? null,
+      createdByUser: thread.createdBy ? userMap.get(thread.createdBy) ?? null : null,
     }))
 
     return {
@@ -616,9 +620,9 @@ export async function getThreadDetail(
     // スレッドとコメントの作成者情報を取得
     const userIds = [
       thread.createdBy,
-      ...(thread.resolvedBy ? [thread.resolvedBy] : []),
+      thread.resolvedBy,
       ...thread.comments.map((c) => c.createdBy),
-    ]
+    ].filter((id): id is string => id !== null)
     const uniqueUserIds = [...new Set(userIds)]
     const users = await prisma.user.findMany({
       where: { id: { in: uniqueUserIds } },
@@ -628,7 +632,7 @@ export async function getThreadDetail(
 
     const commentsWithUsers = thread.comments.map((comment) => ({
       ...comment,
-      createdByUser: userMap.get(comment.createdBy),
+      createdByUser: comment.createdBy ? userMap.get(comment.createdBy) : undefined,
     }))
 
     return {
@@ -636,7 +640,7 @@ export async function getThreadDetail(
       data: {
         ...thread,
         comments: commentsWithUsers,
-        createdByUser: userMap.get(thread.createdBy),
+        createdByUser: thread.createdBy ? userMap.get(thread.createdBy) : undefined,
         resolvedByUser: thread.resolvedBy ? userMap.get(thread.resolvedBy) : null,
       },
     }

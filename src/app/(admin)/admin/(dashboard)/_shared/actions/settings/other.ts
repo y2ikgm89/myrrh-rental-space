@@ -17,8 +17,8 @@ import { updateTag } from 'next/cache'
 import { CACHE_TAGS } from '@/shared/lib/constants'
 import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
 import { withPermission } from '@/admin/lib/server-action-helpers'
-import { sidebarSettingsSchema } from '@/admin/lib/validations/sidebar'
-import { TermsType, TermsStatus } from '@/shared/generated/prisma/enums'
+import { sidebarSettingsSchema } from '@/shared/lib/validations/sidebar'
+import { TermsType, TermsStatus, AnnouncementBarAnimation, AnnouncementBarDesignStyle, PostPermalinkStructure } from '@/shared/generated/prisma/enums'
 
 import {
   maintenanceSettingsSchema,
@@ -27,12 +27,14 @@ import {
   reservationSettingsSchema,
   announcementBarCarouselSettingsSchema,
   permalinkSettingsSchema,
+  headerSettingsSchema,
   type MaintenanceSettingsInput,
   type CookieConsentSettingsInput,
   type TermsAgreementSettingsInput,
   type ReservationSettingsInput,
   type AnnouncementBarCarouselSettingsInput,
   type PermalinkSettingsInput,
+  type HeaderSettingsInput,
   type SidebarSettingsInput,
 } from './schemas'
 
@@ -298,23 +300,25 @@ export async function getAnnouncementBarCarouselSettings(): Promise<Announcement
       announcementBarStripeAnimation: true,
       announcementBarGradientAnimation: true,
       announcementBarGlassAnimation: true,
+      announcementBarSticky: true,
     },
   })
 
   return {
-    announcementBarAnimation: (settings?.announcementBarAnimation ?? 'fade') as 'fade' | 'slideX' | 'slideY',
+    announcementBarAnimation: settings?.announcementBarAnimation ?? AnnouncementBarAnimation.fade,
     announcementBarDuration: settings?.announcementBarDuration ?? 5000,
     announcementBarAutoPlay: settings?.announcementBarAutoPlay ?? true,
     announcementBarPauseOnHover: settings?.announcementBarPauseOnHover ?? true,
     announcementBarShowArrows: settings?.announcementBarShowArrows ?? true,
     announcementBarShowIndicator: settings?.announcementBarShowIndicator ?? true,
-    announcementBarDesignStyle: (settings?.announcementBarDesignStyle ?? 'solid') as 'solid' | 'gradient' | 'outlined' | 'glass' | 'minimal' | 'striped',
+    announcementBarDesignStyle: settings?.announcementBarDesignStyle ?? AnnouncementBarDesignStyle.solid,
     announcementBarBgColor: settings?.announcementBarBgColor ?? null,
     announcementBarTextColor: settings?.announcementBarTextColor ?? null,
     announcementBarStripeColor: settings?.announcementBarStripeColor ?? null,
     announcementBarStripeAnimation: settings?.announcementBarStripeAnimation ?? false,
     announcementBarGradientAnimation: settings?.announcementBarGradientAnimation ?? false,
     announcementBarGlassAnimation: settings?.announcementBarGlassAnimation ?? false,
+    announcementBarSticky: settings?.announcementBarSticky ?? false,
   }
 }
 
@@ -364,7 +368,7 @@ export async function getPermalinkSettings(): Promise<{
   })
 
   return {
-    postPermalinkStructure: settings?.postPermalinkStructure ?? 'post-name',
+    postPermalinkStructure: settings?.postPermalinkStructure ?? PostPermalinkStructure.post_name,
   }
 }
 
@@ -390,4 +394,32 @@ export const updatePermalinkSettings = withPermission<[data: PermalinkSettingsIn
   updateTag(CACHE_TAGS.POSTS)
 
   return createSuccess('パーマリンク設定を更新しました')
+})
+
+// =============================================================================
+// Header Settings Actions
+// =============================================================================
+
+/**
+ * ヘッダー設定を更新（スクロール動作 + 背景モード）
+ */
+export const updateHeaderSettings = withPermission<[data: HeaderSettingsInput], void>(
+  'settings',
+  'update'
+)(async (_user, data): Promise<ActionResult<void>> => {
+  const parsed = headerSettingsSchema.safeParse(data)
+  if (!parsed.success) {
+    return createFailure(parsed.error.issues[0].message)
+  }
+
+  await prisma.settings.upsert({
+    where: { id: 'singleton' },
+    create: { id: 'singleton', ...parsed.data },
+    update: parsed.data,
+  })
+
+  updateTag(CACHE_TAGS.SETTINGS)
+  updateTag(CACHE_TAGS.LAYOUT_SETTINGS)
+
+  return createSuccess('ヘッダー設定を更新しました')
 })

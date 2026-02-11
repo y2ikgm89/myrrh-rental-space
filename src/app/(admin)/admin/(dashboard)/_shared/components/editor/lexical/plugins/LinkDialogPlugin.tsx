@@ -6,11 +6,10 @@
 
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $getSelection, $isRangeSelection } from 'lexical'
+import { $findMatchingParent, $getSelection, $isRangeSelection } from 'lexical'
 import { $isLinkNode, TOGGLE_LINK_COMMAND } from '@lexical/link'
-import { $findMatchingParent } from '@lexical/utils'
 import {
   Dialog,
   DialogContent,
@@ -141,8 +140,8 @@ export function LinkDialogPlugin({ isOpen, onClose }: LinkDialogPluginProps) {
 export function useLinkDialog() {
   const [isOpen, setIsOpen] = useState(false)
 
-  const openLinkDialog = useCallback(() => setIsOpen(true), [])
-  const closeLinkDialog = useCallback(() => setIsOpen(false), [])
+  const openLinkDialog = () => setIsOpen(true)
+  const closeLinkDialog = () => setIsOpen(false)
 
   return {
     isLinkDialogOpen: isOpen,

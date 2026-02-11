@@ -6,7 +6,7 @@ interface TimeColumnProps {
 
 export function TimeColumn({ timeSlots }: TimeColumnProps) {
   return (
-    <div className="sticky left-0 z-10 border-r bg-white">
+    <div className="sticky left-0 z-10 border-r bg-card">
       {timeSlots.map((time) => (
         <div
           key={time}

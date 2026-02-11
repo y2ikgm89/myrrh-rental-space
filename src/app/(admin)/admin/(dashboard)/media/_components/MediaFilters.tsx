@@ -4,45 +4,35 @@
  * メディアフィルター
  */
 
-import { useEffect, useRef, useState, useTransition } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useRef, useState } from 'react'
+import { useQueryStates, parseAsString, parseAsInteger } from 'nuqs'
 import { Search, Grid, List, Upload } from 'lucide-react'
-import { Button, Input } from '@/admin/components/ui'
+import {
+  Button,
+  Input,
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/admin/components/ui'
 import { MediaUploadDialog } from './MediaUploadDialog'
 import { TYPE_OPTIONS, USAGE_FILTER_OPTIONS } from './constants'
 
 export function MediaFilters() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const [isPending, startTransition] = useTransition()
   const [isUploadOpen, setIsUploadOpen] = useState(false)
-
-  const currentType = searchParams.get('type') || ''
-  const currentUsage = searchParams.get('usage') || ''
-  const currentSearch = searchParams.get('search') || ''
-  const currentView = searchParams.get('view') || 'grid'
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  function updateParams(updates: Record<string, string | null>) {
-    const params = new URLSearchParams(searchParams.toString())
-
-    for (const [key, value] of Object.entries(updates)) {
-      if (value === null || value === '') {
-        params.delete(key)
-      } else {
-        params.set(key, value)
-      }
-    }
-
-    // Reset page when filter changes
-    if (!('page' in updates)) {
-      params.delete('page')
-    }
-
-    startTransition(() => {
-      router.push(`/admin/media?${params.toString()}`)
-    })
-  }
+  const [params, setParams] = useQueryStates(
+    {
+      search: parseAsString.withDefault(''),
+      type: parseAsString.withDefault(''),
+      usage: parseAsString.withDefault(''),
+      view: parseAsString.withDefault('grid'),
+      page: parseAsInteger.withDefault(1),
+    },
+    { history: 'push', shallow: false }
+  )
 
   function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
     const value = e.target.value
@@ -52,11 +42,10 @@ export function MediaFilters() {
     }
 
     searchTimeoutRef.current = setTimeout(() => {
-      updateParams({ search: value || null })
+      void setParams({ search: value || null, page: 1 })
     }, 300)
   }
 
-  // アンマウント時にタイムアウトをクリーンアップ
   useEffect(() => {
     return () => {
       if (searchTimeoutRef.current) {
@@ -76,39 +65,51 @@ export function MediaFilters() {
             <Input
               type="search"
               placeholder="検索..."
-              defaultValue={currentSearch}
+              defaultValue={params.search}
               onChange={handleSearchChange}
               className="w-48 pl-9"
             />
           </div>
 
           {/* Type Filter */}
-          <select
-            value={currentType}
-            onChange={(e) => updateParams({ type: e.target.value || null })}
-            disabled={isPending}
-            className="h-9 rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          <Select
+            value={params.type || 'all'}
+            onValueChange={(v) =>
+              void setParams({ type: v === 'all' ? null : v, page: 1 })
+            }
           >
-            {TYPE_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="h-9 w-auto min-w-[140px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">すべての種別</SelectItem>
+              {TYPE_OPTIONS.filter((opt) => opt.value !== '').map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           {/* Usage Filter */}
-          <select
-            value={currentUsage}
-            onChange={(e) => updateParams({ usage: e.target.value || null })}
-            disabled={isPending}
-            className="h-9 rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          <Select
+            value={params.usage || 'all'}
+            onValueChange={(v) =>
+              void setParams({ usage: v === 'all' ? null : v, page: 1 })
+            }
           >
-            {USAGE_FILTER_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="h-9 w-auto min-w-[140px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">すべての用途</SelectItem>
+              {USAGE_FILTER_OPTIONS.filter((opt) => opt.value !== '').map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Right: View Toggle & Upload */}
@@ -117,9 +118,9 @@ export function MediaFilters() {
           <div className="flex border rounded-md overflow-hidden">
             <button
               type="button"
-              onClick={() => updateParams({ view: 'grid' })}
+              onClick={() => void setParams({ view: 'grid' })}
               className={`p-2 ${
-                currentView === 'grid'
+                params.view === 'grid'
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-background hover:bg-muted'
               }`}
@@ -129,9 +130,9 @@ export function MediaFilters() {
             </button>
             <button
               type="button"
-              onClick={() => updateParams({ view: 'list' })}
+              onClick={() => void setParams({ view: 'list' })}
               className={`p-2 ${
-                currentView === 'list'
+                params.view === 'list'
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-background hover:bg-muted'
               }`}

@@ -1,24 +1,25 @@
 import type { UseFormRegister, UseFormSetValue, FieldErrors, Control } from 'react-hook-form'
 import type { AnnouncementBarData } from '@/admin/actions/announcement-bar'
 import type { DesignStyle, AnimationType } from '@/shared/lib/announcement-bar-utils'
+import { AnnouncementBarAnimation, AnnouncementBarDesignStyle, type AnnouncementBarType } from '@/shared/generated/prisma/enums'
 
 // =============================================================================
 // Constants
 // =============================================================================
 
 export const ANIMATION_OPTIONS: readonly { value: AnimationType; label: string; description: string }[] = [
-  { value: 'fade', label: 'フェード', description: '透明度でふわっと切り替え' },
-  { value: 'slideX', label: '横スライド', description: '左右にスライドして切り替え' },
-  { value: 'slideY', label: '縦スライド', description: '上下にスライドして切り替え' },
+  { value: AnnouncementBarAnimation.fade, label: 'フェード', description: '透明度でふわっと切り替え' },
+  { value: AnnouncementBarAnimation.slideX, label: '横スライド', description: '左右にスライドして切り替え' },
+  { value: AnnouncementBarAnimation.slideY, label: '縦スライド', description: '上下にスライドして切り替え' },
 ]
 
 export const DESIGN_STYLE_OPTIONS: readonly { value: DesignStyle; label: string; description: string }[] = [
-  { value: 'solid', label: 'ソリッド', description: 'シンプルなベタ塗り' },
-  { value: 'gradient', label: 'グラデーション', description: 'モダンなグラデーション背景' },
-  { value: 'outlined', label: 'アウトライン', description: '枠線スタイルですっきり' },
-  { value: 'glass', label: 'グラス', description: '半透明のグラスモーフィズム' },
-  { value: 'minimal', label: 'ミニマル', description: '細い帯のミニマルスタイル' },
-  { value: 'striped', label: 'ストライプ', description: 'さりげない斜めストライプ' },
+  { value: AnnouncementBarDesignStyle.solid, label: 'ソリッド', description: 'シンプルなベタ塗り' },
+  { value: AnnouncementBarDesignStyle.gradient, label: 'グラデーション', description: 'モダンなグラデーション背景' },
+  { value: AnnouncementBarDesignStyle.outlined, label: 'アウトライン', description: '枠線スタイルですっきり' },
+  { value: AnnouncementBarDesignStyle.glass, label: 'グラス', description: '半透明のグラスモーフィズム' },
+  { value: AnnouncementBarDesignStyle.minimal, label: 'ミニマル', description: '細い帯のミニマルスタイル' },
+  { value: AnnouncementBarDesignStyle.striped, label: 'ストライプ', description: 'さりげない斜めストライプ' },
 ]
 
 /** HEXカラー形式の正規表現 (#RRGGBB) */
@@ -36,7 +37,7 @@ export function isValidHexColor(value: string | null | undefined): boolean {
 
 export type BarFormData = {
   message: string
-  type: 'info' | 'warning' | 'promo'
+  type: AnnouncementBarType
   linkUrl: string
   linkText: string
   isActive: boolean
@@ -59,6 +60,7 @@ export type CarouselSettings = {
   announcementBarStripeAnimation: boolean
   announcementBarGradientAnimation: boolean
   announcementBarGlassAnimation: boolean
+  announcementBarSticky: boolean
 }
 
 // =============================================================================

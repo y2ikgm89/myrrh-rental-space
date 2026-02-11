@@ -27,7 +27,8 @@ import { $isLayoutContainerNode } from './LayoutContainerNode'
 // Types
 // =============================================================================
 
-export type SerializedLayoutItemNode = SerializedElementNode
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface SerializedLayoutItemNode extends SerializedElementNode {}
 
 // =============================================================================
 // Type Guard (declared early for use in class)
@@ -75,8 +76,8 @@ export class LayoutItemNode extends ElementNode {
     }
   }
 
-  static importJSON(): LayoutItemNode {
-    return $createLayoutItemNode()
+  static importJSON(serializedNode: SerializedLayoutItemNode): LayoutItemNode {
+    return $createLayoutItemNode().updateFromJSON(serializedNode)
   }
 
   constructor(key?: NodeKey) {
@@ -86,8 +87,6 @@ export class LayoutItemNode extends ElementNode {
   exportJSON(): SerializedLayoutItemNode {
     return {
       ...super.exportJSON(),
-      type: 'layout-item',
-      version: 1,
     }
   }
 

@@ -15,13 +15,13 @@ import {
   $getSelection,
   $isRangeSelection,
   COMMAND_PRIORITY_CRITICAL,
+  mergeRegister,
   SELECTION_CHANGE_COMMAND,
 } from 'lexical'
 import {
   $getSelectionStyleValueForProperty,
   $patchStyleText,
 } from '@lexical/selection'
-import { mergeRegister } from '@lexical/utils'
 import { Check, ChevronDown, Highlighter, X } from 'lucide-react'
 import { Button } from '@/admin/components/ui/button'
 import {

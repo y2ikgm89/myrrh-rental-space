@@ -6,7 +6,6 @@
 
 'use client'
 
-import { useCallback } from 'react'
 import {
   $isButtonNode,
   type ButtonNode,
@@ -65,47 +64,29 @@ export function ButtonInspectorPanel({ nodeKey, node }: ButtonInspectorPanelProp
   const alignment = node.getAlignment()
   const openInNewTab = node.getOpenInNewTab()
 
-  const handleTextChange = useCallback(
-    (value: string) => updateNode((n) => n.setText(value)),
-    [updateNode]
-  )
+  const handleTextChange = (value: string) => updateNode((n) => n.setText(value))
 
-  const handleHrefChange = useCallback(
-    (value: string) => updateNode((n) => n.setHref(value)),
-    [updateNode]
-  )
+  const handleHrefChange = (value: string) => updateNode((n) => n.setHref(value))
 
-  const handleVariantChange = useCallback(
-    (value: string) => {
-      if (isButtonVariant(value)) {
-        updateNode((n) => n.setVariant(value))
-      }
-    },
-    [updateNode]
-  )
+  const handleVariantChange = (value: string) => {
+    if (isButtonVariant(value)) {
+      updateNode((n) => n.setVariant(value))
+    }
+  }
 
-  const handleSizeChange = useCallback(
-    (value: string) => {
-      if (isButtonSize(value)) {
-        updateNode((n) => n.setSize(value))
-      }
-    },
-    [updateNode]
-  )
+  const handleSizeChange = (value: string) => {
+    if (isButtonSize(value)) {
+      updateNode((n) => n.setSize(value))
+    }
+  }
 
-  const handleAlignmentChange = useCallback(
-    (value: string) => {
-      if (isButtonAlignment(value)) {
-        updateNode((n) => n.setAlignment(value))
-      }
-    },
-    [updateNode]
-  )
+  const handleAlignmentChange = (value: string) => {
+    if (isButtonAlignment(value)) {
+      updateNode((n) => n.setAlignment(value))
+    }
+  }
 
-  const handleOpenInNewTabChange = useCallback(
-    (value: boolean) => updateNode((n) => n.setOpenInNewTab(value)),
-    [updateNode]
-  )
+  const handleOpenInNewTabChange = (value: boolean) => updateNode((n) => n.setOpenInNewTab(value))
 
   return (
     <div>

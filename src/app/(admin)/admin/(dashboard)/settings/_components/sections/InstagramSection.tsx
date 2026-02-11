@@ -8,7 +8,8 @@
  * - フィード表示設定
  */
 
-import { useState, useTransition, useCallback } from 'react'
+import { useState, useTransition } from 'react'
+import { useConfirm } from '@/admin/contexts/confirm-context'
 import { Instagram, Link2, Key, Unlink, ExternalLink } from 'lucide-react'
 import {
   Button,
@@ -32,6 +33,8 @@ import {
 import { StatusBanner } from '../shared'
 import { useRefreshOnSuccess } from '../hooks'
 import { formatDateTimeShort } from '@/shared/lib/utils'
+import { InstagramFeedLayout } from '@/shared/generated/prisma/enums'
+import { isValidInstagramFeedLayout } from '@/shared/lib/validations/enums'
 
 // =============================================================================
 // Types
@@ -41,7 +44,13 @@ interface InstagramSectionProps {
   config: InstagramConfig
 }
 
-type ConnectionMethod = 'oauth' | 'manual'
+const CONNECTION_METHODS = ['oauth', 'manual'] as const
+type ConnectionMethod = (typeof CONNECTION_METHODS)[number]
+const CONNECTION_METHOD_SET = new Set<string>(CONNECTION_METHODS)
+function isConnectionMethod(value: string): value is ConnectionMethod {
+  return CONNECTION_METHOD_SET.has(value)
+}
+
 
 // =============================================================================
 // Constants
@@ -64,19 +73,19 @@ const CONNECTION_METHOD_OPTIONS = [
 
 const LAYOUT_OPTIONS = [
   {
-    value: 'grid' as const,
+    value: InstagramFeedLayout.grid,
     label: 'グリッド',
     description: '写真を格子状に並べて表示',
   },
   {
-    value: 'carousel' as const,
-    label: 'カルーセル',
-    description: '横スクロールで表示',
+    value: InstagramFeedLayout.masonry,
+    label: 'メイソンリー',
+    description: '高さの異なるグリッドレイアウト',
   },
   {
-    value: 'card' as const,
-    label: 'カード',
-    description: 'キャプション付きのカード形式',
+    value: InstagramFeedLayout.slider,
+    label: 'スライダー',
+    description: '横スクロールで表示',
   },
 ]
 
@@ -105,12 +114,12 @@ function ConnectionCard({
     message: string
   } | null>(null)
 
-  const handleOAuthConnect = useCallback(() => {
+  const handleOAuthConnect = () => {
     // OAuth認証ページへリダイレクト
     window.location.href = '/api/instagram/oauth/authorize'
-  }, [])
+  }
 
-  const handleTestConnection = useCallback(async () => {
+  const handleTestConnection = async () => {
     if (!manualToken) {
       setTestResult({
         success: false,
@@ -145,9 +154,9 @@ function ConnectionCard({
     } finally {
       setIsTesting(false)
     }
-  }, [manualToken])
+  }
 
-  const handleSaveManualToken = useCallback(async () => {
+  const handleSaveManualToken = async () => {
     if (!manualToken) return
 
     const result = await saveManualToken(manualToken)
@@ -156,7 +165,7 @@ function ConnectionCard({
       setTestResult(null)
     }
     handleResult(result)
-  }, [manualToken, handleResult])
+  }
 
   // 連携済みの場合
   if (config.isConnected) {
@@ -172,12 +181,12 @@ function ConnectionCard({
         <CardContent className="space-y-4">
           <StatusBanner success>
             <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-green-500" />
-              <span className="text-sm font-medium text-green-700">
+              <span className="h-2 w-2 rounded-full bg-success" />
+              <span className="text-sm font-medium text-success">
                 連携済み
               </span>
             </div>
-            <p className="mt-1 text-sm text-green-800">
+            <p className="mt-1 text-sm text-success">
               @{config.username || 'unknown'}
               {config.accountType && (
                 <span className="ml-2 text-xs text-muted-foreground">
@@ -194,7 +203,7 @@ function ConnectionCard({
               </p>
             )}
             {config.shouldRefreshToken && (
-              <p className="mt-2 text-xs text-amber-600">
+              <p className="mt-2 text-xs text-warning">
                 トークンの有効期限が近づいています。再認証することで更新できます。
               </p>
             )}
@@ -248,7 +257,7 @@ function ConnectionCard({
           <SelectionBox
             options={CONNECTION_METHOD_OPTIONS}
             value={connectionMethod}
-            onChange={(value) => setConnectionMethod(value as ConnectionMethod)}
+            onChange={(value) => { if (isConnectionMethod(value)) setConnectionMethod(value) }}
             columns={2}
             name="connection-method"
           />
@@ -257,8 +266,8 @@ function ConnectionCard({
         {/* OAuth連携 */}
         {connectionMethod === 'oauth' && (
           <div className="space-y-4">
-            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-              <p className="text-sm text-blue-800">
+            <div className="rounded-lg border border-primary/20 bg-primary/10 p-4">
+              <p className="text-sm text-primary">
                 「Instagramと連携」ボタンをクリックすると、Instagramのログインページに移動します。
                 認証後、自動的にこのページに戻ります。
               </p>
@@ -296,7 +305,7 @@ function ConnectionCard({
             {testResult && (
               <StatusBanner success={testResult.success}>
                 <p
-                  className={`text-sm ${testResult.success ? 'text-green-700' : 'text-destructive'}`}
+                  className={`text-sm ${testResult.success ? 'text-success' : 'text-destructive'}`}
                 >
                   {testResult.message}
                 </p>
@@ -348,7 +357,7 @@ function FeedSettingsCard({
   const [showCaption, setShowCaption] = useState(config.showCaption)
   const [showViewAll, setShowViewAll] = useState(config.showViewAll)
 
-  const handleSave = useCallback(() => {
+  const handleSave = () => {
     startTransition(async () => {
       const result = await updateInstagramSettings({
         feedEnabled,
@@ -360,16 +369,7 @@ function FeedSettingsCard({
       })
       handleResult(result)
     })
-  }, [
-    feedEnabled,
-    feedLayout,
-    feedColumns,
-    feedMaxItems,
-    showCaption,
-    showViewAll,
-    startTransition,
-    handleResult,
-  ])
+  }
 
   return (
     <Card>
@@ -405,9 +405,11 @@ function FeedSettingsCard({
           <SelectionBox
             options={LAYOUT_OPTIONS}
             value={feedLayout}
-            onChange={(value) =>
-              setFeedLayout(value as 'grid' | 'carousel' | 'card')
-            }
+            onChange={(value) => {
+              if (isValidInstagramFeedLayout(value)) {
+                setFeedLayout(value)
+              }
+            }}
             columns={3}
             disabled={isPending || !feedEnabled}
             name="feed-layout"
@@ -492,19 +494,24 @@ function FeedSettingsCard({
 // =============================================================================
 
 export function InstagramSection({ config }: InstagramSectionProps) {
+  const confirmDialog = useConfirm()
   const { handleResult } = useRefreshOnSuccess()
   const [isPending, startTransition] = useTransition()
 
-  const handleDisconnect = useCallback(() => {
-    if (!confirm('Instagram連携を解除しますか？キャッシュされた投稿も削除されます。')) {
-      return
-    }
+  const handleDisconnect = async () => {
+    const confirmed = await confirmDialog({
+      title: 'Instagram連携を解除しますか？',
+      description: 'Instagram連携を解除しますか？キャッシュされた投稿も削除されます。',
+      confirmLabel: '解除',
+      variant: 'destructive',
+    })
+    if (!confirmed) return
 
     startTransition(async () => {
       const result = await disconnectInstagram()
       handleResult(result)
     })
-  }, [startTransition, handleResult])
+  }
 
   return (
     <div className="space-y-6">

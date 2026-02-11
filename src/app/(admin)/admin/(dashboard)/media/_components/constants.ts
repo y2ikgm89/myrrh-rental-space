@@ -37,13 +37,18 @@ export const USAGE_FILTER_OPTIONS: readonly UsageFilterOption[] = [
   ...USAGE_OPTIONS,
 ]
 
-export const USAGE_LABELS: Record<MediaUsage, string> = Object.fromEntries(
-  USAGE_OPTIONS.map((opt) => [opt.value, opt.label])
-) as Record<MediaUsage, string>
+export const USAGE_LABELS: Record<MediaUsage, string> = {
+  [MediaUsage.GENERAL]: '未分類',
+  [MediaUsage.POST]: '投稿',
+  [MediaUsage.NEWS]: 'お知らせ',
+  [MediaUsage.PAGE]: 'ページ',
+  [MediaUsage.SPACE]: 'スペース',
+  [MediaUsage.SITE]: 'サイト',
+}
 
 export const TYPE_CONFIG: Record<MediaType, { label: string; color: string }> = {
-  [MediaType.IMAGE]: { label: '画像', color: 'bg-blue-500' },
-  [MediaType.VIDEO]: { label: '動画', color: 'bg-purple-500' },
-  [MediaType.DOCUMENT]: { label: 'PDF', color: 'bg-orange-500' },
-  [MediaType.OTHER]: { label: 'その他', color: 'bg-gray-500' },
+  [MediaType.IMAGE]: { label: '画像', color: 'bg-media-image' },
+  [MediaType.VIDEO]: { label: '動画', color: 'bg-media-video' },
+  [MediaType.DOCUMENT]: { label: 'PDF', color: 'bg-media-document' },
+  [MediaType.OTHER]: { label: 'その他', color: 'bg-media-other' },
 }

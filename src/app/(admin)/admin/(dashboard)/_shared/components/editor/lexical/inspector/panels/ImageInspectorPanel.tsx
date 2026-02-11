@@ -6,7 +6,6 @@
 
 'use client'
 
-import { useCallback } from 'react'
 import { $isImageNode, type ImageNode } from '../../nodes/ImageNode'
 import { InspectorHeader } from '../InspectorHeader'
 import { InspectorSection } from '../InspectorSection'
@@ -35,26 +34,17 @@ export function ImageInspectorPanel({ nodeKey, node }: ImageInspectorPanelProps)
   const width = node.getWidth()
   const height = node.getHeight()
 
-  const handleAltChange = useCallback(
-    (value: string) => updateNode((n) => n.setAlt(value)),
-    [updateNode]
-  )
+  const handleAltChange = (value: string) => updateNode((n) => n.setAlt(value))
 
-  const handleWidthChange = useCallback(
-    (value: string) => {
-      const numValue = value ? parseInt(value, 10) : undefined
-      updateNode((n) => n.setWidth(numValue))
-    },
-    [updateNode]
-  )
+  const handleWidthChange = (value: string) => {
+    const numValue = value ? parseInt(value, 10) : undefined
+    updateNode((n) => n.setWidth(numValue))
+  }
 
-  const handleHeightChange = useCallback(
-    (value: string) => {
-      const numValue = value ? parseInt(value, 10) : undefined
-      updateNode((n) => n.setHeight(numValue))
-    },
-    [updateNode]
-  )
+  const handleHeightChange = (value: string) => {
+    const numValue = value ? parseInt(value, 10) : undefined
+    updateNode((n) => n.setHeight(numValue))
+  }
 
   return (
     <div>

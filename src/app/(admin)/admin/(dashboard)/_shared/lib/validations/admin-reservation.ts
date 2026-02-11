@@ -71,14 +71,14 @@ export const adminReservationSchema = z
     manualDiscountReason: z.string().max(200, { error: '割引理由は200文字以内で入力してください' }).optional().or(z.literal('')),
 
     // その他オプション
-    status: z.nativeEnum(ReservationStatus).default('CONFIRMED'),
+    status: z.enum(ReservationStatus).default('CONFIRMED'),
     notes: z.string().max(1000, { error: 'メモは1000文字以内で入力してください' }).optional(),
     sendEmail: z.boolean().default(true),
   })
   .refine(
     (data) => data.customerId || data.customerData,
     {
-      message: '顧客を選択するか、新規顧客情報を入力してください',
+      error: '顧客を選択するか、新規顧客情報を入力してください',
       path: ['customerId'],
     }
   )
@@ -89,7 +89,7 @@ export const adminReservationSchema = z
       return end > start
     },
     {
-      message: '終了時間は開始時間より後に設定してください',
+      error: '終了時間は開始時間より後に設定してください',
       path: ['endTime'],
     }
   )
@@ -101,7 +101,7 @@ export const adminReservationSchema = z
       return diffHours >= 1
     },
     {
-      message: '最低1時間以上の予約が必要です',
+      error: '最低1時間以上の予約が必要です',
       path: ['endTime'],
     }
   )

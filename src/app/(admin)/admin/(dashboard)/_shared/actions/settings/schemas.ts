@@ -5,7 +5,19 @@
  */
 
 import { z } from 'zod'
-import { LayoutWidth } from '@/shared/generated/prisma/enums'
+import {
+  LayoutWidth,
+  AnalyticsType,
+  HeaderScrollBehavior,
+  HeaderBackgroundMode,
+  CalendarSyncMethod,
+  AnnouncementBarAnimation,
+  AnnouncementBarDesignStyle,
+  PostPermalinkStructure,
+  DiscountCombinationMode,
+  TaxDisplayMode,
+  TaxInputMode,
+} from '@/shared/generated/prisma/enums'
 
 // =============================================================================
 // Basic Schemas
@@ -101,9 +113,6 @@ export const businessHoursDaySchema = z.object({
   { error: '時間帯が重複しています' }
 )
 
-const WEEKDAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const
-type Weekday = typeof WEEKDAYS[number]
-
 // Note: refine後の型はZodEffectsになるため、基本スキーマを使用
 const businessHoursDayBaseSchema = z.object({
   isOpen: z.boolean(),
@@ -113,9 +122,15 @@ const businessHoursDayBaseSchema = z.object({
   })),
 })
 
-const businessHoursWeekSchema = z.object(
-  Object.fromEntries(WEEKDAYS.map((day) => [day, businessHoursDayBaseSchema])) as Record<Weekday, typeof businessHoursDayBaseSchema>
-)
+const businessHoursWeekSchema = z.object({
+  monday: businessHoursDayBaseSchema,
+  tuesday: businessHoursDayBaseSchema,
+  wednesday: businessHoursDayBaseSchema,
+  thursday: businessHoursDayBaseSchema,
+  friday: businessHoursDayBaseSchema,
+  saturday: businessHoursDayBaseSchema,
+  sunday: businessHoursDayBaseSchema,
+})
 
 export const businessHoursSettingsSchema = z.object({
   businessHours: businessHoursWeekSchema,
@@ -137,7 +152,7 @@ export const seoSettingsSchema = z.object({
   defaultOgpTitle: z.string().max(60).nullable(),
   defaultOgpDescription: z.string().max(160).nullable(),
   // Analytics Settings
-  analyticsType: z.enum(['ga4', 'gtm']).nullable(),
+  analyticsType: z.enum(AnalyticsType).nullable(),
   googleAnalyticsId: z.string().max(50).nullable(),
   googleTagManagerId: z.string().max(50).nullable(),
   googleSearchConsoleId: z.string().max(100).nullable(),
@@ -152,11 +167,18 @@ export type SeoSettingsInput = z.infer<typeof seoSettingsSchema>
 // =============================================================================
 
 export const layoutSettingsSchema = z.object({
-  containerWidth: z.nativeEnum(LayoutWidth),
+  containerWidth: z.enum(LayoutWidth),
   containerWidthCustom: z.number().int().min(320).max(2560).nullable(),
-  contentWidth: z.nativeEnum(LayoutWidth),
+  contentWidth: z.enum(LayoutWidth),
   contentWidthCustom: z.number().int().min(320).max(1920).nullable(),
 })
+
+export const headerSettingsSchema = z.object({
+  headerScrollBehavior: z.enum(HeaderScrollBehavior),
+  headerBackgroundMode: z.enum(HeaderBackgroundMode),
+})
+
+export type HeaderSettingsInput = z.infer<typeof headerSettingsSchema>
 
 export type LayoutSettingsInput = z.infer<typeof layoutSettingsSchema>
 
@@ -200,7 +222,7 @@ export type GoogleCalendarSettingsInput = z.infer<typeof googleCalendarSettingsS
 
 export const twoWaySyncSettingsSchema = z.object({
   enabled: z.boolean(),
-  syncMethod: z.enum(['polling', 'webhook', 'both']),
+  syncMethod: z.enum(CalendarSyncMethod),
   pollingIntervalMin: z.number().int().min(1).max(60),
 })
 
@@ -246,13 +268,13 @@ export const reservationSettingsSchema = z.object({
 export type ReservationSettingsInput = z.infer<typeof reservationSettingsSchema>
 
 export const announcementBarCarouselSettingsSchema = z.object({
-  announcementBarAnimation: z.enum(['fade', 'slideX', 'slideY']),
+  announcementBarAnimation: z.enum(AnnouncementBarAnimation),
   announcementBarDuration: z.number().int().min(1000).max(30000),
   announcementBarAutoPlay: z.boolean(),
   announcementBarPauseOnHover: z.boolean(),
   announcementBarShowArrows: z.boolean(),
   announcementBarShowIndicator: z.boolean(),
-  announcementBarDesignStyle: z.enum(['solid', 'gradient', 'outlined', 'glass', 'minimal', 'striped']),
+  announcementBarDesignStyle: z.enum(AnnouncementBarDesignStyle),
   // Common Color Settings
   announcementBarBgColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).nullable(),
   announcementBarTextColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).nullable(),
@@ -263,6 +285,8 @@ export const announcementBarCarouselSettingsSchema = z.object({
   announcementBarGradientAnimation: z.boolean(),
   // Glass Design Settings
   announcementBarGlassAnimation: z.boolean(),
+  // Sticky Settings
+  announcementBarSticky: z.boolean(),
 })
 
 export type AnnouncementBarCarouselSettingsInput = z.infer<typeof announcementBarCarouselSettingsSchema>
@@ -272,14 +296,14 @@ export type AnnouncementBarCarouselSettingsInput = z.infer<typeof announcementBa
 // =============================================================================
 
 export const permalinkSettingsSchema = z.object({
-  postPermalinkStructure: z.enum(['post-name', 'date-name', 'category-name']),
+  postPermalinkStructure: z.enum(PostPermalinkStructure),
   postUrlPrefixEnabled: z.boolean(),
 })
 
 export type PermalinkSettingsInput = z.infer<typeof permalinkSettingsSchema>
 
 // Re-export from validations for sidebar
-export { sidebarSettingsSchema, type SidebarSettings as SidebarSettingsInput } from '@/admin/lib/validations/sidebar'
+export { sidebarSettingsSchema, type SidebarSettings as SidebarSettingsInput } from '@/shared/lib/validations/sidebar'
 
 // =============================================================================
 // Discount Schemas
@@ -293,7 +317,7 @@ export const durationDiscountRuleSchema = z.object({
 export const discountSettingsSchema = z.object({
   durationDiscountEnabled: z.boolean(),
   durationDiscountRules: z.array(durationDiscountRuleSchema),
-  discountCombinationMode: z.enum(['best', 'both']),
+  discountCombinationMode: z.enum(DiscountCombinationMode),
   showOriginalPrice: z.boolean(),
   discountWarningEnabled: z.boolean(),
 })
@@ -305,17 +329,33 @@ export type DiscountSettingsInput = z.infer<typeof discountSettingsSchema>
 // Tax Schemas
 // =============================================================================
 
-export const taxDisplayModeSchema = z.enum(['tax_excluded', 'tax_included', 'both'])
+export const taxDisplayModeSchema = z.enum(TaxDisplayMode)
 
 export const taxSettingsSchema = z.object({
   taxStandardRate: z.coerce.number().min(0).max(100),
   taxReducedRate: z.coerce.number().min(0).max(100),
   taxDisplayModeAdmin: taxDisplayModeSchema,
   taxDisplayModePublic: taxDisplayModeSchema,
-  taxInputMode: z.enum(['tax_excluded', 'tax_included']),
+  taxInputMode: z.enum(TaxInputMode),
 })
 
 export type TaxSettingsInput = z.infer<typeof taxSettingsSchema>
+
+// =============================================================================
+// MEO Schemas (ローカル検索最適化)
+// =============================================================================
+
+export const meoSettingsSchema = z.object({
+  latitude: z.number().min(-90, { error: '緯度は-90〜90の範囲で入力してください' }).max(90, { error: '緯度は-90〜90の範囲で入力してください' }).nullable(),
+  longitude: z.number().min(-180, { error: '経度は-180〜180の範囲で入力してください' }).max(180, { error: '経度は-180〜180の範囲で入力してください' }).nullable(),
+  priceRange: z.string().max(100, { error: '価格帯は100文字以内で入力してください' }).nullable(),
+  googleBusinessPlaceId: z.string().max(200, { error: 'Place IDは200文字以内で入力してください' }).nullable(),
+  googleReviewUrl: z.string().url({ error: '有効なURLを入力してください' }).max(500, { error: 'URLは500文字以内で入力してください' }).nullable().or(z.literal('')),
+  businessAttributes: z.record(z.string(), z.boolean()).nullable(),
+  paymentAccepted: z.string().max(500, { error: '決済方法は500文字以内で入力してください' }).nullable().or(z.literal('')),
+})
+
+export type MeoSettingsInput = z.infer<typeof meoSettingsSchema>
 
 // robots.txt
 

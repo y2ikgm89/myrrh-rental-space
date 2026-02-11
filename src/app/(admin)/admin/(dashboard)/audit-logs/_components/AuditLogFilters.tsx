@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useQueryStates, parseAsString, parseAsInteger } from 'nuqs'
 import { Button } from '@/admin/components/ui/button'
 import { Input } from '@/admin/components/ui/input'
 import {
@@ -12,13 +12,6 @@ import {
 } from '@/admin/components/ui/select'
 import { AuditAction } from '@/shared/generated/prisma/enums'
 import { getFormString } from '@/shared/lib/utils'
-
-type Props = {
-  action: string
-  resource: string
-  dateFrom: string
-  dateTo: string
-}
 
 const ACTION_OPTIONS: { value: AuditAction | 'ALL'; label: string }[] = [
   { value: 'ALL', label: 'すべて' },
@@ -49,58 +42,49 @@ const RESOURCE_OPTIONS = [
   { value: 'auth', label: '認証' },
 ]
 
-export function AuditLogFilters({ action, resource, dateFrom, dateTo }: Props) {
-  const router = useRouter()
-  const searchParams = useSearchParams()
+export function AuditLogFilters() {
+  const [params, setParams] = useQueryStates(
+    {
+      page: parseAsInteger.withDefault(1),
+      action: parseAsString.withDefault(''),
+      resource: parseAsString.withDefault(''),
+      dateFrom: parseAsString.withDefault(''),
+      dateTo: parseAsString.withDefault(''),
+    },
+    { history: 'push', shallow: false }
+  )
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
-    const params = new URLSearchParams(searchParams.toString())
 
-    // Reset page when filtering
-    params.set('page', '1')
-
-    // Update params
     const newAction = getFormString(formData, 'action')
     const newResource = getFormString(formData, 'resource')
     const newDateFrom = getFormString(formData, 'dateFrom')
     const newDateTo = getFormString(formData, 'dateTo')
 
-    if (newAction && newAction !== 'ALL') {
-      params.set('action', newAction)
-    } else {
-      params.delete('action')
-    }
-
-    if (newResource) {
-      params.set('resource', newResource)
-    } else {
-      params.delete('resource')
-    }
-
-    if (newDateFrom) {
-      params.set('dateFrom', newDateFrom)
-    } else {
-      params.delete('dateFrom')
-    }
-
-    if (newDateTo) {
-      params.set('dateTo', newDateTo)
-    } else {
-      params.delete('dateTo')
-    }
-
-    router.push(`/admin/audit-logs?${params.toString()}`)
+    void setParams({
+      action: newAction === 'ALL' ? null : newAction || null,
+      resource: newResource === 'ALL_RESOURCES' ? null : newResource || null,
+      dateFrom: newDateFrom || null,
+      dateTo: newDateTo || null,
+      page: 1,
+    })
   }
 
   const handleReset = () => {
-    router.push('/admin/audit-logs')
+    void setParams({
+      action: null,
+      resource: null,
+      dateFrom: null,
+      dateTo: null,
+      page: 1,
+    })
   }
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-wrap gap-4">
-      <Select name="action" defaultValue={action}>
+      <Select name="action" defaultValue={params.action || 'ALL'}>
         <SelectTrigger className="w-[180px]">
           <SelectValue placeholder="アクション" />
         </SelectTrigger>
@@ -113,7 +97,7 @@ export function AuditLogFilters({ action, resource, dateFrom, dateTo }: Props) {
         </SelectContent>
       </Select>
 
-      <Select name="resource" defaultValue={resource}>
+      <Select name="resource" defaultValue={params.resource || 'ALL_RESOURCES'}>
         <SelectTrigger className="w-[180px]">
           <SelectValue placeholder="リソース" />
         </SelectTrigger>
@@ -129,7 +113,7 @@ export function AuditLogFilters({ action, resource, dateFrom, dateTo }: Props) {
       <Input
         type="date"
         name="dateFrom"
-        defaultValue={dateFrom}
+        defaultValue={params.dateFrom}
         className="w-[160px]"
         placeholder="開始日"
       />
@@ -137,7 +121,7 @@ export function AuditLogFilters({ action, resource, dateFrom, dateTo }: Props) {
       <Input
         type="date"
         name="dateTo"
-        defaultValue={dateTo}
+        defaultValue={params.dateTo}
         className="w-[160px]"
         placeholder="終了日"
       />

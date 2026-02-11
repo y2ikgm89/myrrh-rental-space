@@ -87,7 +87,7 @@ function toFormData(data?: PostData): PostFormData {
     thumbnailUrl: data.thumbnailUrl,
     ogpImageUrl: toFormString(data.ogpImageUrl),
     categoryId: data.categoryId,
-    tags: toTagsString(data.tags),
+    tags: toTagsString(data.postTags?.map((t) => t.name)),
     metaDescription: toFormString(data.metaDescription),
     metaKeywords: toFormString(data.metaKeywords),
     ogpTitle: toFormString(data.ogpTitle),

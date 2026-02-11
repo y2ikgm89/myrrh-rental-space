@@ -55,6 +55,16 @@ export type CloudflareConfig = {
 }
 
 /**
+ * Google OAuth設定（ログイン & カレンダー共通）
+ */
+export type GoogleOAuthConfig = {
+  clientId: string | null
+  clientSecretMasked: string | null
+  lastTestedAt: Date | null
+  connectionStatus: ConnectionStatus
+}
+
+/**
  * カスタムAPIキー（汎用）
  */
 export type CustomApiKeyData = {

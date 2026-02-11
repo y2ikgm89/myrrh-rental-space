@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from '@/admin/components/ui'
 import { updateDiscountSettings, type DiscountSettingsData } from '@/admin/actions/settings'
+import { DiscountCombinationMode } from '@/shared/generated/prisma/enums'
 import { useRefreshOnSuccess } from '../hooks'
 
 interface DiscountSectionProps {
@@ -205,7 +206,7 @@ export function DiscountSection({ settings }: DiscountSectionProps) {
             <Label>割引の併用モード</Label>
             <Select
               value={formData.discountCombinationMode}
-              onValueChange={(value: 'best' | 'both') =>
+              onValueChange={(value: DiscountCombinationMode) =>
                 setFormData({ ...formData, discountCombinationMode: value })
               }
               disabled={isPending}
@@ -214,16 +215,16 @@ export function DiscountSection({ settings }: DiscountSectionProps) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="best">
+                <SelectItem value={DiscountCombinationMode.best}>
                   最もお得な割引のみ適用
                 </SelectItem>
-                <SelectItem value="both">
+                <SelectItem value={DiscountCombinationMode.both}>
                   両方の割引を適用
                 </SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              {formData.discountCombinationMode === 'best'
+              {formData.discountCombinationMode === DiscountCombinationMode.best
                 ? '長時間割引とクーポンのうち、割引額が大きい方のみ適用されます'
                 : '長時間割引とクーポンの両方が適用されます（クーポンの併用設定が優先されます）'}
             </p>

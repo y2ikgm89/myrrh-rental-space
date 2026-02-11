@@ -16,7 +16,6 @@ import type {
   LexicalNode,
   NodeKey,
   SerializedLexicalNode,
-  Spread,
 } from 'lexical'
 import { $applyNodeReplacement, DecoratorNode } from 'lexical'
 import { ExternalLink } from 'lucide-react'
@@ -25,17 +24,14 @@ import { ExternalLink } from 'lucide-react'
 // Types
 // =============================================================================
 
-export type SerializedBookmarkNode = Spread<
-  {
-    url: string
-    title: string
-    description: string
-    imageUrl: string
-    faviconUrl: string
-    siteName: string
-  },
-  SerializedLexicalNode
->
+export interface SerializedBookmarkNode extends SerializedLexicalNode {
+  url: string
+  title: string
+  description: string
+  imageUrl: string
+  faviconUrl: string
+  siteName: string
+}
 
 // =============================================================================
 // Component
@@ -186,7 +182,7 @@ export class BookmarkNode extends DecoratorNode<ReactElement> {
       imageUrl: serializedNode.imageUrl,
       faviconUrl: serializedNode.faviconUrl,
       siteName: serializedNode.siteName,
-    })
+    }).updateFromJSON(serializedNode)
   }
 
   static importDOM(): DOMConversionMap | null {
@@ -225,7 +221,6 @@ export class BookmarkNode extends DecoratorNode<ReactElement> {
   exportJSON(): SerializedBookmarkNode {
     return {
       ...super.exportJSON(),
-      type: 'bookmark',
       url: this.__url,
       title: this.__title,
       description: this.__description,

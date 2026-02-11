@@ -22,7 +22,8 @@ import { $applyNodeReplacement, ElementNode, $createParagraphNode, $isElementNod
 // Types
 // =============================================================================
 
-export type SerializedPullQuoteTextNode = SerializedElementNode
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface SerializedPullQuoteTextNode extends SerializedElementNode {}
 
 // =============================================================================
 // Constants
@@ -52,8 +53,8 @@ export class PullQuoteTextNode extends ElementNode {
     return new PullQuoteTextNode(node.__key)
   }
 
-  static importJSON(_serializedNode: SerializedPullQuoteTextNode): PullQuoteTextNode {
-    return $createPullQuoteTextNode()
+  static importJSON(serializedNode: SerializedPullQuoteTextNode): PullQuoteTextNode {
+    return $createPullQuoteTextNode().updateFromJSON(serializedNode)
   }
 
   static importDOM(): DOMConversionMap | null {
@@ -78,7 +79,6 @@ export class PullQuoteTextNode extends ElementNode {
   exportJSON(): SerializedPullQuoteTextNode {
     return {
       ...super.exportJSON(),
-      type: 'pull-quote-text',
     }
   }
 

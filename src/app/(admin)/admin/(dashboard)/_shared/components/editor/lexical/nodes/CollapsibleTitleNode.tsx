@@ -25,7 +25,8 @@ import { $isCollapsibleContentNode } from './CollapsibleContentNode'
 // Types
 // =============================================================================
 
-export type SerializedCollapsibleTitleNode = SerializedElementNode
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface SerializedCollapsibleTitleNode extends SerializedElementNode {}
 
 // =============================================================================
 // DOM Conversion
@@ -49,8 +50,8 @@ export class CollapsibleTitleNode extends ElementNode {
     return new CollapsibleTitleNode(node.__key)
   }
 
-  static importJSON(_serializedNode: SerializedCollapsibleTitleNode): CollapsibleTitleNode {
-    return $createCollapsibleTitleNode()
+  static importJSON(serializedNode: SerializedCollapsibleTitleNode): CollapsibleTitleNode {
+    return $createCollapsibleTitleNode().updateFromJSON(serializedNode)
   }
 
   static importDOM(): DOMConversionMap | null {
@@ -69,7 +70,6 @@ export class CollapsibleTitleNode extends ElementNode {
   exportJSON(): SerializedCollapsibleTitleNode {
     return {
       ...super.exportJSON(),
-      type: 'collapsible-title',
     }
   }
 

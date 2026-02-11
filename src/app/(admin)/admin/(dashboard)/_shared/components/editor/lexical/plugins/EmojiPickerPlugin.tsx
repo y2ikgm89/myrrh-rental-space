@@ -9,7 +9,7 @@
 
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
@@ -485,7 +485,7 @@ export function EmojiPickerPlugin() {
   })
 
   // オプション生成
-  const options = useMemo(() => {
+  const options = (() => {
     if (!queryString) return []
 
     const lowerQuery = queryString.toLowerCase()
@@ -497,7 +497,7 @@ export function EmojiPickerPlugin() {
 
     // 上位15件に制限
     return filtered.slice(0, 15).map((item) => new EmojiOption(item.emoji, item.keywords))
-  }, [queryString])
+  })()
 
   const onSelectOption = useCallback(
     (

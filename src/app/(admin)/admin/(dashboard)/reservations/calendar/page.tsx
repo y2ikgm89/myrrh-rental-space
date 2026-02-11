@@ -7,20 +7,16 @@ import {
 } from '@/admin/actions/reservation'
 import { getCalendarDateRange, getValidCalendarView } from '@/admin/lib/calendar'
 import { getReservationStatusFilterOrAll } from '@/shared/lib/validations/enums'
+import { loadAdminCalendarSearchParams } from '@/shared/lib/nuqs'
 import { CalendarViewWrapper } from '../_components/calendar'
-import { Button } from '@/admin/components/ui'
+import { Button, Breadcrumb } from '@/admin/components/ui'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: '予約カレンダー | Myrrh Rental Space',
 }
 
-type SearchParams = Promise<{
-  view?: string
-  date?: string
-  spaceId?: string
-  status?: string
-}>
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
 
 interface PageProps {
   searchParams: SearchParams
@@ -36,7 +32,7 @@ function CalendarSkeleton() {
 }
 
 async function CalendarData({ searchParams }: { searchParams: SearchParams }) {
-  const params = await searchParams
+  const params = await loadAdminCalendarSearchParams(searchParams)
   const view = getValidCalendarView(params.view, 'week')
   const date = params.date ? new Date(params.date) : new Date()
   const spaceId = params.spaceId || undefined
@@ -57,6 +53,13 @@ export default async function ReservationCalendarPage({
 }: PageProps) {
   return (
     <div className="flex h-[calc(100vh-8rem)] flex-col space-y-6">
+      <Breadcrumb
+        items={[
+          { label: '予約管理', href: '/admin/reservations' },
+          { label: 'カレンダー' },
+        ]}
+      />
+
       {/* ヘッダー */}
       <div className="flex items-center justify-between">
         <div>

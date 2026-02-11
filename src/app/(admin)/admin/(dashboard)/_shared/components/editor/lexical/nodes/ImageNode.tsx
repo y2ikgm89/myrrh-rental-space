@@ -15,7 +15,6 @@ import type {
   LexicalNode,
   NodeKey,
   SerializedLexicalNode,
-  Spread,
 } from 'lexical'
 import { $applyNodeReplacement, DecoratorNode } from 'lexical'
 
@@ -23,15 +22,12 @@ import { $applyNodeReplacement, DecoratorNode } from 'lexical'
 // Types
 // =============================================================================
 
-export type SerializedImageNode = Spread<
-  {
-    src: string
-    alt: string
-    width?: number
-    height?: number
-  },
-  SerializedLexicalNode
->
+export interface SerializedImageNode extends SerializedLexicalNode {
+  src: string
+  alt: string
+  width?: number
+  height?: number
+}
 
 // =============================================================================
 // Component
@@ -115,7 +111,7 @@ export class ImageNode extends DecoratorNode<ReactElement> {
       alt: serializedNode.alt,
       width: serializedNode.width,
       height: serializedNode.height,
-    })
+    }).updateFromJSON(serializedNode)
   }
 
   static importDOM(): DOMConversionMap | null {
@@ -144,7 +140,6 @@ export class ImageNode extends DecoratorNode<ReactElement> {
   exportJSON(): SerializedImageNode {
     return {
       ...super.exportJSON(),
-      type: 'image',
       src: this.__src,
       alt: this.__alt,
       width: this.__width,

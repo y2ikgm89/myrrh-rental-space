@@ -8,7 +8,7 @@
 
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
   $createParagraphNode,
@@ -25,6 +25,7 @@ import {
 import {
   $createCalloutNode,
   $isCalloutNode,
+  isCalloutType,
   CalloutNode,
   type CalloutType,
 } from '../nodes/CalloutNode'
@@ -116,8 +117,8 @@ function $onEscape(
 export function useCalloutDialog() {
   const [isCalloutDialogOpen, setIsCalloutDialogOpen] = useState(false)
 
-  const openCalloutDialog = useCallback(() => setIsCalloutDialogOpen(true), [])
-  const closeCalloutDialog = useCallback(() => setIsCalloutDialogOpen(false), [])
+  const openCalloutDialog = () => setIsCalloutDialogOpen(true)
+  const closeCalloutDialog = () => setIsCalloutDialogOpen(false)
 
   return {
     isCalloutDialogOpen,
@@ -226,7 +227,7 @@ export function CalloutPlugin({ isOpen, onClose }: CalloutPluginProps) {
           <SelectionBox
             options={CALLOUT_OPTIONS}
             value={selectedType}
-            onChange={(value) => setSelectedType(value as CalloutType)}
+            onChange={(value) => { if (isCalloutType(value)) setSelectedType(value) }}
             columns={2}
             name="コールアウト種類"
           />

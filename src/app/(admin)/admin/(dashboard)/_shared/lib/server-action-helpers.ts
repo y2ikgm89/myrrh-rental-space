@@ -27,34 +27,6 @@ import {
 } from '@/shared/types/server-actions'
 
 // =============================================================================
-// withAuth Higher Order Function
-// =============================================================================
-
-/**
- * 管理者認証が必要なServer Actionをラップする高階関数
- *
- * @deprecated withPermission または withRole を使用してください
- */
-export function withAuth<TArgs extends unknown[], TData = void>(
-  fn: (user: User, ...args: TArgs) => Promise<ActionResult<TData>>
-): (...args: TArgs) => Promise<ActionResult<TData>> {
-  return async (...args: TArgs): Promise<ActionResult<TData>> => {
-    const session = await getSession()
-    const user = getSessionUser(session)
-
-    if (!user) {
-      return createFailure('ログインが必要です')
-    }
-
-    if (!canAccessAdmin(user.role)) {
-      return createFailure('管理者権限が必要です')
-    }
-
-    return await fn(user, ...args)
-  }
-}
-
-// =============================================================================
 // withPermission Higher Order Function
 // =============================================================================
 
@@ -104,7 +76,7 @@ export function withPermission<TArgs extends unknown[], TData = void>(
 
       if (checkResourceAccess && isEditorRole(role)) {
         const resourceId = typeof args[0] === 'string' ? args[0] : undefined
-        if (!userHasResourceAccess(user, resource, action, resourceId)) {
+        if (!(await userHasResourceAccess(user, resource, action, resourceId))) {
           void logPermissionDenied(user.id, resource, action, resourceId)
           return createFailure('このリソースへのアクセス権がありません')
         }

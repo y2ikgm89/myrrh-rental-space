@@ -8,6 +8,7 @@ import { useState, useTransition, useRef } from 'react'
 import { X, Copy, ExternalLink, Trash2, Save, Loader2, FileText, Film, File } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
+import { useConfirm } from '@/admin/contexts/confirm-context'
 import { updateMedia, deleteMedia } from '@/admin/actions/media'
 import type { MediaData } from '@/admin/types/media-picker'
 import { formatDate } from '@/shared/lib/utils'
@@ -39,6 +40,7 @@ function getInitialFormState(item: MediaData | null): FormState {
 
 export function MediaDetailDialog({ item, onClose }: Props) {
   const router = useRouter()
+  const confirmDialog = useConfirm()
   const [isPending, startTransition] = useTransition()
   const [hasChanges, setHasChanges] = useState(false)
 
@@ -98,8 +100,14 @@ export function MediaDetailDialog({ item, onClose }: Props) {
     })
   }
 
-  const handleDelete = () => {
-    if (!confirm(`「${item.filename}」を削除しますか？`)) return
+  const handleDelete = async () => {
+    const confirmed = await confirmDialog({
+      title: 'メディアを削除しますか？',
+      description: `「${item.filename}」を削除します。この操作は元に戻せません。`,
+      confirmLabel: '削除',
+      variant: 'destructive',
+    })
+    if (!confirmed) return
 
     startTransition(async () => {
       const result = await deleteMedia(item.id)

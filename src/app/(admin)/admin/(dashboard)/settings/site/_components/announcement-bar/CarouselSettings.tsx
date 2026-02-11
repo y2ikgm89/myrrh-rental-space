@@ -17,6 +17,7 @@ import {
   Switch,
 } from '@/admin/components/ui'
 import type { DesignStyle, AnimationType } from '@/shared/lib/announcement-bar-utils'
+import { AnnouncementBarDesignStyle } from '@/shared/generated/prisma/enums'
 import { DesignPreview } from './DesignPreview'
 import {
   ANIMATION_OPTIONS,
@@ -71,7 +72,7 @@ export function CarouselSettingsPanel({
           {/* プレビュー */}
           <div className="space-y-2">
             <Label>プレビュー</Label>
-            <div className="rounded-lg border bg-gradient-to-br from-gray-100 to-gray-200 p-4">
+            <div className="rounded-lg border bg-gradient-to-br from-muted to-muted/50 p-4">
               <DesignPreview
                 message="サンプルお知らせメッセージ"
                 linkText="詳細はこちら"
@@ -131,7 +132,7 @@ export function CarouselSettingsPanel({
           </div>
 
           {/* ストライプ設定（stripedスタイル選択時のみ） */}
-          {settings.announcementBarDesignStyle === 'striped' && (
+          {settings.announcementBarDesignStyle === AnnouncementBarDesignStyle.striped && (
             <div className="rounded-lg border p-4 space-y-4">
               <h4 className="font-medium">ストライプ設定</h4>
 
@@ -179,7 +180,7 @@ export function CarouselSettingsPanel({
           )}
 
           {/* グラデーション設定（gradientスタイル選択時のみ） */}
-          {settings.announcementBarDesignStyle === 'gradient' && (
+          {settings.announcementBarDesignStyle === AnnouncementBarDesignStyle.gradient && (
             <div className="rounded-lg border p-4 space-y-4">
               <h4 className="font-medium">グラデーション設定</h4>
 
@@ -205,7 +206,7 @@ export function CarouselSettingsPanel({
           )}
 
           {/* グラス設定（glassスタイル選択時のみ） */}
-          {settings.announcementBarDesignStyle === 'glass' && (
+          {settings.announcementBarDesignStyle === AnnouncementBarDesignStyle.glass && (
             <div className="rounded-lg border p-4 space-y-4">
               <h4 className="font-medium">グラス設定</h4>
 
@@ -240,6 +241,26 @@ export function CarouselSettingsPanel({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* スクロール時に固定表示 */}
+          <div className="flex items-center justify-between rounded-lg border p-4">
+            <div className="space-y-0.5">
+              <Label htmlFor="sticky" className="font-medium">
+                スクロール時に固定表示
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                有効にすると、スクロールしてもお知らせバーが画面上部に固定されます
+              </p>
+            </div>
+            <Switch
+              id="sticky"
+              checked={settings.announcementBarSticky}
+              onCheckedChange={(checked) =>
+                onSettingsChange({ ...settings, announcementBarSticky: checked })
+              }
+              disabled={isPending}
+            />
+          </div>
+
           {/* アニメーション種類 */}
           <div className="space-y-2">
             <Label htmlFor="animation">アニメーション種類</Label>

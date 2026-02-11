@@ -9,6 +9,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { useConfirm } from '@/admin/contexts/confirm-context'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -111,6 +112,7 @@ export function FaqItemInlineEditor({
   defaultCategoryId,
 }: FaqItemInlineEditorProps) {
   const router = useRouter()
+  const confirm = useConfirm()
   const [isPending, startTransition] = useTransition()
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -248,10 +250,16 @@ export function FaqItemInlineEditor({
     window.open(`/faq`, '_blank')
   }
 
-  const handleBack = () => {
+  const handleBack = async () => {
     const isUnsaved = isDirty || hasEditorChanges
-    if (isUnsaved && !window.confirm('保存されていない変更があります。破棄してもよろしいですか？')) {
-      return
+    if (isUnsaved) {
+      const confirmed = await confirm({
+        title: '変更を破棄しますか？',
+        description: '保存されていない変更があります。破棄してもよろしいですか？',
+        confirmLabel: '破棄',
+        variant: 'destructive',
+      })
+      if (!confirmed) return
     }
     router.push('/admin/faq')
   }

@@ -10,6 +10,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
   $createParagraphNode,
+  $findMatchingParent,
   $getSelection,
   $isRangeSelection,
   $isRootOrShadowRoot,
@@ -18,6 +19,7 @@ import {
   COMMAND_PRIORITY_CRITICAL,
   FORMAT_ELEMENT_COMMAND,
   FORMAT_TEXT_COMMAND,
+  mergeRegister,
   REDO_COMMAND,
   UNDO_COMMAND,
   type ElementFormatType,
@@ -30,7 +32,6 @@ import {
 import { $isLinkNode, TOGGLE_LINK_COMMAND } from '@lexical/link'
 import { $isHeadingNode, $createHeadingNode, type HeadingTagType } from '@lexical/rich-text'
 import { $setBlocksType } from '@lexical/selection'
-import { $findMatchingParent, mergeRegister } from '@lexical/utils'
 import { INSERT_HORIZONTAL_RULE_COMMAND } from '@lexical/react/LexicalHorizontalRuleNode'
 import {
   AlignCenter,

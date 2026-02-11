@@ -21,7 +21,8 @@ import { $applyNodeReplacement, ElementNode } from 'lexical'
 // Types
 // =============================================================================
 
-export type SerializedCollapsibleContentNode = SerializedElementNode
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface SerializedCollapsibleContentNode extends SerializedElementNode {}
 
 // =============================================================================
 // DOM Conversion
@@ -45,8 +46,8 @@ export class CollapsibleContentNode extends ElementNode {
     return new CollapsibleContentNode(node.__key)
   }
 
-  static importJSON(_serializedNode: SerializedCollapsibleContentNode): CollapsibleContentNode {
-    return $createCollapsibleContentNode()
+  static importJSON(serializedNode: SerializedCollapsibleContentNode): CollapsibleContentNode {
+    return $createCollapsibleContentNode().updateFromJSON(serializedNode)
   }
 
   static importDOM(): DOMConversionMap | null {
@@ -71,7 +72,6 @@ export class CollapsibleContentNode extends ElementNode {
   exportJSON(): SerializedCollapsibleContentNode {
     return {
       ...super.exportJSON(),
-      type: 'collapsible-content',
     }
   }
 

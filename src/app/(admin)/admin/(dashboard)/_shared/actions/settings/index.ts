@@ -37,6 +37,7 @@ export type {
   BusinessInfoInput,
   ContactInfoInput,
   BusinessHoursSettingsInput,
+  MeoSettingsInput,
   SeoSettingsInput,
   LayoutSettingsInput,
   EmailSettingsInput,
@@ -52,6 +53,7 @@ export type {
   PermalinkSettingsInput,
   DiscountSettingsInput,
   DurationDiscountRuleInput,
+  HeaderSettingsInput,
 } from './schemas'
 
 // =============================================================================
@@ -74,6 +76,7 @@ export {
   updateBusinessInfo,
   updateContactInfo,
   updateBusinessHoursSettings,
+  updateMeoSettings,
 } from './business'
 
 // =============================================================================
@@ -130,6 +133,7 @@ export {
   updateAnnouncementBarCarouselSettings,
   getPermalinkSettings,
   updatePermalinkSettings,
+  updateHeaderSettings,
 } from './other'
 
 // =============================================================================
