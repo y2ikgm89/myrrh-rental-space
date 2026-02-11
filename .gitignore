@@ -1,104 +1,72 @@
-
-
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
-!prisma/migrations/.gitkeep
-# Bun
-# Debug
 # Dependencies
-# IDE
-# Local env files
-# Misc
-# Next.js
-# OS
-# Playwright
-# Prisma
-# Production
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-# Temporary files
-# Testing
-# Turbopack
-# TypeScript
-# Vercel
-# debug
-# dependencies
-# env files (can opt-in for committing if needed)
-# misc
-# next.js
-# production
-# testing
-# typescript
-# vercel
-*.log
-*.pem
-*.pem
-*.swo
-*.swp
-*.temp
-*.tmp
-*.tsbuildinfo
-*.tsbuildinfo
-*~
-.DS_Store
-.DS_Store
-.bun/
-.env
-.env*
-.env*.local
-.env.development.local
-.env.production.local
-.env.test.local
-.idea/
-.next/
-.nyc_output
-.pnp
-.pnp.*
-.pnp.js
-.pnpm-debug.log*
-.turbo/
-.vercel
-.vercel
-.vscode/
-.yarn/*
-/.next/
-/.pnp
-/build
-/coverage
-/node_modules
-/out/
-Thumbs.db
-build/
-coverage/
-dist/
-lerna-debug.log*
-next-env.d.ts
-next-env.d.ts
 node_modules/
-npm-debug.log*
-npm-debug.log*
+
+# Next.js
+.next/
 out/
+build/
+dist/
+next-env.d.ts
+
+# Bun
+.bun/
+
+# Turbopack
+.turbo/
+
+# Environment variables
+.env
+.env*.local
+
+# TypeScript
+*.tsbuildinfo
+
+# Prisma (generated)
+src/shared/generated/
+prisma/migrations/*.sql
+!prisma/migrations/.gitkeep
+
+# Testing
+coverage/
+test-results/
 playwright-report/
 playwright/.cache/
-pnpm-debug.log*
-prisma/migrations/*.sql
-src/shared/generated/
-test-results/
-yarn-debug.log*
-yarn-debug.log*
-yarn-error.log*
-yarn-error.log*
-tmpclaude-*-cwd
+.nyc_output
 
-# Claude Code local files
-.claude/logs/
-.claude/state/
-.claude/memory/
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+*~
+*.swp
+*.swo
+
+# Debug logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Temporary files
+*.tmp
+*.temp
+*.pem
+
+# Vercel
+.vercel
 
 # TypeDoc generated API docs
 docs/api/
 
 # Playwright MCP screenshots
 .playwright-mcp/
+
+# Claude Code local files
+.claude/logs/
+.claude/state/
+.claude/memory/
+tmpclaude-*-cwd
 nul

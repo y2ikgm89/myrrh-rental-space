@@ -6,7 +6,7 @@
 # ---------------------------------------------
 # Stage 1: Dependencies
 # ---------------------------------------------
-FROM oven/bun:1.3-alpine AS deps
+FROM oven/bun:1.3.9-alpine AS deps
 
 WORKDIR /app
 
@@ -26,7 +26,7 @@ RUN bunx --bun prisma generate --schema=./prisma/schema.prisma
 # ---------------------------------------------
 # Stage 2: Builder
 # ---------------------------------------------
-FROM oven/bun:1.3-alpine AS builder
+FROM oven/bun:1.3.9-alpine AS builder
 
 WORKDIR /app
 
@@ -51,7 +51,7 @@ RUN bun run build
 # ---------------------------------------------
 # Stage 3: Runner (Production)
 # ---------------------------------------------
-FROM oven/bun:1.3-alpine AS runner
+FROM oven/bun:1.3.9-alpine AS runner
 
 WORKDIR /app
 
