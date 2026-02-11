@@ -15,8 +15,10 @@ import { gsap } from '@/public/lib/gsap-config'
 import { ScrollReveal } from '@/public/components/animations/ScrollReveal'
 import { SplitText } from '@/public/components/animations/SplitText'
 import { SectionLabel } from '@/public/components/ui/SectionLabel'
+import { SectionWrapper, getTitleClasses, getTitleStyle, getTextStyle } from '@/public/components/sections/SectionWrapper'
 import { DURATION, EASE, STAGGER } from '@/public/lib/animations'
 import type { SpaceListConfig } from '@/shared/lib/validations/section'
+import type { SectionDesign } from '@/shared/lib/validations/section-design'
 
 export interface SpaceListData {
   readonly id: string
@@ -32,6 +34,7 @@ export interface SpaceListData {
 interface SpaceListSectionProps {
   readonly config: SpaceListConfig
   readonly spaces: readonly SpaceListData[]
+  readonly design: SectionDesign
 }
 
 const COLUMNS_MAP = {
@@ -41,7 +44,7 @@ const COLUMNS_MAP = {
   4: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
 } as const
 
-export function SpaceListSection({ config, spaces }: SpaceListSectionProps): ReactElement {
+export function SpaceListSection({ config, spaces, design }: SpaceListSectionProps): ReactElement {
   const gridRef = useRef<HTMLDivElement>(null)
 
   useGSAP(
@@ -86,13 +89,12 @@ export function SpaceListSection({ config, spaces }: SpaceListSectionProps): Rea
       : `grid gap-6 ${COLUMNS_MAP[colKey as keyof typeof COLUMNS_MAP]}`
 
   return (
-    <section className="py-16 md:py-24 lg:py-32">
-      <div className="mx-auto max-w-6xl px-5 md:px-8">
+    <SectionWrapper design={design}>
         <div className="mb-12 text-center md:mb-16">
           <ScrollReveal>
-            <SectionLabel>Spaces</SectionLabel>
+            {config.sectionLabel && <SectionLabel>{config.sectionLabel}</SectionLabel>}
           </ScrollReveal>
-          <h2 className="mt-4 font-heading text-2xl font-bold tracking-tight md:text-3xl lg:text-4xl">
+          <h2 className={`mt-4 font-heading ${getTitleClasses(design)} font-bold tracking-tight`} style={getTitleStyle(design)}>
             <SplitText variant="words">
               {config.title}
             </SplitText>
@@ -117,7 +119,6 @@ export function SpaceListSection({ config, spaces }: SpaceListSectionProps): Rea
                   height={300}
                   className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   sizes={isList ? '33vw' : `(max-width: 768px) 100vw, ${Math.round(100 / colKey)}vw`}
-                  unoptimized
                 />
               </div>
               <div className={`p-4 md:p-5 ${isList ? 'flex-1' : ''}`}>
@@ -125,7 +126,7 @@ export function SpaceListSection({ config, spaces }: SpaceListSectionProps): Rea
                   {space.name}
                 </h3>
                 {space.description && (
-                  <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                  <p className="mt-1 line-clamp-2 text-sm text-muted-foreground" style={getTextStyle(design)}>
                     {space.description}
                   </p>
                 )}
@@ -152,16 +153,15 @@ export function SpaceListSection({ config, spaces }: SpaceListSectionProps): Rea
           <ScrollReveal delay={0.2}>
             <div className="mt-10 text-center">
               <Link
-                href="/spaces"
+                href={config.viewAllUrl}
                 className="group relative inline-block text-xs uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-primary-dark"
               >
-                全てのスペースを見る &rarr;
+                {config.viewAllText} &rarr;
                 <span className="absolute bottom-0 left-0 h-px w-0 bg-primary-dark/60 transition-all duration-300 group-hover:w-full" />
               </Link>
             </div>
           </ScrollReveal>
         )}
-      </div>
-    </section>
+    </SectionWrapper>
   )
 }

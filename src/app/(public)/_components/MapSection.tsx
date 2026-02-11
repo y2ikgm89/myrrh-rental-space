@@ -7,8 +7,10 @@
 
 import type { ReactElement } from 'react'
 import { ScrollReveal } from '@/public/components/animations/ScrollReveal'
+import { SectionWrapper, getTitleClasses, getTitleStyle, getTextStyle } from '@/public/components/sections/SectionWrapper'
 import { SectionLabel } from '@/public/components/ui/SectionLabel'
 import type { MapConfig } from '@/shared/lib/validations/section'
+import type { SectionDesign } from '@/shared/lib/validations/section-design'
 
 const HEIGHT_MAP = {
   sm: 'h-[300px]',
@@ -18,6 +20,7 @@ const HEIGHT_MAP = {
 
 interface MapSectionProps {
   readonly config: MapConfig
+  readonly design: SectionDesign
 }
 
 function buildMapEmbedUrl(config: MapConfig): string | null {
@@ -31,53 +34,51 @@ function buildMapEmbedUrl(config: MapConfig): string | null {
   return null
 }
 
-export function MapSection({ config }: MapSectionProps): ReactElement {
+export function MapSection({ config, design }: MapSectionProps): ReactElement {
   const heightClass = HEIGHT_MAP[config.height] ?? HEIGHT_MAP.md
   const embedUrl = buildMapEmbedUrl(config)
 
   return (
-    <section className="py-16 md:py-24">
-      <div className="mx-auto max-w-6xl px-5 md:px-8">
-        {config.title && (
-          <div className="mb-8 text-center md:mb-12">
-            <ScrollReveal>
-              <SectionLabel>Location</SectionLabel>
-              <h2 className="mt-4 font-heading text-2xl font-bold tracking-tight md:text-3xl">
-                {config.title}
-              </h2>
-            </ScrollReveal>
-          </div>
-        )}
-
-        <ScrollReveal>
-          <div className={`overflow-hidden rounded-lg ${heightClass}`}>
-            {embedUrl ? (
-              <iframe
-                src={embedUrl}
-                className="h-full w-full border-0"
-                allowFullScreen
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                title={config.title ?? 'Google Maps'}
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center bg-muted">
-                <p className="text-sm text-muted-foreground">
-                  地図を表示するには、住所または座標を設定してください。
-                </p>
-              </div>
-            )}
-          </div>
-        </ScrollReveal>
-
-        {config.showAddressBelow && config.address && (
-          <ScrollReveal delay={0.2}>
-            <p className="mt-4 text-center text-sm text-muted-foreground">
-              {config.address}
-            </p>
+    <SectionWrapper design={design}>
+      {config.title && (
+        <div className="mb-8 text-center md:mb-12">
+          <ScrollReveal>
+            {config.sectionLabel && <SectionLabel>{config.sectionLabel}</SectionLabel>}
+            <h2 className={`mt-4 font-heading ${getTitleClasses(design)} font-bold tracking-tight`} style={getTitleStyle(design)}>
+              {config.title}
+            </h2>
           </ScrollReveal>
-        )}
-      </div>
-    </section>
+        </div>
+      )}
+
+      <ScrollReveal>
+        <div className={`overflow-hidden rounded-lg ${heightClass}`}>
+          {embedUrl ? (
+            <iframe
+              src={embedUrl}
+              className="h-full w-full border-0"
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              title={config.title ?? 'Google Maps'}
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center bg-muted">
+              <p className="text-sm text-muted-foreground">
+                地図を表示するには、住所または座標を設定してください。
+              </p>
+            </div>
+          )}
+        </div>
+      </ScrollReveal>
+
+      {config.showAddressBelow && config.address && (
+        <ScrollReveal delay={0.2}>
+          <p className="mt-4 text-center text-sm text-muted-foreground" style={getTextStyle(design)}>
+            {config.address}
+          </p>
+        </ScrollReveal>
+      )}
+    </SectionWrapper>
   )
 }

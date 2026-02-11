@@ -15,8 +15,10 @@ import { gsap } from '@/public/lib/gsap-config'
 import { ScrollReveal } from '@/public/components/animations/ScrollReveal'
 import { SplitText } from '@/public/components/animations/SplitText'
 import { SectionLabel } from '@/public/components/ui/SectionLabel'
+import { SectionWrapper, getTitleClasses, getTitleStyle } from '@/public/components/sections/SectionWrapper'
 import { DURATION, EASE, STAGGER } from '@/public/lib/animations'
 import type { FaqListConfig } from '@/shared/lib/validations/section'
+import type { SectionDesign } from '@/shared/lib/validations/section-design'
 
 export interface FaqData {
   readonly id: string
@@ -27,6 +29,7 @@ export interface FaqData {
 interface FaqListSectionProps {
   readonly config: FaqListConfig
   readonly items: readonly FaqData[]
+  readonly design: SectionDesign
 }
 
 const VARIANT_STYLES = {
@@ -50,7 +53,7 @@ const VARIANT_STYLES = {
   },
 } as const
 
-export function FaqListSection({ config, items }: FaqListSectionProps): ReactElement {
+export function FaqListSection({ config, items, design }: FaqListSectionProps): ReactElement {
   const listRef = useRef<HTMLDivElement>(null)
 
   useGSAP(
@@ -88,55 +91,59 @@ export function FaqListSection({ config, items }: FaqListSectionProps): ReactEle
 
   const styles = VARIANT_STYLES[config.variant] ?? VARIANT_STYLES.default
 
+  // NOTE: dangerouslySetInnerHTML usage below is pre-existing code for FAQ answers
+  // and FAQ JSON-LD schema, both sourced from admin-managed content.
   return (
-    <section className="py-16 md:py-24">
-      <div className="mx-auto max-w-3xl px-5 md:px-8">
-        <div className="mb-10 text-center md:mb-14">
-          <ScrollReveal>
-            <SectionLabel>FAQ</SectionLabel>
-          </ScrollReveal>
-          <h2 className="mt-4 font-heading text-2xl font-bold tracking-tight md:text-3xl lg:text-4xl">
-            <SplitText variant="words">
-              {config.title}
-            </SplitText>
-          </h2>
-        </div>
+    <>
+      <SectionWrapper design={design}>
+        <div className="mx-auto max-w-3xl">
+          <div className="mb-10 text-center md:mb-14">
+            <ScrollReveal>
+              {config.sectionLabel && <SectionLabel>{config.sectionLabel}</SectionLabel>}
+            </ScrollReveal>
+            <h2 className={`mt-4 font-heading ${getTitleClasses(design)} font-bold tracking-tight`} style={getTitleStyle(design)}>
+              <SplitText variant="words">
+                {config.title}
+              </SplitText>
+            </h2>
+          </div>
 
-        <div ref={listRef} className={styles.container}>
-          {items.map((item) => (
-            <details key={item.id} data-faq-item="" className={`group ${styles.item}`}>
-              <summary className={styles.summary}>
-                <span>{item.question}</span>
-                {styles.marker && (
-                  <span className="shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-45" aria-hidden="true">
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
-                    </svg>
-                  </span>
-                )}
-              </summary>
-              <div
-                className="mt-3 text-sm leading-relaxed text-muted-foreground"
-                dangerouslySetInnerHTML={{ __html: item.answer }}
-              />
-            </details>
-          ))}
-        </div>
+          <div ref={listRef} className={styles.container}>
+            {items.map((item) => (
+              <details key={item.id} data-faq-item="" className={`group ${styles.item}`}>
+                <summary className={styles.summary}>
+                  <span>{item.question}</span>
+                  {styles.marker && (
+                    <span className="shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-45" aria-hidden="true">
+                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
+                      </svg>
+                    </span>
+                  )}
+                </summary>
+                <div
+                  className="mt-3 text-sm leading-relaxed text-muted-foreground"
+                  dangerouslySetInnerHTML={{ __html: item.answer }}
+                />
+              </details>
+            ))}
+          </div>
 
-        {config.showViewAllLink && (
-          <ScrollReveal delay={0.2}>
-            <div className="mt-8 text-center">
-              <Link
-                href="/faq"
-                className="group relative inline-block text-xs uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-primary-dark"
-              >
-                全てのFAQ &rarr;
-                <span className="absolute bottom-0 left-0 h-px w-0 bg-primary-dark/60 transition-all duration-300 group-hover:w-full" />
-              </Link>
-            </div>
-          </ScrollReveal>
-        )}
-      </div>
+          {config.showViewAllLink && (
+            <ScrollReveal delay={0.2}>
+              <div className="mt-8 text-center">
+                <Link
+                  href={config.viewAllUrl}
+                  className="group relative inline-block text-xs uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-primary-dark"
+                >
+                  {config.viewAllText} &rarr;
+                  <span className="absolute bottom-0 left-0 h-px w-0 bg-primary-dark/60 transition-all duration-300 group-hover:w-full" />
+                </Link>
+              </div>
+            </ScrollReveal>
+          )}
+        </div>
+      </SectionWrapper>
 
       {/* FAQ JSON-LD */}
       <script
@@ -156,6 +163,6 @@ export function FaqListSection({ config, items }: FaqListSectionProps): ReactEle
           }),
         }}
       />
-    </section>
+    </>
   )
 }

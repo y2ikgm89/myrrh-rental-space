@@ -12,6 +12,7 @@
 import { GoogleAnalytics, GoogleTagManager } from '@next/third-parties/google'
 import { useCookieConsent } from '@/public/components/CookieConsentBanner'
 import type { AnalyticsConfig } from '@/shared/lib/analytics/config'
+import { AnalyticsType } from '@/shared/generated/prisma/enums'
 
 interface AnalyticsProviderProps {
   config: AnalyticsConfig
@@ -39,12 +40,12 @@ export function AnalyticsProvider({ config }: AnalyticsProviderProps) {
   }
 
   // GA4の場合
-  if (config.analyticsType === 'ga4' && config.googleAnalyticsId) {
+  if (config.analyticsType === AnalyticsType.ga4 && config.googleAnalyticsId) {
     return <GoogleAnalytics gaId={config.googleAnalyticsId} />
   }
 
   // GTMの場合
-  if (config.analyticsType === 'gtm' && config.googleTagManagerId) {
+  if (config.analyticsType === AnalyticsType.gtm && config.googleTagManagerId) {
     return <GoogleTagManager gtmId={config.googleTagManagerId} />
   }
 

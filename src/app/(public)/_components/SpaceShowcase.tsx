@@ -12,8 +12,10 @@ import { useGSAP } from '@gsap/react'
 import { gsap } from '@/public/lib/gsap-config'
 import { ScrollReveal } from '@/public/components/animations/ScrollReveal'
 import { SectionLabel } from '@/public/components/ui/SectionLabel'
+import { SectionWrapper, getTitleClasses, getTitleStyle, getTextStyle } from '@/public/components/sections/SectionWrapper'
 import { DURATION, EASE, STAGGER } from '@/public/lib/animations'
 import type { SpaceShowcaseConfig } from '@/shared/lib/validations/section'
+import type { SectionDesign } from '@/shared/lib/validations/section-design'
 
 export interface SpaceData {
   readonly id: string
@@ -31,9 +33,10 @@ export interface SpaceData {
 interface SpaceShowcaseProps {
   readonly config: SpaceShowcaseConfig
   readonly spaces: readonly SpaceData[]
+  readonly design: SectionDesign
 }
 
-export function SpaceShowcase({ config, spaces }: SpaceShowcaseProps): ReactElement {
+export function SpaceShowcase({ config, spaces, design }: SpaceShowcaseProps): ReactElement {
   const gridRef = useRef<HTMLDivElement>(null)
 
   useGSAP(
@@ -68,66 +71,69 @@ export function SpaceShowcase({ config, spaces }: SpaceShowcaseProps): ReactElem
   )
 
   return (
-    <section className="bg-surface py-24 md:py-32 lg:py-40">
-      <div className="mx-auto max-w-6xl px-5 md:px-8">
-        <div className="mb-12 text-center md:mb-16">
-          <ScrollReveal>
-            <SectionLabel>Spaces</SectionLabel>
-            <h2 className="mt-4 font-heading text-2xl font-bold tracking-tight md:text-3xl lg:text-4xl">
-              {config.title}
-            </h2>
-          </ScrollReveal>
-        </div>
-
-        <div ref={gridRef} className="grid gap-6 md:grid-cols-3 md:gap-8">
-          {spaces.map((space) => (
-            <div
-              key={space.id}
-              data-space-card=""
-              className="group overflow-hidden rounded-lg border border-border bg-card transition-shadow duration-300 hover:shadow-lg"
-            >
-              <div className="aspect-[4/3] overflow-hidden">
-                <Image
-                  src={space.imageUrl}
-                  alt={space.imageAlt}
-                  width={400}
-                  height={300}
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  sizes="(max-width: 768px) 100vw, 33vw"
-                  unoptimized
-                />
-              </div>
-              <div className="p-5 md:p-6">
-                <p className="text-[11px] uppercase tracking-[0.15em] text-primary-dark">
-                  {space.name}
-                </p>
-                <h3 className="mt-1 font-heading text-lg tracking-tight">
-                  {space.nameJa}
-                </h3>
-                {space.tagline && (
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {space.tagline}
-                  </p>
-                )}
-                {(space.capacity != null || space.hourlyPrice != null) && (
-                  <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
-                    <span className="text-xs text-muted-foreground">
-                      {space.capacity != null && `${space.capacity}名`}
-                      {space.capacity != null && space.area != null && ' / '}
-                      {space.area != null && <>{space.area}m&sup2;</>}
-                    </span>
-                    {space.hourlyPrice != null && (
-                      <span className="text-sm font-medium text-primary-dark">
-                        &yen;{space.hourlyPrice.toLocaleString()}/h
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+    <SectionWrapper design={design}>
+      <div className="mb-12 text-center md:mb-16">
+        <ScrollReveal>
+          {config.sectionLabel && <SectionLabel>{config.sectionLabel}</SectionLabel>}
+          <h2
+            className={`mt-4 font-heading ${getTitleClasses(design)} font-bold tracking-tight`}
+            style={getTitleStyle(design)}
+          >
+            {config.title}
+          </h2>
+        </ScrollReveal>
       </div>
-    </section>
+
+      <div ref={gridRef} className="grid gap-6 md:grid-cols-3 md:gap-8">
+        {spaces.map((space) => (
+          <div
+            key={space.id}
+            data-space-card=""
+            className="group overflow-hidden rounded-lg border border-border bg-card transition-shadow duration-300 hover:shadow-lg"
+          >
+            <div className="aspect-[4/3] overflow-hidden">
+              <Image
+                src={space.imageUrl}
+                alt={space.imageAlt}
+                width={400}
+                height={300}
+                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                sizes="(max-width: 768px) 100vw, 33vw"
+              />
+            </div>
+            <div className="p-5 md:p-6">
+              <p className="text-[11px] uppercase tracking-[0.15em] text-primary-dark">
+                {space.name}
+              </p>
+              <h3 className="mt-1 font-heading text-lg tracking-tight">
+                {space.nameJa}
+              </h3>
+              {space.tagline && (
+                <p
+                  className="mt-2 text-sm text-muted-foreground"
+                  style={getTextStyle(design)}
+                >
+                  {space.tagline}
+                </p>
+              )}
+              {(space.capacity != null || space.hourlyPrice != null) && (
+                <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
+                  <span className="text-xs text-muted-foreground">
+                    {space.capacity != null && `${space.capacity}名`}
+                    {space.capacity != null && space.area != null && ' / '}
+                    {space.area != null && <>{space.area}m&sup2;</>}
+                  </span>
+                  {space.hourlyPrice != null && (
+                    <span className="text-sm font-medium text-primary-dark">
+                      &yen;{space.hourlyPrice.toLocaleString()}/h
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </SectionWrapper>
   )
 }

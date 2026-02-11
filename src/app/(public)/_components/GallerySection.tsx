@@ -7,18 +7,21 @@
  * Lightbox via native <dialog> element. useGSAP stagger reveal.
  */
 
-import { useRef, useState, useCallback, type ReactElement } from 'react'
+import { useRef, useState, type ReactElement } from 'react'
 import Image from 'next/image'
 import { useGSAP } from '@gsap/react'
 import { gsap } from '@/public/lib/gsap-config'
 import { ScrollReveal } from '@/public/components/animations/ScrollReveal'
 import { SplitText } from '@/public/components/animations/SplitText'
+import { SectionWrapper, getTitleClasses, getTitleStyle, getTextStyle } from '@/public/components/sections/SectionWrapper'
 import { SectionLabel } from '@/public/components/ui/SectionLabel'
 import { DURATION, EASE, STAGGER } from '@/public/lib/animations'
 import type { GalleryConfig } from '@/shared/lib/validations/section'
+import type { SectionDesign } from '@/shared/lib/validations/section-design'
 
 interface GallerySectionProps {
   readonly config: GalleryConfig
+  readonly design: SectionDesign
 }
 
 const COLUMNS_MAP = {
@@ -46,7 +49,7 @@ const MASONRY_COLUMNS_MAP = {
   6: 'columns-2 md:columns-3 lg:columns-6',
 } as const
 
-export function GallerySection({ config }: GallerySectionProps): ReactElement {
+export function GallerySection({ config, design }: GallerySectionProps): ReactElement {
   const gridRef = useRef<HTMLDivElement>(null)
   const dialogRef = useRef<HTMLDialogElement>(null)
   const [lightboxIndex, setLightboxIndex] = useState(-1)
@@ -82,25 +85,25 @@ export function GallerySection({ config }: GallerySectionProps): ReactElement {
     { scope: gridRef },
   )
 
-  const openLightbox = useCallback((index: number) => {
+  const openLightbox = (index: number) => {
     if (!config.enableLightbox) return
     setLightboxIndex(index)
     dialogRef.current?.showModal()
-  }, [config.enableLightbox])
+  }
 
-  const closeLightbox = useCallback(() => {
+  const closeLightbox = () => {
     dialogRef.current?.close()
     setLightboxIndex(-1)
-  }, [])
+  }
 
-  const navigateLightbox = useCallback((direction: 1 | -1) => {
+  const navigateLightbox = (direction: 1 | -1) => {
     setLightboxIndex((prev) => {
       const next = prev + direction
       if (next < 0) return config.images.length - 1
       if (next >= config.images.length) return 0
       return next
     })
-  }, [config.images.length])
+  }
 
   if (config.images.length === 0) return <></>
 
@@ -117,52 +120,50 @@ export function GallerySection({ config }: GallerySectionProps): ReactElement {
       : `grid ${COLUMNS_MAP[colKey as keyof typeof COLUMNS_MAP]} ${gapClass}`
 
   return (
-    <section className="py-16 md:py-24">
-      <div className="mx-auto max-w-6xl px-5 md:px-8">
-        {config.title && (
-          <div className="mb-10 text-center md:mb-14">
-            <ScrollReveal>
-              <SectionLabel>Gallery</SectionLabel>
-            </ScrollReveal>
-            <h2 className="mt-4 font-heading text-2xl font-bold tracking-tight md:text-3xl lg:text-4xl">
-              <SplitText variant="words">
-                {config.title}
-              </SplitText>
-            </h2>
-          </div>
-        )}
-
-        <div ref={gridRef} className={layoutClass}>
-          {config.images.map((image, index) => (
-            <div
-              key={index}
-              data-gallery-item=""
-              className={`group overflow-hidden rounded-lg ${
-                isCarousel ? 'min-w-[280px] snap-center md:min-w-[320px]' : ''
-              } ${isMasonry ? 'mb-4 break-inside-avoid' : ''}`}
-            >
-              <button
-                type="button"
-                onClick={() => openLightbox(index)}
-                className="block w-full overflow-hidden"
-                disabled={!config.enableLightbox}
-              >
-                <Image
-                  src={image.url}
-                  alt={image.alt ?? ''}
-                  width={600}
-                  height={400}
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  sizes={`(max-width: 768px) 100vw, ${Math.round(100 / colKey)}vw`}
-                  unoptimized
-                />
-              </button>
-              {image.caption && (
-                <p className="mt-2 text-xs text-muted-foreground">{image.caption}</p>
-              )}
-            </div>
-          ))}
+    <SectionWrapper design={design}>
+      {config.title && (
+        <div className="mb-10 text-center md:mb-14">
+          <ScrollReveal>
+            {config.sectionLabel && <SectionLabel>{config.sectionLabel}</SectionLabel>}
+          </ScrollReveal>
+          <h2 className={`mt-4 font-heading ${getTitleClasses(design)} font-bold tracking-tight`} style={getTitleStyle(design)}>
+            <SplitText variant="words">
+              {config.title}
+            </SplitText>
+          </h2>
         </div>
+      )}
+
+      <div ref={gridRef} className={layoutClass}>
+        {config.images.map((image, index) => (
+          <div
+            key={index}
+            data-gallery-item=""
+            className={`group overflow-hidden rounded-lg ${
+              isCarousel ? 'min-w-[280px] snap-center md:min-w-[320px]' : ''
+            } ${isMasonry ? 'mb-4 break-inside-avoid' : ''}`}
+          >
+            <button
+              type="button"
+              onClick={() => openLightbox(index)}
+              className="block w-full overflow-hidden"
+              disabled={!config.enableLightbox}
+              aria-label={image.alt ?? `ギャラリー画像 ${index + 1} を拡大表示`}
+            >
+              <Image
+                src={image.url}
+                alt={image.alt ?? ''}
+                width={600}
+                height={400}
+                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                sizes={`(max-width: 768px) 100vw, ${Math.round(100 / colKey)}vw`}
+              />
+            </button>
+            {image.caption && (
+              <p className="mt-2 text-xs text-muted-foreground" style={getTextStyle(design)}>{image.caption}</p>
+            )}
+          </div>
+        ))}
       </div>
 
       {/* Lightbox */}
@@ -205,7 +206,6 @@ export function GallerySection({ config }: GallerySectionProps): ReactElement {
                   width={1200}
                   height={800}
                   className="max-h-[80vh] w-auto rounded-lg object-contain"
-                  unoptimized
                 />
 
                 <button
@@ -229,6 +229,6 @@ export function GallerySection({ config }: GallerySectionProps): ReactElement {
           )}
         </dialog>
       )}
-    </section>
+    </SectionWrapper>
   )
 }

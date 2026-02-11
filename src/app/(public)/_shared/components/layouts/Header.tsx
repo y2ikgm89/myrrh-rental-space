@@ -1,144 +1,361 @@
+'use client'
+
 /**
- * ヘッダーコンポーネント
+ * Header — Partially persistent sticky header
  *
- * - DB からナビゲーションアイテムを取得
- * - レスポンシブ対応（モバイルメニュー）
- * - ロゴ/テキスト表示の切り替え対応
+ * Positioned below the announcement bar in normal flow.
+ * Sticks to viewport top when scrolled past announcement bar (Shopify Dawn pattern).
+ * Starts transparent, gains white backdrop on scroll via style attributes.
+ * Hides on sustained downward scroll (~150px), reappears immediately on upward scroll.
+ * Mobile: fullscreen overlay menu with GSAP animation.
+ * Navigation items from DB via props.
  *
- * Next.js 16 PPR対応:
- * - use cache ディレクティブでナビゲーションと設定をキャッシュ
+ * Scroll-linked behaviour uses useGSAP + ScrollTrigger + gsap.matchMedia (pattern A).
+ * Visual changes are applied via inline style (style.translate, style.backgroundColor, etc.)
+ * to avoid conflicts with React-controlled className on re-render.
+ * CSS `transition` on the element handles the smooth animation.
  */
 
+import { useState, useRef, useEffect, type ReactElement } from 'react'
 import Link from 'next/link'
-import { cacheLife, cacheTag } from 'next/cache'
-import { prisma } from '@/shared/lib/prisma'
-import type { Settings } from '@/shared/generated/prisma/client'
-import { MobileMenu, type NavItem } from './MobileMenu'
-import { safeFetch, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
-import { toPlainObject } from '@/shared/lib/serialize'
-import { HeaderBranding } from './HeaderBranding'
-import { SITE_DEFAULTS } from '@/shared/lib/constants'
+import { useGSAP } from '@gsap/react'
+import { gsap, ScrollTrigger } from '@/public/lib/gsap-config'
+import { useMotionPreference } from '@/public/hooks/use-motion-preference'
+import type { PublicNavItem } from '@/public/lib/navigation'
+import { HeaderScrollBehavior, HeaderBackgroundMode } from '@/shared/generated/prisma/enums'
+import { cn } from '@/shared/lib/utils'
 
-type HeaderSettings = Pick<Settings, 'siteName' | 'headerLogoUrl' | 'useHeaderLogo'>
-
-async function getDesktopNavigationItems(): Promise<NavItem[]> {
-  'use cache'
-  cacheLife('hours')
-  cacheTag('navigation')
-
-  const items = await safeFetch({
-    fetch: () =>
-      prisma.navigationItem.findMany({
-        where: { type: 'HEADER_DESKTOP', isActive: true },
-        orderBy: { order: 'asc' },
-      }),
-    fallback: [],
-    category: ErrorCategory.DATABASE,
-    severity: ErrorSeverity.MEDIUM,
-    operationName: 'getDesktopNavigationItems',
-    context: { component: 'Header', type: 'HEADER_DESKTOP' },
-  })
-  // Prisma オブジェクトをプレーンオブジェクトに変換（Client Component 用）
-  return items.map((item) => ({ label: item.label, url: item.url }))
+interface HeaderProps {
+  readonly brandName?: string
+  readonly navItems?: readonly PublicNavItem[]
+  readonly scrollBehavior?: HeaderScrollBehavior
+  readonly backgroundMode?: HeaderBackgroundMode
 }
 
-async function getMobileNavigationItems(): Promise<NavItem[]> {
-  'use cache'
-  cacheLife('hours')
-  cacheTag('navigation')
+const FALLBACK_NAV: readonly PublicNavItem[] = [
+  { id: 'home', label: 'Home', url: '/', isExternal: false, children: [] },
+  { id: 'reservation', label: 'Reservation', url: '/reservation', isExternal: false, children: [] },
+  { id: 'contact', label: 'Contact', url: '/contact', isExternal: false, children: [] },
+]
 
-  const items = await safeFetch({
-    fetch: () =>
-      prisma.navigationItem.findMany({
-        where: { type: 'HEADER_MOBILE', isActive: true },
-        orderBy: { order: 'asc' },
-      }),
-    fallback: [],
-    category: ErrorCategory.DATABASE,
-    severity: ErrorSeverity.MEDIUM,
-    operationName: 'getMobileNavigationItems',
-    context: { component: 'Header', type: 'HEADER_MOBILE' },
-  })
-  // Prisma オブジェクトをプレーンオブジェクトに変換（Client Component 用）
-  return items.map((item) => ({ label: item.label, url: item.url }))
-}
+/** Scroll position (px) where header gains opaque background */
+const SCROLL_THRESHOLD = 80
+/** Accumulated downward scroll distance (px) before header hides */
+const HIDE_THRESHOLD = 150
 
-async function getHeaderSettings(): Promise<HeaderSettings | null> {
-  'use cache'
-  cacheLife('hours')
-  cacheTag('settings')
+export function Header({ brandName = 'MYRRH', navItems, scrollBehavior = HeaderScrollBehavior.always_visible, backgroundMode = HeaderBackgroundMode.solid }: HeaderProps): ReactElement {
+  const items = navItems ?? FALLBACK_NAV
+  const [menuOpen, setMenuOpen] = useState(false)
+  const headerRef = useRef<HTMLElement>(null)
+  const overlayRef = useRef<HTMLDivElement>(null)
+  const motionOk = useMotionPreference()
 
-  const result = await safeFetch({
-    fetch: () =>
-      prisma.settings.findFirst({
-        select: {
-          siteName: true,
-          headerLogoUrl: true,
-          useHeaderLogo: true,
+  // Bridge React state → ref for reading inside ScrollTrigger callback
+  const menuOpenRef = useRef(false)
+  useEffect(() => {
+    menuOpenRef.current = menuOpen
+  }, [menuOpen])
+
+  // Publish header height as CSS custom property for hero overlap
+  useEffect(() => {
+    const header = headerRef.current
+    if (!header) return
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0]
+      if (!entry) return
+      const height = entry.borderBoxSize?.[0]?.blockSize ?? header.offsetHeight
+      document.documentElement.style.setProperty(
+        '--header-height',
+        `${Math.round(height)}px`,
+      )
+    })
+
+    observer.observe(header)
+    return () => observer.disconnect()
+  }, [])
+
+  // Scroll-linked header behaviour — gsap.matchMedia pattern A
+  // When reduced-motion is preferred, the matchMedia context auto-reverts:
+  // the ScrollTrigger is destroyed and the cleanup function restores styles.
+  useGSAP(() => {
+    const header = headerRef.current
+    if (!header) return
+
+    const mm = gsap.matchMedia()
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
+      let accumulated = 0
+      let lastDirection: -1 | 0 | 1 = 0
+      let lastScroll = 0
+      let hidden = false
+      let scrolled = false
+
+      const show = () => {
+        if (!hidden) return
+        hidden = false
+        header.style.translate = ''
+      }
+
+      const hide = () => {
+        if (hidden) return
+        hidden = true
+        header.style.translate = '0 -100%'
+      }
+
+      const setScrolled = (next: boolean) => {
+        if (scrolled === next) return
+        scrolled = next
+        // solid モードでは背景はCSSクラスで固定、style操作不要
+        if (backgroundMode === HeaderBackgroundMode.solid) return
+        // transparent モードのみ style で制御
+        if (next) {
+          header.style.backgroundColor = 'oklch(0.995 0.002 250 / 0.9)'
+          header.style.backdropFilter = 'blur(24px)'
+          header.style.boxShadow = '0 1px 2px 0 rgb(0 0 0 / 0.03)'
+        } else {
+          header.style.backgroundColor = ''
+          header.style.backdropFilter = ''
+          header.style.boxShadow = ''
+        }
+      }
+
+      ScrollTrigger.create({
+        onUpdate: (self) => {
+          const scroll = self.scroll()
+          const direction = self.direction as -1 | 1
+
+          // Background opacity (applies to all modes)
+          setScrolled(scroll > SCROLL_THRESHOLD)
+
+          // always_visible: background change only, no hide/show
+          if (scrollBehavior === HeaderScrollBehavior.always_visible) return
+
+          // Mobile menu open → always visible
+          if (menuOpenRef.current) {
+            show()
+            accumulated = 0
+            lastScroll = scroll
+            return
+          }
+
+          // Near page top → always visible, reset accumulation
+          if (scroll <= SCROLL_THRESHOLD) {
+            show()
+            accumulated = 0
+            lastDirection = 0
+            lastScroll = scroll
+            return
+          }
+
+          const delta = Math.abs(scroll - lastScroll)
+
+          // Direction changed → reset accumulation
+          if (direction !== lastDirection) {
+            accumulated = 0
+            lastDirection = direction
+          }
+
+          if (direction === 1) {
+            // Scrolling down
+            if (scrollBehavior === HeaderScrollBehavior.hide_on_scroll) {
+              // hide_on_scroll: hide immediately on any downward scroll
+              hide()
+            } else {
+              // auto_hide: accumulate distance before hiding
+              accumulated += delta
+              if (accumulated >= HIDE_THRESHOLD) {
+                hide()
+              }
+            }
+          } else if (direction === -1) {
+            // Scrolling up: show immediately
+            show()
+            accumulated = 0
+          }
+
+          lastScroll = scroll
         },
-      }),
-    fallback: null,
-    category: ErrorCategory.DATABASE,
-    severity: ErrorSeverity.LOW,
-    operationName: 'getHeaderSettings',
-    context: { component: 'Header' },
-  })
+      })
 
-  return toPlainObject(result)
-}
+      // matchMedia cleanup: ensure header is visible when reduced-motion activates
+      return () => {
+        header.style.translate = ''
+        header.style.backgroundColor = ''
+        header.style.backdropFilter = ''
+        header.style.boxShadow = ''
+      }
+    })
+  }, { scope: headerRef })
 
-export async function Header(): Promise<React.ReactElement> {
-  const [desktopNavItems, mobileNavItems, settings] = await Promise.all([
-    getDesktopNavigationItems(),
-    getMobileNavigationItems(),
-    getHeaderSettings(),
-  ])
+  const openMenu = () => {
+    setMenuOpen(true)
+    const reduced = !motionOk.current
+    requestAnimationFrame(() => {
+      const overlay = overlayRef.current
+      if (!overlay) return
+      const links = overlay.querySelectorAll('[data-menu-link]')
+      gsap.fromTo(
+        overlay,
+        { opacity: 0 },
+        { opacity: 1, duration: reduced ? 0.15 : 0.3, ease: 'power2.out' },
+      )
+      gsap.fromTo(
+        links,
+        { opacity: 0, y: reduced ? 0 : 20 },
+        {
+          opacity: 1,
+          y: 0,
+          stagger: reduced ? 0 : 0.06,
+          duration: reduced ? 0.15 : 0.4,
+          ease: 'power3.out',
+          delay: reduced ? 0 : 0.15,
+        },
+      )
+    })
+  }
 
-  const siteName = settings?.siteName ?? SITE_DEFAULTS.name
-  const headerLogoUrl = settings?.headerLogoUrl ?? null
-  const useHeaderLogo = settings?.useHeaderLogo ?? true
-
-  // デフォルトナビゲーション（DB未設定時）
-  const defaultNavItems: NavItem[] = [
-    { label: 'ホーム', url: '/' },
-    { label: 'スペース', url: '/spaces' },
-    { label: '料金', url: '/pricing' },
-    { label: 'お問い合わせ', url: '/contact' },
-  ]
-
-  // デスクトップ用アイテム
-  const desktopItems: NavItem[] = desktopNavItems.length > 0 ? desktopNavItems : defaultNavItems
-  // モバイル用アイテム（モバイル用が未設定の場合はデスクトップと同じ）
-  const mobileItems: NavItem[] = mobileNavItems.length > 0 ? mobileNavItems : desktopItems
+  const closeMenu = () => {
+    const overlay = overlayRef.current
+    if (!overlay) {
+      setMenuOpen(false)
+      return
+    }
+    const reduced = !motionOk.current
+    gsap.to(overlay, {
+      opacity: 0,
+      duration: reduced ? 0.1 : 0.25,
+      ease: 'power2.in',
+      onComplete: () => setMenuOpen(false),
+    })
+  }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        {/* ロゴ/サイト名 */}
-        <Link href="/" className="flex items-center space-x-2">
-          <HeaderBranding
-            siteName={siteName}
-            logoUrl={headerLogoUrl}
-            useLogo={useHeaderLogo}
-          />
-        </Link>
+    <>
+      <header
+        ref={headerRef}
+        className={cn(
+          "sticky top-[var(--announcement-bar-height,0px)] z-40 transition-[background-color,backdrop-filter,box-shadow,translate] duration-300",
+          backgroundMode === HeaderBackgroundMode.transparent ? "bg-transparent" : "bg-background"
+        )}
+      >
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 md:px-8 md:py-5">
+          <Link
+            href="/"
+            className="font-heading text-lg tracking-[0.15em] text-foreground"
+          >
+            {brandName}
+          </Link>
 
-        {/* デスクトップナビゲーション */}
-        <nav className="hidden md:flex items-center space-x-6">
-          {desktopItems.map((item, index) => (
+          {/* Desktop navigation */}
+          <nav aria-label="メインナビゲーション" className="hidden md:block">
+            <ul className="flex items-center gap-8">
+              {items.map((item) => (
+                <li key={item.id}>
+                  {item.isExternal ? (
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-primary-dark"
+                    >
+                      {item.label}
+                      <span className="sr-only"> (新しいタブで開く)</span>
+                    </a>
+                  ) : (
+                    <Link
+                      href={item.url}
+                      className="text-xs uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-primary-dark"
+                    >
+                      {item.label}
+                    </Link>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          {/* Hamburger (mobile) */}
+          <button
+            type="button"
+            onClick={openMenu}
+            className="flex h-10 w-10 items-center justify-center md:hidden"
+            aria-label="メニューを開く"
+            aria-expanded={menuOpen}
+          >
+            <div className="flex flex-col gap-1.5">
+              <span className="block h-px w-5 bg-foreground" />
+              <span className="block h-px w-5 bg-foreground" />
+            </div>
+          </button>
+        </div>
+      </header>
+
+      {/* Mobile fullscreen overlay */}
+      {menuOpen && (
+        <div
+          ref={overlayRef}
+          className="fixed inset-0 z-50 flex flex-col bg-background/95 backdrop-blur-xl md:hidden"
+        >
+          <div className="flex items-center justify-between px-5 py-4">
             <Link
-              key={item.url || index}
-              href={item.url}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              href="/"
+              className="font-heading text-lg tracking-[0.15em] text-foreground"
+              onClick={closeMenu}
             >
-              {item.label}
+              {brandName}
             </Link>
-          ))}
-        </nav>
+            <button
+              type="button"
+              onClick={closeMenu}
+              className="flex h-10 w-10 items-center justify-center"
+              aria-label="メニューを閉じる"
+            >
+              <svg
+                className="h-5 w-5 text-foreground"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
 
-        {/* モバイルメニュー（モバイル用アイテムを渡す） */}
-        <MobileMenu items={mobileItems} />
-      </div>
-    </header>
+          <nav className="flex flex-1 flex-col items-center justify-center gap-8">
+            {items.map((item) =>
+              item.isExternal ? (
+                <a
+                  key={item.id}
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-menu-link=""
+                  onClick={closeMenu}
+                  className="font-heading text-2xl uppercase tracking-[0.2em] text-foreground transition-colors hover:text-primary-dark"
+                >
+                  {item.label}
+                  <span className="sr-only"> (新しいタブで開く)</span>
+                </a>
+              ) : (
+                <Link
+                  key={item.id}
+                  href={item.url}
+                  data-menu-link=""
+                  onClick={closeMenu}
+                  className="font-heading text-2xl uppercase tracking-[0.2em] text-foreground transition-colors hover:text-primary-dark"
+                >
+                  {item.label}
+                </Link>
+              ),
+            )}
+          </nav>
+        </div>
+      )}
+    </>
   )
 }

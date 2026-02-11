@@ -14,11 +14,14 @@ import { gsap } from '@/public/lib/gsap-config'
 import { ScrollReveal } from '@/public/components/animations/ScrollReveal'
 import { SplitText } from '@/public/components/animations/SplitText'
 import { SectionLabel } from '@/public/components/ui/SectionLabel'
+import { SectionWrapper, getTitleClasses, getTitleStyle, getTextStyle } from '@/public/components/sections/SectionWrapper'
 import { DURATION, EASE, STAGGER } from '@/public/lib/animations'
 import type { TestimonialConfig } from '@/shared/lib/validations/section'
+import type { SectionDesign } from '@/shared/lib/validations/section-design'
 
 interface TestimonialSectionProps {
   readonly config: TestimonialConfig
+  readonly design: SectionDesign
 }
 
 function StarRating({ rating }: { readonly rating: number }): ReactElement {
@@ -50,7 +53,7 @@ const CARD_CLASS = {
   carousel: 'min-w-[300px] snap-center md:min-w-[360px]',
 } as const
 
-export function TestimonialSection({ config }: TestimonialSectionProps): ReactElement {
+export function TestimonialSection({ config, design }: TestimonialSectionProps): ReactElement {
   const gridRef = useRef<HTMLDivElement>(null)
 
   useGSAP(
@@ -87,13 +90,12 @@ export function TestimonialSection({ config }: TestimonialSectionProps): ReactEl
   if (config.items.length === 0) return <></>
 
   return (
-    <section className="py-16 md:py-24 lg:py-32">
-      <div className="mx-auto max-w-6xl px-5 md:px-8">
+    <SectionWrapper design={design}>
         <div className="mb-12 text-center md:mb-16">
           <ScrollReveal>
-            <SectionLabel>Testimonials</SectionLabel>
+            {config.sectionLabel && <SectionLabel>{config.sectionLabel}</SectionLabel>}
           </ScrollReveal>
-          <h2 className="mt-4 font-heading text-2xl font-bold tracking-tight md:text-3xl lg:text-4xl">
+          <h2 className={`mt-4 font-heading ${getTitleClasses(design)} font-bold tracking-tight`} style={getTitleStyle(design)}>
             <SplitText variant="words">
               {config.title}
             </SplitText>
@@ -112,7 +114,7 @@ export function TestimonialSection({ config }: TestimonialSectionProps): ReactEl
                 &ldquo;
               </span>
 
-              <p className="mt-2 text-sm leading-relaxed text-foreground">
+              <p className="mt-2 text-sm leading-relaxed text-foreground" style={getTextStyle(design)}>
                 {item.content}
               </p>
 
@@ -131,7 +133,6 @@ export function TestimonialSection({ config }: TestimonialSectionProps): ReactEl
                     width={48}
                     height={48}
                     className="h-12 w-12 rounded-full object-cover"
-                    unoptimized
                   />
                 )}
                 <div>
@@ -144,7 +145,6 @@ export function TestimonialSection({ config }: TestimonialSectionProps): ReactEl
             </div>
           ))}
         </div>
-      </div>
-    </section>
+    </SectionWrapper>
   )
 }

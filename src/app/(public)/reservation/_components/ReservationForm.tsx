@@ -1,1049 +1,260 @@
 'use client'
 
-import {
-  useState,
-  useTransition,
-  type ReactElement,
-  type ReactNode,
-  type FormEvent,
-} from 'react'
-import { useKanaInput } from '@/shared/hooks'
-import { TermsPreviewDialog } from '@/public/components/TermsPreviewDialog'
-import { getPageContent, type PageContentResult } from '@/public/actions/settings'
-import { tv } from 'tailwind-variants'
-import { Button } from '@/public/components/ui/Button'
-import { Checkbox } from '@/public/components/ui/Checkbox'
-import { Input } from '@/public/components/ui/Input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/public/components/ui/Card'
-import { Turnstile } from '@/public/components/Turnstile'
-import { TermsAgreementDialog } from '@/public/components/TermsAgreementDialog'
-import { Calendar } from './Calendar'
-import { TimeSlotPicker } from './TimeSlotPicker'
-import { createReservation } from '@/public/actions/reservation'
-import {
-  reservationSchema,
-  reservationWithTermsSchema,
-  type ReservationInput,
-  type ReservationWithTermsInput,
-  type ReservationActionResult,
-} from '@/public/lib/validations/reservation'
-import type { SerializedTermsWithVersion } from '@/shared/lib/validations/terms'
-import { cn } from '@/shared/lib/utils'
-import { toDateString } from '@/shared/lib/serialize'
-import {
-  CouponCodeInput,
-  type AppliedCoupon,
-} from '@/public/components/CouponCodeInput'
-import {
-  calculateReservationPrice,
-  calculateTaxIncludedPrice,
-  getTaxRate,
-  type DurationDiscountRule,
-  type DiscountCombinationMode,
-  type PriceCalculation,
-  type TaxSettings,
-  DEFAULT_TAX_SETTINGS,
-} from '@/shared/lib/pricing'
-import { formatPrice } from '@/shared/lib/utils'
+/**
+ * ReservationForm — 3-step dummy reservation form
+ *
+ * Step 1: Date/time/capacity selection
+ * Step 2: Name/contact info
+ * Step 3: Confirmation
+ *
+ * GSAP animation on step transitions.
+ */
 
-const formStyles = tv({
-  slots: {
-    container: 'w-full max-w-4xl mx-auto',
-    grid: 'grid gap-8 lg:grid-cols-2',
-    section: 'space-y-6',
-    sectionTitle: 'text-xl font-semibold text-foreground mb-4',
-    form: 'space-y-6',
-    fieldGroup: 'space-y-2',
-    fieldRow: 'grid grid-cols-2 gap-4',
-    label: 'block text-sm font-medium text-foreground',
-    required: 'text-destructive ml-1',
-    textarea:
-      'flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y',
-    errorText: 'text-sm text-destructive mt-1',
-    successMessage:
-      'rounded-md bg-green-50 border border-green-200 p-4 text-green-800',
-    errorMessage:
-      'rounded-md bg-destructive/10 border border-destructive/20 p-4 text-destructive',
-    priceSection: 'mt-6 p-4 bg-muted rounded-lg',
-    priceRow: 'flex justify-between items-center',
-    priceLabel: 'text-sm text-muted-foreground',
-    priceValue: 'text-lg font-semibold text-foreground',
-    totalRow: 'flex justify-between items-center pt-3 mt-3 border-t border-border',
-    totalLabel: 'text-base font-medium text-foreground',
-    totalValue: 'text-2xl font-bold text-primary',
-    stepIndicator: 'flex items-center gap-2 mb-6',
-    step: 'flex items-center gap-2',
-    stepNumber:
-      'w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium',
-    stepNumberActive: 'bg-primary text-primary-foreground',
-    stepNumberInactive: 'bg-muted text-muted-foreground',
-    stepLine: 'flex-1 h-0.5 bg-muted',
-  },
-})
+import { useState, useRef, type ReactElement } from 'react'
+import { gsap } from '@/public/lib/gsap-config'
+import { useMotionPreference } from '@/public/hooks/use-motion-preference'
+import { MagneticButton } from '@/public/components/animations/MagneticButton'
+import { StepIndicator } from './StepIndicator'
+import { DURATION, EASE } from '@/public/lib/animations'
 
-const styles = formStyles()
+const INPUT_CLASS =
+  'w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary'
 
-// =============================================================================
-// TermsLinkLabel Component
-// =============================================================================
+function DateTimeStep({
+  onNext,
+}: {
+  readonly onNext: () => void
+}): ReactElement {
+  return (
+    <div>
+      <h2 className="mb-6 font-heading text-xl tracking-tight md:text-2xl">
+        日時・人数を選択
+      </h2>
 
-interface TermsLinkLabelProps {
-  settings: TermsSettings
-  onTermsClick: () => void
-  onPrivacyClick: () => void
-}
-
-function TermsLinkLabel({ settings, onTermsClick, onPrivacyClick }: TermsLinkLabelProps): ReactNode {
-  const { requireTerms, requirePrivacy } = settings
-
-  const linkClasses = 'text-primary hover:underline cursor-pointer font-medium'
-
-  if (requireTerms && requirePrivacy) {
-    return (
-      <>
-        <button type="button" onClick={onTermsClick} className={linkClasses}>
-          利用規約
-        </button>
-        と
-        <button type="button" onClick={onPrivacyClick} className={linkClasses}>
-          プライバシーポリシー
-        </button>
-        に同意します
-      </>
-    )
-  }
-
-  if (requireTerms) {
-    return (
-      <>
-        <button type="button" onClick={onTermsClick} className={linkClasses}>
-          利用規約
-        </button>
-        に同意します
-      </>
-    )
-  }
-
-  if (requirePrivacy) {
-    return (
-      <>
-        <button type="button" onClick={onPrivacyClick} className={linkClasses}>
-          プライバシーポリシー
-        </button>
-        に同意します
-      </>
-    )
-  }
-
-  return '規約に同意します'
-}
-
-interface TermsSettings {
-  enabled: boolean
-  text: string | null
-  requireTerms: boolean
-  requirePrivacy: boolean
-}
-
-interface DiscountSettings {
-  durationDiscountEnabled: boolean
-  durationDiscountRules: DurationDiscountRule[]
-  discountCombinationMode: DiscountCombinationMode
-  showOriginalPrice: boolean
-  discountWarningEnabled: boolean
-}
-
-interface ReservationFormProps {
-  spaceId: string
-  spaceName: string
-  hourlyPrice: number
-  termsSettings: TermsSettings
-  /** スペース固有の規約（設定されている場合、シリアライズ済み） */
-  spaceTerms: SerializedTermsWithVersion | null
-  /** キャンセルポリシー（設定されている場合、シリアライズ済み） */
-  cancellationPolicy: SerializedTermsWithVersion | null
-  /** 割引設定 */
-  discountSettings: DiscountSettings
-  /** 税設定 */
-  taxSettings?: TaxSettings
-  /** スペースの税率タイプ */
-  taxRateType?: 'standard' | 'reduced'
-  /** Turnstile Site Key（DBから取得、nullの場合はTurnstile無効） */
-  turnstileSiteKey: string | null
-}
-
-type FormStep = 'datetime' | 'info' | 'confirm'
-
-interface FormState {
-  lastName: string
-  firstName: string
-  lastNameKana: string
-  firstNameKana: string
-  email: string
-  phoneNumber: string
-  notes: string
-  agreedToTerms: boolean
-  /** スペース固有の規約に同意したバージョンID */
-  agreedTermsVersionId: string | null
-}
-
-const initialFormState: FormState = {
-  lastName: '',
-  firstName: '',
-  lastNameKana: '',
-  firstNameKana: '',
-  email: '',
-  phoneNumber: '',
-  notes: '',
-  agreedToTerms: false,
-  agreedTermsVersionId: null,
-}
-
-export function ReservationForm({
-  spaceId,
-  spaceName,
-  hourlyPrice,
-  termsSettings,
-  spaceTerms,
-  cancellationPolicy,
-  discountSettings,
-  taxSettings = DEFAULT_TAX_SETTINGS,
-  taxRateType = 'standard',
-  turnstileSiteKey,
-}: ReservationFormProps): ReactElement {
-  // 税計算用の値
-  const taxRate = getTaxRate(taxRateType, taxSettings)
-  const displayMode = taxSettings.displayModePublic
-  // 日時選択状態
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
-  const [startTime, setStartTime] = useState<string | null>(null)
-  const [endTime, setEndTime] = useState<string | null>(null)
-
-  // クーポン状態
-  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null)
-
-  // フォーム状態
-  const [formState, setFormState] = useState<FormState>(initialFormState)
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({})
-  const [result, setResult] = useState<ReservationActionResult | null>(null)
-  const [isPending, startTransition] = useTransition()
-  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
-
-  // カナ自動入力フック（IMEで漢字入力時に読みを自動取得）
-  const lastNameKanaInput = useKanaInput({
-    onKanaChange: (kana) => setFormState((prev) => ({ ...prev, lastNameKana: kana })),
-  })
-  const firstNameKanaInput = useKanaInput({
-    onKanaChange: (kana) => setFormState((prev) => ({ ...prev, firstNameKana: kana })),
-  })
-
-  // ステップ管理
-  const [currentStep, setCurrentStep] = useState<FormStep>('datetime')
-
-  // スペース固有規約ダイアログ状態
-  const [isTermsDialogOpen, setIsTermsDialogOpen] = useState(false)
-  const [isTermsAgreeing, setIsTermsAgreeing] = useState(false)
-
-  // 規約プレビューダイアログ状態
-  const [previewDialogType, setPreviewDialogType] = useState<'terms' | 'privacy' | null>(null)
-  const [previewContent, setPreviewContent] = useState<PageContentResult>(null)
-  const [isPreviewLoading, setIsPreviewLoading] = useState(false)
-
-  // キャンセルポリシーダイアログ状態
-  const [isCancellationPolicyOpen, setIsCancellationPolicyOpen] = useState(false)
-
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ): void => {
-    const { name, value } = e.target
-    setFormState((prev) => ({ ...prev, [name]: value }))
-
-    if (fieldErrors[name]) {
-      setFieldErrors((prev) => {
-        const next = { ...prev }
-        delete next[name]
-        return next
-      })
-    }
-  }
-
-  const handleDateSelect = (date: Date): void => {
-    setSelectedDate(date)
-    setStartTime(null)
-    setEndTime(null)
-  }
-
-  const canProceedToInfo = selectedDate && startTime && endTime
-
-  const handleProceedToInfo = (): void => {
-    if (canProceedToInfo) {
-      setCurrentStep('info')
-    }
-  }
-
-  const handleBackToDateTime = (): void => {
-    setCurrentStep('datetime')
-  }
-
-  // スペース固有の規約同意ハンドラ
-  const handleOpenTermsDialog = (): void => {
-    if (spaceTerms?.currentVersion) {
-      setIsTermsDialogOpen(true)
-    }
-  }
-
-  const handleTermsAgree = async (_termsId: string, versionId: string): Promise<void> => {
-    setIsTermsAgreeing(true)
-    // 同意を記録（実際の保存は予約確定時に行う）
-    setFormState((prev) => ({
-      ...prev,
-      agreedTermsVersionId: versionId,
-    }))
-    setIsTermsAgreeing(false)
-    setIsTermsDialogOpen(false)
-  }
-
-  const handleTermsDecline = (): void => {
-    setFormState((prev) => ({
-      ...prev,
-      agreedTermsVersionId: null,
-    }))
-  }
-
-  // 規約プレビューダイアログを開く
-  const handleOpenPreviewDialog = async (type: 'terms' | 'privacy'): Promise<void> => {
-    setPreviewDialogType(type)
-    setIsPreviewLoading(true)
-    const content = await getPageContent(type)
-    setPreviewContent(content)
-    setIsPreviewLoading(false)
-  }
-
-  // 規約プレビューダイアログを閉じる
-  const handleClosePreviewDialog = (): void => {
-    setPreviewDialogType(null)
-    setPreviewContent(null)
-  }
-
-  // スペース規約に同意済みかどうか
-  const hasAgreedToSpaceTerms =
-    !spaceTerms || // 規約がない場合は同意不要
-    formState.agreedTermsVersionId === spaceTerms.currentVersion?.id
-
-  // 料金計算（割引適用）
-  const calculatePrice = (): PriceCalculation | null => {
-    if (!startTime || !endTime) return null
-    const [startHour] = startTime.split(':').map(Number)
-    const [endHour] = endTime.split(':').map(Number)
-    const hours = endHour - startHour
-    if (hours <= 0) return null
-
-    return calculateReservationPrice({
-      hourlyPrice,
-      hours,
-      durationRules: discountSettings.durationDiscountRules,
-      durationDiscountEnabled: discountSettings.durationDiscountEnabled,
-      coupon: appliedCoupon,
-      combinationMode: discountSettings.discountCombinationMode,
-      showWarning: discountSettings.discountWarningEnabled,
-    })
-  }
-
-  // クーポン適用/解除時のハンドラ
-  const handleApplyCoupon = (coupon: AppliedCoupon): void => {
-    setAppliedCoupon(coupon)
-  }
-
-  const handleRemoveCoupon = (): void => {
-    setAppliedCoupon(null)
-  }
-
-  const handleSubmit = (e: FormEvent<HTMLFormElement>): void => {
-    e.preventDefault()
-
-    if (!selectedDate || !startTime || !endTime) {
-      return
-    }
-
-    // スペース固有の規約に同意していない場合はエラー
-    if (spaceTerms?.currentVersion && !formState.agreedTermsVersionId) {
-      setFieldErrors({
-        spaceTerms: ['スペースの利用規約に同意してください'],
-      })
-      return
-    }
-
-    const dateStr = toDateString(selectedDate)
-
-    // 規約同意が必要な場合は agreedToTerms を含める
-    const baseInput = {
-      spaceId,
-      date: dateStr,
-      startTime,
-      endTime,
-      lastName: formState.lastName,
-      firstName: formState.firstName,
-      // カナ（IMEで自動取得、空の場合は送信しない）
-      lastNameKana: formState.lastNameKana || undefined,
-      firstNameKana: formState.firstNameKana || undefined,
-      email: formState.email,
-      phoneNumber: formState.phoneNumber,
-      notes: formState.notes || undefined,
-      // クーポンコード
-      couponCode: appliedCoupon?.code || undefined,
-      // スペース固有の規約同意情報
-      termsAgreement: formState.agreedTermsVersionId && spaceTerms
-        ? {
-            termsId: spaceTerms.id,
-            versionId: formState.agreedTermsVersionId,
-          }
-        : undefined,
-    }
-
-    const input: ReservationInput | ReservationWithTermsInput = termsSettings.enabled
-      ? { ...baseInput, agreedToTerms: formState.agreedToTerms }
-      : baseInput
-
-    // クライアントサイドバリデーション（設定に応じてスキーマを選択）
-    const schema = termsSettings.enabled ? reservationWithTermsSchema : reservationSchema
-    const clientValidation = schema.safeParse(input)
-
-    if (!clientValidation.success) {
-      const errors: Record<string, string[]> = {}
-      for (const issue of clientValidation.error.issues) {
-        const field = issue.path[0]
-        if (typeof field === 'string') {
-          if (!errors[field]) {
-            errors[field] = []
-          }
-          errors[field].push(issue.message)
-        }
-      }
-      setFieldErrors(errors)
-      return
-    }
-
-    startTransition(async () => {
-      const response = await createReservation(input, turnstileToken ?? undefined)
-      setResult(response)
-
-      if (response.success) {
-        setFormState(initialFormState)
-        setSelectedDate(null)
-        setStartTime(null)
-        setEndTime(null)
-        setAppliedCoupon(null)
-        setTurnstileToken(null)
-        setCurrentStep('confirm')
-      } else if (response.fieldErrors) {
-        setFieldErrors(response.fieldErrors)
-      }
-    })
-  }
-
-  const formatSelectedDate = (): string => {
-    if (!selectedDate) return ''
-    const year = selectedDate.getFullYear()
-    const month = selectedDate.getMonth() + 1
-    const day = selectedDate.getDate()
-    const weekday = ['日', '月', '火', '水', '木', '金', '土'][selectedDate.getDay()]
-    return `${year}年${month}月${day}日（${weekday}）`
-  }
-
-  // 成功画面
-  if (result?.success) {
-    return (
-      <div className={styles.container()}>
-        <Card>
-          <CardContent className="py-12 text-center">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
-              <svg
-                className="w-8 h-8 text-green-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            </div>
-            <h2 className="text-2xl font-bold text-foreground mb-2">
-              予約を受け付けました
-            </h2>
-            <p className="text-muted-foreground mb-6">{result.message}</p>
-            <Button
-              onClick={() => {
-                setResult(null)
-                setCurrentStep('datetime')
-              }}
-            >
-              新しい予約をする
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="grid gap-5 md:grid-cols-2">
+        <div>
+          <label htmlFor="reservation-date" className="mb-2 block text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
+            ご利用日
+          </label>
+          <input id="reservation-date" type="date" className={INPUT_CLASS} />
+        </div>
+        <div>
+          <label htmlFor="reservation-timeslot" className="mb-2 block text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
+            時間帯
+          </label>
+          <select id="reservation-timeslot" className={INPUT_CLASS}>
+            <option>10:00 - 13:00 (3時間)</option>
+            <option>13:00 - 17:00 (4時間)</option>
+            <option>17:00 - 21:00 (4時間)</option>
+            <option>10:00 - 21:00 (終日)</option>
+          </select>
+        </div>
       </div>
+
+      <div className="mt-5">
+        <label htmlFor="reservation-capacity" className="mb-2 block text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
+          利用人数
+        </label>
+        <input
+          id="reservation-capacity"
+          type="number"
+          min={1}
+          max={100}
+          defaultValue={10}
+          className={INPUT_CLASS}
+        />
+      </div>
+
+      <div className="mt-8">
+        <MagneticButton onClick={onNext} strength={0.2}>
+          次のステップへ
+        </MagneticButton>
+      </div>
+    </div>
+  )
+}
+
+function InfoStep({
+  onNext,
+  onBack,
+}: {
+  readonly onNext: () => void
+  readonly onBack: () => void
+}): ReactElement {
+  return (
+    <div>
+      <h2 className="mb-6 font-heading text-xl tracking-tight md:text-2xl">
+        お客様情報
+      </h2>
+
+      <div className="grid gap-5 md:grid-cols-2">
+        <div>
+          <label htmlFor="reservation-name" className="mb-2 block text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
+            お名前
+          </label>
+          <input
+            id="reservation-name"
+            type="text"
+            placeholder="山田 太郎"
+            className={INPUT_CLASS}
+          />
+        </div>
+        <div>
+          <label htmlFor="reservation-email" className="mb-2 block text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
+            メールアドレス
+          </label>
+          <input
+            id="reservation-email"
+            type="email"
+            placeholder="mail@example.com"
+            className={INPUT_CLASS}
+          />
+        </div>
+      </div>
+
+      <div className="mt-5">
+        <label htmlFor="reservation-phone" className="mb-2 block text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
+          電話番号
+        </label>
+        <input
+          id="reservation-phone"
+          type="tel"
+          placeholder="03-1234-5678"
+          className={INPUT_CLASS}
+        />
+      </div>
+
+      <div className="mt-5">
+        <label htmlFor="reservation-notes" className="mb-2 block text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
+          備考
+        </label>
+        <textarea
+          id="reservation-notes"
+          rows={3}
+          placeholder="ご要望などございましたらお書きください"
+          className={INPUT_CLASS}
+        />
+      </div>
+
+      <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:gap-4">
+        <button
+          type="button"
+          onClick={onBack}
+          className="rounded-lg border border-border px-6 py-3 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        >
+          戻る
+        </button>
+        <MagneticButton onClick={onNext} strength={0.2}>
+          確認画面へ
+        </MagneticButton>
+      </div>
+    </div>
+  )
+}
+
+function ConfirmationStep({
+  onBack,
+}: {
+  readonly onBack: () => void
+}): ReactElement {
+  return (
+    <div>
+      <div className="rounded-lg border border-primary/20 bg-card p-5 md:p-8">
+        <h3 className="font-heading text-xl tracking-tight">予約内容の確認</h3>
+
+        <div className="mt-6 space-y-4">
+          <div className="flex justify-between border-b border-border pb-4">
+            <span className="text-sm text-muted-foreground">ご利用日</span>
+            <span className="text-sm font-medium">2026年3月15日 (日)</span>
+          </div>
+          <div className="flex justify-between border-b border-border pb-4">
+            <span className="text-sm text-muted-foreground">時間帯</span>
+            <span className="text-sm font-medium">13:00 - 17:00 (4時間)</span>
+          </div>
+          <div className="flex justify-between border-b border-border pb-4">
+            <span className="text-sm text-muted-foreground">利用人数</span>
+            <span className="text-sm font-medium">10名</span>
+          </div>
+          <div className="flex justify-between border-b border-border pb-4">
+            <span className="text-sm text-muted-foreground">お名前</span>
+            <span className="text-sm font-medium">山田 太郎</span>
+          </div>
+          <div className="flex justify-between pt-2">
+            <span className="font-heading text-base">概算金額</span>
+            <span className="font-heading text-xl text-primary-dark">
+              &yen;32,000
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:gap-4">
+        <button
+          type="button"
+          onClick={onBack}
+          className="rounded-lg border border-border px-6 py-3 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        >
+          戻る
+        </button>
+        <MagneticButton strength={0.35}>
+          予約を確定する
+        </MagneticButton>
+      </div>
+
+      <p className="mt-4 text-center text-xs text-muted-foreground">
+        ※ これはデモページです。実際の予約は行われません。
+      </p>
+    </div>
+  )
+}
+
+export function ReservationForm(): ReactElement {
+  const [step, setStep] = useState(1)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const motionOk = useMotionPreference()
+
+  const animateTransition = () => {
+    const content = contentRef.current
+    if (!content) return
+
+    const stepContent = content.querySelector('[data-step]')
+    if (!stepContent) return
+
+    const reduced = !motionOk.current
+    gsap.fromTo(
+      stepContent,
+      { opacity: 0, y: reduced ? 0 : 20 },
+      { opacity: 1, y: 0, duration: reduced ? DURATION.fast : DURATION.normal, ease: EASE.outQuart },
     )
   }
 
-  const priceInfo = calculatePrice()
-  const hours = startTime && endTime
-    ? parseInt(endTime.split(':')[0], 10) - parseInt(startTime.split(':')[0], 10)
-    : 0
+  const goNext = () => {
+    setStep((prev) => Math.min(3, prev + 1))
+    animateTransition()
+  }
+
+  const goBack = () => {
+    setStep((prev) => Math.max(1, prev - 1))
+    animateTransition()
+  }
 
   return (
-    <div className={styles.container()}>
-      {/* ステップインジケーター */}
-      <div className={styles.stepIndicator()}>
-        <div className={styles.step()}>
-          <span
-            className={cn(
-              styles.stepNumber(),
-              currentStep === 'datetime'
-                ? styles.stepNumberActive()
-                : styles.stepNumberInactive()
-            )}
-          >
-            1
-          </span>
-          <span className="text-sm font-medium">日時選択</span>
+    <section className="pb-24 md:pb-32">
+      <div className="mx-auto max-w-2xl px-5 md:px-8">
+        {/* Step indicator */}
+        <div className="mb-10 md:mb-12">
+          <StepIndicator currentStep={step} />
         </div>
-        <div className={styles.stepLine()} />
-        <div className={styles.step()}>
-          <span
-            className={cn(
-              styles.stepNumber(),
-              currentStep === 'info'
-                ? styles.stepNumberActive()
-                : styles.stepNumberInactive()
-            )}
-          >
-            2
-          </span>
-          <span className="text-sm font-medium">お客様情報</span>
+
+        {/* Form content */}
+        <div ref={contentRef}>
+          <div data-step="">
+            {step === 1 && <DateTimeStep onNext={goNext} />}
+            {step === 2 && <InfoStep onNext={goNext} onBack={goBack} />}
+            {step === 3 && <ConfirmationStep onBack={goBack} />}
+          </div>
         </div>
       </div>
-
-      {/* エラーメッセージ */}
-      {result && !result.success && (
-        <div className={cn(styles.errorMessage(), 'mb-6')}>{result.error}</div>
-      )}
-
-      {currentStep === 'datetime' && (
-        <div className={styles.grid()}>
-          {/* 左カラム: カレンダー */}
-          <Card>
-            <CardHeader>
-              <CardTitle>日付を選択</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Calendar
-                selectedDate={selectedDate}
-                onSelectDate={handleDateSelect}
-              />
-            </CardContent>
-          </Card>
-
-          {/* 右カラム: 時間枠 */}
-          <Card>
-            <CardHeader>
-              <CardTitle>時間を選択</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <TimeSlotPicker
-                spaceId={spaceId}
-                selectedDate={selectedDate}
-                startTime={startTime}
-                endTime={endTime}
-                onSelectStartTime={setStartTime}
-                onSelectEndTime={setEndTime}
-              />
-
-              {/* 料金表示 */}
-              {canProceedToInfo && priceInfo && (() => {
-                // 税込み価格を計算
-                const taxIncludedHourly = calculateTaxIncludedPrice(hourlyPrice, taxRate)
-                const taxIncludedBase = calculateTaxIncludedPrice(priceInfo.basePrice, taxRate)
-                const taxIncludedTotal = calculateTaxIncludedPrice(priceInfo.totalPrice, taxRate)
-                const taxIncludedDurationDiscount = calculateTaxIncludedPrice(priceInfo.durationDiscount, taxRate)
-                const taxIncludedCouponDiscount = calculateTaxIncludedPrice(priceInfo.couponDiscount, taxRate)
-
-                // 表示モードに応じた価格フォーマット
-                const formatPriceByMode = (taxExcluded: number, taxIncluded: number) => {
-                  if (displayMode === 'tax_excluded') return formatPrice(taxExcluded)
-                  if (displayMode === 'tax_included') return formatPrice(taxIncluded)
-                  return `${formatPrice(taxIncluded)}（税抜${formatPrice(taxExcluded)}）`
-                }
-
-                const taxLabel = displayMode === 'tax_excluded' ? '（税抜）' : ''
-
-                return (
-                <div className={styles.priceSection()}>
-                  <div className={styles.priceRow()}>
-                    <span className={styles.priceLabel()}>
-                      {formatPriceByMode(hourlyPrice, taxIncludedHourly)} × {hours}時間
-                    </span>
-                    <span className={styles.priceValue()}>
-                      {formatPriceByMode(priceInfo.basePrice, taxIncludedBase)}
-                    </span>
-                  </div>
-
-                  {/* 長時間割引表示 */}
-                  {priceInfo.appliedDurationRule && priceInfo.durationDiscount > 0 && (
-                    <div className={styles.priceRow()}>
-                      <span className={styles.priceLabel()}>
-                        長時間割引（{priceInfo.appliedDurationRule.hours}時間以上 {priceInfo.appliedDurationRule.discountRate}%OFF）
-                      </span>
-                      <span className="text-sm font-medium text-green-600">
-                        -{formatPriceByMode(priceInfo.durationDiscount, taxIncludedDurationDiscount)}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* クーポン割引表示 */}
-                  {priceInfo.appliedCoupon && priceInfo.couponDiscount > 0 && (
-                    <div className={styles.priceRow()}>
-                      <span className={styles.priceLabel()}>
-                        クーポン「{priceInfo.appliedCoupon.code}」
-                      </span>
-                      <span className="text-sm font-medium text-green-600">
-                        -{formatPriceByMode(priceInfo.couponDiscount, taxIncludedCouponDiscount)}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* 合計 */}
-                  <div className={styles.totalRow()}>
-                    <span className={styles.totalLabel()}>合計{taxLabel}</span>
-                    <div className="text-right">
-                      {/* 割引がある場合は元価格を取り消し線で表示 */}
-                      {discountSettings.showOriginalPrice && priceInfo.totalDiscountRate > 0 && (
-                        <span className="text-sm text-muted-foreground line-through mr-2">
-                          {displayMode === 'tax_excluded'
-                            ? formatPrice(priceInfo.basePrice)
-                            : formatPrice(taxIncludedBase)}
-                        </span>
-                      )}
-                      <span className={styles.totalValue()}>
-                        {displayMode === 'tax_excluded'
-                          ? formatPrice(priceInfo.totalPrice)
-                          : formatPrice(taxIncludedTotal)}
-                      </span>
-                      {priceInfo.totalDiscountRate > 0 && (
-                        <span className="ml-2 text-sm font-medium text-green-600">
-                          ({priceInfo.totalDiscountRate}%OFF)
-                        </span>
-                      )}
-                      {displayMode === 'both' && (
-                        <div className="text-xs text-muted-foreground mt-1">
-                          税抜 {formatPrice(priceInfo.totalPrice)}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* クーポン入力 */}
-                  <div className="mt-4 pt-4 border-t border-border">
-                    <CouponCodeInput
-                      appliedCoupon={appliedCoupon}
-                      onApply={handleApplyCoupon}
-                      onRemove={handleRemoveCoupon}
-                      reservationAmount={priceInfo.basePrice}
-                    />
-                  </div>
-
-                  {/* 警告メッセージ */}
-                  {priceInfo.warnings.length > 0 && (
-                    <div className="mt-3 space-y-1">
-                      {priceInfo.warnings.map((warning, index) => (
-                        <p key={index} className="text-xs text-amber-600">
-                          ※ {warning}
-                        </p>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* キャンセルポリシー */}
-                  {cancellationPolicy?.currentVersion && (
-                    <div className="mt-3 pt-3 border-t border-border">
-                      <button
-                        type="button"
-                        onClick={() => setIsCancellationPolicyOpen(true)}
-                        className="text-sm text-primary hover:underline"
-                      >
-                        キャンセルポリシーを確認
-                      </button>
-                    </div>
-                  )}
-
-                  {/* 税注釈 */}
-                  <p className="text-xs text-muted-foreground mt-3">
-                    {displayMode === 'tax_excluded'
-                      ? '※ 表示価格は税抜きです。'
-                      : displayMode === 'tax_included'
-                        ? '※ 表示価格は税込みです。'
-                        : '※ 価格は税込み表示です。'}
-                  </p>
-                </div>
-                )
-              })()}
-
-              <div className="mt-6">
-                <Button
-                  onClick={handleProceedToInfo}
-                  disabled={!canProceedToInfo}
-                  className="w-full"
-                >
-                  次へ進む
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {currentStep === 'info' && (
-        <Card>
-          <CardHeader>
-            <CardTitle>お客様情報を入力</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {/* 選択内容サマリー */}
-            <div className="mb-6 p-4 bg-muted rounded-lg">
-              <p className="text-sm text-muted-foreground mb-1">予約内容</p>
-              <p className="font-medium">{spaceName}</p>
-              <p className="text-sm text-muted-foreground">
-                {formatSelectedDate()} {startTime} 〜 {endTime}（{hours}時間）
-              </p>
-              {priceInfo && (() => {
-                const taxIncludedBase = calculateTaxIncludedPrice(priceInfo.basePrice, taxRate)
-                const taxIncludedTotal = calculateTaxIncludedPrice(priceInfo.totalPrice, taxRate)
-                const taxIncludedDurationDiscount = calculateTaxIncludedPrice(priceInfo.durationDiscount, taxRate)
-                const taxIncludedCouponDiscount = calculateTaxIncludedPrice(priceInfo.couponDiscount, taxRate)
-
-                return (
-                <div className="mt-2">
-                  {/* 割引詳細 */}
-                  {(priceInfo.durationDiscount > 0 || priceInfo.couponDiscount > 0) && (
-                    <div className="text-xs text-muted-foreground space-y-0.5 mb-1">
-                      {priceInfo.appliedDurationRule && priceInfo.durationDiscount > 0 && (
-                        <p>長時間割引: -{displayMode === 'tax_excluded'
-                          ? formatPrice(priceInfo.durationDiscount)
-                          : formatPrice(taxIncludedDurationDiscount)}</p>
-                      )}
-                      {priceInfo.appliedCoupon && priceInfo.couponDiscount > 0 && (
-                        <p>クーポン「{priceInfo.appliedCoupon.code}」: -{displayMode === 'tax_excluded'
-                          ? formatPrice(priceInfo.couponDiscount)
-                          : formatPrice(taxIncludedCouponDiscount)}</p>
-                      )}
-                    </div>
-                  )}
-                  <div className="flex items-baseline gap-2 flex-wrap">
-                    {discountSettings.showOriginalPrice && priceInfo.totalDiscountRate > 0 && (
-                      <span className="text-sm text-muted-foreground line-through">
-                        {displayMode === 'tax_excluded'
-                          ? formatPrice(priceInfo.basePrice)
-                          : formatPrice(taxIncludedBase)}
-                      </span>
-                    )}
-                    <span className="text-lg font-bold text-primary">
-                      {displayMode === 'tax_excluded'
-                        ? formatPrice(priceInfo.totalPrice)
-                        : formatPrice(taxIncludedTotal)}
-                    </span>
-                    {priceInfo.totalDiscountRate > 0 && (
-                      <span className="text-sm font-medium text-green-600">
-                        ({priceInfo.totalDiscountRate}%OFF)
-                      </span>
-                    )}
-                  </div>
-                  {displayMode === 'both' && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      税抜 {formatPrice(priceInfo.totalPrice)}
-                    </p>
-                  )}
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {displayMode === 'tax_excluded' ? '※ 税抜' : '※ 税込'}
-                  </p>
-                </div>
-                )
-              })()}
-            </div>
-
-            <form onSubmit={handleSubmit} className={styles.form()}>
-              {/* 名前 */}
-              <div className={styles.fieldRow()}>
-                <div className={styles.fieldGroup()}>
-                  <label htmlFor="lastName" className={styles.label()}>
-                    姓<span className={styles.required()}>*</span>
-                  </label>
-                  <Input
-                    id="lastName"
-                    name="lastName"
-                    value={formState.lastName}
-                    onChange={handleChange}
-                    placeholder="山田"
-                    disabled={isPending}
-                    aria-invalid={!!fieldErrors.lastName}
-                    aria-describedby={
-                      fieldErrors.lastName ? 'lastName-error' : undefined
-                    }
-                    {...lastNameKanaInput.inputProps}
-                  />
-                  {fieldErrors.lastName && (
-                    <p id="lastName-error" className={styles.errorText()}>
-                      {fieldErrors.lastName[0]}
-                    </p>
-                  )}
-                </div>
-
-                <div className={styles.fieldGroup()}>
-                  <label htmlFor="firstName" className={styles.label()}>
-                    名<span className={styles.required()}>*</span>
-                  </label>
-                  <Input
-                    id="firstName"
-                    name="firstName"
-                    value={formState.firstName}
-                    onChange={handleChange}
-                    placeholder="太郎"
-                    disabled={isPending}
-                    aria-invalid={!!fieldErrors.firstName}
-                    aria-describedby={
-                      fieldErrors.firstName ? 'firstName-error' : undefined
-                    }
-                    {...firstNameKanaInput.inputProps}
-                  />
-                  {fieldErrors.firstName && (
-                    <p id="firstName-error" className={styles.errorText()}>
-                      {fieldErrors.firstName[0]}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* メール */}
-              <div className={styles.fieldGroup()}>
-                <label htmlFor="email" className={styles.label()}>
-                  メールアドレス<span className={styles.required()}>*</span>
-                </label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={formState.email}
-                  onChange={handleChange}
-                  placeholder="example@email.com"
-                  disabled={isPending}
-                  aria-invalid={!!fieldErrors.email}
-                  aria-describedby={fieldErrors.email ? 'email-error' : undefined}
-                />
-                {fieldErrors.email && (
-                  <p id="email-error" className={styles.errorText()}>
-                    {fieldErrors.email[0]}
-                  </p>
-                )}
-              </div>
-
-              {/* 電話番号 */}
-              <div className={styles.fieldGroup()}>
-                <label htmlFor="phoneNumber" className={styles.label()}>
-                  電話番号<span className={styles.required()}>*</span>
-                </label>
-                <Input
-                  id="phoneNumber"
-                  name="phoneNumber"
-                  type="tel"
-                  value={formState.phoneNumber}
-                  onChange={handleChange}
-                  placeholder="090-1234-5678"
-                  disabled={isPending}
-                  aria-invalid={!!fieldErrors.phoneNumber}
-                  aria-describedby={
-                    fieldErrors.phoneNumber ? 'phoneNumber-error' : undefined
-                  }
-                />
-                {fieldErrors.phoneNumber && (
-                  <p id="phoneNumber-error" className={styles.errorText()}>
-                    {fieldErrors.phoneNumber[0]}
-                  </p>
-                )}
-              </div>
-
-              {/* 備考 */}
-              <div className={styles.fieldGroup()}>
-                <label htmlFor="notes" className={styles.label()}>
-                  備考・ご要望
-                </label>
-                <textarea
-                  id="notes"
-                  name="notes"
-                  value={formState.notes}
-                  onChange={handleChange}
-                  placeholder="ご要望があればご記入ください"
-                  disabled={isPending}
-                  className={styles.textarea()}
-                  aria-invalid={!!fieldErrors.notes}
-                  aria-describedby={fieldErrors.notes ? 'notes-error' : undefined}
-                />
-                {fieldErrors.notes && (
-                  <p id="notes-error" className={styles.errorText()}>
-                    {fieldErrors.notes[0]}
-                  </p>
-                )}
-              </div>
-
-              {/* スペース固有の規約同意 */}
-              {spaceTerms?.currentVersion && (
-                <div className={styles.fieldGroup()}>
-                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-foreground">
-                          {spaceTerms.title}
-                          <span className={styles.required()}>*</span>
-                        </p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {hasAgreedToSpaceTerms ? (
-                            <span className="text-green-600">同意済み</span>
-                          ) : (
-                            '予約前に規約をご確認ください'
-                          )}
-                        </p>
-                      </div>
-                      <Button
-                        type="button"
-                        variant={hasAgreedToSpaceTerms ? 'outline' : 'primary'}
-                        size="sm"
-                        onClick={handleOpenTermsDialog}
-                        disabled={isPending}
-                      >
-                        {hasAgreedToSpaceTerms ? '再確認' : '規約を確認'}
-                      </Button>
-                    </div>
-                  </div>
-                  {fieldErrors.spaceTerms && (
-                    <p id="spaceTerms-error" className={styles.errorText()}>
-                      {fieldErrors.spaceTerms[0]}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* 規約同意チェックボックス */}
-              {termsSettings.enabled && (
-                <div className={styles.fieldGroup()}>
-                  <div className="flex items-start gap-3">
-                    <Checkbox
-                      id="agreedToTerms"
-                      checked={formState.agreedToTerms}
-                      onCheckedChange={(checked) =>
-                        setFormState((prev) => ({ ...prev, agreedToTerms: checked }))
-                      }
-                      disabled={isPending}
-                      aria-invalid={!!fieldErrors.agreedToTerms}
-                      aria-describedby={
-                        fieldErrors.agreedToTerms ? 'agreedToTerms-error' : undefined
-                      }
-                      className="mt-0.5"
-                    />
-                    <label
-                      htmlFor="agreedToTerms"
-                      className="text-sm text-foreground cursor-pointer leading-relaxed"
-                    >
-                      {termsSettings.text || (
-                        <TermsLinkLabel
-                          settings={termsSettings}
-                          onTermsClick={() => handleOpenPreviewDialog('terms')}
-                          onPrivacyClick={() => handleOpenPreviewDialog('privacy')}
-                        />
-                      )}
-                      <span className={styles.required()}>*</span>
-                    </label>
-                  </div>
-                  {fieldErrors.agreedToTerms && (
-                    <p id="agreedToTerms-error" className={styles.errorText()}>
-                      {fieldErrors.agreedToTerms[0]}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* Turnstile（スパム対策） */}
-              {turnstileSiteKey && (
-                <div className="flex justify-center">
-                  <Turnstile
-                    siteKey={turnstileSiteKey}
-                    onVerify={setTurnstileToken}
-                    onExpire={() => setTurnstileToken(null)}
-                    size="normal"
-                  />
-                </div>
-              )}
-
-              {/* ボタン */}
-              <div className="flex gap-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleBackToDateTime}
-                  disabled={isPending}
-                >
-                  戻る
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={
-                    isPending ||
-                    !hasAgreedToSpaceTerms ||
-                    (termsSettings.enabled && !formState.agreedToTerms) ||
-                    Boolean(turnstileSiteKey && !turnstileToken)
-                  }
-                  className="flex-1"
-                >
-                  {isPending ? '送信中...' : '予約を確定する'}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* スペース固有の規約ダイアログ */}
-      {spaceTerms?.currentVersion && (
-        <TermsAgreementDialog
-          open={isTermsDialogOpen}
-          onOpenChange={setIsTermsDialogOpen}
-          terms={spaceTerms}
-          onAgree={handleTermsAgree}
-          onDecline={handleTermsDecline}
-          loading={isTermsAgreeing}
-        />
-      )}
-
-      {/* 規約プレビューダイアログ */}
-      <TermsPreviewDialog
-        open={previewDialogType !== null}
-        onOpenChange={(open) => {
-          if (!open) handleClosePreviewDialog()
-        }}
-        title={previewContent?.title || (previewDialogType === 'terms' ? '利用規約' : 'プライバシーポリシー')}
-        content={previewContent?.content || ''}
-        loading={isPreviewLoading}
-      />
-
-      {/* キャンセルポリシーダイアログ */}
-      {cancellationPolicy?.currentVersion && (
-        <TermsPreviewDialog
-          open={isCancellationPolicyOpen}
-          onOpenChange={setIsCancellationPolicyOpen}
-          title={cancellationPolicy.title}
-          content={cancellationPolicy.currentVersion.content}
-        />
-      )}
-    </div>
+    </section>
   )
 }

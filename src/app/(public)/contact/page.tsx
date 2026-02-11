@@ -1,50 +1,48 @@
 /**
- * お問い合わせページ
+ * Contact Page — Contact form + business info
  *
- * セクションシステムでレンダリング。
- *
- * ## 構造化データ
- * - Breadcrumb JSON-LD
- *
- * @module public/contact/page
+ * SEO: Dynamic metadata via unified pipeline
  */
 
 import type { Metadata } from 'next'
-import { notFound } from 'next/navigation'
+import type { ReactElement } from 'react'
+import { Suspense } from 'react'
+import { ScrollReveal } from '@/public/components/animations/ScrollReveal'
 import { BreadcrumbJsonLd } from '@/public/components/seo/JsonLd'
 import { generatePageMetadata } from '@/public/lib/page-metadata'
-import { getPublicPageWithSections } from '@/public/actions/page-section'
-import { PageSections } from '@/public/components/page-sections'
-import { getPostUrlPrefix } from '@/shared/lib/settings/public'
-import type { ReactElement } from 'react'
+import { ContactHero } from './_components/ContactHero'
+import { ContactForm } from './_components/ContactForm'
+import { BusinessInfo } from './_components/BusinessInfo'
 
 export async function generateMetadata(): Promise<Metadata> {
-  return generatePageMetadata('contact', {
-    title: 'お問い合わせ',
-    description:
-      'レンタルスペースに関するお問い合わせはこちらから。ご質問・ご予約のご相談など、お気軽にお問い合わせください。',
-  })
+  return generatePageMetadata('contact')
 }
 
-export default async function ContactPage(): Promise<ReactElement> {
-  const [pageWithSections, postPrefix] = await Promise.all([
-    getPublicPageWithSections('contact'),
-    getPostUrlPrefix(),
-  ])
-
-  if (!pageWithSections || pageWithSections.sections.length === 0) {
-    notFound()
-  }
-
+export default function ContactPage(): ReactElement {
   return (
     <>
       <BreadcrumbJsonLd
         items={[
           { name: 'ホーム', url: '/' },
-          { name: pageWithSections.title || 'お問い合わせ', url: '/contact' },
+          { name: 'お問い合わせ', url: '/contact' },
         ]}
       />
-      <PageSections sections={pageWithSections.sections} postPrefix={postPrefix} />
+      <ContactHero />
+      <section className="pb-24 md:pb-32">
+        <div className="mx-auto max-w-4xl px-5 md:px-8">
+          <div className="grid gap-10 md:grid-cols-[1fr_320px] md:gap-12">
+            {/* Form */}
+            <ContactForm />
+
+            {/* Business Info — Server Component with DB data */}
+            <ScrollReveal delay={0.2}>
+              <Suspense fallback={null}>
+                <BusinessInfo />
+              </Suspense>
+            </ScrollReveal>
+          </div>
+        </div>
+      </section>
     </>
   )
 }

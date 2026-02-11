@@ -1,49 +1,31 @@
 /**
- * 予約ページ
+ * Reservation Page — 3-step dummy reservation form
  *
- * セクションシステムでレンダリング。
- *
- * ## 構造化データ
- * - Breadcrumb JSON-LD
- *
- * @module public/reservation/page
+ * SEO: Dynamic metadata via unified pipeline
  */
 
 import type { Metadata } from 'next'
-import { notFound } from 'next/navigation'
+import type { ReactElement } from 'react'
 import { BreadcrumbJsonLd } from '@/public/components/seo/JsonLd'
 import { generatePageMetadata } from '@/public/lib/page-metadata'
-import { getPublicPageWithSections } from '@/public/actions/page-section'
-import { PageSections } from '@/public/components/page-sections'
-import { getPostUrlPrefix } from '@/shared/lib/settings/public'
-import type { ReactElement } from 'react'
+import { ReservationHero } from './_components/ReservationHero'
+import { ReservationForm } from './_components/ReservationForm'
 
 export async function generateMetadata(): Promise<Metadata> {
-  return generatePageMetadata('reservation', {
-    title: '予約',
-    description: 'レンタルスペースのご予約はこちらから。日時を選択して、簡単にご予約いただけます。',
-  })
+  return generatePageMetadata('reservation')
 }
 
-export default async function ReservationPage(): Promise<ReactElement> {
-  const [pageWithSections, postPrefix] = await Promise.all([
-    getPublicPageWithSections('reservation'),
-    getPostUrlPrefix(),
-  ])
-
-  if (!pageWithSections || pageWithSections.sections.length === 0) {
-    notFound()
-  }
-
+export default function ReservationPage(): ReactElement {
   return (
     <>
       <BreadcrumbJsonLd
         items={[
           { name: 'ホーム', url: '/' },
-          { name: pageWithSections.title || '予約', url: '/reservation' },
+          { name: 'ご予約', url: '/reservation' },
         ]}
       />
-      <PageSections sections={pageWithSections.sections} postPrefix={postPrefix} />
+      <ReservationHero />
+      <ReservationForm />
     </>
   )
 }

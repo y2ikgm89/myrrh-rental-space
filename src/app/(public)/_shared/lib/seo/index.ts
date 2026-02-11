@@ -7,9 +7,7 @@
 // メタデータファクトリ
 export {
   getSeoSettings,
-  generateHomeMetadata,
   generateArticleMetadata,
-  generatePageMetadata,
   type SeoSettings,
   type ArticleMetadata,
 } from './metadata-factory'
@@ -18,6 +16,10 @@ export {
 export {
   getWebSiteJsonLdData,
   getOrganizationJsonLdData,
+  getLocalBusinessJsonLdData,
+  getGraphJsonLdData,
   type WebSiteJsonLdData,
   type OrganizationJsonLdData,
+  type LocalBusinessJsonLdData,
+  type GraphJsonLdData,
 } from './json-ld-config'

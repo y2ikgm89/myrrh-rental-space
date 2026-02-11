@@ -5,3 +5,4 @@
  */
 
 export { AnalyticsProvider } from './AnalyticsProvider'
+export { WebVitalsReporter } from './WebVitalsReporter'

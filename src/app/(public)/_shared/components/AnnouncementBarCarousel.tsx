@@ -13,15 +13,14 @@
  * - 閉じるボタンでセッション中は非表示
  */
 
-import { useState, useEffect, useSyncExternalStore } from 'react'
+import { useState, useEffect, useRef, useSyncExternalStore } from 'react'
 import Link from 'next/link'
-import { AnimatePresence, motion } from 'motion/react'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { gsap } from '@/public/lib/gsap-config'
 import { cn } from '@/shared/lib/utils'
 import {
   TYPE_STYLES,
   DESIGN_STYLE_CLASSES,
-  ANIMATION_VARIANTS,
   getStripedStyle,
   getTypeHexColor,
   getGradientAnimationStyle,
@@ -29,6 +28,7 @@ import {
   type DesignStyle,
   type AnimationType,
 } from '@/shared/lib/announcement-bar-utils'
+import { AnnouncementBarDesignStyle } from '@/shared/generated/prisma/enums'
 
 // =============================================================================
 // Types
@@ -66,12 +66,32 @@ export interface CarouselSettings {
   gradientAnimation: boolean
   // Glass Design Settings
   glassAnimation: boolean
+  // Sticky Settings
+  sticky: boolean
 }
 
 export interface AnnouncementBarCarouselProps {
   bars: AnnouncementBarItem[]
   settings: CarouselSettings
 }
+
+// =============================================================================
+// Animation config
+// =============================================================================
+
+const ENTER_FROM_PROPS: Record<AnimationType, gsap.TweenVars> = {
+  fade: { opacity: 0 },
+  slideX: { opacity: 0, x: 50 },
+  slideY: { opacity: 0, y: -20 },
+}
+
+const ENTER_TO_PROPS: Record<AnimationType, gsap.TweenVars> = {
+  fade: { opacity: 1 },
+  slideX: { opacity: 1, x: 0 },
+  slideY: { opacity: 1, y: 0 },
+}
+
+const TRANSITION_DURATION = 0.3
 
 // =============================================================================
 // Constants
@@ -167,6 +187,10 @@ function subscribeToStorage(callback: () => void): () => void {
 export function AnnouncementBarCarousel({ bars, settings }: AnnouncementBarCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const barContainerRef = useRef<HTMLDivElement>(null)
+  const isAnimatingRef = useRef(false)
+  const prevBarIdRef = useRef<string | null>(null)
 
   // useSyncExternalStoreでセッションストレージを購読
   // storageイベント（他タブ）とカスタムイベント（同一タブ）の両方を監視
@@ -185,25 +209,77 @@ export function AnnouncementBarCarousel({ bars, settings }: AnnouncementBarCarou
   const safeIndex = visibleBars.length === 0 ? 0 : (currentIndex >= visibleBars.length ? 0 : currentIndex)
   const currentBar = visibleBars[safeIndex]
 
+  // sticky: ResizeObserver で高さ計測 → CSS変数を設定
+  useEffect(() => {
+    if (!settings.sticky) return
+
+    const el = barContainerRef.current
+    if (!el) return
+
+    // バーが非表示の場合は CSS変数を 0px にリセット
+    if (visibleBars.length === 0) {
+      document.documentElement.style.setProperty('--announcement-bar-height', '0px')
+      return
+    }
+
+    const updateHeight = () => {
+      const height = el.getBoundingClientRect().height
+      document.documentElement.style.setProperty('--announcement-bar-height', `${height}px`)
+    }
+
+    const ro = new ResizeObserver(updateHeight)
+    ro.observe(el)
+    updateHeight()
+
+    return () => {
+      ro.disconnect()
+      document.documentElement.style.setProperty('--announcement-bar-height', '0px')
+    }
+  }, [settings.sticky, visibleBars.length])
+
+  // currentBar が変わったら GSAP でトランジション
+  useEffect(() => {
+    if (!currentBar || !contentRef.current) return
+
+    // 初回表示 — アニメーション不要
+    if (prevBarIdRef.current === null) {
+      prevBarIdRef.current = currentBar.id
+      return
+    }
+
+    // 同一バー or アニメーション中
+    if (prevBarIdRef.current === currentBar.id || isAnimatingRef.current) return
+
+    prevBarIdRef.current = currentBar.id
+    isAnimatingRef.current = true
+
+    // React が新コンテンツをレンダリング済み → 即座に非表示位置にセットし、入場アニメーション
+    gsap.fromTo(contentRef.current, ENTER_FROM_PROPS[settings.animation], {
+      ...ENTER_TO_PROPS[settings.animation],
+      duration: TRANSITION_DURATION,
+      ease: 'power2.out',
+      onComplete: () => {
+        isAnimatingRef.current = false
+      },
+    })
+  }, [currentBar, settings.animation])
+
   // 次へ
   const goNext = () => {
-    if (visibleBars.length === 0) return
+    if (visibleBars.length === 0 || isAnimatingRef.current) return
     setCurrentIndex((prev) => (prev + 1) % visibleBars.length)
   }
 
   // 前へ
   const goPrev = () => {
-    if (visibleBars.length === 0) return
+    if (visibleBars.length === 0 || isAnimatingRef.current) return
     setCurrentIndex((prev) => (prev - 1 + visibleBars.length) % visibleBars.length)
   }
 
   // 閉じる（現在のバーを非表示）
-  // useSyncExternalStoreがカスタムイベントで変更を検知するため、localDismissed不要
   const handleDismiss = () => {
     if (!currentBar) return
     addDismissedId(currentBar.id)
-    // visibleBarsの更新後にsafeIndexで自動的に範囲外補正されるため、
-    // ここでのsetCurrentIndexは不要
   }
 
   // 自動切り替え
@@ -213,13 +289,14 @@ export function AnnouncementBarCarousel({ bars, settings }: AnnouncementBarCarou
     }
 
     const timer = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % visibleBars.length)
+      if (!isAnimatingRef.current) {
+        setCurrentIndex((prev) => (prev + 1) % visibleBars.length)
+      }
     }, settings.duration)
     return () => clearInterval(timer)
   }, [settings.autoPlay, settings.duration, isPaused, visibleBars.length])
 
-  // バーがなくなったら非表示（すべてのHooksの後に配置）
-  // 注: currentIndexの範囲外補正はsafeIndexで行っているため、useEffectでのsetStateは不要
+  // バーがなくなったら非表示
   if (visibleBars.length === 0 || !currentBar) {
     return null
   }
@@ -236,34 +313,31 @@ export function AnnouncementBarCarousel({ bars, settings }: AnnouncementBarCarou
   if (textColor) customStyles.color = textColor
 
   // デザインスタイル
-  const designStyle = settings.designStyle || 'solid'
+  const designStyle = settings.designStyle || AnnouncementBarDesignStyle.solid
   const styleConfig = DESIGN_STYLE_CLASSES[designStyle]
-  const needsDefaultText = !hasCustomText && (designStyle === 'solid' || designStyle === 'gradient' || designStyle === 'striped')
+  const needsDefaultText = !hasCustomText && (designStyle === AnnouncementBarDesignStyle.solid || designStyle === AnnouncementBarDesignStyle.gradient || designStyle === AnnouncementBarDesignStyle.striped)
 
   // Stripedスタイルの場合、ストライプ背景を追加
-  if (designStyle === 'striped') {
+  if (designStyle === AnnouncementBarDesignStyle.striped) {
     const baseHexColor = bgColor || getTypeHexColor(currentBar.type)
     const stripedStyles = getStripedStyle(baseHexColor, settings.stripeColor, settings.stripeAnimation)
     Object.assign(customStyles, stripedStyles)
   }
 
   // Gradientスタイルのアニメーション
-  if (designStyle === 'gradient' && settings.gradientAnimation) {
+  if (designStyle === AnnouncementBarDesignStyle.gradient && settings.gradientAnimation) {
     Object.assign(customStyles, getGradientAnimationStyle(true))
   }
 
   // Glassスタイルのアニメーション
-  if (designStyle === 'glass' && settings.glassAnimation) {
+  if (designStyle === AnnouncementBarDesignStyle.glass && settings.glassAnimation) {
     Object.assign(customStyles, getGlassShimmerStyle(true))
   }
-
-  // アニメーションバリアント
-  const variants = ANIMATION_VARIANTS[settings.animation]
 
   return (
     <>
       {/* ストライプアニメーション用のスタイル */}
-      {designStyle === 'striped' && settings.stripeAnimation && (
+      {designStyle === AnnouncementBarDesignStyle.striped && settings.stripeAnimation && (
         <style>{`
           @keyframes stripe-slide {
             from { background-position: 0 0; }
@@ -272,7 +346,7 @@ export function AnnouncementBarCarousel({ bars, settings }: AnnouncementBarCarou
         `}</style>
       )}
       {/* グラデーションアニメーション用のスタイル */}
-      {designStyle === 'gradient' && settings.gradientAnimation && (
+      {designStyle === AnnouncementBarDesignStyle.gradient && settings.gradientAnimation && (
         <style>{`
           @keyframes gradient-flow {
             0% { background-position: 0% 50%; }
@@ -282,7 +356,7 @@ export function AnnouncementBarCarousel({ bars, settings }: AnnouncementBarCarou
         `}</style>
       )}
       {/* グラスシマーアニメーション用のスタイル */}
-      {designStyle === 'glass' && settings.glassAnimation && (
+      {designStyle === AnnouncementBarDesignStyle.glass && settings.glassAnimation && (
         <style>{`
           @keyframes glass-shimmer {
             0% { transform: translateX(-100%); }
@@ -291,15 +365,17 @@ export function AnnouncementBarCarousel({ bars, settings }: AnnouncementBarCarou
         `}</style>
       )}
       <div
+        ref={barContainerRef}
         className={cn(
-          'relative z-50 flex items-center justify-center px-4 py-2 text-sm',
+          'relative flex items-center justify-center px-4 py-2 text-sm',
+          settings.sticky && 'sticky top-0 z-41',
           styleConfig.container,
           !hasCustomBg && styleConfig.containerWithBg(currentBar.type),
           styleConfig.border,
           needsDefaultText && defaultStyle.text,
           // outlined/glass/minimalではテキスト色をタイプカラーに
-          !hasCustomText && (designStyle === 'outlined' || designStyle === 'minimal') && 'text-gray-800',
-          !hasCustomText && designStyle === 'glass' && 'text-white'
+          !hasCustomText && (designStyle === AnnouncementBarDesignStyle.outlined || designStyle === AnnouncementBarDesignStyle.minimal) && 'text-foreground',
+          !hasCustomText && designStyle === AnnouncementBarDesignStyle.glass && 'text-white'
         )}
         style={customStyles}
         role="alert"
@@ -307,7 +383,7 @@ export function AnnouncementBarCarousel({ bars, settings }: AnnouncementBarCarou
         onMouseLeave={() => settings.pauseOnHover && setIsPaused(false)}
       >
       {/* グラスシマーオーバーレイ */}
-      {designStyle === 'glass' && settings.glassAnimation && (
+      {designStyle === AnnouncementBarDesignStyle.glass && settings.glassAnimation && (
         <div
           className="pointer-events-none absolute inset-0 overflow-hidden"
           aria-hidden="true"
@@ -335,37 +411,27 @@ export function AnnouncementBarCarousel({ bars, settings }: AnnouncementBarCarou
 
       {/* コンテンツ */}
       <div className="mx-8 flex min-h-[1.5rem] items-center justify-center gap-2 overflow-hidden">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentBar.id}
-            variants={variants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            transition={{ duration: 0.3 }}
-            className="flex items-center gap-2"
-          >
-            <span className="text-center">{currentBar.message}</span>
-            {currentBar.linkUrl && currentBar.linkText && (
-              <Link
-                href={currentBar.linkUrl}
-                className={cn(
-                  'ml-1 whitespace-nowrap underline underline-offset-2 transition-colors',
-                  !hasCustomText && defaultStyle.hover
-                )}
-                target={currentBar.linkUrl.startsWith('http') ? '_blank' : undefined}
-                rel={currentBar.linkUrl.startsWith('http') ? 'noopener noreferrer' : undefined}
-              >
-                {currentBar.linkText}
-              </Link>
-            )}
-          </motion.div>
-        </AnimatePresence>
+        <div ref={contentRef} className="flex items-center gap-2">
+          <span className="text-center">{currentBar.message}</span>
+          {currentBar.linkUrl && currentBar.linkText && (
+            <Link
+              href={currentBar.linkUrl}
+              className={cn(
+                'ml-1 whitespace-nowrap underline underline-offset-2 transition-colors',
+                !hasCustomText && defaultStyle.hover
+              )}
+              target={currentBar.linkUrl.startsWith('http') ? '_blank' : undefined}
+              rel={currentBar.linkUrl.startsWith('http') ? 'noopener noreferrer' : undefined}
+            >
+              {currentBar.linkText}
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* インジケーター */}
       {settings.showIndicator && visibleBars.length > 1 && (
-        <span className="absolute right-12 text-xs opacity-70">
+        <span className="absolute right-12 text-xs">
           {safeIndex + 1}/{visibleBars.length}
         </span>
       )}

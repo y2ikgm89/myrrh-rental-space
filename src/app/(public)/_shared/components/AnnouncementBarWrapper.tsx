@@ -49,6 +49,8 @@ export async function AnnouncementBarWrapper(): Promise<ReactElement | null> {
     gradientAnimation: dbSettings.announcementBarGradientAnimation,
     // Glass Design Settings
     glassAnimation: dbSettings.announcementBarGlassAnimation,
+    // Sticky Settings
+    sticky: dbSettings.announcementBarSticky,
   }
 
   return (

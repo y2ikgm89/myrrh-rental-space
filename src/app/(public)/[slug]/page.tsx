@@ -6,13 +6,15 @@
  *
  * /contact and /reservation have dedicated routes (Next.js routing priority).
  *
+ * Section initialization is handled by admin ensureSystemPage or seed,
+ * not by public page rendering (read-only).
+ *
  * SEO: Dynamic metadata + BreadcrumbList JSON-LD
  */
 
 import type { Metadata } from 'next'
 import type { ReactElement } from 'react'
 import { notFound } from 'next/navigation'
-import { connection } from 'next/server'
 import { BreadcrumbJsonLd } from '@/public/components/seo/JsonLd'
 import { generatePageMetadata } from '@/public/lib/page-metadata'
 import {
@@ -20,7 +22,6 @@ import {
   getPageSections,
   getAllPublishedPageSlugs,
 } from '@/public/actions/section'
-import { ensurePageSections } from '@/shared/lib/section-defaults'
 import { SectionRenderer } from '../_shared/components/sections/SectionRenderer'
 
 interface PageProps {
@@ -40,19 +41,11 @@ export async function generateStaticParams() {
 export default async function DynamicPage({ params }: PageProps): Promise<ReactElement> {
   const { slug } = await params
 
-  // ensurePageSections は uncached DB 呼び出しのため connection() でオプトイン
-  await connection()
-
-  // ページデータ取得
   const page = await getPublicPage(slug)
   if (!page) {
     notFound()
   }
 
-  // デフォルトセクションが未作成なら自動生成
-  await ensurePageSections(page.id, slug)
-
-  // セクション取得 & レンダリング
   const sections = await getPageSections(page.id)
 
   return (

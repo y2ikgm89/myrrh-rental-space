@@ -17,6 +17,8 @@ import { ScrollReveal } from '@/public/components/animations/ScrollReveal'
 import { MagneticButton } from '@/public/components/animations/MagneticButton'
 import { DURATION, EASE } from '@/public/lib/animations'
 import type { HeroConfig } from '@/shared/lib/validations/section'
+import type { SectionDesign } from '@/shared/lib/validations/section-design'
+import { getTitleClasses, getTitleStyle, getTextStyle } from '@/public/components/sections/SectionWrapper'
 
 const HEIGHT_MAP = {
   sm: 'h-[40vh]',
@@ -27,9 +29,10 @@ const HEIGHT_MAP = {
 
 interface StandardHeroSectionProps {
   readonly config: HeroConfig
+  readonly design: SectionDesign
 }
 
-export function StandardHeroSection({ config }: StandardHeroSectionProps): ReactElement {
+export function StandardHeroSection({ config, design }: StandardHeroSectionProps): ReactElement {
   const sectionRef = useRef<HTMLElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
 
@@ -63,7 +66,8 @@ export function StandardHeroSection({ config }: StandardHeroSectionProps): React
   return (
     <section
       ref={sectionRef}
-      className={`relative flex items-center justify-center overflow-hidden ${heightClass}`}
+      data-hero=""
+      className={`relative flex items-center justify-center overflow-hidden pt-[var(--header-height)] ${heightClass}`}
     >
       {/* Background image */}
       {config.backgroundImageUrl && (
@@ -91,7 +95,7 @@ export function StandardHeroSection({ config }: StandardHeroSectionProps): React
       {/* Content */}
       <div ref={contentRef} className="relative z-10 px-5 text-center md:px-8">
         {config.title && (
-          <h1 className="font-heading text-2xl font-bold leading-tight tracking-tight sm:text-3xl md:text-4xl lg:text-5xl">
+          <h1 className={`font-heading ${getTitleClasses(design)} font-bold leading-tight tracking-tight`} style={getTitleStyle(design)}>
             <SplitText variant="words" trigger={false} delay={0.3}>
               {config.title}
             </SplitText>
@@ -100,7 +104,7 @@ export function StandardHeroSection({ config }: StandardHeroSectionProps): React
 
         {config.subtitle && (
           <ScrollReveal delay={0.2}>
-            <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-muted-foreground md:mt-6 md:text-base">
+            <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-muted-foreground md:mt-6 md:text-base" style={getTextStyle(design)}>
               {config.subtitle}
             </p>
           </ScrollReveal>

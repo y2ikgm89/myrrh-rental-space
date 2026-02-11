@@ -77,7 +77,7 @@ export async function getShowcaseSpaces(maxItems: number, showOnlyPublished: boo
     take: maxItems,
   })
 
-  return spaces
+  return toPlainArray(spaces)
 }
 
 /**

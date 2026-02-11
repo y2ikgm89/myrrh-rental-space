@@ -9,9 +9,7 @@ import { cacheLife, cacheTag } from 'next/cache'
 import type { Metadata } from 'next'
 import { prisma } from '@/shared/lib/prisma'
 import { safeFetch, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
-import { getBaseUrl, SITE_DEFAULTS } from '@/shared/lib/constants'
-
-const BASE_URL = getBaseUrl()
+import { SITE_DEFAULTS, CACHE_TAGS } from '@/shared/lib/constants'
 
 // =============================================================================
 // Types
@@ -47,7 +45,7 @@ export interface ArticleMetadata {
 export async function getSeoSettings(): Promise<SeoSettings | null> {
   'use cache'
   cacheLife('hours')
-  cacheTag('seo-settings', 'settings')
+  cacheTag(CACHE_TAGS.SEO_SETTINGS, CACHE_TAGS.SETTINGS)
 
   return safeFetch({
     fetch: () =>
@@ -73,45 +71,6 @@ export async function getSeoSettings(): Promise<SeoSettings | null> {
 // =============================================================================
 // Metadata Generators
 // =============================================================================
-
-/**
- * ホームページメタデータ生成
- */
-export async function generateHomeMetadata(): Promise<Metadata> {
-  const settings = await getSeoSettings()
-
-  const siteName = settings?.siteName || SITE_DEFAULTS.name
-  const description =
-    settings?.defaultOgpDescription ||
-    settings?.defaultMetaDescription ||
-    settings?.siteDescription ||
-    SITE_DEFAULTS.description
-  const title = settings?.defaultOgpTitle || siteName
-  const image = settings?.defaultOgpImageUrl || `${BASE_URL}/og-image.png`
-
-  return {
-    title: siteName,
-    description,
-    keywords: settings?.defaultMetaKeywords || undefined,
-    alternates: {
-      canonical: BASE_URL,
-    },
-    openGraph: {
-      title,
-      description,
-      images: [image],
-      type: 'website',
-      url: BASE_URL,
-      siteName,
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title,
-      description,
-      images: [image],
-    },
-  }
-}
 
 /**
  * 記事ページメタデータ生成（ブログ・ニュース共通）
@@ -148,48 +107,6 @@ export function generateArticleMetadata(
       title,
       description,
       images: article.image ? [article.image] : undefined,
-    },
-  }
-}
-
-/**
- * 汎用ページメタデータ生成
- */
-export function generatePageMetadata(
-  title: string,
-  description: string,
-  options?: {
-    canonicalUrl?: string
-    keywords?: string
-    image?: string
-    type?: 'website' | 'article'
-    siteName?: string
-  }
-): Metadata {
-  const image = options?.image || `${BASE_URL}/og-image.png`
-  const siteName = options?.siteName || 'Myrrh Rental Space'
-
-  return {
-    title,
-    description,
-    keywords: options?.keywords,
-    ...(options?.canonicalUrl && {
-      alternates: {
-        canonical: options.canonicalUrl,
-      },
-    }),
-    openGraph: {
-      title,
-      description,
-      images: [image],
-      type: options?.type || 'website',
-      siteName,
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title,
-      description,
-      images: [image],
     },
   }
 }

@@ -3,7 +3,7 @@
  *
  * Next.js 16 Multiple Root Layouts パターン
  * - 管理画面とは完全に分離された独立したRoot Layout
- * - public.css で公開ページ専用テーマを適用（AI生成対象）
+ * - public.css で公開ページ専用テーマを適用
  * - 公開ページ ↔ 管理画面の遷移はフルページリロード（仕様）
  *
  * アクセシビリティ対応:
@@ -18,15 +18,28 @@
 import type { Metadata, Viewport } from 'next'
 import type { ReactElement, ReactNode } from 'react'
 import { Suspense } from 'react'
-import { Noto_Sans_JP } from 'next/font/google'
+import { Noto_Sans_JP, Noto_Serif_JP } from 'next/font/google'
 import { NuqsAdapter } from 'nuqs/adapters/next/app'
 import { Header } from '@/public/components/layouts/Header'
 import { Footer } from '@/public/components/layouts/Footer'
-import { AnalyticsProvider } from '@/public/components/analytics'
+import { AnalyticsProvider, WebVitalsReporter } from '@/public/components/analytics'
 import { CookieConsentBanner } from '@/public/components/CookieConsentBanner'
 import { AnnouncementBarWrapper } from '@/public/components/AnnouncementBarWrapper'
 import { SkipLink, AriaLiveRegion } from '@/public/components/a11y'
 import { AriaLiveProvider } from '@/shared/contexts'
+import { SmoothScrollProvider } from '@/public/components/providers/SmoothScrollProvider'
+import {
+  ScrollOrchestratorProvider,
+  VisualEffectsProvider,
+  PerformanceMonitor,
+} from '@/public/components/effects/core'
+import { GraphJsonLd } from '@/public/components/seo/JsonLd'
+import { getGraphJsonLdData } from '@/public/lib/seo'
+import { getHeaderNavigation } from '@/public/lib/navigation'
+import { getBusinessInfo } from '@/public/data/business'
+import { getHeaderSettings } from '@/public/lib/layout-settings'
+import type { HeaderSettings } from '@/public/lib/layout-settings'
+import { HeaderBackgroundMode } from '@/shared/generated/prisma/enums'
 import { getCookieConsentSettings } from '@/shared/lib/settings'
 import { getAnalyticsConfig } from '@/shared/lib/analytics/config'
 import { SITE_DEFAULTS } from '@/shared/lib/constants'
@@ -35,6 +48,12 @@ import './_styles/public.css'
 
 const notoSansJP = Noto_Sans_JP({
   variable: '--font-noto-sans-jp',
+  subsets: ['latin'],
+  weight: ['400', '500', '700'],
+})
+
+const notoSerifJP = Noto_Serif_JP({
+  variable: '--font-noto-serif-jp',
   subsets: ['latin'],
   weight: ['400', '500', '700'],
 })
@@ -50,6 +69,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  themeColor: '#fafafa',
 }
 
 /**
@@ -65,6 +85,7 @@ async function DynamicContent(): Promise<ReactElement> {
   return (
     <>
       <AnalyticsProvider config={analyticsConfig} />
+      <WebVitalsReporter enabled={analyticsConfig.analyticsType !== null} />
       {cookieSettings?.cookieConsentEnabled && (
         <CookieConsentBanner
           message={cookieSettings.cookieConsentMessage}
@@ -109,11 +130,42 @@ async function HeadContent(): Promise<ReactElement> {
   )
 }
 
+/**
+ * 構造化データ: @graph パターン（LocalBusiness + WebSite）
+ * エンティティ間の @id 相互参照でナレッジグラフ理解を向上
+ */
+async function StructuredDataContent(): Promise<ReactElement> {
+  const graphData = await getGraphJsonLdData()
+  return <GraphJsonLd {...graphData} />
+}
+
+/**
+ * Header ラッパー: DB からナビゲーション + ブランド名を取得して Client Component に渡す
+ */
+async function HeaderWithData({ headerSettings }: { headerSettings: HeaderSettings }): Promise<ReactElement> {
+  const [navItems, businessInfo] = await Promise.all([
+    getHeaderNavigation(),
+    getBusinessInfo(),
+  ])
+
+  return (
+    <Header
+      brandName={businessInfo.name.split(' ')[0]?.toUpperCase() ?? 'MYRRH'}
+      navItems={navItems.length > 0 ? navItems : undefined}
+      scrollBehavior={headerSettings.scrollBehavior}
+      backgroundMode={headerSettings.backgroundMode}
+    />
+  )
+}
+
 export default async function PublicRootLayout({
   children,
 }: Readonly<{
   children: ReactNode
 }>): Promise<ReactElement> {
+  const headerSettings = await getHeaderSettings()
+  const isTransparent = headerSettings.backgroundMode === HeaderBackgroundMode.transparent
+
   return (
     <html lang="ja">
       <head>
@@ -121,7 +173,14 @@ export default async function PublicRootLayout({
           <HeadContent />
         </Suspense>
       </head>
-      <body className={`${notoSansJP.variable} font-sans antialiased`}>
+      <body className={`${notoSansJP.variable} ${notoSerifJP.variable} font-sans antialiased`}>
+        {/* 全公開ページ共通の構造化データ */}
+        <Suspense fallback={null}>
+          <StructuredDataContent />
+        </Suspense>
+        <SmoothScrollProvider>
+        <ScrollOrchestratorProvider>
+        <VisualEffectsProvider>
         {/* NuqsAdapter は内部で useSearchParams を使用するため Suspense でラップ（Next.js 16 PPR対応） */}
         <Suspense fallback={null}>
           <NuqsAdapter>
@@ -132,9 +191,18 @@ export default async function PublicRootLayout({
 
               {/* キャッシュされたコンテンツ - 静的シェルに含まれる */}
               <AnnouncementBarWrapper />
-              <Header />
+              <Suspense fallback={null}>
+                <HeaderWithData headerSettings={headerSettings} />
+              </Suspense>
 
-              <main id="main-content" className="flex-1">
+              <main
+                id="main-content"
+                className="flex-1"
+                {...(isTransparent && {
+                  'data-header-transparent': '',
+                  style: { marginTop: 'calc(var(--header-height, 0px) * -1)' },
+                })}
+              >
                 {children}
               </main>
 
@@ -151,6 +219,10 @@ export default async function PublicRootLayout({
           </AriaLiveProvider>
           </NuqsAdapter>
         </Suspense>
+        <PerformanceMonitor />
+        </VisualEffectsProvider>
+        </ScrollOrchestratorProvider>
+        </SmoothScrollProvider>
       </body>
     </html>
   )

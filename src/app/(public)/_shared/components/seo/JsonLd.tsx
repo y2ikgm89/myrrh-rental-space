@@ -34,13 +34,42 @@ interface OrganizationData {
   sameAs?: string[]
 }
 
+interface OpeningHoursSpecification {
+  '@type': 'OpeningHoursSpecification'
+  dayOfWeek: string | string[]
+  opens: string
+  closes: string
+}
+
+interface AmenityFeature {
+  '@type': 'LocationFeatureSpecification'
+  name: string
+  value: boolean
+}
+
+interface SpecialOpeningHoursSpecification {
+  '@type': 'OpeningHoursSpecification'
+  validFrom: string
+  validThrough: string
+  opens: string
+  closes: string
+}
+
 interface LocalBusinessData extends OrganizationData {
-  openingHours?: string[]
+  openingHoursSpecification?: OpeningHoursSpecification[]
+  specialOpeningHoursSpecification?: SpecialOpeningHoursSpecification[]
   priceRange?: string
   geo?: {
     latitude: number
     longitude: number
   }
+  hasMap?: string
+  currenciesAccepted?: string
+  paymentAccepted?: string
+  foundingDate?: string
+  additionalType?: string
+  image?: string | string[]
+  amenityFeature?: AmenityFeature[]
 }
 
 interface ProductData {
@@ -156,27 +185,41 @@ export function OrganizationJsonLd({
 /**
  * LocalBusiness構造化データ（レンタルスペース事業者向け）
  */
-export function LocalBusinessJsonLd({
-  name,
-  description,
-  url = BASE_URL,
-  logo,
-  telephone,
-  email,
-  address,
-  openingHours,
-  priceRange,
-  geo,
-  sameAs,
-}: LocalBusinessData): ReactElement {
-  const data = {
-    '@context': 'https://schema.org',
+/**
+ * LocalBusiness JSON-LD オブジェクトを構築（コンポーネント版と @graph 版で共有）
+ */
+function buildLocalBusinessData(props: LocalBusinessData & { id?: string }): Record<string, unknown> {
+  const {
+    name,
+    description,
+    url = BASE_URL,
+    logo,
+    telephone,
+    email,
+    address,
+    openingHoursSpecification,
+    specialOpeningHoursSpecification,
+    priceRange,
+    geo,
+    hasMap,
+    currenciesAccepted,
+    paymentAccepted,
+    foundingDate,
+    additionalType,
+    image,
+    amenityFeature,
+    sameAs,
+    id,
+  } = props
+
+  return {
     '@type': 'LocalBusiness',
-    '@id': `${url}#localbusiness`,
+    '@id': id || `${url}/#organization`,
     name,
     ...(description && { description }),
     url,
-    ...(logo && { logo, image: logo }),
+    ...(logo && { logo }),
+    ...(image ? { image } : logo ? { image: logo } : {}),
     ...(telephone && { telephone }),
     ...(email && { email }),
     ...(address && {
@@ -186,7 +229,12 @@ export function LocalBusinessJsonLd({
         addressCountry: address.addressCountry || 'JP',
       },
     }),
-    ...(openingHours && { openingHoursSpecification: openingHours }),
+    ...(openingHoursSpecification && openingHoursSpecification.length > 0 && {
+      openingHoursSpecification,
+    }),
+    ...(specialOpeningHoursSpecification && specialOpeningHoursSpecification.length > 0 && {
+      specialOpeningHoursSpecification,
+    }),
     ...(priceRange && { priceRange }),
     ...(geo && {
       geo: {
@@ -195,7 +243,63 @@ export function LocalBusinessJsonLd({
         longitude: geo.longitude,
       },
     }),
+    ...(hasMap && { hasMap }),
+    ...(currenciesAccepted && { currenciesAccepted }),
+    ...(paymentAccepted && { paymentAccepted }),
+    ...(foundingDate && { foundingDate }),
+    ...(additionalType && { additionalType }),
+    ...(amenityFeature && amenityFeature.length > 0 && { amenityFeature }),
     ...(sameAs && sameAs.length > 0 && { sameAs }),
+  }
+}
+
+/**
+ * LocalBusiness構造化データ（レンタルスペース事業者向け）
+ */
+export function LocalBusinessJsonLd(props: LocalBusinessData): ReactElement {
+  const data = {
+    '@context': 'https://schema.org',
+    ...buildLocalBusinessData(props),
+  }
+
+  return <JsonLd data={data} />
+}
+
+/**
+ * @graph パターン: LocalBusiness + WebSite を1つの JSON-LD で出力
+ * エンティティ間の @id 相互参照でナレッジグラフ理解を向上
+ */
+export function GraphJsonLd({
+  localBusiness,
+  webSite,
+}: {
+  localBusiness: LocalBusinessData
+  webSite: { name: string; description?: string; url?: string }
+}): ReactElement {
+  const orgId = `${localBusiness.url || BASE_URL}/#organization`
+  const websiteId = `${webSite.url || BASE_URL}/#website`
+
+  const data = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      buildLocalBusinessData({ ...localBusiness, id: orgId }),
+      {
+        '@type': 'WebSite',
+        '@id': websiteId,
+        name: webSite.name,
+        ...(webSite.description && { description: webSite.description }),
+        url: webSite.url || BASE_URL,
+        publisher: { '@id': orgId },
+        potentialAction: {
+          '@type': 'SearchAction',
+          target: {
+            '@type': 'EntryPoint',
+            urlTemplate: `${webSite.url || BASE_URL}/search?q={search_term_string}`,
+          },
+          'query-input': 'required name=search_term_string',
+        },
+      },
+    ],
   }
 
   return <JsonLd data={data} />

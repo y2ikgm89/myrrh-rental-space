@@ -16,15 +16,18 @@ import { MagneticButton } from '@/public/components/animations/MagneticButton'
 import { ScrollIndicator } from '@/public/components/layouts/ScrollIndicator'
 import { DURATION, EASE, PARALLAX, SCROLL_TRIGGER } from '@/public/lib/animations'
 import type { HeroParallaxConfig } from '@/shared/lib/validations/section'
+import type { SectionDesign } from '@/shared/lib/validations/section-design'
+import { getTitleClasses, getTitleStyle, getTextStyle } from '@/public/components/sections/SectionWrapper'
 
 const DEFAULT_BG_IMAGE =
   'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=1600&q=80'
 
 interface HeroSectionProps {
   readonly config: HeroParallaxConfig
+  readonly design: SectionDesign
 }
 
-export function HeroSection({ config }: HeroSectionProps): ReactElement {
+export function HeroSection({ config, design }: HeroSectionProps): ReactElement {
   const sectionRef = useRef<HTMLElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const imageRef = useRef<HTMLDivElement>(null)
@@ -73,11 +76,12 @@ export function HeroSection({ config }: HeroSectionProps): ReactElement {
   return (
     <section
       ref={sectionRef}
-      className="relative flex h-screen items-center justify-center overflow-hidden"
+      data-hero=""
+      className="relative flex h-screen items-center justify-center overflow-hidden pt-[var(--header-height)]"
     >
       {/* Background image with parallax */}
       <div className="absolute inset-0">
-        <div ref={imageRef} className="h-full w-full">
+        <div ref={imageRef} className="relative h-full w-full">
           <Image
             src={config.backgroundImageUrl || DEFAULT_BG_IMAGE}
             alt="洗練されたレンタルスペースのインテリア"
@@ -100,25 +104,31 @@ export function HeroSection({ config }: HeroSectionProps): ReactElement {
         ref={contentRef}
         className="relative z-10 px-5 text-center md:px-8"
       >
-        <p className="mb-6 text-[11px] uppercase tracking-[0.3em] text-primary-dark md:tracking-[0.4em]">
-          Luxury Rental Space
-        </p>
+        {config.tagline && (
+          <p className="mb-6 text-[11px] uppercase tracking-[0.3em] text-primary-dark md:tracking-[0.4em]">
+            {config.tagline}
+          </p>
+        )}
 
-        <h1 className="font-heading text-3xl font-bold leading-[1.15] tracking-tight sm:text-4xl md:text-5xl lg:text-7xl">
+        <h1 className={`font-heading ${getTitleClasses(design)} font-bold leading-[1.15] tracking-tight`} style={getTitleStyle(design)}>
           <SplitText variant="words" trigger={false} delay={0.5}>
-            {config.title || '洗練された空間で 特別なひとときを'}
+            {config.title}
           </SplitText>
         </h1>
 
-        <p className="mx-auto mt-6 max-w-lg text-sm leading-relaxed text-muted-foreground md:mt-8 md:text-base">
-          {config.subtitle || '厳選されたレンタルスペースが、あなたの大切な瞬間を彩ります。'}
+        <p className="mx-auto mt-6 max-w-lg text-sm leading-relaxed text-muted-foreground md:mt-8 md:text-base" style={getTextStyle(design)}>
+          {config.subtitle}
         </p>
 
-        <div className="mt-8 md:mt-12">
-          <MagneticButton href="/reservation">
-            Reserve Now
-          </MagneticButton>
-        </div>
+        {config.buttons.length > 0 && (
+          <div className="mt-8 flex flex-col items-center gap-4 md:mt-12">
+            {config.buttons.map((btn, i) => (
+              <MagneticButton key={i} href={btn.url}>
+                {btn.text}
+              </MagneticButton>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Scroll hint */}

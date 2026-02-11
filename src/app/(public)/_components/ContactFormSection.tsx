@@ -11,32 +11,35 @@ import type { ReactElement } from 'react'
 import { ScrollReveal } from '@/public/components/animations/ScrollReveal'
 import { SplitText } from '@/public/components/animations/SplitText'
 import { MagneticButton } from '@/public/components/animations/MagneticButton'
+import { SectionWrapper, getTitleClasses, getTitleStyle, getTextStyle } from '@/public/components/sections/SectionWrapper'
 import { SectionLabel } from '@/public/components/ui/SectionLabel'
 import type { ContactFormConfig } from '@/shared/lib/validations/section'
+import type { SectionDesign } from '@/shared/lib/validations/section-design'
 
 interface ContactFormSectionProps {
   readonly config: ContactFormConfig
+  readonly design: SectionDesign
 }
 
 const INPUT_CLASS =
-  'w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary'
+  'w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground focus-visible:border-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary'
 
-export function ContactFormSection({ config }: ContactFormSectionProps): ReactElement {
+export function ContactFormSection({ config, design }: ContactFormSectionProps): ReactElement {
   return (
-    <section className="py-16 md:py-24">
-      <div className="mx-auto max-w-2xl px-5 md:px-8">
+    <SectionWrapper design={design}>
+      <div className="mx-auto max-w-2xl">
         <div className="mb-10 text-center md:mb-14">
           <ScrollReveal>
-            <SectionLabel>Contact</SectionLabel>
+            {config.sectionLabel && <SectionLabel>{config.sectionLabel}</SectionLabel>}
           </ScrollReveal>
-          <h2 className="mt-4 font-heading text-2xl font-bold tracking-tight md:text-3xl">
+          <h2 className={`mt-4 font-heading ${getTitleClasses(design)} font-bold tracking-tight`} style={getTitleStyle(design)}>
             <SplitText variant="words">
               {config.title}
             </SplitText>
           </h2>
           {config.description && (
             <ScrollReveal delay={0.2}>
-              <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-muted-foreground">
+              <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-muted-foreground" style={getTextStyle(design)}>
                 {config.description}
               </p>
             </ScrollReveal>
@@ -134,6 +137,6 @@ export function ContactFormSection({ config }: ContactFormSectionProps): ReactEl
           </form>
         </ScrollReveal>
       </div>
-    </section>
+    </SectionWrapper>
   )
 }

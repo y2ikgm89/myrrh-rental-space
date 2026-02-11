@@ -13,8 +13,10 @@ import { useGSAP } from '@gsap/react'
 import { gsap } from '@/public/lib/gsap-config'
 import { SectionLabel } from '@/public/components/ui/SectionLabel'
 import { ScrollReveal } from '@/public/components/animations/ScrollReveal'
+import { SectionWrapper, getTitleClasses, getTitleStyle, getTextStyle } from '@/public/components/sections/SectionWrapper'
 import { DURATION, EASE, STAGGER } from '@/public/lib/animations'
 import type { FeaturesConfig } from '@/shared/lib/validations/section'
+import type { SectionDesign } from '@/shared/lib/validations/section-design'
 
 type FeatureIcon = 'clock' | 'shield' | 'sparkles'
 
@@ -41,6 +43,7 @@ function FeatureIcon({
         viewBox="0 0 24 24"
         stroke="currentColor"
         strokeWidth={1.5}
+        aria-hidden="true"
       >
         {icon === 'clock' && (
           <path
@@ -70,9 +73,10 @@ function FeatureIcon({
 
 interface FeaturesSectionProps {
   readonly config: FeaturesConfig
+  readonly design: SectionDesign
 }
 
-export function FeaturesSection({ config }: FeaturesSectionProps): ReactElement {
+export function FeaturesSection({ config, design }: FeaturesSectionProps): ReactElement {
   const gridRef = useRef<HTMLDivElement>(null)
 
   useGSAP(
@@ -113,58 +117,65 @@ export function FeaturesSection({ config }: FeaturesSectionProps): ReactElement 
   const restFeatures = items.slice(1)
 
   return (
-    <section className="py-24 md:py-32 lg:py-40">
-      <div className="mx-auto max-w-6xl px-5 md:px-8">
-        <div className="mb-12 md:mb-16">
-          <ScrollReveal>
-            <SectionLabel>Features</SectionLabel>
-            <h2 className="mt-4 font-heading text-2xl font-bold tracking-tight md:text-3xl lg:text-4xl">
-              {config.title}
-            </h2>
-          </ScrollReveal>
-        </div>
-
-        <div ref={gridRef} className="space-y-8 md:space-y-12">
-          {/* Hero feature — horizontal layout on md+ */}
-          <div
-            data-feature=""
-            className="grid gap-5 md:grid-cols-[auto_1fr] md:items-start md:gap-8"
+    <SectionWrapper design={design}>
+      <div className="mb-12 md:mb-16">
+        <ScrollReveal>
+          {config.sectionLabel && <SectionLabel>{config.sectionLabel}</SectionLabel>}
+          <h2
+            className={`mt-4 font-heading ${getTitleClasses(design)} font-bold tracking-tight`}
+            style={getTitleStyle(design)}
           >
-            <FeatureIcon icon={heroFeature.icon} size="hero" />
-            <div>
-              <h3 className="font-heading text-xl tracking-tight md:text-2xl">
-                {heroFeature.title}
-              </h3>
-              <p className="mt-3 max-w-lg text-sm leading-relaxed text-muted-foreground md:text-base">
-                {heroFeature.description}
-              </p>
-            </div>
-          </div>
-
-          {/* Remaining features — 2 columns */}
-          {restFeatures.length > 0 && (
-            <div className="grid gap-8 md:grid-cols-2 md:gap-10">
-              {restFeatures.map((feature, index) => (
-                <div
-                  key={`feature-${index}`}
-                  data-feature=""
-                  className="flex items-start gap-4"
-                >
-                  <FeatureIcon icon={feature.icon} />
-                  <div>
-                    <h3 className="font-heading text-lg tracking-tight">
-                      {feature.title}
-                    </h3>
-                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                      {feature.description}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+            {config.title}
+          </h2>
+        </ScrollReveal>
       </div>
-    </section>
+
+      <div ref={gridRef} className="space-y-8 md:space-y-12">
+        {/* Hero feature — horizontal layout on md+ */}
+        <div
+          data-feature=""
+          className="grid gap-5 md:grid-cols-[auto_1fr] md:items-start md:gap-8"
+        >
+          <FeatureIcon icon={heroFeature.icon} size="hero" />
+          <div>
+            <h3 className="font-heading text-xl tracking-tight md:text-2xl">
+              {heroFeature.title}
+            </h3>
+            <p
+              className="mt-3 max-w-lg text-sm leading-relaxed text-muted-foreground md:text-base"
+              style={getTextStyle(design)}
+            >
+              {heroFeature.description}
+            </p>
+          </div>
+        </div>
+
+        {/* Remaining features — 2 columns */}
+        {restFeatures.length > 0 && (
+          <div className="grid gap-8 md:grid-cols-2 md:gap-10">
+            {restFeatures.map((feature, index) => (
+              <div
+                key={`feature-${index}`}
+                data-feature=""
+                className="flex items-start gap-4"
+              >
+                <FeatureIcon icon={feature.icon} />
+                <div>
+                  <h3 className="font-heading text-lg tracking-tight">
+                    {feature.title}
+                  </h3>
+                  <p
+                    className="mt-2 text-sm leading-relaxed text-muted-foreground"
+                    style={getTextStyle(design)}
+                  >
+                    {feature.description}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </SectionWrapper>
   )
 }

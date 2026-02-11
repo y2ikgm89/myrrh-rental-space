@@ -25,6 +25,7 @@ import {
   getMapConfig,
   getEmbedConfig,
   getInstagramConfig,
+  parseSectionDesign,
 } from '@/shared/lib/validations/section'
 import type { PublicSection } from '@/public/actions/section'
 import {
@@ -66,6 +67,8 @@ interface SectionRendererProps {
 export async function SectionRenderer({
   section,
 }: SectionRendererProps): Promise<ReactElement | null> {
+  const design = parseSectionDesign(section.design)
+
   switch (section.type) {
     // =========================================================================
     // Hero variants
@@ -73,12 +76,12 @@ export async function SectionRenderer({
 
     case SectionType.HERO: {
       const config = getHeroConfig(section.config)
-      return <StandardHeroSection config={config} />
+      return <StandardHeroSection config={config} design={design} />
     }
 
     case SectionType.HERO_PARALLAX: {
       const config = getHeroParallaxConfig(section.config)
-      return <HeroSection config={config} />
+      return <HeroSection config={config} design={design} />
     }
 
     // =========================================================================
@@ -87,12 +90,12 @@ export async function SectionRenderer({
 
     case SectionType.CUSTOM: {
       const config = getCustomConfig(section.config)
-      return <CustomSection config={config} content={section.content} title={section.title} />
+      return <CustomSection config={config} content={section.content} title={section.title} design={design} />
     }
 
     case SectionType.CONCEPT: {
       const config = getConceptConfig(section.config)
-      return <ConceptSection config={config} />
+      return <ConceptSection config={config} design={design} />
     }
 
     // =========================================================================
@@ -112,7 +115,7 @@ export async function SectionRenderer({
         area: s.area != null ? Number(s.area) : null,
         mainImageUrl: s.mainImageUrl,
       }))
-      return <SpaceListSection config={config} spaces={spaces} />
+      return <SpaceListSection config={config} spaces={spaces} design={design} />
     }
 
     case SectionType.SPACE_SHOWCASE: {
@@ -130,7 +133,7 @@ export async function SectionRenderer({
         imageAlt: s.name,
         slug: s.slug,
       }))
-      return <SpaceShowcase config={config} spaces={spaces} />
+      return <SpaceShowcase config={config} spaces={spaces} design={design} />
     }
 
     case SectionType.NEWS_LIST: {
@@ -142,7 +145,7 @@ export async function SectionRenderer({
         title: n.title,
         publishedAt: n.publishedAt,
       }))
-      return <NewsListSection config={config} news={news} />
+      return <NewsListSection config={config} news={news} design={design} />
     }
 
     case SectionType.POST_LIST: {
@@ -157,7 +160,7 @@ export async function SectionRenderer({
         publishedAt: p.publishedAt,
         categoryName: p.category.name,
       }))
-      return <PostListSection config={config} posts={posts} />
+      return <PostListSection config={config} posts={posts} design={design} />
     }
 
     case SectionType.FAQ_LIST: {
@@ -175,7 +178,7 @@ export async function SectionRenderer({
             question: f.question,
             answer: f.answer,
           }))
-      return <FaqListSection config={config} items={items} />
+      return <FaqListSection config={config} items={items} design={design} />
     }
 
     // =========================================================================
@@ -184,17 +187,17 @@ export async function SectionRenderer({
 
     case SectionType.FEATURES: {
       const config = getFeaturesConfig(section.config)
-      return <FeaturesSection config={config} />
+      return <FeaturesSection config={config} design={design} />
     }
 
     case SectionType.TESTIMONIAL: {
       const config = getTestimonialConfig(section.config)
-      return <TestimonialSection config={config} />
+      return <TestimonialSection config={config} design={design} />
     }
 
     case SectionType.GALLERY: {
       const config = getGalleryConfig(section.config)
-      return <GallerySection config={config} />
+      return <GallerySection config={config} design={design} />
     }
 
     // =========================================================================
@@ -203,27 +206,27 @@ export async function SectionRenderer({
 
     case SectionType.CTA: {
       const config = getCtaConfig(section.config)
-      return <CTASection config={config} />
+      return <CTASection config={config} design={design} />
     }
 
     case SectionType.CONTACT_FORM: {
       const config = getContactFormConfig(section.config)
-      return <ContactFormSection config={config} />
+      return <ContactFormSection config={config} design={design} />
     }
 
     case SectionType.MAP: {
       const config = getMapConfig(section.config)
-      return <MapSection config={config} />
+      return <MapSection config={config} design={design} />
     }
 
     case SectionType.EMBED: {
       const config = getEmbedConfig(section.config)
-      return <EmbedSection config={config} />
+      return <EmbedSection config={config} design={design} />
     }
 
     case SectionType.INSTAGRAM: {
       const config = getInstagramConfig(section.config)
-      return <InstagramSection config={config} />
+      return <InstagramSection config={config} design={design} />
     }
 
     default:

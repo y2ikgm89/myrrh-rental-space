@@ -4,50 +4,22 @@
  * Fetches sections from DB via getHomepageSections() and renders
  * each through SectionRenderer.
  *
- * SEO: Dynamic metadata + WebSite JSON-LD
+ * Section initialization is handled by seed or admin UI,
+ * not by public page rendering (read-only).
+ *
+ * SEO: Dynamic metadata via unified pipeline + WebSite JSON-LD
  */
 
 import type { Metadata } from 'next'
 import type { ReactElement } from 'react'
 import { WebSiteJsonLd } from '@/public/components/seo/JsonLd'
-import { getWebSiteJsonLdData, getSeoSettings } from '@/public/lib/seo'
-import { SITE_DEFAULTS, getBaseUrl } from '@/shared/lib/constants'
+import { getWebSiteJsonLdData } from '@/public/lib/seo'
+import { generatePageMetadata } from '@/public/lib/page-metadata'
 import { getHomepageSections } from '@/public/actions/section'
 import { SectionRenderer } from './_shared/components/sections/SectionRenderer'
 
-const BASE_URL = getBaseUrl()
-
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = await getSeoSettings()
-
-  const siteName = settings?.siteName ?? SITE_DEFAULTS.name
-  const description =
-    settings?.defaultOgpDescription ??
-    settings?.defaultMetaDescription ??
-    settings?.siteDescription ??
-    SITE_DEFAULTS.description
-  const title = settings?.defaultOgpTitle ?? siteName
-  const image = settings?.defaultOgpImageUrl ?? `${BASE_URL}/og-image.png`
-
-  return {
-    title: siteName,
-    description,
-    openGraph: {
-      title,
-      description,
-      url: `${BASE_URL}/`,
-      siteName,
-      images: [{ url: image }],
-      type: 'website',
-      locale: 'ja_JP',
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title,
-      description,
-      images: [image],
-    },
-  }
+  return generatePageMetadata('home')
 }
 
 export default async function HomePage(): Promise<ReactElement> {

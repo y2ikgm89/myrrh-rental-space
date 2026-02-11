@@ -2,80 +2,77 @@
 @plugin "@tailwindcss/typography";
 
 /* ==========================================================================
- * Public Pages Theme
+ * Public V3 Theme — Champagne Gold + White
  *
- * 公開ページ専用テーマ - 管理画面には影響しない
- *
- * このファイルはAI生成で顧客ブランドに合わせてカスタマイズ可能
- * 以下はデフォルトテンプレート
- *
+ * デザイン方針: 白基調 + シャンパンゴールドアクセント
+ * v1（暖色系 hue 80 + クラシックゴールド hue 85）と差別化
  * カラー形式: OKLCH（Tailwind CSS 4推奨）
  * ========================================================================== */
 
 @theme {
   /* --------------------------------------------------------------------------
-   * Brand Colors（顧客ブランドに合わせて変更）
+   * Brand Colors — Champagne Gold
    * -------------------------------------------------------------------------- */
-  --color-brand-primary: oklch(0.55 0.20 260);
-  --color-brand-secondary: oklch(0.65 0.15 260);
-  --color-brand-accent: oklch(0.70 0.18 145);
+  --color-brand-primary: oklch(0.75 0.06 65);
+  --color-brand-secondary: oklch(0.55 0.08 65);
 
   /* --------------------------------------------------------------------------
    * Core Colors
    * -------------------------------------------------------------------------- */
-  --color-background: oklch(1 0 0);
-  --color-foreground: oklch(0.15 0.02 260);
+  --color-background: oklch(0.995 0.002 250);
+  --color-foreground: oklch(0.15 0.01 250);
 
   /* --------------------------------------------------------------------------
-   * Card & Popover
+   * Card & Surface
    * -------------------------------------------------------------------------- */
   --color-card: oklch(1 0 0);
-  --color-card-foreground: oklch(0.15 0.02 260);
-  --color-popover: oklch(1 0 0);
-  --color-popover-foreground: oklch(0.15 0.02 260);
+  --color-card-foreground: oklch(0.15 0.01 250);
+  --color-surface: oklch(0.97 0.003 250);
 
   /* --------------------------------------------------------------------------
-   * Primary（ブランドカラーを使用）
+   * Primary（シャンパンゴールド）
    * -------------------------------------------------------------------------- */
   --color-primary: var(--color-brand-primary);
-  --color-primary-foreground: oklch(1 0 0);
+  --color-primary-dark: oklch(0.55 0.08 65);
+  --color-primary-foreground: oklch(0.15 0.01 250);
 
   /* --------------------------------------------------------------------------
    * Secondary
    * -------------------------------------------------------------------------- */
-  --color-secondary: oklch(0.96 0.005 260);
-  --color-secondary-foreground: oklch(0.25 0.02 260);
+  --color-secondary: oklch(0.96 0.005 250);
+  --color-secondary-foreground: oklch(0.25 0.02 250);
 
   /* --------------------------------------------------------------------------
    * Muted
    * -------------------------------------------------------------------------- */
-  --color-muted: oklch(0.96 0.005 260);
-  --color-muted-foreground: oklch(0.50 0.02 260);
+  --color-muted: oklch(0.96 0.005 250);
+  --color-muted-foreground: oklch(0.45 0.01 250);
 
   /* --------------------------------------------------------------------------
    * Accent
    * -------------------------------------------------------------------------- */
-  --color-accent: oklch(0.96 0.02 260);
-  --color-accent-foreground: oklch(0.35 0.10 260);
+  --color-accent: oklch(0.96 0.01 65);
+  --color-accent-foreground: oklch(0.35 0.05 65);
 
   /* --------------------------------------------------------------------------
    * Semantic Colors
    * -------------------------------------------------------------------------- */
   --color-destructive: oklch(0.55 0.22 25);
   --color-destructive-foreground: oklch(1 0 0);
-
   --color-success: oklch(0.60 0.18 145);
   --color-success-foreground: oklch(1 0 0);
-
   --color-warning: oklch(0.75 0.18 85);
   --color-warning-foreground: oklch(0.20 0.02 85);
+  --color-info: oklch(0.55 0.18 260);
+  --color-info-foreground: oklch(1 0 0);
+  --color-rating: oklch(0.82 0.17 90);
 
   /* --------------------------------------------------------------------------
    * Border & Input
    * -------------------------------------------------------------------------- */
-  --color-border: oklch(0.92 0.005 260);
-  --color-input: oklch(0.92 0.005 260);
-  --color-ring: var(--color-brand-primary);
+  --color-border: oklch(0.90 0.005 250);
+  --color-input: oklch(0.90 0.005 250);
+  --color-ring: var(--color-primary-dark);
 
   /* --------------------------------------------------------------------------
    * Border Radius
@@ -88,14 +85,15 @@
   /* --------------------------------------------------------------------------
    * Shadows
    * -------------------------------------------------------------------------- */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.04), 0 2px 4px -2px rgb(0 0 0 / 0.02);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.02);
 
   /* --------------------------------------------------------------------------
    * Font
    * -------------------------------------------------------------------------- */
   --font-sans: var(--font-noto-sans-jp), "Helvetica Neue", Arial, sans-serif;
+  --font-serif: var(--font-noto-serif-jp), Georgia, "Times New Roman", serif;
 }
 
 /* ==========================================================================
@@ -103,6 +101,10 @@
  * ========================================================================== */
 
 @layer base {
+  :root {
+    --header-height: 60px;
+  }
+
   * {
     border-color: var(--color-border);
   }
@@ -113,14 +115,40 @@
     font-family: var(--font-sans);
   }
 
-  /* モバイルメニュー開閉時のスクロール制御 */
+  /* transparent モードのみ: 非Hero最初の要素にmargin-top補正
+     Hero sections extend behind the transparent header via main's negative margin.
+     Non-hero first visible elements cancel the overlap to start below the header.
+     :is(section, div):first-of-type targets the first <section> or <div> independently,
+     skipping invisible elements like <script> (JSON-LD). */
+  #main-content[data-header-transparent] > :is(section, div):first-of-type:not([data-hero]) {
+    margin-top: var(--header-height, 60px);
+  }
+
+  /* Lenis smooth scroll */
+  html.lenis,
+  html.lenis body {
+    height: auto;
+  }
+
+  .lenis.lenis-smooth {
+    scroll-behavior: auto !important;
+  }
+
+  .lenis.lenis-stopped {
+    overflow: hidden;
+  }
+
   body.overflow-hidden {
     overflow: hidden;
   }
 
-  /* ==========================================================================
-   * アクセシビリティ: prefers-reduced-motion 対応
-   * ========================================================================== */
+  /* WCAG 2.4.7 Focus Visible — keyboard focus indicator */
+  :is(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+
+  /* prefers-reduced-motion */
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -130,5 +158,39 @@
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
     }
+
+    /* Safety net: always show header when reduced-motion is preferred.
+       Uses `translate` property (not `transform`) matching the inline style approach. */
+    header.sticky {
+      translate: none !important;
+    }
   }
 }
+
+/* ==========================================================================
+ * Utility Layer
+ * ========================================================================== */
+
+@layer utilities {
+  .font-heading {
+    font-family: var(--font-serif);
+  }
+
+  /* ゴールドアクセントライン — セクションラベル装飾 */
+  .gold-line {
+    position: relative;
+    display: inline-block;
+  }
+
+  .gold-line::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: -2rem;
+    transform: translateY(-50%);
+    width: 1.5rem;
+    height: 1px;
+    background-color: var(--color-brand-primary);
+  }
+}
+

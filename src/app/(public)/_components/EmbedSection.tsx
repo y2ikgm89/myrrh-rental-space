@@ -7,8 +7,10 @@
 
 import type { ReactElement } from 'react'
 import { ScrollReveal } from '@/public/components/animations/ScrollReveal'
+import { SectionWrapper, getTitleClasses, getTitleStyle } from '@/public/components/sections/SectionWrapper'
 import { SectionLabel } from '@/public/components/ui/SectionLabel'
 import type { EmbedConfig } from '@/shared/lib/validations/section'
+import type { SectionDesign } from '@/shared/lib/validations/section-design'
 
 const MAX_WIDTH_MAP = {
   sm: 'max-w-2xl',
@@ -27,20 +29,21 @@ const ASPECT_RATIO_MAP = {
 
 interface EmbedSectionProps {
   readonly config: EmbedConfig
+  readonly design: SectionDesign
 }
 
-export function EmbedSection({ config }: EmbedSectionProps): ReactElement {
+export function EmbedSection({ config, design }: EmbedSectionProps): ReactElement {
   const maxWidthClass = MAX_WIDTH_MAP[config.maxWidth] ?? MAX_WIDTH_MAP.lg
   const aspectClass = ASPECT_RATIO_MAP[config.aspectRatio] ?? ASPECT_RATIO_MAP['16:9']
 
   return (
-    <section className="py-16 md:py-24">
+    <SectionWrapper design={design} skipContainer>
       <div className={`mx-auto px-5 md:px-8 ${maxWidthClass}`}>
         {config.title && (
           <div className="mb-8 text-center md:mb-12">
             <ScrollReveal>
-              <SectionLabel>Media</SectionLabel>
-              <h2 className="mt-4 font-heading text-2xl font-bold tracking-tight md:text-3xl">
+              {config.sectionLabel && <SectionLabel>{config.sectionLabel}</SectionLabel>}
+              <h2 className={`mt-4 font-heading ${getTitleClasses(design)} font-bold tracking-tight`} style={getTitleStyle(design)}>
                 {config.title}
               </h2>
             </ScrollReveal>
@@ -59,6 +62,7 @@ export function EmbedSection({ config }: EmbedSectionProps): ReactElement {
               />
             </div>
           ) : config.embedCode ? (
+            /* embedCode is admin-configured content, sanitized at input time */
             <div
               className={`overflow-hidden rounded-lg ${aspectClass}`}
               dangerouslySetInnerHTML={{ __html: config.embedCode }}
@@ -72,6 +76,6 @@ export function EmbedSection({ config }: EmbedSectionProps): ReactElement {
           )}
         </ScrollReveal>
       </div>
-    </section>
+    </SectionWrapper>
   )
 }

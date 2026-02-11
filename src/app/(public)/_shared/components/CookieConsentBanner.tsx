@@ -128,7 +128,7 @@ export function CookieConsentBanner({
               {message || DEFAULT_MESSAGE}{' '}
               <Link
                 href={policyUrl || DEFAULT_POLICY_URL}
-                className="text-primary underline underline-offset-4 hover:text-primary/80"
+                className="text-primary-dark underline underline-offset-4 hover:text-primary-dark/80"
               >
                 詳細
               </Link>

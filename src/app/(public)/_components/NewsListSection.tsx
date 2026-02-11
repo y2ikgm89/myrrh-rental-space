@@ -14,8 +14,10 @@ import { gsap } from '@/public/lib/gsap-config'
 import { ScrollReveal } from '@/public/components/animations/ScrollReveal'
 import { SplitText } from '@/public/components/animations/SplitText'
 import { SectionLabel } from '@/public/components/ui/SectionLabel'
+import { SectionWrapper, getTitleClasses, getTitleStyle, getTextStyle } from '@/public/components/sections/SectionWrapper'
 import { DURATION, EASE, STAGGER } from '@/public/lib/animations'
 import type { NewsListConfig } from '@/shared/lib/validations/section'
+import type { SectionDesign } from '@/shared/lib/validations/section-design'
 
 export interface NewsData {
   readonly id: string
@@ -27,6 +29,7 @@ export interface NewsData {
 interface NewsListSectionProps {
   readonly config: NewsListConfig
   readonly news: readonly NewsData[]
+  readonly design: SectionDesign
 }
 
 function formatDate(date: Date | null): string {
@@ -40,7 +43,7 @@ function formatDate(date: Date | null): string {
     .replaceAll('/', '.')
 }
 
-export function NewsListSection({ config, news }: NewsListSectionProps): ReactElement {
+export function NewsListSection({ config, news, design }: NewsListSectionProps): ReactElement {
   const listRef = useRef<HTMLDivElement>(null)
 
   useGSAP(
@@ -79,13 +82,12 @@ export function NewsListSection({ config, news }: NewsListSectionProps): ReactEl
   const isCard = config.layout === 'card'
 
   return (
-    <section className="py-16 md:py-24">
-      <div className="mx-auto max-w-6xl px-5 md:px-8">
+    <SectionWrapper design={design}>
         <div className="mb-10 text-center md:mb-14">
           <ScrollReveal>
-            <SectionLabel>News</SectionLabel>
+            {config.sectionLabel && <SectionLabel>{config.sectionLabel}</SectionLabel>}
           </ScrollReveal>
-          <h2 className="mt-4 font-heading text-2xl font-bold tracking-tight md:text-3xl lg:text-4xl">
+          <h2 className={`mt-4 font-heading ${getTitleClasses(design)} font-bold tracking-tight`} style={getTitleStyle(design)}>
             <SplitText variant="words">
               {config.title}
             </SplitText>
@@ -104,7 +106,7 @@ export function NewsListSection({ config, news }: NewsListSectionProps): ReactEl
                 data-news-item=""
                 className="group rounded-lg border border-border bg-card p-5 transition-shadow duration-300 hover:shadow-lg"
               >
-                <time className="text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
+                <time className="text-[11px] uppercase tracking-[0.15em] text-muted-foreground" style={getTextStyle(design)}>
                   {formatDate(item.publishedAt)}
                 </time>
                 <h3 className="mt-2 font-heading text-base font-medium tracking-tight transition-colors group-hover:text-primary-dark md:text-lg">
@@ -118,7 +120,7 @@ export function NewsListSection({ config, news }: NewsListSectionProps): ReactEl
                 data-news-item=""
                 className="group flex items-baseline gap-4 py-4 transition-colors first:pt-0 last:pb-0"
               >
-                <time className="shrink-0 text-[11px] tabular-nums uppercase tracking-[0.1em] text-muted-foreground">
+                <time className="shrink-0 text-[11px] tabular-nums uppercase tracking-[0.1em] text-muted-foreground" style={getTextStyle(design)}>
                   {formatDate(item.publishedAt)}
                 </time>
                 <h3 className="text-sm font-medium transition-colors group-hover:text-primary-dark md:text-base">
@@ -133,16 +135,15 @@ export function NewsListSection({ config, news }: NewsListSectionProps): ReactEl
           <ScrollReveal delay={0.2}>
             <div className="mt-8 text-center">
               <Link
-                href="/news"
+                href={config.viewAllUrl}
                 className="group relative inline-block text-xs uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-primary-dark"
               >
-                全てのお知らせ &rarr;
+                {config.viewAllText} &rarr;
                 <span className="absolute bottom-0 left-0 h-px w-0 bg-primary-dark/60 transition-all duration-300 group-hover:w-full" />
               </Link>
             </div>
           </ScrollReveal>
         )}
-      </div>
-    </section>
+    </SectionWrapper>
   )
 }

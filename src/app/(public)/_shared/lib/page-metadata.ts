@@ -1,19 +1,26 @@
 /**
  * ページメタデータ取得ユーティリティ
  *
+ * 全ページ共通のメタデータ生成パイプライン。
+ * DB（Pageテーブル）の SEO/OGP 設定を優先し、
+ * 未設定フィールドは Settings フォールバック → デフォルト値の順で補完。
+ *
  * Next.js 16 PPR対応:
  * - 'use cache' ディレクティブでキャッシュし、プリレンダリング時の動的データアクセスを回避
- * - データベースからSEO/OGP設定を取得
  */
 
 import { cacheLife, cacheTag } from 'next/cache'
 import type { Metadata } from 'next'
 import { prisma } from '@/shared/lib/prisma'
+import { CACHE_TAGS, getBaseUrl, SITE_DEFAULTS } from '@/shared/lib/constants'
+import { getSeoSettings } from '@/public/lib/seo/metadata-factory'
 import {
   SYSTEM_PAGES,
   getSystemPageDefinition,
   type SystemPageDefinition,
 } from '@/shared/lib/validations/page'
+
+const BASE_URL = getBaseUrl()
 
 /**
  * SEOデータ型
@@ -36,7 +43,7 @@ export interface PageSeoData {
 export async function getPageSeo(slug: string): Promise<PageSeoData | null> {
   'use cache'
   cacheLife('hours')
-  cacheTag('page-seo', `page-seo-${slug}`)
+  cacheTag(CACHE_TAGS.PAGE_SEO, `${CACHE_TAGS.PAGE_SEO}-${slug}`)
 
   const page = await prisma.page.findUnique({
     where: { slug },
@@ -73,45 +80,79 @@ export function getDefaultPageSeo(slug: string): PageSeoData | null {
 }
 
 /**
- * ページのメタデータを生成
+ * ページのメタデータを生成（統一パイプライン）
  *
- * データベースに設定がある場合はそれを使用し、
- * ない場合はデフォルト値を使用
+ * 優先順位: DB PageSEO設定 > Settings フォールバック > システムページデフォルト > フォールバック引数
+ *
+ * 生成項目:
+ * - title / description
+ * - canonical URL
+ * - Open Graph (url, siteName, locale, images, type)
+ * - Twitter Card (summary_large_image)
+ * - keywords
  */
 export async function generatePageMetadata(
   slug: string,
   fallback?: { title: string; description?: string }
 ): Promise<Metadata> {
-  const seo = await getPageSeo(slug)
+  // Page SEO と Settings を並列取得
+  const [seo, settings] = await Promise.all([
+    getPageSeo(slug),
+    getSeoSettings(),
+  ])
   const defaultSeo = getDefaultPageSeo(slug)
 
-  // データベースの設定 > デフォルト設定 > フォールバック の優先順位
+  const siteName = settings?.siteName ?? SITE_DEFAULTS.name
+
+  // タイトル: DB > デフォルト > フォールバック
   const title = seo?.title || defaultSeo?.title || fallback?.title || slug
+
+  // 説明文: DB metaDescription > DB description > Settings > デフォルト > フォールバック
   const description =
     seo?.metaDescription ||
     seo?.description ||
+    settings?.defaultMetaDescription ||
     defaultSeo?.description ||
-    fallback?.description
+    fallback?.description ||
+    undefined
+
+  // OGP タイトル/説明: DB OGP > Settings OGP > 通常値
+  const ogTitle = seo?.ogpTitle || settings?.defaultOgpTitle || title
+  const ogDescription = seo?.ogpDescription || settings?.defaultOgpDescription || description
+
+  // OGP 画像: DB > Settings デフォルト
+  const ogImage = seo?.ogpImageUrl || settings?.defaultOgpImageUrl || undefined
+
+  // canonical URL: 'home' はルート URL、それ以外は /{slug}
+  const canonicalUrl = slug === 'home' ? `${BASE_URL}/` : `${BASE_URL}/${slug}`
 
   const metadata: Metadata = {
     title,
     description,
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    openGraph: {
+      title: ogTitle,
+      description: ogDescription ?? undefined,
+      url: canonicalUrl,
+      siteName,
+      locale: 'ja_JP',
+      type: 'website',
+      ...(ogImage && { images: [{ url: ogImage }] }),
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: ogTitle,
+      description: ogDescription ?? undefined,
+      ...(ogImage && { images: [ogImage] }),
+    },
   }
 
-  // OGP設定
-  if (seo?.ogpTitle || seo?.ogpDescription || seo?.ogpImageUrl) {
-    metadata.openGraph = {
-      title: seo.ogpTitle || title,
-      description: seo.ogpDescription || description || undefined,
-      ...(seo.ogpImageUrl && {
-        images: [{ url: seo.ogpImageUrl }],
-      }),
-    }
-  }
-
-  // メタキーワード（SEO効果は限定的だが、設定されている場合は適用）
-  if (seo?.metaKeywords) {
-    metadata.keywords = seo.metaKeywords.split(',').map((k) => k.trim())
+  // メタキーワード
+  if (seo?.metaKeywords || settings?.defaultMetaKeywords) {
+    const keywords = seo?.metaKeywords || settings?.defaultMetaKeywords || ''
+    metadata.keywords = keywords.split(',').map((k) => k.trim())
   }
 
   return metadata
