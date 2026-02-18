@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Pencil } from 'lucide-react'
 import { formatDateShort, formatDateTimeShort, formatPrice } from '@/shared/lib/utils'
 import { toast } from 'sonner'
 import {
@@ -93,6 +93,12 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
             </p>
           </div>
         </div>
+        <Button variant="outline" size="sm" asChild>
+          <Link href={`/admin/customers/${customer.id}/edit`}>
+            <Pencil className="mr-2 h-4 w-4" />
+            編集
+          </Link>
+        </Button>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
