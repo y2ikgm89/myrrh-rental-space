@@ -23,7 +23,10 @@ import {
   stepsShapeState,
   startNumberState,
   stepsFillState,
+  stepsColorState,
 } from '../../nodes/StepsContainerNode'
+import { type AccentColor } from '../../config/accent-colors'
+import { ColorSwatchPicker } from '../ColorSwatchPicker'
 import { $isStepItemNode } from '../../nodes/StepItemNode'
 import { $isStepTitleNode } from '../../nodes/StepTitleNode'
 import { $addStep, $removeStep, $renumberSteps, $reorderStep } from '../../plugins/StepsPlugin'
@@ -62,12 +65,13 @@ export function StepsInspectorPanel({ nodeKey, node }: StepsInspectorPanelProps)
   const [editor] = useLexicalComposerContext()
   const updateNode = useNodeUpdater(nodeKey, $isStepsContainerNode)
 
-  const { stepsStyle, stepsLabel, stepsShape, startNumber, stepsFill, stepItems } = editor.getEditorState().read(() => {
+  const { stepsStyle, stepsLabel, stepsShape, startNumber, stepsFill, stepsColor, stepItems } = editor.getEditorState().read(() => {
     const style = $getState(node, stepsStyleState)
     const label = $getState(node, stepsLabelState)
     const shape = $getState(node, stepsShapeState)
     const start = $getState(node, startNumberState)
     const fill = $getState(node, stepsFillState)
+    const color = $getState(node, stepsColorState)
     const items: StepItemInfo[] = []
     const children = node.getChildren()
     for (const child of children) {
@@ -85,6 +89,7 @@ export function StepsInspectorPanel({ nodeKey, node }: StepsInspectorPanelProps)
       stepsShape: shape,
       startNumber: start,
       stepsFill: fill,
+      stepsColor: color,
       stepItems: items,
     }
   })
@@ -118,6 +123,10 @@ export function StepsInspectorPanel({ nodeKey, node }: StepsInspectorPanelProps)
     if (isStepsFill(value)) {
       updateNode((n) => { $setState(n, stepsFillState, value) })
     }
+  }
+
+  const handleColorChange = (color: AccentColor) => {
+    updateNode((n) => { $setState(n, stepsColorState, color) })
   }
 
   const handleStartNumberChange = (value: number) => {
@@ -251,6 +260,12 @@ export function StepsInspectorPanel({ nodeKey, node }: StepsInspectorPanelProps)
               />
             </div>
           )}
+
+          <ColorSwatchPicker
+            value={stepsColor}
+            onChange={handleColorChange}
+            label="アクセントカラー"
+          />
       </InspectorFields>
 
       <InspectorSection title={`アイテム (${stepItems.length})`}>

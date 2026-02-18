@@ -8,10 +8,12 @@
 
 import { $getState, $setState } from 'lexical'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $isPullQuoteNode, type PullQuoteNode, PULL_QUOTE_STYLES, isPullQuoteStyle, quoteStyleState } from '../../nodes/PullQuoteNode'
+import { $isPullQuoteNode, type PullQuoteNode, PULL_QUOTE_STYLES, isPullQuoteStyle, quoteStyleState, pullQuoteColorState } from '../../nodes/PullQuoteNode'
+import { type AccentColor } from '../../config/accent-colors'
 import { InspectorHeader } from '../InspectorHeader'
 import { InspectorFields } from '../InspectorFields'
 import { useNodeUpdater } from '../hooks/use-node-updater'
+import { ColorSwatchPicker } from '../ColorSwatchPicker'
 import { Label } from '@/admin/components/ui'
 import {
   Select,
@@ -31,12 +33,19 @@ export function PullQuoteInspectorPanel({ nodeKey, node }: PullQuoteInspectorPan
   const [editor] = useLexicalComposerContext()
   const updateNode = useNodeUpdater(nodeKey, $isPullQuoteNode)
 
-  const quoteStyle = editor.getEditorState().read(() => $getState(node, quoteStyleState))
+  const { quoteStyle, quoteColor } = editor.getEditorState().read(() => ({
+    quoteStyle: $getState(node, quoteStyleState),
+    quoteColor: $getState(node, pullQuoteColorState),
+  }))
 
   const handleStyleChange = (value: string) => {
     if (isPullQuoteStyle(value)) {
       updateNode((n) => { $setState(n, quoteStyleState, value) })
     }
+  }
+
+  const handleColorChange = (color: AccentColor) => {
+    updateNode((n) => { $setState(n, pullQuoteColorState, color) })
   }
 
   return (
@@ -59,6 +68,11 @@ export function PullQuoteInspectorPanel({ nodeKey, node }: PullQuoteInspectorPan
               </SelectContent>
             </Select>
           </div>
+          <ColorSwatchPicker
+            value={quoteColor}
+            onChange={handleColorChange}
+            label="アクセントカラー"
+          />
       </InspectorFields>
     </div>
   )

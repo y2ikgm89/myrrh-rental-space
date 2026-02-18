@@ -9,13 +9,15 @@
 import { $getNodeByKey, $getState, $setState } from 'lexical'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { SortableInspectorList, type SortableInspectorItem } from '../SortableInspectorList'
-import { $isTabsContainerNode, type TabsContainerNode, activeIndexState, TABS_STYLES, TABS_SIZES, TABS_FIXED_WIDTHS, isTabsStyle, isTabsSize, isTabsFixedWidth, tabsStyleState, tabsSizeState, tabsFixedWidthState } from '../../nodes/TabsContainerNode'
+import { $isTabsContainerNode, type TabsContainerNode, activeIndexState, TABS_STYLES, TABS_SIZES, TABS_FIXED_WIDTHS, isTabsStyle, isTabsSize, isTabsFixedWidth, tabsStyleState, tabsSizeState, tabsFixedWidthState, tabsColorState } from '../../nodes/TabsContainerNode'
+import { type AccentColor } from '../../config/accent-colors'
 import { $isTabListNode } from '../../nodes/TabListNode'
 import { $isTabTitleNode } from '../../nodes/TabTitleNode'
 import { $isTabPanelNode } from '../../nodes/TabPanelNode'
 import { $addTab, $removeTab, $reorderTab, handleTabClick } from '../../plugins/TabsPlugin'
 import { InspectorHeader } from '../InspectorHeader'
 import { InspectorSection } from '../InspectorSection'
+import { ColorSwatchPicker } from '../ColorSwatchPicker'
 import { useNodeUpdater } from '../hooks/use-node-updater'
 import { Label } from '@/admin/components/ui'
 import {
@@ -49,11 +51,12 @@ export function TabsInspectorPanel({ nodeKey, node }: TabsInspectorPanelProps) {
   const [editor] = useLexicalComposerContext()
   const updateNode = useNodeUpdater(nodeKey, $isTabsContainerNode)
 
-  const { activeIndex, tabsStyle, tabsSize, tabsFixedWidth, tabItems } = editor.getEditorState().read(() => {
+  const { activeIndex, tabsStyle, tabsSize, tabsFixedWidth, tabsColor, tabItems } = editor.getEditorState().read(() => {
     const active = $getState(node, activeIndexState)
     const style = $getState(node, tabsStyleState)
     const size = $getState(node, tabsSizeState)
     const fixedWidth = $getState(node, tabsFixedWidthState)
+    const color = $getState(node, tabsColorState)
     const children = node.getChildren()
     const tabList = children.find($isTabListNode)
     const items: TabItemInfo[] = []
@@ -71,7 +74,7 @@ export function TabsInspectorPanel({ nodeKey, node }: TabsInspectorPanelProps) {
       }
     }
 
-    return { activeIndex: active, tabsStyle: style, tabsSize: size, tabsFixedWidth: fixedWidth, tabItems: items }
+    return { activeIndex: active, tabsStyle: style, tabsSize: size, tabsFixedWidth: fixedWidth, tabsColor: color, tabItems: items }
   })
 
   const canRemove = tabItems.length > MIN_TABS
@@ -93,6 +96,10 @@ export function TabsInspectorPanel({ nodeKey, node }: TabsInspectorPanelProps) {
     if (isTabsFixedWidth(value)) {
       updateNode((n) => { $setState(n, tabsFixedWidthState, value) })
     }
+  }
+
+  const handleColorChange = (color: AccentColor) => {
+    updateNode((n) => { $setState(n, tabsColorState, color) })
   }
 
   const handleAddTab = () => {
@@ -187,6 +194,11 @@ export function TabsInspectorPanel({ nodeKey, node }: TabsInspectorPanelProps) {
             </Select>
           </div>
         )}
+        <ColorSwatchPicker
+          value={tabsColor}
+          onChange={handleColorChange}
+          label="アクセントカラー"
+        />
       </InspectorSection>
 
       <InspectorSection title={`アイテム (${tabItems.length})`}>
