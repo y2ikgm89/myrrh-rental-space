@@ -16,6 +16,7 @@
  * @module shared/lib/calendar-sync
  */
 
+import 'server-only'
 import { prisma } from '@/shared/lib/prisma'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
 import { fireAndForget } from '@/shared/lib/async-utils'

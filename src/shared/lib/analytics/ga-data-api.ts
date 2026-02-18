@@ -13,6 +13,7 @@
  * @module shared/lib/analytics/ga-data-api
  */
 
+import 'server-only'
 import { BetaAnalyticsDataClient } from '@google-analytics/data'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
 

@@ -1,3 +1,4 @@
+import 'server-only'
 import { Resend } from 'resend'
 import { SITE_DEFAULTS } from './constants'
 

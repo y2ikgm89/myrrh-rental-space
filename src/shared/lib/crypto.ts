@@ -20,6 +20,7 @@
  * @module shared/lib/crypto
  */
 
+import 'server-only'
 import {
   createCipheriv,
   createDecipheriv,

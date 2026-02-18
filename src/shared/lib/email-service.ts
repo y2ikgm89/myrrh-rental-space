@@ -17,6 +17,7 @@
  * @module shared/lib/email-service
  */
 
+import 'server-only'
 import { getResendClient, getFromAddress, isEmailEnabled } from './email'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from './errors'
 import { ReservationConfirmationEmail } from '@/shared/emails/reservation-confirmation'

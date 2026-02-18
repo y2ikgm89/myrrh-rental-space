@@ -6,6 +6,7 @@
  * 接続テスト機能
  */
 
+import 'server-only'
 import Stripe from 'stripe'
 import { safeDecrypt } from '@/shared/lib/crypto'
 

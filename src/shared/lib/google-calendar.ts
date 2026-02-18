@@ -17,6 +17,7 @@
  * @module shared/lib/google-calendar
  */
 
+import 'server-only'
 import { google, calendar_v3 } from 'googleapis'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from './errors'
 import { safeDecrypt, encryptApiKey } from '@/shared/lib/crypto'

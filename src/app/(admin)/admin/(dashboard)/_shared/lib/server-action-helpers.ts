@@ -9,6 +9,7 @@
  * 各 actions/*.ts ファイル（'use server' 付き）でインポートして使用する
  */
 
+import 'server-only'
 import { getSession, getSessionUser, type User } from '@/shared/lib/auth'
 import { Role, AuditAction } from '@/shared/generated/prisma/enums'
 import {

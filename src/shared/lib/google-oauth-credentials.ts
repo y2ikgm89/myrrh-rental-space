@@ -7,6 +7,7 @@
  * @module shared/lib/google-oauth-credentials
  */
 
+import 'server-only'
 import { prisma } from './prisma'
 import { safeDecrypt } from './crypto'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from './errors'

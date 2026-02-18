@@ -5,6 +5,7 @@
  * 管理画面での設定（Zone ID, API Token）をDBから取得して使用
  */
 
+import 'server-only'
 import { z } from 'zod'
 import { prisma } from './prisma'
 import { safeDecrypt } from './crypto'

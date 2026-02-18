@@ -14,6 +14,7 @@
  * @module shared/lib/turnstile
  */
 
+import 'server-only'
 import { prisma } from './prisma'
 import { decrypt, isEncrypted } from './crypto'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from './errors'
