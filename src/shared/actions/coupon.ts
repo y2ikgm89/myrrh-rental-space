@@ -140,3 +140,18 @@ export async function incrementCouponUsage(couponId: string): Promise<void> {
     data: { usageCount: { increment: 1 } },
   })
 }
+
+/**
+ * クーポン使用回数をデクリメント
+ *
+ * 予約編集でクーポンを変更・削除した際に呼び出される。
+ * 0以下にはならないよう MAX(0, count - 1) で更新する。
+ *
+ * @param couponId - クーポンID
+ */
+export async function decrementCouponUsage(couponId: string): Promise<void> {
+  await prisma.coupon.updateMany({
+    where: { id: couponId, usageCount: { gt: 0 } },
+    data: { usageCount: { decrement: 1 } },
+  })
+}
