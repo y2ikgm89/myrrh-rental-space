@@ -1,3 +1,9 @@
+---
+paths:
+  - src/app/(public*)/**
+  - src/app/(admin)/**
+---
+
 # アクセシビリティ（a11y）ルール
 
 > WCAG 2.2 AA / React 19 / GSAP prefers-reduced-motion / SkipLink / AriaLiveRegion 対応

@@ -1,3 +1,8 @@
+---
+paths:
+  - src/app/(public*)/**
+---
+
 # SEO / 構造化データパターンルール
 
 > JSON-LD @graph / microdata / NAP一貫性 / MEO対応

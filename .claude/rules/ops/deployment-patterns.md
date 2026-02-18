@@ -1,3 +1,12 @@
+---
+paths:
+  - Dockerfile
+  - cloudbuild.yaml
+  - .dockerignore
+  - .gcloudignore
+  - docs/operations/**
+---
+
 # デプロイパターンルール
 
 > Docker / Cloud Run / Cloud Build / Artifact Registry対応
