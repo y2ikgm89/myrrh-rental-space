@@ -39,6 +39,7 @@ import { AuditAction } from '@/shared/generated/prisma/enums'
 import { SESSION_CONFIG, getAppUrl } from './constants'
 import { isRecord } from './serialize'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from './errors'
+import { serverEnv } from './env/server'
 import type { GoogleOAuthCredentials } from './google-oauth-credentials'
 
 /**
@@ -127,7 +128,7 @@ function createAuth(credentials?: GoogleOAuthCredentials | null) {
       }),
     },
     plugins: [nextCookies()],
-    trustedOrigins: [process.env["BETTER_AUTH_URL"] ?? getAppUrl()],
+    trustedOrigins: [serverEnv.BETTER_AUTH_URL ?? getAppUrl()],
   })
 }
 

@@ -16,6 +16,7 @@
 import 'server-only'
 import { BetaAnalyticsDataClient } from '@google-analytics/data'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
+import { serverEnv } from '@/shared/lib/env/server'
 
 // =============================================================================
 // Types
@@ -48,7 +49,7 @@ export type AnalyticsError = {
  * 環境変数 GOOGLE_APPLICATION_CREDENTIALS_JSON からクレデンシャルを読み込む
  */
 function getAnalyticsClient(): BetaAnalyticsDataClient | null {
-  const credentialsJson = process.env["GOOGLE_APPLICATION_CREDENTIALS_JSON"]
+  const credentialsJson = serverEnv.GOOGLE_APPLICATION_CREDENTIALS_JSON
 
   if (!credentialsJson) {
     return null
@@ -169,5 +170,5 @@ export async function getAnalyticsStats(
  * GA Data APIが利用可能かチェック
  */
 export function isAnalyticsApiAvailable(): boolean {
-  return !!process.env["GOOGLE_APPLICATION_CREDENTIALS_JSON"]
+  return !!serverEnv.GOOGLE_APPLICATION_CREDENTIALS_JSON
 }

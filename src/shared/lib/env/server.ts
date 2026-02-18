@@ -82,6 +82,9 @@ export const serverEnv = createEnv({
       .min(32, { error: 'ADMIN_LOGIN_TOKEN must be at least 32 characters' })
       .optional(),
 
+    // Google Analytics（サービスアカウント JSON — GA4 Data API）
+    GOOGLE_APPLICATION_CREDENTIALS_JSON: z.string().optional(),
+
     // Node environment
     NODE_ENV: z
       .enum(['development', 'production', 'test'])
@@ -104,6 +107,7 @@ export const serverEnv = createEnv({
     ENCRYPTION_KEY: process.env["ENCRYPTION_KEY"],
     CRON_SECRET: process.env["CRON_SECRET"],
     ADMIN_LOGIN_TOKEN: process.env["ADMIN_LOGIN_TOKEN"],
+    GOOGLE_APPLICATION_CREDENTIALS_JSON: process.env["GOOGLE_APPLICATION_CREDENTIALS_JSON"],
     NODE_ENV: process.env["NODE_ENV"],
   },
   // ビルド時検証をスキップするオプション（CI環境用）

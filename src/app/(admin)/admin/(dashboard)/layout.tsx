@@ -21,9 +21,10 @@ import { MainContent } from './_components/MainContent'
 import { TopBar } from './_components/TopBar'
 import { UserInfo, UserInfoSkeleton } from './_components/UserInfo'
 import { prisma } from '@/shared/lib/prisma'
+import { serverEnv } from '@/shared/lib/env/server'
 import type { ReactElement, ReactNode } from 'react'
 
-const ADMIN_LOGIN_TOKEN = process.env["ADMIN_LOGIN_TOKEN"] || ''
+const ADMIN_LOGIN_TOKEN = serverEnv.ADMIN_LOGIN_TOKEN ?? ''
 
 async function getAdminBrandingSettings() {
   'use cache'
