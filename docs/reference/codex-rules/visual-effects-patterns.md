@@ -26,6 +26,7 @@ paths:
 ## パフォーマンスバジェット
 
 ```typescript
+// src/app/(public)/_shared/components/effects/core/types.ts
 export const PERFORMANCE_BUDGETS: Record<EffectLevel, PerformanceBudget> = {
   1: { targetFps: 30, maxWebGLContexts: 0, allowThreeJs: false, allowPixiJs: false },
   2: { targetFps: 45, maxWebGLContexts: 0, allowThreeJs: false, allowPixiJs: false },
@@ -38,15 +39,39 @@ export const PERFORMANCE_BUDGETS: Record<EffectLevel, PerformanceBudget> = {
 
 ```
 detect-gpu（ベンチマーク）→ gpuTier (0-3) → effectLevel 変換
-  - FALLBACK/tier 0 → WebGL直接検出フォールバック
-  - desktop tier 3 → L4
+  - FALLBACK / tier 0 → WebGL直接検出フォールバック（専用GPU検出で最大tier 3まで補正）
+  - desktop tier 3 → L4（PixiJS有効）
+  - desktop tier 0-1 → L1（toEffectLevel は n<=1 をL1に丸める）
+  - desktop tier 2 → L2
   - mobile tier N → L(N-1)（1段階ペナルティ）
-  - prefersReducedMotion → 常にL1
+  - prefersReducedMotion → 常にL1（GPU検出前に即座に返す）
 ```
+
+### GPU検出の実際のロジック
+
+```typescript
+// device-capabilities.ts
+const baseLevel = gpuTier === 3 && !isMobile ? 4 : gpuTier
+const rawLevel = toEffectLevel(baseLevel)
+const effectLevel = isMobile && rawLevel > 1
+  ? toEffectLevel(baseLevel - 1)
+  : rawLevel
+```
+
+**注意**: デスクトップ tier 3 のみが L4 に到達する。tier 2 → L2、tier 1 → L1。
+
+### WebGL直接検出フォールバック
+
+detect-gpu がベンチマーク失敗（type: "FALLBACK"）または tier 0 の場合:
+- WebGL2 + 専用GPU（NVIDIA/Radeon/GeForce/RTX/GTX キーワード） → tier 3
+- WebGL2 → tier 2
+- WebGL1 のみ → tier 1
+- WebGL なし → tier 0
 
 ### DeviceCapabilities 型
 
 ```typescript
+// src/app/(public)/_shared/components/effects/core/types.ts
 interface DeviceCapabilities {
   readonly gpuTier: 0 | 1 | 2 | 3
   readonly isMobile: boolean
@@ -60,24 +85,37 @@ interface DeviceCapabilities {
 ## VisualEffectsProvider hook インターフェース
 
 ```typescript
-const { effectLevel, budget, capabilities, degradeTo } = useVisualEffects()
+// src/app/(public)/_shared/components/effects/core/VisualEffectsProvider.tsx
+const { effectLevel, budget, capabilities, isReady, degradeTo } = useVisualEffects()
 
 // L3以上でThree.js有効
 if (effectLevel >= 3 && budget.allowThreeJs) { /* ThreeCanvas描画 */ }
 
-// ダウングレードのみ許可
+// ダウングレードのみ許可（Math.min でガード）
 degradeTo(toEffectLevel(effectLevel - 1))
+
+// Provider外でも安全に使いたい場合
+const ctx = useVisualEffectsOptional()  // null | VisualEffectsContextValue
 ```
 
 > **VisualEffectsProvider完全実装**: → `docs/reference/claude-rules/visual-effects-reference.md`
 
+## prefers-reduced-motion の動的監視
+
+`VisualEffectsProvider` は `MediaQueryList.addEventListener('change', ...)` で OS 設定変更をリアルタイム監視。
+設定変更時に即座に `effectLevel = 1` へ強制ダウングレード。GPU 検出完了後も動的に反応する。
+
 ## WebGLコンテキストLRU管理
 
 ```typescript
+// src/app/(public)/_shared/components/effects/core/webgl-context-manager.ts
 import { webGLContextManager } from '../core/webgl-context-manager'
+
 webGLContextManager.register({ id, canvas, type: 'three', createdAt: Date.now() })
 webGLContextManager.unregister(id)
 ```
+
+`type` は `'three' | 'pixi' | 'raw'`。maxWebGLContexts（budget）を超えた場合に最古コンテキストをLRU削除。
 
 ## Z-index ベースライン
 
@@ -95,6 +133,7 @@ webGLContextManager.unregister(id)
 Three.js / PixiJS は React state を使わず mutable ref でスクロール値を管理（再レンダリングゼロ）。
 
 ```typescript
+// types.ts の ScrollState 型
 interface ScrollState {
   readonly scroll: number
   readonly limit: number
@@ -108,12 +147,22 @@ interface ScrollState {
 ## エフェクトレベル判定ロジック
 
 ```typescript
-function determineEffectLevel(gpuTier, isMobile, prefersReducedMotion): EffectLevel {
-  if (prefersReducedMotion) return 1
-  if (gpuTier.type !== 'BENCHMARK' || gpuTier.tier === 0) return detectFromWebGL()
-  if (isMobile) return toEffectLevel(Math.max(1, gpuTier.tier - 1))
-  if (gpuTier.tier === 3) return 4
-  return toEffectLevel(gpuTier.tier)
+// device-capabilities.ts（実際の実装）
+async function detectDeviceCapabilities(): Promise<DeviceCapabilities> {
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (prefersReducedMotion) return { ..., effectLevel: 1 }
+
+  // detect-gpu ベンチマーク → 失敗時はWebGL直接検出にフォールバック
+  // ...
+
+  // デスクトップ tier 3 → L4。モバイルは1段階下げ
+  const baseLevel = gpuTier === 3 && !isMobile ? 4 : gpuTier
+  const rawLevel = toEffectLevel(baseLevel)
+  const effectLevel = isMobile && rawLevel > 1
+    ? toEffectLevel(baseLevel - 1)
+    : rawLevel
+
+  return { gpuTier, isMobile, prefersReducedMotion: false, effectLevel, gpuModel, estimatedFps }
 }
 ```
 
@@ -132,7 +181,7 @@ function determineEffectLevel(gpuTier, isMobile, prefersReducedMotion): EffectLe
 | L1 | CSS transition のみ。パララックスなし |
 | L2 | GSAP パララックス量50%削減、ピン固定回避 |
 | L3 | Three.js DPR制限（1.5）、パーティクル数40% |
-| L4 | **モバイルでは到達不可** |
+| L4 | **モバイルでは到達不可**（isMobile ペナルティで最高 L3） |
 
 ## Web Vitals 目標
 
@@ -190,7 +239,7 @@ import { useLenis } from 'lenis/react'
 ## 禁止事項
 
 1. **GPU検出スキップ禁止** — `VisualEffectsProvider` なしでThree.js/PixiJSを使用しない
-2. **effectLevel昇格禁止** — `degradeTo` はダウングレードのみ
+2. **effectLevel昇格禁止** — `degradeTo` はダウングレードのみ（`Math.min` でガード済み）
 3. **React stateでスクロールデータ管理禁止** — mutable ref パターン使用
 4. **WebGLコンテキスト登録漏れ禁止** — 必ず `webGLContextManager` に登録/解除
 5. **同期的なGPU検出禁止** — `detectDeviceCapabilities()` は非同期
@@ -200,14 +249,40 @@ import { useLenis } from 'lenis/react'
 9. **WebGLコンテキスト数超過の放置禁止** — IntersectionObserver で管理
 10. **フォールバック未定義の高レベルエフェクト禁止** — L3/L4は必ずL2/L1フォールバックを用意
 
+```typescript
+// NG: VisualEffectsProvider 外で直接 Three.js を使用
+export function MyEffect() {
+  return <Canvas><mesh /></Canvas>  // effectLevel チェックなし
+}
+
+// OK: useVisualEffects() で effectLevel を確認してから描画
+export function MyEffect() {
+  const { effectLevel } = useVisualEffects()
+  if (effectLevel < 2) return null
+  return <ThreeCanvas><mesh /></ThreeCanvas>
+}
+```
+
+```typescript
+// NG: effectLevel をアップグレード（degradeTo は昇格不可）
+degradeTo(5)  // 現在が L3 でも L5 に昇格しようとする
+
+// OK: ダウングレードのみ（内部で Math.min により昇格は無効）
+degradeTo(2)  // L4 → L2 にダウングレード
+```
+
 ## ファイル配置
+
+パスは `src/app/(public)/_shared/components/` を起点とした相対パス。
 
 | パス | 内容 |
 |------|------|
-| `effects/core/types.ts` | EffectLevel, DeviceCapabilities, ScrollState, PerformanceBudget 型 |
-| `effects/core/device-capabilities.ts` | GPU検出ロジック |
+| `effects/core/types.ts` | EffectLevel, DeviceCapabilities, ScrollState, PerformanceBudget 型、PERFORMANCE_BUDGETS定数、toEffectLevel |
+| `effects/core/device-capabilities.ts` | GPU検出ロジック（detect-gpu + WebGL直接検出フォールバック） |
 | `effects/core/webgl-context-manager.ts` | WebGLコンテキストLRU管理 |
-| `effects/core/VisualEffectsProvider.tsx` | エフェクトレベルProvider |
+| `effects/core/VisualEffectsProvider.tsx` | エフェクトレベルProvider + `useVisualEffects()` + `useVisualEffectsOptional()` |
+| `effects/core/PerformanceMonitor.tsx` | FPS監視UI（開発ツール） |
+| `effects/core/ScrollOrchestrator.tsx` | スクロールオーケストレーション |
 | `effects/three/` | Three.js / R3F コンポーネント |
 | `effects/pixi/` | PixiJS v8 コンポーネント |
 

@@ -17,12 +17,13 @@
 | `NewsArticle` | — | `/news/[slug]/page.tsx` | ニュース詳細 |
 
 ```typescript
-// layout.tsx — @graph パターン
+// layout.tsx — @graph パターン（実際の実装）
 async function StructuredDataContent(): Promise<ReactElement> {
   const graphData = await getGraphJsonLdData()
   return <GraphJsonLd {...graphData} />
 }
 
+// body 内の Suspense でラップ
 <Suspense fallback={null}>
   <StructuredDataContent />
 </Suspense>
@@ -31,29 +32,46 @@ async function StructuredDataContent(): Promise<ReactElement> {
 ### 原則
 
 - **@graph で LocalBusiness + WebSite を layout.tsx に1つだけ配置**。個別ページに重複しない
-- JSON-LDコンポーネントは `@/public/components/seo/JsonLd.tsx` に集約（`GraphJsonLd`）
-- XSS対策: JSON文字列はUnicodeエスケープ（`<`, `>`, `&`）
+- JSON-LDコンポーネントは `@/public/components/seo/JsonLd.tsx` に集約
+- XSS対策: JSON文字列は Unicodeエスケープ（`<`, `>`, `&`, U+2028, U+2029）
 - `@id` 相互参照でGoogleのナレッジグラフ理解を向上
 
 ### microdata（HTML属性）
 
-Footer・BusinessInfo の NAP 情報に schema.org microdata を付与:
+`BusinessInfo` の NAP 情報に schema.org microdata を付与（`Footer` も同様のパターン）:
 
 ```tsx
-<address itemScope itemType="https://schema.org/LocalBusiness" className="not-italic">
+// BusinessInfo.tsx — 実際の実装パターン
+<div
+  className="..."
+  itemScope
+  itemType="https://schema.org/LocalBusiness"
+>
   <meta itemProp="name" content={info.name} />
-  <div itemProp="address" itemScope itemType="https://schema.org/PostalAddress">
-    <meta itemProp="postalCode" content={postalCode} />
-    <meta itemProp="addressRegion" content={prefecture} />
-    <meta itemProp="addressLocality" content={city} />
-    <meta itemProp="streetAddress" content={streetAddress} />
+
+  <div
+    itemProp="address"
+    itemScope
+    itemType="https://schema.org/PostalAddress"
+  >
+    {info.postalCode && <meta itemProp="postalCode" content={info.postalCode} />}
+    {info.prefecture && <meta itemProp="addressRegion" content={info.prefecture} />}
+    {info.city && <meta itemProp="addressLocality" content={info.city} />}
+    {info.streetAddress && <meta itemProp="streetAddress" content={info.streetAddress} />}
+    {info.address}
   </div>
-  <a itemProp="telephone" href={`tel:${phone}`}>{phone}</a>
-  <a itemProp="email" href={`mailto:${email}`}>{email}</a>
+
+  <a itemProp="telephone" href={`tel:${info.phone}`}>{info.phone}</a>
+  <a itemProp="email" href={`mailto:${info.email}`}>{info.email}</a>
+
   {/* 営業時間 microdata */}
-  <time itemProp="openingHours" content="Mo-Fr 09:00-21:00">09:00 - 21:00</time>
-</address>
+  <time itemProp="openingHours" content={h.microdataContent}>
+    {h.time}
+  </time>
+</div>
 ```
+
+**注意**: microdata のルート要素は `<address>` ではなく `<div>` に `itemScope itemType` を付与するパターンを採用。
 
 ## NAP一貫性（Name・Address・Phone）
 
@@ -63,24 +81,37 @@ Footer・BusinessInfo の NAP 情報に schema.org microdata を付与:
 
 ## データソース
 
-| データ | 取得関数 | キャッシュタグ |
-|--------|---------|--------------|
-| ビジネス情報（公開表示用） | `getBusinessInfo()` | `CACHE_TAGS.BUSINESS_SETTINGS` |
-| ビジネス設定（生データ） | `getPublicBusinessSettings()` | `CACHE_TAGS.BUSINESS_SETTINGS` |
-| 組織設定（JSON-LD用） | `getOrganizationSettings()` | `CACHE_TAGS.ORGANIZATION_SETTINGS` |
-| @graph 統合データ | `getGraphJsonLdData()` | 上記を並列取得 |
-| ソーシャルリンク | `getSocialLinkUrls()` | `CACHE_TAGS.SOCIAL_LINKS` |
-| SEO設定 | `getSeoSettings()` | `CACHE_TAGS.SEO_SETTINGS` |
-| ページSEO | `getPageSeo(slug)` | `CACHE_TAGS.PAGE_SEO` |
+| データ | 取得関数 | キャッシュタグ | 公開/内部 |
+|--------|---------|--------------|---------|
+| ビジネス情報（コンポーネント用） | `getBusinessInfo()` | `CACHE_TAGS.BUSINESS_SETTINGS` | 公開 |
+| ビジネス設定（生データ） | `getPublicBusinessSettings()` | `CACHE_TAGS.BUSINESS_SETTINGS` | 公開 |
+| @graph 統合データ | `getGraphJsonLdData()` | `ORGANIZATION_SETTINGS`, `SOCIAL_LINKS`（サブ関数経由） | 公開 |
+| LocalBusiness データ | `getLocalBusinessJsonLdData()` | `CACHE_TAGS.ORGANIZATION_SETTINGS` | 公開 |
+| Organization データ（MEOなし） | `getOrganizationJsonLdData()` | `CACHE_TAGS.ORGANIZATION_SETTINGS` | 公開 |
+| WebSite データ | `getWebSiteJsonLdData()` | `CACHE_TAGS.ORGANIZATION_SETTINGS` | 公開 |
+| SEO設定 | `getSeoSettings()` | `CACHE_TAGS.SEO_SETTINGS` | 公開 |
+| ページSEO | `getPageSeo(slug)` | `CACHE_TAGS.PAGE_SEO` | 公開 |
+
+**注意**: `getOrganizationSettings()` と `getSocialLinkUrls()` は `json-ld-config.ts` 内部のプライベート関数。直接インポート不可。
+
+**`getLocalBusinessJsonLdData()` vs `getOrganizationJsonLdData()` の違い**:
+- `getLocalBusinessJsonLdData()`: MEOプロパティ（`telephone`, `address`, `openingHoursSpecification`, `geo` 等）を含むフル仕様の `LocalBusiness` データを返す。`@graph` 経由で layout.tsx に配置。
+- `getOrganizationJsonLdData()`: MEOプロパティを除いた `Organization` 型データを返す。サイト名・URL・ロゴのみ必要な場合に使用。
 
 ### BusinessInfo データレイヤー
 
 `getBusinessInfo()` は `getPublicBusinessSettings()` をラップし、コンポーネント向けの形状にマッピング:
 
-- `address`: 結合済み住所文字列
-- `googleMapsUrl`: Place IDから自動生成（`https://www.google.com/maps/search/?api=1&query=Google&query_place_id={placeId}`）
-- `businessAttributes`: 型安全パース済み `Record<string, boolean>`
+- `name`: ビジネス名（`businessName`）
+- `address`: 結合済み住所文字列（`〒postalCode + prefecture + city + streetAddress + buildingName`）
+- `postalCode`, `prefecture`, `city`, `streetAddress`, `buildingName`: microdata用の個別フィールド
+- `phone`: 電話番号
+- `email`: メールアドレス
 - `businessHours`: 生JSON（コンポーネント側でパース）
+- `holidayNotice`: 休業日テキスト
+- `googleMapsUrl`: Place IDから自動生成（`https://www.google.com/maps/search/?api=1&query=Google&query_place_id={placeId}`）
+- `googleReviewUrl`: Googleクチコミ URL
+- `businessAttributes`: 型安全パース済み `Record<string, boolean>`
 
 ## MEO（ローカル検索最適化）
 
@@ -98,14 +129,16 @@ Footer・BusinessInfo の NAP 情報に schema.org microdata を付与:
 | `openingHoursSpecification` | `businessHours` JSON | 曜日グループ化 |
 | `specialOpeningHoursSpecification` | `specialHolidays` JSON | 休業日 `opens/closes: "00:00"` |
 | `priceRange` | `priceRange` | |
-| `geo` | `latitude` + `longitude` | 両方設定時のみ |
-| `hasMap` | lat/lng から生成 | Google Maps URL |
+| `geo` | `latitude` + `longitude` | 両方設定時のみ。`GeoCoordinates` 型 |
+| `hasMap` | lat/lng から生成 | `https://www.google.com/maps?q={lat},{lng}` |
 | `currenciesAccepted` | 固定 `"JPY"` | |
 | `paymentAccepted` | `paymentAccepted` | |
-| `foundingDate` | `establishedDate` | ISO 8601 |
-| `additionalType` | 固定 Wikipedia URL | |
+| `foundingDate` | `establishedDate` | ISO 8601 (`YYYY-MM-DD`) |
+| `additionalType` | 固定 Wikipedia URL | `https://en.wikipedia.org/wiki/Coworking` |
 | `sameAs` | `SocialLink` テーブル | アクティブなもののみ |
-| `amenityFeature` | `businessAttributes` JSON | `true` の項目のみ |
+| `amenityFeature` | `businessAttributes` JSON | `LocationFeatureSpecification` 型 |
+
+**注意**: `hasMap`（JSON-LD 内、緯度経度から生成）と `googleMapsUrl`（コンポーネント表示用、Place ID から生成）は別物。
 
 ### OpeningHoursSpecification
 
@@ -153,18 +186,14 @@ Footer・BusinessInfo の NAP 情報に schema.org microdata を付与:
 
 | 定数 | 用途 |
 |------|------|
-| `DAY_MAP` | 曜日キー → 英語名（JSON-LD用） |
-| `DAY_LABELS` | 曜日キー → 日本語ラベル（表示用） |
-| `ATTR_LABELS` | 施設属性キー → 日本語ラベル（表示用） |
-
-### Google Maps URL 自動生成
-
-Place ID が設定されていれば URL を自動生成（管理画面での手入力不要）:
+| `DAY_MAP` | 曜日キー → 英語名（JSON-LD用）例: `monday → 'Monday'` |
+| `DAY_LABELS` | 曜日キー → 日本語ラベル（表示用）例: `monday → '月'` |
+| `ATTR_LABELS` | 施設属性キー → 日本語ラベル（表示用）例: `wifi → 'Wi-Fi'` |
+| `convertToOpeningHoursSpecification` | businessHours JSON → OpeningHoursSpec[] 変換 |
 
 ```typescript
-googleMapsUrl: placeId
-  ? `https://www.google.com/maps/search/?api=1&query=Google&query_place_id=${placeId}`
-  : null
+// Footer / BusinessInfo での import
+import { DAY_LABELS, ATTR_LABELS } from '@/public/lib/seo/json-ld-config'
 ```
 
 ### 営業時間フロントエンド表示パターン
@@ -173,77 +202,192 @@ Footer・BusinessInfo で共通のパースロジック:
 
 1. `businessHours` JSON を曜日順にイテレート
 2. 同じ時間帯の曜日をグループ化（「月〜金」形式）
-3. microdata 用の content 属性を生成（`Mo-Fr 09:00-21:00`）
+3. microdata 用の `content` 属性を生成（`Mo-Fr 09:00-21:00`）
 4. `<time itemProp="openingHours" content="...">` で出力
+
+```tsx
+{hoursDisplay.map((h) => (
+  <div key={h.microdataContent}>
+    <span>{h.label}</span>
+    <time itemProp="openingHours" content={h.microdataContent}>
+      {h.time}
+    </time>
+  </div>
+))}
+```
 
 ## 記事詳細ページの構造化データ
 
 ### Article / NewsArticle JSON-LD
 
-ブログ記事・ニュース詳細ページでは `ArticleJsonLd` / `NewsArticleJsonLd` を使用:
+ブログ記事・ニュース詳細ページでは `ArticleJsonLd` / `NewsArticleJsonLd` + `BreadcrumbJsonLd` を使用:
 
-```typescript
-// /posts/[slug]/page.tsx — ブログ記事
+```tsx
+// /posts/[slug]/page.tsx — ブログ記事（実際の実装）
+<BreadcrumbJsonLd
+  items={[
+    { name: 'ホーム', url: '/' },
+    { name: 'ブログ', url: '/posts' },
+    { name: post.title, url: `/posts/${slug}` },
+  ]}
+/>
+
 <ArticleJsonLd
   headline={post.title}
   description={post.metaDescription ?? post.excerpt}
   image={post.thumbnailUrl}
   url={`${baseUrl}/posts/${slug}`}
-  datePublished={toISOString(post.publishedAt) ?? ''}
+  datePublished={datePublished}
   author={post.author ? { name: post.author.name } : undefined}
 />
 
-// /news/[slug]/page.tsx — ニュース
+// /news/[slug]/page.tsx — ニュース（実際の実装）
+<BreadcrumbJsonLd
+  items={[
+    { name: 'ホーム', url: '/' },
+    { name: 'お知らせ', url: '/news' },
+    { name: newsItem.title, url: `/news/${slug}` },
+  ]}
+/>
+
 <NewsArticleJsonLd
   headline={newsItem.title}
   description={newsItem.metaDescription ?? newsItem.title}
   image={newsItem.ogpImageUrl ?? undefined}
   url={`${baseUrl}/news/${slug}`}
-  datePublished={toISOString(newsItem.publishedAt) ?? ''}
+  datePublished={datePublished}
 />
 ```
 
-### メタデータ生成（generateArticleMetadata）
+### メタデータ生成パターン
 
-記事詳細ページでは `generateArticleMetadata()`（純粋関数）を使用:
+#### 一覧・固定ページ: `generatePageMetadata(slug)`
+
+DB Page テーブルの SEO 設定を参照。優先順位: DB PageSEO > Settings フォールバック > システムデフォルト:
 
 ```typescript
-// SEO設定と記事データを並列取得
-const [post, settings] = await Promise.all([
-  getPublishedPost(slug),
-  getSeoSettings(),
-])
+// page.tsx（一覧・固定ページ）
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params
+  return generatePageMetadata(slug)  // 引数は slug のみ
+}
+```
 
-return generateArticleMetadata(
-  {
-    title: post.title,
-    description: post.metaDescription ?? post.excerpt,
-    image: post.ogpImageUrl ?? post.thumbnailUrl,
-    ogpTitle: post.ogpTitle,
-    ogpDescription: post.ogpDescription,
-    metaKeywords: post.metaKeywords,
-  },
-  {
-    canonicalUrl: `${getBaseUrl()}/posts/${slug}`,
-    siteName: settings?.siteName ?? undefined,
+**注意**: `generatePageMetadata` の第2引数（fallback）は存在しない。
+
+#### 詳細ページ: `generateArticleMetadata(article, options)`
+
+記事データから直接生成する純粋関数:
+
+```typescript
+// posts/[slug]/page.tsx および news/[slug]/page.tsx（実際の実装）
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  await connection()
+
+  const { slug } = await params
+  const [post, settings] = await Promise.all([
+    getPublishedPost(slug),
+    getSeoSettings(),
+  ])
+
+  if (!post) {
+    return { title: '記事が見つかりません' }
   }
-)
+
+  return generateArticleMetadata(
+    {
+      title: post.title,
+      description: post.metaDescription ?? post.excerpt,
+      image: post.ogpImageUrl ?? post.thumbnailUrl,
+      ogpTitle: post.ogpTitle,
+      ogpDescription: post.ogpDescription,
+      metaKeywords: post.metaKeywords,
+    },
+    {
+      canonicalUrl: `${getBaseUrl()}/posts/${slug}`,
+      siteName: settings?.siteName ?? undefined,
+    }
+  )
+}
 ```
 
 **使い分け**:
-- 一覧ページ: `generatePageMetadata(slug, fallback)` — DB Page テーブル参照
-- 詳細ページ: `generateArticleMetadata(article, options)` — 記事データから直接生成
+
+| 関数 | 用途 | 引数 |
+|------|------|------|
+| `generatePageMetadata(slug)` | 一覧・固定ページ | slug のみ |
+| `generateArticleMetadata(article, options?)` | 記事詳細ページ | ArticleMetadata + optional |
+
+### ArticleMetadata 型
+
+```typescript
+interface ArticleMetadata {
+  title: string
+  description?: string | null
+  image?: string | null
+  ogpTitle?: string | null
+  ogpDescription?: string | null
+  metaKeywords?: string | null
+}
+```
+
+## JsonLd コンポーネント一覧
+
+`@/public/components/seo/JsonLd.tsx` で提供:
+
+| コンポーネント | 型 | 用途 |
+|--------------|-----|------|
+| `GraphJsonLd` | LocalBusiness + WebSite @graph | layout.tsx 共通（主要） |
+| `ArticleJsonLd` | Article | `/posts/[slug]/page.tsx` |
+| `NewsArticleJsonLd` | NewsArticle | `/news/[slug]/page.tsx` |
+| `BreadcrumbJsonLd` | BreadcrumbList | 各詳細ページ |
+| `FAQPageJsonLd` | FAQPage | FAQ ページ |
+| `ProductJsonLd` | Product | スペース詳細ページ向け |
+| `LocalBusinessJsonLd` | LocalBusiness（単独） | @graph を使わない場合 |
+| `OrganizationJsonLd` | Organization | 組織情報単独出力 |
+| `WebSiteJsonLd` | WebSite（単独） | @graph を使わない場合 |
 
 ## 禁止事項
 
 1. **NAP情報のハードコード禁止**
    - Footer・JSON-LD・Contact すべて DB から取得
 
+```tsx
+// NG: NAP情報をハードコード
+<address>東京都渋谷区〇〇 1-2-3</address>
+
+// OK: DBから取得
+const info = await getBusinessInfo()
+<address>{info.address}</address>
+```
+
 2. **LocalBusiness JSON-LD の重複配置禁止**
    - layout.tsx の `@graph` のみ。個別ページに追加しない
 
-3. **JSON-LD内のユーザー入力エスケープ漏れ禁止**
-   - `JsonLd.tsx` のサニタイズ関数を使用
+```tsx
+// NG: 個別ページで LocalBusiness を独自追加
+// app/(public)/about/page.tsx
+<script type="application/ld+json">
+  {JSON.stringify({ "@type": "LocalBusiness", "name": "..." })}
+</script>
+
+// OK: layout.tsx の @graph に統合（一箇所のみ）
+// app/(public)/layout.tsx
+<Suspense fallback={null}>
+  <StructuredDataContent />  {/* GraphJsonLd が @graph で出力 */}
+</Suspense>
+```
+
+3. **JSON-LD内のエスケープ漏れ禁止**
+   - `JsonLd.tsx` の内部 `JsonLd` コンポーネントを使用（Unicodeエスケープ実装済み）
+
+```typescript
+// NG: ユーザー入力を直接 JSON-LD に埋め込む（XSS リスク）
+const jsonLd = `{"name": "${businessName}"}` // businessName に <script> が含まれると危険
+
+// OK: GraphJsonLd コンポーネント経由（内部で自動エスケープ済み）
+<GraphJsonLd {...graphData} />
+```
 
 4. **@graph 外での WebSite/LocalBusiness 個別出力禁止**
    - `GraphJsonLd` を使用し、`@graph` 配列で統合出力
@@ -251,14 +395,42 @@ return generateArticleMetadata(
 5. **AggregateRating の使用禁止**
    - Googleポリシー（2019年9月〜）により自社レビューの LocalBusiness 星評価はリッチリザルト非対象
 
+6. **`generatePageMetadata(slug, fallback)` 形式の呼び出し禁止**
+   - 第2引数は存在しない。`generatePageMetadata(slug)` のみ
+
+```typescript
+// NG: 記事詳細ページで generatePageMetadata を使用（DB の Page テーブルに記事はない）
+export async function generateMetadata({ params }: Props) {
+  return generatePageMetadata(params.slug) // NG: 記事詳細ページには不適切
+}
+
+// OK: 記事詳細ページは generateArticleMetadata を使用
+export async function generateMetadata({ params }: Props) {
+  const post = await getPublishedPost(params.slug)
+  return generateArticleMetadata(
+    { title: post.title, description: post.metaDescription },
+    { canonicalUrl: `${getBaseUrl()}/posts/${params.slug}` }
+  )
+}
+
+// OK: カスタムページ（DB Page テーブル）は generatePageMetadata を使用
+export async function generateMetadata({ params }: Props) {
+  return generatePageMetadata(params.slug)
+}
+```
+
+7. **`hasMap` と `googleMapsUrl` の混同禁止**
+   - `hasMap`（JSON-LD内）: 緯度経度 URL (`maps?q=lat,lng`)
+   - `googleMapsUrl`（コンポーネント表示用）: Place ID URL
+
 ## ファイル配置
 
 | パス | 内容 |
 |------|------|
-| `@/public/components/seo/JsonLd.tsx` | `GraphJsonLd`, `ArticleJsonLd`, `NewsArticleJsonLd`, `BreadcrumbJsonLd` |
-| `@/public/lib/seo/json-ld-config.ts` | JSON-LDデータ生成、共有定数（DAY_MAP, ATTR_LABELS等） |
+| `@/public/components/seo/JsonLd.tsx` | `GraphJsonLd`, `ArticleJsonLd`, `NewsArticleJsonLd`, `BreadcrumbJsonLd`, `FAQPageJsonLd`, `ProductJsonLd` 等 |
+| `@/public/lib/seo/json-ld-config.ts` | `getGraphJsonLdData()`, `getLocalBusinessJsonLdData()`, `getOrganizationJsonLdData()`, `getWebSiteJsonLdData()`, 共有定数（`DAY_MAP`, `DAY_LABELS`, `ATTR_LABELS`） |
 | `@/public/lib/seo/metadata-factory.ts` | `getSeoSettings()`, `generateArticleMetadata()` |
-| `@/public/lib/seo/index.ts` | SEOユーティリティ barrel |
-| `@/public/lib/page-metadata.ts` | `generatePageMetadata()`, `getPageSeo()` |
-| `@/public/data/business.ts` | ビジネス情報データレイヤー（`getBusinessInfo()`） |
-| `@/shared/lib/settings/public.ts` | 公開設定取得（NAP含む） |
+| `@/public/lib/seo/index.ts` | SEOライブラリ barrel export |
+| `@/public/lib/page-metadata.ts` | `generatePageMetadata(slug)`, `getPageSeo(slug)`, `getDefaultPageSeo(slug)` |
+| `@/public/data/business.ts` | `getBusinessInfo()` — コンポーネント向けビジネス情報 |
+| `@/shared/lib/settings/public.ts` | `getPublicBusinessSettings()` — 公開設定取得（NAP含む） |

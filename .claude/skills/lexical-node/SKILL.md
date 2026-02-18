@@ -281,6 +281,8 @@ export class ${NodeName}ContainerNode extends ElementNode {
     const children = this.getChildren()
     const paragraph = $createParagraphNode()
 
+    // noUncheckedIndexedAccess: children[0] is LexicalNode | undefined
+    // $isElementNode() accepts undefined and returns false → safe
     if (children.length > 0) {
       const firstChild = children[0]
       if ($isElementNode(firstChild)) {
@@ -404,6 +406,7 @@ if (change) {
 
 - [ ] `bun run type-check` 通過
 - [ ] `bun run lint` 通過
+- [ ] `bun run test:all` で既存テストが通過
 - [ ] 既存テストが壊れていないこと
 - [ ] `exportJSON()` / `importJSON()` が `$config` で自動生成されること
 - [ ] `exportDOM()` / `importDOM()` が正しく往復変換

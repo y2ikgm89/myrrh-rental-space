@@ -228,6 +228,7 @@ const updateToolbar = () => {
 
 - [ ] `bun run type-check` 通過
 - [ ] `bun run lint` 通過
+- [ ] `bun run test:all` で既存テストが通過
 - [ ] 既存テストが壊れていないこと
 - [ ] ツールバーボタンに `type="button"` 設定
 - [ ] ツールバーボタンに `title` 属性（ツールチップ）設定

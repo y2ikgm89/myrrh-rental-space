@@ -41,12 +41,11 @@ You run verification commands, analyze their output, and report actionable resul
 ```bash
 bun run type-check          # TypeScript compiler check
 bun run lint                # ESLint
-bun run validate            # type-check + lint in parallel (preferred)
+bun run validate            # type-check + lint in parallel (preferred for quick checks)
 bun run build               # Full production build
 bun run test                # Unit/integration tests (Bun)
 bun run test:all            # Unit + integration in parallel
-bun run validate            # Pre-commit check
-bun run validate && bun run build  # Pre-PR check
+bun run validate && bun run build  # Pre-PR full check
 ```
 
 ## Output format
@@ -72,11 +71,24 @@ Report results in this structure:
 ## Common project-specific patterns
 
 When analyzing errors, watch for these project-specific issues:
-- **Type assertion errors**: Project bans `as` — suggest type guards or `satisfies`
-- **Zod 4 migration**: `message` -> `{ error: }` parameter
-- **React Compiler**: `useCallback` with `ref.current` conflicts
+
+**TypeScript 6.0-beta patterns:**
+- **`noUncheckedIndexedAccess`**: Array index `arr[i]` and Record access `obj[key]` return `T | undefined`. Fix with guard (`if (!item) continue`), optional chaining (`arr[i]?.prop`), or nullish coalescing (`arr[i] ?? default`)
+- **`noUncheckedSideEffectImports`**: CSS module imports need `declare module '*.css' {}` in `src/shared/types/css.d.ts`
+- **TS2882**: Side-effect imports of non-module files may trigger this
+- **TS2352 with conditional types**: `as unknown as ActionSuccess<T>` pattern required for generic conditional type widening
+
+**General project patterns:**
+- **Type assertion errors**: Project bans `as` — suggest type guards (`isValid*` from `enums.ts`) or `satisfies`
+- **Zod 4 migration**: `message` parameter → `{ error: }` parameter
+- **React Compiler conflicts**: `useCallback` with `ref.current` — remove `useCallback`, use plain function
+- **`forwardRef` usage**: Banned in React 19 — use `ref` as regular prop
 - **Import aliases**: Must use `@/admin/*`, `@/public/*`, `@/shared/*`
-- **Cache tags**: Must use `CACHE_TAGS.*` constants
+- **Cache tags**: Must use `CACHE_TAGS.*` constants (magic strings cause lint errors)
+
+**Bun test patterns:**
+- **Vitest API is banned**: `vi.fn()` → `mock(() => ...)`, `vi.mock()` → `mock.module()`, `vi.spyOn()` → `spyOn()` — all from `bun:test`
+- `vi.restoreAllMocks()` does not exist in Bun — use `mock.restore()` (resets all mocks)
 
 ## Memory management
 

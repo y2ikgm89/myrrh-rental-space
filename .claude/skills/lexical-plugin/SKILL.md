@@ -196,7 +196,7 @@ export function ${PluginName}Plugin() {
 
 import { useEffect } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { mergeRegister } from 'lexical'
+import { mergeRegister } from 'lexical'  // Lexical 0.40: canonical import (@lexical/utils も re-export しているが 'lexical' が正規)
 
 export function ${PluginName}Plugin() {
   const [editor] = useLexicalComposerContext()
@@ -265,6 +265,7 @@ const {
 
 - [ ] `bun run type-check` 通過
 - [ ] `bun run lint` 通過
+- [ ] `bun run test:all` で既存テストが通過
 - [ ] 既存テストが壊れていないこと
 - [ ] `plugins/index.ts` にエクスポート追加
 - [ ] `LexicalEditor.tsx` に統合（JSX + フック）

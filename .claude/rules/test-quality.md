@@ -302,6 +302,11 @@ test('モバイルでも表示される', async ({ page }) => {
    - `await expect(...).toBeVisible()` を使用
    - `networkidle` を適切に待機
 
+5. **Vitest API の使用禁止**（`bun:test` と混同しない）
+   - `vi.restoreAllMocks()` → `mockFn.mockReset()`
+   - `vi.mock()` → `mock.module()`
+   - `vi.fn()` → `mock()`
+
 ## 必須事項
 
 1. **新機能にはテストを追加**
@@ -326,6 +331,9 @@ bun run test
 # 特定ファイル
 bun run test __tests__/unit/lib/crypto.test.ts
 
+# 全テスト（unit + integration 並列）
+bun run test:all
+
 # E2Eテスト
 bun run e2e
 
@@ -342,6 +350,9 @@ bun run e2e:headless
 |------|------|
 | `__tests__/unit/` | 単体テスト |
 | `__tests__/integration/` | 統合テスト |
-| `__tests__/mocks/` | モック関数 |
+| `__tests__/mocks/` | モック関数（auth, prisma, next, resend, stripe） |
+| `__tests__/fixtures/` | テストデータ（users, reservations） |
+| `__tests__/helpers/` | テストヘルパー（session-mock, assertions） |
+| `__tests__/setup.ts` | グローバルセットアップ（env 設定） |
 | `e2e/` | E2Eテスト |
-| `e2e/fixtures/` | テストデータ・URL定義 |
+| `playwright.config.ts` | Playwright 設定（workers: 1, chromium のみ） |

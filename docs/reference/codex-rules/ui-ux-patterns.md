@@ -212,14 +212,39 @@ python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --stack nextj
    - 単調なボタン配置
    - 差別化のないフォーム
 
+   ```
+   // NG: プロジェクトのアンチAIデザインガイド（anti-ai-design.md）に反する実装
+   // - "Create beautiful and modern UI" という指示のみで実装
+   // - デフォルトのシャドウ・グラデーション・角丸を無思考に使用
+
+   // OK: .claude/skills/frontend-design を使用してプロジェクト固有の
+   //     デザインシステムに沿った独自デザインを実装
+   ```
+
 3. **デザイン方針なしの実装禁止**
    - スタイル未決定での実装開始
    - 既存デザインとの整合性無視
+
+   ```
+   // NG: ChatGPT的な汎用実装
+   // - ui-ux-pro-max / frontend-design スキルを使用せずに実装開始
+   // - デザインブリーフなしでコンポーネントを作成
+
+   // OK: /frontend-design <ComponentName> で Design Brief を作成してから実装
+   ```
 
 4. **ハードコードされたスタイル禁止**
    - `style={{ color: '#ff0000' }}` → Tailwind / テーマ変数使用
    - `gray-*`, `blue-*` 等 → `foreground`, `muted`, `primary` 等セマンティック変数使用
    - → `.claude/rules/tailwind-patterns.md` 参照
+
+   ```tsx
+   // NG: ハードコードされたカラー
+   <div style={{ color: '#ff0000', backgroundColor: '#f3f4f6' }}>
+
+   // OK: テーマ変数 + Tailwind ユーティリティ
+   <div className="text-destructive bg-muted">
+   ```
 
 5. **絵文字アイコン禁止**
    - Lucide React のSVGアイコンを使用

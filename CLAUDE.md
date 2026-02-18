@@ -27,6 +27,8 @@
 - `.claude/rules/type-safety.md` - 型安全ルール
 - `.claude/rules/implementation-quality.md` - 実装品質ルール
 - `.claude/rules/test-quality.md` - テスト品質ルール
+- `.claude/rules/bun-patterns.md` - Bun Test / モック / ランタイム
+- `.claude/rules/error-handling.md` - エラーハンドリング / safeFetch / logger
 - `.claude/rules/react-patterns.md` - React 19.2 / React Compiler
 - `.claude/rules/server-actions.md` - Next.js 16 Server Actions / キャッシュ
 - `.claude/rules/auth-patterns.md` - Better Auth 1.4 / RBAC
@@ -34,6 +36,7 @@
 - `.claude/rules/zod-patterns.md` - Zod 4 バリデーション
 - `.claude/rules/nuqs-patterns.md` - nuqs URL状態管理
 - `.claude/rules/tailwind-patterns.md` - Tailwind CSS 4 / CSS-first設定
+- `.claude/rules/turbopack-hmr.md` - Turbopack HMR エラー対処（開発時）
 
 #### 条件付きロード（対象ファイル作業時のみ）
 
@@ -46,6 +49,7 @@
 | `visual-effects-patterns.md` - エフェクトアーキテクチャ | `src/app/(public*)/**` |
 | `threejs-patterns.md` - Three.js / R3F | `src/app/(public*)/**` |
 | `pixijs-patterns.md` - PixiJS v8 | `src/app/(public*)/**` |
+| `accessibility.md` - WCAG 2.2 AA / prefers-reduced-motion / a11y | `src/app/(public*)/**`, `src/app/(admin)/**` |
 | `lexical-patterns.md` - Lexical 0.40 エディタ | `src/app/(admin)/**/lexical/**` |
 | `seo-patterns.md` - SEO / 構造化データ / NAP | `src/app/(public*)/**/seo/**`, `**/layouts/**` |
 | `ui-ux-patterns.md` - UI/UX スキル使用ガイドライン | `src/app/(public*\|admin)/**` |

@@ -219,6 +219,162 @@ export function $createCollapsibleTitleNode(): CollapsibleTitleNode {
 - **`createState` の `parse` 関数**: デシリアライゼーション時のバリデーション+デフォルト値を担当
 - **`$getState` / `$setState`**: プロパティの読み書きに使用。`__` フィールドや `getWritable()` / `getLatest()` は不要
 
+## コンポジットノードアーキテクチャ
+
+複数ノードで構成される複合コンポーネント（Tabs、Steps、Collapsible、PullQuote 等）のパターン。
+公式 Lexical Playground に準拠。
+
+### ノード階層
+
+```
+ContainerNode（ルート）
+├── TitleNode / ListNode（子: タイトル/リスト部分）
+└── ContentNode / PanelNode（子: コンテンツ領域）
+```
+
+### メソッドガイドライン
+
+| メソッド | コンテナノード | 子ノード（Title/Content） | 目的 |
+|---------|--------------|------------------------|------|
+| `isShadowRoot()` | ✅ 必須 | ✅ 必須 | 編集境界の確立 |
+| `canBeEmpty()` | ✅ `false` | — | 空コンテナ防止 |
+| `collapseAtStart()` | ✅ 実装 | ❌ 禁止 | Backspace でノード解除 |
+| `canInsertTextBefore()` | ✅ `false` | ✅ `false` | テキスト漏れ防止 |
+| `canInsertTextAfter()` | ✅ `false` | ✅ `false` | テキスト漏れ防止 |
+| `insertNewAfter()` | — | △ TitleNodeのみ | Enter でコンテンツへ移動 |
+
+### isShadowRoot()
+
+**すべてのコンテナ/コンテンツノードに必須**。キャレットがキーボード操作で境界外に漏れるのを防止:
+
+```typescript
+isShadowRoot(): boolean {
+  return true
+}
+```
+
+**現在の実装状況（全9ノード）:**
+- CollapsibleContainerNode, CollapsibleContentNode
+- LayoutContainerNode, LayoutItemNode
+- StepsContainerNode, StepContentNode
+- TabsContainerNode, TabPanelNode
+- PullQuoteNode
+
+### canBeEmpty()
+
+コンテナノードで `false` を返し、空のコンテナが残存するのを防止:
+
+```typescript
+canBeEmpty(): boolean {
+  return false
+}
+```
+
+**対象:** CollapsibleContainerNode, StepsContainerNode, TabsContainerNode, LayoutContainerNode
+
+### collapseAtStart()
+
+**コンテナノードのみに実装**。Backspace でコンポジットノード全体をパラグラフに分解:
+
+```typescript
+// コンテナノード: 子のコンテンツをパラグラフに展開
+collapseAtStart(): boolean {
+  const children = this.getChildren()
+  const paragraph = $createParagraphNode()
+
+  if (children.length > 0) {
+    const firstChild = children[0]
+    if ($isElementNode(firstChild)) {
+      const firstChildChildren = firstChild.getChildren()
+      for (const child of firstChildChildren) {
+        paragraph.append(child)
+      }
+    }
+  }
+
+  this.replace(paragraph)
+  return true
+}
+```
+
+**子ノード（Title/Content等）には collapseAtStart を実装しない**。isShadowRoot が境界保護を担当する。
+
+### insertNewAfter()（CollapsibleTitleNode 専用パターン）
+
+タイトルで Enter を押した際、コンテナを開いてコンテンツ先頭にフォーカス移動:
+
+```typescript
+insertNewAfter(_selection: RangeSelection, restoreSelection = true): null | ElementNode {
+  const container = this.getParent()
+  if ($isCollapsibleContainerNode(container)) {
+    $setState(container, openState, true)
+    const content = container.getChildren().find($isCollapsibleContentNode)
+    if (content) {
+      const firstChild = content.getFirstChild()
+      if (firstChild) {
+        if (restoreSelection) firstChild.selectStart()
+        return null
+      }
+    }
+  }
+  return null
+}
+```
+
+### CSS-first exportDOM パターン
+
+exportDOM / createDOM では **data-attributes のみ使用**。CSS クラスは使用しない。
+公開ページの CSS でアトリビュートセレクタによるスタイリングを行う:
+
+```typescript
+// exportDOM(): 公開ページ HTML 出力
+exportDOM(): DOMExportOutput {
+  const element = document.createElement('div')
+  element.setAttribute('data-steps', 'true')
+  element.setAttribute('data-steps-style', $getState(this, stepsStyleState))
+  return { element }
+}
+
+// createDOM(): エディタ内 DOM
+createDOM(_config: EditorConfig): HTMLElement {
+  const element = document.createElement('div')
+  element.setAttribute('data-steps', 'true')
+  element.setAttribute('data-steps-style', $getState(this, stepsStyleState))
+  return element
+}
+
+// updateDOM(): 差分更新（return false で DOM 再構築を回避）
+updateDOM(prevNode: StepsContainerNode, dom: HTMLElement): boolean {
+  const change = $getStateChange(this, prevNode, stepsStyleState)
+  if (change) {
+    const [newStyle] = change
+    dom.setAttribute('data-steps-style', newStyle)
+  }
+  return false
+}
+```
+
+```css
+/* 公開ページ CSS: アトリビュートセレクタ */
+[data-steps] { /* コンテナスタイル */ }
+[data-steps-style="numbered"] { /* numbered 固有スタイル */ }
+[data-steps-style="timeline"] { /* timeline 固有スタイル */ }
+```
+
+### 型ガードユーティリティ（createEnumGuard）
+
+ノード固有のリテラル型に対する型ガードは `config/type-guards.ts` の `createEnumGuard` を使用:
+
+```typescript
+import { createEnumGuard } from '../config/type-guards'
+
+export type StepsStyle = 'numbered' | 'big' | 'small' | 'icon' | 'timeline'
+export const STEPS_STYLES: readonly StepsStyle[] = ['numbered', 'big', 'small', 'icon', 'timeline'] as const
+export const isStepsStyle = createEnumGuard<StepsStyle>(STEPS_STYLES)
+```
+
+**注意:** これは Prisma enum ではないため `enums.ts` ではなくノードファイル内に定義する。
+
 ## プラグイン実装パターン
 
 ### ノード挿入: `$insertNodeToNearestRoot` vs `$insertNodes`
@@ -397,6 +553,10 @@ const initialConfig = {
 12. **React render内でのノードプロパティ直接アクセス禁止**: `editor.getEditorState().read(() => $getState(node, xxxState))` で囲む。Lexicalはアクティブなeditor stateが必要
 13. **`node.__property` 直接アクセス禁止**: `$getState(node, xxxState)` を使用。`__` フィールドは `$config` で自動管理
 14. **ノードクラスに getter/setter ラッパー定義禁止**: `node.getText()` / `node.setText(v)` ではなく `$getState(node, textState)` / `$setState(node, textState, v)` を直接使用。ラッパーメソッドは後方互換性ハックであり CLAUDE.md §禁止事項に違反
+15. **子ノードの collapseAtStart 委譲禁止**: Title/Content/Panel 等の子ノードに `collapseAtStart()` を実装しない。`isShadowRoot()` で境界保護する。コンテナノードのみが `collapseAtStart()` を持つ
+16. **コンテナ/コンテンツノードの isShadowRoot 省略禁止**: 複合ノードのコンテナ・コンテンツ・パネルノードには必ず `isShadowRoot() { return true }` を実装する
+17. **exportDOM での CSS クラス使用禁止**: `config.theme.*` や `className` は `createDOM` のみ（エディタ内表示）。`exportDOM` は data-attributes のみで HTML を構築する
+18. **updateDOM で `return true` の乱用禁止**: 属性変更は `$getStateChange` + `dom.setAttribute()` で差分更新し `return false`。`return true` は DOM 要素タグの変更等、DOM 再構築が必要な場合のみ
 
 ## ファイル命名規則
 
