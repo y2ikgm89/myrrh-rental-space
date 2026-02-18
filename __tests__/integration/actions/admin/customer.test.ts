@@ -184,7 +184,7 @@ describe('Customer Admin Action Integration', () => {
     })
 
     test('全ステータス値が定義されている', () => {
-      const expectedStatuses = ['NEW', 'REGULAR', 'VIP', 'INACTIVE', 'BLACKLIST']
+      const expectedStatuses: CustomerStatus[] = ['NEW', 'REGULAR', 'VIP', 'INACTIVE', 'BLACKLIST']
       expect(CUSTOMER_STATUSES.sort()).toEqual(expectedStatuses.sort())
     })
   })

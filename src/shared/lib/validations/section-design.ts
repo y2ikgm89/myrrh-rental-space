@@ -158,8 +158,9 @@ export function transformLegacyCtaToButtons(
  * heroConfigSchema / ctaConfigSchema の .transform() で共通利用。
  * buttons[] が存在すればそのまま使用し、なければレガシーフィールドから変換する。
  *
- * Note: TypeScript cannot infer the rest spread type from a generic constraint,
- * so the type assertion is required (TypeScript generic rest spread limitation).
+ * Note: Return type is inferred by TypeScript as
+ * `Omit<T, 'ctaPrimary' | 'ctaSecondary' | 'buttons'> & { buttons: CTAButtonItem[] }`
+ * which is structurally equivalent to `Omit<T, 'ctaPrimary' | 'ctaSecondary'> & { buttons: CTAButtonItem[] }`.
  */
 export function transformCtaFields<
   T extends {
@@ -167,15 +168,14 @@ export function transformCtaFields<
     ctaSecondary?: { text?: string; url?: string }
     buttons?: CTAButtonItem[]
   },
->(input: T): Omit<T, 'ctaPrimary' | 'ctaSecondary'> & { buttons: CTAButtonItem[] } {
+>(input: T) {
   const { ctaPrimary, ctaSecondary, buttons, ...rest } = input
-  // TypeScript generic rest spread limitation: cannot prove rest + buttons = Omit<T> & { buttons }
   return {
     ...rest,
     buttons: buttons && buttons.length > 0
       ? buttons
       : transformLegacyCtaToButtons(ctaPrimary, ctaSecondary),
-  } as Omit<T, 'ctaPrimary' | 'ctaSecondary'> & { buttons: CTAButtonItem[] }
+  }
 }
 
 // =============================================================================

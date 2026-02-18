@@ -3,9 +3,6 @@ import {
   parseStringArray,
   parseStringArrayOrNull,
   parseBusinessHours,
-  parseDiscountType,
-  parseDurationDiscountOverride,
-  parseTaxRateType,
   parseBusinessAttributes,
   type BusinessHours,
 } from '@/shared/lib/json-validators'
@@ -92,7 +89,7 @@ describe('parseBusinessHours', () => {
     expect(result).toEqual(validNewFormat)
   })
 
-  test('旧形式（営業日・時刻あり）を新形式に自動変換する', () => {
+  test('旧形式（slots配列なし）はnullを返す', () => {
     const legacyFormat = {
       monday: { isOpen: true, openTime: '10:00', closeTime: '20:00' },
       tuesday: { isOpen: true, openTime: '10:00', closeTime: '20:00' },
@@ -104,45 +101,7 @@ describe('parseBusinessHours', () => {
     }
 
     const result = parseBusinessHours(legacyFormat)
-    expect(result).not.toBeNull()
-    expect(result?.monday.isOpen).toBe(true)
-    expect(result?.monday.slots).toEqual([{ openTime: '10:00', closeTime: '20:00' }])
-    expect(result?.saturday.isOpen).toBe(false)
-    expect(result?.saturday.slots).toEqual([])
-  })
-
-  test('旧形式（休業日）を新形式に自動変換する', () => {
-    const legacyFormat = {
-      monday: { isOpen: false, openTime: null, closeTime: null },
-      tuesday: { isOpen: false, openTime: null, closeTime: null },
-      wednesday: { isOpen: false, openTime: null, closeTime: null },
-      thursday: { isOpen: false, openTime: null, closeTime: null },
-      friday: { isOpen: false, openTime: null, closeTime: null },
-      saturday: { isOpen: false, openTime: null, closeTime: null },
-      sunday: { isOpen: false, openTime: null, closeTime: null },
-    }
-
-    const result = parseBusinessHours(legacyFormat)
-    expect(result).not.toBeNull()
-    expect(result?.monday.isOpen).toBe(false)
-    expect(result?.monday.slots).toEqual([])
-  })
-
-  test('旧形式（営業日だが時刻なし）をデフォルト時刻で変換する', () => {
-    const legacyFormat = {
-      monday: { isOpen: true, openTime: null, closeTime: null },
-      tuesday: { isOpen: true, openTime: null, closeTime: null },
-      wednesday: { isOpen: true, openTime: null, closeTime: null },
-      thursday: { isOpen: true, openTime: null, closeTime: null },
-      friday: { isOpen: true, openTime: null, closeTime: null },
-      saturday: { isOpen: false, openTime: null, closeTime: null },
-      sunday: { isOpen: false, openTime: null, closeTime: null },
-    }
-
-    const result = parseBusinessHours(legacyFormat)
-    expect(result).not.toBeNull()
-    expect(result?.monday.isOpen).toBe(true)
-    expect(result?.monday.slots).toEqual([{ openTime: '09:00', closeTime: '21:00' }])
+    expect(result).toBeNull()
   })
 
   test('無効なデータはnullを返す', () => {
@@ -185,84 +144,6 @@ describe('parseBusinessHours', () => {
   })
 })
 
-describe('parseDiscountType', () => {
-  test('有効な値 "none" を正しく返す', () => {
-    expect(parseDiscountType('none')).toBe('none')
-  })
-
-  test('有効な値 "percentage" を正しく返す', () => {
-    expect(parseDiscountType('percentage')).toBe('percentage')
-  })
-
-  test('有効な値 "fixed" を正しく返す', () => {
-    expect(parseDiscountType('fixed')).toBe('fixed')
-  })
-
-  test('無効な文字列はデフォルト値 "none" を返す', () => {
-    expect(parseDiscountType('invalid')).toBe('none')
-    expect(parseDiscountType('PERCENTAGE')).toBe('none')
-    expect(parseDiscountType('')).toBe('none')
-  })
-
-  test('文字列以外はデフォルト値 "none" を返す', () => {
-    expect(parseDiscountType(123)).toBe('none')
-    expect(parseDiscountType(null)).toBe('none')
-    expect(parseDiscountType(undefined)).toBe('none')
-    expect(parseDiscountType({ type: 'percentage' })).toBe('none')
-    expect(parseDiscountType(['percentage'])).toBe('none')
-  })
-})
-
-describe('parseDurationDiscountOverride', () => {
-  test('有効な値 "inherit" を正しく返す', () => {
-    expect(parseDurationDiscountOverride('inherit')).toBe('inherit')
-  })
-
-  test('有効な値 "enabled" を正しく返す', () => {
-    expect(parseDurationDiscountOverride('enabled')).toBe('enabled')
-  })
-
-  test('有効な値 "disabled" を正しく返す', () => {
-    expect(parseDurationDiscountOverride('disabled')).toBe('disabled')
-  })
-
-  test('無効な文字列はデフォルト値 "inherit" を返す', () => {
-    expect(parseDurationDiscountOverride('invalid')).toBe('inherit')
-    expect(parseDurationDiscountOverride('ENABLED')).toBe('inherit')
-    expect(parseDurationDiscountOverride('')).toBe('inherit')
-  })
-
-  test('文字列以外はデフォルト値 "inherit" を返す', () => {
-    expect(parseDurationDiscountOverride(123)).toBe('inherit')
-    expect(parseDurationDiscountOverride(null)).toBe('inherit')
-    expect(parseDurationDiscountOverride(undefined)).toBe('inherit')
-    expect(parseDurationDiscountOverride({ value: 'enabled' })).toBe('inherit')
-  })
-})
-
-describe('parseTaxRateType', () => {
-  test('有効な値 "standard" を正しく返す', () => {
-    expect(parseTaxRateType('standard')).toBe('standard')
-  })
-
-  test('有効な値 "reduced" を正しく返す', () => {
-    expect(parseTaxRateType('reduced')).toBe('reduced')
-  })
-
-  test('無効な文字列はデフォルト値 "standard" を返す', () => {
-    expect(parseTaxRateType('invalid')).toBe('standard')
-    expect(parseTaxRateType('REDUCED')).toBe('standard')
-    expect(parseTaxRateType('')).toBe('standard')
-  })
-
-  test('文字列以外はデフォルト値 "standard" を返す', () => {
-    expect(parseTaxRateType(123)).toBe('standard')
-    expect(parseTaxRateType(null)).toBe('standard')
-    expect(parseTaxRateType(undefined)).toBe('standard')
-    expect(parseTaxRateType({ type: 'reduced' })).toBe('standard')
-  })
-})
-
 describe('parseBusinessAttributes', () => {
   test('有効なオブジェクトを正しくパースする', () => {
     const input = {
@@ -274,7 +155,7 @@ describe('parseBusinessAttributes', () => {
     expect(result).toEqual(input)
   })
 
-  test('混合型（boolean + 非boolean）はbooleanのみ抽出する', () => {
+  test('混合型（boolean + 非boolean）はnullを返す', () => {
     const input = {
       wifi: true,
       parking: false,
@@ -282,12 +163,7 @@ describe('parseBusinessAttributes', () => {
       count: 123,
       accessible: true,
     }
-    const result = parseBusinessAttributes(input)
-    expect(result).toEqual({
-      wifi: true,
-      parking: false,
-      accessible: true,
-    })
+    expect(parseBusinessAttributes(input)).toBeNull()
   })
 
   test('nullはnullを返す', () => {
@@ -324,12 +200,11 @@ describe('parseBusinessAttributes', () => {
     expect(parseBusinessAttributes(123)).toBeNull()
   })
 
-  test('ネストされたオブジェクトのboolean値は無視される', () => {
+  test('ネストされたオブジェクトを含む場合はnullを返す', () => {
     const input = {
       wifi: true,
       nested: { parking: true },
     }
-    const result = parseBusinessAttributes(input)
-    expect(result).toEqual({ wifi: true })
+    expect(parseBusinessAttributes(input)).toBeNull()
   })
 })

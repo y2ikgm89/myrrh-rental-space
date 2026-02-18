@@ -33,6 +33,10 @@ const TYPE_ICONS = {
   OTHER: File,
 } as const
 
+function hasTypeIcon(type: string): type is keyof typeof TYPE_ICONS {
+  return type in TYPE_ICONS
+}
+
 export function MediaTable({ items }: Props) {
   const [detailItem, setDetailItem] = useState<MediaData | null>(null)
   const handleCopyUrl = useCopyUrl()
@@ -54,7 +58,7 @@ export function MediaTable({ items }: Props) {
           </TableHeader>
           <TableBody>
             {items.map((item) => {
-              const TypeIcon = TYPE_ICONS[item.type as keyof typeof TYPE_ICONS] ?? File
+              const TypeIcon = hasTypeIcon(item.type) ? TYPE_ICONS[item.type] : File
 
               return (
                 <TableRow key={item.id}>

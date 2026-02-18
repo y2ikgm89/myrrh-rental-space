@@ -15,9 +15,12 @@ export interface MockUser {
   name: string
   role: Role
   emailVerified: boolean
-  image: string | null
+  // Better Auth の User.image は省略可能
+  image?: string | null
   createdAt: Date
   updatedAt: Date
+  // EDITOR ロール用: 割り当てられたページIDの配列
+  assignedPages?: string[]
 }
 
 export interface MockSession {

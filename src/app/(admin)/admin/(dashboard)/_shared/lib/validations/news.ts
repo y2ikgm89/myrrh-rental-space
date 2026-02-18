@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { LayoutWidth } from '@/shared/types/prisma'
 import { seoOgpFieldsSchema, seoOgpFieldsFormSchema } from '@/shared/lib/validations/seo'
+import { lexicalJsonSchema } from '@/shared/lib/validations/lexical'
 
 // =============================================================================
 // News Schemas
@@ -21,7 +22,7 @@ export const newsSlugSchema = z
 export const createNewsSchema = z.object({
   slug: newsSlugSchema,
   title: z.string().min(1, { error: 'タイトルは必須です' }).max(200, { error: 'タイトルは200文字以内で入力してください' }),
-  content: z.string().default(''),
+  contentJson: z.string().default(''),
 })
 
 export type CreateNewsInput = z.infer<typeof createNewsSchema>
@@ -33,7 +34,7 @@ export const updateNewsSchema = z
   .object({
     slug: newsSlugSchema,
     title: z.string().min(1, { error: 'タイトルは必須です' }).max(200, { error: 'タイトルは200文字以内で入力してください' }),
-    content: z.string().min(1, { error: '本文は必須です' }),
+    contentJson: lexicalJsonSchema,
     contentWidth: z.enum(LayoutWidth).nullable().optional(),
     contentWidthCustom: z.number().int().min(320).max(1920).nullable().optional(),
   })
@@ -49,7 +50,7 @@ export const newsFormSchema = z
   .object({
     slug: newsSlugSchema,
     title: z.string().min(1, { error: 'タイトルは必須です' }).max(200, { error: 'タイトルは200文字以内で入力してください' }),
-    content: z.string().min(1, { error: '本文は必須です' }),
+    contentJson: z.string().min(1, { error: '本文は必須です' }),
     isPublished: z.boolean(),
     publishedAt: z.string().optional(),
     contentWidth: z.string().optional(),
@@ -70,7 +71,8 @@ export type NewsData = {
   id: string
   slug: string
   title: string
-  content: string
+  contentHtml: string
+  contentJson: unknown
   isPublished: boolean
   publishedAt: Date | null
   createdAt: Date
@@ -92,7 +94,8 @@ export type NewsVersionData = {
   id: string
   newsId: string
   version: number
-  content: string
+  contentHtml: string
+  contentJson: unknown
   createdAt: Date
   createdBy: string | null
 }

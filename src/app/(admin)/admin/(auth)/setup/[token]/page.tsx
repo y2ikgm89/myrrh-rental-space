@@ -7,6 +7,7 @@
 import type { Metadata } from 'next'
 import type { ReactElement } from 'react'
 import { validateInvitationToken } from '@/admin/actions/staff-invitation'
+import { isActionFailure } from '@/shared/types/server-actions'
 import { SetupForm } from './_components/SetupForm'
 
 export const metadata: Metadata = {
@@ -23,7 +24,7 @@ export default async function SetupPage({ params }: Props): Promise<ReactElement
   // トークン検証
   const result = await validateInvitationToken(token)
 
-  if (!result.success) {
+  if (isActionFailure(result)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="w-full max-w-md">

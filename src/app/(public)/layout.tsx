@@ -18,6 +18,7 @@
 import type { Metadata, Viewport } from 'next'
 import type { ReactElement, ReactNode } from 'react'
 import { Suspense } from 'react'
+import { connection } from 'next/server'
 import { Noto_Sans_JP, Noto_Serif_JP } from 'next/font/google'
 import { NuqsAdapter } from 'nuqs/adapters/next/app'
 import { Header } from '@/public/components/layouts/Header'
@@ -37,8 +38,8 @@ import { GraphJsonLd } from '@/public/components/seo/JsonLd'
 import { getGraphJsonLdData } from '@/public/lib/seo'
 import { getHeaderNavigation } from '@/public/lib/navigation'
 import { getBusinessInfo } from '@/public/data/business'
-import { getHeaderSettings } from '@/public/lib/layout-settings'
-import type { HeaderSettings } from '@/public/lib/layout-settings'
+import { getHeaderSettings } from '@/public/lib/header-settings'
+import type { HeaderSettings } from '@/public/lib/header-settings'
 import { HeaderBackgroundMode } from '@/shared/generated/prisma/enums'
 import { getCookieConsentSettings } from '@/shared/lib/settings'
 import { getAnalyticsConfig } from '@/shared/lib/analytics/config'
@@ -163,6 +164,8 @@ export default async function PublicRootLayout({
 }: Readonly<{
   children: ReactNode
 }>): Promise<ReactElement> {
+  await connection()
+
   const headerSettings = await getHeaderSettings()
   const isTransparent = headerSettings.backgroundMode === HeaderBackgroundMode.transparent
 

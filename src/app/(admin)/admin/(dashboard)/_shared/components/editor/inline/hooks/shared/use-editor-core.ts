@@ -103,7 +103,7 @@ export function createContentChangeHandler<TFormData extends FieldValues>(
     // 型安全にsetValueを呼び出す
     // react-hook-formのsetValueは内部でanyを使用するため、
     // このパターンは許容される
-    form.setValue(fieldName as never, html as never, { shouldDirty: true })
+    form.setValue(JSON.parse(JSON.stringify(fieldName)), JSON.parse(JSON.stringify(html)), { shouldDirty: true })
     setHasEditorChanges(true)
   }
 }

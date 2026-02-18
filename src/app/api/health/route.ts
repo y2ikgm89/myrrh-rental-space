@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ヘルスチェックAPI
  *
  * Cloud Run / Load Balancerからのヘルスチェックリクエストに応答します。
@@ -31,7 +31,7 @@ export async function GET() {
         uptime: process.uptime(),
         responseTime: `${responseTime}ms`,
         database: 'connected',
-        version: process.env.npm_package_version || '0.1.0',
+        version: process.env['npm_package_version'] || '0.1.0',
       },
       {
         status: 200,

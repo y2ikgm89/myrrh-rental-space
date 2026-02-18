@@ -197,12 +197,15 @@ describe('updateTermsSchema', () => {
   })
 })
 
+// 有効なLexical EditorState JSON（lexicalJsonSchema準拠）
+const VALID_LEXICAL_JSON = '{"root":{"children":[],"direction":null,"format":"","indent":0,"type":"root","version":1}}'
+
 describe('createTermsVersionSchema', () => {
   describe('正常系', () => {
     test('有効なデータは検証を通過', () => {
       const result = createTermsVersionSchema.safeParse({
         termsId: '123e4567-e89b-12d3-a456-426614174000',
-        content: 'これは規約の内容です。',
+        contentJson: VALID_LEXICAL_JSON,
       })
       expect(result.success).toBe(true)
     })
@@ -212,7 +215,7 @@ describe('createTermsVersionSchema', () => {
     test('無効なUUIDはエラー', () => {
       const result = createTermsVersionSchema.safeParse({
         termsId: 'invalid-uuid',
-        content: 'コンテンツ',
+        contentJson: VALID_LEXICAL_JSON,
       })
       expect(result.success).toBe(false)
       if (!result.success) {
@@ -221,16 +224,29 @@ describe('createTermsVersionSchema', () => {
     })
   })
 
-  describe('content', () => {
+  describe('contentJson', () => {
     test('空文字はエラー', () => {
       const result = createTermsVersionSchema.safeParse({
         termsId: '123e4567-e89b-12d3-a456-426614174000',
-        content: '',
+        contentJson: '',
       })
       expect(result.success).toBe(false)
-      if (!result.success) {
-        expect(result.error.issues[0].message).toContain('コンテンツ')
-      }
+    })
+
+    test('無効なJSONはエラー', () => {
+      const result = createTermsVersionSchema.safeParse({
+        termsId: '123e4567-e89b-12d3-a456-426614174000',
+        contentJson: 'これは規約の内容です。',
+      })
+      expect(result.success).toBe(false)
+    })
+
+    test('rootプロパティがないJSONはエラー', () => {
+      const result = createTermsVersionSchema.safeParse({
+        termsId: '123e4567-e89b-12d3-a456-426614174000',
+        contentJson: '{"data":"test"}',
+      })
+      expect(result.success).toBe(false)
     })
   })
 })
@@ -255,16 +271,23 @@ describe('publishTermsVersionSchema', () => {
 })
 
 describe('updateTermsVersionSchema', () => {
-  test('有効なコンテンツは許可', () => {
+  test('有効なLexical JSONは許可', () => {
     const result = updateTermsVersionSchema.safeParse({
-      content: '更新されたコンテンツ',
+      contentJson: VALID_LEXICAL_JSON,
     })
     expect(result.success).toBe(true)
   })
 
   test('空文字はエラー', () => {
     const result = updateTermsVersionSchema.safeParse({
-      content: '',
+      contentJson: '',
+    })
+    expect(result.success).toBe(false)
+  })
+
+  test('無効なJSONはエラー', () => {
+    const result = updateTermsVersionSchema.safeParse({
+      contentJson: '更新されたコンテンツ',
     })
     expect(result.success).toBe(false)
   })
@@ -665,7 +688,8 @@ describe('serializeTermsWithVersion', () => {
       currentVersion: {
         id: 'version-1',
         version: 1,
-        content: '<p>ポリシー内容</p>',
+        contentHtml: '<p>ポリシー内容</p>',
+        contentJson: VALID_LEXICAL_JSON,
         publishedAt,
       },
     }
@@ -676,7 +700,7 @@ describe('serializeTermsWithVersion', () => {
       if (result.currentVersion) {
         expect(result.currentVersion.id).toBe('version-1')
         expect(result.currentVersion.version).toBe(1)
-        expect(result.currentVersion.content).toBe('<p>ポリシー内容</p>')
+        expect(result.currentVersion.contentHtml).toBe('<p>ポリシー内容</p>')
         expect(result.currentVersion.publishedAt).toBe('2026-01-15T10:30:00.000Z')
         // publishedAtがstring型であること
         expect(typeof result.currentVersion.publishedAt).toBe('string')

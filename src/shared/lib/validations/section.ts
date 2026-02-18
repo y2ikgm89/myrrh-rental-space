@@ -357,9 +357,13 @@ type SectionConfigSchemas = typeof sectionConfigSchemas
 
 /**
  * セクションタイプに応じた config を検証
+ *
+ * 戻り型を SectionConfig union に widening することで、
+ * 呼び出し側の `as SectionConfig` が不要になる。
  */
-export function validateSectionConfig<T extends SectionType>(type: T, config: unknown) {
+export function validateSectionConfig(type: SectionType, config: unknown): z.ZodSafeParseResult<SectionConfig> {
   const schema = sectionConfigSchemas[type]
+  // 各スキーマの safeParse 結果は個別型だが、SectionConfig union の部分型なので安全
   return schema.safeParse(config)
 }
 
@@ -374,7 +378,7 @@ export const createSectionSchema = z.object({
   title: z.string().max(100, { error: 'タイトルは100文字以内です' }).optional(),
   config: z.record(z.string(), z.unknown()).default({}),
   design: z.record(z.string(), z.unknown()).default({}),
-  content: z.string().max(500000, { error: 'コンテンツは500,000文字以内です' }).optional(),
+  contentJson: z.string().max(500000, { error: 'コンテンツは500,000文字以内です' }).optional(),
   order: z.number().int().min(0).optional(),
   isActive: z.boolean().default(true),
 })
@@ -384,7 +388,7 @@ export const updateSectionSchema = z.object({
   title: z.string().max(100, { error: 'タイトルは100文字以内です' }).optional(),
   config: z.record(z.string(), z.unknown()).optional(),
   design: z.record(z.string(), z.unknown()).optional(),
-  content: z.string().max(500000, { error: 'コンテンツは500,000文字以内です' }).optional(),
+  contentJson: z.string().max(500000, { error: 'コンテンツは500,000文字以内です' }).optional(),
   isActive: z.boolean().optional(),
 })
 

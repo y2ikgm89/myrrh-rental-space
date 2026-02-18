@@ -12,6 +12,7 @@ export type DefaultSectionDef = {
   type: SectionType
   title: string | null
   config: Prisma.InputJsonValue
+  design?: Prisma.InputJsonValue
   content: string | null
   order: number
   isActive: boolean
@@ -26,11 +27,11 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       type: SectionType.HERO,
       title: null,
       config: {
-        title: '私たちについて',
-        subtitle: 'ビジネスからプライベートまで、あらゆるシーンに対応するレンタルスペース',
-        height: 'sm',
-        overlay: false,
+        title: 'About',
+        subtitle: 'ビジネスからプライベートまで、あらゆるシーンに対応するレンタルスペース。',
+        variant: 'minimal',
       },
+      design: { titleSize: '3xl' },
       content: null,
       order: 0,
       isActive: true,
@@ -63,11 +64,11 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       type: SectionType.HERO,
       title: null,
       config: {
-        title: 'よくある質問',
+        title: 'FAQ',
         subtitle: 'ご不明点がございましたら、まずはこちらをご確認ください。',
-        height: 'sm',
-        overlay: false,
+        variant: 'minimal',
       },
+      design: { titleSize: '3xl' },
       content: null,
       order: 0,
       isActive: true,
@@ -102,43 +103,93 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       type: SectionType.HERO,
       title: null,
       config: {
-        title: 'お問い合わせ',
-        subtitle: 'ご質問やご予約のご相談など、お気軽にお問い合わせください。通常、2営業日以内にご返信いたします。',
-        height: 'sm',
-        overlay: false,
+        title: 'Contact',
+        subtitle: 'ご質問やご要望がございましたら、お気軽にお問い合わせください。',
+        variant: 'minimal',
       },
+      design: { titleSize: '3xl' },
       content: null,
       order: 0,
       isActive: true,
     },
+  ],
+
+  news: [
     {
-      type: SectionType.CONTACT_FORM,
-      title: 'お問い合わせフォーム',
-      config: {},
+      type: SectionType.HERO,
+      title: null,
+      config: {
+        title: 'News',
+        subtitle: 'お知らせ・最新情報をお届けします。',
+        variant: 'minimal',
+      },
+      design: { titleSize: '3xl' },
       content: null,
-      order: 1,
+      order: 0,
+      isActive: true,
+    },
+  ],
+
+  posts: [
+    {
+      type: SectionType.HERO,
+      title: null,
+      config: {
+        title: 'Blog',
+        subtitle: '最新のお知らせやお役立ち情報をお届けします。',
+        variant: 'minimal',
+      },
+      design: { titleSize: '3xl' },
+      content: null,
+      order: 0,
       isActive: true,
     },
   ],
 
   privacy: [
     {
+      type: SectionType.HERO,
+      title: null,
+      config: {
+        title: 'Privacy',
+        subtitle: '個人情報の取り扱いについてご確認ください。',
+        variant: 'minimal',
+      },
+      design: { titleSize: '3xl' },
+      content: null,
+      order: 0,
+      isActive: true,
+    },
+    {
       type: SectionType.CUSTOM,
       title: 'プライバシーポリシー',
       config: {},
       content: '<p>プライバシーポリシーの内容は管理画面から編集してください。</p>',
-      order: 0,
+      order: 1,
       isActive: true,
     },
   ],
 
   terms: [
     {
+      type: SectionType.HERO,
+      title: null,
+      config: {
+        title: 'Terms',
+        subtitle: 'ご利用にあたっての規約をご確認ください。',
+        variant: 'minimal',
+      },
+      design: { titleSize: '3xl' },
+      content: null,
+      order: 0,
+      isActive: true,
+    },
+    {
       type: SectionType.CUSTOM,
       title: '利用規約',
       config: {},
       content: '<p>利用規約の内容は管理画面から編集してください。</p>',
-      order: 0,
+      order: 1,
       isActive: true,
     },
   ],
@@ -148,11 +199,11 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       type: SectionType.HERO,
       title: null,
       config: {
-        title: '予約',
-        subtitle: '日時を選択して、簡単にご予約いただけます。',
-        height: 'sm',
-        overlay: false,
+        title: 'Reserve',
+        subtitle: '3ステップで簡単予約。お好みのスペースと日時をお選びください。',
+        variant: 'minimal',
       },
+      design: { titleSize: '3xl' },
       content: null,
       order: 0,
       isActive: true,
@@ -175,11 +226,11 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       type: SectionType.HERO,
       title: null,
       config: {
-        title: 'スペース一覧',
-        subtitle: 'ご利用可能なレンタルスペースをお探しください',
-        height: 'sm',
-        overlay: false,
+        title: 'Spaces',
+        subtitle: 'ご利用可能なレンタルスペースをお探しください。',
+        variant: 'minimal',
       },
+      design: { titleSize: '3xl' },
       content: null,
       order: 0,
       isActive: true,

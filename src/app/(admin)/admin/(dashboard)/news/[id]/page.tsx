@@ -3,6 +3,8 @@ import { connection } from 'next/server'
 import { getNewsById } from '@/admin/actions/news'
 import { NewsEditor } from '../_components/NewsEditor'
 import { getLayoutSettings } from '@/shared/lib/settings/public'
+import { getValidLayoutWidth, LayoutWidth } from '@/shared/lib/validations/enums'
+import type { ContentWidth } from '@/shared/types'
 import type { Metadata } from 'next'
 
 
@@ -32,7 +34,7 @@ export default async function EditNewsPage({ params }: PageProps) {
   await connection()
   const { id } = await params
 
-  const [news, layoutSettings] = await Promise.all([
+  const [news, settings] = await Promise.all([
     getNewsById(id),
     getLayoutSettings(),
   ])
@@ -41,5 +43,10 @@ export default async function EditNewsPage({ params }: PageProps) {
     notFound()
   }
 
-  return <NewsEditor news={news} mode="edit" layoutSettings={layoutSettings} />
+  const fallbackContentWidth: ContentWidth = {
+    width: getValidLayoutWidth(settings?.contentWidth, LayoutWidth.MD),
+    customPx: settings?.contentWidthCustom ?? null,
+  }
+
+  return <NewsEditor news={news} mode="edit" fallbackContentWidth={fallbackContentWidth} />
 }

@@ -25,7 +25,7 @@ const VALID_FAQ_CATEGORY = {
 const VALID_FAQ_ITEM = {
   categoryId: '123e4567-e89b-12d3-a456-426614174000',
   question: 'これはテスト質問ですか？',
-  answer: 'はい、これはテスト回答です。',
+  answerJson: 'はい、これはテスト回答です。',
   order: 0,
   isPublished: true,
   metaDescription: null,
@@ -261,11 +261,11 @@ describe('faqItemFormSchema', () => {
     })
   })
 
-  describe('answer', () => {
+  describe('answerJson', () => {
     test('空文字はエラー', () => {
       const result = faqItemFormSchema.safeParse({
         ...VALID_FAQ_ITEM,
-        answer: '',
+        answerJson: '',
       })
       expect(result.success).toBe(false)
       if (!result.success) {
@@ -273,21 +273,21 @@ describe('faqItemFormSchema', () => {
       }
     })
 
-    test('10000文字超過はエラー', () => {
+    test('500000文字超過はエラー', () => {
       const result = faqItemFormSchema.safeParse({
         ...VALID_FAQ_ITEM,
-        answer: 'あ'.repeat(10001),
+        answerJson: 'あ'.repeat(500001),
       })
       expect(result.success).toBe(false)
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain('10000文字以内')
+        expect(result.error.issues[0].message).toContain('大きすぎます')
       }
     })
 
-    test('10000文字ちょうどは許可', () => {
+    test('500000文字ちょうどは許可', () => {
       const result = faqItemFormSchema.safeParse({
         ...VALID_FAQ_ITEM,
-        answer: 'あ'.repeat(10000),
+        answerJson: 'あ'.repeat(500000),
       })
       expect(result.success).toBe(true)
     })
@@ -341,7 +341,7 @@ describe('defaultFaqItemFormValues', () => {
     expect(defaultFaqItemFormValues).toEqual({
       categoryId: '',
       question: '',
-      answer: '',
+      answerJson: '',
       order: 0,
       isPublished: true,
       metaDescription: null,

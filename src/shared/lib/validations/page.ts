@@ -17,8 +17,9 @@ import { LayoutWidth } from '@/shared/generated/prisma/enums'
  *
  * システムページは削除不可。セクションシステムで編集可能。
  * すべてのページは /[slug] で統一されたURLで表示される。
+ * ヒーローセクション等は Page レコードに紐づく Section として管理。
  *
- * Note: 以下は各専用管理ページで管理
+ * Note: コンテンツ本体は各専用管理ページで管理
  * - posts/news → /admin/posts, /admin/news
  * - terms → /admin/terms（Termsテーブルで管理）
  */
@@ -36,6 +37,9 @@ export const SYSTEM_PAGES: readonly SystemPageDefinition[] = [
   { slug: 'reservation', title: '予約', description: 'レンタルスペースの予約' },
   { slug: 'spaces', title: 'スペース一覧', description: 'ご利用可能なレンタルスペース' },
   { slug: 'contact', title: 'お問い合わせ', description: 'お問い合わせフォーム' },
+  { slug: 'posts', title: 'ブログ', description: 'ブログ記事一覧' },
+  { slug: 'news', title: 'お知らせ', description: 'ニュース・お知らせ一覧' },
+  { slug: 'terms', title: '利用規約', description: 'ご利用にあたっての規約' },
 ]
 
 export const SYSTEM_PAGE_SLUGS = SYSTEM_PAGES.map((p) => p.slug)
@@ -61,20 +65,6 @@ export function isSystemPageSlug(slug: string): boolean {
 export function canDeletePage(slug: string): boolean {
   return !isSystemPageSlug(slug)
 }
-
-// =============================================================================
-// ページデータ型
-// =============================================================================
-
-/**
- * ページデータ型
- *
- * Prisma生成型を直接使用（公式ベストプラクティス）
- * - 型アサーション不要
- * - スキーマ変更時に自動同期
- * @see https://www.prisma.io/docs/concepts/components/prisma-client/type-safety
- */
-export type { PageModel as PageData } from '@/shared/generated/prisma/models/Page'
 
 // =============================================================================
 // バリデーションスキーマ（admin用、ここからre-export）

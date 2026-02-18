@@ -16,16 +16,15 @@ import {
   TaxInputMode,
   DiscountCombinationMode,
 } from '@/shared/generated/prisma/enums'
-import type { Decimal } from '@/shared/generated/prisma/runtime/client'
-
 // Coupon型の簡易定義（Prismaのモデルに依存しない）
+// Prisma拡張でDecimal→number自動変換済みのため、number型で統一
 type CouponLike = {
   id: string
   code: string
   name: string
   type: CouponType
-  discountValue: Decimal | number
-  maxDiscountAmount?: Decimal | number | null
+  discountValue: number
+  maxDiscountAmount?: number | null
   canCombineWithDurationDiscount?: boolean
 }
 
@@ -100,7 +99,7 @@ export function calculateSpaceDiscount(
     return { discount: 0, applied: null }
   }
 
-  const discountValue = Number(settings.discountValue)
+  const discountValue = settings.discountValue
 
   if (settings.discountType === DiscountType.percentage) {
     const discount = Math.floor(basePrice * (discountValue / 100))
@@ -159,14 +158,13 @@ export function calculateCouponDiscount(
 ): number {
   if (price <= 0) return 0
 
-  const discountValue = Number(coupon.discountValue)
+  const discountValue = coupon.discountValue
 
   if (coupon.type === 'PERCENTAGE') {
     let discount = Math.floor(price * (discountValue / 100))
     // 最大割引額の制限
     if (coupon.maxDiscountAmount) {
-      const maxDiscount = Number(coupon.maxDiscountAmount)
-      discount = Math.min(discount, maxDiscount)
+      discount = Math.min(discount, coupon.maxDiscountAmount)
     }
     return discount
   }
@@ -239,7 +237,7 @@ export function calculateReservationPrice(
       code: coupon.code,
       name: coupon.name,
       type: coupon.type,
-      discountValue: Number(coupon.discountValue),
+      discountValue: coupon.discountValue,
     }
   }
 
@@ -391,7 +389,7 @@ export function formatDiscountSummary(calculation: PriceCalculation): string[] {
   if (calculation.appliedCoupon) {
     const couponLabel = formatDiscountAmount(
       calculation.appliedCoupon.type,
-      Number(calculation.appliedCoupon.discountValue)
+      calculation.appliedCoupon.discountValue
     )
     summaries.push(
       `クーポン「${calculation.appliedCoupon.code}」${couponLabel}: -¥${calculation.couponDiscount.toLocaleString()}`

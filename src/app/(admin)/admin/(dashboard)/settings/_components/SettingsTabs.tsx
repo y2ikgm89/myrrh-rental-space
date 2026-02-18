@@ -42,9 +42,12 @@ interface SettingsTabsProps {
 // =============================================================================
 
 export function SettingsTabs({ tabs, defaultTab }: SettingsTabsProps) {
-  // タブの値を抽出（型安全のため）
-  const tabValues = tabs.map((t) => t.value) as [string, ...string[]]
   const firstTab = defaultTab ?? tabs[0]?.value ?? ''
+  // parseAsStringLiteral は非空タプルを要求 — ランタイムで構築
+  const values = tabs.map((t) => t.value)
+  const tabValues: [string, ...string[]] = values[0] !== undefined
+    ? [values[0], ...values.slice(1)]
+    : [firstTab]
 
   // nuqs でURLパラメータと同期
   const [activeTab, setActiveTab] = useQueryState(

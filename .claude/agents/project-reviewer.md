@@ -40,6 +40,17 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
 - `src/app/(public*)/**`: Anti-AI design rules, GSAP patterns, OKLCH colors only
 - `src/app/(admin)/**/lexical/**`: Lexical 0.40 patterns, JSON-serializable node properties
 - `src/app/(public*)/**/seo/**` or `**/layouts/**`: SEO/NAP consistency, JSON-LD @graph pattern
+- `Dockerfile`, `cloudbuild.yaml`, `.dockerignore`, `.gcloudignore`: Deployment patterns (see below)
+
+### Deployment config checks (Dockerfile / cloudbuild.yaml)
+- **No `--set-secrets` / `--set-env-vars`** in cloudbuild.yaml — must use `--update-*` (merge, not replace)
+- **No `openssl`** in Dockerfile — Prisma 7 WASM engine doesn't need it
+- **No `node_modules/.prisma` copy** — Prisma 7 custom output uses `src/shared/generated/prisma/`
+- **`NEXT_PUBLIC_*` must be Docker ARGs** in builder stage — runtime-only injection breaks client-side code
+- **`COPY --from=deps /app/src/shared/generated`** must exist in builder — .gitignore excludes this dir
+- **`node_modules/@prisma`** must be copied to runner — WASM runtime engine
+- **Non-root user** (`USER nextjs`) in runner stage
+- **Secret versions must be fixed** (not `latest`) in substitutions
 
 ## Output format
 

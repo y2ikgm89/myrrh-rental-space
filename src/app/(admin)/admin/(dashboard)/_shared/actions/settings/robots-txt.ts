@@ -3,7 +3,8 @@
 import { prisma } from '@/shared/lib/prisma'
 import { updateTag } from 'next/cache'
 import { CACHE_TAGS } from '@/shared/lib/constants'
-import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+import { createSuccess, type ActionResult } from '@/admin/types/server-actions'
+import { createValidationError } from '@/shared/lib/action-helpers'
 import { withPermission } from '@/admin/lib/server-action-helpers'
 import { getSession, getRoleFromSession } from '@/shared/lib/auth'
 import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'
@@ -65,7 +66,7 @@ export const updateRobotsTxtSettings = withPermission<[data: RobotsTxtSettingsIn
 )(async (_user, data): Promise<ActionResult<{ warnings: string[] }>> => {
   const parsed = robotsTxtSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   const { robotsTxtEnabled, robotsTxtCustom } = parsed.data

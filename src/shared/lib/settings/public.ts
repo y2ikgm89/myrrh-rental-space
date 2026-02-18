@@ -14,7 +14,7 @@ import { prisma } from '@/shared/lib/prisma'
 import { CACHE_TAGS } from '@/shared/lib/constants'
 import { safeFetch, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
 import { toPlainObject, toPlainArray } from '@/shared/lib/serialize'
-import { AnnouncementBarAnimation, AnnouncementBarDesignStyle, PostPermalinkStructure } from '@/shared/generated/prisma/enums'
+import { AnnouncementBarAnimation, AnnouncementBarDesignStyle, LayoutWidth, PostPermalinkStructure } from '@/shared/generated/prisma/enums'
 
 /** お知らせバー設定のデフォルト値 */
 interface AnnouncementBarSettings {
@@ -279,9 +279,9 @@ export async function getLayoutSettings() {
         },
       }),
     fallback: {
-      containerWidth: 'LG',
+      containerWidth: LayoutWidth.LG,
       containerWidthCustom: null,
-      contentWidth: 'MD',
+      contentWidth: LayoutWidth.MD,
       contentWidthCustom: null,
     },
     category: ErrorCategory.DATABASE,
@@ -292,8 +292,3 @@ export async function getLayoutSettings() {
   return toPlainObject(result)
 }
 
-/**
- * 設定キャッシュを無効化
- * 設定更新時にServer Actionから呼び出す
- */
-export { revalidateTag } from 'next/cache'

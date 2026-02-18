@@ -1,12 +1,12 @@
-/**
+﻿/**
  * Image Node
  *
- * @description 画像を表示するDecoratorNode
+ * @description 画像を表示するDecoratorNode（リサイズ＋アライメント対応）
  */
 
 'use client'
 
-import type { ReactElement } from 'react'
+import { type ReactElement, useRef, useState } from 'react'
 import type {
   DOMConversionMap,
   DOMConversionOutput,
@@ -14,20 +14,61 @@ import type {
   EditorConfig,
   LexicalNode,
   NodeKey,
-  SerializedLexicalNode,
 } from 'lexical'
-import { $applyNodeReplacement, DecoratorNode } from 'lexical'
+import { $create, $getNodeByKey, $getState, $setState, createState, DecoratorNode } from 'lexical'
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
+import { useLexicalNodeSelection } from '@lexical/react/useLexicalNodeSelection'
+import { createEnumGuard } from '../config/type-guards'
 
 // =============================================================================
 // Types
 // =============================================================================
 
-export interface SerializedImageNode extends SerializedLexicalNode {
-  src: string
-  alt: string
-  width?: number
-  height?: number
+export const IMAGE_ALIGNMENTS = ['left', 'center', 'right'] as const
+export type ImageAlignment = (typeof IMAGE_ALIGNMENTS)[number]
+
+// =============================================================================
+// Type Guards
+// =============================================================================
+
+const isImageAlignment = createEnumGuard<ImageAlignment>(IMAGE_ALIGNMENTS)
+
+// =============================================================================
+// Alignment Utils
+// =============================================================================
+
+const ALIGNMENT_CLASSES: Record<ImageAlignment, string> = {
+  left: 'justify-start',
+  center: 'justify-center',
+  right: 'justify-end',
 }
+
+// =============================================================================
+// State
+// =============================================================================
+
+export const srcState = createState('src', {
+  parse: (v: unknown): string => typeof v === 'string' ? v : '',
+})
+
+export const altState = createState('alt', {
+  parse: (v: unknown): string => typeof v === 'string' ? v : '',
+})
+
+export const widthState = createState('width', {
+  parse: (v: unknown): number | undefined =>
+    typeof v === 'number' && Number.isFinite(v) ? v : undefined,
+})
+
+export const heightState = createState('height', {
+  parse: (v: unknown): number | undefined =>
+    typeof v === 'number' && Number.isFinite(v) ? v : undefined,
+})
+
+export const alignmentState = createState('alignment', {
+  parse: (v: unknown): ImageAlignment =>
+    typeof v === 'string' && isImageAlignment(v) ? v : 'center',
+})
 
 // =============================================================================
 // Component
@@ -38,27 +79,87 @@ function ImageComponent({
   alt,
   width,
   height,
+  alignment = 'center',
   nodeKey,
 }: {
   src: string
   alt: string
   width?: number
   height?: number
+  alignment?: ImageAlignment
   nodeKey: NodeKey
 }) {
+  const [editor] = useLexicalComposerContext()
+  const [isSelected] = useLexicalNodeSelection(nodeKey)
+  const [isResizing, setIsResizing] = useState(false)
+  const imageRef = useRef<HTMLImageElement>(null)
+  const startRef = useRef<{ x: number; width: number }>({ x: 0, width: 0 })
+
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const img = imageRef.current
+    if (!img) return
+
+    setIsResizing(true)
+    startRef.current = { x: e.clientX, width: img.offsetWidth }
+
+    const handleResizeMove = (moveEvent: MouseEvent) => {
+      const delta = moveEvent.clientX - startRef.current.x
+      const newWidth = Math.max(50, startRef.current.width + delta)
+      if (img) {
+        img.style.width = `${newWidth}px`
+      }
+    }
+
+    const handleResizeEnd = (upEvent: MouseEvent) => {
+      document.removeEventListener('mousemove', handleResizeMove)
+      document.removeEventListener('mouseup', handleResizeEnd)
+      setIsResizing(false)
+
+      const delta = upEvent.clientX - startRef.current.x
+      const newWidth = Math.max(50, startRef.current.width + delta)
+
+      editor.update(() => {
+        const node = $getNodeByKey(nodeKey)
+        if (node && node instanceof ImageNode) {
+          $setState(node, widthState, Math.round(newWidth))
+          $setState(node, heightState, undefined)
+        }
+      })
+    }
+
+    document.addEventListener('mousemove', handleResizeMove)
+    document.addEventListener('mouseup', handleResizeEnd)
+  }
+
+  const alignClass = ALIGNMENT_CLASSES[alignment]
+
   return (
     <div
       data-lexical-node-key={nodeKey}
-      className="relative my-4 flex justify-center"
+      className={`relative my-6 flex ${alignClass}`}
     >
-      <img
-        src={src}
-        alt={alt}
-        width={width}
-        height={height}
-        className="max-w-full h-auto rounded-lg"
-        draggable={false}
-      />
+      <div className="relative inline-block">
+        <img
+          ref={imageRef}
+          src={src}
+          alt={alt}
+          width={width}
+          height={height}
+          className={`max-w-full h-auto rounded-lg ${isSelected ? 'ring-2 ring-primary' : ''}`}
+          draggable={false}
+        />
+        {isSelected && (
+          <div
+            className="absolute right-0 bottom-0 h-3 w-3 cursor-se-resize rounded-tl bg-primary"
+            onMouseDown={handleResizeStart}
+          />
+        )}
+        {isResizing && (
+          <div className="absolute inset-0 bg-primary/10" />
+        )}
+      </div>
     </div>
   )
 }
@@ -67,13 +168,13 @@ function ImageComponent({
 // DOM Conversion
 // =============================================================================
 
-function $convertImageElement(domNode: Node): null | DOMConversionOutput {
-  if (domNode instanceof HTMLImageElement) {
-    const src = domNode.getAttribute('src')
+function $convertImageElement(element: HTMLElement): null | DOMConversionOutput {
+  if (element instanceof HTMLImageElement) {
+    const src = element.getAttribute('src')
     if (src) {
-      const alt = domNode.getAttribute('alt') ?? ''
-      const width = domNode.width || undefined
-      const height = domNode.height || undefined
+      const alt = element.getAttribute('alt') ?? ''
+      const width = element.width || undefined
+      const height = element.height || undefined
       const node = $createImageNode({ src, alt, width, height })
       return { node }
     }
@@ -86,35 +187,20 @@ function $convertImageElement(domNode: Node): null | DOMConversionOutput {
 // =============================================================================
 
 export class ImageNode extends DecoratorNode<ReactElement> {
-  __src: string
-  __alt: string
-  __width?: number
-  __height?: number
-
-  static getType(): string {
-    return 'image'
+  override $config() {
+    return this.config('image', {
+      extends: DecoratorNode,
+      stateConfigs: [
+        { flat: true, stateConfig: srcState },
+        { flat: true, stateConfig: altState },
+        { flat: true, stateConfig: widthState },
+        { flat: true, stateConfig: heightState },
+        { flat: true, stateConfig: alignmentState },
+      ],
+    })
   }
 
-  static clone(node: ImageNode): ImageNode {
-    return new ImageNode(
-      node.__src,
-      node.__alt,
-      node.__width,
-      node.__height,
-      node.__key
-    )
-  }
-
-  static importJSON(serializedNode: SerializedImageNode): ImageNode {
-    return $createImageNode({
-      src: serializedNode.src,
-      alt: serializedNode.alt,
-      width: serializedNode.width,
-      height: serializedNode.height,
-    }).updateFromJSON(serializedNode)
-  }
-
-  static importDOM(): DOMConversionMap | null {
+  static override importDOM(): DOMConversionMap | null {
     return {
       img: () => ({
         conversion: $convertImageElement,
@@ -123,45 +209,32 @@ export class ImageNode extends DecoratorNode<ReactElement> {
     }
   }
 
-  constructor(
-    src: string,
-    alt: string,
-    width?: number,
-    height?: number,
-    key?: NodeKey
-  ) {
-    super(key)
-    this.__src = src
-    this.__alt = alt
-    this.__width = width
-    this.__height = height
-  }
+  override exportDOM(): DOMExportOutput {
+    const src = $getState(this, srcState)
+    const alt = $getState(this, altState)
+    const width = $getState(this, widthState)
+    const height = $getState(this, heightState)
+    const alignment = $getState(this, alignmentState)
 
-  exportJSON(): SerializedImageNode {
-    return {
-      ...super.exportJSON(),
-      src: this.__src,
-      alt: this.__alt,
-      width: this.__width,
-      height: this.__height,
-    }
-  }
+    const container = document.createElement('div')
+    container.setAttribute('data-image', 'true')
+    container.setAttribute('data-image-alignment', alignment)
 
-  exportDOM(): DOMExportOutput {
     const img = document.createElement('img')
-    img.setAttribute('src', this.__src)
-    img.setAttribute('alt', this.__alt)
-    if (this.__width) {
-      img.setAttribute('width', String(this.__width))
+    img.setAttribute('src', src)
+    img.setAttribute('alt', alt)
+    if (width) {
+      img.setAttribute('width', String(width))
     }
-    if (this.__height) {
-      img.setAttribute('height', String(this.__height))
+    if (height) {
+      img.setAttribute('height', String(height))
     }
-    img.className = 'max-w-full h-auto rounded-lg my-4'
-    return { element: img }
+
+    container.appendChild(img)
+    return { element: container }
   }
 
-  createDOM(config: EditorConfig): HTMLElement {
+  override createDOM(config: EditorConfig): HTMLElement {
     const div = document.createElement('div')
     const theme = config.theme
     const className = theme.image
@@ -171,86 +244,51 @@ export class ImageNode extends DecoratorNode<ReactElement> {
     return div
   }
 
-  updateDOM(): false {
+  override updateDOM(): false {
     return false
   }
 
-  decorate(): ReactElement {
+  override decorate(): ReactElement {
     return (
       <ImageComponent
-        src={this.__src}
-        alt={this.__alt}
-        width={this.__width}
-        height={this.__height}
+        src={$getState(this, srcState)}
+        alt={$getState(this, altState)}
+        width={$getState(this, widthState)}
+        height={$getState(this, heightState)}
+        alignment={$getState(this, alignmentState)}
         nodeKey={this.__key}
       />
     )
   }
 
-  // Getters
-  getSrc(): string {
-    return this.getLatest().__src
-  }
-
-  getAlt(): string {
-    return this.getLatest().__alt
-  }
-
-  getWidth(): number | undefined {
-    return this.getLatest().__width
-  }
-
-  getHeight(): number | undefined {
-    return this.getLatest().__height
-  }
-
-  // Setters
-  setAlt(alt: string): void {
-    const self = this.getWritable()
-    self.__alt = alt
-  }
-
-  setWidth(width: number | undefined): void {
-    const self = this.getWritable()
-    self.__width = width
-  }
-
-  setHeight(height: number | undefined): void {
-    const self = this.getWritable()
-    self.__height = height
-  }
 }
 
 // =============================================================================
 // Factory Functions
 // =============================================================================
 
-/**
- * 画像ノードを作成する
- *
- * @param params - 画像のパラメータ
- * @returns ImageNode インスタンス
- */
 export function $createImageNode({
   src,
   alt = '',
   width,
   height,
+  alignment,
 }: {
   src: string
   alt?: string
   width?: number
   height?: number
+  alignment?: ImageAlignment
 }): ImageNode {
-  return $applyNodeReplacement(new ImageNode(src, alt, width, height))
+  const node = $create(ImageNode)
+  $setState(node, srcState, src)
+  $setState(node, altState, alt)
+  if (width !== undefined) $setState(node, widthState, width)
+  if (height !== undefined) $setState(node, heightState, height)
+  if (alignment) $setState(node, alignmentState, alignment)
+  return node
 }
 
-/**
- * ノードがImageNodeかどうかを判定する
- *
- * @param node - 判定対象のノード
- * @returns ImageNodeの場合true
- */
 export function $isImageNode(
   node: LexicalNode | null | undefined
 ): node is ImageNode {

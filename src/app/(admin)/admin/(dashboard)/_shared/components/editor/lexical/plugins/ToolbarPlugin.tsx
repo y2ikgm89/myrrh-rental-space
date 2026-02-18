@@ -6,7 +6,7 @@
 
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { Fragment, useEffect, useState, useCallback } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
   $createParagraphNode,
@@ -32,45 +32,29 @@ import {
 import { $isLinkNode, TOGGLE_LINK_COMMAND } from '@lexical/link'
 import { $isHeadingNode, $createHeadingNode, type HeadingTagType } from '@lexical/rich-text'
 import { $setBlocksType } from '@lexical/selection'
-import { INSERT_HORIZONTAL_RULE_COMMAND } from '@lexical/react/LexicalHorizontalRuleNode'
 import {
   AlignCenter,
   AlignJustify,
   AlignLeft,
   AlignRight,
-  AlertCircle,
   Bold,
   Check,
   ChevronDown,
-  Columns,
   Heading1,
   Heading2,
   Heading3,
   Heading4,
-  Image as ImageIcon,
-  Instagram,
   Italic,
   Link,
   List,
   ListOrdered,
-  Minus,
   Pilcrow,
   Plus,
   Redo,
-  Scissors,
   Strikethrough,
-  Table,
   TextQuote,
   Underline,
   Undo,
-  Youtube,
-  Twitter,
-  ChevronsDownUp,
-  MousePointerClick,
-  Quote,
-  Link2,
-  Footprints,
-  PanelTop,
 } from 'lucide-react'
 import { Button } from '@/admin/components/ui/button'
 import { Separator } from '@/admin/components/ui/separator'
@@ -86,28 +70,16 @@ import { FontSizePlugin } from './FontSizePlugin'
 import { HighlightPlugin } from './HighlightPlugin'
 import { TextColorPlugin } from './TextColorPlugin'
 import { TextCasePlugin } from './TextCasePlugin'
-import { INSERT_PAGE_BREAK_COMMAND } from './PageBreakPlugin'
-import { INSERT_COLLAPSIBLE_COMMAND } from './CollapsiblePlugin'
 import { entriesOf } from '@/shared/lib/serialize'
+import { getToolbarInsertItems, executeInsertItem, MERGED_CATEGORY_PAIRS } from '../config/insert-items'
+import type { DialogId } from '../dialogs/dialog-types'
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type ToolbarPluginProps = {
-  onInsertImage?: () => void
-  onInsertYouTube?: () => void
-  onInsertX?: () => void
-  onInsertInstagram?: () => void
-  onInsertLink?: () => void
-  onInsertTable?: () => void
-  onInsertLayout?: () => void
-  onInsertCallout?: () => void
-  onInsertButton?: () => void
-  onInsertPullQuote?: () => void
-  onInsertBookmark?: () => void
-  onInsertSteps?: () => void
-  onInsertTabs?: () => void
+  openDialog?: (id: DialogId) => void
 }
 
 type BlockType = 'paragraph' | 'h1' | 'h2' | 'h3' | 'h4' | 'quote' | 'ul' | 'ol'
@@ -170,19 +142,7 @@ const ALIGNMENT_CONFIG: Record<AlignmentType, AlignmentConfig> = {
 // =============================================================================
 
 export function ToolbarPlugin({
-  onInsertImage,
-  onInsertYouTube,
-  onInsertX,
-  onInsertInstagram,
-  onInsertLink,
-  onInsertTable,
-  onInsertLayout,
-  onInsertCallout,
-  onInsertButton,
-  onInsertPullQuote,
-  onInsertBookmark,
-  onInsertSteps,
-  onInsertTabs,
+  openDialog,
 }: ToolbarPluginProps) {
   const [editor] = useLexicalComposerContext()
 
@@ -305,18 +265,14 @@ export function ToolbarPlugin({
   }
 
   const handleInsertLink = () => {
-    if (onInsertLink) {
-      onInsertLink()
+    if (openDialog) {
+      openDialog('link')
     } else {
       // フォールバック: ダイアログが提供されていない場合はリンク解除のみ
       if (isLink) {
         editor.dispatchCommand(TOGGLE_LINK_COMMAND, null)
       }
     }
-  }
-
-  const handleInsertHorizontalRule = () => {
-    editor.dispatchCommand(INSERT_HORIZONTAL_RULE_COMMAND, undefined)
   }
 
   const handleInsertList = (type: 'ul' | 'ol') => {
@@ -358,17 +314,8 @@ export function ToolbarPlugin({
     editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, format)
   }
 
-  // 挿入ハンドラー
-  const handleInsertPageBreak = () => {
-    editor.dispatchCommand(INSERT_PAGE_BREAK_COMMAND, undefined)
-  }
-
-  const handleInsertCollapsible = () => {
-    editor.dispatchCommand(INSERT_COLLAPSIBLE_COMMAND, undefined)
-  }
-
-  // 挿入メニューに項目があるかチェック（常にtrue: 区切り線、ページ区切り、折りたたみは常に表示）
-  const hasInsertItems = true
+  // 挿入アイテム（configベース）
+  const insertItems = getToolbarInsertItems(!!openDialog)
 
   return (
     <div className="flex justify-center border-b bg-background p-1">
@@ -556,7 +503,7 @@ export function ToolbarPlugin({
       <Separator orientation="vertical" className="mx-1 h-6" />
 
       {/* Insert Dropdown */}
-      {hasInsertItems && (
+      {insertItems.length > 0 && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -571,92 +518,23 @@ export function ToolbarPlugin({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="min-w-[160px]">
-            {onInsertImage && (
-              <DropdownMenuItem onClick={onInsertImage} className="flex items-center gap-2">
-                <ImageIcon className="h-4 w-4" />
-                <span>画像</span>
-              </DropdownMenuItem>
-            )}
-            {onInsertYouTube && (
-              <DropdownMenuItem onClick={onInsertYouTube} className="flex items-center gap-2">
-                <Youtube className="h-4 w-4" />
-                <span>YouTube</span>
-              </DropdownMenuItem>
-            )}
-            {onInsertX && (
-              <DropdownMenuItem onClick={onInsertX} className="flex items-center gap-2">
-                <Twitter className="h-4 w-4" />
-                <span>X (Twitter)</span>
-              </DropdownMenuItem>
-            )}
-            {onInsertInstagram && (
-              <DropdownMenuItem onClick={onInsertInstagram} className="flex items-center gap-2">
-                <Instagram className="h-4 w-4" />
-                <span>Instagram</span>
-              </DropdownMenuItem>
-            )}
-            {onInsertTable && (
-              <DropdownMenuItem onClick={onInsertTable} className="flex items-center gap-2">
-                <Table className="h-4 w-4" />
-                <span>テーブル</span>
-              </DropdownMenuItem>
-            )}
-            {onInsertLayout && (
-              <DropdownMenuItem onClick={onInsertLayout} className="flex items-center gap-2">
-                <Columns className="h-4 w-4" />
-                <span>カラム</span>
-              </DropdownMenuItem>
-            )}
-            {onInsertCallout && (
-              <DropdownMenuItem onClick={onInsertCallout} className="flex items-center gap-2">
-                <AlertCircle className="h-4 w-4" />
-                <span>コールアウト</span>
-              </DropdownMenuItem>
-            )}
-            {onInsertPullQuote && (
-              <DropdownMenuItem onClick={onInsertPullQuote} className="flex items-center gap-2">
-                <Quote className="h-4 w-4" />
-                <span>プルクォート</span>
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem onClick={handleInsertCollapsible} className="flex items-center gap-2">
-              <ChevronsDownUp className="h-4 w-4" />
-              <span>折りたたみ</span>
-            </DropdownMenuItem>
-            {onInsertSteps && (
-              <DropdownMenuItem onClick={onInsertSteps} className="flex items-center gap-2">
-                <Footprints className="h-4 w-4" />
-                <span>ステップ</span>
-              </DropdownMenuItem>
-            )}
-            {onInsertTabs && (
-              <DropdownMenuItem onClick={onInsertTabs} className="flex items-center gap-2">
-                <PanelTop className="h-4 w-4" />
-                <span>タブ</span>
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            {onInsertButton && (
-              <DropdownMenuItem onClick={onInsertButton} className="flex items-center gap-2">
-                <MousePointerClick className="h-4 w-4" />
-                <span>ボタン</span>
-              </DropdownMenuItem>
-            )}
-            {onInsertBookmark && (
-              <DropdownMenuItem onClick={onInsertBookmark} className="flex items-center gap-2">
-                <Link2 className="h-4 w-4" />
-                <span>ブックマーク</span>
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleInsertHorizontalRule} className="flex items-center gap-2">
-              <Minus className="h-4 w-4" />
-              <span>区切り線</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleInsertPageBreak} className="flex items-center gap-2">
-              <Scissors className="h-4 w-4" />
-              <span>ページ区切り</span>
-            </DropdownMenuItem>
+            {insertItems.map((item, index) => {
+              const prev = insertItems[index - 1]
+              const showSeparator = prev !== undefined && prev.category !== item.category
+                && !MERGED_CATEGORY_PAIRS.has(`${prev.category}→${item.category}`)
+              return (
+                <Fragment key={item.id}>
+                  {showSeparator && <DropdownMenuSeparator />}
+                  <DropdownMenuItem
+                    onClick={() => executeInsertItem(item, editor, openDialog)}
+                    className="flex items-center gap-2"
+                  >
+                    <item.icon className="h-4 w-4" />
+                    <span>{item.label}</span>
+                  </DropdownMenuItem>
+                </Fragment>
+              )
+            })}
           </DropdownMenuContent>
         </DropdownMenu>
       )}

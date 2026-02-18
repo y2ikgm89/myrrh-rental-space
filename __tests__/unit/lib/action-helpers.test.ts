@@ -25,8 +25,8 @@ describe('action-helpers', () => {
 
       const fieldErrors = extractFieldErrors(result.error)
 
-      expect(fieldErrors.name).toContain('名前は必須です')
-      expect(fieldErrors.email).toContain('有効なメールアドレスを入力してください')
+      expect(fieldErrors['name']).toContain('名前は必須です')
+      expect(fieldErrors['email']).toContain('有効なメールアドレスを入力してください')
     })
 
     test('複数のエラーを持つフィールドを処理する', () => {
@@ -42,9 +42,9 @@ describe('action-helpers', () => {
 
       const fieldErrors = extractFieldErrors(result.error)
 
-      expect(fieldErrors.password).toHaveLength(2)
-      expect(fieldErrors.password).toContain('8文字以上必要です')
-      expect(fieldErrors.password).toContain('大文字を含める必要があります')
+      expect(fieldErrors['password']).toHaveLength(2)
+      expect(fieldErrors['password']).toContain('8文字以上必要です')
+      expect(fieldErrors['password']).toContain('大文字を含める必要があります')
     })
 
     test('ネストされたパスはトップレベルフィールドのみ抽出する', () => {
@@ -59,7 +59,7 @@ describe('action-helpers', () => {
 
       const fieldErrors = extractFieldErrors(result.error)
 
-      expect(fieldErrors.address).toBeDefined()
+      expect(fieldErrors['address']).toBeDefined()
     })
   })
 
@@ -76,7 +76,7 @@ describe('action-helpers', () => {
 
       expect(errorResponse.success).toBe(false)
       expect(errorResponse.error).toBe('入力内容に誤りがあります')
-      expect(errorResponse.fieldErrors?.name).toContain('必須')
+      expect(errorResponse.fieldErrors?.['name']).toContain('必須')
     })
 
     test('カスタムメッセージを設定できる', () => {

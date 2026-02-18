@@ -77,11 +77,11 @@ function parseAuditLogMetadata(value: unknown): AuditLogMetadata {
   const result: { ipAddress?: string; userAgent?: string; [key: string]: unknown } = {}
 
   // 既知のフィールドを型安全に抽出
-  if (typeof value.ipAddress === 'string') {
-    result.ipAddress = value.ipAddress
+  if (typeof value['ipAddress'] === 'string') {
+    result['ipAddress'] = value['ipAddress']
   }
-  if (typeof value.userAgent === 'string') {
-    result.userAgent = value.userAgent
+  if (typeof value['userAgent'] === 'string') {
+    result['userAgent'] = value['userAgent']
   }
 
   // その他のフィールドをコピー

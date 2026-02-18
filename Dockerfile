@@ -1,94 +1,54 @@
-# ==============================================
-# Myrrh Rental Space - Production Dockerfile
-# Optimized for Cloud Run with Bun runtime
-# ==============================================
+# syntax=docker.io/docker/dockerfile:1
 
-# ---------------------------------------------
-# Stage 1: Dependencies
-# ---------------------------------------------
-FROM oven/bun:1.3.9-alpine AS deps
-
+FROM oven/bun:1.3.9-alpine AS base
 WORKDIR /app
 
-# Install OpenSSL for Prisma
-RUN apk add --no-cache openssl libc6-compat
-
-# Copy package files
+# --- Stage 1: Dependencies ---
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
 COPY package.json bun.lock ./
 COPY prisma ./prisma/
+RUN bun install --frozen-lockfile && \
+    bunx --bun prisma generate --schema=./prisma/schema.prisma
 
-# Install dependencies
-RUN bun install --frozen-lockfile
-
-# Generate Prisma Client
-RUN bunx --bun prisma generate --schema=./prisma/schema.prisma
-
-# ---------------------------------------------
-# Stage 2: Builder
-# ---------------------------------------------
-FROM oven/bun:1.3.9-alpine AS builder
-
-WORKDIR /app
-
-# Install build dependencies
-RUN apk add --no-cache openssl libc6-compat
-
-# Copy dependencies from deps stage
+# --- Stage 2: Build ---
+FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/prisma ./prisma
-
-# Copy source code
+COPY --from=deps /app/src/shared/generated ./src/shared/generated
 COPY . .
 
-# Build environment variables (placeholder for build-time)
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV NODE_ENV=production
-ENV DOCKER_BUILD=true
+ENV NEXT_TELEMETRY_DISABLED=1 \
+    NODE_ENV=production \
+    SKIP_ENV_VALIDATION=true \
+    STANDALONE=true
 
-# Build the application
-RUN bun run build
+# NEXT_PUBLIC_* はビルド時にクライアント JS へインライン化される
+ARG NEXT_PUBLIC_BASE_URL
+ARG NEXT_PUBLIC_APP_URL
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY
+ARG NEXT_PUBLIC_GA_MEASUREMENT_ID
 
-# ---------------------------------------------
-# Stage 3: Runner (Production)
-# ---------------------------------------------
-FROM oven/bun:1.3.9-alpine AS runner
+RUN bun run validate && bun run build
 
-WORKDIR /app
+# --- Stage 3: Runner ---
+FROM base AS runner
 
-# Install runtime dependencies
-RUN apk add --no-cache openssl libc6-compat
-
-# Create non-root user for security
-RUN addgroup --system --gid 1001 nodejs && \
+RUN apk add --no-cache libc6-compat && \
+    addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Set production environment
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    PORT=8080 \
+    HOSTNAME=0.0.0.0
 
-# Copy necessary files from builder
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-# Copy Prisma generated client
-COPY --from=deps /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=deps /app/node_modules/@prisma ./node_modules/@prisma
 
-# Switch to non-root user
 USER nextjs
-
-# Expose port (Cloud Run uses PORT env variable)
-EXPOSE 3000
-
-# Set default port
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
-
-# Start the application
-CMD ["bun", "run", "server.js"]
+EXPOSE 8080
+CMD ["bun", "server.js"]

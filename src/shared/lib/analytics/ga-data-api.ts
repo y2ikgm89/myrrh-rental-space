@@ -47,7 +47,7 @@ export type AnalyticsError = {
  * 環境変数 GOOGLE_APPLICATION_CREDENTIALS_JSON からクレデンシャルを読み込む
  */
 function getAnalyticsClient(): BetaAnalyticsDataClient | null {
-  const credentialsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON
+  const credentialsJson = process.env["GOOGLE_APPLICATION_CREDENTIALS_JSON"]
 
   if (!credentialsJson) {
     return null
@@ -168,5 +168,5 @@ export async function getAnalyticsStats(
  * GA Data APIが利用可能かチェック
  */
 export function isAnalyticsApiAvailable(): boolean {
-  return !!process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON
+  return !!process.env["GOOGLE_APPLICATION_CREDENTIALS_JSON"]
 }

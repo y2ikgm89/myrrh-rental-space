@@ -59,32 +59,30 @@ export type NodeUpdater<T extends LexicalNode> = (node: T) => void
  *
  * @example
  * ```tsx
+ * import { $getState, $setState } from 'lexical'
+ * import { $isButtonNode, buttonTextState, buttonVariantState } from '../../nodes/ButtonNode'
+ *
  * function ButtonInspectorPanel({ nodeKey, node }: Props) {
  *   const updateNode = useNodeUpdater(nodeKey, $isButtonNode)
  *
- *   const handleTextChange = useCallback(
- *     (value: string) => updateNode((n) => n.setText(value)),
- *     [updateNode]
- *   )
+ *   const text = editor.getEditorState().read(() => $getState(node, buttonTextState))
  *
- *   const handleVariantChange = useCallback(
- *     (value: string) => {
- *       if (isButtonVariant(value)) {
- *         updateNode((n) => n.setVariant(value))
- *       }
- *     },
- *     [updateNode]
- *   )
+ *   const handleTextChange = (value: string) =>
+ *     updateNode((n) => { $setState(n, buttonTextState, value) })
  *
- *   return (
- *     <Input value={node.getText()} onChange={handleTextChange} />
- *   )
+ *   const handleVariantChange = (value: string) => {
+ *     if (isButtonVariant(value)) {
+ *       updateNode((n) => { $setState(n, buttonVariantState, value) })
+ *     }
+ *   }
+ *
+ *   return <Input value={text} onChange={(e) => handleTextChange(e.target.value)} />
  * }
  * ```
  *
  * @remarks
- * - 更新関数内では`node.setXxx()`のようなsetterメソッドを呼び出す
- * - setterメソッドは内部で`getWritable()`を使用するため、直接呼び出してOK
+ * - 更新関数内では `$setState(node, stateConfig, value)` を使用
+ * - editor.update()内で実行されるため $setState は直接呼び出し可
  * - typeGuardが失敗した場合、更新は実行されない（サイレントに無視）
  */
 export function useNodeUpdater<T extends LexicalNode>(

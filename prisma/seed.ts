@@ -24,7 +24,7 @@ import { syncPermissionsToDb } from '../src/app/(admin)/admin/(dashboard)/_share
 
 // Prisma アダプター（PrismaPg が Pool ライフサイクルを内部管理）
 const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: process.env["DATABASE_URL"],
 })
 
 // Prisma Client
@@ -849,7 +849,7 @@ async function seedNews() {
     {
       slug: 'year-end-business-hours',
       title: '【重要】年末年始の営業について',
-      content: `いつもMyrrh Rental Spaceをご利用いただきありがとうございます。
+      contentHtml: `いつもMyrrh Rental Spaceをご利用いただきありがとうございます。
 
 年末年始の営業日程についてお知らせいたします。
 
@@ -867,7 +867,7 @@ async function seedNews() {
     {
       slug: 'new-seminar-room-open',
       title: '新スペース「セミナールーム」オープンのお知らせ',
-      content: `この度、最大30名収容可能な「セミナールーム」を新たにオープンいたしました。
+      contentHtml: `この度、最大30名収容可能な「セミナールーム」を新たにオープンいたしました。
 
 セミナー、ワークショップ、説明会、発表会など、様々な用途でご利用いただけます。
 
@@ -885,7 +885,7 @@ async function seedNews() {
     {
       slug: 'wifi-upgrade',
       title: 'Wi-Fi回線を増強しました',
-      content: `より快適にご利用いただけるよう、全スペースのWi-Fi回線を増強いたしました。
+      contentHtml: `より快適にご利用いただけるよう、全スペースのWi-Fi回線を増強いたしました。
 
 これにより、オンライン会議や大容量データの送受信もストレスなく行えるようになりました。
 
@@ -896,7 +896,7 @@ async function seedNews() {
     {
       slug: 'website-renewal',
       title: 'ホームページをリニューアルしました',
-      content: `Myrrh Rental Spaceのホームページをリニューアルいたしました。
+      contentHtml: `Myrrh Rental Spaceのホームページをリニューアルいたしました。
 
 より見やすく、使いやすいデザインに生まれ変わりました。
 スペースの検索・予約もスムーズに行えるようになっています。
@@ -908,14 +908,14 @@ async function seedNews() {
     {
       slug: 'spring-campaign-draft',
       title: '【未公開】春のキャンペーン企画中',
-      content: `春のキャンペーンを企画中です。詳細は後日公開予定。`,
+      contentHtml: `春のキャンペーンを企画中です。詳細は後日公開予定。`,
       isPublished: false,
       publishedAt: null,
     },
     {
       slug: 'corporate-monthly-plan',
       title: '法人向け月額プランを開始しました',
-      content: `法人のお客様向けに、お得な月額プランを開始いたしました。
+      contentHtml: `法人のお客様向けに、お得な月額プランを開始いたしました。
 
 【プラン内容】
 ・月10時間プラン: 20,000円（税込）
@@ -935,7 +935,7 @@ async function seedNews() {
     {
       slug: 'credit-card-payment',
       title: 'クレジットカード決済に対応しました',
-      content: `ご要望の多かったクレジットカード決済に対応いたしました。
+      contentHtml: `ご要望の多かったクレジットカード決済に対応いたしました。
 
 【対応カード】
 ・Visa
@@ -950,7 +950,7 @@ async function seedNews() {
     {
       slug: 'media-coverage-newspaper',
       title: '【メディア掲載】〇〇新聞に紹介されました',
-      content: `2025年12月の〇〇新聞「注目のレンタルスペース特集」にて、当スペースが紹介されました。
+      contentHtml: `2025年12月の〇〇新聞「注目のレンタルスペース特集」にて、当スペースが紹介されました。
 
 「駅近でアクセス抜群、設備も充実した使いやすいスペース」としてご紹介いただきました。
 
@@ -963,7 +963,7 @@ async function seedNews() {
     {
       slug: 'users-1000-milestone',
       title: 'ご利用者数1000名を突破しました',
-      content: `おかげさまで、累計ご利用者数が1000名を突破いたしました。
+      contentHtml: `おかげさまで、累計ご利用者数が1000名を突破いたしました。
 
 日頃よりご愛顧いただき、誠にありがとうございます。
 
@@ -980,7 +980,7 @@ async function seedNews() {
     {
       slug: 'hvac-renewal',
       title: '空調設備をリニューアルしました',
-      content: `全スペースの空調設備をリニューアルいたしました。
+      contentHtml: `全スペースの空調設備をリニューアルいたしました。
 
 【改善点】
 ・最新型のエアコンに入れ替え
@@ -995,7 +995,7 @@ async function seedNews() {
     {
       slug: 'terms-revision-notice',
       title: '【重要】利用規約改定のお知らせ',
-      content: `2026年1月1日より、利用規約を一部改定いたします。
+      contentHtml: `2026年1月1日より、利用規約を一部改定いたします。
 
 【主な変更点】
 ・キャンセルポリシーの明確化
@@ -1011,7 +1011,7 @@ async function seedNews() {
     {
       slug: 'reservation-system-update',
       title: 'オンライン予約システムをアップデートしました',
-      content: `オンライン予約システムをアップデートいたしました。
+      contentHtml: `オンライン予約システムをアップデートいたしました。
 
 【改善点】
 ・スマートフォンでの操作性向上
@@ -1026,7 +1026,7 @@ async function seedNews() {
     {
       slug: 'temporary-closure-staff-training',
       title: 'スタッフ研修のため臨時休業のお知らせ',
-      content: `下記日程におきまして、スタッフ研修のため臨時休業とさせていただきます。
+      contentHtml: `下記日程におきまして、スタッフ研修のため臨時休業とさせていただきます。
 
 【臨時休業日】
 3月15日（土）終日
@@ -1040,7 +1040,7 @@ async function seedNews() {
     {
       slug: 'parking-partnership',
       title: '駐車場提携を開始しました',
-      content: `近隣の駐車場「〇〇パーキング」との提携を開始いたしました。
+      contentHtml: `近隣の駐車場「〇〇パーキング」との提携を開始いたしました。
 
 【特典】
 当スペースをご利用の方は、駐車料金が最大3時間無料になります。
@@ -1057,7 +1057,7 @@ async function seedNews() {
     {
       slug: 'new-service-coming-soon',
       title: '【未公開】新サービス準備中',
-      content: `2026年春に向けて、新サービスを準備中です。
+      contentHtml: `2026年春に向けて、新サービスを準備中です。
 
 詳細は後日発表いたします。お楽しみに！`,
       isPublished: false,
@@ -1081,66 +1081,15 @@ async function seedNews() {
 // =============================================================================
 
 async function seedPages() {
-  const { ensurePageSections } = await import('@/shared/lib/section-defaults')
+  const { bootstrapSystemPages } = await import('@/shared/lib/bootstrap')
+  await bootstrapSystemPages()
+  console.log('✅ System pages ensured')
 
-  // プライバシーポリシーページ
-  const privacyPageData = {
-    slug: 'privacy',
-    title: 'プライバシーポリシー',
-    description: '当サイトにおける個人情報の取り扱いについてご説明いたします。',
-    metaDescription: '当サイトにおける個人情報の取り扱いについてご説明いたします。',
-    isPublished: true,
-    isActive: true,
-    isSystemPage: true,
-  }
-
-  const existing = await prisma.page.findUnique({ where: { slug: privacyPageData.slug } })
-  if (!existing) {
-    const page = await prisma.page.create({ data: privacyPageData })
-    await ensurePageSections(page.id, page.slug)
-    console.log(`✅ Created page: ${privacyPageData.title}`)
-  }
-
-  // システムページ
-  const systemPages = [
-    { slug: 'reservation', title: '予約', description: 'レンタルスペースの予約' },
-    { slug: 'spaces', title: 'スペース一覧', description: 'ご利用可能なレンタルスペース' },
-    { slug: 'contact', title: 'お問い合わせ', description: 'お問い合わせフォーム' },
-    { slug: 'posts', title: 'ブログ', description: 'ブログ記事一覧' },
-    { slug: 'news', title: 'お知らせ', description: 'ニュース・お知らせ一覧' },
-    { slug: 'about', title: '会社概要', description: '会社・サービスについて' },
-    { slug: 'faq', title: 'よくある質問', description: 'FAQ' },
-  ]
-
-  for (const pageData of systemPages) {
-    const existingPage = await prisma.page.findUnique({ where: { slug: pageData.slug } })
-    if (!existingPage) {
-      const page = await prisma.page.create({
-        data: {
-          slug: pageData.slug,
-          title: pageData.title,
-          description: pageData.description,
-          isPublished: true,
-          isActive: true,
-          isSystemPage: true,
-        },
-      })
-      await ensurePageSections(page.id, page.slug)
-      console.log(`✅ Created system page: ${pageData.title}`)
-    } else if (!existingPage.isSystemPage) {
-      await prisma.page.update({
-        where: { id: existingPage.id },
-        data: { isSystemPage: true },
-      })
-      // 既存ページにもデフォルトセクションを確保
-      await ensurePageSections(existingPage.id, existingPage.slug)
-      console.log(`🔄 Updated to system page: ${pageData.title}`)
-    } else {
-      // 既存システムページにもデフォルトセクションを確保
-      await ensurePageSections(existingPage.id, existingPage.slug)
-      console.log(`⏭️ Skipped existing system page: ${pageData.title}`)
-    }
-  }
+  // seed 固有: privacy ページに metaDescription を設定
+  await prisma.page.updateMany({
+    where: { slug: 'privacy', metaDescription: null },
+    data: { metaDescription: '当サイトにおける個人情報の取り扱いについてご説明いたします。' },
+  })
 }
 
 // =============================================================================
@@ -1185,7 +1134,7 @@ async function seedTerms() {
       versions: {
         create: {
           version: 1,
-          content: termsContent,
+          contentHtml: termsContent,
           status: 'PUBLISHED',
           publishedAt: new Date(),
           isCurrentVersion: true,
@@ -1207,30 +1156,30 @@ async function seedFaq() {
     {
       category: { name: 'ご予約について', slug: 'reservation', description: '予約に関するよくあるご質問', order: 0 },
       items: [
-        { question: '予約はどのくらい前からできますか？', answer: '<p>ご予約は<strong>3ヶ月前</strong>から承っております。</p>' },
-        { question: '予約のキャンセルはできますか？', answer: '<p>はい、可能です。キャンセル規定は7日前まで無料、3日前まで50%、前日・当日100%となります。</p>' },
-        { question: '予約の変更はできますか？', answer: '<p>日時・スペースの変更は<strong>3日前まで</strong>無料で承ります。</p>' },
-        { question: '当日予約は可能ですか？', answer: '<p>空き状況によっては可能です。お電話にてお問い合わせください。</p>' },
-        { question: '定期利用の割引はありますか？', answer: '<p>月4回以上のご利用で<strong>10%OFF</strong>、月8回以上で<strong>15%OFF</strong>となります。</p>' },
+        { question: '予約はどのくらい前からできますか？', answerHtml: '<p>ご予約は<strong>3ヶ月前</strong>から承っております。</p>' },
+        { question: '予約のキャンセルはできますか？', answerHtml: '<p>はい、可能です。キャンセル規定は7日前まで無料、3日前まで50%、前日・当日100%となります。</p>' },
+        { question: '予約の変更はできますか？', answerHtml: '<p>日時・スペースの変更は<strong>3日前まで</strong>無料で承ります。</p>' },
+        { question: '当日予約は可能ですか？', answerHtml: '<p>空き状況によっては可能です。お電話にてお問い合わせください。</p>' },
+        { question: '定期利用の割引はありますか？', answerHtml: '<p>月4回以上のご利用で<strong>10%OFF</strong>、月8回以上で<strong>15%OFF</strong>となります。</p>' },
       ],
     },
     {
       category: { name: 'お支払いについて', slug: 'payment', description: '料金・お支払いに関するご質問', order: 1 },
       items: [
-        { question: '支払い方法は何がありますか？', answer: '<p>クレジットカード、銀行振込、請求書払い（法人のみ）に対応しております。</p>' },
-        { question: '領収書は発行できますか？', answer: '<p>はい、マイページよりダウンロードいただけます。</p>' },
-        { question: '請求書払いは可能ですか？', answer: '<p>法人のお客様に限り対応しております。</p>' },
-        { question: '延長料金はいくらですか？', answer: '<p>30分単位で、通常の時間料金の50%となります。</p>' },
+        { question: '支払い方法は何がありますか？', answerHtml: '<p>クレジットカード、銀行振込、請求書払い（法人のみ）に対応しております。</p>' },
+        { question: '領収書は発行できますか？', answerHtml: '<p>はい、マイページよりダウンロードいただけます。</p>' },
+        { question: '請求書払いは可能ですか？', answerHtml: '<p>法人のお客様に限り対応しております。</p>' },
+        { question: '延長料金はいくらですか？', answerHtml: '<p>30分単位で、通常の時間料金の50%となります。</p>' },
       ],
     },
     {
       category: { name: '設備・備品について', slug: 'facilities', description: 'スペースの設備に関するご質問', order: 2 },
       items: [
-        { question: 'Wi-Fiは利用できますか？', answer: '<p>はい、全スペースで<strong>高速Wi-Fi</strong>を無料でご利用いただけます。</p>' },
-        { question: 'プロジェクターの持ち込みは可能ですか？', answer: '<p>可能ですが、各スペースにプロジェクターを完備しております。</p>' },
-        { question: '飲食の持ち込みはできますか？', answer: '<p>はい、可能です。ゴミはお持ち帰りください。</p>' },
-        { question: 'ホワイトボードはありますか？', answer: '<p>全ての会議室・セミナールームに完備しております。</p>' },
-        { question: '電源・延長コードは使えますか？', answer: '<p>各席に電源コンセントを完備しております。延長コードも無料貸出しております。</p>' },
+        { question: 'Wi-Fiは利用できますか？', answerHtml: '<p>はい、全スペースで<strong>高速Wi-Fi</strong>を無料でご利用いただけます。</p>' },
+        { question: 'プロジェクターの持ち込みは可能ですか？', answerHtml: '<p>可能ですが、各スペースにプロジェクターを完備しております。</p>' },
+        { question: '飲食の持ち込みはできますか？', answerHtml: '<p>はい、可能です。ゴミはお持ち帰りください。</p>' },
+        { question: 'ホワイトボードはありますか？', answerHtml: '<p>全ての会議室・セミナールームに完備しております。</p>' },
+        { question: '電源・延長コードは使えますか？', answerHtml: '<p>各席に電源コンセントを完備しております。延長コードも無料貸出しております。</p>' },
       ],
     },
   ]
@@ -1255,7 +1204,7 @@ async function seedFaq() {
           data: {
             categoryId: faqCategory.id,
             question: item.question,
-            answer: item.answer,
+            answerHtml: item.answerHtml,
             order: i,
             isPublished: true,
             publishedAt: new Date(),
@@ -1306,7 +1255,7 @@ async function seedBlog() {
       title: 'レンタルスペースを活用したセミナー開催のコツ',
       slug: 'seminar-tips',
       excerpt: 'セミナーを成功させるための会場選びと準備のポイントをご紹介します。',
-      content: `# レンタルスペースを活用したセミナー開催のコツ
+      contentHtml: `# レンタルスペースを活用したセミナー開催のコツ
 
 セミナーを開催する際、会場選びは成功の鍵を握る重要な要素です。
 
@@ -1329,7 +1278,7 @@ async function seedBlog() {
       title: '会議室の上手な使い方 - 生産性を上げる5つのポイント',
       slug: 'meeting-room-productivity',
       excerpt: '会議の生産性を高めるための会議室の使い方をご紹介します。',
-      content: `# 会議室の上手な使い方
+      contentHtml: `# 会議室の上手な使い方
 
 会議が長引いてしまう、なかなか結論が出ない...そんなお悩みを解決します。
 
@@ -1349,7 +1298,7 @@ async function seedBlog() {
       title: '【活用事例】IT企業様の社内研修でご利用いただきました',
       slug: 'case-study-it-training',
       excerpt: 'セミナールームを社内研修でご利用いただいたIT企業様の事例をご紹介します。',
-      content: `# IT企業様の社内研修でご利用いただきました
+      contentHtml: `# IT企業様の社内研修でご利用いただきました
 
 先日、IT企業のA社様に社内研修でセミナールームをご利用いただきました。
 
@@ -1371,7 +1320,7 @@ async function seedBlog() {
       title: 'リモートワーク時代のコワーキングスペース活用術',
       slug: 'remote-work-coworking',
       excerpt: 'リモートワークの普及に伴い、コワーキングスペースの需要が高まっています。',
-      content: `# リモートワーク時代のコワーキングスペース活用術
+      contentHtml: `# リモートワーク時代のコワーキングスペース活用術
 
 ## なぜコワーキングスペースが選ばれるのか
 1. 集中できる環境
@@ -1389,7 +1338,7 @@ async function seedBlog() {
       title: '2026年のオフィストレンドとレンタルスペースの役割',
       slug: 'office-trends-2026',
       excerpt: '2026年のオフィストレンドを予測し、レンタルスペースの可能性を探ります。',
-      content: `# 2026年のオフィストレンドとレンタルスペースの役割
+      contentHtml: `# 2026年のオフィストレンドとレンタルスペースの役割
 
 ## トレンド1: ハイブリッドワークの定着
 ## トレンド2: フレキシブルオフィスの増加

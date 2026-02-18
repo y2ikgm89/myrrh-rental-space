@@ -8,7 +8,7 @@
 
 import { useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $insertNodes } from 'lexical'
+import { $insertNodeToNearestRoot } from '@lexical/utils'
 import {
   Dialog,
   DialogContent,
@@ -82,7 +82,7 @@ export function InstagramPlugin({ isOpen, onClose }: InstagramPluginProps) {
 
     editor.update(() => {
       const node = $createInstagramNode({ postId })
-      $insertNodes([node])
+      $insertNodeToNearestRoot(node)
     })
 
     setUrl('')
@@ -150,22 +150,3 @@ export function InstagramPlugin({ isOpen, onClose }: InstagramPluginProps) {
   )
 }
 
-// =============================================================================
-// Hook
-// =============================================================================
-
-/**
- * Instagramダイアログの状態管理フック
- */
-export function useInstagramDialog() {
-  const [isOpen, setIsOpen] = useState(false)
-
-  const openInstagramDialog = () => setIsOpen(true)
-  const closeInstagramDialog = () => setIsOpen(false)
-
-  return {
-    isInstagramDialogOpen: isOpen,
-    openInstagramDialog,
-    closeInstagramDialog,
-  }
-}

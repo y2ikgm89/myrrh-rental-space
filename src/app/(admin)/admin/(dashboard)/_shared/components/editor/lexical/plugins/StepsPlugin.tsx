@@ -8,27 +8,36 @@
 
 'use client'
 
-import type { ReactElement } from 'react'
 import { useEffect, useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
   $createParagraphNode,
-  $createTextNode,
   $getSelection,
+  $getState,
   $isRangeSelection,
+  $setState,
   COMMAND_PRIORITY_LOW,
   KEY_ARROW_DOWN_COMMAND,
   KEY_ARROW_UP_COMMAND,
   mergeRegister,
 } from 'lexical'
+import { $insertNodeToNearestRoot } from '@lexical/utils'
 import {
   $createStepsContainerNode,
   $isStepsContainerNode,
   isStepsStyle,
+  isStepsShape,
+  isStepsFill,
   StepsContainerNode,
+  startNumberState,
+  STEPS_STYLES,
+  STEPS_SHAPES,
+  STEPS_FILLS,
   type StepsStyle,
+  type StepsShape,
+  type StepsFill,
 } from '../nodes/StepsContainerNode'
-import { $createStepItemNode, StepItemNode } from '../nodes/StepItemNode'
+import { $createStepItemNode, $isStepItemNode, StepItemNode, stepNumberState } from '../nodes/StepItemNode'
 import { $createStepTitleNode, StepTitleNode, $isStepTitleNode } from '../nodes/StepTitleNode'
 import { $createStepContentNode, StepContentNode } from '../nodes/StepContentNode'
 import {
@@ -38,88 +47,27 @@ import {
   DialogTitle,
   DialogFooter,
   Button,
+  Input,
   Label,
-  SelectionBox,
 } from '@/admin/components/ui'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/admin/components/ui/select'
+import {
+  STEPS_STYLE_LABELS,
+  STEPS_SHAPE_LABELS,
+  STEPS_FILL_LABELS,
+} from '../config/node-labels'
 
 // =============================================================================
-// Options
+// Constants
 // =============================================================================
 
-const STYLE_OPTIONS = [
-  { value: 'numbered', label: '番号', description: '数字で順序を示す' },
-  { value: 'icon', label: 'アイコン', description: 'チェックアイコンで表示' },
-  { value: 'timeline', label: 'タイムライン', description: '縦線で繋がったスタイル' },
-]
-
-const COUNT_OPTIONS = [
-  { value: '2', label: '2', description: '2ステップ' },
-  { value: '3', label: '3', description: '3ステップ' },
-  { value: '4', label: '4', description: '4ステップ' },
-  { value: '5', label: '5', description: '5ステップ' },
-]
-
-// =============================================================================
-// Step Number Badge Component
-// =============================================================================
-
-function StepNumberBadge({
-  stepNumber,
-  style,
-}: {
-  stepNumber: number
-  style: StepsStyle
-}): ReactElement {
-  if (style === 'icon') {
-    return (
-      <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M5 13l4 4L19 7"
-          />
-        </svg>
-      </div>
-    )
-  }
-
-  if (style === 'timeline') {
-    return (
-      <div className="w-4 h-4 rounded-full bg-primary border-2 border-background flex-shrink-0 -ml-6 mr-2" />
-    )
-  }
-
-  // numbered (default)
-  return (
-    <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center flex-shrink-0 text-sm font-medium">
-      {stepNumber}
-    </div>
-  )
-}
-
-// =============================================================================
-// Hook
-// =============================================================================
-
-export function useStepsDialog() {
-  const [isStepsDialogOpen, setIsStepsDialogOpen] = useState(false)
-
-  const openStepsDialog = () => setIsStepsDialogOpen(true)
-  const closeStepsDialog = () => setIsStepsDialogOpen(false)
-
-  return {
-    isStepsDialogOpen,
-    openStepsDialog,
-    closeStepsDialog,
-  }
-}
+const DEFAULT_STEP_COUNT = 2
 
 // =============================================================================
 // Utilities
@@ -166,6 +114,77 @@ function $onEscape(direction: 'up' | 'down'): boolean {
   return false
 }
 
+/**
+ * 全StepItemNodeのstepNumberをstartNumberから連番に再設定
+ */
+export function $renumberSteps(container: StepsContainerNode): void {
+  const start = $getState(container, startNumberState)
+  const children = container.getChildren()
+  let num = start
+  for (const child of children) {
+    if ($isStepItemNode(child)) {
+      $setState(child, stepNumberState, num)
+      num++
+    }
+  }
+}
+
+/**
+ * 末尾にステップを追加し、新規StepItemNodeを返す
+ */
+export function $addStep(container: StepsContainerNode): StepItemNode {
+  const count = container.getChildren().filter($isStepItemNode).length
+  const start = $getState(container, startNumberState)
+  const _stepNumber = start + count
+  const stepItem = $createStepItemNode(1) // $renumberStepsで即座に再設定
+
+  const titleNode = $createStepTitleNode()
+  const titleParagraph = $createParagraphNode()
+  titleNode.append(titleParagraph)
+
+  const contentNode = $createStepContentNode()
+  const contentParagraph = $createParagraphNode()
+  contentNode.append(contentParagraph)
+
+  stepItem.append(titleNode)
+  stepItem.append(contentNode)
+  container.append(stepItem)
+  $renumberSteps(container)
+  return stepItem
+}
+
+/**
+ * 0-based indexでステップを削除。最小1つ保証
+ */
+export function $removeStep(container: StepsContainerNode, index: number): boolean {
+  const items = container.getChildren().filter($isStepItemNode)
+  if (items.length <= 1) return false
+  const target = items[index]
+  if (!target) return false
+  target.remove()
+  $renumberSteps(container)
+  return true
+}
+
+export function $reorderStep(
+  container: StepsContainerNode,
+  fromIndex: number,
+  toIndex: number,
+): void {
+  if (fromIndex === toIndex) return
+  const items = container.getChildren().filter($isStepItemNode)
+  const movedItem = items[fromIndex]
+  const targetItem = items[toIndex]
+  if (!movedItem || !targetItem) return
+
+  if (fromIndex < toIndex) {
+    targetItem.insertAfter(movedItem)
+  } else {
+    targetItem.insertBefore(movedItem)
+  }
+  $renumberSteps(container)
+}
+
 // =============================================================================
 // Types
 // =============================================================================
@@ -176,13 +195,36 @@ type StepsPluginProps = {
 }
 
 // =============================================================================
+// Style-dependent option visibility helpers
+// =============================================================================
+
+function showShape(style: StepsStyle): boolean {
+  return style === 'numbered' || style === 'small'
+}
+
+function showLabel(style: StepsStyle): boolean {
+  return style === 'big' || style === 'numbered'
+}
+
+function showFill(style: StepsStyle): boolean {
+  return style === 'small'
+}
+
+function showStartNumber(style: StepsStyle): boolean {
+  return style === 'numbered' || style === 'big' || style === 'small'
+}
+
+// =============================================================================
 // Component
 // =============================================================================
 
 export function StepsPlugin({ isOpen, onClose }: StepsPluginProps) {
   const [editor] = useLexicalComposerContext()
   const [selectedStyle, setSelectedStyle] = useState<StepsStyle>('numbered')
-  const [stepCount, setStepCount] = useState('3')
+  const [stepsLabel, setStepsLabel] = useState('STEP')
+  const [shape, setShape] = useState<StepsShape>('circle')
+  const [fill, setFill] = useState<StepsFill>('filled')
+  const [startNum, setStartNum] = useState(1)
 
   // リスナー登録（mergeRegisterで統一）
   useEffect(() => {
@@ -261,30 +303,34 @@ export function StepsPlugin({ isOpen, onClose }: StepsPluginProps) {
 
   const resetForm = () => {
     setSelectedStyle('numbered')
-    setStepCount('3')
+    setStepsLabel('STEP')
+    setShape('circle')
+    setFill('filled')
+    setStartNum(1)
   }
 
   const handleInsert = () => {
     editor.update(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
+      const stepsContainer = $createStepsContainerNode({
+        style: selectedStyle,
+        label: stepsLabel,
+        shape,
+        startNumber: startNum,
+        fill,
+      })
 
-      const count = parseInt(stepCount, 10)
-      const stepsContainer = $createStepsContainerNode(selectedStyle)
+      for (let i = 0; i < DEFAULT_STEP_COUNT; i++) {
+        const num = startNum + i
+        const stepItem = $createStepItemNode(num)
 
-      for (let i = 1; i <= count; i++) {
-        const stepItem = $createStepItemNode(i)
-
-        // タイトル
+        // タイトル（CSSプレースホルダー表示）
         const titleNode = $createStepTitleNode()
         const titleParagraph = $createParagraphNode()
-        titleParagraph.append($createTextNode(`ステップ ${i}`))
         titleNode.append(titleParagraph)
 
-        // コンテンツ
+        // コンテンツ（CSSプレースホルダー表示）
         const contentNode = $createStepContentNode()
         const contentParagraph = $createParagraphNode()
-        contentParagraph.append($createTextNode('ステップの説明を入力してください'))
         contentNode.append(contentParagraph)
 
         stepItem.append(titleNode)
@@ -292,7 +338,7 @@ export function StepsPlugin({ isOpen, onClose }: StepsPluginProps) {
         stepsContainer.append(stepItem)
       }
 
-      selection.insertNodes([stepsContainer])
+      $insertNodeToNearestRoot(stepsContainer)
 
       // 最初のステップのタイトルを選択
       const firstItem = stepsContainer.getChildAtIndex(0)
@@ -323,42 +369,99 @@ export function StepsPlugin({ isOpen, onClose }: StepsPluginProps) {
           <DialogTitle>ステップを挿入</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-3 py-4">
           {/* スタイル選択 */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">スタイル</Label>
-            <SelectionBox
-              options={STYLE_OPTIONS}
-              value={selectedStyle}
-              onChange={(value) => isStepsStyle(value) && setSelectedStyle(value)}
-              columns={3}
-              name="ステップスタイル"
-            />
+            <Select value={selectedStyle} onValueChange={(v) => { if (isStepsStyle(v)) setSelectedStyle(v) }}>
+              <SelectTrigger className="h-8 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {STEPS_STYLES.map((s) => (
+                  <SelectItem key={s} value={s}>{STEPS_STYLE_LABELS[s]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          {/* ステップ数選択 */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">ステップ数</Label>
-            <SelectionBox
-              options={COUNT_OPTIONS}
-              value={stepCount}
-              onChange={setStepCount}
-              columns={2}
-              name="ステップ数"
-            />
-          </div>
+          {/* スタイル依存オプション */}
+          {showLabel(selectedStyle) && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">ラベルテキスト</Label>
+              <Input
+                value={stepsLabel}
+                onChange={(e) => setStepsLabel(e.target.value)}
+                placeholder="STEP"
+                className="h-8 text-sm"
+              />
+            </div>
+          )}
 
-          {/* プレビュー */}
+          {showShape(selectedStyle) && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">バッジ形状</Label>
+              <Select value={shape} onValueChange={(v) => { if (isStepsShape(v)) setShape(v) }}>
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {STEPS_SHAPES.map((s) => (
+                    <SelectItem key={s} value={s}>{STEPS_SHAPE_LABELS[s]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {showFill(selectedStyle) && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">塗りつぶし</Label>
+              <Select value={fill} onValueChange={(v) => { if (isStepsFill(v)) setFill(v) }}>
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {STEPS_FILLS.map((s) => (
+                    <SelectItem key={s} value={s}>{STEPS_FILL_LABELS[s]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {showStartNumber(selectedStyle) && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">開始番号</Label>
+              <Input
+                type="number"
+                value={startNum}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value, 10)
+                  if (Number.isFinite(v) && v >= 1) setStartNum(v)
+                }}
+                min={1}
+                className="h-8 text-sm w-20"
+              />
+            </div>
+          )}
+
+          {/* プレビュー — 実際の data 属性 HTML + lexical-content.css でレンダリング */}
           <div className="border rounded-lg p-4 bg-muted/30">
             <div className="text-xs text-muted-foreground mb-2">プレビュー</div>
-            <div className={`space-y-2 ${selectedStyle === 'timeline' ? 'border-l-2 border-primary/30 ml-4' : ''}`}>
-              {[1, 2].map((num) => (
-                <div key={num} className="flex items-start gap-3">
-                  <StepNumberBadge stepNumber={num} style={selectedStyle} />
-                  <div>
-                    <div className="font-medium text-sm">ステップ {num}</div>
-                    <div className="text-xs text-muted-foreground">説明文</div>
-                  </div>
+            <div
+              data-steps="true"
+              data-steps-style={selectedStyle}
+              data-steps-label={stepsLabel}
+              data-steps-shape={shape}
+              data-steps-start={String(startNum)}
+              data-steps-fill={fill}
+              ref={(el) => el?.style.setProperty('--step-label', `"${stepsLabel}"`)}
+            >
+              {[0, 1].map((i) => (
+                <div key={i} data-step={String(startNum + i)}>
+                  <h4 data-step-title="true">ステップ {startNum + i}</h4>
+                  <div data-step-content="true">説明文</div>
                 </div>
               ))}
             </div>

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Layout Item Node
  *
  * @description レイアウトコンテナ内の個別カラム
@@ -9,26 +9,15 @@
  * - isShadowRoot()でネスト境界を形成
  */
 
-import {
-  $applyNodeReplacement,
-  $createParagraphNode,
-  ElementNode,
-  type DOMConversionMap,
-  type DOMConversionOutput,
-  type DOMExportOutput,
-  type EditorConfig,
-  type LexicalNode,
-  type NodeKey,
-  type SerializedElementNode,
+import type {
+  DOMConversionMap,
+  DOMConversionOutput,
+  DOMExportOutput,
+  EditorConfig,
+  LexicalNode,
 } from 'lexical'
+import { $create, $createParagraphNode, ElementNode } from 'lexical'
 import { $isLayoutContainerNode } from './LayoutContainerNode'
-
-// =============================================================================
-// Types
-// =============================================================================
-
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface SerializedLayoutItemNode extends SerializedElementNode {}
 
 // =============================================================================
 // Type Guard (declared early for use in class)
@@ -54,15 +43,11 @@ function $convertLayoutItemElement(): DOMConversionOutput | null {
 // =============================================================================
 
 export class LayoutItemNode extends ElementNode {
-  static getType(): string {
-    return 'layout-item'
+  override $config() {
+    return this.config('layout-item', { extends: ElementNode })
   }
 
-  static clone(node: LayoutItemNode): LayoutItemNode {
-    return new LayoutItemNode(node.__key)
-  }
-
-  static importDOM(): DOMConversionMap | null {
+  static override importDOM(): DOMConversionMap | null {
     return {
       div: (element: HTMLElement) => {
         if (!element.hasAttribute('data-lexical-layout-item')) {
@@ -76,48 +61,34 @@ export class LayoutItemNode extends ElementNode {
     }
   }
 
-  static importJSON(serializedNode: SerializedLayoutItemNode): LayoutItemNode {
-    return $createLayoutItemNode().updateFromJSON(serializedNode)
-  }
-
-  constructor(key?: NodeKey) {
-    super(key)
-  }
-
-  exportJSON(): SerializedLayoutItemNode {
-    return {
-      ...super.exportJSON(),
-    }
-  }
-
-  createDOM(config: EditorConfig): HTMLElement {
+  override createDOM(config: EditorConfig): HTMLElement {
     const dom = document.createElement('div')
     dom.setAttribute('data-lexical-layout-item', 'true')
 
-    if (config.theme.layoutItem) {
-      dom.className = config.theme.layoutItem
+    if (config.theme['layoutItem']) {
+      dom.className = config.theme['layoutItem']
     }
 
     return dom
   }
 
-  exportDOM(): DOMExportOutput {
+  override exportDOM(): DOMExportOutput {
     const element = document.createElement('div')
     element.setAttribute('data-lexical-layout-item', 'true')
     return { element }
   }
 
-  updateDOM(): boolean {
+  override updateDOM(): boolean {
     return false
   }
 
   // レイアウトアイテムは選択境界として機能
-  isShadowRoot(): boolean {
+  override isShadowRoot(): boolean {
     return true
   }
 
   // 先頭でBackspace時の挙動
-  collapseAtStart(): boolean {
+  override collapseAtStart(): boolean {
     const parent = this.getParent()
     if (!$isLayoutContainerNode(parent)) {
       return false
@@ -148,5 +119,5 @@ export class LayoutItemNode extends ElementNode {
 // =============================================================================
 
 export function $createLayoutItemNode(): LayoutItemNode {
-  return $applyNodeReplacement(new LayoutItemNode())
+  return $create(LayoutItemNode)
 }

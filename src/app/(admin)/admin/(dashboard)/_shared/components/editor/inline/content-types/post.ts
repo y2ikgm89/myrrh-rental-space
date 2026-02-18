@@ -20,7 +20,7 @@ import {
 } from '@/admin/actions/post'
 import { isValidLayoutWidth } from '@/shared/lib/validations/enums'
 import type { PostPreviewData } from '@/shared/types'
-import type { ContentTypeConfig, ContentEditorExtraData } from './types'
+import { SEO_FIELD_NAMES, OGP_FIELD_NAMES, type ContentTypeConfig, type ContentEditorExtraData } from './types'
 import {
   TitleSlugFields,
   ExcerptFields,
@@ -42,7 +42,7 @@ type PostSubmitPayload = {
   title: string
   slug: string
   excerpt: string
-  content: string
+  contentJson: string
   thumbnailUrl: string
   ogpImageUrl: string | null
   categoryId: string
@@ -66,7 +66,7 @@ function toFormData(data?: PostData): PostFormData {
       title: '',
       slug: '',
       excerpt: '',
-      content: '',
+      contentJson: '',
       thumbnailUrl: '/images/placeholder.jpg',
       ogpImageUrl: '',
       categoryId: '',
@@ -86,7 +86,7 @@ function toFormData(data?: PostData): PostFormData {
     title: data.title,
     slug: data.slug,
     excerpt: data.excerpt,
-    content: data.content,
+    contentJson: data.contentJson ? JSON.stringify(data.contentJson) : '',
     thumbnailUrl: data.thumbnailUrl,
     ogpImageUrl: data.ogpImageUrl ?? '',
     categoryId: data.categoryId,
@@ -114,7 +114,7 @@ function toSubmitPayload(formData: PostFormData): PostSubmitPayload {
     title: formData.title,
     slug: formData.slug,
     excerpt: formData.excerpt,
-    content: formData.content,
+    contentJson: formData.contentJson,
     thumbnailUrl: formData.thumbnailUrl,
     ogpImageUrl: formData.ogpImageUrl || null,
     categoryId: formData.categoryId,
@@ -151,7 +151,7 @@ function toPreviewData(
     title: formData.title || '無題',
     slug: formData.slug || 'preview-new',
     excerpt: formData.excerpt || '',
-    content: formData.content || '',
+    content: formData.contentJson || '',
     thumbnailUrl: formData.thumbnailUrl || '/images/placeholder.jpg',
     publishedAt: formData.publishedAt || null,
     tags,
@@ -161,21 +161,6 @@ function toPreviewData(
     },
   }
 }
-
-// =============================================================================
-// フィールド名定数
-// =============================================================================
-
-const SEO_FIELDS = {
-  metaDescription: 'metaDescription',
-  metaKeywords: 'metaKeywords',
-} as const
-
-const OGP_FIELDS = {
-  ogpTitle: 'ogpTitle',
-  ogpDescription: 'ogpDescription',
-  ogpImageUrl: 'ogpImageUrl',
-} as const
 
 // =============================================================================
 // Config
@@ -286,14 +271,14 @@ export const postConfig: ContentTypeConfig<
             title: 'SEO設定',
             component: SEOFields,
             props: {
-              fields: SEO_FIELDS,
+              fields: SEO_FIELD_NAMES,
             },
           },
           {
             title: 'OGP設定',
             component: OGPFields,
             props: {
-              fields: OGP_FIELDS,
+              fields: OGP_FIELD_NAMES,
             },
           },
         ],

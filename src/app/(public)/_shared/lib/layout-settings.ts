@@ -9,48 +9,8 @@ import { cacheLife, cacheTag } from 'next/cache'
 import { prisma } from '@/shared/lib/prisma'
 import { CACHE_TAGS } from '@/shared/lib/constants'
 import { LayoutWidth } from '@/shared/types/prisma'
-import { HeaderScrollBehavior, HeaderBackgroundMode, isValidHeaderScrollBehavior, isValidHeaderBackgroundMode } from '@/shared/lib/validations/enums'
 import type { LayoutConfig } from '@/shared/types/layout'
-
-// Re-export for convenience
-export type { LayoutConfig } from '@/shared/types/layout'
-export type { HeaderScrollBehavior, HeaderBackgroundMode } from '@/shared/lib/validations/enums'
-
-// =============================================================================
-// Header Settings
-// =============================================================================
-
-export interface HeaderSettings {
-  scrollBehavior: HeaderScrollBehavior
-  backgroundMode: HeaderBackgroundMode
-}
-
-/**
- * ヘッダー設定を取得（キャッシュ付き）
- * スクロール動作 + 背景モードを1クエリで取得
- */
-export async function getHeaderSettings(): Promise<HeaderSettings> {
-  'use cache'
-  cacheLife('hours')
-  cacheTag(CACHE_TAGS.SETTINGS, CACHE_TAGS.LAYOUT_SETTINGS)
-
-  const settings = await prisma.settings.findUnique({
-    where: { id: 'singleton' },
-    select: {
-      headerScrollBehavior: true,
-      headerBackgroundMode: true,
-    },
-  })
-
-  return {
-    scrollBehavior: isValidHeaderScrollBehavior(settings?.headerScrollBehavior)
-      ? settings.headerScrollBehavior
-      : HeaderScrollBehavior.always_visible,
-    backgroundMode: isValidHeaderBackgroundMode(settings?.headerBackgroundMode)
-      ? settings.headerBackgroundMode
-      : HeaderBackgroundMode.solid,
-  }
-}
+import { slugParamSchema, idParamSchema } from '@/shared/lib/validations/params'
 
 // =============================================================================
 // Fallback Config (DB未設定時のデフォルト値)
@@ -109,6 +69,8 @@ export async function getPostLayoutSettings(postId: string): Promise<LayoutConfi
   cacheLife('hours')
   cacheTag(CACHE_TAGS.SETTINGS, CACHE_TAGS.LAYOUT_SETTINGS, `post-${postId}`)
 
+  if (!idParamSchema.safeParse(postId).success) return FALLBACK_LAYOUT_CONFIG
+
   const [siteSettings, postSettings] = await Promise.all([
     getSiteLayoutSettings(),
     prisma.post.findUnique({
@@ -137,6 +99,8 @@ export async function getNewsLayoutSettings(newsId: string): Promise<LayoutConfi
   cacheLife('hours')
   cacheTag(CACHE_TAGS.SETTINGS, CACHE_TAGS.LAYOUT_SETTINGS, `news-${newsId}`)
 
+  if (!idParamSchema.safeParse(newsId).success) return FALLBACK_LAYOUT_CONFIG
+
   const [siteSettings, newsSettings] = await Promise.all([
     getSiteLayoutSettings(),
     prisma.news.findUnique({
@@ -164,6 +128,8 @@ export async function getPageLayoutSettings(slug: string): Promise<LayoutConfig>
   cacheLife('hours')
   cacheTag(CACHE_TAGS.SETTINGS, CACHE_TAGS.LAYOUT_SETTINGS, `page-${slug}`)
 
+  if (!slugParamSchema.safeParse(slug).success) return FALLBACK_LAYOUT_CONFIG
+
   const [siteSettings, pageSettings] = await Promise.all([
     getSiteLayoutSettings(),
     prisma.page.findUnique({
@@ -180,23 +146,5 @@ export async function getPageLayoutSettings(slug: string): Promise<LayoutConfig>
     containerWidthCustom: siteSettings.containerWidthCustom,
     contentWidth: pageSettings?.contentWidth ?? siteSettings.contentWidth,
     contentWidthCustom: pageSettings?.contentWidthCustom ?? siteSettings.contentWidthCustom,
-  }
-}
-
-// =============================================================================
-// Helpers
-// =============================================================================
-
-/**
- * コンテンツ幅設定のみを取得するヘルパー
- * ContentRendererに渡す用
- */
-export function getContentWidthFromConfig(config: LayoutConfig): {
-  width: LayoutWidth
-  customWidth: number | null
-} {
-  return {
-    width: config.contentWidth,
-    customWidth: config.contentWidthCustom,
   }
 }

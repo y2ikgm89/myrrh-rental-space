@@ -119,114 +119,295 @@ const [editorState, setEditorState] = useState()
 | TextNode | ✅ | テキスト＋フォーマット（bold, italic等） |
 | DecoratorNode | ✅ | React/任意コンポーネント埋め込み |
 
-### 必須メソッド
+### NodeState API（標準パターン — 全ノードで採用済み）
+
+`$config` + `createState` で `getType`, `clone`, `importJSON`, `exportJSON`, `updateFromJSON`, `afterCloneFrom` を自動生成。
+`flat: true` で既存JSONとの後方互換性を維持。
+
+**状態宣言:**
 
 ```typescript
-class CustomNode extends DecoratorNode<ReactElement> {
-  static getType(): string           // ノードタイプ識別子
-  static clone(node: CustomNode)     // ノード複製
-  static importJSON(data)            // JSONデシリアライズ（updateFromJSON呼出推奨）
-  static importDOM()                 // HTMLインポート
-  exportJSON()                       // JSONシリアライズ
-  updateFromJSON(serializedNode)     // JSONからプロパティ更新（v0.33.0+推奨）
-  exportDOM()                        // HTMLエクスポート
-  createDOM(config)                  // DOM要素作成
-  updateDOM()                        // DOM更新判定
-  decorate()                         // Reactコンポーネント
+import { $create, $getState, $setState, createState, DecoratorNode } from 'lexical'
+
+// 各プロパティをcreateStateで宣言（ファイルトップレベル）
+export const calloutTypeState = createState('calloutType', {
+  parse: (v: unknown): CalloutType =>
+    typeof v === 'string' && isCalloutType(v) ? v : 'info',
+})
+```
+
+**ノードクラス:**
+
+```typescript
+export class CalloutNode extends ElementNode {
+  // $config() が getType, clone, importJSON, exportJSON を自動生成
+  $config() {
+    return this.config('callout', {
+      extends: ElementNode,     // 親クラスを指定
+      stateConfigs: [
+        { flat: true, stateConfig: calloutTypeState },
+      ],
+    })
+  }
+
+  // importDOM() — 変更なし（DOM→Node変換）
+  // exportDOM() — $getState() でプロパティ取得
+  // createDOM(), updateDOM() — $getState()/$getStateChange() 使用
+  // decorate() — DecoratorNodeのみ、$getState() 使用
 }
 ```
 
-### ファクトリ関数（$プレフィックス）
+**プロパティアクセス:**
 
 ```typescript
-// オブジェクトパラメータパターン（推奨）
-export function $createImageNode({
-  src,
-  alt = '',
-  width,
-  height,
-}: {
-  src: string
-  alt?: string
-  width?: number
-  height?: number
-}): ImageNode {
-  return $applyNodeReplacement(new ImageNode(src, alt, width, height))
+// 読み取り: $getState(node, stateConfig)
+const type = $getState(this, calloutTypeState)
+
+// 書き込み: $setState(node, stateConfig, value)
+$setState(this, calloutTypeState, 'warning')
+
+// DOM更新での変更検出: $getStateChange(this, prevNode, stateConfig)
+const change = $getStateChange(this, prevNode, calloutTypeState)
+if (change) {
+  const [newType] = change
+  dom.setAttribute('data-callout-type', newType)
+}
+```
+
+**ファクトリ関数:**
+
+```typescript
+// 単一プロパティ
+export function $createCalloutNode(type: CalloutType = 'info'): CalloutNode {
+  return $setState($create(CalloutNode), calloutTypeState, type)
 }
 
-// 型ガード
-export function $isImageNode(node: LexicalNode | null): node is ImageNode {
-  return node instanceof ImageNode
+// 複数プロパティ
+export function $createImageNode({ src, alt = '', width, height }: {...}): ImageNode {
+  const node = $create(ImageNode)
+  $setState(node, srcState, src)
+  $setState(node, altState, alt)
+  if (width !== undefined) $setState(node, widthState, width)
+  if (height !== undefined) $setState(node, heightState, height)
+  return node
+}
+
+// 型ガード（変更なし）
+export function $isCalloutNode(node: LexicalNode | null | undefined): node is CalloutNode {
+  return node instanceof CalloutNode
+}
+```
+
+**ゼロプロパティノード（子ノードのみ保持）:**
+
+```typescript
+export class CollapsibleTitleNode extends ElementNode {
+  $config() {
+    return this.config('collapsible-title', { extends: ElementNode })
+  }
+  // stateConfigs 不要
+}
+
+export function $createCollapsibleTitleNode(): CollapsibleTitleNode {
+  return $create(CollapsibleTitleNode)
 }
 ```
 
 ### プロパティルール
 
 - **JSON serializable のみ**: Function, Symbol, Map, Set 禁止
-- **__プレフィックス**: プライベートプロパティに必須
-- **getWritable() / getLatest()**: 不変性維持に必要
+- **`createState` の `parse` 関数**: デシリアライゼーション時のバリデーション+デフォルト値を担当
+- **`$getState` / `$setState`**: プロパティの読み書きに使用。`__` フィールドや `getWritable()` / `getLatest()` は不要
 
-### シリアライゼーションパターン（v0.40.0 推奨）
+## コンポジットノードアーキテクチャ
 
-**Serialized型**: `Spread<>` ではなく `interface extends` を使用:
+複数ノードで構成される複合コンポーネント（Tabs、Steps、Collapsible、PullQuote 等）のパターン。
+公式 Lexical Playground に準拠。
+
+### ノード階層
+
+```
+ContainerNode（ルート）
+├── TitleNode / ListNode（子: タイトル/リスト部分）
+└── ContentNode / PanelNode（子: コンテンツ領域）
+```
+
+### メソッドガイドライン
+
+| メソッド | コンテナノード | 子ノード（Title/Content） | 目的 |
+|---------|--------------|------------------------|------|
+| `isShadowRoot()` | ✅ 必須 | ✅ 必須 | 編集境界の確立 |
+| `canBeEmpty()` | ✅ `false` | — | 空コンテナ防止 |
+| `collapseAtStart()` | ✅ 実装 | ❌ 禁止 | Backspace でノード解除 |
+| `canInsertTextBefore()` | ✅ `false` | ✅ `false` | テキスト漏れ防止 |
+| `canInsertTextAfter()` | ✅ `false` | ✅ `false` | テキスト漏れ防止 |
+| `insertNewAfter()` | — | △ TitleNodeのみ | Enter でコンテンツへ移動 |
+
+### isShadowRoot()
+
+**すべてのコンテナ/コンテンツノードに必須**。キャレットがキーボード操作で境界外に漏れるのを防止:
 
 ```typescript
-// NG: Spread<> パターン（旧）
-import type { SerializedLexicalNode, Spread } from 'lexical'
-export type SerializedFooNode = Spread<{ bar: string }, SerializedLexicalNode>
-
-// OK: interface extends パターン（v0.40.0 推奨）
-import type { SerializedDecoratorNode } from 'lexical'
-export interface SerializedFooNode extends SerializedDecoratorNode {
-  bar: string
+isShadowRoot(): boolean {
+  return true
 }
 ```
 
-**importJSON**: ファクトリ関数 + `updateFromJSON` チェーン:
+**現在の実装状況（全9ノード）:**
+- CollapsibleContainerNode, CollapsibleContentNode
+- LayoutContainerNode, LayoutItemNode
+- StepsContainerNode, StepContentNode
+- TabsContainerNode, TabPanelNode
+- PullQuoteNode
+
+### canBeEmpty()
+
+コンテナノードで `false` を返し、空のコンテナが残存するのを防止:
 
 ```typescript
-// NG: ファクトリ関数のみ（旧）
-static importJSON(serializedNode: SerializedFooNode): FooNode {
-  return $createFooNode({ bar: serializedNode.bar })
-}
-
-// OK: updateFromJSON チェーン（v0.40.0 推奨）
-static importJSON(serializedNode: SerializedFooNode): FooNode {
-  return $createFooNode({ bar: serializedNode.bar }).updateFromJSON(serializedNode)
+canBeEmpty(): boolean {
+  return false
 }
 ```
 
-**exportJSON**: `super.exportJSON()` が `type` と `version` を自動提供:
+**対象:** CollapsibleContainerNode, StepsContainerNode, TabsContainerNode, LayoutContainerNode
+
+### collapseAtStart()
+
+**コンテナノードのみに実装**。Backspace でコンポジットノード全体をパラグラフに分解:
 
 ```typescript
-// NG: 手動で type/version を設定（旧）
-exportJSON(): SerializedFooNode {
-  return { type: 'foo', version: 1, bar: this.__bar }
-}
+// コンテナノード: 子のコンテンツをパラグラフに展開
+collapseAtStart(): boolean {
+  const children = this.getChildren()
+  const paragraph = $createParagraphNode()
 
-// OK: super.exportJSON() でスプレッド（v0.40.0 推奨）
-exportJSON(): SerializedFooNode {
-  return { ...super.exportJSON(), bar: this.__bar }
+  if (children.length > 0) {
+    const firstChild = children[0]
+    if ($isElementNode(firstChild)) {
+      const firstChildChildren = firstChild.getChildren()
+      for (const child of firstChildChildren) {
+        paragraph.append(child)
+      }
+    }
+  }
+
+  this.replace(paragraph)
+  return true
 }
 ```
 
-### NodeState API（v0.33.0+ 実験的）
+**子ノード（Title/Content等）には collapseAtStart を実装しない**。isShadowRoot が境界保護を担当する。
 
-v0.33.0で `$config` + `createState` による NodeState API が導入された。
-ボイラープレート削減と自動シリアライゼーションが可能だが、**実験的APIのため安定化を待って移行を検討**。
-レガシーパターン（`$applyNodeReplacement` + 手動 `importJSON`/`exportJSON`）は引き続き有効。
+### insertNewAfter()（CollapsibleTitleNode 専用パターン）
+
+タイトルで Enter を押した際、コンテナを開いてコンテンツ先頭にフォーカス移動:
+
+```typescript
+insertNewAfter(_selection: RangeSelection, restoreSelection = true): null | ElementNode {
+  const container = this.getParent()
+  if ($isCollapsibleContainerNode(container)) {
+    $setState(container, openState, true)
+    const content = container.getChildren().find($isCollapsibleContentNode)
+    if (content) {
+      const firstChild = content.getFirstChild()
+      if (firstChild) {
+        if (restoreSelection) firstChild.selectStart()
+        return null
+      }
+    }
+  }
+  return null
+}
+```
+
+### CSS-first exportDOM パターン
+
+exportDOM / createDOM では **data-attributes のみ使用**。CSS クラスは使用しない。
+公開ページの CSS でアトリビュートセレクタによるスタイリングを行う:
+
+```typescript
+// exportDOM(): 公開ページ HTML 出力
+exportDOM(): DOMExportOutput {
+  const element = document.createElement('div')
+  element.setAttribute('data-steps', 'true')
+  element.setAttribute('data-steps-style', $getState(this, stepsStyleState))
+  return { element }
+}
+
+// createDOM(): エディタ内 DOM
+createDOM(_config: EditorConfig): HTMLElement {
+  const element = document.createElement('div')
+  element.setAttribute('data-steps', 'true')
+  element.setAttribute('data-steps-style', $getState(this, stepsStyleState))
+  return element
+}
+
+// updateDOM(): 差分更新（return false で DOM 再構築を回避）
+updateDOM(prevNode: StepsContainerNode, dom: HTMLElement): boolean {
+  const change = $getStateChange(this, prevNode, stepsStyleState)
+  if (change) {
+    const [newStyle] = change
+    dom.setAttribute('data-steps-style', newStyle)
+  }
+  return false
+}
+```
+
+```css
+/* 公開ページ CSS: アトリビュートセレクタ */
+[data-steps] { /* コンテナスタイル */ }
+[data-steps-style="numbered"] { /* numbered 固有スタイル */ }
+[data-steps-style="timeline"] { /* timeline 固有スタイル */ }
+```
+
+### 型ガードユーティリティ（createEnumGuard）
+
+ノード固有のリテラル型に対する型ガードは `config/type-guards.ts` の `createEnumGuard` を使用:
+
+```typescript
+import { createEnumGuard } from '../config/type-guards'
+
+export type StepsStyle = 'numbered' | 'big' | 'small' | 'icon' | 'timeline'
+export const STEPS_STYLES: readonly StepsStyle[] = ['numbered', 'big', 'small', 'icon', 'timeline'] as const
+export const isStepsStyle = createEnumGuard<StepsStyle>(STEPS_STYLES)
+```
+
+**注意:** これは Prisma enum ではないため `enums.ts` ではなくノードファイル内に定義する。
 
 ## プラグイン実装パターン
+
+### ノード挿入: `$insertNodeToNearestRoot` vs `$insertNodes`
+
+公式Playgroundパターンに準拠:
+
+| 関数 | import元 | 用途 |
+|------|---------|------|
+| `$insertNodeToNearestRoot(node)` | `@lexical/utils` | **ブロックレベルノード**（ElementNode, DecoratorNode） |
+| `$insertNodes([node])` | `lexical` | **インライン/混合ノード**（TextNode, Image, 複数ノード一括） |
+
+```typescript
+// ブロックレベルノード（Callout, Collapsible, Layout, YouTube, Button等）
+import { $insertNodeToNearestRoot } from '@lexical/utils'
+$insertNodeToNearestRoot(blockNode)  // 単一ノード、配列不要
+
+// インライン/混合ノード（Emoji, Image, BlockTemplate等）
+import { $insertNodes } from 'lexical'
+$insertNodes([inlineNode])  // 配列で渡す
+$insertNodes(mixedNodes)    // 複数ノード一括挿入
+```
 
 ### 直接更新パターン（推奨: ダイアログ付きプラグイン）
 
 ```typescript
+import { $insertNodeToNearestRoot } from '@lexical/utils'
+
 // コマンド登録不要。ダイアログから直接editor.update()を呼び出す
 // React Compiler が自動メモ化するため useCallback 不要
 const handleSubmit = () => {
   editor.update(() => {
     const node = $createCustomNode(formData)
-    $insertNodes([node])
+    $insertNodeToNearestRoot(node)
   })
   onClose()
 }
@@ -236,6 +417,7 @@ const handleSubmit = () => {
 
 ```typescript
 import { createCommand, COMMAND_PRIORITY_EDITOR } from 'lexical'
+import { $insertNodeToNearestRoot } from '@lexical/utils'
 
 export const INSERT_CUSTOM_COMMAND = createCommand<Payload>('INSERT_CUSTOM')
 
@@ -248,7 +430,7 @@ function CustomPlugin() {
       (payload) => {
         editor.update(() => {
           const node = $createCustomNode(payload)
-          $insertNodes([node])
+          $insertNodeToNearestRoot(node)
         })
         return true
       },
@@ -366,9 +548,15 @@ const initialConfig = {
 7. **LexicalErrorBoundary省略禁止**: RichTextPluginには必須（v0.36+ は named export: `{ LexicalErrorBoundary }`）
 8. **RichTextPlugin の placeholder prop 使用禁止**: ContentEditable に直接 `placeholder` を渡す
 9. **`@lexical/utils` からの `mergeRegister` / `$findMatchingParent` import禁止**: v0.40.0で `lexical` 本体に移動。`import { mergeRegister } from 'lexical'` を使用
-10. **`Spread<>` 型の使用禁止**: `interface extends SerializedDecoratorNode` / `SerializedElementNode` を使用
-11. **`exportJSON` での手動 `type` / `version` 設定禁止**: `...super.exportJSON()` で自動提供
-12. **`importJSON` での `updateFromJSON` チェーン漏れ禁止**: ファクトリ関数の戻り値に `.updateFromJSON(serializedNode)` を付与
+10. **レガシーノードパターン禁止**: `static getType()`, `static clone()`, `static importJSON()`, `exportJSON()`, `__property`, `getWritable()`, `getLatest()`, `$applyNodeReplacement`, `SerializedXxxNode` interface — すべて `$config` + `createState` + `$getState` / `$setState` に置換済み
+11. **ブロックレベルノードへの `$insertNodes` 使用禁止**: `$insertNodeToNearestRoot` (`@lexical/utils`) を使用。`$insertNodes` はインライン/混合ノード専用
+12. **React render内でのノードプロパティ直接アクセス禁止**: `editor.getEditorState().read(() => $getState(node, xxxState))` で囲む。Lexicalはアクティブなeditor stateが必要
+13. **`node.__property` 直接アクセス禁止**: `$getState(node, xxxState)` を使用。`__` フィールドは `$config` で自動管理
+14. **ノードクラスに getter/setter ラッパー定義禁止**: `node.getText()` / `node.setText(v)` ではなく `$getState(node, textState)` / `$setState(node, textState, v)` を直接使用。ラッパーメソッドは後方互換性ハックであり CLAUDE.md §禁止事項に違反
+15. **子ノードの collapseAtStart 委譲禁止**: Title/Content/Panel 等の子ノードに `collapseAtStart()` を実装しない。`isShadowRoot()` で境界保護する。コンテナノードのみが `collapseAtStart()` を持つ
+16. **コンテナ/コンテンツノードの isShadowRoot 省略禁止**: 複合ノードのコンテナ・コンテンツ・パネルノードには必ず `isShadowRoot() { return true }` を実装する
+17. **exportDOM での CSS クラス使用禁止**: `config.theme.*` や `className` は `createDOM` のみ（エディタ内表示）。`exportDOM` は data-attributes のみで HTML を構築する
+18. **updateDOM で `return true` の乱用禁止**: 属性変更は `$getStateChange` + `dom.setAttribute()` で差分更新し `return false`。`return true` は DOM 要素タグの変更等、DOM 再構築が必要な場合のみ
 
 ## ファイル命名規則
 

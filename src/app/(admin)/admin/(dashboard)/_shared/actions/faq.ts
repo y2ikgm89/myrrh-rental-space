@@ -4,8 +4,10 @@ import { prisma } from '@/shared/lib/prisma'
 import { updateTag } from 'next/cache'
 import { CACHE_TAGS } from '@/shared/lib/constants'
 import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+import { createValidationError } from '@/shared/lib/action-helpers'
 import { withPermission } from '@/admin/lib/server-action-helpers'
 import { checkReadPermissionFor } from '@/admin/lib/permissions'
+import { renderEditorStateToHtmlLazy } from '@/admin/lib/lazy-renderer'
 import { purgeFaqCache } from '@/shared/lib/cloudflare'
 import { fireAndForget } from '@/shared/lib/async-utils'
 import { ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
@@ -111,12 +113,13 @@ export const createFaqCategory = withPermission<
 >('faq', 'create')(async (user, data): Promise<ActionResult<{ id: string }>> => {
   const parsed = faqCategoryFormSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   // スラッグの重複チェック
   const existing = await prisma.faqCategory.findUnique({
     where: { slug: parsed.data.slug },
+    select: { id: true },
   })
 
   if (existing) {
@@ -152,11 +155,12 @@ export const updateFaqCategory = withPermission<
 >('faq', 'update')(async (user, id, data): Promise<ActionResult<void>> => {
   const parsed = faqCategoryFormSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   const existing = await prisma.faqCategory.findUnique({
     where: { id },
+    select: { id: true },
   })
 
   if (!existing) {
@@ -169,6 +173,7 @@ export const updateFaqCategory = withPermission<
       slug: parsed.data.slug,
       id: { not: id },
     },
+    select: { id: true },
   })
 
   if (slugExists) {
@@ -267,7 +272,7 @@ export async function getFaqItems(
     isPublished?: boolean
     OR?: Array<{
       question?: { contains: string; mode: 'insensitive' }
-      answer?: { contains: string; mode: 'insensitive' }
+      answerHtml?: { contains: string; mode: 'insensitive' }
     }>
   }
 
@@ -284,7 +289,7 @@ export async function getFaqItems(
   if (search) {
     where.OR = [
       { question: { contains: search, mode: 'insensitive' } },
-      { answer: { contains: search, mode: 'insensitive' } },
+      { answerHtml: { contains: search, mode: 'insensitive' } },
     ]
   }
 
@@ -352,12 +357,13 @@ export const createFaqItem = withPermission<
 >('faq', 'create')(async (user, data): Promise<ActionResult<{ id: string }>> => {
   const parsed = faqItemFormSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   // カテゴリの存在確認
   const category = await prisma.faqCategory.findUnique({
     where: { id: parsed.data.categoryId },
+    select: { id: true },
   })
 
   if (!category) {
@@ -370,9 +376,15 @@ export const createFaqItem = withPermission<
     _max: { order: true },
   })
 
+  // JSON → HTML 変換
+  const { answerJson, ...rest } = parsed.data
+  const answerHtml = await renderEditorStateToHtmlLazy(answerJson)
+
   const item = await prisma.faqItem.create({
     data: {
-      ...parsed.data,
+      ...rest,
+      answerJson: JSON.parse(answerJson),
+      answerHtml,
       order: parsed.data.order || (maxOrder._max.order ?? 0) + 1,
     },
   })
@@ -394,11 +406,12 @@ export const updateFaqItem = withPermission<
 >('faq', 'update')(async (user, id, data): Promise<ActionResult<void>> => {
   const parsed = faqItemFormSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   const existing = await prisma.faqItem.findUnique({
     where: { id },
+    select: { id: true },
   })
 
   if (!existing) {
@@ -408,15 +421,24 @@ export const updateFaqItem = withPermission<
   // カテゴリの存在確認
   const category = await prisma.faqCategory.findUnique({
     where: { id: parsed.data.categoryId },
+    select: { id: true },
   })
 
   if (!category) {
     return createFailure('カテゴリが見つかりません')
   }
 
+  // JSON → HTML 変換
+  const { answerJson, ...rest } = parsed.data
+  const answerHtml = await renderEditorStateToHtmlLazy(answerJson)
+
   await prisma.faqItem.update({
     where: { id },
-    data: parsed.data,
+    data: {
+      ...rest,
+      answerJson: JSON.parse(answerJson),
+      answerHtml,
+    },
   })
 
   updateTag(CACHE_TAGS.FAQ)
@@ -436,6 +458,7 @@ export const deleteFaqItem = withPermission<[id: string], void>(
 )(async (user, id): Promise<ActionResult<void>> => {
   const item = await prisma.faqItem.findUnique({
     where: { id },
+    select: { id: true },
   })
 
   if (!item) {

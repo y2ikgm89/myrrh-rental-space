@@ -281,8 +281,8 @@ export function CustomerSelector({
                   handleNewCustomerInputChange('lastName', e.target.value)
                 }
               />
-              {errors?.lastName && (
-                <p className="text-sm text-destructive">{errors.lastName[0]}</p>
+              {errors?.['lastName'] && (
+                <p className="text-sm text-destructive">{errors['lastName']?.[0]}</p>
               )}
             </div>
 
@@ -300,8 +300,8 @@ export function CustomerSelector({
                   handleNewCustomerInputChange('firstName', e.target.value)
                 }
               />
-              {errors?.firstName && (
-                <p className="text-sm text-destructive">{errors.firstName[0]}</p>
+              {errors?.['firstName'] && (
+                <p className="text-sm text-destructive">{errors['firstName']?.[0]}</p>
               )}
             </div>
           </div>
@@ -320,8 +320,8 @@ export function CustomerSelector({
                 handleNewCustomerInputChange('email', e.target.value)
               }
             />
-            {errors?.email && (
-              <p className="text-sm text-destructive">{errors.email[0]}</p>
+            {errors?.['email'] && (
+              <p className="text-sm text-destructive">{errors['email']?.[0]}</p>
             )}
           </div>
 
@@ -337,8 +337,8 @@ export function CustomerSelector({
                 handleNewCustomerInputChange('phoneNumber', e.target.value)
               }
             />
-            {errors?.phoneNumber && (
-              <p className="text-sm text-destructive">{errors.phoneNumber[0]}</p>
+            {errors?.['phoneNumber'] && (
+              <p className="text-sm text-destructive">{errors['phoneNumber']?.[0]}</p>
             )}
           </div>
         </div>

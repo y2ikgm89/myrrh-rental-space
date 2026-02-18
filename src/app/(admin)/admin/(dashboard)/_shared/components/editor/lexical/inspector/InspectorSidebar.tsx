@@ -12,6 +12,15 @@ import {
   ImageInspectorPanel,
   CalloutInspectorPanel,
   BookmarkInspectorPanel,
+  PullQuoteInspectorPanel,
+  CollapsibleInspectorPanel,
+  StepsInspectorPanel,
+  TabsInspectorPanel,
+  LayoutInspectorPanel,
+  YouTubeInspectorPanel,
+  XInspectorPanel,
+  InstagramInspectorPanel,
+  PageBreakInspectorPanel,
 } from './panels'
 import { Settings2 } from 'lucide-react'
 
@@ -34,6 +43,24 @@ function renderPanel(info: SelectedNodeInfo) {
       return <CalloutInspectorPanel nodeKey={info.nodeKey} node={info.node} />
     case 'bookmark':
       return <BookmarkInspectorPanel nodeKey={info.nodeKey} node={info.node} />
+    case 'pullQuote':
+      return <PullQuoteInspectorPanel nodeKey={info.nodeKey} node={info.node} />
+    case 'collapsible':
+      return <CollapsibleInspectorPanel nodeKey={info.nodeKey} node={info.node} />
+    case 'steps':
+      return <StepsInspectorPanel nodeKey={info.nodeKey} node={info.node} />
+    case 'tabs':
+      return <TabsInspectorPanel nodeKey={info.nodeKey} node={info.node} />
+    case 'layout':
+      return <LayoutInspectorPanel nodeKey={info.nodeKey} node={info.node} />
+    case 'youtube':
+      return <YouTubeInspectorPanel nodeKey={info.nodeKey} node={info.node} />
+    case 'x':
+      return <XInspectorPanel nodeKey={info.nodeKey} node={info.node} />
+    case 'instagram':
+      return <InstagramInspectorPanel nodeKey={info.nodeKey} node={info.node} />
+    case 'pageBreak':
+      return <PageBreakInspectorPanel />
   }
 }
 

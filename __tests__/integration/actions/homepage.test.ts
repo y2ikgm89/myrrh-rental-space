@@ -27,8 +27,10 @@ describe('Homepage Public Action Integration', () => {
         'CTA', 'CONTACT_FORM', 'MAP', 'EMBED', 'INSTAGRAM',
       ]
 
+      // SectionType[] → string[] に変換して toContain の型制約を満たす
+      const sectionTypeValues: string[] = Object.values(SectionType)
       expectedTypes.forEach((type) => {
-        expect(Object.values(SectionType)).toContain(type)
+        expect(sectionTypeValues).toContain(type)
       })
     })
 
@@ -78,7 +80,7 @@ describe('Homepage Public Action Integration', () => {
         const config = { maxItems: 12 }
         const result = validateSectionConfig(SectionType.SPACE_LIST, config)
         expect(result.success).toBe(true)
-        if (result.success) {
+        if (result.success && 'maxItems' in result.data) {
           expect(result.data.maxItems).toBe(12)
         }
       })

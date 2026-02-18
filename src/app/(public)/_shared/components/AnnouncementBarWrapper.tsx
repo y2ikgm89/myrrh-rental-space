@@ -2,7 +2,7 @@
  * お知らせバーラッパー（Server Component）
  *
  * DBから有効なお知らせバーとカルーセル設定を取得して表示
- * Next.js 16 PPR対応: unstable_cache でキャッシュされた関数を使用
+ * Next.js 16 PPR対応: 'use cache' ディレクティブでキャッシュ
  * AnnouncementBarCarouselを動的インポートでMotionライブラリを遅延読み込み
  */
 

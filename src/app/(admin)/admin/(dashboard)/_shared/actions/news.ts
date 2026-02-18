@@ -4,6 +4,7 @@ import { prisma } from '@/shared/lib/prisma'
 import { updateTag } from 'next/cache'
 import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
 import { createSuccess, createFailure } from '@/admin/types/server-actions'
+import { createValidationError } from '@/shared/lib/action-helpers'
 import { withPermission } from '@/admin/lib/server-action-helpers'
 import type { NewsWhereInput } from '@/shared/types/prisma'
 import { checkReadPermissionFor } from '@/admin/lib/permissions'
@@ -11,6 +12,7 @@ import { purgeNewsCache } from '@/shared/lib/cloudflare'
 import { fireAndForget } from '@/shared/lib/async-utils'
 import { ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
 import { checkSlugAvailability, getSlugErrorMessage } from '@/shared/lib/slug-validation'
+import { renderEditorStateToHtmlLazy } from '@/admin/lib/lazy-renderer'
 
 // Types and schemas from centralized validation file
 import {
@@ -79,7 +81,7 @@ export async function getNewsList(
   if (search) {
     where.OR = [
       { title: { contains: search, mode: 'insensitive' } },
-      { content: { contains: search, mode: 'insensitive' } },
+      { contentHtml: { contains: search, mode: 'insensitive' } },
     ]
   }
 
@@ -132,10 +134,10 @@ export const createNews = withPermission<[CreateNewsInput], { id: string }>(
 )(async (_user, data) => {
   const parsed = createNewsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
-  const { slug, title, content } = parsed.data
+  const { slug, title, contentJson } = parsed.data
 
   // スラッグの使用可能チェック（予約パス＋全コンテンツタイプ横断）
   const slugCheck = await checkSlugAvailability(slug, {
@@ -145,11 +147,15 @@ export const createNews = withPermission<[CreateNewsInput], { id: string }>(
     return createFailure(getSlugErrorMessage(slugCheck.reason))
   }
 
+  // JSON → HTML 変換（空コンテンツの場合はスキップ）
+  const contentHtml = contentJson ? await renderEditorStateToHtmlLazy(contentJson) : ''
+
   const news = await prisma.news.create({
     data: {
       slug,
       title,
-      content,
+      contentJson: contentJson ? JSON.parse(contentJson) : undefined,
+      contentHtml,
       isPublished: false,
     },
   })
@@ -171,7 +177,7 @@ export const updateNews = withPermission<[string, UpdateNewsInput], void>(
 )(async (_user, id, data) => {
   const parsed = updateNewsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   const existingNews = await prisma.news.findUnique({
@@ -186,7 +192,7 @@ export const updateNews = withPermission<[string, UpdateNewsInput], void>(
   const {
     slug,
     title,
-    content,
+    contentJson,
     contentWidth,
     contentWidthCustom,
     metaDescription,
@@ -205,12 +211,16 @@ export const updateNews = withPermission<[string, UpdateNewsInput], void>(
     return createFailure(getSlugErrorMessage(slugCheck.reason))
   }
 
+  // JSON → HTML 変換
+  const contentHtml = await renderEditorStateToHtmlLazy(contentJson)
+
   await prisma.news.update({
     where: { id },
     data: {
       slug,
       title,
-      content,
+      contentJson: JSON.parse(contentJson),
+      contentHtml,
       contentWidth: contentWidth ?? null,
       contentWidthCustom: contentWidthCustom ?? null,
       // SEO フィールド
@@ -241,6 +251,7 @@ export const deleteNews = withPermission<[string], void>(
 )(async (_user, id) => {
   const news = await prisma.news.findUnique({
     where: { id },
+    select: { id: true },
   })
 
   if (!news) {
@@ -268,7 +279,7 @@ export const publishNews = withPermission<[string], void>(
 )(async (user, id) => {
   const news = await prisma.news.findUnique({
     where: { id },
-    select: { id: true, publishedAt: true, content: true },
+    select: { id: true, publishedAt: true, contentHtml: true, contentJson: true },
   })
 
   if (!news) {
@@ -296,7 +307,8 @@ export const publishNews = withPermission<[string], void>(
       data: {
         newsId: id,
         version: nextVersion,
-        content: news.content,
+        contentHtml: news.contentHtml,
+        contentJson: news.contentJson ?? undefined,
         createdBy: user.id,
       },
     }),
@@ -320,6 +332,7 @@ export const unpublishNews = withPermission<[string], void>(
 )(async (_user, id) => {
   const news = await prisma.news.findUnique({
     where: { id },
+    select: { id: true },
   })
 
   if (!news) {
@@ -351,6 +364,7 @@ export const createNewsBackup = withPermission<[string], { version: number }>(
 )(async (user, id) => {
   const news = await prisma.news.findUnique({
     where: { id },
+    select: { id: true, contentHtml: true, contentJson: true },
   })
 
   if (!news) {
@@ -369,7 +383,8 @@ export const createNewsBackup = withPermission<[string], { version: number }>(
     data: {
       newsId: id,
       version: nextVersion,
-      content: news.content,
+      contentHtml: news.contentHtml,
+      contentJson: news.contentJson ?? undefined,
       createdBy: user.id,
     },
   })
@@ -405,6 +420,7 @@ export const restoreNewsVersion = withPermission<[string, number], void>(
     where: {
       newsId_version: { newsId, version },
     },
+    select: { contentHtml: true, contentJson: true },
   })
 
   if (!versionData) {
@@ -414,7 +430,8 @@ export const restoreNewsVersion = withPermission<[string, number], void>(
   await prisma.news.update({
     where: { id: newsId },
     data: {
-      content: versionData.content,
+      contentHtml: versionData.contentHtml,
+      contentJson: versionData.contentJson ?? undefined,
       isPublished: false,
     },
   })

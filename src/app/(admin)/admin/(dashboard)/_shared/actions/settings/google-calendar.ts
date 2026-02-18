@@ -10,6 +10,7 @@ import { prisma } from '@/shared/lib/prisma'
 import { updateTag } from 'next/cache'
 import { CACHE_TAGS } from '@/shared/lib/constants'
 import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+import { createValidationError } from '@/shared/lib/action-helpers'
 import { withPermission } from '@/admin/lib/server-action-helpers'
 import {
   testServiceAccountConnection,
@@ -72,7 +73,7 @@ export const updateGoogleCalendarSettings = withPermission<[data: GoogleCalendar
 )(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = googleCalendarSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   // カレンダーIDのバリデーション
@@ -92,7 +93,7 @@ export const updateGoogleCalendarSettings = withPermission<[data: GoogleCalendar
     try {
       // JSONとして有効か確認
       JSON.parse(parsed.data.serviceAccountJson)
-      updateData.googleCalendarServiceAccountJson = encryptServiceAccountJson(
+      updateData['googleCalendarServiceAccountJson'] = encryptServiceAccountJson(
         parsed.data.serviceAccountJson
       )
     } catch {
@@ -285,7 +286,7 @@ export const updateTwoWaySyncSettings = withPermission<[data: TwoWaySyncSettings
 )(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = twoWaySyncSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   await prisma.settings.upsert({
@@ -323,7 +324,7 @@ export async function setupCalendarWebhook(): Promise<{
     }
 
     // ベースURLを取得（環境変数から）
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL
+    const baseUrl = process.env["NEXT_PUBLIC_APP_URL"] || process.env["VERCEL_URL"]
     if (!baseUrl) {
       return { success: false, error: 'APP_URLが設定されていません' }
     }

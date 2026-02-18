@@ -66,7 +66,7 @@ export default function PublicError({ error, reset }: ErrorProps) {
           </p>
         )}
 
-        {process.env.NODE_ENV === 'development' && (
+        {process.env["NODE_ENV"] === 'development' && (
           <details className="mb-8 text-left">
             <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
               エラー詳細（開発環境のみ）

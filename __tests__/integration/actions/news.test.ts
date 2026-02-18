@@ -15,7 +15,7 @@ import { describe, test, expect } from 'bun:test'
 describe('News Public Action Integration', () => {
   describe('GetPublishedNewsListOptions', () => {
     test('デフォルト値が正しく設定される', () => {
-      const options = {}
+      const options: { take?: number } = {}
       const { take = 5 } = options
 
       expect(take).toBe(5)

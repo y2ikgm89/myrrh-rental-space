@@ -17,12 +17,19 @@ export type AddCommentPayload = {
 
 /**
  * LexicalEditor コンポーネントのプロパティ
+ *
+ * JSON primary + HTML cache パターン:
+ * - contentJson があれば JSON から EditorState を復元（プライマリ）
+ * - contentJson がなく contentHtml がある場合は HTML からフォールバック復元（レガシー）
+ * - onChange は JSON 文字列を返す
  */
 export type LexicalEditorProps = {
-  /** 初期コンテンツ（HTML形式） */
-  content?: string
-  /** コンテンツ変更時のコールバック（HTML形式で返す） */
-  onChange?: (html: string) => void
+  /** EditorState JSON 文字列（プライマリ） */
+  contentJson?: string | null
+  /** レガシー HTML コンテンツ（contentJson がない場合のフォールバック） */
+  contentHtml?: string
+  /** コンテンツ変更時のコールバック（JSON文字列を返す） */
+  onChange?: (json: string) => void
   /** エディタを無効化するかどうか */
   disabled?: boolean
   /** エディタのCSSクラス */
@@ -43,6 +50,10 @@ export type LexicalEditorProps = {
   contentWidthClassName?: string
   /** コンテンツ幅制御用スタイル（カスタム幅用） */
   contentWidthStyle?: CSSProperties
+  /** オートセーブコールバック（Server Action経由保存） */
+  onAutoSave?: (json: string) => Promise<void>
+  /** オートセーブのstorageキー（LocalStorage保存用） */
+  autoSaveKey?: string
 }
 
 /**

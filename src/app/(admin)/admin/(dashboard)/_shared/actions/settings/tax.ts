@@ -12,7 +12,8 @@
 import { prisma } from '@/shared/lib/prisma'
 import { updateTag } from 'next/cache'
 import { CACHE_TAGS } from '@/shared/lib/constants'
-import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+import { createSuccess, type ActionResult } from '@/admin/types/server-actions'
+import { createValidationError } from '@/shared/lib/action-helpers'
 import { withPermission } from '@/admin/lib/server-action-helpers'
 import { checkReadPermissionFor } from '@/admin/lib/permissions'
 import { taxSettingsSchema, type TaxSettingsInput } from './schemas'
@@ -65,7 +66,7 @@ export const updateTaxSettings = withPermission<[input: TaxSettingsInput], void>
 )(async (_user, input): Promise<ActionResult<void>> => {
   const parsed = taxSettingsSchema.safeParse(input)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? '入力が不正です')
+    return createValidationError(parsed.error)
   }
 
   const data = parsed.data
@@ -123,8 +124,8 @@ async function getTaxSettingsFromDb(): Promise<TaxSettingsData> {
   }
 
   return {
-    standardRate: Number(settings.taxStandardRate),
-    reducedRate: Number(settings.taxReducedRate),
+    standardRate: settings.taxStandardRate,
+    reducedRate: settings.taxReducedRate,
     displayModeAdmin: parseTaxDisplayMode(settings.taxDisplayModeAdmin),
     displayModePublic: parseTaxDisplayMode(settings.taxDisplayModePublic),
     inputMode: settings.taxInputMode === TaxInputMode.tax_included ? TaxInputMode.tax_included : TaxInputMode.tax_excluded,

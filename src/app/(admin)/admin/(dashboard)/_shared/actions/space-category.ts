@@ -181,6 +181,7 @@ export const createSpaceCategory = withPermission<[input: SpaceCategoryFormInput
   // 同名チェック
   const existing = await prisma.spaceCategory.findFirst({
     where: { name: data.name, isActive: true },
+    select: { id: true },
   })
   if (existing) {
     return createFailure('同じ名前のカテゴリーが既に存在します')
@@ -218,7 +219,10 @@ export const updateSpaceCategory = withPermission<[id: string, input: SpaceCateg
     return createValidationError(parsed.error)
   }
 
-  const existing = await prisma.spaceCategory.findUnique({ where: { id } })
+  const existing = await prisma.spaceCategory.findUnique({
+    where: { id },
+    select: { id: true },
+  })
   if (!existing) {
     return createFailure('カテゴリーが見つかりません')
   }
@@ -228,6 +232,7 @@ export const updateSpaceCategory = withPermission<[id: string, input: SpaceCateg
   // 同名チェック（自分以外）
   const duplicate = await prisma.spaceCategory.findFirst({
     where: { name: data.name, isActive: true, id: { not: id } },
+    select: { id: true },
   })
   if (duplicate) {
     return createFailure('同じ名前のカテゴリーが既に存在します')

@@ -7,11 +7,13 @@
  * - EDITOR用のリソース単位アクセス制御
  */
 
-import { cache } from 'react'
+import { cacheLife, cacheTag } from 'next/cache'
 import { prisma, Role } from '@/shared/lib/prisma'
 import { getSession, getRoleFromSession, type User } from '@/shared/lib/auth'
 import { logPermissionDenied } from '@/admin/lib/audit'
 import { entriesOf } from '@/shared/lib/serialize'
+import { logError, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
+import { CACHE_TAGS } from '@/shared/lib/constants'
 import { isEditorRole } from './role-guards'
 
 // =============================================================================
@@ -38,6 +40,7 @@ export type Resource =
   | 'announcementBar'
   | 'media'
   | 'coupon'
+  | 'blockTemplate'
 
 /** アクション種別 */
 export type Action = 'create' | 'read' | 'update' | 'delete' | 'publish' | 'manage'
@@ -82,6 +85,7 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     'announcementBar:create', 'announcementBar:read', 'announcementBar:update', 'announcementBar:delete', 'announcementBar:manage',
     'media:create', 'media:read', 'media:update', 'media:delete', 'media:manage',
     'coupon:create', 'coupon:read', 'coupon:update', 'coupon:delete', 'coupon:manage',
+    'blockTemplate:create', 'blockTemplate:read', 'blockTemplate:delete', 'blockTemplate:manage',
   ],
   ADMIN: [
     // コンテンツ管理（ユーザー管理・監査ログ除く）
@@ -102,6 +106,7 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     'announcementBar:create', 'announcementBar:read', 'announcementBar:update', 'announcementBar:delete', 'announcementBar:manage',
     'media:create', 'media:read', 'media:update', 'media:delete', 'media:manage',
     'coupon:create', 'coupon:read', 'coupon:update', 'coupon:delete', 'coupon:manage',
+    'blockTemplate:create', 'blockTemplate:read', 'blockTemplate:delete', 'blockTemplate:manage',
   ],
   EDITOR: [
     // 割り当てページ編集のみ（要リソースIDチェック）
@@ -110,6 +115,7 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     'page:read', 'page:update',
     'faq:read', 'faq:update',
     'media:create', 'media:read', 'media:update', // アップロード・閲覧・編集のみ
+    'blockTemplate:create', 'blockTemplate:read', 'blockTemplate:delete', // テンプレート管理
   ],
   VIEWER: [
     // 閲覧のみ
@@ -159,6 +165,7 @@ export const RESOURCE_LABELS: Record<Resource, string> = {
   announcementBar: 'お知らせバー',
   media: 'メディア',
   coupon: 'クーポン',
+  blockTemplate: 'ブロックテンプレート',
 }
 
 /**
@@ -316,38 +323,19 @@ export function checkReadPermissionFor(resource: Resource): () => Promise<boolea
 // =============================================================================
 
 /**
- * Resource型の型ガード
+ * Resource型の型ガード（RESOURCE_LABELSから自動導出 — Single Source of Truth）
  */
+const VALID_RESOURCES = new Set<string>(Object.keys(RESOURCE_LABELS))
 function isValidResource(value: string): value is Resource {
-  const validResources: string[] = [
-    'space',
-    'location',
-    'spaceCategory',
-    'reservation',
-    'customer',
-    'inquiry',
-    'post',
-    'news',
-    'page',
-    'faq',
-    'terms',
-    'settings',
-    'user',
-    'auditLog',
-    'navigation',
-    'announcementBar',
-    'media',
-    'coupon',
-  ]
-  return validResources.includes(value)
+  return VALID_RESOURCES.has(value)
 }
 
 /**
- * Action型の型ガード
+ * Action型の型ガード（ACTION_LABELSから自動導出 — Single Source of Truth）
  */
+const VALID_ACTIONS = new Set<string>(Object.keys(ACTION_LABELS))
 function isValidAction(value: string): value is Action {
-  const validActions: string[] = ['create', 'read', 'update', 'delete', 'publish', 'manage']
-  return validActions.includes(value)
+  return VALID_ACTIONS.has(value)
 }
 
 /**
@@ -391,7 +379,11 @@ export async function syncPermissionsToDb(): Promise<void> {
   for (const permKey of allPermissions) {
     const parsed = parsePermissionKey(permKey)
     if (!parsed) {
-      console.warn(`Invalid permission key: ${permKey}`)
+      logError(new Error(`Invalid permission key: ${permKey}`), {
+        category: ErrorCategory.VALIDATION,
+        severity: ErrorSeverity.MEDIUM,
+        context: { operation: 'syncPermissionsToDb', permKey },
+      })
       continue
     }
 
@@ -413,7 +405,11 @@ export async function syncPermissionsToDb(): Promise<void> {
     for (const permKey of permissions) {
       const parsed = parsePermissionKey(permKey)
       if (!parsed) {
-        console.warn(`Invalid permission key: ${permKey}`)
+        logError(new Error(`Invalid permission key: ${permKey}`), {
+        category: ErrorCategory.VALIDATION,
+        severity: ErrorSeverity.MEDIUM,
+        context: { operation: 'syncPermissionsToDb', permKey },
+      })
         continue
       }
 
@@ -440,38 +436,50 @@ export async function syncPermissionsToDb(): Promise<void> {
 // =============================================================================
 
 /**
- * DBから権限をチェック（cache()でメモ化）
+ * DBから権限をチェック（'use cache' でクロスリクエストキャッシュ）
  *
  * コードベース定義と併用する場合、DB優先
+ * 権限更新時は updateTag(CACHE_TAGS.PERMISSIONS) で無効化
  */
-export const checkPermissionFromDb = cache(
-  async (role: Role, resource: Resource, action: Action): Promise<boolean> => {
-    const permission = await prisma.permission.findUnique({
-      where: { resource_action: { resource, action } },
-      include: {
-        rolePermissions: {
-          where: { role },
-        },
+export async function checkPermissionFromDb(
+  role: Role, resource: Resource, action: Action
+): Promise<boolean> {
+  'use cache'
+  cacheLife('hours')
+  cacheTag(CACHE_TAGS.PERMISSIONS)
+
+  const permission = await prisma.permission.findUnique({
+    where: { resource_action: { resource, action } },
+    include: {
+      rolePermissions: {
+        where: { role },
       },
-    })
-    return (permission?.rolePermissions.length ?? 0) > 0
-  }
-)
+    },
+  })
+  return (permission?.rolePermissions.length ?? 0) > 0
+}
 
 /**
- * ユーザーの全権限を取得（cache()でメモ化）
+ * ユーザーの全権限を取得（'use cache' でクロスリクエストキャッシュ）
+ *
+ * 権限更新時は updateTag(CACHE_TAGS.PERMISSIONS) で無効化
  */
-export const getUserPermissions = cache(
-  async (role: Role): Promise<PermissionKey[]> => {
-    const rolePermissions = await prisma.rolePermission.findMany({
-      where: { role },
-      include: { permission: true },
-    })
-    return rolePermissions.map(
-      (rp) => `${rp.permission.resource}:${rp.permission.action}` as PermissionKey
-    )
-  }
-)
+export async function getUserPermissions(role: Role): Promise<PermissionKey[]> {
+  'use cache'
+  cacheLife('hours')
+  cacheTag(CACHE_TAGS.PERMISSIONS)
+
+  const rolePermissions = await prisma.rolePermission.findMany({
+    where: { role },
+    include: { permission: true },
+  })
+  return rolePermissions.flatMap((rp) => {
+    const { resource, action } = rp.permission
+    if (!isValidResource(resource) || !isValidAction(action)) return []
+    const key: PermissionKey = `${resource}:${action}`
+    return [key]
+  })
+}
 
 // =============================================================================
 // Role Type Guards (re-exported from role-guards.ts for client compatibility)

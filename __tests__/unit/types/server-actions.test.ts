@@ -7,6 +7,7 @@
 
 import { describe, test, expect, beforeEach, mock } from 'bun:test'
 import { Role } from '@/shared/generated/prisma/enums'
+import type { ActionResult } from '@/shared/types/server-actions'
 import {
   SUPER_ADMIN_USER,
   ADMIN_USER,
@@ -16,7 +17,8 @@ import {
 } from '../../fixtures/users'
 
 // モック関数の定義
-const mockGetSession = mock(() => null)
+// getSession は null | { user: MockUser } のどちらも返せるよう unknown に拡大
+const mockGetSession = mock<() => unknown>(() => null)
 const mockGetSessionUser = mock((session: unknown) => {
   if (!session || typeof session !== 'object' || !('user' in session)) return null
   return (session as { user: unknown }).user
@@ -107,16 +109,17 @@ describe('isActionSuccess / isActionFailure', () => {
     const success = createSuccess('OK')
     const failure = createFailure('NG')
 
-    expect(isActionSuccess(success)).toBe(true)
-    expect(isActionSuccess(failure)).toBe(false)
+    // TS: ActionSuccess<void> 条件型の推論を補助するため <void> を明示
+    expect(isActionSuccess<void>(success)).toBe(true)
+    expect(isActionSuccess<void>(failure)).toBe(false)
   })
 
   test('isActionFailure: 失敗判定', () => {
     const success = createSuccess('OK')
     const failure = createFailure('NG')
 
-    expect(isActionFailure(failure)).toBe(true)
-    expect(isActionFailure(success)).toBe(false)
+    expect(isActionFailure<void>(failure)).toBe(true)
+    expect(isActionFailure<void>(success)).toBe(false)
   })
 })
 
@@ -233,7 +236,8 @@ describe('withPermission', () => {
       user: ADMIN_USER,
     }))
 
-    const action = withPermission('space', 'read')(async (user, data: string) => {
+    // TArgs = [string], TData = { user: string; data: string } — 明示的に指定して handler param の型制約を解決
+    const action = withPermission<[string], { user: string; data: string }>('space', 'read')(async (user, data: string) => {
       return createSuccess('OK', { user: user.id, data })
     })
 
@@ -251,7 +255,7 @@ describe('withPermission', () => {
       }))
       mockUserHasResourceAccess.mockImplementation(() => true)
 
-      const action = withPermission('page', 'update', { checkResourceAccess: true })(
+      const action = withPermission<[string]>('page', 'update', { checkResourceAccess: true })(
         async (user, id: string) => {
           return createSuccess('更新しました')
         }
@@ -268,7 +272,7 @@ describe('withPermission', () => {
       }))
       mockUserHasResourceAccess.mockImplementation(() => false)
 
-      const action = withPermission('page', 'update', { checkResourceAccess: true })(
+      const action = withPermission<[string]>('page', 'update', { checkResourceAccess: true })(
         async (user, id: string) => {
           return createSuccess('更新しました')
         }
@@ -288,7 +292,7 @@ describe('withPermission', () => {
         user: ADMIN_USER,
       }))
 
-      const action = withPermission('space', 'update')(
+      const action = withPermission<[string, string, boolean], { id: string; name: string; active: boolean }>('space', 'update')(
         async (user, id: string, name: string, active: boolean) => {
           return createSuccess('更新しました', { id, name, active })
         }
@@ -327,7 +331,9 @@ describe('withReadPermission', () => {
     })
 
     const result = await action()
-    expect('success' in result && result.success === false).toBe(true)
+    // withReadPermission の TReturn 推論不可により result は unknown | ActionFailure
+    // toMatchObject で型制約なしにアサーション
+    expect(result).toMatchObject({ success: false })
   })
 
   test('読み取り権限がない場合はエラーを返す', async () => {
@@ -341,12 +347,7 @@ describe('withReadPermission', () => {
     })
 
     const result = await action()
-    if ('success' in result) {
-      expect(result.success).toBe(false)
-      if (!result.success) {
-        expect(result.error).toContain('閲覧権限')
-      }
-    }
+    expect(result).toMatchObject({ success: false, error: expect.stringContaining('閲覧権限') })
   })
 
   test('正常実行時はデータを返す', async () => {
@@ -359,10 +360,7 @@ describe('withReadPermission', () => {
     })
 
     const result = await action()
-    expect('spaces' in result).toBe(true)
-    if ('spaces' in result) {
-      expect(result.spaces).toHaveLength(1)
-    }
+    expect(result).toMatchObject({ spaces: [{ id: '1', name: 'Space 1' }] })
   })
 
   test('監査ログは記録しない', async () => {
@@ -511,7 +509,7 @@ describe('HOFの組み合わせテスト', () => {
       user: ADMIN_USER,
     }))
 
-    const createSpace = withPermission('space', 'create')(
+    const createSpace = withPermission<[string], { id: string; name: string }>('space', 'create')(
       async (user, name: string) => {
         return createSuccess('作成しました', { id: 'new-id', name })
       }
@@ -537,9 +535,7 @@ describe('HOFの組み合わせテスト', () => {
     })
 
     const result = await getSpaces()
-    if ('spaces' in result) {
-      expect(result.spaces).toHaveLength(1)
-    }
+    expect(result).toMatchObject({ spaces: [{ id: '1', name: 'Space 1' }] })
   })
 
   test('典型的なCRUD操作シナリオ: Update', async () => {
@@ -547,7 +543,7 @@ describe('HOFの組み合わせテスト', () => {
       user: ADMIN_USER,
     }))
 
-    const updateSpace = withPermission('space', 'update')(
+    const updateSpace = withPermission<[string, { name: string }], { id: string; name: string }>('space', 'update')(
       async (user, id: string, data: { name: string }) => {
         return createSuccess('更新しました', { id, ...data })
       }
@@ -562,7 +558,7 @@ describe('HOFの組み合わせテスト', () => {
       user: ADMIN_USER,
     }))
 
-    const deleteSpace = withPermission('space', 'delete')(
+    const deleteSpace = withPermission<[string]>('space', 'delete')(
       async (user, id: string) => {
         return createSuccess('削除しました')
       }

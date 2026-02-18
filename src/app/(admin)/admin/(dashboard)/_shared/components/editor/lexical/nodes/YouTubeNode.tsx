@@ -1,4 +1,4 @@
-/**
+﻿/**
  * YouTube Node
  *
  * @description YouTube動画を埋め込むDecoratorNode
@@ -14,17 +14,16 @@ import type {
   EditorConfig,
   LexicalNode,
   NodeKey,
-  SerializedLexicalNode,
 } from 'lexical'
-import { $applyNodeReplacement, DecoratorNode } from 'lexical'
+import { $create, $getState, $setState, createState, DecoratorNode } from 'lexical'
 
 // =============================================================================
-// Types
+// State
 // =============================================================================
 
-export interface SerializedYouTubeNode extends SerializedLexicalNode {
-  videoId: string
-}
+export const videoIdState = createState('videoId', {
+  parse: (v: unknown): string => typeof v === 'string' ? v : '',
+})
 
 // =============================================================================
 // Component
@@ -40,7 +39,7 @@ function YouTubeComponent({
   return (
     <div
       data-lexical-node-key={nodeKey}
-      className="relative my-4 aspect-video w-full max-w-3xl mx-auto"
+      className="relative my-6 aspect-video w-full max-w-3xl mx-auto"
     >
       <iframe
         src={`https://www.youtube.com/embed/${videoId}`}
@@ -57,9 +56,9 @@ function YouTubeComponent({
 // DOM Conversion
 // =============================================================================
 
-function $convertYouTubeElement(domNode: Node): null | DOMConversionOutput {
-  if (domNode instanceof HTMLIFrameElement) {
-    const src = domNode.getAttribute('src')
+function $convertYouTubeElement(element: HTMLElement): null | DOMConversionOutput {
+  if (element instanceof HTMLIFrameElement) {
+    const src = element.getAttribute('src')
     if (src) {
       const match = src.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]+)/)
       if (match?.[1]) {
@@ -76,21 +75,14 @@ function $convertYouTubeElement(domNode: Node): null | DOMConversionOutput {
 // =============================================================================
 
 export class YouTubeNode extends DecoratorNode<ReactElement> {
-  __videoId: string
-
-  static getType(): string {
-    return 'youtube'
+  override $config() {
+    return this.config('youtube', {
+      extends: DecoratorNode,
+      stateConfigs: [{ flat: true, stateConfig: videoIdState }],
+    })
   }
 
-  static clone(node: YouTubeNode): YouTubeNode {
-    return new YouTubeNode(node.__videoId, node.__key)
-  }
-
-  static importJSON(serializedNode: SerializedYouTubeNode): YouTubeNode {
-    return $createYouTubeNode({ videoId: serializedNode.videoId }).updateFromJSON(serializedNode)
-  }
-
-  static importDOM(): DOMConversionMap | null {
+  static override importDOM(): DOMConversionMap | null {
     return {
       iframe: () => ({
         conversion: $convertYouTubeElement,
@@ -99,52 +91,40 @@ export class YouTubeNode extends DecoratorNode<ReactElement> {
     }
   }
 
-  constructor(videoId: string, key?: NodeKey) {
-    super(key)
-    this.__videoId = videoId
-  }
-
-  exportJSON(): SerializedYouTubeNode {
-    return {
-      ...super.exportJSON(),
-      videoId: this.__videoId,
-    }
-  }
-
-  exportDOM(): DOMExportOutput {
+  override exportDOM(): DOMExportOutput {
+    const videoId = $getState(this, videoIdState)
     const div = document.createElement('div')
-    div.className = 'aspect-video w-full max-w-3xl mx-auto my-4'
+    div.setAttribute('data-youtube', 'true')
 
     const iframe = document.createElement('iframe')
-    iframe.setAttribute('src', `https://www.youtube.com/embed/${this.__videoId}`)
+    iframe.setAttribute('src', `https://www.youtube.com/embed/${videoId}`)
     iframe.setAttribute('title', 'YouTube video')
     iframe.setAttribute(
       'allow',
       'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
     )
     iframe.setAttribute('allowfullscreen', '')
-    iframe.className = 'w-full h-full rounded-lg'
 
     div.appendChild(iframe)
     return { element: div }
   }
 
-  createDOM(config: EditorConfig): HTMLElement {
+  override createDOM(config: EditorConfig): HTMLElement {
     const div = document.createElement('div')
     const theme = config.theme
-    const className = theme.youtube
+    const className = theme['youtube']
     if (className) {
       div.className = className
     }
     return div
   }
 
-  updateDOM(): false {
+  override updateDOM(): false {
     return false
   }
 
-  decorate(): ReactElement {
-    return <YouTubeComponent videoId={this.__videoId} nodeKey={this.__key} />
+  override decorate(): ReactElement {
+    return <YouTubeComponent videoId={$getState(this, videoIdState)} nodeKey={this.__key} />
   }
 }
 
@@ -163,7 +143,7 @@ export function $createYouTubeNode({
 }: {
   videoId: string
 }): YouTubeNode {
-  return $applyNodeReplacement(new YouTubeNode(videoId))
+  return $setState($create(YouTubeNode), videoIdState, videoId)
 }
 
 /**

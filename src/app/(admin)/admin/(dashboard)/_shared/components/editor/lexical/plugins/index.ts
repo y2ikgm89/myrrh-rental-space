@@ -2,7 +2,7 @@
  * Lexical Plugins エクスポート
  */
 
-export { ImagePlugin, useImageDialog } from './ImagePlugin'
+export { ImagePlugin } from './ImagePlugin'
 export {
   HighlightPlugin,
   HighlightCompact,
@@ -22,12 +22,12 @@ export {
   type TextColor,
   type PresetTextColor,
 } from './TextColorPlugin'
-export { YouTubePlugin, useYouTubeDialog } from './YouTubePlugin'
-export { XPlugin, useXDialog } from './XPlugin'
-export { InstagramPlugin, useInstagramDialog } from './InstagramPlugin'
-export { LinkDialogPlugin, useLinkDialog } from './LinkDialogPlugin'
-export { TableInsertPlugin, useTableDialog } from './TableInsertPlugin'
-export { LayoutPlugin, useLayoutDialog, INSERT_LAYOUT_COMMAND } from './LayoutPlugin'
+export { YouTubePlugin } from './YouTubePlugin'
+export { XPlugin } from './XPlugin'
+export { InstagramPlugin } from './InstagramPlugin'
+export { LinkDialogPlugin } from './LinkDialogPlugin'
+export { TableInsertPlugin } from './TableInsertPlugin'
+export { LayoutPlugin, INSERT_LAYOUT_COMMAND } from './LayoutPlugin'
 export { ComponentPickerPlugin } from './ComponentPickerPlugin'
 export { ToolbarPlugin } from './ToolbarPlugin'
 export { DraggableBlockPlugin } from './DraggableBlockPlugin'
@@ -36,9 +36,7 @@ export { FontSizePlugin, useFontSize } from './FontSizePlugin'
 export {
   CommentPlugin,
   CommentButton,
-  CommentInputDialog,
   useComment,
-  useCommentDialog,
   useMarkIds,
   generateMarkId,
   ADD_COMMENT_COMMAND,
@@ -56,13 +54,40 @@ export {
 } from './TextCasePlugin'
 
 export { PageBreakPlugin, INSERT_PAGE_BREAK_COMMAND } from './PageBreakPlugin'
-export { CalloutPlugin, useCalloutDialog, INSERT_CALLOUT_COMMAND } from './CalloutPlugin'
+export { CalloutPlugin, INSERT_CALLOUT_COMMAND } from './CalloutPlugin'
 export { CollapsiblePlugin, INSERT_COLLAPSIBLE_COMMAND, TOGGLE_COLLAPSIBLE_COMMAND } from './CollapsiblePlugin'
 export { EmojiPickerPlugin } from './EmojiPickerPlugin'
 
-// New custom block plugins
-export { ButtonPlugin, useButtonDialog } from './ButtonPlugin'
-export { PullQuotePlugin, usePullQuoteDialog } from './PullQuotePlugin'
-export { BookmarkPlugin, useBookmarkDialog } from './BookmarkPlugin'
-export { StepsPlugin, useStepsDialog } from './StepsPlugin'
-export { TabsPlugin, useTabsDialog } from './TabsPlugin'
+// Word count
+export { WordCountPlugin, useWordCount, type WordCountData } from './WordCountPlugin'
+
+// Table of Contents
+export { TableOfContentsPlugin, INSERT_TOC_COMMAND } from './TableOfContentsPlugin'
+
+// Keyboard shortcuts & Auto save
+export { KeyboardShortcutsPlugin } from './KeyboardShortcutsPlugin'
+export { AutoSavePlugin, useAutoSaveStatus, getDraftJson, clearDraft, type SaveStatus } from './AutoSavePlugin'
+
+// Code block enhancement
+export { CodeBlockPlugin } from './CodeBlockPlugin'
+
+// Image drop & Find replace
+export { ImageDropPlugin } from './ImageDropPlugin'
+export { FindReplacePlugin } from './FindReplacePlugin'
+
+// Markdown export
+export { MarkdownExportPlugin } from './MarkdownExportPlugin'
+
+// Custom block plugins
+export { ButtonPlugin } from './ButtonPlugin'
+export { PullQuotePlugin } from './PullQuotePlugin'
+export { BookmarkPlugin } from './BookmarkPlugin'
+export { StepsPlugin } from './StepsPlugin'
+export { TabsPlugin } from './TabsPlugin'
+
+// Block template
+export {
+  BlockTemplatePlugin,
+  SAVE_BLOCK_TEMPLATE_COMMAND,
+  INSERT_BLOCK_TEMPLATE_COMMAND,
+} from './BlockTemplatePlugin'

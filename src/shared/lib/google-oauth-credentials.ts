@@ -52,8 +52,8 @@ export async function getGoogleOAuthCredentials(): Promise<GoogleOAuthCredential
   }
 
   // 環境変数フォールバック
-  const clientId = process.env.GOOGLE_CLIENT_ID
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET
+  const clientId = process.env["GOOGLE_CLIENT_ID"]
+  const clientSecret = process.env["GOOGLE_CLIENT_SECRET"]
 
   if (clientId && clientSecret) {
     return { clientId, clientSecret }

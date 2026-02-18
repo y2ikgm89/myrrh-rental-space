@@ -1,7 +1,9 @@
-/**
+﻿/**
  * Collapsible Content Node
  *
  * @description 折りたたみのコンテンツ部分を表すElementNode
+ *
+ * スタイルは lexical-content.css の [data-collapsible-content] セレクターで管理
  */
 
 'use client'
@@ -12,23 +14,14 @@ import type {
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
-  NodeKey,
-  SerializedElementNode,
 } from 'lexical'
-import { $applyNodeReplacement, ElementNode } from 'lexical'
-
-// =============================================================================
-// Types
-// =============================================================================
-
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface SerializedCollapsibleContentNode extends SerializedElementNode {}
+import { $create, ElementNode } from 'lexical'
 
 // =============================================================================
 // DOM Conversion
 // =============================================================================
 
-function $convertCollapsibleContentElement(_domNode: Node): null | DOMConversionOutput {
+function $convertCollapsibleContentElement(_element: HTMLElement): null | DOMConversionOutput {
   const node = $createCollapsibleContentNode()
   return { node }
 }
@@ -38,22 +31,13 @@ function $convertCollapsibleContentElement(_domNode: Node): null | DOMConversion
 // =============================================================================
 
 export class CollapsibleContentNode extends ElementNode {
-  static getType(): string {
-    return 'collapsible-content'
+  override $config() {
+    return this.config('collapsible-content', { extends: ElementNode })
   }
 
-  static clone(node: CollapsibleContentNode): CollapsibleContentNode {
-    return new CollapsibleContentNode(node.__key)
-  }
-
-  static importJSON(serializedNode: SerializedCollapsibleContentNode): CollapsibleContentNode {
-    return $createCollapsibleContentNode().updateFromJSON(serializedNode)
-  }
-
-  static importDOM(): DOMConversionMap | null {
+  static override importDOM(): DOMConversionMap | null {
     return {
-      div: (domNode: Node) => {
-        const element = domNode as HTMLElement
+      div: (element: HTMLElement) => {
         if (element.hasAttribute('data-collapsible-content')) {
           return {
             conversion: $convertCollapsibleContentElement,
@@ -65,43 +49,31 @@ export class CollapsibleContentNode extends ElementNode {
     }
   }
 
-  constructor(key?: NodeKey) {
-    super(key)
-  }
-
-  exportJSON(): SerializedCollapsibleContentNode {
-    return {
-      ...super.exportJSON(),
-    }
-  }
-
-  exportDOM(): DOMExportOutput {
+  override exportDOM(): DOMExportOutput {
     const element = document.createElement('div')
     element.setAttribute('data-collapsible-content', 'true')
-    element.className = 'px-4 py-3 border-t border-border'
     return { element }
   }
 
-  createDOM(_config: EditorConfig): HTMLElement {
+  override createDOM(_config: EditorConfig): HTMLElement {
     const element = document.createElement('div')
     element.setAttribute('data-collapsible-content', 'true')
-    element.className = 'px-4 py-3 border-t border-border'
     return element
   }
 
-  updateDOM(): false {
+  override updateDOM(): false {
     return false
   }
 
-  isShadowRoot(): boolean {
+  override isShadowRoot(): boolean {
     return true
   }
 
-  canInsertTextBefore(): false {
+  override canInsertTextBefore(): false {
     return false
   }
 
-  canInsertTextAfter(): false {
+  override canInsertTextAfter(): false {
     return false
   }
 }
@@ -110,21 +82,10 @@ export class CollapsibleContentNode extends ElementNode {
 // Factory Functions
 // =============================================================================
 
-/**
- * CollapsibleContentノードを作成する
- *
- * @returns CollapsibleContentNode インスタンス
- */
 export function $createCollapsibleContentNode(): CollapsibleContentNode {
-  return $applyNodeReplacement(new CollapsibleContentNode())
+  return $create(CollapsibleContentNode)
 }
 
-/**
- * ノードがCollapsibleContentNodeかどうかを判定する
- *
- * @param node - 判定対象のノード
- * @returns CollapsibleContentNodeの場合true
- */
 export function $isCollapsibleContentNode(
   node: LexicalNode | null | undefined
 ): node is CollapsibleContentNode {

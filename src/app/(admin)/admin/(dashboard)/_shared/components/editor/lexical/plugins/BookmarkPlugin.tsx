@@ -10,7 +10,7 @@
 
 import { useState, useTransition } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $getSelection, $isRangeSelection, $insertNodes } from 'lexical'
+import { $insertNodeToNearestRoot } from '@lexical/utils'
 import { Loader2, ExternalLink, AlertCircle } from 'lucide-react'
 import { $createBookmarkNode } from '../nodes/BookmarkNode'
 import { fetchOgp } from '../../../../actions/fetch-ogp'
@@ -24,23 +24,6 @@ import {
   Input,
   Label,
 } from '@/admin/components/ui'
-
-// =============================================================================
-// Hook
-// =============================================================================
-
-export function useBookmarkDialog() {
-  const [isBookmarkDialogOpen, setIsBookmarkDialogOpen] = useState(false)
-
-  const openBookmarkDialog = () => setIsBookmarkDialogOpen(true)
-  const closeBookmarkDialog = () => setIsBookmarkDialogOpen(false)
-
-  return {
-    isBookmarkDialogOpen,
-    openBookmarkDialog,
-    closeBookmarkDialog,
-  }
-}
 
 // =============================================================================
 // Types
@@ -99,9 +82,6 @@ export function BookmarkPlugin({ isOpen, onClose }: BookmarkPluginProps) {
     if (!preview) return
 
     editor.update(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
-
       const bookmarkNode = $createBookmarkNode({
         url: preview.url,
         title: preview.title,
@@ -111,7 +91,7 @@ export function BookmarkPlugin({ isOpen, onClose }: BookmarkPluginProps) {
         siteName: preview.siteName,
       })
 
-      $insertNodes([bookmarkNode])
+      $insertNodeToNearestRoot(bookmarkNode)
     })
 
     resetForm()

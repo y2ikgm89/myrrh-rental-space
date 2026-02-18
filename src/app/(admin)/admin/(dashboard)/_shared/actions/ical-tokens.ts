@@ -87,7 +87,10 @@ export const createICalToken = withPermission<
 
   // スペースIDの検証
   if (spaceId) {
-    const space = await prisma.space.findUnique({ where: { id: spaceId } })
+    const space = await prisma.space.findUnique({
+      where: { id: spaceId },
+      select: { id: true },
+    })
     if (!space) {
       return createFailure('スペースが見つかりません')
     }
@@ -128,7 +131,10 @@ export const deleteICalToken = withPermission<[string]>(
   'settings',
   'update'
 )(async (_user, id) => {
-  const token = await prisma.iCalToken.findUnique({ where: { id } })
+  const token = await prisma.iCalToken.findUnique({
+    where: { id },
+    select: { id: true },
+  })
 
   if (!token) {
     return createFailure('トークンが見つかりません')
@@ -171,7 +177,12 @@ export async function getICalFeedSettings(): Promise<{
 }> {
   await verifyAdminSession()
 
-  const settings = await prisma.settings.findFirst()
+  const settings = await prisma.settings.findFirst({
+    select: {
+      icalFeedEnabled: true,
+      icalFeedIncludeCustomerInfo: true,
+    },
+  })
 
   return {
     icalFeedEnabled: settings?.icalFeedEnabled ?? false,

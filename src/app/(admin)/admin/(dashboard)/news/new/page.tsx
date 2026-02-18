@@ -1,5 +1,7 @@
 import { NewsEditor } from '../_components/NewsEditor'
 import { getLayoutSettings } from '@/shared/lib/settings/public'
+import { getValidLayoutWidth, LayoutWidth } from '@/shared/lib/validations/enums'
+import type { ContentWidth } from '@/shared/types'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -7,7 +9,12 @@ export const metadata: Metadata = {
 }
 
 export default async function NewNewsPage() {
-  const layoutSettings = await getLayoutSettings()
+  const settings = await getLayoutSettings()
 
-  return <NewsEditor mode="create" layoutSettings={layoutSettings} />
+  const fallbackContentWidth: ContentWidth = {
+    width: getValidLayoutWidth(settings?.contentWidth, LayoutWidth.MD),
+    customPx: settings?.contentWidthCustom ?? null,
+  }
+
+  return <NewsEditor mode="create" fallbackContentWidth={fallbackContentWidth} />
 }

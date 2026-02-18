@@ -255,6 +255,7 @@ model User {
   publishedTermsVersions  TermsVersion[]         @relation("TermsVersionPublisher")
   createdStaffInvitations StaffInvitation[]      @relation("StaffInvitationCreator")
   createdLoginTokens      LoginToken[]           @relation("LoginTokenCreator")
+  createdBlockTemplates   BlockTemplate[]        @relation("BlockTemplateCreator")
 
   // OR検索用インデックス
   @@index([name])
@@ -612,7 +613,8 @@ model News {
   id                 String       @id @default(uuid())
   slug               String       @unique
   title              String
-  content            String       @db.Text // HTMLコンテンツ（レンダリング用）
+  contentHtml        String       @db.Text @map("content") // HTMLキャッシュ（公開表示用）
+  contentJson        Json? // Lexical EditorState JSON（プライマリ）
   isPublished        Boolean      @default(false)
   publishedAt        DateTime?
   contentWidth       LayoutWidth?
@@ -641,11 +643,12 @@ model News {
 
 /// Newsのバージョン履歴
 model NewsVersion {
-  id        String   @id @default(uuid())
-  newsId    String
-  version   Int // 自動インクリメント（News内でユニーク）
-  content   String   @db.Text // HTMLスナップショット
-  createdAt DateTime @default(now())
+  id          String   @id @default(uuid())
+  newsId      String
+  version     Int // 自動インクリメント（News内でユニーク）
+  contentHtml String   @db.Text @map("content") // HTMLスナップショット
+  contentJson Json? // Lexical EditorState JSON
+  createdAt   DateTime @default(now())
   createdBy String? // 作成者ID（User.id）- ユーザー削除時にnull化
 
   // Relations
@@ -686,7 +689,8 @@ model Post {
   title              String
   slug               String      @unique
   excerpt            String      @db.Text
-  content            String      @db.Text // HTMLコンテンツ（レンダリング用）
+  contentHtml        String      @db.Text @map("content") // HTMLキャッシュ（公開表示用）
+  contentJson        Json? // Lexical EditorState JSON（プライマリ）
   thumbnailUrl       String
   ogpImageUrl        String?
   categoryId         String
@@ -733,11 +737,12 @@ model PostTagOnPost {
 
 /// Postのバージョン履歴
 model PostVersion {
-  id        String   @id @default(uuid())
-  postId    String
-  version   Int // 自動インクリメント（Post内でユニーク）
-  content   String   @db.Text // HTMLスナップショット
-  createdAt DateTime @default(now())
+  id          String   @id @default(uuid())
+  postId      String
+  version     Int // 自動インクリメント（Post内でユニーク）
+  contentHtml String   @db.Text @map("content") // HTMLスナップショット
+  contentJson Json? // Lexical EditorState JSON
+  createdAt   DateTime @default(now())
   createdBy String? // 作成者ID（User.id）- ユーザー削除時にnull化
 
   // Relations
@@ -866,14 +871,15 @@ model Page {
 /// 統一セクション（ホームページ + カスタムページ共通）
 /// pageId = null でホームページセクション判別
 model Section {
-  id        String      @id @default(uuid())
-  pageId    String? // null = ホームページ
-  type      SectionType
-  order     Int         @default(0) // 表示順序（DnDで変更可能）
-  isActive  Boolean     @default(true) // ON/OFF制御
-  title     String? // セクション見出し（表示用）
-  content   String?     @db.Text // Lexical HTML（CUSTOM等で使用）
-  config    Json        @default("{}") // タイプ別設定（Zodで型安全）
+  id          String      @id @default(uuid())
+  pageId      String? // null = ホームページ
+  type        SectionType
+  order       Int         @default(0) // 表示順序（DnDで変更可能）
+  isActive    Boolean     @default(true) // ON/OFF制御
+  title       String? // セクション見出し（表示用）
+  contentHtml String?     @db.Text @map("content") // HTMLキャッシュ（CUSTOM等で使用）
+  contentJson Json? // Lexical EditorState JSON（プライマリ）
+  config      Json        @default("{}") // タイプ別設定（Zodで型安全）
   design    Json        @default("{}") // ビジュアル設定（共通）
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
@@ -949,7 +955,8 @@ model FaqItem {
   id          String    @id @default(uuid())
   categoryId  String
   question    String
-  answer      String    @db.Text // Lexical HTML (リッチテキスト)
+  answerHtml  String    @db.Text @map("answer") // HTMLキャッシュ（公開表示用）
+  answerJson  Json? // Lexical EditorState JSON（プライマリ）
   order       Int       @default(0)
   isPublished Boolean   @default(true)
   publishedAt DateTime?
@@ -1498,7 +1505,8 @@ model TermsVersion {
   id               String      @id @default(uuid())
   termsId          String
   version          Int // 自動インクリメント（Terms内でユニーク）
-  content          String      @db.Text // Lexical HTML（リッチテキスト）
+  contentHtml      String      @db.Text @map("content") // HTMLキャッシュ（公開表示用）
+  contentJson      Json? // Lexical EditorState JSON（プライマリ）
   status           TermsStatus @default(DRAFT)
   publishedAt      DateTime? // 公開日時
   publishedBy      String? // 公開者ID（User.id）- ユーザー削除時にnull化
@@ -1600,4 +1608,22 @@ model EditorComment {
   @@index([createdBy])
   @@index([isDeleted])
   @@map("editor_comments")
+}
+
+/// エディタブロックテンプレート（再利用可能なブロック）
+model BlockTemplate {
+  id          String   @id @default(uuid())
+  name        String // テンプレート名
+  description String?  @db.Text // 説明
+  nodeJson    Json // Lexical SerializedEditorState JSON
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String? // 作成者ID（User.id）- ユーザー削除時にnull化
+
+  // Relations
+  creator User? @relation("BlockTemplateCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@index([createdBy])
+  @@index([createdAt])
+  @@map("block_templates")
 }

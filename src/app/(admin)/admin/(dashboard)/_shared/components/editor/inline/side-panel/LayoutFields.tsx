@@ -115,9 +115,9 @@ export function LayoutFields({
             placeholder="例: 900"
             disabled={disabled}
           />
-          {'contentWidthCustom' in errors && errors.contentWidthCustom && (
+          {'contentWidthCustom' in errors && errors['contentWidthCustom'] && (
             <p className="text-sm text-destructive">
-              {String(errors.contentWidthCustom.message ?? '')}
+              {String(errors['contentWidthCustom'].message ?? '')}
             </p>
           )}
           <p className="text-xs text-muted-foreground">

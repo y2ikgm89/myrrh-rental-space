@@ -56,7 +56,11 @@ export function TermsVersionForm({
   onCancel,
 }: TermsVersionFormProps) {
   const [isPending, startTransition] = useTransition()
-  const [content, setContent] = useState(version?.content ?? '')
+  const [contentJson, setContentJson] = useState(
+    version?.contentJson ? JSON.stringify(version.contentJson) : ''
+  )
+  const [editorKey, setEditorKey] = useState(0)
+  const [initialHtml, setInitialHtml] = useState(version?.contentHtml ?? '')
   const [selectedTemplate, setSelectedTemplate] = useState<string>('')
 
   const isEditing = !!version
@@ -65,7 +69,9 @@ export function TermsVersionForm({
   const handleTemplateChange = (templateId: string) => {
     setSelectedTemplate(templateId)
     if (templateId === 'blank') {
-      setContent('')
+      setContentJson('')
+      setInitialHtml('')
+      setEditorKey((k) => k + 1)
       return
     }
     const template = templates.find((t) => t.id === templateId)
@@ -74,22 +80,24 @@ export function TermsVersionForm({
       const appliedContent = businessInfo
         ? applyBusinessInfo(template.content, businessInfo)
         : template.content
-      setContent(appliedContent)
+      setContentJson('')
+      setInitialHtml(appliedContent)
+      setEditorKey((k) => k + 1)
     }
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!content.trim()) {
+    if (!contentJson.trim()) {
       toast.error('規約内容を入力してください')
       return
     }
 
     startTransition(async () => {
       const result = isEditing
-        ? await updateTermsVersion(version.id, { content })
-        : await createTermsVersion({ termsId, content })
+        ? await updateTermsVersion(version.id, { contentJson })
+        : await createTermsVersion({ termsId, contentJson })
 
       if (result.success) {
         toast.success(result.message)
@@ -131,8 +139,10 @@ export function TermsVersionForm({
         <Label>規約内容 *</Label>
         <div className="min-h-[400px]">
           <LexicalEditor
-            content={content}
-            onChange={setContent}
+            key={editorKey}
+            contentJson={contentJson || undefined}
+            contentHtml={initialHtml}
+            onChange={setContentJson}
             placeholder="規約の内容を入力してください..."
             className={EDITOR_PROSE_CLASSES}
             height="400px"

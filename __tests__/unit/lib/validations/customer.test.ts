@@ -195,7 +195,7 @@ describe('updateCustomerStatusSchema', () => {
   test('無効なUUIDの場合にエラー', () => {
     const invalidData = {
       id: 'invalid-uuid',
-      status: CustomerStatus.ACTIVE,
+      status: CustomerStatus.REGULAR,
     }
 
     const result = updateCustomerStatusSchema.safeParse(invalidData)

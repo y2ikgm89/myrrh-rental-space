@@ -64,13 +64,6 @@ const styles = tv({
         sidebar: '-translate-x-full lg:translate-x-0',
       },
     },
-    isFullscreen: {
-      true: {
-        overlay: 'opacity-0 pointer-events-none',
-        // lg:でも非表示にするため lg:-translate-x-full を追加
-        sidebar: '-translate-x-full lg:-translate-x-full',
-      },
-    },
   },
 })
 
@@ -87,7 +80,7 @@ export function ResponsiveSidebar({ userInfo }: ResponsiveSidebarProps) {
   // SSR時: sidebarState='expanded', isMobile=false → isOpen=true
   const isOpen = hasMounted ? sidebarState === 'expanded' : true
   const effectiveIsMobile = hasMounted && isMobile
-  const classes = styles({ isOpen, isFullscreen })
+  const classes = styles({ isOpen })
 
   // ESCキーで閉じる
   useEffect(() => {
@@ -112,6 +105,9 @@ export function ResponsiveSidebar({ userInfo }: ResponsiveSidebarProps) {
     }
     return () => document.body.classList.remove('overflow-hidden')
   }, [effectiveIsMobile, isOpen])
+
+  // フルスクリーンモード時はレンダリングしない（Lexicalエディタ等）
+  if (isFullscreen) return null
 
   return (
     <>

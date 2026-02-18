@@ -1,4 +1,4 @@
-/**
+﻿/**
  * PullQuoteCitation Node
  *
  * @description プルクォートの著者/出典部分
@@ -13,29 +13,14 @@ import type {
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
-  NodeKey,
-  SerializedElementNode,
 } from 'lexical'
-import { $applyNodeReplacement, ElementNode, $createParagraphNode, $isElementNode } from 'lexical'
-
-// =============================================================================
-// Types
-// =============================================================================
-
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface SerializedPullQuoteCitationNode extends SerializedElementNode {}
-
-// =============================================================================
-// Constants
-// =============================================================================
-
-const CITATION_CLASS = 'mt-4 text-sm text-muted-foreground before:content-["—_"]'
+import { $create, ElementNode } from 'lexical'
 
 // =============================================================================
 // DOM Conversion
 // =============================================================================
 
-function $convertPullQuoteCitationElement(_domNode: Node): null | DOMConversionOutput {
+function $convertPullQuoteCitationElement(_element: HTMLElement): null | DOMConversionOutput {
   const node = $createPullQuoteCitationNode()
   return { node }
 }
@@ -45,22 +30,13 @@ function $convertPullQuoteCitationElement(_domNode: Node): null | DOMConversionO
 // =============================================================================
 
 export class PullQuoteCitationNode extends ElementNode {
-  static getType(): string {
-    return 'pull-quote-citation'
+  override $config() {
+    return this.config('pull-quote-citation', { extends: ElementNode })
   }
 
-  static clone(node: PullQuoteCitationNode): PullQuoteCitationNode {
-    return new PullQuoteCitationNode(node.__key)
-  }
-
-  static importJSON(serializedNode: SerializedPullQuoteCitationNode): PullQuoteCitationNode {
-    return $createPullQuoteCitationNode().updateFromJSON(serializedNode)
-  }
-
-  static importDOM(): DOMConversionMap | null {
+  static override importDOM(): DOMConversionMap | null {
     return {
-      figcaption: (domNode: Node) => {
-        const element = domNode as HTMLElement
+      figcaption: (element: HTMLElement) => {
         if (element.hasAttribute('data-pull-quote-citation')) {
           return {
             conversion: $convertPullQuoteCitationElement,
@@ -72,61 +48,28 @@ export class PullQuoteCitationNode extends ElementNode {
     }
   }
 
-  constructor(key?: NodeKey) {
-    super(key)
-  }
-
-  exportJSON(): SerializedPullQuoteCitationNode {
-    return {
-      ...super.exportJSON(),
-    }
-  }
-
-  exportDOM(): DOMExportOutput {
+  override exportDOM(): DOMExportOutput {
     const element = document.createElement('figcaption')
     element.setAttribute('data-pull-quote-citation', 'true')
-    element.className = CITATION_CLASS
     return { element }
   }
 
-  createDOM(_config: EditorConfig): HTMLElement {
+  override createDOM(_config: EditorConfig): HTMLElement {
     const element = document.createElement('figcaption')
     element.setAttribute('data-pull-quote-citation', 'true')
-    element.className = CITATION_CLASS
     return element
   }
 
-  updateDOM(): boolean {
+  override updateDOM(): boolean {
     return false
   }
 
-  canInsertTextBefore(): false {
+  override canInsertTextBefore(): false {
     return false
   }
 
-  canInsertTextAfter(): false {
+  override canInsertTextAfter(): false {
     return false
-  }
-
-  collapseAtStart(): boolean {
-    const children = this.getChildren()
-    const paragraph = $createParagraphNode()
-
-    if (children.length > 0) {
-      const firstChild = children[0]
-      if ($isElementNode(firstChild)) {
-        const firstChildChildren = firstChild.getChildren()
-        for (const child of firstChildChildren) {
-          paragraph.append(child)
-        }
-      }
-    }
-
-    const parent = this.getParent()
-    if (parent) {
-      parent.replace(paragraph)
-    }
-    return true
   }
 }
 
@@ -140,7 +83,7 @@ export class PullQuoteCitationNode extends ElementNode {
  * @returns PullQuoteCitationNode インスタンス
  */
 export function $createPullQuoteCitationNode(): PullQuoteCitationNode {
-  return $applyNodeReplacement(new PullQuoteCitationNode())
+  return $create(PullQuoteCitationNode)
 }
 
 /**

@@ -31,6 +31,7 @@ import type {
   CommentableContentType,
 } from '@/admin/types/editor-comment'
 import { isCommentableContentType } from '@/admin/types/editor-comment'
+import { createValidationError } from '@/shared/lib/action-helpers'
 import { z } from 'zod/v4'
 
 // ==============================================
@@ -142,10 +143,7 @@ export async function createCommentThread(
   // バリデーション
   const validation = createThreadSchema.safeParse(input)
   if (!validation.success) {
-    return {
-      success: false,
-      error: validation.error.issues[0]?.message ?? 'バリデーションエラー',
-    }
+    return createValidationError(validation.error)
   }
 
   const { markId, contentType, contentId, quotedText, initialComment } = validation.data
@@ -160,6 +158,7 @@ export async function createCommentThread(
           contentId,
         },
       },
+      select: { id: true },
     })
 
     if (existingThread) {
@@ -230,10 +229,7 @@ export async function addComment(
   // バリデーション
   const validation = addCommentSchema.safeParse(input)
   if (!validation.success) {
-    return {
-      success: false,
-      error: validation.error.issues[0]?.message ?? 'バリデーションエラー',
-    }
+    return createValidationError(validation.error)
   }
 
   const { threadId, content } = validation.data

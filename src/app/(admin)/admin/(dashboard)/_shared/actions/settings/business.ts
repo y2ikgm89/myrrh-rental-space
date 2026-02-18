@@ -9,7 +9,8 @@
 import { prisma, Prisma } from '@/shared/lib/prisma'
 import { updateTag } from 'next/cache'
 import { CACHE_TAGS } from '@/shared/lib/constants'
-import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+import { createSuccess, type ActionResult } from '@/admin/types/server-actions'
+import { createValidationError } from '@/shared/lib/action-helpers'
 import { withPermission } from '@/admin/lib/server-action-helpers'
 
 import {
@@ -36,7 +37,7 @@ export const updateBusinessInfo = withPermission<[data: BusinessInfoInput], void
 )(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = businessInfoSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   const updateData = {
@@ -66,7 +67,7 @@ export const updateContactInfo = withPermission<[data: ContactInfoInput], void>(
 )(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = contactInfoSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   const updateData = {
@@ -94,7 +95,7 @@ export const updateBusinessHoursSettings = withPermission<[data: BusinessHoursSe
 )(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = businessHoursSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   // Prisma JSON null の適切な変換
@@ -126,7 +127,7 @@ export const updateMeoSettings = withPermission<[data: MeoSettingsInput], void>(
 )(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = meoSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   const meoData = {

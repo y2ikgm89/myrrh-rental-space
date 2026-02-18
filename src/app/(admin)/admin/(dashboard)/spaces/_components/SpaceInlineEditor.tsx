@@ -427,8 +427,8 @@ export function SpaceInlineEditor({
     })
   )
 
-  const handleDescriptionChange = (html: string) => {
-    setValue('description', html, { shouldDirty: true })
+  const handleDescriptionChange = (json: string) => {
+    setValue('description', json, { shouldDirty: true })
     setHasEditorChanges(true)
   }
 
@@ -725,7 +725,7 @@ export function SpaceInlineEditor({
                 <div className="space-y-2">
                   <Label htmlFor="description">説明 *</Label>
                   <RichTextEditor
-                    content={description || ''}
+                    contentHtml={description || ''}
                     onChange={handleDescriptionChange}
                     placeholder="スペースの説明を入力..."
                     height="200px"
@@ -1326,7 +1326,9 @@ export function SpaceInlineEditor({
             <CardContent>
               <OGPFields
                 register={register}
+                control={control}
                 errors={errors}
+                setValue={setValue}
                 disabled={isPending}
                 fields={{
                   ogpTitle: 'ogpTitle',

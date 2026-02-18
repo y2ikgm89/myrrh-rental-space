@@ -14,6 +14,7 @@ import { prisma } from '@/shared/lib/prisma'
 import { updateTag } from 'next/cache'
 import { CACHE_TAGS } from '@/shared/lib/constants'
 import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+import { createValidationError } from '@/shared/lib/action-helpers'
 import { withPermission } from '@/admin/lib/server-action-helpers'
 import { checkReadPermissionFor } from '@/admin/lib/permissions'
 import { discountSettingsSchema, type DiscountSettingsInput } from './schemas'
@@ -78,7 +79,7 @@ export const updateDiscountSettings = withPermission<[input: DiscountSettingsInp
 )(async (_user, input): Promise<ActionResult<void>> => {
   const parsed = discountSettingsSchema.safeParse(input)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? '入力が不正です')
+    return createValidationError(parsed.error)
   }
 
   const data = parsed.data

@@ -63,7 +63,7 @@ function toFormData(data?: PostData): PostFormData {
       title: '',
       slug: '',
       excerpt: '',
-      content: '',
+      contentJson: '',
       thumbnailUrl: '/images/placeholder.jpg',
       ogpImageUrl: '',
       categoryId: '',
@@ -83,7 +83,7 @@ function toFormData(data?: PostData): PostFormData {
     title: data.title,
     slug: data.slug,
     excerpt: data.excerpt,
-    content: data.content,
+    contentJson: data.contentJson ? JSON.stringify(data.contentJson) : '',
     thumbnailUrl: data.thumbnailUrl,
     ogpImageUrl: toFormString(data.ogpImageUrl),
     categoryId: data.categoryId,
@@ -104,7 +104,7 @@ function toSubmitPayload(formData: PostFormData) {
     title: formData.title,
     slug: formData.slug,
     excerpt: formData.excerpt,
-    content: formData.content,
+    contentJson: formData.contentJson,
     thumbnailUrl: formData.thumbnailUrl,
     ogpImageUrl: toNullableString(formData.ogpImageUrl),
     categoryId: formData.categoryId,
@@ -129,7 +129,7 @@ function toPreviewData(
     title: formData.title || '無題',
     slug: formData.slug || 'preview-new',
     excerpt: formData.excerpt || '',
-    content: formData.content || '',
+    content: formData.contentJson || '',
     thumbnailUrl: formData.thumbnailUrl || '/images/placeholder.jpg',
     publishedAt: formData.publishedAt || null,
     tags,
@@ -178,7 +178,7 @@ export function usePostEditor({
   // 監視値（型アサーション不要 - 具体的な型が推論される）
   const title = useWatch({ control, name: 'title' }) ?? ''
   const slug = useWatch({ control, name: 'slug' }) ?? ''
-  const content = useWatch({ control, name: 'content' }) ?? ''
+  const contentJson = useWatch({ control, name: 'contentJson' }) ?? ''
   const status = useWatch({ control, name: 'status' }) ?? PostStatus.DRAFT
 
   // isDirty計算
@@ -188,8 +188,8 @@ export function usePostEditor({
   // Handlers (React Compiler auto-memoizes - no useCallback needed)
   // ==========================================================================
 
-  const handleContentChange = (html: string) => {
-    setValue('content', html, { shouldDirty: true })
+  const handleContentChange = (json: string) => {
+    setValue('contentJson', json, { shouldDirty: true })
     core.setHasEditorChanges(true)
   }
 
@@ -322,7 +322,8 @@ export function usePostEditor({
     // 監視値
     title,
     slug,
-    content,
+    contentJson,
+    contentHtml: post?.contentHtml ?? '',
     status,
 
     // パネル管理

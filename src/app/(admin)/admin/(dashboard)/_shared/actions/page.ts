@@ -33,8 +33,8 @@ import {
   type UpdatePageInput,
   type UpdatePageSeoInput,
   type CreatePageInput,
-  type PageData,
 } from '@/shared/lib/validations/page'
+import type { PageModel as PageData } from '@/shared/generated/prisma/models/Page'
 import type { Prisma } from '@/shared/generated/prisma/client'
 import type { ActionResult } from '@/shared/types/server-actions'
 
@@ -207,6 +207,7 @@ export async function updatePage(
     // ページが存在するか確認
     const existingPage = await prisma.page.findUnique({
       where: { slug },
+      select: { id: true },
     })
 
     if (!existingPage) {
@@ -466,6 +467,7 @@ export async function deletePage(slug: string): Promise<ActionResult> {
   try {
     const existingPage = await prisma.page.findUnique({
       where: { slug },
+      select: { id: true },
     })
 
     if (!existingPage) {
@@ -519,6 +521,7 @@ export async function deletePagePermanently(
   try {
     const existingPage = await prisma.page.findUnique({
       where: { slug },
+      select: { id: true },
     })
 
     if (!existingPage) {
@@ -561,6 +564,7 @@ export async function restorePage(slug: string): Promise<ActionResult> {
   try {
     const existingPage = await prisma.page.findUnique({
       where: { slug },
+      select: { id: true, isActive: true },
     })
 
     if (!existingPage) {
@@ -625,6 +629,7 @@ export async function togglePagePublished(
   try {
     const existingPage = await prisma.page.findUnique({
       where: { slug },
+      select: { id: true, isPublished: true },
     })
 
     if (!existingPage) {
@@ -801,6 +806,7 @@ export async function updatePageSeo(
     // ページが存在するか確認
     const existingPage = await prisma.page.findUnique({
       where: { slug },
+      select: { id: true },
     })
 
     if (!existingPage) {

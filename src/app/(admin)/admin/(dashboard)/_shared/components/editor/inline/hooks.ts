@@ -8,7 +8,7 @@
 
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useState } from 'react'
 import { useAdminLayout } from '@/admin/contexts/admin-layout-context'
 import type { AddCommentPayload } from '../lexical/types'
 
@@ -25,7 +25,7 @@ import type { AddCommentPayload } from '../lexical/types'
 export function useFullscreenMode() {
   const { enterFullscreen, exitFullscreen, isFullscreen } = useAdminLayout()
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     enterFullscreen()
     return () => exitFullscreen()
   }, [enterFullscreen, exitFullscreen])

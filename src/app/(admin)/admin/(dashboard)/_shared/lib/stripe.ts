@@ -101,7 +101,7 @@ export function maskSecretKey(key: string): string {
  * 環境変数からStripeシークレットキーを取得
  */
 function getEnvSecretKey(): string | null {
-  return process.env.STRIPE_SECRET_KEY || null
+  return process.env["STRIPE_SECRET_KEY"] || null
 }
 
 /**

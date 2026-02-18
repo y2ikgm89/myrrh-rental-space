@@ -94,8 +94,10 @@ function SelectionBox({
       // フォーカスを次の要素に移動
       const nextButton = document.querySelector(
         `[data-selection-box-id="${groupId}"][data-value="${nextOption.value}"]`
-      ) as HTMLButtonElement | null
-      nextButton?.focus()
+      )
+      if (nextButton instanceof HTMLElement) {
+        nextButton.focus()
+      }
     }
   }
 

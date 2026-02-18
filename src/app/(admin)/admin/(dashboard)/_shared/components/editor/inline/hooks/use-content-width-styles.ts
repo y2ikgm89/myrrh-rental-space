@@ -1,37 +1,30 @@
 /**
  * コンテンツ幅スタイルフック
  *
- * React Hook Form公式推奨のuseWatch()を使用したリアルタイム幅更新
- * グローバル設定をフォールバックとして使用
+ * React Hook Form公式推奨のuseWatch() + Path<T>で型安全なリアルタイム幅更新
+ * 型アサーション完全排除
  */
 
-import type { CSSProperties } from 'react'
-import { useWatch, type Control } from 'react-hook-form'
-import { getContentStyles } from '@/shared/lib/styles/layout-mapper'
-import { LayoutWidth, type ContentWidthSettings } from '@/shared/types'
+import { useWatch, type Control, type FieldValues, type Path } from 'react-hook-form'
+import { resolveWidthStyles, type WidthStyles } from '@/shared/lib/styles/layout-mapper'
+import { LayoutWidth } from '@/shared/types/prisma'
 import { isValidLayoutWidth } from '@/shared/lib/validations/enums'
+import type { ContentWidth } from '@/shared/types/layout'
 
 // =============================================================================
 // Types
 // =============================================================================
 
-/**
- * コンテンツ幅フィールドを持つフォームの最小型定義
- */
-type ContentWidthFormFields = {
-  contentWidth?: string
-  contentWidthCustom?: string
-}
-
-type UseContentWidthStylesOptions<T extends ContentWidthFormFields> = {
+type UseContentWidthStylesOptions<T extends FieldValues> = {
   control: Control<T>
-  /** グローバル設定（フォールバック値として使用） */
-  layoutSettings?: ContentWidthSettings | null
+  widthFieldName: Path<T>
+  customFieldName: Path<T>
+  fallback?: ContentWidth
 }
 
-type ContentWidthStyles = {
-  className: string
-  style: CSSProperties | undefined
+const DEFAULT_FALLBACK: ContentWidth = {
+  width: LayoutWidth.MD,
+  customPx: null,
 }
 
 // =============================================================================
@@ -42,62 +35,32 @@ type ContentWidthStyles = {
  * コンテンツ幅スタイルを計算するフック
  *
  * @description
- * - React Hook Form公式推奨の`useWatch()`を使用
+ * - React Hook Form公式 Path<T> パターンで型安全
  * - フォーム値の変更をリアルタイムで反映
- * - フォーム値が未設定の場合はlayoutSettingsをフォールバック
- * - 公開ページと同じ幅をエディタに適用
- *
- * @example
- * ```tsx
- * const contentStyles = useContentWidthStyles({
- *   control: form.control,
- *   layoutSettings,
- * })
- * <LexicalEditor
- *   contentWidthClassName={contentStyles.className}
- *   contentWidthStyle={contentStyles.style}
- * />
- * ```
+ * - フォーム値が未設定の場合はfallbackをフォールバック
  */
-export function useContentWidthStyles<T extends ContentWidthFormFields>({
+export function useContentWidthStyles<T extends FieldValues>({
   control,
-  layoutSettings,
-}: UseContentWidthStylesOptions<T>): ContentWidthStyles {
-  // useWatch()でリアルタイム監視（公式推奨パターン）
-  const contentWidth = useWatch({
-    control,
-    name: 'contentWidth' as never,
-  }) as string | undefined
+  widthFieldName,
+  customFieldName,
+  fallback = DEFAULT_FALLBACK,
+}: UseContentWidthStylesOptions<T>): WidthStyles {
+  // Path<T> により型安全 — 型アサーション不要
+  const rawWidth = useWatch({ control, name: widthFieldName })
+  const rawCustom = useWatch({ control, name: customFieldName })
 
-  const contentWidthCustom = useWatch({
-    control,
-    name: 'contentWidthCustom' as never,
-  }) as string | undefined
+  // typeof ナローイング（型アサーション不要）
+  const effectiveWidth =
+    typeof rawWidth === 'string' && isValidLayoutWidth(rawWidth)
+      ? rawWidth
+      : fallback.width
 
-  // フォールバック値（グローバル設定 → ハードコードデフォルト）
-  const fallbackWidth = isValidLayoutWidth(layoutSettings?.contentWidth)
-    ? layoutSettings.contentWidth
-    : LayoutWidth.MD
-  const fallbackCustomWidth = layoutSettings?.contentWidthCustom ?? null
+  const rawCustomStr = typeof rawCustom === 'string' ? rawCustom : null
+  const parsedCustom = rawCustomStr ? parseInt(rawCustomStr, 10) : null
+  const effectiveCustomPx =
+    parsedCustom !== null && !Number.isNaN(parsedCustom)
+      ? parsedCustom
+      : fallback.customPx
 
-  // カスタム幅のパース（NaN対策）
-  const parsedCustomWidth = contentWidthCustom
-    ? parseInt(contentWidthCustom, 10)
-    : null
-  const validCustomWidth =
-    parsedCustomWidth !== null && !Number.isNaN(parsedCustomWidth)
-      ? parsedCustomWidth
-      : fallbackCustomWidth
-
-  // 有効なコンテンツ幅を決定
-  const effectiveContentWidth = isValidLayoutWidth(contentWidth)
-    ? contentWidth
-    : fallbackWidth
-
-  return getContentStyles({
-    containerWidth: LayoutWidth.LG,
-    containerWidthCustom: null,
-    contentWidth: effectiveContentWidth,
-    contentWidthCustom: validCustomWidth,
-  })
+  return resolveWidthStyles({ width: effectiveWidth, customPx: effectiveCustomPx })
 }

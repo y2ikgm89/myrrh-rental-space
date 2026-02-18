@@ -1,4 +1,4 @@
-/**
+﻿/**
  * StepItem Node
  *
  * @description 各ステップを表現するコンテナ
@@ -13,31 +13,23 @@ import type {
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
-  NodeKey,
-  SerializedElementNode,
 } from 'lexical'
-import { $applyNodeReplacement, ElementNode, $createParagraphNode, $isElementNode } from 'lexical'
+import { $create, $getState, $getStateChange, $setState, createState, ElementNode } from 'lexical'
 
 // =============================================================================
-// Types
+// State
 // =============================================================================
 
-export interface SerializedStepItemNode extends SerializedElementNode {
-  stepNumber: number
-}
-
-// =============================================================================
-// Constants
-// =============================================================================
-
-const ITEM_CLASS = 'flex gap-4'
+export const stepNumberState = createState('stepNumber', {
+  parse: (v: unknown): number =>
+    typeof v === 'number' && Number.isFinite(v) ? v : 1,
+})
 
 // =============================================================================
 // DOM Conversion
 // =============================================================================
 
-function $convertStepItemElement(domNode: Node): null | DOMConversionOutput {
-  const element = domNode as HTMLElement
+function $convertStepItemElement(element: HTMLElement): null | DOMConversionOutput {
   const stepAttr = element.getAttribute('data-step')
   const stepNumber = stepAttr ? parseInt(stepAttr, 10) : 1
   const node = $createStepItemNode(stepNumber)
@@ -49,24 +41,16 @@ function $convertStepItemElement(domNode: Node): null | DOMConversionOutput {
 // =============================================================================
 
 export class StepItemNode extends ElementNode {
-  __stepNumber: number
-
-  static getType(): string {
-    return 'step-item'
+  override $config() {
+    return this.config('step-item', {
+      extends: ElementNode,
+      stateConfigs: [{ flat: true, stateConfig: stepNumberState }],
+    })
   }
 
-  static clone(node: StepItemNode): StepItemNode {
-    return new StepItemNode(node.__stepNumber, node.__key)
-  }
-
-  static importJSON(serializedNode: SerializedStepItemNode): StepItemNode {
-    return $createStepItemNode(serializedNode.stepNumber).updateFromJSON(serializedNode)
-  }
-
-  static importDOM(): DOMConversionMap | null {
+  static override importDOM(): DOMConversionMap | null {
     return {
-      div: (domNode: Node) => {
-        const element = domNode as HTMLElement
+      div: (element: HTMLElement) => {
         if (element.hasAttribute('data-step')) {
           return {
             conversion: $convertStepItemElement,
@@ -78,76 +62,37 @@ export class StepItemNode extends ElementNode {
     }
   }
 
-  constructor(stepNumber: number = 1, key?: NodeKey) {
-    super(key)
-    this.__stepNumber = stepNumber
-  }
-
-  exportJSON(): SerializedStepItemNode {
-    return {
-      ...super.exportJSON(),
-      stepNumber: this.__stepNumber,
-    }
-  }
-
-  exportDOM(): DOMExportOutput {
+  override exportDOM(): DOMExportOutput {
+    const stepNumber = $getState(this, stepNumberState)
     const element = document.createElement('div')
-    element.setAttribute('data-step', String(this.__stepNumber))
-    element.className = ITEM_CLASS
+    element.setAttribute('data-step', String(stepNumber))
+
     return { element }
   }
 
-  createDOM(_config: EditorConfig): HTMLElement {
+  override createDOM(_config: EditorConfig): HTMLElement {
+    const stepNumber = $getState(this, stepNumberState)
     const element = document.createElement('div')
-    element.setAttribute('data-step', String(this.__stepNumber))
-    element.className = ITEM_CLASS
+    element.setAttribute('data-step', String(stepNumber))
+
     return element
   }
 
-  updateDOM(prevNode: StepItemNode, dom: HTMLElement): boolean {
-    if (prevNode.__stepNumber !== this.__stepNumber) {
-      dom.setAttribute('data-step', String(this.__stepNumber))
-      return false
+  override updateDOM(prevNode: StepItemNode, dom: HTMLElement): boolean {
+    const change = $getStateChange(this, prevNode, stepNumberState)
+    if (change) {
+      const [newStepNumber] = change
+      dom.setAttribute('data-step', String(newStepNumber))
     }
     return false
   }
 
-  getStepNumber(): number {
-    return this.getLatest().__stepNumber
-  }
-
-  setStepNumber(stepNumber: number): void {
-    const self = this.getWritable()
-    self.__stepNumber = stepNumber
-  }
-
-  canInsertTextBefore(): false {
+  override canInsertTextBefore(): false {
     return false
   }
 
-  canInsertTextAfter(): false {
+  override canInsertTextAfter(): false {
     return false
-  }
-
-  collapseAtStart(): boolean {
-    const children = this.getChildren()
-    const paragraph = $createParagraphNode()
-
-    if (children.length > 0) {
-      const firstChild = children[0]
-      if ($isElementNode(firstChild)) {
-        const firstChildChildren = firstChild.getChildren()
-        for (const child of firstChildChildren) {
-          paragraph.append(child)
-        }
-      }
-    }
-
-    const parent = this.getParent()
-    if (parent) {
-      parent.replace(paragraph)
-    }
-    return true
   }
 }
 
@@ -162,7 +107,7 @@ export class StepItemNode extends ElementNode {
  * @returns StepItemNode インスタンス
  */
 export function $createStepItemNode(stepNumber: number = 1): StepItemNode {
-  return $applyNodeReplacement(new StepItemNode(stepNumber))
+  return $setState($create(StepItemNode), stepNumberState, stepNumber)
 }
 
 /**

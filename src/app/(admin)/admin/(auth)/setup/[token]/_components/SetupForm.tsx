@@ -10,6 +10,7 @@ import { useState, type FormEvent, type ReactElement } from 'react'
 import { useRouter } from 'next/navigation'
 import { setupPassword } from '@/admin/actions/staff-invitation'
 import { signIn } from '@/shared/lib/auth-client'
+import { isActionFailure } from '@/shared/types/server-actions'
 import type { InvitationData } from '@/admin/lib/validations/staff-invitation'
 
 type Props = {
@@ -47,8 +48,8 @@ export function SetupForm({ invitation, token }: Props): ReactElement {
         confirmPassword,
       })
 
-      if (!result.success) {
-        setError(result.error ?? 'パスワード設定に失敗しました')
+      if (isActionFailure(result)) {
+        setError(result.error)
         setIsLoading(false)
         return
       }

@@ -17,7 +17,7 @@ import {
   MenuOption,
   useBasicTypeaheadTriggerMatch,
 } from '@lexical/react/LexicalTypeaheadMenuPlugin'
-import { TextNode, $createTextNode, $getSelection, $isRangeSelection } from 'lexical'
+import { TextNode, $createTextNode, $insertNodes } from 'lexical'
 
 // =============================================================================
 // Emoji Data (Built-in common emojis)
@@ -507,10 +507,7 @@ export function EmojiPickerPlugin() {
       _matchingString: string
     ) => {
       editor.update(() => {
-        const selection = $getSelection()
-        if (!$isRangeSelection(selection) || !selectedOption) {
-          return
-        }
+        if (!selectedOption) return
 
         // トリガー文字（":keyword"）を削除
         if (nodeToRemove) {
@@ -518,7 +515,7 @@ export function EmojiPickerPlugin() {
         }
 
         // 絵文字をTextNodeとして挿入
-        selection.insertNodes([$createTextNode(selectedOption.emoji)])
+        $insertNodes([$createTextNode(selectedOption.emoji)])
 
         closeMenu()
       })

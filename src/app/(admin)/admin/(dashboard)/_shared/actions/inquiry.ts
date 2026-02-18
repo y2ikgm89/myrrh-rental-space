@@ -154,6 +154,7 @@ export const updateInquiryStatus = withPermission<
 
   const inquiry = await prisma.inquiry.findUnique({
     where: { id },
+    select: { id: true },
   })
 
   if (!inquiry) {
@@ -180,6 +181,7 @@ export const deleteInquiry = withPermission<[id: string], void>(
 )(async (_user, id): Promise<ActionResult<void>> => {
   const inquiry = await prisma.inquiry.findUnique({
     where: { id },
+    select: { id: true },
   })
 
   if (!inquiry) {

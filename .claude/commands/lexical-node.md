@@ -26,6 +26,9 @@ Lexicalエディタ用のカスタムノードを作成します。
 
 **DecoratorNode テンプレート（Reactコンポーネント埋め込み用）:**
 
+NodeState API（`$config` + `createState` + `$getState`/`$setState`）を使用。
+`static getType()`, `static clone()`, `static importJSON()`, `exportJSON()`, `SerializedXxxNode` interface, `$applyNodeReplacement` は**使用禁止**（`$config` が自動生成）。
+
 ```typescript
 /**
  * ${ノード名} Node
@@ -42,51 +45,44 @@ import type {
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
-  NodeKey,
-  SerializedLexicalNode,
-  Spread,
 } from 'lexical'
-import { DecoratorNode } from 'lexical'
+import { $create, $getState, $setState, createState, DecoratorNode } from 'lexical'
 
-export type Serialized${ノード名}Node = Spread<
-  {
-    // プロパティ定義
-  },
-  SerializedLexicalNode
->
+// --- State 宣言（ファイルトップレベル） ---
+export const ${プロパティ名}State = createState('${プロパティ名}', {
+  parse: (v: unknown): ${型} =>
+    typeof v === 'string' ? v : 'デフォルト値',
+})
 
+// --- Decorator Component ---
 function ${ノード名}Component({
-  nodeKey,
   // プロパティ
 }: {
-  nodeKey: NodeKey
   // 型定義
-}) {
+}): ReactElement {
   return (
-    <div data-lexical-node-key={nodeKey}>
+    <div>
       {/* コンポーネント実装 */}
     </div>
   )
 }
 
+// --- DOM Conversion ---
 function $convert${ノード名}Element(domNode: Node): null | DOMConversionOutput {
   // DOM→ノード変換ロジック
   return null
 }
 
+// --- Node Class ---
 export class ${ノード名}Node extends DecoratorNode<ReactElement> {
-  // プライベートプロパティ
-
-  static getType(): string {
-    return '${ノード名.toLowerCase()}'
-  }
-
-  static clone(node: ${ノード名}Node): ${ノード名}Node {
-    return new ${ノード名}Node(/* props */, node.__key)
-  }
-
-  static importJSON(serializedNode: Serialized${ノード名}Node): ${ノード名}Node {
-    return $create${ノード名}Node(/* props from serializedNode */)
+  // $config() が getType, clone, importJSON, exportJSON を自動生成
+  $config() {
+    return this.config('${ノード名.toLowerCase()}', {
+      extends: DecoratorNode,
+      stateConfigs: [
+        { flat: true, stateConfig: ${プロパティ名}State },
+      ],
+    })
   }
 
   static importDOM(): DOMConversionMap | null {
@@ -95,22 +91,10 @@ export class ${ノード名}Node extends DecoratorNode<ReactElement> {
     }
   }
 
-  constructor(/* props */, key?: NodeKey) {
-    super(key)
-    // プロパティ初期化
-  }
-
-  exportJSON(): Serialized${ノード名}Node {
-    return {
-      type: '${ノード名.toLowerCase()}',
-      version: 1,
-      // プロパティ
-    }
-  }
-
   exportDOM(): DOMExportOutput {
-    // HTML出力
     const element = document.createElement('div')
+    const value = $getState(this, ${プロパティ名}State)
+    element.setAttribute('data-${プロパティ名}', value)
     return { element }
   }
 
@@ -125,41 +109,30 @@ export class ${ノード名}Node extends DecoratorNode<ReactElement> {
   }
 
   decorate(): ReactElement {
-    return <${ノード名}Component nodeKey={this.__key} /* props */ />
+    const value = $getState(this, ${プロパティ名}State)
+    return <${ノード名}Component ${プロパティ名}={value} />
   }
 }
 
-// オブジェクトパラメータパターン（推奨）
-export function $create${ノード名}Node({
-  // プロパティ
-}: {
-  // 型定義
-}): ${ノード名}Node {
-  return new ${ノード名}Node(/* 個別引数に分解 */)
+// --- Factory & Type Guard ---
+
+// 単一プロパティ
+export function $create${ノード名}Node(value: ${型} = 'デフォルト値'): ${ノード名}Node {
+  return $setState($create(${ノード名}Node), ${プロパティ名}State, value)
 }
+
+// 複数プロパティの場合:
+// export function $create${ノード名}Node({ prop1, prop2 }: { prop1: string; prop2: number }): ${ノード名}Node {
+//   const node = $create(${ノード名}Node)
+//   $setState(node, prop1State, prop1)
+//   $setState(node, prop2State, prop2)
+//   return node
+// }
 
 export function $is${ノード名}Node(
   node: LexicalNode | null | undefined
 ): node is ${ノード名}Node {
   return node instanceof ${ノード名}Node
-}
-```
-
-**実装例（ImageNode準拠）:**
-
-```typescript
-export function $createImageNode({
-  src,
-  alt = '',
-  width,
-  height,
-}: {
-  src: string
-  alt?: string
-  width?: number
-  height?: number
-}): ImageNode {
-  return new ImageNode(src, alt, width, height)
 }
 ```
 
@@ -179,72 +152,60 @@ import type {
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
-  NodeKey,
-  SerializedElementNode,
-  Spread,
 } from 'lexical'
-import { ElementNode } from 'lexical'
+import { $create, $getState, $getStateChange, $setState, createState, ElementNode } from 'lexical'
 
-export type Serialized${ノード名}Node = Spread<
-  {
-    // プロパティ
-  },
-  SerializedElementNode
->
+// --- State 宣言 ---
+export const ${プロパティ名}State = createState('${プロパティ名}', {
+  parse: (v: unknown): ${型} =>
+    typeof v === 'string' ? v : 'デフォルト値',
+})
 
+// --- Node Class ---
 export class ${ノード名}Node extends ElementNode {
-  static getType(): string {
-    return '${ノード名.toLowerCase()}'
-  }
-
-  static clone(node: ${ノード名}Node): ${ノード名}Node {
-    return new ${ノード名}Node(/* props */, node.__key)
-  }
-
-  static importJSON(serializedNode: Serialized${ノード名}Node): ${ノード名}Node {
-    const node = $create${ノード名}Node(/* props */)
-    return node
+  $config() {
+    return this.config('${ノード名.toLowerCase()}', {
+      extends: ElementNode,
+      stateConfigs: [
+        { flat: true, stateConfig: ${プロパティ名}State },
+      ],
+    })
   }
 
   static importDOM(): DOMConversionMap | null {
     return {}
   }
 
-  constructor(/* props */, key?: NodeKey) {
-    super(key)
-  }
-
   createDOM(config: EditorConfig): HTMLElement {
     const element = document.createElement('div')
+    const value = $getState(this, ${プロパティ名}State)
+    element.setAttribute('data-${プロパティ名}', value)
     element.className = config.theme.${ノード名.toLowerCase()} || ''
     return element
   }
 
-  updateDOM(): boolean {
-    return false
+  updateDOM(prevNode: ${ノード名}Node, dom: HTMLElement): boolean {
+    // $getStateChange で変更を検出し、属性レベルで差分更新
+    const change = $getStateChange(this, prevNode, ${プロパティ名}State)
+    if (change) {
+      const [newValue] = change
+      dom.setAttribute('data-${プロパティ名}', newValue)
+    }
+    return false  // DOM 再構築は不要
   }
 
   exportDOM(): DOMExportOutput {
     const element = document.createElement('div')
+    const value = $getState(this, ${プロパティ名}State)
+    element.setAttribute('data-${プロパティ名}', value)
     return { element }
-  }
-
-  exportJSON(): Serialized${ノード名}Node {
-    return {
-      ...super.exportJSON(),
-      type: '${ノード名.toLowerCase()}',
-      version: 1,
-    }
   }
 }
 
-// オブジェクトパラメータパターン（推奨）
-export function $create${ノード名}Node({
-  // プロパティ
-}: {
-  // 型定義
-}): ${ノード名}Node {
-  return new ${ノード名}Node(/* 個別引数に分解 */)
+// --- Factory & Type Guard ---
+
+export function $create${ノード名}Node(value: ${型} = 'デフォルト値'): ${ノード名}Node {
+  return $setState($create(${ノード名}Node), ${プロパティ名}State, value)
 }
 
 export function $is${ノード名}Node(
@@ -253,6 +214,76 @@ export function $is${ノード名}Node(
   return node instanceof ${ノード名}Node
 }
 ```
+
+**ゼロプロパティ ElementNode テンプレート（子ノードのみ保持）:**
+
+```typescript
+export class ${ノード名}Node extends ElementNode {
+  $config() {
+    return this.config('${ノード名.toLowerCase()}', { extends: ElementNode })
+  }
+  // stateConfigs 不要
+}
+
+export function $create${ノード名}Node(): ${ノード名}Node {
+  return $create(${ノード名}Node)
+}
+```
+
+**コンポジットノードテンプレート（Container / Child パターン）:**
+
+複数ノードで構成される複合コンポーネント。公式 Lexical Playground 準拠。
+
+Container ノード:
+
+```typescript
+export class ${ノード名}ContainerNode extends ElementNode {
+  $config() {
+    return this.config('${ノード名.toLowerCase()}-container', {
+      extends: ElementNode,
+      stateConfigs: [{ flat: true, stateConfig: ${プロパティ名}State }],
+    })
+  }
+
+  isShadowRoot(): boolean { return true }
+  canBeEmpty(): boolean { return false }
+  canInsertTextBefore(): false { return false }
+  canInsertTextAfter(): false { return false }
+
+  collapseAtStart(): boolean {
+    const children = this.getChildren()
+    const paragraph = $createParagraphNode()
+    if (children.length > 0) {
+      const firstChild = children[0]
+      if ($isElementNode(firstChild)) {
+        for (const child of firstChild.getChildren()) {
+          paragraph.append(child)
+        }
+      }
+    }
+    this.replace(paragraph)
+    return true
+  }
+}
+```
+
+Child ノード（Title / Content / Panel）:
+
+```typescript
+export class ${ノード名}ContentNode extends ElementNode {
+  $config() {
+    return this.config('${ノード名.toLowerCase()}-content', { extends: ElementNode })
+  }
+
+  isShadowRoot(): boolean { return true }
+  canInsertTextBefore(): false { return false }
+  canInsertTextAfter(): false { return false }
+
+  // ⚠️ collapseAtStart は実装しない — isShadowRoot が境界保護を担当
+}
+```
+
+**ルール:** Container に isShadowRoot + canBeEmpty + collapseAtStart。Child に isShadowRoot のみ。
 
 ### 3. エクスポート追加
 
@@ -263,8 +294,8 @@ export {
   ${ノード名}Node,
   $create${ノード名}Node,
   $is${ノード名}Node,
+  ${プロパティ名}State,
 } from './${ノード名}Node'
-export type { Serialized${ノード名}Node } from './${ノード名}Node'
 ```
 
 ### 4. LexicalEditor.tsx 更新
@@ -293,8 +324,6 @@ export const editorTheme: EditorThemeClasses = {
 
 ### 6. メインindex.ts エクスポート
 
-`index.ts` に追加:
-
 ```typescript
 export {
   ${ノード名}Node,
@@ -303,8 +332,29 @@ export {
 } from './nodes'
 ```
 
+## プロパティアクセスまとめ
+
+```typescript
+// 読み取り
+const value = $getState(this, ${プロパティ名}State)
+
+// 書き込み
+$setState(this, ${プロパティ名}State, newValue)
+
+// DOM更新での変更検出
+const change = $getStateChange(this, prevNode, ${プロパティ名}State)
+if (change) {
+  const [newValue] = change
+  dom.setAttribute('data-${プロパティ名}', newValue)
+}
+```
+
 ## 注意事項
 
 - `.claude/rules/lexical-patterns.md` のパターンに従う
 - `.claude/rules/type-safety.md` の型安全ルールを遵守
-- exportDOM/importDOM は公開ページ表示に必須
+- exportDOM/importDOM は公開ページ表示に必須。data-attributes のみ、CSS クラス不使用
+- コンポジットノード: Container に isShadowRoot + canBeEmpty + collapseAtStart、Child に isShadowRoot のみ
+- 子ノードの collapseAtStart 禁止（isShadowRoot が境界保護を担当）
+- updateDOM: `$getStateChange` + `dom.setAttribute()` で差分更新、`return false`
+- **禁止**: `static getType()`, `static clone()`, `static importJSON()`, `exportJSON()`, `SerializedXxxNode` interface, `$applyNodeReplacement`, `__property`, `getWritable()`, `getLatest()`, `new XxxNode()` constructor

@@ -7,8 +7,8 @@
 import { describe, test, expect, mock, beforeEach } from 'bun:test'
 import { Role } from '@/shared/generated/prisma/enums'
 
-// prismaのモック
-const mockFindMany = mock(() => Promise.resolve([]))
+// prismaのモック — 空配列は never[] と推論されるため明示的に型付け
+const mockFindMany = mock<() => Promise<{ pageId: string }[]>>(() => Promise.resolve([]))
 mock.module('@/shared/lib/prisma', () => ({
   prisma: {
     userPageAssignment: {
@@ -26,7 +26,6 @@ import {
   ROLE_PERMISSIONS,
   ADMIN_ROLES,
 } from '@/admin/lib/permissions'
-import { Role } from '@/shared/generated/prisma/enums'
 import {
   SUPER_ADMIN_USER,
   ADMIN_USER,

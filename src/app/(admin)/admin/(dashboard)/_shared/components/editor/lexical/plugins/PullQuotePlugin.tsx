@@ -19,12 +19,14 @@ import {
   KEY_ARROW_UP_COMMAND,
   mergeRegister,
 } from 'lexical'
+import { $insertNodeToNearestRoot } from '@lexical/utils'
 import {
   $createPullQuoteNode,
   $isPullQuoteNode,
   isPullQuoteStyle,
   PullQuoteNode,
   type PullQuoteStyle,
+  PULL_QUOTE_STYLES,
 } from '../nodes/PullQuoteNode'
 import { $createPullQuoteTextNode, PullQuoteTextNode } from '../nodes/PullQuoteTextNode'
 import { $createPullQuoteCitationNode, PullQuoteCitationNode } from '../nodes/PullQuoteCitationNode'
@@ -36,35 +38,15 @@ import {
   DialogFooter,
   Button,
   Label,
-  SelectionBox,
 } from '@/admin/components/ui'
-
-// =============================================================================
-// Options
-// =============================================================================
-
-const STYLE_OPTIONS = [
-  { value: 'classic', label: 'クラシック', description: '左ボーダーの伝統的なスタイル' },
-  { value: 'modern', label: 'モダン', description: 'グラデーションを使った現代的なスタイル' },
-  { value: 'minimal', label: 'ミニマル', description: '控えめでシンプルなスタイル' },
-]
-
-// =============================================================================
-// Hook
-// =============================================================================
-
-export function usePullQuoteDialog() {
-  const [isPullQuoteDialogOpen, setIsPullQuoteDialogOpen] = useState(false)
-
-  const openPullQuoteDialog = () => setIsPullQuoteDialogOpen(true)
-  const closePullQuoteDialog = () => setIsPullQuoteDialogOpen(false)
-
-  return {
-    isPullQuoteDialogOpen,
-    openPullQuoteDialog,
-    closePullQuoteDialog,
-  }
-}
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/admin/components/ui/select'
+import { PULL_QUOTE_STYLE_LABELS } from '../config/node-labels'
 
 // =============================================================================
 // Utilities
@@ -187,9 +169,6 @@ export function PullQuotePlugin({ isOpen, onClose }: PullQuotePluginProps) {
 
   const handleInsert = () => {
     editor.update(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
-
       // PullQuote構造を作成
       const pullQuote = $createPullQuoteNode(selectedStyle)
       const textNode = $createPullQuoteTextNode()
@@ -203,7 +182,7 @@ export function PullQuotePlugin({ isOpen, onClose }: PullQuotePluginProps) {
       pullQuote.append(textNode)
       pullQuote.append(citationNode)
 
-      selection.insertNodes([pullQuote])
+      $insertNodeToNearestRoot(pullQuote)
 
       // テキスト部分を選択
       textParagraph.selectEnd()
@@ -229,13 +208,18 @@ export function PullQuotePlugin({ isOpen, onClose }: PullQuotePluginProps) {
           <Label className="text-sm font-medium mb-3 block">
             スタイルを選択
           </Label>
-          <SelectionBox
-            options={STYLE_OPTIONS}
-            value={selectedStyle}
-            onChange={(value) => isPullQuoteStyle(value) && setSelectedStyle(value)}
-            columns={3}
-            name="プルクォートスタイル"
-          />
+          <Select value={selectedStyle} onValueChange={(value) => { if (isPullQuoteStyle(value)) setSelectedStyle(value) }}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PULL_QUOTE_STYLES.map((style) => (
+                <SelectItem key={style} value={style}>
+                  {PULL_QUOTE_STYLE_LABELS[style]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <DialogFooter>

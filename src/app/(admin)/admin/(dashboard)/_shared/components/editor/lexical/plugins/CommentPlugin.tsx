@@ -34,16 +34,6 @@ import {
 } from '@lexical/mark'
 import { MessageSquarePlus } from 'lucide-react'
 import { Button } from '@/admin/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/admin/components/ui/dialog'
-import { Textarea } from '@/admin/components/ui/textarea'
-import { Label } from '@/admin/components/ui/label'
 
 // =============================================================================
 // Types & Commands
@@ -153,31 +143,6 @@ export function useComment(): UseCommentReturn {
 }
 
 // =============================================================================
-// Hook: useCommentDialog
-// =============================================================================
-
-export type UseCommentDialogReturn = {
-  isOpen: boolean
-  open: () => void
-  close: () => void
-  pendingComment: AddCommentPayload | null
-  setPendingComment: (comment: AddCommentPayload | null) => void
-}
-
-export function useCommentDialog(): UseCommentDialogReturn {
-  const [isOpen, setIsOpen] = useState(false)
-  const [pendingComment, setPendingComment] = useState<AddCommentPayload | null>(null)
-
-  const open = () => setIsOpen(true)
-  const close = () => {
-    setIsOpen(false)
-    setPendingComment(null)
-  }
-
-  return { isOpen, open, close, pendingComment, setPendingComment }
-}
-
-// =============================================================================
 // Component: CommentButton (for Floating Toolbar)
 // =============================================================================
 
@@ -200,87 +165,6 @@ export function CommentButton({ onClick, disabled }: CommentButtonProps): React.
     >
       <MessageSquarePlus className="h-4 w-4" />
     </Button>
-  )
-}
-
-// =============================================================================
-// Component: CommentInputDialog
-// =============================================================================
-
-type CommentInputDialogProps = {
-  isOpen: boolean
-  onClose: () => void
-  quotedText: string
-  onSubmit: (comment: string) => void
-}
-
-export function CommentInputDialog({
-  isOpen,
-  onClose,
-  quotedText,
-  onSubmit,
-}: CommentInputDialogProps): React.ReactElement {
-  const [comment, setComment] = useState('')
-
-  const handleSubmit = () => {
-    const trimmed = comment.trim()
-    if (trimmed) {
-      onSubmit(trimmed)
-      setComment('')
-      onClose()
-    }
-  }
-
-  const handleClose = () => {
-    setComment('')
-    onClose()
-  }
-
-  const displayText =
-    quotedText.length > 100 ? `${quotedText.slice(0, 100)}...` : quotedText
-
-  return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>コメントを追加</DialogTitle>
-          <DialogDescription>
-            選択したテキストにコメントを追加します
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label>選択テキスト</Label>
-            <div className="rounded-md bg-muted p-3 text-sm">
-              &ldquo;{displayText}&rdquo;
-            </div>
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="comment">コメント</Label>
-            <Textarea
-              id="comment"
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              placeholder="コメントを入力..."
-              rows={4}
-              autoFocus
-            />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={handleClose}>
-            キャンセル
-          </Button>
-          <Button
-            type="button"
-            onClick={handleSubmit}
-            disabled={!comment.trim()}
-          >
-            追加
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   )
 }
 

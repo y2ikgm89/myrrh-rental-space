@@ -19,15 +19,18 @@ import {
   KEY_ARROW_DOWN_COMMAND,
   KEY_ARROW_UP_COMMAND,
   createCommand,
+  mergeRegister,
   type LexicalCommand,
   type LexicalEditor,
 } from 'lexical'
+import { $insertNodeToNearestRoot } from '@lexical/utils'
 import {
   $createCalloutNode,
   $isCalloutNode,
   isCalloutType,
   CalloutNode,
   type CalloutType,
+  CALLOUT_TYPES,
 } from '../nodes/CalloutNode'
 import {
   Dialog,
@@ -37,8 +40,15 @@ import {
   DialogFooter,
   Button,
   Label,
-  SelectionBox,
 } from '@/admin/components/ui'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/admin/components/ui/select'
+import { CALLOUT_TYPE_LABELS } from '../config/node-labels'
 
 // =============================================================================
 // Commands
@@ -55,12 +65,6 @@ export const INSERT_CALLOUT_COMMAND: LexicalCommand<InsertCalloutPayload> =
 // Callout Templates
 // =============================================================================
 
-const CALLOUT_OPTIONS = [
-  { value: 'info', label: '情報', description: '補足説明や追加情報' },
-  { value: 'warning', label: '警告', description: '注意が必要な内容' },
-  { value: 'error', label: 'エラー', description: '重要な警告や危険な内容' },
-  { value: 'success', label: '成功', description: '完了や成功の通知' },
-]
 
 // =============================================================================
 // Utilities
@@ -111,23 +115,6 @@ function $onEscape(
 }
 
 // =============================================================================
-// Hook
-// =============================================================================
-
-export function useCalloutDialog() {
-  const [isCalloutDialogOpen, setIsCalloutDialogOpen] = useState(false)
-
-  const openCalloutDialog = () => setIsCalloutDialogOpen(true)
-  const closeCalloutDialog = () => setIsCalloutDialogOpen(false)
-
-  return {
-    isCalloutDialogOpen,
-    openCalloutDialog,
-    closeCalloutDialog,
-  }
-}
-
-// =============================================================================
 // Types
 // =============================================================================
 
@@ -146,58 +133,50 @@ export function CalloutPlugin({ isOpen, onClose }: CalloutPluginProps) {
 
   // コマンドリスナー登録
   useEffect(() => {
-    // INSERT_CALLOUT_COMMAND
-    const insertUnregister = editor.registerCommand(
-      INSERT_CALLOUT_COMMAND,
-      (payload) => {
-        editor.update(() => {
-          const selection = $getSelection()
-          if (!$isRangeSelection(selection)) return false
+    return mergeRegister(
+      // INSERT_CALLOUT_COMMAND
+      editor.registerCommand(
+        INSERT_CALLOUT_COMMAND,
+        (payload) => {
+          editor.update(() => {
+            const callout = $createCalloutNode(payload.calloutType)
+            const paragraph = $createParagraphNode()
+            callout.append(paragraph)
 
-          const callout = $createCalloutNode(payload.calloutType)
-          const paragraph = $createParagraphNode()
-          callout.append(paragraph)
+            $insertNodeToNearestRoot(callout)
 
-          selection.insertNodes([callout])
+            // Callout内の段落を選択
+            paragraph.selectEnd()
+          })
+          return true
+        },
+        COMMAND_PRIORITY_EDITOR
+      ),
 
-          // Callout内の段落を選択
-          paragraph.selectEnd()
-        })
-        return true
-      },
-      COMMAND_PRIORITY_EDITOR
-    )
+      // 矢印キーリスナー
+      editor.registerCommand(
+        KEY_ARROW_UP_COMMAND,
+        () => $onEscape(editor, 'up'),
+        COMMAND_PRIORITY_LOW
+      ),
+      editor.registerCommand(
+        KEY_ARROW_DOWN_COMMAND,
+        () => $onEscape(editor, 'down'),
+        COMMAND_PRIORITY_LOW
+      ),
 
-    // 矢印キーリスナー
-    const arrowUpUnregister = editor.registerCommand(
-      KEY_ARROW_UP_COMMAND,
-      () => $onEscape(editor, 'up'),
-      COMMAND_PRIORITY_LOW
-    )
-    const arrowDownUnregister = editor.registerCommand(
-      KEY_ARROW_DOWN_COMMAND,
-      () => $onEscape(editor, 'down'),
-      COMMAND_PRIORITY_LOW
-    )
-
-    // 構造検証トランスフォーマー: Callout
-    const calloutTransformUnregister = editor.registerNodeTransform(
-      CalloutNode,
-      (node) => {
-        // 空のCalloutに段落を追加
-        if (node.getChildren().length === 0) {
-          const paragraph = $createParagraphNode()
-          node.append(paragraph)
+      // 構造検証トランスフォーマー: Callout
+      editor.registerNodeTransform(
+        CalloutNode,
+        (node) => {
+          // 空のCalloutに段落を追加
+          if (node.getChildren().length === 0) {
+            const paragraph = $createParagraphNode()
+            node.append(paragraph)
+          }
         }
-      }
+      ),
     )
-
-    return () => {
-      insertUnregister()
-      arrowUpUnregister()
-      arrowDownUnregister()
-      calloutTransformUnregister()
-    }
   }, [editor])
 
   const handleInsert = () => {
@@ -224,13 +203,18 @@ export function CalloutPlugin({ isOpen, onClose }: CalloutPluginProps) {
           <Label className="text-sm font-medium mb-3 block">
             種類を選択
           </Label>
-          <SelectionBox
-            options={CALLOUT_OPTIONS}
-            value={selectedType}
-            onChange={(value) => { if (isCalloutType(value)) setSelectedType(value) }}
-            columns={2}
-            name="コールアウト種類"
-          />
+          <Select value={selectedType} onValueChange={(value) => { if (isCalloutType(value)) setSelectedType(value) }}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {CALLOUT_TYPES.map((type) => (
+                <SelectItem key={type} value={type}>
+                  {CALLOUT_TYPE_LABELS[type]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <DialogFooter>

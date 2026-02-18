@@ -70,7 +70,7 @@ export function SectionDetailPanel({
     startTransition(async () => {
       const result = await updatePageSection(section.id, {
         config: payload.config,
-        ...(payload.content !== undefined ? { content: payload.content } : {}),
+        ...(payload.contentJson !== undefined ? { contentJson: payload.contentJson } : {}),
       })
       if (result.success) {
         toast.success(result.message)

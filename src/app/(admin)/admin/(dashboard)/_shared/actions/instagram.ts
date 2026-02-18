@@ -10,6 +10,7 @@ import { prisma } from '@/shared/lib/prisma'
 import { updateTag } from 'next/cache'
 import { CACHE_TAGS } from '@/shared/lib/constants'
 import { createSuccess, createFailure } from '@/admin/types/server-actions'
+import { createValidationError } from '@/shared/lib/action-helpers'
 import { withPermission } from '@/admin/lib/server-action-helpers'
 import { encrypt, safeDecrypt } from '@/shared/lib/crypto'
 import { verifyAdminSession } from '@/shared/lib/auth'
@@ -159,7 +160,7 @@ export const updateInstagramSettings = withPermission<[InstagramSettingsInput], 
 )(async (_user, data) => {
     const parsed = instagramSettingsSchema.safeParse(data)
     if (!parsed.success) {
-      return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+      return createValidationError(parsed.error)
     }
 
     await prisma.settings.upsert({
@@ -201,7 +202,7 @@ export const saveManualToken = withPermission<[string], { username: string | und
 )(async (_user, token) => {
     const parsed = instagramTokenSchema.safeParse(token)
     if (!parsed.success) {
-      return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+      return createValidationError(parsed.error)
     }
 
     // トークンをテストしてユーザー情報を取得
@@ -262,7 +263,7 @@ export const testInstagramConnectionAction = withPermission<
 >('settings', 'update')(async (_user, token) => {
     const parsed = instagramTokenSchema.safeParse(token)
     if (!parsed.success) {
-      return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+      return createValidationError(parsed.error)
     }
 
     const result = await testInstagramConnection(parsed.data)
@@ -318,7 +319,7 @@ export const addInstagramPost = withPermission<[string], void>(
 )(async (_user, url) => {
     const parsed = instagramPostUrlSchema.safeParse(url)
     if (!parsed.success) {
-      return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+      return createValidationError(parsed.error)
     }
 
     const shortcode = extractInstagramShortcode(parsed.data)

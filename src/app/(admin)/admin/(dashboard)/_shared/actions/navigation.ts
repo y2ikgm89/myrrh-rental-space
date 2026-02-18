@@ -6,6 +6,7 @@ import { CACHE_TAGS } from '@/shared/lib/constants'
 import { NavigationType, SocialPlatform } from '@/shared/generated/prisma/enums'
 import { z } from 'zod'
 import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+import { createValidationError } from '@/shared/lib/action-helpers'
 import { withPermission } from '@/admin/lib/server-action-helpers'
 import { getSession, getRoleFromSession } from '@/shared/lib/auth'
 import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'
@@ -133,7 +134,7 @@ export const createNavigationItem = withPermission<[data: NavigationItemInput], 
 )(async (_user, data): Promise<ActionResult<{ id: string }>> => {
   const parsed = navigationItemSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   const item = await prisma.navigationItem.create({
@@ -157,11 +158,12 @@ export const updateNavigationItem = withPermission<[id: string, data: Navigation
 )(async (_user, id, data): Promise<ActionResult<void>> => {
   const parsed = navigationItemSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   const existing = await prisma.navigationItem.findUnique({
     where: { id },
+    select: { id: true },
   })
 
   if (!existing) {
@@ -317,7 +319,7 @@ export const createSocialLink = withPermission<[data: SocialLinkInput], { id: st
 )(async (_user, data): Promise<ActionResult<{ id: string }>> => {
   const parsed = socialLinkSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   const link = await prisma.socialLink.create({
@@ -341,11 +343,12 @@ export const updateSocialLink = withPermission<[id: string, data: SocialLinkInpu
 )(async (_user, id, data): Promise<ActionResult<void>> => {
   const parsed = socialLinkSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   const existing = await prisma.socialLink.findUnique({
     where: { id },
+    select: { id: true },
   })
 
   if (!existing) {
@@ -374,6 +377,7 @@ export const deleteSocialLink = withPermission<[id: string], void>(
 )(async (_user, id): Promise<ActionResult<void>> => {
   const link = await prisma.socialLink.findUnique({
     where: { id },
+    select: { id: true },
   })
 
   if (!link) {

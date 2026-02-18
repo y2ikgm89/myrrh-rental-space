@@ -43,7 +43,7 @@ interface EncryptOptions {
  * マスター暗号化キーを取得
  */
 function getMasterKey(): Buffer {
-  const key = process.env.ENCRYPTION_KEY
+  const key = process.env["ENCRYPTION_KEY"]
   if (!key) {
     throw new Error(
       'ENCRYPTION_KEY is not set. Generate with: openssl rand -hex 32'

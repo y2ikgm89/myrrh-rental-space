@@ -178,7 +178,7 @@ import {
   faqVariantLabels,
 } from '@/shared/lib/validations/section-options'
 import { keysOf } from '@/shared/lib/serialize'
-import { CTAButtonEditor } from '@/shared/components/cta-button-editor'
+import { CTAButtonEditor } from '@/admin/components/cta-button-editor'
 import dynamic from 'next/dynamic'
 import { EDITOR_PROSE_CLASSES } from '@/shared/lib/styles/prose'
 
@@ -2055,16 +2055,16 @@ function CtaConfigForm({
 
 function CustomConfigForm({
   config,
-  content,
+  section,
   onSave,
   isPending,
 }: {
   config: CustomConfig
-  content: string | null
-  onSave: (config: CustomConfig, content: string) => void
+  section: HomepageSectionData
+  onSave: (config: CustomConfig, contentJson: string) => void
   isPending: boolean
 }) {
-  const [editorContent, setEditorContent] = useState(content || '')
+  const [editorContentJson, setEditorContentJson] = useState('')
 
   const {
     register,
@@ -2075,7 +2075,7 @@ function CustomConfigForm({
   })
 
   const handleFormSubmit = (formData: CustomConfig) => {
-    onSave(formData, editorContent)
+    onSave(formData, editorContentJson)
   }
 
   return (
@@ -2107,8 +2107,9 @@ function CustomConfigForm({
         <div className="space-y-2">
           <Label>コンテンツ</Label>
           <LexicalEditor
-            content={content || ''}
-            onChange={setEditorContent}
+            contentJson={section.contentJson ? JSON.stringify(section.contentJson) : undefined}
+            contentHtml={section.contentHtml || ''}
+            onChange={setEditorContentJson}
             placeholder="セクションのコンテンツを入力..."
             className={EDITOR_PROSE_CLASSES}
             height="300px"
@@ -2928,11 +2929,11 @@ export function SectionEditor({ section, onBack, onSave, showHeader = true }: Se
   const [isPending, startTransition] = useTransition()
   const label = sectionTypeLabels[section.type]
 
-  const handleConfigSave = (config: Record<string, unknown>, content?: string) => {
+  const handleConfigSave = (config: Record<string, unknown>, contentJson?: string) => {
     startTransition(async () => {
       const result = await updateHomepageSection(section.id, {
         config,
-        content,
+        contentJson,
       })
       if (result.success) {
         toast.success(result.message)
@@ -3031,8 +3032,8 @@ export function SectionEditor({ section, onBack, onSave, showHeader = true }: Se
         return (
           <CustomConfigForm
             config={getCustomConfig(config)}
-            content={section.content}
-            onSave={(c, content) => handleConfigSave(c, content)}
+            section={section}
+            onSave={(c, contentJson) => handleConfigSave(c, contentJson)}
             isPending={isPending}
           />
         )

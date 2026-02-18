@@ -6,79 +6,95 @@ export {
   ImageNode,
   $createImageNode,
   $isImageNode,
+  srcState,
+  altState,
+  widthState,
+  heightState,
+  alignmentState,
 } from './ImageNode'
-export type { SerializedImageNode } from './ImageNode'
+export type { ImageAlignment } from './ImageNode'
+export { IMAGE_ALIGNMENTS } from './ImageNode'
 
 export {
   YouTubeNode,
   $createYouTubeNode,
   $isYouTubeNode,
+  videoIdState,
 } from './YouTubeNode'
-export type { SerializedYouTubeNode } from './YouTubeNode'
 
 export {
   LayoutContainerNode,
   $createLayoutContainerNode,
   $isLayoutContainerNode,
+  templateColumnsState,
 } from './LayoutContainerNode'
-export type { SerializedLayoutContainerNode } from './LayoutContainerNode'
 
 export {
   LayoutItemNode,
   $createLayoutItemNode,
   $isLayoutItemNode,
 } from './LayoutItemNode'
-export type { SerializedLayoutItemNode } from './LayoutItemNode'
 
 export {
   XNode,
   $createXNode,
   $isXNode,
+  tweetIdState,
 } from './XNode'
-export type { SerializedXNode } from './XNode'
 
 export {
   InstagramNode,
   $createInstagramNode,
   $isInstagramNode,
+  postIdState,
 } from './InstagramNode'
-export type { SerializedInstagramNode } from './InstagramNode'
 
 export {
   PageBreakNode,
   $createPageBreakNode,
   $isPageBreakNode,
 } from './PageBreakNode'
-export type { SerializedPageBreakNode } from './PageBreakNode'
 
 export {
   CalloutNode,
   $createCalloutNode,
   $isCalloutNode,
   CALLOUT_TYPES,
+  calloutTypeState,
 } from './CalloutNode'
-export type { SerializedCalloutNode, CalloutType } from './CalloutNode'
+export type { CalloutType } from './CalloutNode'
 
 export {
   CollapsibleContainerNode,
   $createCollapsibleContainerNode,
   $isCollapsibleContainerNode,
+  COLLAPSIBLE_STYLES,
+  COLLAPSIBLE_RADII,
+  collapsibleStyleState,
+  borderRadiusState,
+  isCollapsibleStyle,
+  isCollapsibleRadius,
 } from './CollapsibleContainerNode'
-export type { SerializedCollapsibleContainerNode } from './CollapsibleContainerNode'
+export type { CollapsibleStyle, CollapsibleRadius } from './CollapsibleContainerNode'
+
+export {
+  CollapsibleItemNode,
+  $createCollapsibleItemNode,
+  $isCollapsibleItemNode,
+  openState,
+} from './CollapsibleItemNode'
 
 export {
   CollapsibleTitleNode,
   $createCollapsibleTitleNode,
   $isCollapsibleTitleNode,
 } from './CollapsibleTitleNode'
-export type { SerializedCollapsibleTitleNode } from './CollapsibleTitleNode'
 
 export {
   CollapsibleContentNode,
   $createCollapsibleContentNode,
   $isCollapsibleContentNode,
 } from './CollapsibleContentNode'
-export type { SerializedCollapsibleContentNode } from './CollapsibleContentNode'
 
 // Button
 export {
@@ -88,9 +104,14 @@ export {
   BUTTON_VARIANTS,
   BUTTON_SIZES,
   BUTTON_ALIGNMENTS,
+  buttonTextState,
+  buttonHrefState,
+  buttonVariantState,
+  buttonSizeState,
+  buttonAlignmentState,
+  buttonOpenInNewTabState,
 } from './ButtonNode'
 export type {
-  SerializedButtonNode,
   ButtonVariant,
   ButtonSize,
   ButtonAlignment,
@@ -102,30 +123,34 @@ export {
   $createPullQuoteNode,
   $isPullQuoteNode,
   PULL_QUOTE_STYLES,
+  quoteStyleState,
 } from './PullQuoteNode'
-export type { SerializedPullQuoteNode, PullQuoteStyle } from './PullQuoteNode'
+export type { PullQuoteStyle } from './PullQuoteNode'
 
 export {
   PullQuoteTextNode,
   $createPullQuoteTextNode,
   $isPullQuoteTextNode,
 } from './PullQuoteTextNode'
-export type { SerializedPullQuoteTextNode } from './PullQuoteTextNode'
 
 export {
   PullQuoteCitationNode,
   $createPullQuoteCitationNode,
   $isPullQuoteCitationNode,
 } from './PullQuoteCitationNode'
-export type { SerializedPullQuoteCitationNode } from './PullQuoteCitationNode'
 
 // Bookmark
 export {
   BookmarkNode,
   $createBookmarkNode,
   $isBookmarkNode,
+  bookmarkUrlState,
+  bookmarkTitleState,
+  bookmarkDescriptionState,
+  bookmarkImageUrlState,
+  bookmarkFaviconUrlState,
+  bookmarkSiteNameState,
 } from './BookmarkNode'
-export type { SerializedBookmarkNode } from './BookmarkNode'
 
 // Steps
 export {
@@ -133,55 +158,78 @@ export {
   $createStepsContainerNode,
   $isStepsContainerNode,
   STEPS_STYLES,
+  STEPS_SHAPES,
+  STEPS_FILLS,
+  stepsStyleState,
+  stepsLabelState,
+  stepsShapeState,
+  startNumberState,
+  stepsFillState,
+  isStepsStyle,
+  isStepsShape,
+  isStepsFill,
 } from './StepsContainerNode'
-export type { SerializedStepsContainerNode, StepsStyle } from './StepsContainerNode'
+export type { StepsStyle, StepsShape, StepsFill } from './StepsContainerNode'
 
 export {
   StepItemNode,
   $createStepItemNode,
   $isStepItemNode,
+  stepNumberState,
 } from './StepItemNode'
-export type { SerializedStepItemNode } from './StepItemNode'
 
 export {
   StepTitleNode,
   $createStepTitleNode,
   $isStepTitleNode,
 } from './StepTitleNode'
-export type { SerializedStepTitleNode } from './StepTitleNode'
 
 export {
   StepContentNode,
   $createStepContentNode,
   $isStepContentNode,
 } from './StepContentNode'
-export type { SerializedStepContentNode } from './StepContentNode'
 
 // Tabs
 export {
   TabsContainerNode,
   $createTabsContainerNode,
   $isTabsContainerNode,
+  activeIndexState,
+  TABS_STYLES,
+  TABS_SIZES,
+  tabsStyleState,
+  tabsSizeState,
+  isTabsStyle,
+  isTabsSize,
 } from './TabsContainerNode'
-export type { SerializedTabsContainerNode } from './TabsContainerNode'
+export type { TabsStyle, TabsSize } from './TabsContainerNode'
 
 export {
   TabListNode,
   $createTabListNode,
   $isTabListNode,
 } from './TabListNode'
-export type { SerializedTabListNode } from './TabListNode'
 
 export {
   TabTitleNode,
   $createTabTitleNode,
   $isTabTitleNode,
+  tabTitleIndexState,
+  tabTitleActiveState,
 } from './TabTitleNode'
-export type { SerializedTabTitleNode } from './TabTitleNode'
 
 export {
   TabPanelNode,
   $createTabPanelNode,
   $isTabPanelNode,
+  tabPanelIndexState,
+  tabPanelActiveState,
 } from './TabPanelNode'
-export type { SerializedTabPanelNode } from './TabPanelNode'
+
+// Table of Contents
+export {
+  TableOfContentsNode,
+  $createTableOfContentsNode,
+  $isTableOfContentsNode,
+} from './TableOfContentsNode'

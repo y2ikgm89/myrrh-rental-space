@@ -13,12 +13,14 @@ import { cacheLife, cacheTag } from 'next/cache'
 import type { Metadata } from 'next'
 import { prisma } from '@/shared/lib/prisma'
 import { CACHE_TAGS, getBaseUrl, SITE_DEFAULTS } from '@/shared/lib/constants'
+import { safeFetch, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
 import { getSeoSettings } from '@/public/lib/seo/metadata-factory'
 import {
   SYSTEM_PAGES,
   getSystemPageDefinition,
   type SystemPageDefinition,
 } from '@/shared/lib/validations/page'
+import { slugParamSchema } from '@/shared/lib/validations/params'
 
 const BASE_URL = getBaseUrl()
 
@@ -45,17 +47,26 @@ export async function getPageSeo(slug: string): Promise<PageSeoData | null> {
   cacheLife('hours')
   cacheTag(CACHE_TAGS.PAGE_SEO, `${CACHE_TAGS.PAGE_SEO}-${slug}`)
 
-  const page = await prisma.page.findUnique({
-    where: { slug },
-    select: {
-      title: true,
-      description: true,
-      metaDescription: true,
-      metaKeywords: true,
-      ogpTitle: true,
-      ogpDescription: true,
-      ogpImageUrl: true,
-    },
+  if (!slugParamSchema.safeParse(slug).success) return null
+
+  const page = await safeFetch({
+    fetch: () =>
+      prisma.page.findUnique({
+        where: { slug },
+        select: {
+          title: true,
+          description: true,
+          metaDescription: true,
+          metaKeywords: true,
+          ogpTitle: true,
+          ogpDescription: true,
+          ogpImageUrl: true,
+        },
+      }),
+    fallback: null,
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: 'getPageSeo',
   })
 
   return page
@@ -82,7 +93,7 @@ export function getDefaultPageSeo(slug: string): PageSeoData | null {
 /**
  * ページのメタデータを生成（統一パイプライン）
  *
- * 優先順位: DB PageSEO設定 > Settings フォールバック > システムページデフォルト > フォールバック引数
+ * 優先順位: DB PageSEO設定 > Settings フォールバック > システムページデフォルト
  *
  * 生成項目:
  * - title / description
@@ -91,10 +102,7 @@ export function getDefaultPageSeo(slug: string): PageSeoData | null {
  * - Twitter Card (summary_large_image)
  * - keywords
  */
-export async function generatePageMetadata(
-  slug: string,
-  fallback?: { title: string; description?: string }
-): Promise<Metadata> {
+export async function generatePageMetadata(slug: string): Promise<Metadata> {
   // Page SEO と Settings を並列取得
   const [seo, settings] = await Promise.all([
     getPageSeo(slug),
@@ -104,16 +112,15 @@ export async function generatePageMetadata(
 
   const siteName = settings?.siteName ?? SITE_DEFAULTS.name
 
-  // タイトル: DB > デフォルト > フォールバック
-  const title = seo?.title || defaultSeo?.title || fallback?.title || slug
+  // タイトル: DB > デフォルト > slug
+  const title = seo?.title || defaultSeo?.title || slug
 
-  // 説明文: DB metaDescription > DB description > Settings > デフォルト > フォールバック
+  // 説明文: DB metaDescription > DB description > Settings > デフォルト
   const description =
     seo?.metaDescription ||
     seo?.description ||
     settings?.defaultMetaDescription ||
     defaultSeo?.description ||
-    fallback?.description ||
     undefined
 
   // OGP タイトル/説明: DB OGP > Settings OGP > 通常値

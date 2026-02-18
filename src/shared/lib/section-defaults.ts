@@ -4,7 +4,10 @@
  * システムページのデフォルトセクションを自動作成する。
  * seed.ts と admin の ensureSystemPage の両方から使用。
  *
- * Serializable トランザクションで count + create を原子的に実行し、
+ * 既にセクションが存在するページでも、デフォルト定義に含まれるが
+ * 未作成のセクションタイプがあれば追加作成する（additive）。
+ *
+ * Serializable トランザクションで原子的に実行し、
  * 同時リクエストによるレースコンディション（重複作成）を防止。
  * 競合時のシリアライゼーション失敗は安全に無視する（もう片方が作成済み）。
  */
@@ -14,7 +17,10 @@ import { DEFAULT_PAGE_SECTIONS } from '@/shared/lib/constants/default-page-secti
 import { defaultHomepageSectionOrder, defaultSectionConfigs } from '@/shared/lib/validations/section'
 
 /**
- * ページにセクションが存在しない場合、デフォルトセクションを作成
+ * ページのデフォルトセクションを確保（additive）
+ *
+ * デフォルト定義に含まれるセクションタイプのうち、
+ * ページにまだ存在しないものを作成する。
  *
  * @param pageId - ページID
  * @param slug - ページスラッグ（デフォルトセクション定義のキー）
@@ -27,31 +33,40 @@ export async function ensurePageSections(pageId: string, slug: string): Promise<
     return 0
   }
 
-  // 高速パス: トランザクション外で先にチェック（大半のリクエストはここで終了）
-  const existingCount = await prisma.section.count({
+  // 高速パス: 既存セクションタイプを取得し、不足分を特定
+  const existingSections = await prisma.section.findMany({
     where: { pageId },
+    select: { type: true },
   })
-  if (existingCount > 0) {
+  const existingTypes = new Set(existingSections.map((s) => s.type))
+  const missingSections = defaults.filter((d) => !existingTypes.has(d.type))
+
+  if (missingSections.length === 0) {
     return 0
   }
 
   try {
     return await prisma.$transaction(async (tx) => {
       // トランザクション内で再チェック（Serializable で原子性保証）
-      const count = await tx.section.count({
+      const currentSections = await tx.section.findMany({
         where: { pageId },
+        select: { type: true },
       })
-      if (count > 0) {
+      const currentTypes = new Set(currentSections.map((s) => s.type))
+      const toCreate = defaults.filter((d) => !currentTypes.has(d.type))
+
+      if (toCreate.length === 0) {
         return 0
       }
 
       const created = await tx.section.createMany({
-        data: defaults.map((section) => ({
+        data: toCreate.map((section) => ({
           pageId,
           type: section.type,
           title: section.title,
           config: section.config,
-          content: section.content,
+          design: section.design ?? {},
+          contentHtml: section.content,
           order: section.order,
           isActive: section.isActive,
         })),

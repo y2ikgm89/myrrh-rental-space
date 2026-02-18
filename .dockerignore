@@ -1,7 +1,3 @@
-# ==============================================
-# Myrrh Rental Space - Docker Ignore
-# ==============================================
-
 # Dependencies
 node_modules
 
@@ -11,15 +7,16 @@ out
 build
 dist
 
-# Development files
-.env
-.env.local
-.env.*.local
-*.log
+# Prisma generated (deps stage で再生成するため除外)
+src/shared/generated
 
-# Git
+# Source control
 .git
 .gitignore
+
+# Environment
+.env
+.env.*
 
 # IDE
 .vscode
@@ -28,36 +25,32 @@ dist
 *.swo
 
 # Documentation
-README.md
-CLAUDE.md
-AGENTS.md
 docs/
+*.md
 
 # Docker
-Dockerfile*
+Dockerfile
 docker-compose*.yml
-.docker
 
 # Testing
-coverage
-.nyc_output
-*.test.ts
-*.spec.ts
 __tests__
 __mocks__
+e2e/
+coverage
+playwright.config.ts
+playwright-report/
 
 # CI/CD
 .github
-.gitlab-ci.yml
 cloudbuild.yaml
 
+# AI / Tools
+.claude/
+.serena/
+.agents/
+
 # Misc
+*.log
 .DS_Store
 Thumbs.db
-*.md
-!package.json
-!prisma/**
-
-# Local development
-.claude/
 nul

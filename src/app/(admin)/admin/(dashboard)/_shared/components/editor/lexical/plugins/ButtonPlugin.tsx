@@ -10,7 +10,7 @@
 
 import { useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $getSelection, $isRangeSelection, $insertNodes } from 'lexical'
+import { $insertNodeToNearestRoot } from '@lexical/utils'
 import {
   $createButtonNode,
   isButtonVariant,
@@ -19,6 +19,9 @@ import {
   type ButtonVariant,
   type ButtonSize,
   type ButtonAlignment,
+  BUTTON_VARIANTS,
+  BUTTON_SIZES,
+  BUTTON_ALIGNMENTS,
 } from '../nodes/ButtonNode'
 import {
   Dialog,
@@ -29,48 +32,20 @@ import {
   Button,
   Input,
   Label,
-  SelectionBox,
   Switch,
 } from '@/admin/components/ui'
-
-// =============================================================================
-// Options
-// =============================================================================
-
-const VARIANT_OPTIONS = [
-  { value: 'primary', label: 'プライマリ', description: 'メインカラーの目立つボタン' },
-  { value: 'secondary', label: 'セカンダリ', description: '控えめなサブボタン' },
-  { value: 'outline', label: 'アウトライン', description: '枠線のみのシンプルなボタン' },
-]
-
-const SIZE_OPTIONS = [
-  { value: 'sm', label: '小', description: 'コンパクトなサイズ' },
-  { value: 'md', label: '中', description: '標準サイズ' },
-  { value: 'lg', label: '大', description: '大きく目立つサイズ' },
-]
-
-const ALIGNMENT_OPTIONS = [
-  { value: 'left', label: '左', description: '左寄せ' },
-  { value: 'center', label: '中央', description: '中央揃え' },
-  { value: 'right', label: '右', description: '右寄せ' },
-]
-
-// =============================================================================
-// Hook
-// =============================================================================
-
-export function useButtonDialog() {
-  const [isButtonDialogOpen, setIsButtonDialogOpen] = useState(false)
-
-  const openButtonDialog = () => setIsButtonDialogOpen(true)
-  const closeButtonDialog = () => setIsButtonDialogOpen(false)
-
-  return {
-    isButtonDialogOpen,
-    openButtonDialog,
-    closeButtonDialog,
-  }
-}
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/admin/components/ui/select'
+import {
+  BUTTON_VARIANT_LABELS,
+  BUTTON_SIZE_LABELS,
+  BUTTON_ALIGNMENT_LABELS,
+} from '../config/node-labels'
 
 // =============================================================================
 // Types
@@ -107,9 +82,6 @@ export function ButtonPlugin({ isOpen, onClose }: ButtonPluginProps) {
     if (!text.trim() || !href.trim()) return
 
     editor.update(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
-
       const buttonNode = $createButtonNode({
         text: text.trim(),
         href: href.trim(),
@@ -119,7 +91,7 @@ export function ButtonPlugin({ isOpen, onClose }: ButtonPluginProps) {
         openInNewTab,
       })
 
-      $insertNodes([buttonNode])
+      $insertNodeToNearestRoot(buttonNode)
     })
 
     resetForm()
@@ -167,37 +139,52 @@ export function ButtonPlugin({ isOpen, onClose }: ButtonPluginProps) {
           {/* スタイル */}
           <div className="space-y-2">
             <Label>スタイル</Label>
-            <SelectionBox
-              options={VARIANT_OPTIONS}
-              value={variant}
-              onChange={(value) => isButtonVariant(value) && setVariant(value)}
-              columns={3}
-              name="ボタンスタイル"
-            />
+            <Select value={variant} onValueChange={(value) => { if (isButtonVariant(value)) setVariant(value) }}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {BUTTON_VARIANTS.map((v) => (
+                  <SelectItem key={v} value={v}>
+                    {BUTTON_VARIANT_LABELS[v]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* サイズ */}
           <div className="space-y-2">
             <Label>サイズ</Label>
-            <SelectionBox
-              options={SIZE_OPTIONS}
-              value={size}
-              onChange={(value) => isButtonSize(value) && setSize(value)}
-              columns={3}
-              name="ボタンサイズ"
-            />
+            <Select value={size} onValueChange={(value) => { if (isButtonSize(value)) setSize(value) }}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {BUTTON_SIZES.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {BUTTON_SIZE_LABELS[s]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* 配置 */}
           <div className="space-y-2">
             <Label>配置</Label>
-            <SelectionBox
-              options={ALIGNMENT_OPTIONS}
-              value={alignment}
-              onChange={(value) => isButtonAlignment(value) && setAlignment(value)}
-              columns={3}
-              name="ボタン配置"
-            />
+            <Select value={alignment} onValueChange={(value) => { if (isButtonAlignment(value)) setAlignment(value) }}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {BUTTON_ALIGNMENTS.map((a) => (
+                  <SelectItem key={a} value={a}>
+                    {BUTTON_ALIGNMENT_LABELS[a]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* 新しいタブで開く */}

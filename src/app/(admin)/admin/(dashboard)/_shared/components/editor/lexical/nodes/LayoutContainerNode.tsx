@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Layout Container Node
  *
  * @description CSSグリッドベースのカラムレイアウトコンテナ
@@ -9,25 +9,25 @@
  * - isShadowRoot()でネスト境界を形成
  */
 
-import {
-  $applyNodeReplacement,
-  ElementNode,
-  type DOMConversionMap,
-  type DOMConversionOutput,
-  type DOMExportOutput,
-  type EditorConfig,
-  type LexicalNode,
-  type NodeKey,
-  type SerializedElementNode,
+'use client'
+
+import type {
+  DOMConversionMap,
+  DOMConversionOutput,
+  DOMExportOutput,
+  EditorConfig,
+  LexicalNode,
 } from 'lexical'
+import { $create, $getState, $getStateChange, $setState, createState, ElementNode } from 'lexical'
 
 // =============================================================================
-// Types
+// State
 // =============================================================================
 
-export interface SerializedLayoutContainerNode extends SerializedElementNode {
-  templateColumns: string
-}
+export const templateColumnsState = createState('templateColumns', {
+  parse: (v: unknown): string =>
+    typeof v === 'string' && v.length > 0 ? v : '1fr 1fr',
+})
 
 // =============================================================================
 // DOM Conversion
@@ -37,7 +37,7 @@ function $convertLayoutContainerElement(
   element: HTMLElement
 ): DOMConversionOutput | null {
   const templateColumns =
-    element.style.gridTemplateColumns || element.dataset.layoutTemplate || '1fr 1fr'
+    element.style.gridTemplateColumns || element.dataset['layoutTemplate'] || '1fr 1fr'
   const node = $createLayoutContainerNode(templateColumns)
   return { node }
 }
@@ -47,17 +47,14 @@ function $convertLayoutContainerElement(
 // =============================================================================
 
 export class LayoutContainerNode extends ElementNode {
-  __templateColumns: string
-
-  static getType(): string {
-    return 'layout-container'
+  override $config() {
+    return this.config('layout-container', {
+      extends: ElementNode,
+      stateConfigs: [{ flat: true, stateConfig: templateColumnsState }],
+    })
   }
 
-  static clone(node: LayoutContainerNode): LayoutContainerNode {
-    return new LayoutContainerNode(node.__templateColumns, node.__key)
-  }
-
-  static importDOM(): DOMConversionMap | null {
+  static override importDOM(): DOMConversionMap | null {
     return {
       div: (element: HTMLElement) => {
         if (!element.hasAttribute('data-lexical-layout-container')) {
@@ -71,73 +68,47 @@ export class LayoutContainerNode extends ElementNode {
     }
   }
 
-  static importJSON(json: SerializedLayoutContainerNode): LayoutContainerNode {
-    return $createLayoutContainerNode(json.templateColumns).updateFromJSON(json)
-  }
-
-  constructor(templateColumns: string = '1fr 1fr', key?: NodeKey) {
-    super(key)
-    this.__templateColumns = templateColumns
-  }
-
-  exportJSON(): SerializedLayoutContainerNode {
-    return {
-      ...super.exportJSON(),
-      templateColumns: this.__templateColumns,
-    }
-  }
-
-  createDOM(config: EditorConfig): HTMLElement {
+  override createDOM(config: EditorConfig): HTMLElement {
+    const templateColumns = $getState(this, templateColumnsState)
     const dom = document.createElement('div')
     dom.setAttribute('data-lexical-layout-container', 'true')
-    dom.style.display = 'grid'
-    dom.style.gridTemplateColumns = this.__templateColumns
-    dom.style.gap = '1rem'
+    dom.style.gridTemplateColumns = templateColumns
 
-    if (config.theme.layoutContainer) {
-      dom.className = config.theme.layoutContainer
+    if (config.theme['layoutContainer']) {
+      dom.className = config.theme['layoutContainer']
     }
 
     return dom
   }
 
-  exportDOM(): DOMExportOutput {
+  override exportDOM(): DOMExportOutput {
+    const templateColumns = $getState(this, templateColumnsState)
     const element = document.createElement('div')
     element.setAttribute('data-lexical-layout-container', 'true')
-    element.setAttribute('data-layout-template', this.__templateColumns)
-    element.style.display = 'grid'
-    element.style.gridTemplateColumns = this.__templateColumns
-    element.style.gap = '1rem'
+    element.setAttribute('data-layout-template', templateColumns)
+    element.style.gridTemplateColumns = templateColumns
     return { element }
   }
 
-  updateDOM(
+  override updateDOM(
     prevNode: LayoutContainerNode,
     dom: HTMLElement
   ): boolean {
-    if (prevNode.__templateColumns !== this.__templateColumns) {
-      dom.style.gridTemplateColumns = this.__templateColumns
-      return false
+    const change = $getStateChange(this, prevNode, templateColumnsState)
+    if (change) {
+      const [newColumns] = change
+      dom.style.gridTemplateColumns = newColumns
     }
     return false
   }
 
-  getTemplateColumns(): string {
-    return this.getLatest().__templateColumns
-  }
-
-  setTemplateColumns(templateColumns: string): void {
-    const self = this.getWritable()
-    self.__templateColumns = templateColumns
-  }
-
   // レイアウトコンテナは選択境界として機能
-  isShadowRoot(): boolean {
+  override isShadowRoot(): boolean {
     return true
   }
 
   // 空のコンテナを許可しない
-  canBeEmpty(): boolean {
+  override canBeEmpty(): boolean {
     return false
   }
 }
@@ -149,7 +120,7 @@ export class LayoutContainerNode extends ElementNode {
 export function $createLayoutContainerNode(
   templateColumns: string = '1fr 1fr'
 ): LayoutContainerNode {
-  return $applyNodeReplacement(new LayoutContainerNode(templateColumns))
+  return $setState($create(LayoutContainerNode), templateColumnsState, templateColumns)
 }
 
 export function $isLayoutContainerNode(

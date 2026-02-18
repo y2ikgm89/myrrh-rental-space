@@ -6,7 +6,7 @@
 
 ## 概要
 
-このプロジェクトは**フルBunで実行可能**です。開発環境から本番環境まで、すべての処理をBun 1.3.5で実行します。
+このプロジェクトは**フルBunで実行可能**です。開発環境から本番環境まで、すべての処理をBun 1.3.9で実行します。
 
 ### フルBunとは
 
@@ -97,16 +97,16 @@ bunx --bun prisma generate       # Prismaクライアント生成
 
 ```dockerfile
 # ステージ1: 依存関係インストール
-FROM oven/bun:1.3.5 AS deps
+FROM oven/bun:1.3.9 AS deps
 RUN bun install --frozen-lockfile
 
 # ステージ2: ビルド
-FROM oven/bun:1.3.5 AS builder
+FROM oven/bun:1.3.9 AS builder
 RUN bunx --bun prisma generate
 RUN bun run build
 
 # ステージ3: 本番実行
-FROM oven/bun:1.3.5 AS runner
+FROM oven/bun:1.3.9 AS runner
 CMD ["bun", "run", "start"]
 ```
 
@@ -114,7 +114,7 @@ CMD ["bun", "run", "start"]
 
 Cloud RunはDockerコンテナを実行できるため、Bunイメージを使用可能です：
 
-1. **Dockerイメージのビルド**: `oven/bun:1.3.5`ベースイメージを使用
+1. **Dockerイメージのビルド**: `oven/bun:1.3.9`ベースイメージを使用
 2. **Cloud Runへのデプロイ**: Dockerコンテナとしてデプロイ
 3. **実行**: BunランタイムでNext.jsアプリケーションを実行
 

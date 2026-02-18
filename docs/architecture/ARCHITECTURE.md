@@ -193,7 +193,7 @@ graph TB
 
 - **Next.js Server Actions**: サーバーサイドロジック
 - **Next.js Route Handlers**: APIエンドポイント
-- **Prisma 7.3.0**: ORM
+- **Prisma 7.4.0**: ORM
 - **Zod 4.3.5**: スキーマバリデーション
 
 ### データベース
@@ -265,8 +265,8 @@ graph LR
 | 技術 | 状態 | 備考 |
 |------|------|------|
 | Next.js 16.1.4 + React 19.2.3 | ✅ | 最新安定版（CVE-2025-55182修正済み） |
-| Prisma 7.3.0 + Supabase | ✅ | 完全互換、接続プーリング推奨 |
-| Bun 1.3.6 | ✅ | フルBunで実行可能（開発・本番） |
+| Prisma 7.4.0 + Supabase | ✅ | 完全互換、接続プーリング推奨 |
+| Bun 1.3.9 | ✅ | フルBunで実行可能（開発・本番） |
 | Zod 4.3.5 | ✅ | 完全互換 |
 | Tailwind CSS 4.1.18 | ✅ | 完全互換 |
 | Three.js / Pixi.js | ✅ | 動的インポートで使用可能 |
@@ -314,8 +314,8 @@ graph LR
 
 #### Google Cloud Run
 
-- **ランタイム**: Bun 1.3.6（Dockerイメージ内で実行）
-- **ベースイメージ**: `oven/bun:1.3.6`
+- **ランタイム**: Bun 1.3.9（Dockerイメージ内で実行）
+- **ベースイメージ**: `oven/bun:1.3.9`
 - **ビルド**: `bun run build`（Dockerイメージ内で実行）
 - **環境変数**: Secret Managerから注入
 - **スケーリング**: 自動スケーリング設定
@@ -853,7 +853,7 @@ Server Actionsでのエラーハンドリングを統一し、エラーレスポ
 ## 更新履歴
 
 - **2026-01-23**: バージョン更新、コロケーションパターン反映
-  - Next.js 16.1.4、Prisma 7.3.0、Better Auth 1.4.17、Bun 1.3.6
+  - Next.js 16.1.4、Prisma 7.3.0、Better Auth 1.4.17、Bun 1.3.9
   - プロジェクト構造をPlan 050のコロケーションパターンに更新
   - CVE-2025-55182対策を「対策済み」に更新
 - **2026-01-12**: Next.js 16 cacheComponents対応

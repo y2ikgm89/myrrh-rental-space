@@ -10,6 +10,7 @@ import { prisma } from '@/shared/lib/prisma'
 import { updateTag } from 'next/cache'
 import { CACHE_TAGS } from '@/shared/lib/constants'
 import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+import { createValidationError } from '@/shared/lib/action-helpers'
 import { withPermission } from '@/admin/lib/server-action-helpers'
 import { safeDecrypt } from '@/shared/lib/crypto'
 import {
@@ -109,8 +110,8 @@ export async function getPublicSettings(): Promise<SettingsData> {
     businessAttributes: parseBusinessAttributes(settings.businessAttributes),
     paymentAccepted: settings.paymentAccepted,
     // Tax Settings (Decimal → number変換)
-    taxStandardRate: Number(settings.taxStandardRate),
-    taxReducedRate: Number(settings.taxReducedRate),
+    taxStandardRate: settings.taxStandardRate,
+    taxReducedRate: settings.taxReducedRate,
     taxDisplayModeAdmin: settings.taxDisplayModeAdmin,
     taxDisplayModePublic: settings.taxDisplayModePublic,
     taxInputMode: settings.taxInputMode,
@@ -195,8 +196,8 @@ export async function getSettings(): Promise<SettingsData | null> {
     businessAttributes: parseBusinessAttributes(settings.businessAttributes),
     paymentAccepted: settings.paymentAccepted,
     // Tax Settings (Decimal → number変換)
-    taxStandardRate: Number(settings.taxStandardRate),
-    taxReducedRate: Number(settings.taxReducedRate),
+    taxStandardRate: settings.taxStandardRate,
+    taxReducedRate: settings.taxReducedRate,
     taxDisplayModeAdmin: settings.taxDisplayModeAdmin,
     taxDisplayModePublic: settings.taxDisplayModePublic,
     taxInputMode: settings.taxInputMode,
@@ -212,7 +213,7 @@ export const updateBasicInfo = withPermission<[data: BasicInfoInput], void>(
 )(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = basicInfoSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   await prisma.settings.upsert({
@@ -236,7 +237,7 @@ export const updateLayoutSettings = withPermission<[data: LayoutSettingsInput], 
 )(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = layoutSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   // CUSTOMを選択している場合はカスタム値が必須
@@ -281,7 +282,7 @@ export const updateSeoSettings = withPermission<[data: SeoSettingsInput], void>(
 )(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = seoSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   await prisma.settings.upsert({

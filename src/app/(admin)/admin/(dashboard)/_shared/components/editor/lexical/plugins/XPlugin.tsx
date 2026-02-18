@@ -8,7 +8,7 @@
 
 import { useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $insertNodes } from 'lexical'
+import { $insertNodeToNearestRoot } from '@lexical/utils'
 import {
   Dialog,
   DialogContent,
@@ -84,7 +84,7 @@ export function XPlugin({ isOpen, onClose }: XPluginProps) {
 
     editor.update(() => {
       const node = $createXNode({ tweetId })
-      $insertNodes([node])
+      $insertNodeToNearestRoot(node)
     })
 
     setUrl('')
@@ -138,22 +138,3 @@ export function XPlugin({ isOpen, onClose }: XPluginProps) {
   )
 }
 
-// =============================================================================
-// Hook
-// =============================================================================
-
-/**
- * Xダイアログの状態管理フック
- */
-export function useXDialog() {
-  const [isOpen, setIsOpen] = useState(false)
-
-  const openXDialog = () => setIsOpen(true)
-  const closeXDialog = () => setIsOpen(false)
-
-  return {
-    isXDialogOpen: isOpen,
-    openXDialog,
-    closeXDialog,
-  }
-}

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * StepsContainer Node
  *
  * @description ステップリストの親コンテナ
@@ -13,54 +13,82 @@ import type {
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
-  NodeKey,
-  SerializedElementNode,
 } from 'lexical'
-import { $applyNodeReplacement, ElementNode, $createParagraphNode, $isElementNode } from 'lexical'
+import { $create, $getState, $getStateChange, $setState, createState, ElementNode, $createParagraphNode, $isElementNode } from 'lexical'
+import { createEnumGuard } from '../config/type-guards'
 
 // =============================================================================
 // Types
 // =============================================================================
 
-export type StepsStyle = 'numbered' | 'icon' | 'timeline'
+export type StepsStyle = 'numbered' | 'big' | 'small' | 'icon' | 'timeline'
 
-export const STEPS_STYLES: readonly StepsStyle[] = ['numbered', 'icon', 'timeline'] as const
+export type StepsShape = 'circle' | 'square'
 
-export interface SerializedStepsContainerNode extends SerializedElementNode {
-  stepsStyle: StepsStyle
-}
+export type StepsFill = 'filled' | 'outline'
 
-// =============================================================================
-// Type Guard (Set-based pattern for type safety)
-// =============================================================================
+export const STEPS_STYLES: readonly StepsStyle[] = ['numbered', 'big', 'small', 'icon', 'timeline'] as const
 
-const STEPS_STYLE_SET = new Set<string>(STEPS_STYLES)
+export const STEPS_SHAPES: readonly StepsShape[] = ['circle', 'square'] as const
 
-export function isStepsStyle(value: string): value is StepsStyle {
-  return STEPS_STYLE_SET.has(value)
-}
+export const STEPS_FILLS: readonly StepsFill[] = ['filled', 'outline'] as const
 
 // =============================================================================
-// Constants
+// Type Guards
 // =============================================================================
 
-const STYLE_CLASSES: Record<StepsStyle, string> = {
-  numbered: '',
-  icon: '',
-  timeline: 'border-l-2 border-primary/30 ml-4',
-}
+export const isStepsStyle = createEnumGuard<StepsStyle>(STEPS_STYLES)
+export const isStepsShape = createEnumGuard<StepsShape>(STEPS_SHAPES)
+export const isStepsFill = createEnumGuard<StepsFill>(STEPS_FILLS)
 
-const BASE_CLASS = 'my-6 space-y-4'
+// =============================================================================
+// State
+// =============================================================================
+
+export const stepsStyleState = createState('stepsStyle', {
+  parse: (v: unknown): StepsStyle =>
+    typeof v === 'string' && isStepsStyle(v) ? v : 'numbered',
+})
+
+export const stepsLabelState = createState('stepsLabel', {
+  parse: (v: unknown): string =>
+    typeof v === 'string' ? v : 'STEP',
+})
+
+export const stepsShapeState = createState('stepsShape', {
+  parse: (v: unknown): StepsShape =>
+    typeof v === 'string' && isStepsShape(v) ? v : 'circle',
+})
+
+export const startNumberState = createState('startNumber', {
+  parse: (v: unknown): number =>
+    typeof v === 'number' && Number.isFinite(v) && v >= 1 ? v : 1,
+})
+
+export const stepsFillState = createState('stepsFill', {
+  parse: (v: unknown): StepsFill =>
+    typeof v === 'string' && isStepsFill(v) ? v : 'filled',
+})
 
 // =============================================================================
 // DOM Conversion
 // =============================================================================
 
-function $convertStepsContainerElement(domNode: Node): null | DOMConversionOutput {
-  const element = domNode as HTMLElement
+function $convertStepsContainerElement(element: HTMLElement): null | DOMConversionOutput {
   const styleAttr = element.getAttribute('data-steps-style')
   const style = styleAttr && isStepsStyle(styleAttr) ? styleAttr : 'numbered'
-  const node = $createStepsContainerNode(style)
+  const labelAttr = element.getAttribute('data-steps-label')
+  const shapeAttr = element.getAttribute('data-steps-shape')
+  const startAttr = element.getAttribute('data-steps-start')
+  const fillAttr = element.getAttribute('data-steps-fill')
+
+  const node = $createStepsContainerNode({
+    style,
+    label: labelAttr ?? 'STEP',
+    shape: shapeAttr && isStepsShape(shapeAttr) ? shapeAttr : 'circle',
+    startNumber: startAttr ? parseInt(startAttr, 10) || 1 : 1,
+    fill: fillAttr && isStepsFill(fillAttr) ? fillAttr : 'filled',
+  })
   return { node }
 }
 
@@ -69,24 +97,22 @@ function $convertStepsContainerElement(domNode: Node): null | DOMConversionOutpu
 // =============================================================================
 
 export class StepsContainerNode extends ElementNode {
-  __stepsStyle: StepsStyle
-
-  static getType(): string {
-    return 'steps-container'
+  override $config() {
+    return this.config('steps-container', {
+      extends: ElementNode,
+      stateConfigs: [
+        { flat: true, stateConfig: stepsStyleState },
+        { flat: true, stateConfig: stepsLabelState },
+        { flat: true, stateConfig: stepsShapeState },
+        { flat: true, stateConfig: startNumberState },
+        { flat: true, stateConfig: stepsFillState },
+      ],
+    })
   }
 
-  static clone(node: StepsContainerNode): StepsContainerNode {
-    return new StepsContainerNode(node.__stepsStyle, node.__key)
-  }
-
-  static importJSON(serializedNode: SerializedStepsContainerNode): StepsContainerNode {
-    return $createStepsContainerNode(serializedNode.stepsStyle).updateFromJSON(serializedNode)
-  }
-
-  static importDOM(): DOMConversionMap | null {
+  static override importDOM(): DOMConversionMap | null {
     return {
-      div: (domNode: Node) => {
-        const element = domNode as HTMLElement
+      div: (element: HTMLElement) => {
         if (element.hasAttribute('data-steps')) {
           return {
             conversion: $convertStepsContainerElement,
@@ -98,61 +124,96 @@ export class StepsContainerNode extends ElementNode {
     }
   }
 
-  constructor(stepsStyle: StepsStyle = 'numbered', key?: NodeKey) {
-    super(key)
-    this.__stepsStyle = stepsStyle
-  }
+  override exportDOM(): DOMExportOutput {
+    const style = $getState(this, stepsStyleState)
+    const label = $getState(this, stepsLabelState)
+    const shape = $getState(this, stepsShapeState)
+    const startNumber = $getState(this, startNumberState)
+    const fill = $getState(this, stepsFillState)
 
-  exportJSON(): SerializedStepsContainerNode {
-    return {
-      ...super.exportJSON(),
-      stepsStyle: this.__stepsStyle,
-    }
-  }
-
-  exportDOM(): DOMExportOutput {
     const element = document.createElement('div')
     element.setAttribute('data-steps', 'true')
-    element.setAttribute('data-steps-style', this.__stepsStyle)
-    element.className = `${BASE_CLASS} ${STYLE_CLASSES[this.__stepsStyle]}`
+    element.setAttribute('data-steps-style', style)
+    element.setAttribute('data-steps-label', label)
+    element.setAttribute('data-steps-shape', shape)
+    element.setAttribute('data-steps-start', String(startNumber))
+    element.setAttribute('data-steps-fill', fill)
+    element.style.setProperty('--step-label', `"${label}"`)
+
     return { element }
   }
 
-  createDOM(_config: EditorConfig): HTMLElement {
+  override createDOM(_config: EditorConfig): HTMLElement {
+    const style = $getState(this, stepsStyleState)
+    const label = $getState(this, stepsLabelState)
+    const shape = $getState(this, stepsShapeState)
+    const startNumber = $getState(this, startNumberState)
+    const fill = $getState(this, stepsFillState)
+
     const element = document.createElement('div')
     element.setAttribute('data-steps', 'true')
-    element.setAttribute('data-steps-style', this.__stepsStyle)
-    element.className = `${BASE_CLASS} ${STYLE_CLASSES[this.__stepsStyle]}`
+    element.setAttribute('data-steps-style', style)
+    element.setAttribute('data-steps-label', label)
+    element.setAttribute('data-steps-shape', shape)
+    element.setAttribute('data-steps-start', String(startNumber))
+    element.setAttribute('data-steps-fill', fill)
+    element.style.setProperty('--step-label', `"${label}"`)
+
     return element
   }
 
-  updateDOM(prevNode: StepsContainerNode, dom: HTMLElement): boolean {
-    if (prevNode.__stepsStyle !== this.__stepsStyle) {
-      dom.setAttribute('data-steps-style', this.__stepsStyle)
-      dom.className = `${BASE_CLASS} ${STYLE_CLASSES[this.__stepsStyle]}`
-      return false
+  override updateDOM(prevNode: StepsContainerNode, dom: HTMLElement): boolean {
+    const styleChange = $getStateChange(this, prevNode, stepsStyleState)
+    if (styleChange) {
+      const [newStyle] = styleChange
+      dom.setAttribute('data-steps-style', newStyle)
     }
+
+    const labelChange = $getStateChange(this, prevNode, stepsLabelState)
+    if (labelChange) {
+      const [newLabel] = labelChange
+      dom.setAttribute('data-steps-label', newLabel)
+      dom.style.setProperty('--step-label', `"${newLabel}"`)
+    }
+
+    const shapeChange = $getStateChange(this, prevNode, stepsShapeState)
+    if (shapeChange) {
+      const [newShape] = shapeChange
+      dom.setAttribute('data-steps-shape', newShape)
+    }
+
+    const startChange = $getStateChange(this, prevNode, startNumberState)
+    if (startChange) {
+      const [newStart] = startChange
+      dom.setAttribute('data-steps-start', String(newStart))
+    }
+
+    const fillChange = $getStateChange(this, prevNode, stepsFillState)
+    if (fillChange) {
+      const [newFill] = fillChange
+      dom.setAttribute('data-steps-fill', newFill)
+    }
+
     return false
   }
 
-  getStepsStyle(): StepsStyle {
-    return this.getLatest().__stepsStyle
+  override isShadowRoot(): boolean {
+    return true
   }
 
-  setStepsStyle(style: StepsStyle): void {
-    const self = this.getWritable()
-    self.__stepsStyle = style
-  }
-
-  canInsertTextBefore(): false {
+  override canBeEmpty(): boolean {
     return false
   }
 
-  canInsertTextAfter(): false {
+  override canInsertTextBefore(): false {
     return false
   }
 
-  collapseAtStart(): boolean {
+  override canInsertTextAfter(): false {
+    return false
+  }
+
+  override collapseAtStart(): boolean {
     const children = this.getChildren()
     const paragraph = $createParagraphNode()
 
@@ -175,21 +236,37 @@ export class StepsContainerNode extends ElementNode {
 // Factory Functions
 // =============================================================================
 
+type StepsContainerOptions = {
+  style?: StepsStyle
+  label?: string
+  shape?: StepsShape
+  startNumber?: number
+  fill?: StepsFill
+}
+
 /**
  * StepsContainerノードを作成する
- *
- * @param stepsStyle - ステップスタイル
- * @returns StepsContainerNode インスタンス
  */
-export function $createStepsContainerNode(stepsStyle: StepsStyle = 'numbered'): StepsContainerNode {
-  return $applyNodeReplacement(new StepsContainerNode(stepsStyle))
+export function $createStepsContainerNode(options: StepsContainerOptions = {}): StepsContainerNode {
+  const {
+    style = 'numbered',
+    label = 'STEP',
+    shape = 'circle',
+    startNumber = 1,
+    fill = 'filled',
+  } = options
+
+  const node = $create(StepsContainerNode)
+  $setState(node, stepsStyleState, style)
+  $setState(node, stepsLabelState, label)
+  $setState(node, stepsShapeState, shape)
+  $setState(node, startNumberState, startNumber)
+  $setState(node, stepsFillState, fill)
+  return node
 }
 
 /**
  * ノードがStepsContainerNodeかどうかを判定する
- *
- * @param node - 判定対象のノード
- * @returns StepsContainerNodeの場合true
  */
 export function $isStepsContainerNode(
   node: LexicalNode | null | undefined

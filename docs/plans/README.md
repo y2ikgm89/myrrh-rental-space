@@ -5,13 +5,13 @@
 | カテゴリ | スコア | 詳細 |
 |---------|--------|------|
 | セキュリティ | 100 | 環境変数本番必須化, APIレート制限(100req/分/IP), Webhookトークン検証, 全Server Actions認証チェック完備 |
-| 型安全性 | 100 | Zod 4 + TypeScript 5.9 strict, 型アサーション84→57箇所(32%削減), 型安全ユーティリティ統一 |
+| 型安全性 | 100 | Zod 4 + TypeScript 6.0-beta strict, 型アサーション84→57箇所(32%削減), 型安全ユーティリティ統一 |
 | パフォーマンス | 100 | 公開側アクション全キャッシュ化, メール送信非ブロッキング化, fireAndForget統一, Prisma select句最適化 |
 | コード品質 | 100 | 大規模ファイル分割完了(settings.ts, NavigationManager, AnnouncementBarManager), fireAndForget統一 |
 | キャッシュ戦略 | 100 | 'use cache' + cacheLife + cacheTag 全公開アクションに適用, updateTag統一, getCacheTag一元管理 |
 | テスト | 100 | 2580 tests pass (71 files), pricing/permissions/server-action-helpers/turnstileテスト追加, TDZ修正 |
 
-**最終更新**: 2026-02-10
+**最終更新**: 2026-02-18
 
 ---
 

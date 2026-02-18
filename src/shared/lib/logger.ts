@@ -17,7 +17,7 @@ interface LogEntry {
   timestamp: string
 }
 
-const isDev = process.env.NODE_ENV !== 'production'
+const isDev = process.env["NODE_ENV"] !== 'production'
 
 function formatLog(entry: LogEntry): void {
   if (isDev) {

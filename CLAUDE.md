@@ -49,6 +49,7 @@
 | `lexical-patterns.md` - Lexical 0.40 エディタ | `src/app/(admin)/**/lexical/**` |
 | `seo-patterns.md` - SEO / 構造化データ / NAP | `src/app/(public*)/**/seo/**`, `**/layouts/**` |
 | `ui-ux-patterns.md` - UI/UX スキル使用ガイドライン | `src/app/(public*\|admin)/**` |
+| `deployment-patterns.md` - Docker / Cloud Run / Cloud Build | `Dockerfile`, `cloudbuild.yaml`, `.dockerignore`, `.gcloudignore`, `docs/operations/**` |
 
 > 詳細リファレンス: `docs/reference/claude-rules/` に配置（必要時に参照）
 
@@ -79,7 +80,7 @@
 
 ### ツール使い分け
 
-- **コードベース調査**: `serena`（LSPベース深い分析）, `code-explorer`（広範な探索）
+- **コードベース調査**: `serena`（LSPベース深い分析）, `codebase-explorer`（広範な探索）
 - **MCP**: `serena`, `context7`, `playwright` 推奨。`WebSearch`, `WebFetch` 必要時
 - **ui-ux-pro-max**: `python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --domain <domain> --stack nextjs`
   - ドメイン: `product`, `style`, `typography`, `color`, `landing`, `chart`, `ux`
@@ -87,7 +88,7 @@
 
 ### 手動コマンド（必要時のみ）
 
-`/superpowers:brainstorm`, `/superpowers:write-plan`, `/superpowers:execute-plan`, `/superpowers:using-git-worktrees`, `/ui-ux-pro-max`, `/frontend-design`, `/parallax-section`, `code-explorer`, `code-simplifier`
+`/superpowers:brainstorm`, `/superpowers:write-plan`, `/superpowers:execute-plan`, `/superpowers:using-git-worktrees`, `/ui-ux-pro-max`, `/frontend-design`, `/parallax-section`, `codebase-explorer`
 
 ---
 
@@ -99,9 +100,9 @@
 |------|-----------|------|
 | Next.js | 16.1.6 | `'use cache'`, `updateTag`, PPR対応 |
 | React | 19.2.4 | React Compiler 1.0, `<Activity>`, `useEffectEvent` |
-| TypeScript | 5.9.3 | TS 7.0 (Go native) プレビュー利用可 |
+| TypeScript | 6.0-beta | TS 7.0 準備用 `--stableTypeOrdering` 利用可 |
 | Bun | 1.3.x | Bun.SQL, HTML直接実行 |
-| Prisma | 7.3.0 | 型生成98%削減, mapped enums |
+| Prisma | 7.4.0 | 型生成98%削減, mapped enums |
 | PostgreSQL | - | Supabase経由 |
 | Better Auth | 1.4.18 | RBAC, Auth.js統合 |
 | Tailwind CSS | 4.1.18 | CSS-first設定, @theme |
@@ -140,7 +141,7 @@ src/
 | `src/app/(public)/_styles/public.css` | 公開ページテーマ |
 | `src/app/(admin)/admin/(dashboard)/_shared/` | 管理画面専用コンポーネント |
 | `src/app/(public)/_shared/` | 公開ページ専用コンポーネント |
-| `src/app/(public)/[slug]/` | 統一ページルート（セクションシステム） |
+| `src/app/(public)/[slug]/` | カスタムページルート（管理画面で作成） |
 | `src/app/(public-*)/` | 追加の公開ページルートグループ |
 | `src/shared/` | 共有（CSS変数に依存しないコード） |
 | `docs/{requirements,architecture,plans}/` | ドキュメント |

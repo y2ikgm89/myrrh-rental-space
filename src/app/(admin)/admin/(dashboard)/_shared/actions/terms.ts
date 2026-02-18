@@ -22,7 +22,9 @@ import {
   type SiteWideTermsSeo,
 } from '@/shared/lib/validations/terms'
 import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+import { createValidationError } from '@/shared/lib/action-helpers'
 import { withPermission } from '@/admin/lib/server-action-helpers'
+import { renderEditorStateToHtmlLazy } from '@/admin/lib/lazy-renderer'
 import { purgeTermsCache } from '@/shared/lib/cloudflare'
 import { fireAndForget } from '@/shared/lib/async-utils'
 import { ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
@@ -44,7 +46,8 @@ export const getTermsList = withPermission<[], TermsWithVersion[]>('terms', 'rea
           select: {
             id: true,
             version: true,
-            content: true,
+            contentHtml: true,
+            contentJson: true,
             publishedAt: true,
           },
         },
@@ -68,7 +71,8 @@ export const getTermsList = withPermission<[], TermsWithVersion[]>('terms', 'rea
         ? {
             id: t.versions[0].id,
             version: t.versions[0].version,
-            content: t.versions[0].content,
+            contentHtml: t.versions[0].contentHtml,
+            contentJson: t.versions[0].contentJson,
             publishedAt: t.versions[0].publishedAt!,
           }
         : null,
@@ -117,6 +121,7 @@ export async function getDefaultsForTermsType(
   // まず基本スラッグが使用可能かチェック
   const existing = await prisma.terms.findUnique({
     where: { slug: defaults.slug },
+    select: { id: true },
   })
 
   if (!existing) {
@@ -134,7 +139,7 @@ export async function getDefaultsForTermsType(
   // 使用中の番号を収集
   const usedNumbers = new Set<number>([1])
   for (const term of similarTerms) {
-    const match = term.slug.match(new RegExp(`^${defaults.slug}-(\\d+)$`))
+    const match = term.slug.match(new RegExp(`^${RegExp.escape(defaults.slug)}-(\\d+)$`))
     if (match?.[1]) {
       usedNumbers.add(parseInt(match[1], 10))
     }
@@ -195,12 +200,13 @@ export const createTerms = withPermission<[CreateTermsInput], { id: string }>('t
   async (_user, input): Promise<ActionResult<{ id: string }>> => {
     const validation = createTermsSchema.safeParse(input)
     if (!validation.success) {
-      return createFailure(validation.error.issues[0]?.message ?? 'バリデーションエラー')
+      return createValidationError(validation.error)
     }
 
     // slug重複チェック
     const existing = await prisma.terms.findUnique({
       where: { slug: validation.data.slug },
+      select: { id: true },
     })
 
     if (existing) {
@@ -224,29 +230,33 @@ export const createTerms = withPermission<[CreateTermsInput], { id: string }>('t
  * 規約+バージョンを同時に作成（InlineEditor用）
  */
 export const createTermsWithVersion = withPermission<
-  [CreateTermsInput & { content: string }],
+  [CreateTermsInput & { contentJson: string }],
   { id: string; versionId: string }
 >('terms', 'create')(
   async (user, input): Promise<ActionResult<{ id: string; versionId: string }>> => {
-    const { content, ...termsInput } = input
+    const { contentJson, ...termsInput } = input
 
     const validation = createTermsSchema.safeParse(termsInput)
     if (!validation.success) {
-      return createFailure(validation.error.issues[0]?.message ?? 'バリデーションエラー')
+      return createValidationError(validation.error)
     }
 
-    if (!content.trim()) {
+    if (!contentJson.trim()) {
       return createFailure('コンテンツを入力してください')
     }
 
     // slug重複チェック
     const existing = await prisma.terms.findUnique({
       where: { slug: validation.data.slug },
+      select: { id: true },
     })
 
     if (existing) {
       return createFailure('このスラッグは既に使用されています')
     }
+
+    // JSON → HTML 変換
+    const contentHtml = await renderEditorStateToHtmlLazy(contentJson)
 
     // トランザクションで規約とバージョンを同時作成
     const result = await prisma.$transaction(async (tx) => {
@@ -257,7 +267,8 @@ export const createTermsWithVersion = withPermission<
       const version = await tx.termsVersion.create({
         data: {
           termsId: terms.id,
-          content,
+          contentJson: JSON.parse(contentJson),
+          contentHtml,
           version: 1,
           status: TermsStatus.DRAFT,
           createdBy: user.id,
@@ -283,7 +294,7 @@ export const updateTerms = withPermission<[string, UpdateTermsInput]>('terms', '
   async (_user, id, input): Promise<ActionResult<void>> => {
     const validation = updateTermsSchema.safeParse(input)
     if (!validation.success) {
-      return createFailure(validation.error.issues[0]?.message ?? 'バリデーションエラー')
+      return createValidationError(validation.error)
     }
 
     // slug重複チェック（自分以外）
@@ -293,6 +304,7 @@ export const updateTerms = withPermission<[string, UpdateTermsInput]>('terms', '
           slug: validation.data.slug,
           id: { not: id },
         },
+        select: { id: true },
       })
 
       if (existing) {
@@ -397,7 +409,7 @@ export const createTermsVersion = withPermission<
   async (user, input): Promise<ActionResult<{ id: string; version: number }>> => {
     const validation = createTermsVersionSchema.safeParse(input)
     if (!validation.success) {
-      return createFailure(validation.error.issues[0]?.message ?? 'バリデーションエラー')
+      return createValidationError(validation.error)
     }
 
     // 最新バージョン番号を取得
@@ -409,10 +421,14 @@ export const createTermsVersion = withPermission<
 
     const nextVersion = (latestVersion?.version ?? 0) + 1
 
+    // JSON → HTML 変換
+    const contentHtml = await renderEditorStateToHtmlLazy(validation.data.contentJson)
+
     const version = await prisma.termsVersion.create({
       data: {
         termsId: validation.data.termsId,
-        content: validation.data.content,
+        contentJson: JSON.parse(validation.data.contentJson),
+        contentHtml,
         version: nextVersion,
         status: TermsStatus.DRAFT,
         createdBy: user.id,
@@ -440,7 +456,7 @@ export const updateTermsVersion = withPermission<[string, UpdateTermsVersionInpu
 )(async (_user, versionId, input): Promise<ActionResult<void>> => {
   const validation = updateTermsVersionSchema.safeParse(input)
   if (!validation.success) {
-    return createFailure(validation.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(validation.error)
   }
 
   const version = await prisma.termsVersion.findUnique({
@@ -456,9 +472,15 @@ export const updateTermsVersion = withPermission<[string, UpdateTermsVersionInpu
     return createFailure('公開済みのバージョンは編集できません')
   }
 
+  // JSON → HTML 変換
+  const contentHtml = await renderEditorStateToHtmlLazy(validation.data.contentJson)
+
   await prisma.termsVersion.update({
     where: { id: versionId },
-    data: { content: validation.data.content },
+    data: {
+      contentJson: JSON.parse(validation.data.contentJson),
+      contentHtml,
+    },
   })
 
   updateTag(CACHE_TAGS.TERMS)
@@ -612,7 +634,7 @@ export const updateSiteWideTermsSeo = withPermission<[UpdateTermsSeoInput]>('ter
   async (_user, input): Promise<ActionResult<void>> => {
     const validation = updateTermsSeoSchema.safeParse(input)
     if (!validation.success) {
-      return createFailure(validation.error.issues[0]?.message ?? 'バリデーションエラー')
+      return createValidationError(validation.error)
     }
 
     const terms = await prisma.terms.findFirst({
@@ -620,6 +642,7 @@ export const updateSiteWideTermsSeo = withPermission<[UpdateTermsSeoInput]>('ter
         type: TermsType.TERMS_OF_USE,
         isSiteWide: true,
       },
+      select: { id: true },
     })
 
     if (!terms) {

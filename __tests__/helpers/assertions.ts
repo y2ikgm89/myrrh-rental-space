@@ -56,7 +56,8 @@ export function expectSuccessWithData<T>(
 ): void {
   expectSuccess(result)
   if ('data' in result && result.data !== undefined) {
-    assertion(result.data)
+    // TS 6.0: 条件型を含むジェネリック型へのナロウイングは推論できないため unknown 経由でキャスト
+    assertion(result.data as unknown as T)
   } else {
     throw new Error('Expected result to have data')
   }

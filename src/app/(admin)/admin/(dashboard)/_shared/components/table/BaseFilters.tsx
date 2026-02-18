@@ -12,7 +12,7 @@
 
 import type { ReactNode } from 'react'
 import { Search } from 'lucide-react'
-import { useFilterParams } from '@/shared/hooks'
+import { useFilterParams } from '@/admin/hooks'
 import {
   Select,
   SelectContent,

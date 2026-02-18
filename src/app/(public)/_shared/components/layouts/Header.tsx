@@ -122,7 +122,7 @@ export function Header({ brandName = 'MYRRH', navItems, scrollBehavior = HeaderS
       ScrollTrigger.create({
         onUpdate: (self) => {
           const scroll = self.scroll()
-          const direction = self.direction as -1 | 1
+          const direction: -1 | 1 = self.direction >= 0 ? 1 : -1
 
           // Background opacity (applies to all modes)
           setScrolled(scroll > SCROLL_THRESHOLD)

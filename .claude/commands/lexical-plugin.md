@@ -35,9 +35,9 @@ Lexicalエディタ用のカスタムプラグインを作成します。
 
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $insertNodes } from 'lexical'
+import { $insertNodeToNearestRoot } from '@lexical/utils'
 import {
   Dialog,
   DialogContent,
@@ -62,16 +62,17 @@ export function ${プラグイン名}Plugin({ isOpen, onClose }: ${プラグイ�
   })
 
   // 直接更新パターン（コマンド登録不要）
-  const handleSubmit = useCallback(() => {
+  // React Compiler が自動メモ化するため useCallback 不要
+  const handleSubmit = () => {
     if (!formData./* validation */) return
 
     editor.update(() => {
       const node = $create${プラグイン名}Node(formData)
-      $insertNodes([node])
+      $insertNodeToNearestRoot(node)
     })
     onClose()
     setFormData({/* reset */})
-  }, [editor, formData, onClose])
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -108,17 +109,12 @@ export function ${プラグイン名}Plugin({ isOpen, onClose }: ${プラグイ�
   )
 }
 
-// ダイアログ状態管理フック（useCallback使用でReact Compiler最適化）
+// ダイアログ状態管理フック（React Compiler が自動メモ化）
 export function use${プラグイン名}Dialog() {
   const [isOpen, setIsOpen] = useState(false)
 
-  const open${プラグイン名}Dialog = useCallback(() => {
-    setIsOpen(true)
-  }, [])
-
-  const close${プラグイン名}Dialog = useCallback(() => {
-    setIsOpen(false)
-  }, [])
+  const open${プラグイン名}Dialog = () => setIsOpen(true)
+  const close${プラグイン名}Dialog = () => setIsOpen(false)
 
   return {
     is${プラグイン名}DialogOpen: isOpen,
@@ -141,12 +137,8 @@ export function use${プラグイン名}Dialog() {
 
 import { useEffect } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import {
-  $getSelection,
-  $isRangeSelection,
-  createCommand,
-  COMMAND_PRIORITY_EDITOR,
-} from 'lexical'
+import { createCommand, COMMAND_PRIORITY_EDITOR } from 'lexical'
+import { $insertNodeToNearestRoot } from '@lexical/utils'
 
 export const ${プラグイン名.toUpperCase()}_COMMAND = createCommand<${Payload型}>('${プラグイン名.toUpperCase()}')
 
@@ -158,10 +150,8 @@ export function ${プラグイン名}Plugin() {
       ${プラグイン名.toUpperCase()}_COMMAND,
       (payload) => {
         editor.update(() => {
-          const selection = $getSelection()
-          if (!$isRangeSelection(selection)) return false
-
-          // コマンド処理
+          const node = $create${プラグイン名}Node(payload)
+          $insertNodeToNearestRoot(node)
         })
         return true
       },
@@ -186,7 +176,7 @@ export function ${プラグイン名}Plugin() {
 
 import { useEffect } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { mergeRegister } from '@lexical/utils'
+import { mergeRegister } from 'lexical'  // v0.40.0+: lexical本体からimport
 
 export function ${プラグイン名}Plugin() {
   const [editor] = useLexicalComposerContext()

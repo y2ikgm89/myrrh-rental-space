@@ -30,7 +30,6 @@ import {
 import type { PublicSection } from '@/public/actions/section'
 import {
   getShowcaseSpaces,
-  getListSpaces,
   getPublishedNews,
   getPublishedPosts,
   getPublishedFaqItems,
@@ -90,7 +89,14 @@ export async function SectionRenderer({
 
     case SectionType.CUSTOM: {
       const config = getCustomConfig(section.config)
-      return <CustomSection config={config} content={section.content} title={section.title} design={design} />
+      return (
+        <CustomSection
+          config={config}
+          content={section.contentHtml ?? ''}
+          title={section.title}
+          design={design}
+        />
+      )
     }
 
     case SectionType.CONCEPT: {
@@ -104,15 +110,15 @@ export async function SectionRenderer({
 
     case SectionType.SPACE_LIST: {
       const config = getSpaceListConfig(section.config)
-      const rawSpaces = await getListSpaces(config.maxItems, config.showOnlyPublished)
+      const rawSpaces = await getShowcaseSpaces(config.maxItems, config.showOnlyPublished)
       const spaces: SpaceListData[] = rawSpaces.map((s) => ({
         id: s.id,
         slug: s.slug,
         name: s.name,
         description: s.description,
         capacity: s.capacity,
-        hourlyPrice: s.hourlyPrice != null ? Number(s.hourlyPrice) : null,
-        area: s.area != null ? Number(s.area) : null,
+        hourlyPrice: s.hourlyPrice,
+        area: s.area,
         mainImageUrl: s.mainImageUrl,
       }))
       return <SpaceListSection config={config} spaces={spaces} design={design} />
@@ -127,8 +133,8 @@ export async function SectionRenderer({
         nameJa: s.name,
         tagline: s.description,
         capacity: s.capacity,
-        hourlyPrice: s.hourlyPrice != null ? Number(s.hourlyPrice) : null,
-        area: s.area != null ? Number(s.area) : null,
+        hourlyPrice: s.hourlyPrice,
+        area: s.area,
         imageUrl: s.mainImageUrl,
         imageAlt: s.name,
         slug: s.slug,
@@ -176,7 +182,7 @@ export async function SectionRenderer({
         : (await getPublishedFaqItems(config.maxItems, config.categoryId)).map((f) => ({
             id: f.id,
             question: f.question,
-            answer: f.answer,
+            answer: f.answerHtml ?? '',
           }))
       return <FaqListSection config={config} items={items} design={design} />
     }

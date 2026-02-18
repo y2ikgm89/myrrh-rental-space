@@ -11,7 +11,7 @@ import type { PageSectionData } from '@/admin/actions/page-section'
 
 export interface ConfigFormSavePayload {
   config: Record<string, unknown>
-  content?: string
+  contentJson?: string
 }
 
 export interface ConfigFormProps {

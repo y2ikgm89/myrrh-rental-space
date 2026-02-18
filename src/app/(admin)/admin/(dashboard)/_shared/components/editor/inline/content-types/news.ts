@@ -19,7 +19,7 @@ import {
 } from '@/admin/actions/news'
 import { isValidLayoutWidth, type LayoutWidth } from '@/shared/lib/validations/enums'
 import type { NewsPreviewData } from '@/shared/types'
-import type { ContentTypeConfig } from './types'
+import { SEO_FIELD_NAMES, OGP_FIELD_NAMES, type ContentTypeConfig } from './types'
 import {
   TitleSlugFields,
   SEOFields,
@@ -36,7 +36,7 @@ import {
 type NewsSubmitPayload = {
   slug: string
   title: string
-  content: string
+  contentJson: string
   contentWidth: LayoutWidth | null
   contentWidthCustom: number | null
   metaDescription: string | null
@@ -56,7 +56,7 @@ function toFormData(data?: NewsData): NewsFormData {
     return {
       slug: '',
       title: '',
-      content: '',
+      contentJson: '',
       isPublished: false,
       publishedAt: '',
       contentWidth: '',
@@ -72,7 +72,7 @@ function toFormData(data?: NewsData): NewsFormData {
   return {
     slug: data.slug,
     title: data.title,
-    content: data.content,
+    contentJson: data.contentJson ? JSON.stringify(data.contentJson) : '',
     isPublished: data.isPublished,
     publishedAt: data.publishedAt
       ? format(new Date(data.publishedAt), "yyyy-MM-dd'T'HH:mm")
@@ -92,7 +92,7 @@ function toSubmitPayload(formData: NewsFormData): NewsSubmitPayload {
   return {
     slug: formData.slug,
     title: formData.title,
-    content: formData.content,
+    contentJson: formData.contentJson,
     contentWidth: isValidLayoutWidth(formData.contentWidth) ? formData.contentWidth : null,
     contentWidthCustom: formData.contentWidthCustom
       ? parseInt(formData.contentWidthCustom, 10)
@@ -110,25 +110,10 @@ function toPreviewData(formData: NewsFormData): NewsPreviewData {
   return {
     title: formData.title || '無題',
     slug: formData.slug || 'preview-new',
-    content: formData.content || '',
+    content: formData.contentJson || '',
     publishedAt: formData.publishedAt || null,
   }
 }
-
-// =============================================================================
-// フィールド名定数
-// =============================================================================
-
-const SEO_FIELDS = {
-  metaDescription: 'metaDescription',
-  metaKeywords: 'metaKeywords',
-} as const
-
-const OGP_FIELDS = {
-  ogpTitle: 'ogpTitle',
-  ogpDescription: 'ogpDescription',
-  ogpImageUrl: 'ogpImageUrl',
-} as const
 
 // =============================================================================
 // Config
@@ -208,14 +193,14 @@ export const newsConfig: ContentTypeConfig<
             title: 'SEO設定',
             component: SEOFields,
             props: {
-              fields: SEO_FIELDS,
+              fields: SEO_FIELD_NAMES,
             },
           },
           {
             title: 'OGP設定',
             component: OGPFields,
             props: {
-              fields: OGP_FIELDS,
+              fields: OGP_FIELD_NAMES,
             },
           },
         ],

@@ -7,10 +7,10 @@
  */
 
 import { mock } from 'bun:test'
-import type { Prisma } from '@/shared/generated/prisma/client'
 
-// 型定義
-type MockFunction<T = unknown> = ReturnType<typeof mock<() => Promise<T>>>
+// 型定義 — 引数なし・戻り値 Promise<unknown> のモック関数
+// テスト内では mockResolvedValueOnce / mockImplementationOnce で上書きする
+type MockFunction = ReturnType<typeof mock<() => Promise<unknown>>>
 
 interface MockReservation {
   findFirst: MockFunction
@@ -21,6 +21,8 @@ interface MockReservation {
   update: MockFunction
   delete: MockFunction
 }
+
+
 
 interface MockCustomer {
   findUnique: MockFunction
@@ -71,6 +73,7 @@ interface MockAuditLog {
 interface MockSettings {
   findUnique: MockFunction
   upsert: MockFunction
+  update: MockFunction
 }
 
 interface MockInquiry {
@@ -97,44 +100,32 @@ export interface MockPrismaClient {
 }
 
 export function createMockPrismaClient(): MockPrismaClient {
+  // デフォルト実装はシンプルな固定値を返す。
+  // 各テストで mockResolvedValueOnce / mockImplementationOnce を使って上書きする。
   return {
     reservation: {
       findFirst: mock(() => Promise.resolve(null)),
       findUnique: mock(() => Promise.resolve(null)),
       findMany: mock(() => Promise.resolve([])),
       count: mock(() => Promise.resolve(0)),
-      create: mock((args: Prisma.ReservationCreateArgs) =>
-        Promise.resolve({ id: 'test-reservation-id', ...args.data })
-      ),
-      update: mock((args: Prisma.ReservationUpdateArgs) =>
-        Promise.resolve({ id: args.where.id, ...args.data })
-      ),
+      create: mock(() => Promise.resolve({ id: 'test-reservation-id' })),
+      update: mock(() => Promise.resolve({ id: 'test-reservation-id' })),
       delete: mock(() => Promise.resolve({ id: 'test-reservation-id' })),
     },
     customer: {
       findUnique: mock(() => Promise.resolve(null)),
       findFirst: mock(() => Promise.resolve(null)),
       findMany: mock(() => Promise.resolve([])),
-      create: mock((args: Prisma.CustomerCreateArgs) =>
-        Promise.resolve({ id: 'test-customer-id', ...args.data })
-      ),
-      update: mock((args: Prisma.CustomerUpdateArgs) =>
-        Promise.resolve({ id: args.where.id, ...args.data })
-      ),
-      upsert: mock((args: Prisma.CustomerUpsertArgs) =>
-        Promise.resolve({ id: 'test-customer-id', ...args.create })
-      ),
+      create: mock(() => Promise.resolve({ id: 'test-customer-id' })),
+      update: mock(() => Promise.resolve({ id: 'test-customer-id' })),
+      upsert: mock(() => Promise.resolve({ id: 'test-customer-id' })),
     },
     space: {
       findUnique: mock(() => Promise.resolve(null)),
       findMany: mock(() => Promise.resolve([])),
       findFirst: mock(() => Promise.resolve(null)),
-      create: mock((args: Prisma.SpaceCreateArgs) =>
-        Promise.resolve({ id: 'test-space-id', ...args.data })
-      ),
-      update: mock((args: Prisma.SpaceUpdateArgs) =>
-        Promise.resolve({ id: args.where.id, ...args.data })
-      ),
+      create: mock(() => Promise.resolve({ id: 'test-space-id' })),
+      update: mock(() => Promise.resolve({ id: 'test-space-id' })),
       delete: mock(() => Promise.resolve({ id: 'test-space-id' })),
       count: mock(() => Promise.resolve(0)),
     },
@@ -142,12 +133,8 @@ export function createMockPrismaClient(): MockPrismaClient {
       findUnique: mock(() => Promise.resolve(null)),
       findMany: mock(() => Promise.resolve([])),
       findFirst: mock(() => Promise.resolve(null)),
-      create: mock((args: Prisma.UserCreateArgs) =>
-        Promise.resolve({ id: 'test-user-id', ...args.data })
-      ),
-      update: mock((args: Prisma.UserUpdateArgs) =>
-        Promise.resolve({ id: args.where.id, ...args.data })
-      ),
+      create: mock(() => Promise.resolve({ id: 'test-user-id' })),
+      update: mock(() => Promise.resolve({ id: 'test-user-id' })),
       delete: mock(() => Promise.resolve({ id: 'test-user-id' })),
       count: mock(() => Promise.resolve(0)),
     },
@@ -168,25 +155,17 @@ export function createMockPrismaClient(): MockPrismaClient {
     settings: {
       findUnique: mock(() => Promise.resolve(null)),
       upsert: mock(() => Promise.resolve({ id: 'test-settings-id' })),
+      update: mock(() => Promise.resolve({ id: 'test-settings-id' })),
     },
     inquiry: {
       findUnique: mock(() => Promise.resolve(null)),
       findMany: mock(() => Promise.resolve([])),
-      create: mock((args: Prisma.InquiryCreateArgs) =>
-        Promise.resolve({ id: 'test-inquiry-id', ...args.data })
-      ),
-      update: mock((args: Prisma.InquiryUpdateArgs) =>
-        Promise.resolve({ id: args.where.id, ...args.data })
-      ),
+      create: mock(() => Promise.resolve({ id: 'test-inquiry-id' })),
+      update: mock(() => Promise.resolve({ id: 'test-inquiry-id' })),
       delete: mock(() => Promise.resolve({ id: 'test-inquiry-id' })),
       count: mock(() => Promise.resolve(0)),
     },
-    $transaction: mock((fn: unknown) => {
-      if (typeof fn === 'function') {
-        return fn(mockPrisma)
-      }
-      return Promise.resolve(fn)
-    }),
+    $transaction: mock(() => Promise.resolve([])),
     $queryRaw: mock(() => Promise.resolve([{ '1': 1 }])),
   }
 }

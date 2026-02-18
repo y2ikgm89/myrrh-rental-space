@@ -143,7 +143,7 @@ export function toPlainObject<T>(obj: T): T {
   }
 
   try {
-    return JSON.parse(JSON.stringify(obj)) as T
+    return JSON.parse(JSON.stringify(obj))
   } catch {
     // 循環参照や BigInt などでエラーが発生した場合
     // Server Component でのエラーをわかりやすくする
@@ -177,7 +177,7 @@ export function toPlainArray<T>(arr: T[]): T[] {
   }
 
   try {
-    return JSON.parse(JSON.stringify(arr)) as T[]
+    return JSON.parse(JSON.stringify(arr))
   } catch {
     throw new Error(
       `[serialize] Failed to convert array to plain array. ` +
@@ -333,50 +333,6 @@ export function extractFirstFromCommaList(value: string | null | undefined): str
   return first ? first.trim() : null
 }
 
-/**
- * 配列の指定インデックスの要素を安全に取得
- *
- * @typeParam T - 配列要素の型
- * @param arr - 対象配列
- * @param index - 取得するインデックス（デフォルト: 0）
- * @returns 要素、または undefined
- *
- * @example
- * ```typescript
- * safeArrayAccess(['a', 'b', 'c'], 1)
- * // => "b"
- *
- * safeArrayAccess([], 0)
- * // => undefined
- * ```
- */
-export function safeArrayAccess<T>(arr: T[] | undefined | null, index = 0): T | undefined {
-  if (!arr || arr.length === 0) return undefined
-  return arr[index]
-}
-
-/**
- * 文字列の指定インデックスの文字を安全に取得
- *
- * @param str - 対象文字列
- * @param index - 取得するインデックス（デフォルト: 0）
- * @param fallback - 取得できない場合のフォールバック値（デフォルト: ''）
- * @returns 文字、またはフォールバック値
- *
- * @example
- * ```typescript
- * safeCharAt('Hello', 0)
- * // => "H"
- *
- * safeCharAt('', 0, 'X')
- * // => "X"
- * ```
- */
-export function safeCharAt(str: string | undefined | null, index = 0, fallback = ''): string {
-  if (!str || str.length <= index) return fallback
-  return str[index] ?? fallback
-}
-
 
 // =============================================================================
 // Type-safe Object Utilities
@@ -399,6 +355,8 @@ export function safeCharAt(str: string | undefined | null, index = 0, fallback =
  * ```
  */
 export function keysOf<T extends object>(obj: T): (keyof T)[] {
+  // Object.keys() は string[] を返す（TypeScript の構造的型付けの制約）。
+  // keyof T も実行時には文字列キーのため、この as は型安全。
   return Object.keys(obj) as (keyof T)[]
 }
 
@@ -410,6 +368,8 @@ export function keysOf<T extends object>(obj: T): (keyof T)[] {
  * @returns [key, value] ペアの配列（型安全）
  */
 export function entriesOf<T extends object>(obj: T): [keyof T, T[keyof T]][] {
+  // Object.entries() は [string, T[keyof T]][] を返す（TypeScript の構造的型付けの制約）。
+  // keyof T も実行時には文字列キーのため、この as は型安全。
   return Object.entries(obj) as [keyof T, T[keyof T]][]
 }
 
@@ -436,32 +396,6 @@ export function filterTruthy<T>(
   return arr.filter((x): x is T => Boolean(x))
 }
 
-
-/**
- * DOM属性を型安全にパースする
- *
- * 属性値が許可された値の配列に含まれているか検証し、
- * 含まれていればその値を返し、そうでなければデフォルト値を返します。
- *
- * @example
- * ```typescript
- * const VARIANTS = ['primary', 'secondary', 'outline'] as const
- * type Variant = typeof VARIANTS[number]
- *
- * // Before: (domNode.getAttribute('data-variant') as Variant) || 'primary'
- * // After:  parseEnumAttribute(domNode.getAttribute('data-variant'), VARIANTS, 'primary')
- * ```
- */
-export function parseEnumAttribute<T extends string>(
-  value: string | null,
-  allowedValues: readonly T[],
-  defaultValue: T
-): T {
-  if (value !== null && allowedValues.includes(value as T)) {
-    return value as T
-  }
-  return defaultValue
-}
 
 
 // =============================================================================
@@ -519,48 +453,3 @@ export function createTypeGuard<T extends string>(
   }
 }
 
-/**
- * 値を検証し、有効なら返し、無効ならデフォルト値を返す
- *
- * URLパラメータやフォーム入力の型安全なパースに使用
- *
- * @example
- * ```typescript
- * const STATUSES = ['active', 'inactive', 'expired'] as const
- * type Status = typeof STATUSES[number]
- *
- * // Before: params.status as Status | undefined
- * // After:  parseTypedValue(params.status, STATUSES)
- *
- * const status = parseTypedValue(params.status, STATUSES)
- * // status is Status | undefined
- * ```
- */
-export function parseTypedValue<T extends string>(
-  value: string | null | undefined,
-  allowedValues: readonly T[]
-): T | undefined {
-  if (value === null || value === undefined) return undefined
-  const validSet = new Set<string>(allowedValues)
-  return validSet.has(value) ? (value as T) : undefined
-}
-
-/**
- * 値を検証し、有効なら返し、無効ならデフォルト値を返す（デフォルト必須版）
- *
- * @example
- * ```typescript
- * const TYPES = ['PERCENTAGE', 'FIXED_AMOUNT'] as const
- * type CouponType = typeof TYPES[number]
- *
- * const type = parseTypedValueOrDefault(params.type, TYPES, 'PERCENTAGE')
- * // type is always CouponType (never undefined)
- * ```
- */
-export function parseTypedValueOrDefault<T extends string>(
-  value: string | null | undefined,
-  allowedValues: readonly T[],
-  defaultValue: T
-): T {
-  return parseTypedValue(value, allowedValues) ?? defaultValue
-}

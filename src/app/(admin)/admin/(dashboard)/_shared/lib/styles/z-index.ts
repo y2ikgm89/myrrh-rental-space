@@ -18,7 +18,7 @@
  * className={`z-[${Z_INDEX.editorToolbar}]`}
  */
 
-export const Z_INDEX: Record<string, number> = {
+export const Z_INDEX = {
   // Base (0-9)
   base: 0,
 
@@ -52,7 +52,7 @@ export const Z_INDEX: Record<string, number> = {
   toast: 95,
   tooltip: 97,
   emergency: 99,
-}
+} satisfies Record<string, number>
 
 export type ZIndexKey = keyof typeof Z_INDEX
 

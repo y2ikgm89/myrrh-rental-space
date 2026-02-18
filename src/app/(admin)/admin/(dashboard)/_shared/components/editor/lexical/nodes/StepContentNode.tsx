@@ -1,4 +1,4 @@
-/**
+﻿/**
  * StepContent Node
  *
  * @description ステップのコンテンツ部分
@@ -13,29 +13,14 @@ import type {
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
-  NodeKey,
-  SerializedElementNode,
 } from 'lexical'
-import { $applyNodeReplacement, ElementNode, $createParagraphNode, $isElementNode } from 'lexical'
-
-// =============================================================================
-// Types
-// =============================================================================
-
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface SerializedStepContentNode extends SerializedElementNode {}
-
-// =============================================================================
-// Constants
-// =============================================================================
-
-const CONTENT_CLASS = 'text-muted-foreground text-sm'
+import { $create, ElementNode } from 'lexical'
 
 // =============================================================================
 // DOM Conversion
 // =============================================================================
 
-function $convertStepContentElement(_domNode: Node): null | DOMConversionOutput {
+function $convertStepContentElement(_element: HTMLElement): null | DOMConversionOutput {
   const node = $createStepContentNode()
   return { node }
 }
@@ -45,22 +30,13 @@ function $convertStepContentElement(_domNode: Node): null | DOMConversionOutput 
 // =============================================================================
 
 export class StepContentNode extends ElementNode {
-  static getType(): string {
-    return 'step-content'
+  override $config() {
+    return this.config('step-content', { extends: ElementNode })
   }
 
-  static clone(node: StepContentNode): StepContentNode {
-    return new StepContentNode(node.__key)
-  }
-
-  static importJSON(serializedNode: SerializedStepContentNode): StepContentNode {
-    return $createStepContentNode().updateFromJSON(serializedNode)
-  }
-
-  static importDOM(): DOMConversionMap | null {
+  static override importDOM(): DOMConversionMap | null {
     return {
-      div: (domNode: Node) => {
-        const element = domNode as HTMLElement
+      div: (element: HTMLElement) => {
         if (element.hasAttribute('data-step-content')) {
           return {
             conversion: $convertStepContentElement,
@@ -72,64 +48,34 @@ export class StepContentNode extends ElementNode {
     }
   }
 
-  constructor(key?: NodeKey) {
-    super(key)
-  }
-
-  exportJSON(): SerializedStepContentNode {
-    return {
-      ...super.exportJSON(),
-    }
-  }
-
-  exportDOM(): DOMExportOutput {
+  override exportDOM(): DOMExportOutput {
     const element = document.createElement('div')
     element.setAttribute('data-step-content', 'true')
-    element.className = CONTENT_CLASS
+
     return { element }
   }
 
-  createDOM(_config: EditorConfig): HTMLElement {
+  override createDOM(_config: EditorConfig): HTMLElement {
     const element = document.createElement('div')
     element.setAttribute('data-step-content', 'true')
-    element.className = CONTENT_CLASS
+
     return element
   }
 
-  updateDOM(): boolean {
+  override updateDOM(): boolean {
     return false
   }
 
-  canInsertTextBefore(): false {
-    return false
-  }
-
-  canInsertTextAfter(): false {
-    return false
-  }
-
-  collapseAtStart(): boolean {
-    const children = this.getChildren()
-    const paragraph = $createParagraphNode()
-
-    if (children.length > 0) {
-      const firstChild = children[0]
-      if ($isElementNode(firstChild)) {
-        const firstChildChildren = firstChild.getChildren()
-        for (const child of firstChildChildren) {
-          paragraph.append(child)
-        }
-      }
-    }
-
-    const parent = this.getParent()
-    if (parent) {
-      const grandParent = parent.getParent()
-      if (grandParent) {
-        grandParent.replace(paragraph)
-      }
-    }
+  override isShadowRoot(): boolean {
     return true
+  }
+
+  override canInsertTextBefore(): false {
+    return false
+  }
+
+  override canInsertTextAfter(): false {
+    return false
   }
 }
 
@@ -143,7 +89,7 @@ export class StepContentNode extends ElementNode {
  * @returns StepContentNode インスタンス
  */
 export function $createStepContentNode(): StepContentNode {
-  return $applyNodeReplacement(new StepContentNode())
+  return $create(StepContentNode)
 }
 
 /**

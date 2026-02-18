@@ -5,6 +5,7 @@
  * トークン管理、フィード取得、oEmbed取得などのユーティリティ
  */
 
+import { z } from 'zod'
 import type { ApiKeyTestResult } from '@/admin/types/api-keys'
 import { isValidInstagramToken } from '@/admin/lib/validations/instagram'
 import { maskApiKey } from '@/admin/lib/api-keys/helpers'
@@ -14,6 +15,12 @@ import { maskApiKey } from '@/admin/lib/api-keys/helpers'
 // =============================================================================
 
 export type InstagramMediaType = 'IMAGE' | 'VIDEO' | 'CAROUSEL_ALBUM'
+
+const VALID_MEDIA_TYPES: ReadonlySet<string> = new Set(['IMAGE', 'VIDEO', 'CAROUSEL_ALBUM'])
+
+function isValidMediaType(value: unknown): value is InstagramMediaType {
+  return typeof value === 'string' && VALID_MEDIA_TYPES.has(value)
+}
 
 export interface InstagramMediaItem {
   id: string
@@ -40,40 +47,37 @@ export interface InstagramOembedResponse {
   providerName: string
 }
 
-interface InstagramApiMedia {
-  id: string
-  caption?: string
-  media_type: InstagramMediaType
-  media_url: string
-  permalink: string
-  thumbnail_url?: string
-  timestamp: string
-}
+const instagramApiMediaSchema = z.object({
+  id: z.string(),
+  caption: z.string().optional(),
+  media_type: z.string(),
+  media_url: z.string(),
+  permalink: z.string(),
+  thumbnail_url: z.string().optional(),
+  timestamp: z.string(),
+})
 
-interface InstagramApiFeedResponse {
-  data: InstagramApiMedia[]
-  paging?: {
-    cursors?: {
-      after?: string
-      before?: string
-    }
-    next?: string
-  }
-}
+const instagramApiFeedResponseSchema = z.object({
+  data: z.array(instagramApiMediaSchema),
+  paging: z.object({
+    cursors: z.object({
+      after: z.string().optional(),
+      before: z.string().optional(),
+    }).optional(),
+    next: z.string().optional(),
+  }).optional(),
+})
 
-interface InstagramApiUserResponse {
-  id: string
-  username: string
-  account_type: string
-  media_count?: number
-}
+const instagramApiUserResponseSchema = z.object({
+  id: z.string(),
+  username: z.string(),
+  account_type: z.string(),
+  media_count: z.number().optional(),
+})
 
-interface InstagramApiError {
-  error?: {
-    message: string
-    type: string
-    code: number
-  }
+function parseApiErrorMessage(json: unknown): string | undefined {
+  const result = z.object({ error: z.object({ message: z.string() }).optional() }).safeParse(json)
+  return result.success ? result.data.error?.message : undefined
 }
 
 // =============================================================================
@@ -111,23 +115,29 @@ export async function fetchInstagramFeed(
   })
 
   if (!response.ok) {
-    const errorData = (await response.json()) as InstagramApiError
+    const errorJson: unknown = await response.json()
     throw new Error(
-      errorData.error?.message || `Instagram API error: ${response.status}`
+      parseApiErrorMessage(errorJson) ?? `Instagram API error: ${response.status}`
     )
   }
 
-  const data = (await response.json()) as InstagramApiFeedResponse
+  const json: unknown = await response.json()
+  const parsed = instagramApiFeedResponseSchema.parse(json)
 
-  return data.data.map((item) => ({
-    id: item.id,
-    caption: item.caption,
-    mediaType: item.media_type,
-    mediaUrl: item.media_url,
-    permalink: item.permalink,
-    thumbnailUrl: item.thumbnail_url,
-    timestamp: item.timestamp,
-  }))
+  return parsed.data.map((item) => {
+    if (!isValidMediaType(item.media_type)) {
+      throw new Error(`Invalid media type: ${item.media_type}`)
+    }
+    return {
+      id: item.id,
+      caption: item.caption,
+      mediaType: item.media_type,
+      mediaUrl: item.media_url,
+      permalink: item.permalink,
+      thumbnailUrl: item.thumbnail_url,
+      timestamp: item.timestamp,
+    }
+  })
 }
 
 // =============================================================================
@@ -153,19 +163,20 @@ export async function fetchInstagramOembed(
   const response = await fetch(url.toString())
 
   if (!response.ok) {
-    const errorData = (await response.json()) as InstagramApiError
+    const errorJson: unknown = await response.json()
     throw new Error(
-      errorData.error?.message || `oEmbed API error: ${response.status}`
+      parseApiErrorMessage(errorJson) ?? `oEmbed API error: ${response.status}`
     )
   }
 
-  const data = (await response.json()) as {
-    html: string
-    width: number
-    height?: number
-    author_name?: string
-    provider_name: string
-  }
+  const json: unknown = await response.json()
+  const data = z.object({
+    html: z.string(),
+    width: z.number(),
+    height: z.number().optional(),
+    author_name: z.string().optional(),
+    provider_name: z.string(),
+  }).parse(json)
 
   return {
     html: data.html,
@@ -210,16 +221,14 @@ export async function exchangeCodeForToken(
   })
 
   if (!response.ok) {
-    const errorData = (await response.json()) as InstagramApiError
+    const errorJson: unknown = await response.json()
     throw new Error(
-      errorData.error?.message || `Token exchange failed: ${response.status}`
+      parseApiErrorMessage(errorJson) ?? `Token exchange failed: ${response.status}`
     )
   }
 
-  const data = (await response.json()) as {
-    access_token: string
-    user_id: number
-  }
+  const json: unknown = await response.json()
+  const data = z.object({ access_token: z.string(), user_id: z.number() }).parse(json)
 
   return {
     accessToken: data.access_token,
@@ -246,18 +255,15 @@ export async function exchangeForLongLivedToken(
   const response = await fetch(url.toString())
 
   if (!response.ok) {
-    const errorData = (await response.json()) as InstagramApiError
+    const errorJson: unknown = await response.json()
     throw new Error(
-      errorData.error?.message ||
+      parseApiErrorMessage(errorJson) ??
         `Long-lived token exchange failed: ${response.status}`
     )
   }
 
-  const data = (await response.json()) as {
-    access_token: string
-    token_type: string
-    expires_in: number
-  }
+  const json: unknown = await response.json()
+  const data = z.object({ access_token: z.string(), token_type: z.string(), expires_in: z.number() }).parse(json)
 
   return {
     accessToken: data.access_token,
@@ -281,17 +287,14 @@ export async function refreshLongLivedToken(
   const response = await fetch(url.toString())
 
   if (!response.ok) {
-    const errorData = (await response.json()) as InstagramApiError
+    const errorJson: unknown = await response.json()
     throw new Error(
-      errorData.error?.message || `Token refresh failed: ${response.status}`
+      parseApiErrorMessage(errorJson) ?? `Token refresh failed: ${response.status}`
     )
   }
 
-  const data = (await response.json()) as {
-    access_token: string
-    token_type: string
-    expires_in: number
-  }
+  const json: unknown = await response.json()
+  const data = z.object({ access_token: z.string(), token_type: z.string(), expires_in: z.number() }).parse(json)
 
   return {
     accessToken: data.access_token,
@@ -319,13 +322,14 @@ export async function fetchInstagramUserInfo(
   const response = await fetch(url.toString())
 
   if (!response.ok) {
-    const errorData = (await response.json()) as InstagramApiError
+    const errorJson: unknown = await response.json()
     throw new Error(
-      errorData.error?.message || `User info fetch failed: ${response.status}`
+      parseApiErrorMessage(errorJson) ?? `User info fetch failed: ${response.status}`
     )
   }
 
-  const data = (await response.json()) as InstagramApiUserResponse
+  const json: unknown = await response.json()
+  const data = instagramApiUserResponseSchema.parse(json)
 
   return {
     id: data.id,

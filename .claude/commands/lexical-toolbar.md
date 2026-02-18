@@ -27,19 +27,14 @@ Lexicalエディタのツールバーに新規ボタンを追加します。
 
 ```typescript
 // plugins/${機能名}Plugin.tsx
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 
-// useCallback使用でReact Compiler最適化
+// React Compiler が自動メモ化するため useCallback 不要
 export function use${機能名}Dialog() {
   const [isOpen, setIsOpen] = useState(false)
 
-  const open${機能名}Dialog = useCallback(() => {
-    setIsOpen(true)
-  }, [])
-
-  const close${機能名}Dialog = useCallback(() => {
-    setIsOpen(false)
-  }, [])
+  const open${機能名}Dialog = () => setIsOpen(true)
+  const close${機能名}Dialog = () => setIsOpen(false)
 
   return {
     is${機能名}DialogOpen: isOpen,
@@ -186,15 +181,15 @@ editor.update(() => {
 // 状態管理
 const [is${機能名}Active, setIs${機能名}Active] = useState(false)
 
-// updateToolbarで更新
-const updateToolbar = useCallback(() => {
+// updateToolbarで更新（React Compiler が自動メモ化するため useCallback 不要）
+const updateToolbar = () => {
   const selection = $getSelection()
   if ($isRangeSelection(selection)) {
     // カスタムノードのチェック
     const node = selection.anchor.getNode()
     setIs${機能名}Active($is${機能名}Node(node) || $is${機能名}Node(node.getParent()))
   }
-}, [])
+}
 
 // ボタンのvariant
 <Button

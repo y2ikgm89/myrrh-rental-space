@@ -940,7 +940,7 @@ export async function renewWebhookIfNeeded(): Promise<WebhookRenewalResult> {
     }
 
     // 新しいWebhookを設定
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL
+    const baseUrl = process.env["NEXT_PUBLIC_APP_URL"] || process.env["VERCEL_URL"]
     if (!baseUrl) {
       return { success: false, renewed: false, error: 'APP_URL not configured' }
     }

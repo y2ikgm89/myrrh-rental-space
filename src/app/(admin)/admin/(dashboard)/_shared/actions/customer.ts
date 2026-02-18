@@ -4,6 +4,7 @@ import { prisma } from '@/shared/lib/prisma'
 import { updateTag } from 'next/cache'
 import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
 import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+import { createValidationError } from '@/shared/lib/action-helpers'
 import { withPermission } from '@/admin/lib/server-action-helpers'
 import type { CustomerWhereInput } from '@/shared/types/prisma'
 import { checkReadPermissionFor } from '@/admin/lib/permissions'
@@ -23,7 +24,6 @@ import {
 import { CustomerStatus } from '@/shared/lib/validations/enums'
 
 // Re-export types for consumers
-export type { CustomerFormInput as CreateCustomerInput } from '@/admin/lib/validations/customer'
 export type {
   CustomerData,
   CustomerWithReservations,
@@ -98,10 +98,8 @@ export async function getCustomers(
     }),
   ])
 
-  // Decimal型をnumber型に変換
   const formattedCustomers: CustomerData[] = customers.map((c) => ({
     ...c,
-    totalSpent: c.totalSpent ? Number(c.totalSpent) : null,
   }))
 
   return {
@@ -122,7 +120,7 @@ export const createCustomer = withPermission<[input: CustomerFormInput], { id: s
 )(async (_user, input): Promise<ActionResult<{ id: string }>> => {
   const parsed = customerFormSchema.safeParse(input)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? '入力が不正です')
+    return createValidationError(parsed.error)
   }
 
   const { lastName, firstName, lastNameKana, firstNameKana, email, phoneNumber, address, notes } = parsed.data
@@ -147,7 +145,7 @@ export const createCustomer = withPermission<[input: CustomerFormInput], { id: s
       phoneNumber: phoneNumber || null,
       address: address || null,
       notes: notes || null,
-      status: 'NEW',
+      status: CustomerStatus.NEW,
       isActive: true,
     },
   })
@@ -189,13 +187,12 @@ export async function getCustomerById(id: string): Promise<CustomerWithReservati
 
   return {
     ...customer,
-    totalSpent: customer.totalSpent ? Number(customer.totalSpent) : null,
     reservations: customer.reservations.map((r) => ({
       id: r.id,
       startTime: r.startTime,
       endTime: r.endTime,
       status: r.status,
-      totalPrice: r.totalPrice ? Number(r.totalPrice) : null,
+      totalPrice: r.totalPrice,
       space: r.space,
     })),
   }
@@ -215,6 +212,7 @@ export const updateCustomerStatus = withPermission<[id: string, status: Customer
 
   const customer = await prisma.customer.findUnique({
     where: { id },
+    select: { id: true },
   })
 
   if (!customer) {
@@ -246,6 +244,7 @@ export const updateCustomerNotes = withPermission<[id: string, notes: string | n
 
   const customer = await prisma.customer.findUnique({
     where: { id },
+    select: { id: true },
   })
 
   if (!customer) {
@@ -272,6 +271,7 @@ export const toggleCustomerActive = withPermission<[id: string], void>(
 )(async (_user, id): Promise<ActionResult<void>> => {
   const customer = await prisma.customer.findUnique({
     where: { id },
+    select: { id: true, isActive: true },
   })
 
   if (!customer) {

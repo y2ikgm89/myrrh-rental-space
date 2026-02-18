@@ -1,6 +1,6 @@
 # Prisma パターンルール
 
-> Prisma 7.3 / PostgreSQL対応
+> Prisma 7.4 / PostgreSQL対応
 
 ## Enum パターン（Prisma 7 mapped enums）
 

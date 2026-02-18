@@ -1,4 +1,4 @@
-/**
+﻿/**
  * TabList Node
  *
  * @description タブのヘッダーリスト
@@ -14,29 +14,14 @@ import type {
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
-  NodeKey,
-  SerializedElementNode,
 } from 'lexical'
-import { $applyNodeReplacement, ElementNode } from 'lexical'
-
-// =============================================================================
-// Types
-// =============================================================================
-
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface SerializedTabListNode extends SerializedElementNode {}
-
-// =============================================================================
-// Constants
-// =============================================================================
-
-const LIST_CLASS = 'flex border-b bg-muted/50'
+import { $create, ElementNode } from 'lexical'
 
 // =============================================================================
 // DOM Conversion
 // =============================================================================
 
-function $convertTabListElement(_domNode: Node): null | DOMConversionOutput {
+function $convertTabListElement(_element: HTMLElement): null | DOMConversionOutput {
   const node = $createTabListNode()
   return { node }
 }
@@ -46,22 +31,13 @@ function $convertTabListElement(_domNode: Node): null | DOMConversionOutput {
 // =============================================================================
 
 export class TabListNode extends ElementNode {
-  static getType(): string {
-    return 'tab-list'
+  override $config() {
+    return this.config('tab-list', { extends: ElementNode })
   }
 
-  static clone(node: TabListNode): TabListNode {
-    return new TabListNode(node.__key)
-  }
-
-  static importJSON(serializedNode: SerializedTabListNode): TabListNode {
-    return $createTabListNode().updateFromJSON(serializedNode)
-  }
-
-  static importDOM(): DOMConversionMap | null {
+  static override importDOM(): DOMConversionMap | null {
     return {
-      div: (domNode: Node) => {
-        const element = domNode as HTMLElement
+      div: (element: HTMLElement) => {
         if (element.getAttribute('role') === 'tablist') {
           return {
             conversion: $convertTabListElement,
@@ -73,39 +49,29 @@ export class TabListNode extends ElementNode {
     }
   }
 
-  constructor(key?: NodeKey) {
-    super(key)
-  }
-
-  exportJSON(): SerializedTabListNode {
-    return {
-      ...super.exportJSON(),
-    }
-  }
-
-  exportDOM(): DOMExportOutput {
+  override exportDOM(): DOMExportOutput {
     const element = document.createElement('div')
     element.setAttribute('role', 'tablist')
-    element.className = LIST_CLASS
+
     return { element }
   }
 
-  createDOM(_config: EditorConfig): HTMLElement {
+  override createDOM(_config: EditorConfig): HTMLElement {
     const element = document.createElement('div')
     element.setAttribute('role', 'tablist')
-    element.className = LIST_CLASS
+
     return element
   }
 
-  updateDOM(): boolean {
+  override updateDOM(): boolean {
     return false
   }
 
-  canInsertTextBefore(): false {
+  override canInsertTextBefore(): false {
     return false
   }
 
-  canInsertTextAfter(): false {
+  override canInsertTextAfter(): false {
     return false
   }
 }
@@ -120,7 +86,7 @@ export class TabListNode extends ElementNode {
  * @returns TabListNode インスタンス
  */
 export function $createTabListNode(): TabListNode {
-  return $applyNodeReplacement(new TabListNode())
+  return $create(TabListNode)
 }
 
 /**

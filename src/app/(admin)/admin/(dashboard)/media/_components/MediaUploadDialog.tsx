@@ -63,7 +63,8 @@ export function MediaUploadDialog({
     if (selectedFile.type.startsWith('image/')) {
       const reader = new FileReader()
       reader.onload = (e) => {
-        setPreviewUrl(e.target?.result as string)
+        const result = e.target?.result
+        if (typeof result === 'string') setPreviewUrl(result)
       }
       reader.readAsDataURL(selectedFile)
     } else {

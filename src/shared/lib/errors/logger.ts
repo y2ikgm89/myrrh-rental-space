@@ -45,10 +45,10 @@ export function logError(error: unknown, logContext: ErrorLogContext): void {
     context: logContext.context,
     userId: logContext.userId,
     timestamp: logContext.timestamp ?? new Date(),
-    environment: process.env.NODE_ENV,
+    environment: process.env["NODE_ENV"],
   }
 
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env["NODE_ENV"] === 'production') {
     console.error(JSON.stringify(errorDetails))
   } else {
     console.error('[Error]', errorDetails)
@@ -65,8 +65,10 @@ export function logError(error: unknown, logContext: ErrorLogContext): void {
  * })
  * logDbError(error, { context: { table: 'users' } })
  */
-export function createErrorLogger(defaultContext: Partial<ErrorLogContext>) {
+export function createErrorLogger(
+  defaultContext: Pick<ErrorLogContext, 'category' | 'severity'> & Partial<ErrorLogContext>
+) {
   return (error: unknown, context?: Partial<ErrorLogContext>) => {
-    logError(error, { ...defaultContext, ...context } as ErrorLogContext)
+    logError(error, { ...defaultContext, ...context })
   }
 }

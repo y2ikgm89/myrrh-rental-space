@@ -1,7 +1,7 @@
 /**
  * カレンダー同期 Cron API
  *
- * Vercel Cronまたは外部スケジューラーから定期的に呼び出され、
+ * Cloud Schedulerまたは外部スケジューラーから定期的に呼び出され、
  * Google Calendarとの双方向同期を実行します。
  *
  * ## 機能
@@ -30,7 +30,7 @@ import { CalendarSyncMethod } from '@/shared/generated/prisma/enums'
  * カレンダー同期用Cronエンドポイント
  * GET /api/cron/calendar-sync
  *
- * Vercel Cronまたは外部スケジューラーから呼び出される
+ * Cloud Schedulerまたは外部スケジューラーから呼び出される
  * 設定で指定された間隔（デフォルト5分）でカレンダーの変更をチェック
  *
  * セキュリティ: CRON_SECRET環境変数による認証
@@ -43,10 +43,10 @@ export async function GET() {
     // Next.js 16: headers() で動的にヘッダーを取得
     const headersList = await headers()
     const authHeader = headersList.get('authorization')
-    const cronSecret = process.env.CRON_SECRET
+    const cronSecret = process.env["CRON_SECRET"]
 
     // 本番環境ではCRON_SECRETを必須とする
-    if (!cronSecret && process.env.NODE_ENV === 'production') {
+    if (!cronSecret && process.env["NODE_ENV"] === 'production') {
       logError(new Error('CRON_SECRET is not set in production environment'), {
         category: ErrorCategory.AUTHORIZATION,
         severity: ErrorSeverity.CRITICAL,
@@ -59,11 +59,11 @@ export async function GET() {
     }
 
     // 開発環境で認証をスキップする場合は警告ログ
-    if (!cronSecret && process.env.NODE_ENV !== 'production') {
+    if (!cronSecret && process.env["NODE_ENV"] !== 'production') {
       logError(new Error('CRON_SECRET is not set - authentication skipped in development'), {
         category: ErrorCategory.AUTHORIZATION,
         severity: ErrorSeverity.LOW,
-        context: { operation: 'calendarSyncCron', environment: process.env.NODE_ENV },
+        context: { operation: 'calendarSyncCron', environment: process.env["NODE_ENV"] },
       })
     }
 

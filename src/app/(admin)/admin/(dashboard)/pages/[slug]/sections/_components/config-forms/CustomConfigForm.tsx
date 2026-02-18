@@ -30,7 +30,7 @@ const LexicalEditor = dynamic(
 
 export default function CustomConfigForm({ section, onSave, isPending, onDirtyChange }: ConfigFormProps) {
   const config = getCustomConfig(section.config)
-  const [editorContent, setEditorContent] = useState(section.content || '')
+  const [editorContentJson, setEditorContentJson] = useState('')
 
   const {
     register,
@@ -43,7 +43,7 @@ export default function CustomConfigForm({ section, onSave, isPending, onDirtyCh
   })
 
   const handleFormSubmit = (formData: CustomConfig) => {
-    onSave({ config: formData, content: editorContent })
+    onSave({ config: formData, contentJson: editorContentJson })
   }
 
   return (
@@ -113,8 +113,9 @@ export default function CustomConfigForm({ section, onSave, isPending, onDirtyCh
         <div className="space-y-2">
           <Label>コンテンツ</Label>
           <LexicalEditor
-            content={section.content || ''}
-            onChange={setEditorContent}
+            contentJson={section.contentJson ? JSON.stringify(section.contentJson) : undefined}
+            contentHtml={section.contentHtml || ''}
+            onChange={setEditorContentJson}
             placeholder="セクションのコンテンツを入力..."
             className={EDITOR_PROSE_CLASSES}
             height="400px"

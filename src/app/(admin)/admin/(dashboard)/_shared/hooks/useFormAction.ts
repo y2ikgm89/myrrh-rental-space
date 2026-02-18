@@ -16,7 +16,6 @@ import {
   type FieldValues,
   type UseFormReturn,
   type DefaultValues,
-  type Path,
 } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
@@ -112,7 +111,7 @@ export function useFormAction<
       }
 
       // コールバック
-      options?.onSuccess?.(result as Extract<ActionResult<TOutput>, { success: true }>)
+      options?.onSuccess?.(result)
 
       // リダイレクト or リフレッシュ
       if (options?.redirectTo) {
@@ -130,7 +129,7 @@ export function useFormAction<
       if (result.fieldErrors) {
         for (const [field, errors] of Object.entries(result.fieldErrors)) {
           if (errors && errors.length > 0) {
-            form.setError(field as Path<TInput>, {
+            form.setError(JSON.parse(JSON.stringify(field)), {
               type: 'server',
               message: errors[0],
             })

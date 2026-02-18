@@ -14,8 +14,10 @@ import {
   $isHorizontalRuleNode,
 } from '@lexical/react/LexicalHorizontalRuleNode'
 
-import { $createImageNode, $isImageNode, ImageNode } from './nodes/ImageNode'
-import { $createYouTubeNode, $isYouTubeNode, YouTubeNode } from './nodes/YouTubeNode'
+import { $getState } from 'lexical'
+
+import { $createImageNode, $isImageNode, altState, ImageNode, srcState } from './nodes/ImageNode'
+import { $createYouTubeNode, $isYouTubeNode, videoIdState, YouTubeNode } from './nodes/YouTubeNode'
 
 // =============================================================================
 // Validation Helpers
@@ -43,7 +45,7 @@ function isValidImageUrl(url: string): boolean {
 // ![alt](url) -> ImageNode
 const IMAGE: TextMatchTransformer = {
   dependencies: [ImageNode],
-  export: (node) => ($isImageNode(node) ? `![${node.__alt || ''}](${node.__src})` : null),
+  export: (node) => ($isImageNode(node) ? `![${$getState(node, altState) || ''}](${$getState(node, srcState)})` : null),
   importRegExp: /!(?:\[([^\[\]]*)\])(?:\(([^()]+)\))/,
   regExp: /!(?:\[([^\[\]]*)\])(?:\(([^()]+)\))$/,
   replace: (textNode, match) => {
@@ -59,7 +61,7 @@ const IMAGE: TextMatchTransformer = {
 // @[youtube](videoId) -> YouTubeNode
 const YOUTUBE: TextMatchTransformer = {
   dependencies: [YouTubeNode],
-  export: (node) => ($isYouTubeNode(node) ? `@[youtube](${node.__videoId})` : null),
+  export: (node) => ($isYouTubeNode(node) ? `@[youtube](${$getState(node, videoIdState)})` : null),
   importRegExp: /@\[youtube\]\(([A-Za-z0-9_-]{11})\)/,
   regExp: /@\[youtube\]\(([A-Za-z0-9_-]{11})\)$/,
   replace: (textNode, match) => {

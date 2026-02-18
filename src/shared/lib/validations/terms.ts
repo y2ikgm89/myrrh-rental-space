@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { TermsType, TermsStatus } from '@/shared/generated/prisma/enums'
 import { isValidTermsType } from '@/shared/lib/validations/enums'
+import { lexicalJsonSchema } from '@/shared/lib/validations/lexical'
 
 /**
  * 文字列をTermsTypeに変換（無効な値はundefined）
@@ -71,7 +72,7 @@ export type UpdateTermsInput = z.input<typeof updateTermsSchema>
  */
 export const createTermsVersionSchema = z.object({
   termsId: z.string().uuid({ error: '規約IDが無効です' }),
-  content: z.string().min(1, { error: 'コンテンツを入力してください' }),
+  contentJson: lexicalJsonSchema,
 })
 
 /**
@@ -85,7 +86,7 @@ export const publishTermsVersionSchema = z.object({
  * 規約バージョン更新スキーマ
  */
 export const updateTermsVersionSchema = z.object({
-  content: z.string().min(1, { error: 'コンテンツを入力してください' }),
+  contentJson: lexicalJsonSchema,
 })
 
 export type CreateTermsVersionInput = z.input<typeof createTermsVersionSchema>
@@ -181,7 +182,8 @@ export interface TermsWithVersion {
   currentVersion: {
     id: string
     version: number
-    content: string
+    contentHtml: string
+    contentJson: unknown
     publishedAt: Date
   } | null
 }
@@ -200,7 +202,7 @@ export interface SerializedTermsWithVersion {
   currentVersion: {
     id: string
     version: number
-    content: string
+    contentHtml: string
     publishedAt: string // ISO 8601形式
   } | null
 }
@@ -224,7 +226,7 @@ export function serializeTermsWithVersion(
       ? {
           id: terms.currentVersion.id,
           version: terms.currentVersion.version,
-          content: terms.currentVersion.content,
+          contentHtml: terms.currentVersion.contentHtml,
           publishedAt: terms.currentVersion.publishedAt.toISOString(),
         }
       : null,
@@ -263,7 +265,8 @@ export interface TermsVersionDetail {
   id: string
   termsId: string
   version: number
-  content: string
+  contentHtml: string
+  contentJson: unknown
   status: TermsStatus
   publishedAt: Date | null
   publishedBy: string | null

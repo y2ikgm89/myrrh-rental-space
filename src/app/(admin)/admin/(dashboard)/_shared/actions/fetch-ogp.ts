@@ -131,7 +131,7 @@ function isUrlSafe(urlString: string): { safe: boolean; error?: string } {
 function extractMetaContent(html: string, property: string): string {
   // og:property or name attribute
   const ogRegex = new RegExp(
-    `<meta[^>]*(?:property|name)=["']${property}["'][^>]*content=["']([^"']*)["']`,
+    `<meta[^>]*(?:property|name)=["']${RegExp.escape(property)}["'][^>]*content=["']([^"']*)["']`,
     'i'
   )
   const ogMatch = html.match(ogRegex)
@@ -139,7 +139,7 @@ function extractMetaContent(html: string, property: string): string {
 
   // content first pattern
   const contentFirstRegex = new RegExp(
-    `<meta[^>]*content=["']([^"']*)["'][^>]*(?:property|name)=["']${property}["']`,
+    `<meta[^>]*content=["']([^"']*)["'][^>]*(?:property|name)=["']${RegExp.escape(property)}["']`,
     'i'
   )
   const contentFirstMatch = html.match(contentFirstRegex)

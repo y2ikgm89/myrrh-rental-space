@@ -38,13 +38,13 @@ type AnyPreviewData = PostPreviewData | NewsPreviewData | PagePreviewData
  * @param identifier - スラッグまたは識別子（新規作成時は 'new'）
  * @param data - プレビューデータ
  */
-export function savePreviewData<T extends ContentType>(
-  contentType: T,
+export function savePreviewData(
+  contentType: ContentType,
   identifier: string,
-  data: PreviewDataMap[T]
+  data: AnyPreviewData
 ): void {
   const key = getPreviewStorageKey(contentType, identifier)
-  const container: PreviewData<PreviewDataMap[T]> = {
+  const container: PreviewData<AnyPreviewData> = {
     version: 1,
     timestamp: Date.now(),
     contentType,
@@ -120,9 +120,7 @@ export function clearPreviewData(
  */
 export function usePreview<T extends ContentType>(contentType: T) {
   const save = (identifier: string, data: PreviewDataMap[T] | AnyPreviewData) => {
-    // 外部ライブラリ型要件: PreviewDataMapの型はcontentTypeに依存するが、
-    // 統一エディターから呼ばれる場合はAnyPreviewData型で渡される
-    savePreviewData(contentType, identifier, data as PreviewDataMap[T])
+    savePreviewData(contentType, identifier, data)
   }
 
   const open = (identifier: string, basePath: string) => {

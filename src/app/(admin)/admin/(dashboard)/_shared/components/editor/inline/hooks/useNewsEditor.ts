@@ -53,7 +53,7 @@ function toFormData(data?: NewsData): NewsFormData {
     return {
       slug: '',
       title: '',
-      content: '',
+      contentJson: '',
       isPublished: false,
       publishedAt: '',
       contentWidth: '',
@@ -69,7 +69,7 @@ function toFormData(data?: NewsData): NewsFormData {
   return {
     slug: data.slug,
     title: data.title,
-    content: data.content,
+    contentJson: data.contentJson ? JSON.stringify(data.contentJson) : '',
     isPublished: data.isPublished,
     publishedAt: toFormDateString(data.publishedAt),
     contentWidth: toFormContentWidth(data.contentWidth),
@@ -86,7 +86,7 @@ function toSubmitPayload(formData: NewsFormData) {
   return {
     slug: formData.slug,
     title: formData.title,
-    content: formData.content,
+    contentJson: formData.contentJson,
     contentWidth: toSubmitContentWidth(formData.contentWidth),
     contentWidthCustom: toSubmitNumber(formData.contentWidthCustom),
     metaDescription: toNullableString(formData.metaDescription),
@@ -101,7 +101,7 @@ function toPreviewData(formData: NewsFormData): NewsPreviewData {
   return {
     title: formData.title || '無題',
     slug: formData.slug || 'preview-new',
-    content: formData.content || '',
+    content: formData.contentJson || '',
     publishedAt: formData.publishedAt || null,
   }
 }
@@ -133,7 +133,7 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
   // 監視値（型アサーション不要 - 具体的な型が推論される）
   const title = useWatch({ control, name: 'title' }) ?? ''
   const slug = useWatch({ control, name: 'slug' }) ?? ''
-  const content = useWatch({ control, name: 'content' }) ?? ''
+  const contentJson = useWatch({ control, name: 'contentJson' }) ?? ''
   const isPublished = useWatch({ control, name: 'isPublished' }) ?? false
 
   // isDirty計算
@@ -143,8 +143,8 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
   // Handlers (React Compiler auto-memoizes - no useCallback needed)
   // ==========================================================================
 
-  const handleContentChange = (html: string) => {
-    setValue('content', html, { shouldDirty: true })
+  const handleContentChange = (json: string) => {
+    setValue('contentJson', json, { shouldDirty: true })
     core.setHasEditorChanges(true)
   }
 
@@ -255,7 +255,8 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
     // 監視値
     title,
     slug,
-    content,
+    contentJson,
+    contentHtml: news?.contentHtml ?? '',
     isPublished,
 
     // パネル管理

@@ -130,11 +130,11 @@ export function SpaceListSection({ config, spaces, design }: SpaceListSectionPro
                     <span className="text-xs text-muted-foreground">
                       {space.capacity != null && `${space.capacity}名`}
                       {space.capacity != null && space.area != null && ' / '}
-                      {space.area != null && <>{Number(space.area)}m&sup2;</>}
+                      {space.area != null && <>{space.area}m&sup2;</>}
                     </span>
                     {space.hourlyPrice != null && (
                       <span className="text-sm font-medium text-primary-dark">
-                        &yen;{Number(space.hourlyPrice).toLocaleString()}/h
+                        &yen;{space.hourlyPrice.toLocaleString()}/h
                       </span>
                     )}
                   </div>

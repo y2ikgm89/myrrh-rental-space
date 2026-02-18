@@ -6,7 +6,7 @@
 
 import { describe, test, expect, beforeEach } from 'bun:test'
 import { createHeadlessEditor } from '@lexical/headless'
-import { $getRoot, type LexicalEditor } from 'lexical'
+import { $getRoot, $getState, type LexicalEditor } from 'lexical'
 
 // テスト対象
 import {
@@ -16,7 +16,7 @@ import {
 } from '@/admin/components/editor/lexical/inspector/hooks/inspectable-nodes'
 
 // ノードのインポート
-import { ButtonNode, $createButtonNode } from '@/admin/components/editor/lexical/nodes/ButtonNode'
+import { ButtonNode, $createButtonNode, buttonTextState, buttonHrefState } from '@/admin/components/editor/lexical/nodes/ButtonNode'
 import { ImageNode, $createImageNode } from '@/admin/components/editor/lexical/nodes/ImageNode'
 import { CalloutNode, $createCalloutNode } from '@/admin/components/editor/lexical/nodes/CalloutNode'
 import { BookmarkNode, $createBookmarkNode } from '@/admin/components/editor/lexical/nodes/BookmarkNode'
@@ -41,12 +41,16 @@ function createTestEditor(): LexicalEditor {
 
 describe('inspectable-nodes', () => {
   describe('INSPECTABLE_NODE_TYPES', () => {
-    test('対応しているノードタイプが4つ定義されている', () => {
-      expect(INSPECTABLE_NODE_TYPES).toHaveLength(4)
+    test('対応しているノードタイプが13つ定義されている', () => {
+      expect(INSPECTABLE_NODE_TYPES).toHaveLength(13)
     })
 
-    test('button, image, callout, bookmarkが含まれている', () => {
-      const expectedTypes: InspectableNodeType[] = ['button', 'image', 'callout', 'bookmark']
+    test('すべてのインスペクタブルノードタイプが含まれている', () => {
+      const expectedTypes: InspectableNodeType[] = [
+        'button', 'image', 'callout', 'bookmark', 'pullQuote',
+        'collapsible', 'steps', 'tabs', 'layout',
+        'youtube', 'x', 'instagram', 'pageBreak',
+      ]
       expect(INSPECTABLE_NODE_TYPES).toEqual(expectedTypes)
     })
 
@@ -136,14 +140,14 @@ describe('inspectable-nodes', () => {
     })
   })
 
-  describe('Discriminated Union型の型安全性', () => {
+  describe('NodeState APIによるプロパティアクセス', () => {
     let editor: LexicalEditor
 
     beforeEach(() => {
       editor = createTestEditor()
     })
 
-    test('nodeTypeでswitchすると正しい型に絞り込まれる', async () => {
+    test('$getStateでButtonNodeのプロパティを取得できる', async () => {
       await editor.update(() => {
         const root = $getRoot()
         root.clear()
@@ -158,24 +162,10 @@ describe('inspectable-nodes', () => {
           throw new Error('info should not be null')
         }
 
-        // switchで型が絞り込まれることを検証
-        switch (info.nodeType) {
-          case 'button':
-            // ButtonNode固有のメソッドが呼べることを確認
-            expect(info.node.getText()).toBe('テスト')
-            expect(info.node.getHref()).toBe('#')
-            break
-          case 'image':
-            // この分岐には入らないはず
-            expect(true).toBe(false)
-            break
-          case 'callout':
-            expect(true).toBe(false)
-            break
-          case 'bookmark':
-            expect(true).toBe(false)
-            break
-        }
+        expect(info.nodeType).toBe('button')
+        // NodeState APIでプロパティを読み取る
+        expect($getState(info.node, buttonTextState)).toBe('テスト')
+        expect($getState(info.node, buttonHrefState)).toBe('#')
       })
     })
   })

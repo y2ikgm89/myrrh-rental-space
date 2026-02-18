@@ -6,39 +6,40 @@
 
 'use client'
 
+import { $getState, $setState } from 'lexical'
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
   $isButtonNode,
   type ButtonNode,
+  BUTTON_VARIANTS,
+  BUTTON_SIZES,
+  BUTTON_ALIGNMENTS,
   isButtonVariant,
   isButtonSize,
   isButtonAlignment,
+  buttonTextState,
+  buttonHrefState,
+  buttonVariantState,
+  buttonSizeState,
+  buttonAlignmentState,
+  buttonOpenInNewTabState,
 } from '../../nodes/ButtonNode'
 import { InspectorHeader } from '../InspectorHeader'
-import { InspectorSection } from '../InspectorSection'
+import { InspectorFields } from '../InspectorFields'
 import { useNodeUpdater } from '../hooks/use-node-updater'
-import { Input, Label, SelectionBox, Switch } from '@/admin/components/ui'
-
-// =============================================================================
-// Options
-// =============================================================================
-
-const VARIANT_OPTIONS = [
-  { value: 'primary', label: 'プライマリ' },
-  { value: 'secondary', label: 'セカンダリ' },
-  { value: 'outline', label: 'アウトライン' },
-]
-
-const SIZE_OPTIONS = [
-  { value: 'sm', label: '小' },
-  { value: 'md', label: '中' },
-  { value: 'lg', label: '大' },
-]
-
-const ALIGNMENT_OPTIONS = [
-  { value: 'left', label: '左' },
-  { value: 'center', label: '中央' },
-  { value: 'right', label: '右' },
-]
+import { Input, Label, Switch } from '@/admin/components/ui'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/admin/components/ui/select'
+import {
+  BUTTON_VARIANT_LABELS,
+  BUTTON_SIZE_LABELS,
+  BUTTON_ALIGNMENT_LABELS,
+} from '../../config/node-labels'
 
 // =============================================================================
 // Types
@@ -54,47 +55,48 @@ type ButtonInspectorPanelProps = {
 // =============================================================================
 
 export function ButtonInspectorPanel({ nodeKey, node }: ButtonInspectorPanelProps) {
+  const [editor] = useLexicalComposerContext()
   const updateNode = useNodeUpdater(nodeKey, $isButtonNode)
 
-  // 現在の値を取得
-  const text = node.getText()
-  const href = node.getHref()
-  const variant = node.getVariant()
-  const size = node.getSize()
-  const alignment = node.getAlignment()
-  const openInNewTab = node.getOpenInNewTab()
+  const { text, href, variant, size, alignment, openInNewTab } = editor.getEditorState().read(() => ({
+    text: $getState(node, buttonTextState),
+    href: $getState(node, buttonHrefState),
+    variant: $getState(node, buttonVariantState),
+    size: $getState(node, buttonSizeState),
+    alignment: $getState(node, buttonAlignmentState),
+    openInNewTab: $getState(node, buttonOpenInNewTabState),
+  }))
 
-  const handleTextChange = (value: string) => updateNode((n) => n.setText(value))
+  const handleTextChange = (value: string) => updateNode((n) => { $setState(n, buttonTextState, value) })
 
-  const handleHrefChange = (value: string) => updateNode((n) => n.setHref(value))
+  const handleHrefChange = (value: string) => updateNode((n) => { $setState(n, buttonHrefState, value) })
 
   const handleVariantChange = (value: string) => {
     if (isButtonVariant(value)) {
-      updateNode((n) => n.setVariant(value))
+      updateNode((n) => { $setState(n, buttonVariantState, value) })
     }
   }
 
   const handleSizeChange = (value: string) => {
     if (isButtonSize(value)) {
-      updateNode((n) => n.setSize(value))
+      updateNode((n) => { $setState(n, buttonSizeState, value) })
     }
   }
 
   const handleAlignmentChange = (value: string) => {
     if (isButtonAlignment(value)) {
-      updateNode((n) => n.setAlignment(value))
+      updateNode((n) => { $setState(n, buttonAlignmentState, value) })
     }
   }
 
-  const handleOpenInNewTabChange = (value: boolean) => updateNode((n) => n.setOpenInNewTab(value))
+  const handleOpenInNewTabChange = (value: boolean) => updateNode((n) => { $setState(n, buttonOpenInNewTabState, value) })
 
   return (
     <div>
       <InspectorHeader title="ボタン" />
 
-      <InspectorSection title="基本設定">
-        <div className="space-y-3">
-          <div className="space-y-1.5">
+      <InspectorFields title="基本設定">
+          <div className="space-y-2">
             <Label htmlFor="inspector-button-text" className="text-xs">
               テキスト
             </Label>
@@ -106,7 +108,7 @@ export function ButtonInspectorPanel({ nodeKey, node }: ButtonInspectorPanelProp
             />
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <Label htmlFor="inspector-button-href" className="text-xs">
               リンク先URL
             </Label>
@@ -129,45 +131,57 @@ export function ButtonInspectorPanel({ nodeKey, node }: ButtonInspectorPanelProp
               onCheckedChange={handleOpenInNewTabChange}
             />
           </div>
-        </div>
-      </InspectorSection>
+      </InspectorFields>
 
-      <InspectorSection title="スタイル">
-        <div className="space-y-3">
-          <div className="space-y-1.5">
+      <InspectorFields title="スタイル">
+          <div className="space-y-2">
             <Label className="text-xs">スタイル</Label>
-            <SelectionBox
-              options={VARIANT_OPTIONS}
-              value={variant}
-              onChange={handleVariantChange}
-              columns={3}
-              name="ボタンスタイル"
-            />
+            <Select value={variant} onValueChange={handleVariantChange}>
+              <SelectTrigger className="h-8 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {BUTTON_VARIANTS.map((v) => (
+                  <SelectItem key={v} value={v}>
+                    {BUTTON_VARIANT_LABELS[v]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <Label className="text-xs">サイズ</Label>
-            <SelectionBox
-              options={SIZE_OPTIONS}
-              value={size}
-              onChange={handleSizeChange}
-              columns={3}
-              name="ボタンサイズ"
-            />
+            <Select value={size} onValueChange={handleSizeChange}>
+              <SelectTrigger className="h-8 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {BUTTON_SIZES.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {BUTTON_SIZE_LABELS[s]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <Label className="text-xs">配置</Label>
-            <SelectionBox
-              options={ALIGNMENT_OPTIONS}
-              value={alignment}
-              onChange={handleAlignmentChange}
-              columns={3}
-              name="ボタン配置"
-            />
+            <Select value={alignment} onValueChange={handleAlignmentChange}>
+              <SelectTrigger className="h-8 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {BUTTON_ALIGNMENTS.map((a) => (
+                  <SelectItem key={a} value={a}>
+                    {BUTTON_ALIGNMENT_LABELS[a]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        </div>
-      </InspectorSection>
+      </InspectorFields>
     </div>
   )
 }

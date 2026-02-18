@@ -10,17 +10,17 @@
  * - 長時間割引との併用設定
  */
 
-import { prisma, Prisma } from '@/shared/lib/prisma'
+import { prisma, Prisma, type Coupon } from '@/shared/lib/prisma'
 import { updateTag } from 'next/cache'
 import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
 import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+import { createValidationError } from '@/shared/lib/action-helpers'
 import { withPermission } from '@/admin/lib/server-action-helpers'
 import { checkReadPermissionFor } from '@/admin/lib/permissions'
 import {
   couponFormSchema,
   type CouponFormInput,
 } from '@/shared/lib/validations/coupon'
-import type { CouponModel as Coupon } from '@/shared/generated/prisma/models/Coupon'
 import type { CouponType } from '@/shared/generated/prisma/enums'
 
 // =============================================================================
@@ -79,12 +79,7 @@ const checkReadPermission = checkReadPermissionFor('coupon')
  * Prisma Couponをフロントエンド用に変換
  */
 function formatCoupon(coupon: Coupon): CouponData {
-  return {
-    ...coupon,
-    discountValue: Number(coupon.discountValue),
-    minReservationAmount: coupon.minReservationAmount ? Number(coupon.minReservationAmount) : null,
-    maxDiscountAmount: coupon.maxDiscountAmount ? Number(coupon.maxDiscountAmount) : null,
-  }
+  return { ...coupon }
 }
 
 // =============================================================================
@@ -146,9 +141,15 @@ export async function getCoupons(
   const {
     page = 1,
     limit = 10,
-    sortBy = 'createdAt',
-    sortOrder = 'desc',
+    sortBy: rawSortBy = 'createdAt',
+    sortOrder: rawSortOrder = 'desc',
   } = pagination
+
+  // ランタイムホワイトリスト検証（SQLインジェクション防止）
+  const ALLOWED_SORT_BY = new Set(['code', 'name', 'createdAt', 'validFrom', 'usageCount'])
+  const ALLOWED_SORT_ORDER = new Set(['asc', 'desc'])
+  const sortBy = ALLOWED_SORT_BY.has(rawSortBy) ? rawSortBy : 'createdAt'
+  const sortOrder = ALLOWED_SORT_ORDER.has(rawSortOrder) ? rawSortOrder : 'desc'
 
   const where: Record<string, unknown> = {}
 
@@ -158,7 +159,7 @@ export async function getCoupons(
   }
 
   if (type) {
-    where.type = type
+    where['type'] = type
   }
 
   if (search) {
@@ -167,16 +168,16 @@ export async function getCoupons(
       { code: { contains: search, mode: 'insensitive' as const } },
       { name: { contains: search, mode: 'insensitive' as const } },
     ]
-    const existingOr = where.OR
+    const existingOr = where['OR']
     if (existingOr && Array.isArray(existingOr)) {
       // 既存のOR条件とANDで結合
-      where.AND = [
+      where['AND'] = [
         { OR: existingOr },
         { OR: searchCondition },
       ]
-      delete where.OR
+      delete where['OR']
     } else {
-      where.OR = searchCondition
+      where['OR'] = searchCondition
     }
   }
 
@@ -277,7 +278,7 @@ export const createCoupon = withPermission<[input: CouponFormInput], { id: strin
 )(async (_user, input): Promise<ActionResult<{ id: string }>> => {
   const parsed = couponFormSchema.safeParse(input)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? '入力が不正です')
+    return createValidationError(parsed.error)
   }
 
   const data = parsed.data
@@ -323,7 +324,7 @@ export const updateCoupon = withPermission<[id: string, input: CouponFormInput],
 )(async (_user, id, input): Promise<ActionResult<void>> => {
   const parsed = couponFormSchema.safeParse(input)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? '入力が不正です')
+    return createValidationError(parsed.error)
   }
 
   const data = parsed.data

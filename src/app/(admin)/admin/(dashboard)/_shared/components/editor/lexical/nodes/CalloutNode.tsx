@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Callout Node
  *
  * @description 注意書き・アラートを表示するElementNode
@@ -13,10 +13,9 @@ import type {
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
-  NodeKey,
-  SerializedElementNode,
 } from 'lexical'
-import { $applyNodeReplacement, ElementNode, $createParagraphNode, $isElementNode } from 'lexical'
+import { $create, $getState, $getStateChange, $setState, createState, ElementNode, $createParagraphNode, $isElementNode } from 'lexical'
+import { createEnumGuard } from '../config/type-guards'
 
 // =============================================================================
 // Types
@@ -26,42 +25,26 @@ export type CalloutType = 'info' | 'warning' | 'error' | 'success'
 
 export const CALLOUT_TYPES: readonly CalloutType[] = ['info', 'warning', 'error', 'success'] as const
 
-export interface SerializedCalloutNode extends SerializedElementNode {
-  calloutType: CalloutType
-}
-
-// =============================================================================
-// Constants
-// =============================================================================
-
-const CALLOUT_STYLES: Record<CalloutType, string> = {
-  info: 'bg-info/10 border-info text-foreground',
-  warning: 'bg-warning/10 border-warning text-foreground',
-  error: 'bg-destructive/10 border-destructive text-foreground',
-  success: 'bg-success/10 border-success text-foreground',
-}
-
-const CALLOUT_BASE_CLASS = 'my-4 p-4 rounded-lg border-l-4'
-
 // =============================================================================
 // Type Guards
 // =============================================================================
 
-const CALLOUT_TYPE_SET = new Set<string>(CALLOUT_TYPES)
+export const isCalloutType = createEnumGuard<CalloutType>(CALLOUT_TYPES)
 
-/**
- * 値がCalloutTypeかどうかを判定する（Set-basedパターン）
- */
-export function isCalloutType(value: string): value is CalloutType {
-  return CALLOUT_TYPE_SET.has(value)
-}
+// =============================================================================
+// State
+// =============================================================================
+
+export const calloutTypeState = createState('calloutType', {
+  parse: (v: unknown): CalloutType =>
+    typeof v === 'string' && isCalloutType(v) ? v : 'info',
+})
 
 // =============================================================================
 // DOM Conversion
 // =============================================================================
 
-function $convertCalloutElement(domNode: Node): null | DOMConversionOutput {
-  const element = domNode as HTMLElement
+function $convertCalloutElement(element: HTMLElement): null | DOMConversionOutput {
   const calloutType = element.getAttribute('data-callout-type')
   if (calloutType && isCalloutType(calloutType)) {
     const node = $createCalloutNode(calloutType)
@@ -75,24 +58,16 @@ function $convertCalloutElement(domNode: Node): null | DOMConversionOutput {
 // =============================================================================
 
 export class CalloutNode extends ElementNode {
-  __calloutType: CalloutType
-
-  static getType(): string {
-    return 'callout'
+  override $config() {
+    return this.config('callout', {
+      extends: ElementNode,
+      stateConfigs: [{ flat: true, stateConfig: calloutTypeState }],
+    })
   }
 
-  static clone(node: CalloutNode): CalloutNode {
-    return new CalloutNode(node.__calloutType, node.__key)
-  }
-
-  static importJSON(serializedNode: SerializedCalloutNode): CalloutNode {
-    return $createCalloutNode(serializedNode.calloutType).updateFromJSON(serializedNode)
-  }
-
-  static importDOM(): DOMConversionMap | null {
+  static override importDOM(): DOMConversionMap | null {
     return {
-      div: (domNode: Node) => {
-        const element = domNode as HTMLElement
+      div: (element: HTMLElement) => {
         if (element.hasAttribute('data-callout-type')) {
           return {
             conversion: $convertCalloutElement,
@@ -104,59 +79,38 @@ export class CalloutNode extends ElementNode {
     }
   }
 
-  constructor(calloutType: CalloutType = 'info', key?: NodeKey) {
-    super(key)
-    this.__calloutType = calloutType
-  }
-
-  exportJSON(): SerializedCalloutNode {
-    return {
-      ...super.exportJSON(),
-      calloutType: this.__calloutType,
-    }
-  }
-
-  exportDOM(): DOMExportOutput {
+  override exportDOM(): DOMExportOutput {
+    const calloutType = $getState(this, calloutTypeState)
     const element = document.createElement('div')
-    element.setAttribute('data-callout-type', this.__calloutType)
-    element.className = `${CALLOUT_BASE_CLASS} ${CALLOUT_STYLES[this.__calloutType]}`
+    element.setAttribute('data-callout-type', calloutType)
     return { element }
   }
 
-  createDOM(_config: EditorConfig): HTMLElement {
+  override createDOM(_config: EditorConfig): HTMLElement {
+    const calloutType = $getState(this, calloutTypeState)
     const element = document.createElement('div')
-    element.setAttribute('data-callout-type', this.__calloutType)
-    element.className = `${CALLOUT_BASE_CLASS} ${CALLOUT_STYLES[this.__calloutType]}`
+    element.setAttribute('data-callout-type', calloutType)
     return element
   }
 
-  updateDOM(prevNode: CalloutNode, dom: HTMLElement): boolean {
-    if (prevNode.__calloutType !== this.__calloutType) {
-      dom.setAttribute('data-callout-type', this.__calloutType)
-      dom.className = `${CALLOUT_BASE_CLASS} ${CALLOUT_STYLES[this.__calloutType]}`
-      return false
+  override updateDOM(prevNode: CalloutNode, dom: HTMLElement): boolean {
+    const change = $getStateChange(this, prevNode, calloutTypeState)
+    if (change) {
+      const [newType] = change
+      dom.setAttribute('data-callout-type', newType)
     }
     return false
   }
 
-  getCalloutType(): CalloutType {
-    return this.getLatest().__calloutType
-  }
-
-  setCalloutType(calloutType: CalloutType): void {
-    const self = this.getWritable()
-    self.__calloutType = calloutType
-  }
-
-  canInsertTextBefore(): false {
+  override canInsertTextBefore(): false {
     return false
   }
 
-  canInsertTextAfter(): false {
+  override canInsertTextAfter(): false {
     return false
   }
 
-  collapseAtStart(): boolean {
+  override collapseAtStart(): boolean {
     const children = this.getChildren()
     const paragraph = $createParagraphNode()
 
@@ -186,7 +140,7 @@ export class CalloutNode extends ElementNode {
  * @returns CalloutNode インスタンス
  */
 export function $createCalloutNode(calloutType: CalloutType = 'info'): CalloutNode {
-  return $applyNodeReplacement(new CalloutNode(calloutType))
+  return $setState($create(CalloutNode), calloutTypeState, calloutType)
 }
 
 /**

@@ -122,17 +122,17 @@ export async function getAdminComments(
   const where: Record<string, unknown> = {}
 
   if (postId) {
-    where.postId = postId
+    where['postId'] = postId
   }
 
   if (status === 'ACTIVE') {
-    where.isDeleted = false
+    where['isDeleted'] = false
   } else if (status === 'DELETED') {
-    where.isDeleted = true
+    where['isDeleted'] = true
   }
 
   if (search) {
-    where.OR = [
+    where['OR'] = [
       { content: { contains: search, mode: 'insensitive' } },
       { guestName: { contains: search, mode: 'insensitive' } },
       { guestEmail: { contains: search, mode: 'insensitive' } },

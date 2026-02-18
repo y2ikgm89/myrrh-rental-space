@@ -12,24 +12,19 @@
 /**
  * Server Actionsの成功レスポンス
  */
-export type ActionSuccess<TData = void> = TData extends void
-  ? {
-      success: true
-      message: string
-    }
-  : {
-      success: true
-      message: string
-      data: TData
-    }
+export type ActionSuccess<TData = void> = {
+  readonly success: true
+  readonly message: string
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- intersection identity: no additional properties when TData is void
+} & (TData extends void ? {} : { readonly data: TData })
 
 /**
  * Server Actionsの失敗レスポンス
  */
 export type ActionFailure = {
-  success: false
-  error: string
-  fieldErrors?: Record<string, string[]>
+  readonly success: false
+  readonly error: string
+  readonly fieldErrors?: Record<string, string[]>
 }
 
 /**
@@ -63,11 +58,13 @@ export function createSuccess<T>(message: string, data: T): ActionSuccess<T>
 export function createSuccess<T>(
   message: string,
   data?: T
-): { success: true; message: string } | { success: true; message: string; data: T } {
+): ActionSuccess<T | void> {
   if (data === undefined) {
-    return { success: true, message }
+    return { success: true, message } as unknown as ActionSuccess<void>
   }
-  return { success: true, message, data }
+  // TS 6.0: conditional type ActionSuccess<T> can't be resolved when T is generic;
+  // overload signatures ensure callers see correct types
+  return { success: true, message, data } as unknown as ActionSuccess<T>
 }
 
 /**
@@ -102,4 +99,12 @@ export function isActionFailure<T>(
   result: ActionResult<T>
 ): result is ActionFailure {
   return result.success === false
+}
+
+/**
+ * エラーメッセージ取得ヘルパー
+ * 失敗時のエラー情報をType-safe に取得する
+ */
+export function getActionError<T>(result: ActionResult<T>): string | undefined {
+  return isActionFailure(result) ? result.error : undefined
 }

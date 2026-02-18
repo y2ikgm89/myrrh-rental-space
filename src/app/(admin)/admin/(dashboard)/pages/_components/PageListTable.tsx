@@ -24,7 +24,7 @@ import { Pagination } from '@/admin/components/ui/Pagination'
 import { formatDateTimeShort } from '@/shared/lib/utils'
 import { PageActions } from './PageActions'
 import { BulkActions } from './BulkActions'
-import type { PageData } from '@/shared/lib/validations/page'
+import type { PageModel as PageData } from '@/shared/generated/prisma/models/Page'
 
 interface PageListTableProps {
   pages: PageData[]

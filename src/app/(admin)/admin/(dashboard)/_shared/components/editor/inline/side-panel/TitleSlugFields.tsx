@@ -10,7 +10,7 @@
 import type { FieldValues, Path } from 'react-hook-form'
 import { Input, Label, Button } from '@/admin/components/ui'
 import { getFieldError, getErrorMessage } from '../types'
-import type { FieldComponentProps } from '../content-types/types'
+import { setFieldString, type FieldComponentProps } from '../content-types/types'
 
 type TitleSlugFieldsProps<T extends FieldValues> = FieldComponentProps<T> & {
   /** フィールド名マッピング */
@@ -54,7 +54,7 @@ export function TitleSlugFields<T extends FieldValues>({
         .replace(/\s+/g, '-')
         .replace(/-+/g, '-')
         .trim()
-      setValue(fields.slug, slug as T[Path<T>], { shouldDirty: true })
+      setFieldString(setValue, fields.slug, slug, { shouldDirty: true })
     }
   }
 

@@ -153,7 +153,7 @@ describe('Coupon Admin Action Integration', () => {
 
       test('descriptionはオプション（省略可能）', () => {
         const input = { ...VALID_COUPON_INPUT }
-        delete (input as Record<string, unknown>).description
+        delete (input as Record<string, unknown>)['description']
         const result = couponFormSchema.safeParse(input)
         expect(result.success).toBe(true)
       })

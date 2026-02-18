@@ -142,10 +142,11 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
    */
   const businessHoursWithHolidays = (() => {
     const hours = { ...initialBusinessHours }
+    const isBusinessHoursDay = (d: string): d is keyof BusinessHours => d in hours
     for (const day of initialRegularHolidays) {
-      if (day in hours) {
-        hours[day as keyof BusinessHours] = {
-          ...hours[day as keyof BusinessHours],
+      if (isBusinessHoursDay(day)) {
+        hours[day] = {
+          ...hours[day],
           isOpen: false,
         }
       }

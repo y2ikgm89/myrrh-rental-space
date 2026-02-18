@@ -11,7 +11,7 @@ import type { FieldValues, Path } from 'react-hook-form'
 import { useWatch } from 'react-hook-form'
 import { TagInput, type TagOption } from './TagInput'
 import { getFieldError, getErrorMessage } from '../types'
-import type { FieldComponentProps } from '../content-types/types'
+import { setFieldString, type FieldComponentProps } from '../content-types/types'
 
 type PostTagFieldsProps<T extends FieldValues> = FieldComponentProps<T> & {
   /** フィールド名マッピング */
@@ -40,18 +40,20 @@ export function PostTagFields<T extends FieldValues>({
   placeholder = 'タグを入力...',
 }: PostTagFieldsProps<T>) {
   // フォームのカンマ区切り文字列を監視
-  const tagsString = useWatch({ control, name: fields.tags }) as string | undefined
+  // 型注釈 unknown で受け取り、typeof で string に絞り込む（as 不使用）
+  const rawTags: unknown = useWatch({ control, name: fields.tags })
+  const tagsString = typeof rawTags === 'string' ? rawTags : undefined
   const tagsError = getFieldError(errors, fields.tags)
 
   // カンマ区切り文字列を配列に変換
   const tagsArray = tagsString
-    ? tagsString.split(',').map((t) => t.trim()).filter(Boolean)
+    ? tagsString.split(',').map((t: string) => t.trim()).filter(Boolean)
     : []
 
   // 配列をカンマ区切り文字列に変換してフォームに設定
   const handleChange = (newTags: string[]) => {
     const newValue = newTags.join(', ')
-    setValue(fields.tags, newValue as T[Path<T>], { shouldDirty: true })
+    setFieldString(setValue, fields.tags, newValue, { shouldDirty: true })
   }
 
   return (

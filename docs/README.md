@@ -33,12 +33,12 @@ docs/
 
 | 技術 | バージョン |
 |-----|----------|
-| Next.js | 16.1.4 |
-| React | 19.2.3 |
-| TypeScript | 5.9.3 |
-| Prisma | 7.3.0 |
-| Better Auth | 1.4.17 |
-| Bun | 1.3.6 |
+| Next.js | 16.1.6 |
+| React | 19.2.4 |
+| TypeScript | 6.0-beta |
+| Prisma | 7.4.0 |
+| Better Auth | 1.4.18 |
+| Bun | 1.3.9 |
 | Zod | 4.3.6 |
 | Tailwind CSS | 4.1.18 |
 
@@ -73,4 +73,4 @@ docs/
 
 ---
 
-最終更新: 2026-01-23
+最終更新: 2026-02-18

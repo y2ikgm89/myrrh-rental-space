@@ -94,9 +94,8 @@ export async function validateCouponCode(
     }
     // 最低利用金額チェック（ユーザーに有用なフィードバックのため別メッセージ）
     if (reservationAmount !== undefined && coupon.minReservationAmount) {
-      const minAmount = Number(coupon.minReservationAmount)
-      if (reservationAmount < minAmount) {
-        minAmountError = `このクーポンは¥${minAmount.toLocaleString()}以上のご利用で適用できます`
+      if (reservationAmount < coupon.minReservationAmount) {
+        minAmountError = `このクーポンは¥${coupon.minReservationAmount.toLocaleString()}以上のご利用で適用できます`
       }
     }
   }
@@ -120,8 +119,8 @@ export async function validateCouponCode(
         code: coupon.code,
         name: coupon.name,
         type: coupon.type,
-        discountValue: Number(coupon.discountValue),
-        maxDiscountAmount: coupon.maxDiscountAmount ? Number(coupon.maxDiscountAmount) : null,
+        discountValue: coupon.discountValue,
+        maxDiscountAmount: coupon.maxDiscountAmount,
         canCombineWithDurationDiscount: coupon.canCombineWithDurationDiscount,
       },
     },

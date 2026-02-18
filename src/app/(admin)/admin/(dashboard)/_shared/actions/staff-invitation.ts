@@ -23,6 +23,7 @@ import { updateTag } from 'next/cache'
 import { CACHE_TAGS } from '@/shared/lib/constants'
 import { sendStaffInvitationEmail } from '@/shared/lib/email-service'
 import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+import { createValidationError } from '@/shared/lib/action-helpers'
 import { withPermission } from '@/admin/lib/server-action-helpers'
 import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'
 import { getSession, getRoleFromSession, type User } from '@/shared/lib/auth'
@@ -89,13 +90,14 @@ export const sendInvitation = withPermission<[CreateInvitationInput], Invitation
   // 入力バリデーション
   const validationResult = createInvitationSchema.safeParse(input)
   if (!validationResult.success) {
-    return createFailure(validationResult.error.issues[0]?.message ?? '入力が無効です')
+    return createValidationError(validationResult.error)
   }
   const { email, role, name } = validationResult.data
 
   // 既存ユーザーチェック
   const existingUser = await prisma.user.findUnique({
     where: { email },
+    select: { id: true },
   })
   if (existingUser) {
     return createFailure('このメールアドレスは既に登録されています')
@@ -108,6 +110,7 @@ export const sendInvitation = withPermission<[CreateInvitationInput], Invitation
       usedAt: null,
       expiresAt: { gt: new Date() },
     },
+    select: { id: true },
   })
   if (existingInvitation) {
     return createFailure('このメールアドレスには既に有効な招待が存在します。再送する場合は一度削除してください。')
@@ -165,6 +168,15 @@ export const sendInvitation = withPermission<[CreateInvitationInput], Invitation
 export async function validateInvitationToken(token: string): Promise<ActionResult<InvitationData>> {
   const invitation = await prisma.staffInvitation.findUnique({
     where: { token },
+    select: {
+      id: true,
+      email: true,
+      role: true,
+      name: true,
+      expiresAt: true,
+      usedAt: true,
+      createdAt: true,
+    },
   })
 
   if (!invitation) {
@@ -197,13 +209,21 @@ export async function setupPassword(input: SetupPasswordInput): Promise<ActionRe
   // 入力バリデーション
   const validationResult = setupPasswordSchema.safeParse(input)
   if (!validationResult.success) {
-    return createFailure(validationResult.error.issues[0]?.message ?? '入力が無効です')
+    return createFailure('入力内容に誤りがあります')
   }
   const { token, password } = validationResult.data
 
   // トークン検証
   const invitation = await prisma.staffInvitation.findUnique({
     where: { token },
+    select: {
+      id: true,
+      email: true,
+      role: true,
+      name: true,
+      expiresAt: true,
+      usedAt: true,
+    },
   })
 
   if (!invitation) {
@@ -291,6 +311,7 @@ export const deleteInvitation = withPermission<[string], void>(
 )(async (_user: User, id: string): Promise<ActionResult<void>> => {
   const invitation = await prisma.staffInvitation.findUnique({
     where: { id },
+    select: { id: true, usedAt: true },
   })
 
   if (!invitation) {
@@ -318,6 +339,7 @@ export const resendInvitation = withPermission<[string], void>(
 )(async (_user: User, id: string): Promise<ActionResult<void>> => {
   const invitation = await prisma.staffInvitation.findUnique({
     where: { id },
+    select: { id: true, email: true, name: true, usedAt: true },
   })
 
   if (!invitation) {

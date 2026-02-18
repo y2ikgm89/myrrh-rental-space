@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Page Break Node
  *
  * @description ページ区切りを表示するDecoratorNode
@@ -15,21 +15,13 @@ import type {
   EditorConfig,
   LexicalNode,
   NodeKey,
-  SerializedLexicalNode,
 } from 'lexical'
-import { $applyNodeReplacement, DecoratorNode } from 'lexical'
+import { $create, DecoratorNode } from 'lexical'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { useLexicalNodeSelection } from '@lexical/react/useLexicalNodeSelection'
 import { $getNodeByKey, CLICK_COMMAND, COMMAND_PRIORITY_LOW, KEY_BACKSPACE_COMMAND, KEY_DELETE_COMMAND, mergeRegister } from 'lexical'
 import { useCallback, useEffect } from 'react'
 import { Scissors } from 'lucide-react'
-
-// =============================================================================
-// Types
-// =============================================================================
-
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface SerializedPageBreakNode extends SerializedLexicalNode {}
 
 // =============================================================================
 // Component
@@ -60,8 +52,8 @@ function PageBreakComponent({ nodeKey }: { nodeKey: NodeKey }) {
       editor.registerCommand<MouseEvent>(
         CLICK_COMMAND,
         (event) => {
-          const target = event.target as HTMLElement
-          const pageBreakElement = target.closest(`[data-lexical-page-break="${nodeKey}"]`)
+          if (!(event.target instanceof HTMLElement)) return false
+          const pageBreakElement = event.target.closest(`[data-lexical-page-break="${nodeKey}"]`)
           if (pageBreakElement) {
             clearSelection()
             setSelected(true)
@@ -105,8 +97,7 @@ function PageBreakComponent({ nodeKey }: { nodeKey: NodeKey }) {
 // DOM Conversion
 // =============================================================================
 
-function $convertPageBreakElement(domNode: Node): null | DOMConversionOutput {
-  const element = domNode as HTMLElement
+function $convertPageBreakElement(element: HTMLElement): null | DOMConversionOutput {
   if (element.hasAttribute('data-page-break')) {
     return { node: $createPageBreakNode() }
   }
@@ -118,22 +109,13 @@ function $convertPageBreakElement(domNode: Node): null | DOMConversionOutput {
 // =============================================================================
 
 export class PageBreakNode extends DecoratorNode<ReactElement> {
-  static getType(): string {
-    return 'page-break'
+  override $config() {
+    return this.config('page-break', { extends: DecoratorNode })
   }
 
-  static clone(node: PageBreakNode): PageBreakNode {
-    return new PageBreakNode(node.__key)
-  }
-
-  static importJSON(serializedNode: SerializedPageBreakNode): PageBreakNode {
-    return $createPageBreakNode().updateFromJSON(serializedNode)
-  }
-
-  static importDOM(): DOMConversionMap | null {
+  static override importDOM(): DOMConversionMap | null {
     return {
-      figure: (domNode: Node) => {
-        const element = domNode as HTMLElement
+      figure: (element: HTMLElement) => {
         if (element.hasAttribute('data-page-break')) {
           return {
             conversion: $convertPageBreakElement,
@@ -145,47 +127,33 @@ export class PageBreakNode extends DecoratorNode<ReactElement> {
     }
   }
 
-  constructor(key?: NodeKey) {
-    super(key)
-  }
-
-  exportJSON(): SerializedPageBreakNode {
-    return {
-      ...super.exportJSON(),
-    }
-  }
-
-  exportDOM(): DOMExportOutput {
+  override exportDOM(): DOMExportOutput {
     const element = document.createElement('figure')
     element.setAttribute('data-page-break', 'true')
-    element.style.cssText = 'page-break-after: always; break-after: page;'
-    element.className = 'my-8 py-4 border-y-2 border-dashed border-muted-foreground/30 flex items-center justify-center text-xs text-muted-foreground'
-    // Safe DOM construction
     const span = document.createElement('span')
-    span.className = 'bg-background px-3 py-1'
     span.textContent = 'ページ区切り'
     element.appendChild(span)
     return { element }
   }
 
-  createDOM(_config: EditorConfig): HTMLElement {
+  override createDOM(_config: EditorConfig): HTMLElement {
     const div = document.createElement('div')
     return div
   }
 
-  updateDOM(): false {
+  override updateDOM(): false {
     return false
   }
 
-  getTextContent(): string {
+  override getTextContent(): string {
     return '\n'
   }
 
-  isInline(): false {
+  override isInline(): false {
     return false
   }
 
-  decorate(): ReactElement {
+  override decorate(): ReactElement {
     return <PageBreakComponent nodeKey={this.__key} />
   }
 }
@@ -200,7 +168,7 @@ export class PageBreakNode extends DecoratorNode<ReactElement> {
  * @returns PageBreakNode インスタンス
  */
 export function $createPageBreakNode(): PageBreakNode {
-  return $applyNodeReplacement(new PageBreakNode())
+  return $create(PageBreakNode)
 }
 
 /**

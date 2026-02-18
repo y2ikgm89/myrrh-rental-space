@@ -6,9 +6,18 @@
 
 'use client'
 
-import { $isBookmarkNode, type BookmarkNode } from '../../nodes/BookmarkNode'
+import { $getState, $setState } from 'lexical'
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
+import {
+  $isBookmarkNode,
+  type BookmarkNode,
+  bookmarkUrlState,
+  bookmarkTitleState,
+  bookmarkDescriptionState,
+  bookmarkSiteNameState,
+} from '../../nodes/BookmarkNode'
 import { InspectorHeader } from '../InspectorHeader'
-import { InspectorSection } from '../InspectorSection'
+import { InspectorFields } from '../InspectorFields'
 import { useNodeUpdater } from '../hooks/use-node-updater'
 import { Input, Label, Textarea } from '@/admin/components/ui'
 
@@ -26,30 +35,31 @@ type BookmarkInspectorPanelProps = {
 // =============================================================================
 
 export function BookmarkInspectorPanel({ nodeKey, node }: BookmarkInspectorPanelProps) {
+  const [editor] = useLexicalComposerContext()
   const updateNode = useNodeUpdater(nodeKey, $isBookmarkNode)
 
-  // 現在の値を取得
-  const url = node.getUrl()
-  const title = node.getTitle()
-  const description = node.getDescription()
-  const siteName = node.getSiteName()
+  const { url, title, description, siteName } = editor.getEditorState().read(() => ({
+    url: $getState(node, bookmarkUrlState),
+    title: $getState(node, bookmarkTitleState),
+    description: $getState(node, bookmarkDescriptionState),
+    siteName: $getState(node, bookmarkSiteNameState),
+  }))
 
-  const handleTitleChange = (value: string) => updateNode((n) => n.setTitle(value))
-  const handleDescriptionChange = (value: string) => updateNode((n) => n.setDescription(value))
-  const handleSiteNameChange = (value: string) => updateNode((n) => n.setSiteName(value))
+  const handleTitleChange = (value: string) => updateNode((n) => { $setState(n, bookmarkTitleState, value) })
+  const handleDescriptionChange = (value: string) => updateNode((n) => { $setState(n, bookmarkDescriptionState, value) })
+  const handleSiteNameChange = (value: string) => updateNode((n) => { $setState(n, bookmarkSiteNameState, value) })
 
   return (
     <div>
       <InspectorHeader title="ブックマーク" />
 
-      <InspectorSection title="基本設定">
-        <div className="space-y-3">
-          <div className="space-y-1.5">
+      <InspectorFields title="基本設定">
+          <div className="space-y-2">
             <Label className="text-xs">URL</Label>
             <p className="text-xs text-muted-foreground break-all">{url}</p>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <Label htmlFor="inspector-bookmark-title" className="text-xs">
               タイトル
             </Label>
@@ -61,7 +71,7 @@ export function BookmarkInspectorPanel({ nodeKey, node }: BookmarkInspectorPanel
             />
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <Label htmlFor="inspector-bookmark-description" className="text-xs">
               説明
             </Label>
@@ -74,7 +84,7 @@ export function BookmarkInspectorPanel({ nodeKey, node }: BookmarkInspectorPanel
             />
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <Label htmlFor="inspector-bookmark-sitename" className="text-xs">
               サイト名
             </Label>
@@ -85,8 +95,7 @@ export function BookmarkInspectorPanel({ nodeKey, node }: BookmarkInspectorPanel
               className="h-8 text-sm"
             />
           </div>
-        </div>
-      </InspectorSection>
+      </InspectorFields>
     </div>
   )
 }

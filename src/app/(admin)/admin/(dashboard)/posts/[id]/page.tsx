@@ -3,6 +3,8 @@ import { connection } from 'next/server'
 import { getPostById, getPostCategories, getPostTags } from '@/admin/actions/post'
 import { PostEditor } from '../_components/PostEditor'
 import { getLayoutSettings } from '@/shared/lib/settings/public'
+import { getValidLayoutWidth, LayoutWidth } from '@/shared/lib/validations/enums'
+import type { ContentWidth } from '@/shared/types'
 import type { Metadata } from 'next'
 
 
@@ -32,7 +34,7 @@ export default async function EditPostPage({ params }: PageProps) {
   await connection()
   const { id } = await params
 
-  const [post, categories, tags, layoutSettings] = await Promise.all([
+  const [post, categories, tags, settings] = await Promise.all([
     getPostById(id),
     getPostCategories(),
     getPostTags(),
@@ -43,13 +45,18 @@ export default async function EditPostPage({ params }: PageProps) {
     notFound()
   }
 
+  const fallbackContentWidth: ContentWidth = {
+    width: getValidLayoutWidth(settings?.contentWidth, LayoutWidth.MD),
+    customPx: settings?.contentWidthCustom ?? null,
+  }
+
   return (
     <PostEditor
       post={post}
       categories={categories}
       tags={tags}
       mode="edit"
-      layoutSettings={layoutSettings}
+      fallbackContentWidth={fallbackContentWidth}
     />
   )
 }

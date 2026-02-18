@@ -29,6 +29,7 @@ import {
 } from '@/admin/lib/validations/admin-reservation'
 import { createAdminReservation } from '@/admin/actions/reservation'
 import { formatCurrency } from '@/shared/lib/utils'
+import { ReservationStatus, isValidReservationStatus } from '@/shared/lib/validations/enums'
 import { CustomerSelector } from './CustomerSelector'
 
 type SpaceOption = {
@@ -96,8 +97,8 @@ function convertFieldErrors<T extends Record<string, unknown>>(
 // =============================================================================
 
 const RESERVATION_STATUS_OPTIONS = [
-  { value: 'CONFIRMED', label: '確定', description: '予約が確定済み' },
-  { value: 'PENDING', label: '保留', description: '確認待ち' },
+  { value: ReservationStatus.CONFIRMED, label: '確定', description: '予約が確定済み' },
+  { value: ReservationStatus.PENDING, label: '保留', description: '確認待ち' },
 ]
 
 // =============================================================================
@@ -122,7 +123,7 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
   } = useForm<AdminReservationInput>({
     resolver: zodResolver(adminReservationSchema),
     defaultValues: {
-      status: 'CONFIRMED',
+      status: ReservationStatus.CONFIRMED,
       sendEmail: true,
     },
   })
@@ -401,8 +402,8 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
             <Label>予約ステータス</Label>
             <SelectionBox
               options={RESERVATION_STATUS_OPTIONS}
-              value={status ?? 'CONFIRMED'}
-              onChange={(value) => setValue('status', value as 'CONFIRMED' | 'PENDING')}
+              value={status ?? ReservationStatus.CONFIRMED}
+              onChange={(value) => { if (isValidReservationStatus(value)) setValue('status', value) }}
               columns={2}
               disabled={isPending}
               name="予約ステータス"

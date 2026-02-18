@@ -9,6 +9,7 @@
 
 import type { Metadata, Viewport } from 'next'
 import type { ReactElement, ReactNode } from 'react'
+import { connection } from 'next/server'
 import { Noto_Sans_JP } from 'next/font/google'
 import { NuqsAdapter } from 'nuqs/adapters/next/app'
 import './_styles/admin.css'
@@ -35,11 +36,13 @@ export const viewport: Viewport = {
   initialScale: 1,
 }
 
-export default function AdminRootLayout({
+export default async function AdminRootLayout({
   children,
 }: Readonly<{
   children: ReactNode
-}>): ReactElement {
+}>): Promise<ReactElement> {
+  await connection()
+
   return (
     <html lang="ja">
       <body className={`${notoSansJP.variable} font-sans antialiased`}>

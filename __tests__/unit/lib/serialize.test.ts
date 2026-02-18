@@ -6,16 +6,11 @@ import {
   formatSerializedDate,
   toDateString,
   extractFirstFromCommaList,
-  safeArrayAccess,
-  safeCharAt,
   keysOf,
   entriesOf,
   filterTruthy,
-  parseEnumAttribute,
   isRecord,
   createTypeGuard,
-  parseTypedValue,
-  parseTypedValueOrDefault,
 } from '@/shared/lib/serialize'
 
 describe('serialize', () => {
@@ -50,7 +45,10 @@ describe('serialize', () => {
     test('Date を ISO 文字列に変換する', () => {
       const date = new Date('2024-01-15T10:30:00.000Z')
       const result = toPlainObject({ createdAt: date })
-      expect(result.createdAt).toBe('2024-01-15T10:30:00.000Z')
+      // toPlainObject<T> の返り型は T のまま（Date型）だが、実行時は string に変換される
+      // unknown 経由で型制約を回避
+      const createdAt: unknown = result.createdAt
+      expect(createdAt).toBe('2024-01-15T10:30:00.000Z')
     })
 
     test('ネストされたオブジェクトを変換する', () => {
@@ -80,7 +78,9 @@ describe('serialize', () => {
       const symbol = Symbol('test')
       const input = { id: 1, [symbol]: 'removed' }
       const result = toPlainObject(input)
-      expect(result).toEqual({ id: 1 })
+      // TS型には Symbol プロパティが含まれるため unknown 経由で比較
+      const plain: unknown = result
+      expect(plain).toEqual({ id: 1 })
       expect(symbol in result).toBe(false)
     })
 
@@ -109,7 +109,9 @@ describe('serialize', () => {
         },
       }
       const result = toPlainObject(input)
-      expect(result).toEqual({ id: 1 })
+      // TS型には method プロパティが含まれるため unknown 経由で比較
+      const plain: unknown = result
+      expect(plain).toEqual({ id: 1 })
     })
   })
 
@@ -121,12 +123,14 @@ describe('serialize', () => {
     })
 
     test('null をそのまま返す', () => {
-      const result = toPlainArray(null as any)
+      // toPlainArray の型は T[] だが null/undefined をそのまま返す実装
+      // unknown 経由で型制約を回避
+      const result: unknown = toPlainArray(null as any)
       expect(result).toBe(null)
     })
 
     test('undefined をそのまま返す', () => {
-      const result = toPlainArray(undefined as any)
+      const result: unknown = toPlainArray(undefined as any)
       expect(result).toBe(undefined)
     })
 
@@ -143,8 +147,11 @@ describe('serialize', () => {
         { id: 2, createdAt: date },
       ]
       const result = toPlainArray(input)
-      expect(result[0].createdAt).toBe('2024-01-15T10:30:00.000Z')
-      expect(result[1].createdAt).toBe('2024-01-15T10:30:00.000Z')
+      // toPlainArray<T> の返り型は T[] のまま（Date型）だが、実行時は string に変換される
+      const createdAt0: unknown = result[0]?.createdAt
+      const createdAt1: unknown = result[1]?.createdAt
+      expect(createdAt0).toBe('2024-01-15T10:30:00.000Z')
+      expect(createdAt1).toBe('2024-01-15T10:30:00.000Z')
     })
 
     test('ネストされたオブジェクトの配列を変換する', () => {
@@ -280,73 +287,7 @@ describe('serialize', () => {
     })
   })
 
-  describe('safeArrayAccess', () => {
-    test('配列の指定インデックスの要素を取得する', () => {
-      expect(safeArrayAccess(['a', 'b', 'c'], 0)).toBe('a')
-      expect(safeArrayAccess(['a', 'b', 'c'], 1)).toBe('b')
-      expect(safeArrayAccess(['a', 'b', 'c'], 2)).toBe('c')
-    })
-
-    test('デフォルトインデックス（0）で要素を取得する', () => {
-      expect(safeArrayAccess(['a', 'b', 'c'])).toBe('a')
-    })
-
-    test('範囲外のインデックスは undefined を返す', () => {
-      expect(safeArrayAccess(['a', 'b', 'c'], 3)).toBe(undefined)
-      expect(safeArrayAccess(['a', 'b', 'c'], -1)).toBe(undefined)
-    })
-
-    test('空配列の場合は undefined を返す', () => {
-      expect(safeArrayAccess([], 0)).toBe(undefined)
-    })
-
-    test('null の場合は undefined を返す', () => {
-      expect(safeArrayAccess(null, 0)).toBe(undefined)
-    })
-
-    test('undefined の場合は undefined を返す', () => {
-      expect(safeArrayAccess(undefined, 0)).toBe(undefined)
-    })
-  })
-
-  describe('safeCharAt', () => {
-    test('文字列の指定インデックスの文字を取得する', () => {
-      expect(safeCharAt('Hello', 0)).toBe('H')
-      expect(safeCharAt('Hello', 1)).toBe('e')
-      expect(safeCharAt('Hello', 4)).toBe('o')
-    })
-
-    test('デフォルトインデックス（0）で文字を取得する', () => {
-      expect(safeCharAt('Hello')).toBe('H')
-    })
-
-    test('範囲外のインデックスはデフォルトフォールバックを返す', () => {
-      expect(safeCharAt('Hello', 5)).toBe('')
-      expect(safeCharAt('Hello', 10)).toBe('')
-    })
-
-    test('カスタムフォールバックを返す', () => {
-      expect(safeCharAt('Hello', 5, 'X')).toBe('X')
-      expect(safeCharAt('', 0, 'Y')).toBe('Y')
-    })
-
-    test('空文字列の場合はフォールバックを返す', () => {
-      expect(safeCharAt('', 0)).toBe('')
-      expect(safeCharAt('', 0, 'Z')).toBe('Z')
-    })
-
-    test('null の場合はフォールバックを返す', () => {
-      expect(safeCharAt(null, 0)).toBe('')
-      expect(safeCharAt(null, 0, 'A')).toBe('A')
-    })
-
-    test('undefined の場合はフォールバックを返す', () => {
-      expect(safeCharAt(undefined, 0)).toBe('')
-      expect(safeCharAt(undefined, 0, 'B')).toBe('B')
-    })
-  })
-
-  describe('keysOf', () => {
+describe('keysOf', () => {
     test('オブジェクトのキーを型安全に取得する', () => {
       const obj = { a: 1, b: 2, c: 3 }
       const keys = keysOf(obj)
@@ -432,35 +373,7 @@ describe('serialize', () => {
     })
   })
 
-  describe('parseEnumAttribute', () => {
-    const VARIANTS = ['primary', 'secondary', 'outline'] as const
-
-    test('有効な値を返す', () => {
-      expect(parseEnumAttribute('primary', VARIANTS, 'primary')).toBe('primary')
-      expect(parseEnumAttribute('secondary', VARIANTS, 'primary')).toBe('secondary')
-      expect(parseEnumAttribute('outline', VARIANTS, 'primary')).toBe('outline')
-    })
-
-    test('無効な値の場合はデフォルトを返す', () => {
-      expect(parseEnumAttribute('invalid', VARIANTS, 'primary')).toBe('primary')
-      expect(parseEnumAttribute('danger', VARIANTS, 'secondary')).toBe('secondary')
-    })
-
-    test('null の場合はデフォルトを返す', () => {
-      expect(parseEnumAttribute(null, VARIANTS, 'primary')).toBe('primary')
-    })
-
-    test('空文字列の場合はデフォルトを返す', () => {
-      expect(parseEnumAttribute('', VARIANTS, 'outline')).toBe('outline')
-    })
-
-    test('大文字小文字を区別する', () => {
-      expect(parseEnumAttribute('PRIMARY', VARIANTS, 'primary')).toBe('primary')
-      expect(parseEnumAttribute('Primary', VARIANTS, 'secondary')).toBe('secondary')
-    })
-  })
-
-  describe('isRecord', () => {
+describe('isRecord', () => {
     test('プレーンオブジェクトは true を返す', () => {
       expect(isRecord({})).toBe(true)
       expect(isRecord({ a: 1 })).toBe(true)
@@ -530,66 +443,4 @@ describe('serialize', () => {
     })
   })
 
-  describe('parseTypedValue', () => {
-    const STATUSES = ['active', 'inactive', 'expired'] as const
-
-    test('有効な値を返す', () => {
-      expect(parseTypedValue('active', STATUSES)).toBe('active')
-      expect(parseTypedValue('inactive', STATUSES)).toBe('inactive')
-      expect(parseTypedValue('expired', STATUSES)).toBe('expired')
-    })
-
-    test('無効な値で undefined を返す', () => {
-      expect(parseTypedValue('invalid', STATUSES)).toBe(undefined)
-      expect(parseTypedValue('pending', STATUSES)).toBe(undefined)
-    })
-
-    test('null で undefined を返す', () => {
-      expect(parseTypedValue(null, STATUSES)).toBe(undefined)
-    })
-
-    test('undefined で undefined を返す', () => {
-      expect(parseTypedValue(undefined, STATUSES)).toBe(undefined)
-    })
-
-    test('空文字列で undefined を返す', () => {
-      expect(parseTypedValue('', STATUSES)).toBe(undefined)
-    })
-
-    test('大文字小文字を区別する', () => {
-      expect(parseTypedValue('Active', STATUSES)).toBe(undefined)
-      expect(parseTypedValue('ACTIVE', STATUSES)).toBe(undefined)
-    })
-  })
-
-  describe('parseTypedValueOrDefault', () => {
-    const TYPES = ['PERCENTAGE', 'FIXED_AMOUNT'] as const
-
-    test('有効な値を返す', () => {
-      expect(parseTypedValueOrDefault('PERCENTAGE', TYPES, 'PERCENTAGE')).toBe('PERCENTAGE')
-      expect(parseTypedValueOrDefault('FIXED_AMOUNT', TYPES, 'PERCENTAGE')).toBe('FIXED_AMOUNT')
-    })
-
-    test('無効な値でデフォルトを返す', () => {
-      expect(parseTypedValueOrDefault('invalid', TYPES, 'PERCENTAGE')).toBe('PERCENTAGE')
-      expect(parseTypedValueOrDefault('DISCOUNT', TYPES, 'FIXED_AMOUNT')).toBe('FIXED_AMOUNT')
-    })
-
-    test('null でデフォルトを返す', () => {
-      expect(parseTypedValueOrDefault(null, TYPES, 'PERCENTAGE')).toBe('PERCENTAGE')
-    })
-
-    test('undefined でデフォルトを返す', () => {
-      expect(parseTypedValueOrDefault(undefined, TYPES, 'FIXED_AMOUNT')).toBe('FIXED_AMOUNT')
-    })
-
-    test('空文字列でデフォルトを返す', () => {
-      expect(parseTypedValueOrDefault('', TYPES, 'PERCENTAGE')).toBe('PERCENTAGE')
-    })
-
-    test('大文字小文字を区別する', () => {
-      expect(parseTypedValueOrDefault('percentage', TYPES, 'PERCENTAGE')).toBe('PERCENTAGE')
-      expect(parseTypedValueOrDefault('Percentage', TYPES, 'FIXED_AMOUNT')).toBe('FIXED_AMOUNT')
-    })
-  })
 })

@@ -182,7 +182,7 @@ export async function getRecentReservations(limit = 5): Promise<RecentReservatio
     startTime: r.startTime,
     endTime: r.endTime,
     status: r.status,
-    totalPrice: r.totalPrice ? Number(r.totalPrice) : null,
+    totalPrice: r.totalPrice,
   }))
 }
 
@@ -250,7 +250,7 @@ export async function getTodayReservations(): Promise<RecentReservation[]> {
     startTime: r.startTime,
     endTime: r.endTime,
     status: r.status,
-    totalPrice: r.totalPrice ? Number(r.totalPrice) : null,
+    totalPrice: r.totalPrice,
   }))
 }
 

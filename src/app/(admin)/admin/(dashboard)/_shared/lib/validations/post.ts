@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { LayoutWidth } from '@/shared/types/prisma'
 import { PostStatus } from '@/shared/generated/prisma/enums'
 import { seoOgpFieldsSchema, seoOgpFieldsFormSchema } from '@/shared/lib/validations/seo'
+import { lexicalJsonSchema } from '@/shared/lib/validations/lexical'
 
 // =============================================================================
 // Post Schemas
@@ -15,7 +16,7 @@ export const createPostSchema = z
     title: z.string().min(1, { error: 'タイトルは必須です' }).max(200, { error: 'タイトルは200文字以内' }),
     slug: z.string().min(1, { error: 'スラッグは必須です' }).max(200).regex(/^[a-z0-9-]+$/, { error: 'スラッグは小文字英数字とハイフンのみ' }),
     excerpt: z.string().min(1, { error: '抜粋は必須です' }).max(500, { error: '抜粋は500文字以内' }),
-    content: z.string().default(''),
+    contentJson: z.string().default(''),
     thumbnailUrl: z.string().min(1, { error: 'サムネイルURLは必須です' }),
     categoryId: z.string().uuid({ error: 'カテゴリを選択してください' }),
     tags: z.array(z.string().uuid({ error: 'タグIDが不正です' })).default([]),
@@ -32,7 +33,7 @@ export const updatePostSchema = z
     title: z.string().min(1, { error: 'タイトルは必須です' }).max(200, { error: 'タイトルは200文字以内' }),
     slug: z.string().min(1, { error: 'スラッグは必須です' }).max(200).regex(/^[a-z0-9-]+$/, { error: 'スラッグは小文字英数字とハイフンのみ' }),
     excerpt: z.string().min(1, { error: '抜粋は必須です' }).max(500, { error: '抜粋は500文字以内' }),
-    content: z.string().min(1, { error: '本文は必須です' }),
+    contentJson: lexicalJsonSchema,
     thumbnailUrl: z.string().min(1, { error: 'サムネイルURLは必須です' }),
     categoryId: z.string().uuid({ error: 'カテゴリを選択してください' }),
     tags: z.array(z.string().uuid({ error: 'タグIDが不正です' })).default([]),
@@ -51,7 +52,7 @@ export const postFormSchema = z
     title: z.string().min(1, { error: 'タイトルは必須です' }).max(200, { error: 'タイトルは200文字以内' }),
     slug: z.string().min(1, { error: 'スラッグは必須です' }).max(200).regex(/^[a-z0-9-]+$/, { error: 'スラッグは小文字英数字とハイフンのみ' }),
     excerpt: z.string().min(1, { error: '抜粋は必須です' }).max(500, { error: '抜粋は500文字以内' }),
-    content: z.string().min(1, { error: '本文は必須です' }),
+    contentJson: z.string().min(1, { error: '本文は必須です' }),
     thumbnailUrl: z.string().min(1, { error: 'サムネイルURLは必須です' }),
     categoryId: z.string().min(1, { error: 'カテゴリを選択してください' }),
     tags: z.string().optional(),
@@ -113,7 +114,8 @@ export type PostData = {
   title: string
   slug: string
   excerpt: string
-  content: string
+  contentHtml: string
+  contentJson: unknown
   thumbnailUrl: string
   ogpImageUrl: string | null
   categoryId: string
@@ -148,7 +150,8 @@ export type PostVersionData = {
   id: string
   postId: string
   version: number
-  content: string
+  contentHtml: string
+  contentJson: unknown
   createdAt: Date
   createdBy: string | null
 }

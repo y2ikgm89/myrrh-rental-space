@@ -14,9 +14,10 @@ import {
 } from 'bun:test'
 
 // モック用prismaクライアント（mock.module より前に定義してTDZを回避）
+// 戻り型を union にしてテスト毎に mockResolvedValueOnce で上書き可能にする
 const mockPrismaClient = {
   settings: {
-    findUnique: mock(() => Promise.resolve(null)),
+    findUnique: mock<() => Promise<Record<string, string | null> | null>>(() => Promise.resolve(null)),
   },
 }
 
@@ -32,7 +33,8 @@ mock.module('@/shared/lib/crypto', () => ({
 }))
 
 // モジュールモック
-const mockFetch = mock<typeof fetch>(() => Promise.resolve(new Response()))
+// typeof fetch は Bun の preconnect 等の付加プロパティを持つため直接指定しない
+const mockFetch = mock(() => Promise.resolve(new Response()))
 
 // テスト対象の関数をインポート前にfetchをモック
 const originalFetch = globalThis.fetch

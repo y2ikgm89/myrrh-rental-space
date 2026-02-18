@@ -82,7 +82,7 @@ export async function createAuditLog(input: AuditLogInput): Promise<void> {
         resourceId: input.resourceId,
         oldValue: input.oldValue ?? undefined,
         newValue: input.newValue ?? undefined,
-        metadata: { ...metadata, ...input.metadata } as object,
+        metadata: JSON.parse(JSON.stringify({ ...metadata, ...input.metadata })),
       },
     })
   } catch (error) {

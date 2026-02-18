@@ -29,7 +29,7 @@ import {
   newsConfig,
 } from '@/admin/components/editor/inline'
 import type { NewsData } from '@/admin/lib/validations/news'
-import type { ContentWidthSettings } from '@/shared/types'
+import type { ContentWidth } from '@/shared/types'
 
 // =============================================================================
 // Types
@@ -39,14 +39,14 @@ type NewsEditorProps = {
   news?: NewsData
   mode?: 'create' | 'edit'
   /** グローバルレイアウト設定（フォールバック値として使用） */
-  layoutSettings?: ContentWidthSettings | null
+  fallbackContentWidth?: ContentWidth
 }
 
 // =============================================================================
 // Component
 // =============================================================================
 
-export function NewsEditor({ news, mode = 'edit', layoutSettings }: NewsEditorProps) {
+export function NewsEditor({ news, mode = 'edit', fallbackContentWidth }: NewsEditorProps) {
   // 専用フック使用（型アサーション不要）
   const editor = useNewsEditor({ news, mode })
 
@@ -111,7 +111,9 @@ export function NewsEditor({ news, mode = 'edit', layoutSettings }: NewsEditorPr
   // コンテンツ幅スタイル（useWatch公式パターン + グローバル設定フォールバック）
   const contentStyles = useContentWidthStyles({
     control: editor.form.control,
-    layoutSettings,
+    widthFieldName: 'contentWidth',
+    customFieldName: 'contentWidthCustom',
+    fallback: fallbackContentWidth,
   })
 
   // サイドパネル用extraProps
@@ -175,7 +177,8 @@ export function NewsEditor({ news, mode = 'edit', layoutSettings }: NewsEditorPr
       }
     >
       <LazyLexicalEditor
-        content={editor.content}
+        contentJson={editor.contentJson}
+        contentHtml={editor.contentHtml}
         onChange={editor.handleContentChange}
         disabled={editor.isPending}
         className={EDITOR_PROSE_CLASSES}

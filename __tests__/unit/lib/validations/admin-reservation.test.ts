@@ -89,7 +89,7 @@ describe('newCustomerSchema', () => {
 
   test('電話番号はオプショナル', () => {
     const validData = { ...validCustomerData }
-    delete (validData as Record<string, unknown>).phoneNumber
+    delete (validData as Record<string, unknown>)['phoneNumber']
     const result = newCustomerSchema.safeParse(validData)
     expect(result.success).toBe(true)
   })
@@ -152,7 +152,7 @@ describe('adminReservationSchema', () => {
 
   test('顧客IDと顧客データの両方がない場合にエラー', () => {
     const invalidData = { ...validReservationData }
-    delete (invalidData as Record<string, unknown>).customerId
+    delete (invalidData as Record<string, unknown>)['customerId']
     const result = adminReservationSchema.safeParse(invalidData)
     expect(result.success).toBe(false)
     if (!result.success) {
@@ -169,7 +169,7 @@ describe('adminReservationSchema', () => {
         email: 'yamada@example.com',
       },
     }
-    delete (validData as Record<string, unknown>).customerId
+    delete (validData as Record<string, unknown>)['customerId']
     const result = adminReservationSchema.safeParse(validData)
     expect(result.success).toBe(true)
   })
@@ -267,7 +267,7 @@ describe('adminReservationSchema', () => {
 
   test('statusフィールドはデフォルトでCONFIRMED', () => {
     const data = { ...validReservationData }
-    delete (data as Record<string, unknown>).status
+    delete (data as Record<string, unknown>)['status']
     const result = adminReservationSchema.safeParse(data)
     expect(result.success).toBe(true)
     if (result.success) {
@@ -277,7 +277,7 @@ describe('adminReservationSchema', () => {
 
   test('sendEmailフィールドはデフォルトでtrue', () => {
     const data = { ...validReservationData }
-    delete (data as Record<string, unknown>).sendEmail
+    delete (data as Record<string, unknown>)['sendEmail']
     const result = adminReservationSchema.safeParse(data)
     expect(result.success).toBe(true)
     if (result.success) {
@@ -290,7 +290,6 @@ describe('adminReservationSchema', () => {
       ReservationStatus.PENDING,
       ReservationStatus.CONFIRMED,
       ReservationStatus.CANCELLED,
-      ReservationStatus.COMPLETED,
     ]
     statuses.forEach((status) => {
       const data = { ...validReservationData, status }

@@ -239,7 +239,7 @@ export function ReservationForm(): ReactElement {
   }
 
   return (
-    <section className="pb-24 md:pb-32">
+    <section className="py-16 md:py-24">
       <div className="mx-auto max-w-2xl px-5 md:px-8">
         {/* Step indicator */}
         <div className="mb-10 md:mb-12">

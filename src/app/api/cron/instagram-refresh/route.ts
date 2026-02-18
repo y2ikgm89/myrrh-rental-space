@@ -1,7 +1,7 @@
 /**
  * Instagram Token Refresh Cron API
  *
- * Vercel Cronまたは外部スケジューラーから定期的に呼び出され、
+ * Cloud Schedulerまたは外部スケジューラーから定期的に呼び出され、
  * Instagramアクセストークンの自動更新を実行します。
  *
  * ## 機能
@@ -31,7 +31,7 @@ const REFRESH_THRESHOLD_DAYS = 10
  * Instagram Token Refresh Cronエンドポイント
  * GET /api/cron/instagram-refresh
  *
- * Vercel Cronまたは外部スケジューラーから呼び出される
+ * Cloud Schedulerまたは外部スケジューラーから呼び出される
  * 毎日1回実行を推奨
  *
  * セキュリティ: CRON_SECRET環境変数による認証
@@ -44,10 +44,10 @@ export async function GET() {
     // Next.js 16: headers() で動的にヘッダーを取得
     const headersList = await headers()
     const authHeader = headersList.get('authorization')
-    const cronSecret = process.env.CRON_SECRET
+    const cronSecret = process.env["CRON_SECRET"]
 
     // 本番環境ではCRON_SECRETを必須とする
-    if (!cronSecret && process.env.NODE_ENV === 'production') {
+    if (!cronSecret && process.env["NODE_ENV"] === 'production') {
       logError(new Error('CRON_SECRET is not set in production environment'), {
         category: ErrorCategory.AUTHORIZATION,
         severity: ErrorSeverity.CRITICAL,
@@ -60,7 +60,7 @@ export async function GET() {
     }
 
     // 開発環境で認証をスキップする場合は警告ログ
-    if (!cronSecret && process.env.NODE_ENV !== 'production') {
+    if (!cronSecret && process.env["NODE_ENV"] !== 'production') {
       logError(
         new Error(
           'CRON_SECRET is not set - authentication skipped in development'
@@ -70,7 +70,7 @@ export async function GET() {
           severity: ErrorSeverity.LOW,
           context: {
             operation: 'instagramTokenRefreshCron',
-            environment: process.env.NODE_ENV,
+            environment: process.env["NODE_ENV"],
           },
         }
       )

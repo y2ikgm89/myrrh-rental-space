@@ -9,7 +9,8 @@
 import { prisma } from '@/shared/lib/prisma'
 import { updateTag } from 'next/cache'
 import { CACHE_TAGS } from '@/shared/lib/constants'
-import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+import { createSuccess, type ActionResult } from '@/admin/types/server-actions'
+import { createValidationError } from '@/shared/lib/action-helpers'
 import { withPermission } from '@/admin/lib/server-action-helpers'
 
 import {
@@ -32,7 +33,7 @@ export const updateEmailSettings = withPermission<[data: EmailSettingsInput], vo
 )(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = emailSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   const updateData = {
@@ -61,7 +62,7 @@ export const updateNotificationSettings = withPermission<[data: NotificationSett
 )(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = notificationSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   await prisma.settings.upsert({

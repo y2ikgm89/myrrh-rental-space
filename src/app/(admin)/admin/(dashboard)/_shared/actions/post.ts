@@ -4,6 +4,7 @@ import { prisma } from '@/shared/lib/prisma'
 import { updateTag } from 'next/cache'
 import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
 import { createSuccess, createFailure } from '@/admin/types/server-actions'
+import { createValidationError } from '@/shared/lib/action-helpers'
 import { withPermission } from '@/admin/lib/server-action-helpers'
 import type { PostWhereInput } from '@/shared/types/prisma'
 import { PostStatus } from '@/shared/generated/prisma/enums'
@@ -12,6 +13,7 @@ import { purgePostCache } from '@/shared/lib/cloudflare'
 import { fireAndForget } from '@/shared/lib/async-utils'
 import { ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
 import { checkSlugAvailability, getSlugErrorMessage } from '@/shared/lib/slug-validation'
+import { renderEditorStateToHtmlLazy } from '@/admin/lib/lazy-renderer'
 
 import {
   createPostSchema,
@@ -81,7 +83,7 @@ export async function getPosts(
     where.OR = [
       { title: { contains: search, mode: 'insensitive' } },
       { excerpt: { contains: search, mode: 'insensitive' } },
-      { content: { contains: search, mode: 'insensitive' } },
+      { contentHtml: { contains: search, mode: 'insensitive' } },
     ]
   }
 
@@ -189,7 +191,7 @@ export const createPost = withPermission<[CreatePostInput], { id: string }>(
 )(async (user, data) => {
     const parsed = createPostSchema.safeParse(data)
     if (!parsed.success) {
-      return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+      return createValidationError(parsed.error)
     }
 
     // スラッグの使用可能チェック（予約パス＋全コンテンツタイプ横断）
@@ -200,11 +202,16 @@ export const createPost = withPermission<[CreatePostInput], { id: string }>(
       return createFailure(getSlugErrorMessage(slugCheck.reason))
     }
 
-    const { tags, ...postData } = parsed.data
+    const { tags, contentJson, ...postData } = parsed.data
+
+    // JSON → HTML 変換（空コンテンツの場合はスキップ）
+    const contentHtml = contentJson ? await renderEditorStateToHtmlLazy(contentJson) : ''
 
     const post = await prisma.post.create({
       data: {
         ...postData,
+        contentJson: contentJson ? JSON.parse(contentJson) : undefined,
+        contentHtml,
         status: PostStatus.DRAFT,
         authorId: user.id,
         postTags: {
@@ -231,7 +238,7 @@ export const updatePost = withPermission<[string, UpdatePostInput], void>(
 )(async (user, id, data) => {
     const parsed = updatePostSchema.safeParse(data)
     if (!parsed.success) {
-      return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+      return createValidationError(parsed.error)
     }
 
     const existingPost = await prisma.post.findUnique({
@@ -252,7 +259,10 @@ export const updatePost = withPermission<[string, UpdatePostInput], void>(
       return createFailure(getSlugErrorMessage(slugCheck.reason))
     }
 
-    const { contentWidth, contentWidthCustom, tags, ...rest } = parsed.data
+    const { contentWidth, contentWidthCustom, tags, contentJson, ...rest } = parsed.data
+
+    // JSON → HTML 変換
+    const contentHtml = await renderEditorStateToHtmlLazy(contentJson)
 
     // 旧 slug でのキャッシュ無効化のため、更新前の slug を保持
     const oldSlug = existingPost.slug
@@ -261,6 +271,8 @@ export const updatePost = withPermission<[string, UpdatePostInput], void>(
       where: { id },
       data: {
         ...rest,
+        contentJson: JSON.parse(contentJson),
+        contentHtml,
         contentWidth: contentWidth ?? null,
         contentWidthCustom: contentWidthCustom ?? null,
         postTags: {
@@ -326,7 +338,7 @@ export const publishPost = withPermission<[string], void>(
 )(async (user, id) => {
     const post = await prisma.post.findUnique({
       where: { id },
-      select: { id: true, slug: true, publishedAt: true, content: true },
+      select: { id: true, slug: true, publishedAt: true, contentHtml: true, contentJson: true },
     })
 
     if (!post) {
@@ -354,7 +366,8 @@ export const publishPost = withPermission<[string], void>(
         data: {
           postId: id,
           version: nextVersion,
-          content: post.content,
+          contentHtml: post.contentHtml,
+          contentJson: post.contentJson ?? undefined,
           createdBy: user.id,
         },
       }),
@@ -379,6 +392,7 @@ export const unpublishPost = withPermission<[string], void>(
 )(async (user, id) => {
     const post = await prisma.post.findUnique({
       where: { id },
+      select: { id: true, slug: true },
     })
 
     if (!post) {
@@ -411,6 +425,7 @@ export const createPostBackup = withPermission<[string], { version: number }>(
 )(async (user, id) => {
     const post = await prisma.post.findUnique({
       where: { id },
+      select: { id: true, contentHtml: true, contentJson: true },
     })
 
     if (!post) {
@@ -429,7 +444,8 @@ export const createPostBackup = withPermission<[string], { version: number }>(
       data: {
         postId: id,
         version: nextVersion,
-        content: post.content,
+        contentHtml: post.contentHtml,
+        contentJson: post.contentJson ?? undefined,
         createdBy: user.id,
       },
     })
@@ -467,6 +483,7 @@ export const restorePostVersion = withPermission<[string, number], void>(
         where: {
           postId_version: { postId, version },
         },
+        select: { contentHtml: true, contentJson: true },
       }),
       prisma.post.findUnique({
         where: { id: postId },
@@ -485,7 +502,8 @@ export const restorePostVersion = withPermission<[string, number], void>(
     await prisma.post.update({
       where: { id: postId },
       data: {
-        content: versionData.content,
+        contentHtml: versionData.contentHtml,
+        contentJson: versionData.contentJson ?? undefined,
         status: PostStatus.DRAFT,
       },
     })
@@ -555,12 +573,13 @@ export const createPostCategory = withPermission<[PostCategoryInput], { id: stri
 )(async (user, data) => {
     const parsed = postCategorySchema.safeParse(data)
     if (!parsed.success) {
-      return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+      return createValidationError(parsed.error)
     }
 
     // スラッグの重複チェック
     const existingCategory = await prisma.postCategory.findUnique({
       where: { slug: parsed.data.slug },
+      select: { id: true },
     })
     if (existingCategory) {
       return createFailure('このスラッグは既に使用されています')
@@ -589,11 +608,12 @@ export const updatePostCategory = withPermission<[string, PostCategoryInput], vo
 )(async (user, id, data) => {
     const parsed = postCategorySchema.safeParse(data)
     if (!parsed.success) {
-      return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+      return createValidationError(parsed.error)
     }
 
     const existingCategory = await prisma.postCategory.findUnique({
       where: { id },
+      select: { id: true },
     })
 
     if (!existingCategory) {
@@ -606,6 +626,7 @@ export const updatePostCategory = withPermission<[string, PostCategoryInput], vo
         slug: parsed.data.slug,
         id: { not: id },
       },
+      select: { id: true },
     })
     if (duplicateSlug) {
       return createFailure('このスラッグは既に使用されています')
@@ -801,7 +822,7 @@ export const createPostTag = withPermission<[PostTagInput], { id: string }>(
 )(async (user, data) => {
   const parsed = postTagSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   // 名前の重複チェック
@@ -838,7 +859,7 @@ export const updatePostTag = withPermission<[string, PostTagInput], void>(
 )(async (user, id, data) => {
   const parsed = postTagSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   // 既存タグと重複チェックを並列実行

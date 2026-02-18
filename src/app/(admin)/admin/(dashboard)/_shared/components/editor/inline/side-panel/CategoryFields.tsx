@@ -28,7 +28,7 @@ import {
   DialogFooter,
 } from '@/admin/components/ui'
 import { getFieldError, getErrorMessage } from '../types'
-import type { FieldComponentProps } from '../content-types/types'
+import { setFieldString, type FieldComponentProps } from '../content-types/types'
 import { generateSlug } from '@/shared/lib/utils'
 
 // =============================================================================
@@ -107,8 +107,7 @@ export function CategoryFields<T extends FieldValues>({
     try {
       const newCategory = await onCreateCategory(newCategoryName.trim())
       if (newCategory) {
-        // react-hook-form のジェネリック型制約により型パラメータが必要
-        setValue(fields.categoryId, newCategory.id as T[Path<T>], { shouldDirty: true })
+        setFieldString(setValue, fields.categoryId, newCategory.id, { shouldDirty: true })
         setIsDialogOpen(false)
         setNewCategoryName('')
       }
@@ -136,8 +135,7 @@ export function CategoryFields<T extends FieldValues>({
           value={categoryId || (allowEmpty ? SELECT_NONE_VALUE : '')}
           onValueChange={(value) => {
             const newValue = value === SELECT_NONE_VALUE ? '' : value
-            // react-hook-form のジェネリック型制約により型パラメータが必要
-            setValue(fields.categoryId, newValue as T[Path<T>], { shouldDirty: true })
+            setFieldString(setValue, fields.categoryId, newValue, { shouldDirty: true })
           }}
           disabled={disabled}
         >

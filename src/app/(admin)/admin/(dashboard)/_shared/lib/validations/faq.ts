@@ -54,10 +54,10 @@ export const faqItemFormSchema = z
       .string()
       .min(1, { error: '質問を入力してください' })
       .max(500, { error: '質問は500文字以内で入力してください' }),
-    answer: z
+    answerJson: z
       .string()
       .min(1, { error: '回答を入力してください' })
-      .max(10000, { error: '回答は10000文字以内で入力してください' }),
+      .max(500000, { error: '回答が大きすぎます' }),
     order: z.number().int().min(0),
     isPublished: z.boolean(),
   })
@@ -68,7 +68,7 @@ export type FaqItemFormInput = z.infer<typeof faqItemFormSchema>
 export const defaultFaqItemFormValues: FaqItemFormInput = {
   categoryId: '',
   question: '',
-  answer: '',
+  answerJson: '',
   order: 0,
   isPublished: true,
   ...defaultSeoOgpValues,
@@ -94,7 +94,8 @@ export type FaqItemData = {
   id: string
   categoryId: string
   question: string
-  answer: string
+  answerHtml: string
+  answerJson: unknown
   order: number
   isPublished: boolean
   publishedAt: Date | null

@@ -42,7 +42,7 @@ export function useMediaSelection({
   const [selectedMedia, setSelectedMedia] = useState<SelectedMedia[]>(initialSelected)
 
   const selectedIds = new Set(
-    selectedMedia.filter((m) => m.id !== null).map((m) => m.id as string)
+    selectedMedia.filter((m): m is SelectedMedia & { id: string } => m.id !== null).map((m) => m.id)
   )
 
   const canSelectMore =

@@ -25,7 +25,7 @@ export type { EditorCommentStatus } from '@/shared/generated/prisma/client'
  */
 export type CommentableContentType = 'post' | 'news' | 'page' | 'faq'
 
-const COMMENTABLE_CONTENT_TYPES = new Set<CommentableContentType>([
+const COMMENTABLE_CONTENT_TYPES: ReadonlySet<string> = new Set([
   'post',
   'news',
   'page',
@@ -35,7 +35,7 @@ const COMMENTABLE_CONTENT_TYPES = new Set<CommentableContentType>([
 export function isCommentableContentType(
   value: string
 ): value is CommentableContentType {
-  return COMMENTABLE_CONTENT_TYPES.has(value as CommentableContentType)
+  return COMMENTABLE_CONTENT_TYPES.has(value)
 }
 
 // =============================================================================

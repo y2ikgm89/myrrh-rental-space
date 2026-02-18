@@ -53,7 +53,7 @@ async function logAuthEvent(
         userId,
         action,
         resource: 'auth',
-        metadata: metadata as object,
+        metadata: JSON.parse(JSON.stringify(metadata)),
       },
     })
   } catch (error) {
@@ -125,7 +125,7 @@ function createAuth(credentials?: GoogleOAuthCredentials | null) {
       }),
     },
     plugins: [nextCookies()],
-    trustedOrigins: [process.env.BETTER_AUTH_URL ?? getAppUrl()],
+    trustedOrigins: [process.env["BETTER_AUTH_URL"] ?? getAppUrl()],
   })
 }
 
@@ -208,7 +208,7 @@ export type User = Omit<Session['user'], 'role'> & {
 function isValidSessionUser(user: unknown): user is Session['user'] {
   if (!isRecord(user)) return false
   if (!('id' in user) || !('email' in user) || !('role' in user)) return false
-  return typeof user.id === 'string' && typeof user.email === 'string'
+  return typeof user['id'] === 'string' && typeof user['email'] === 'string'
 }
 
 /**

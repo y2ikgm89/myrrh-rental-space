@@ -10,10 +10,10 @@
 
 ## 概要
 
-このプロジェクトは**フルBunで実行可能**なテスト環境を採用しています。Bun 1.3.5の組み込みテストランナー（`bun test`）を使用し、追加のテストフレームワーク依存を最小限に抑えます。
+このプロジェクトは**フルBunで実行可能**なテスト環境を採用しています。Bun 1.3.9の組み込みテストランナー（`bun test`）を使用し、追加のテストフレームワーク依存を最小限に抑えます。
 
 **最新の公式推奨事項に準拠**:
-- Bun test 1.3.5の最新機能（`mock.module()`, `spyOn()`, `vi`互換API等）
+- Bun test 1.3.9の最新機能（`mock.module()`, `spyOn()`, `vi`互換API等）
 - Next.js 16 App Routerのテストベストプラクティス（Server ComponentsはE2Eテスト推奨）
 - Prisma 7のテストベストプラクティス（トランザクションを使用したテスト分離）
 - Playwrightの最新設定とベストプラクティス
@@ -39,7 +39,7 @@
 
 ## テストフレームワークとツール
 
-### Bun test（Bun 1.3.5組み込み）
+### Bun test（Bun 1.3.9組み込み）
 
 このプロジェクトは**Bun test**を使用します。追加のテストフレームワーク（Jest、Vitest等）は不要です。
 
@@ -246,8 +246,8 @@ NODE_ENV="test"
 ```
 
 **テスト用設定値の例**:
-- `NEXTAUTH_SECRET`: テスト専用のシークレットキー（本番とは別）
-- `NEXTAUTH_URL`: `http://localhost:3000`（テストサーバー用）
+- `BETTER_AUTH_SECRET`: テスト専用のシークレットキー（本番とは別）
+- `BETTER_AUTH_URL`: `http://localhost:3000`（テストサーバー用）
 - `SUPABASE_URL`: テスト用SupabaseプロジェクトのURL
 - `RESEND_API_KEY`: ResendのテストモードAPIキー（実際のメール送信を回避）
 
@@ -272,7 +272,7 @@ services:
       - test-db-data:/var/lib/postgresql/data
 
   test-app:
-    image: oven/bun:1.3.5
+    image: oven/bun:1.3.9
     container_name: myrrh-rental-space-test
     working_dir: /app
     volumes:
@@ -327,8 +327,8 @@ CI/CD環境では、テスト用データベースを自動セットアップし
     DATABASE_URL="postgresql://test:test@localhost:5433/test_db" \
     bun run test
   env:
-    NEXTAUTH_SECRET: ${{ secrets.TEST_NEXTAUTH_SECRET }}
-    NEXTAUTH_URL: http://localhost:3000
+    BETTER_AUTH_SECRET: ${{ secrets.TEST_BETTER_AUTH_SECRET }}
+    BETTER_AUTH_URL: http://localhost:3000
 ```
 
 ---
@@ -802,7 +802,7 @@ jobs:
       - name: Install Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.3.5
+          bun-version: 1.3.9
       
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -824,8 +824,8 @@ jobs:
         run: bun run test
         env:
           DATABASE_URL: postgresql://test:test@localhost:5432/test_db
-          NEXTAUTH_SECRET: ${{ secrets.TEST_NEXTAUTH_SECRET }}
-          NEXTAUTH_URL: http://localhost:3000
+          BETTER_AUTH_SECRET: ${{ secrets.TEST_BETTER_AUTH_SECRET }}
+          BETTER_AUTH_URL: http://localhost:3000
           SUPABASE_URL: ${{ secrets.TEST_SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.TEST_SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.TEST_SUPABASE_SERVICE_ROLE_KEY }}
@@ -834,8 +834,8 @@ jobs:
         run: bun test --coverage --coverage-reporter=lcov
         env:
           DATABASE_URL: postgresql://test:test@localhost:5432/test_db
-          NEXTAUTH_SECRET: ${{ secrets.TEST_NEXTAUTH_SECRET }}
-          NEXTAUTH_URL: http://localhost:3000
+          BETTER_AUTH_SECRET: ${{ secrets.TEST_BETTER_AUTH_SECRET }}
+          BETTER_AUTH_URL: http://localhost:3000
       
       - name: Upload coverage reports
         uses: codecov/codecov-action@v5
@@ -851,8 +851,8 @@ jobs:
         run: bun run test:e2e
         env:
           DATABASE_URL: postgresql://test:test@localhost:5432/test_db
-          NEXTAUTH_SECRET: ${{ secrets.TEST_NEXTAUTH_SECRET }}
-          NEXTAUTH_URL: http://localhost:3000
+          BETTER_AUTH_SECRET: ${{ secrets.TEST_BETTER_AUTH_SECRET }}
+          BETTER_AUTH_URL: http://localhost:3000
       
       - name: Upload Playwright report
         uses: actions/upload-artifact@v6
@@ -886,25 +886,25 @@ jobs:
 ```yaml
 steps:
   # テスト実行
-  - name: 'oven/bun:1.3.5'
+  - name: 'oven/bun:1.3.9'
     entrypoint: 'bun'
     args: ['install', '--frozen-lockfile']
   
-  - name: 'oven/bun:1.3.5'
+  - name: 'oven/bun:1.3.9'
     entrypoint: 'bun'
     args: ['run', 'lint']
   
-  - name: 'oven/bun:1.3.5'
+  - name: 'oven/bun:1.3.9'
     entrypoint: 'bun'
     args: ['run', 'type-check']
   
-  - name: 'oven/bun:1.3.5'
+  - name: 'oven/bun:1.3.9'
     entrypoint: 'bun'
     args: ['run', 'test']
     env:
       - 'DATABASE_URL=${_TEST_DATABASE_URL}'
-      - 'NEXTAUTH_SECRET=${_TEST_NEXTAUTH_SECRET}'
-      - 'NEXTAUTH_URL=http://localhost:3000'
+      - 'BETTER_AUTH_SECRET=${_TEST_BETTER_AUTH_SECRET}'
+      - 'BETTER_AUTH_URL=http://localhost:3000'
   
   # ビルド（テスト通過後）
   - name: 'gcr.io/cloud-builders/docker'
@@ -1521,9 +1521,10 @@ describe('Cache invalidation', () => {
 
 - **2026-01-06**: テスト要件定義ドキュメント作成、包括的なテスト要件を定義
 - **2026-01-06**: 最新の公式推奨事項を反映（Bun test、Playwright、Next.js 16、Prisma 7の最新ベストプラクティス）
-  - Bun test 1.3.5の最新機能（`mock.module()`, `spyOn()`, `vi`互換API、カバレッジ設定、`bunfig.toml`設定）
+  - Bun test 1.3.9の最新機能（`mock.module()`, `spyOn()`, `vi`互換API、カバレッジ設定、`bunfig.toml`設定）
   - Next.js 16 App Routerのテストベストプラクティス（Server ComponentsはE2Eテスト推奨、Server Actionsの統合テスト）
   - Prisma 7のテストベストプラクティス（トランザクションを使用したテスト分離、並列実行対応、セーブポイント）
   - Playwrightの最新設定（`fullyParallel`, `forbidOnly`, `retries`, `webServer`, `timeout`等）
   - GitHub Actionsの最新バージョン（`actions/checkout@v6`, `oven-sh/setup-bun@v2`, `codecov/codecov-action@v5`, `actions/upload-artifact@v6`）
   - テスト品質のベストプラクティス（カバレッジ数値だけでなく品質を重視、エッジケースのテスト）
+

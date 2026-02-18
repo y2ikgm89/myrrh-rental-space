@@ -224,13 +224,8 @@ export async function getReservations(
     }),
   ])
 
-  // Decimal型をnumber型に変換
   const formattedReservations: ReservationWithRelations[] = reservations.map((r) => ({
     ...r,
-    totalPrice: r.totalPrice ? Number(r.totalPrice) : null,
-    basePrice: r.basePrice ? Number(r.basePrice) : null,
-    couponDiscountAmount: r.couponDiscountAmount ? Number(r.couponDiscountAmount) : null,
-    durationDiscountAmount: r.durationDiscountAmount ? Number(r.durationDiscountAmount) : null,
   }))
 
   return {
@@ -285,13 +280,7 @@ export async function getReservationById(
     return null
   }
 
-  return {
-    ...reservation,
-    totalPrice: reservation.totalPrice ? Number(reservation.totalPrice) : null,
-    basePrice: reservation.basePrice ? Number(reservation.basePrice) : null,
-    couponDiscountAmount: reservation.couponDiscountAmount ? Number(reservation.couponDiscountAmount) : null,
-    durationDiscountAmount: reservation.durationDiscountAmount ? Number(reservation.durationDiscountAmount) : null,
-  }
+  return { ...reservation }
 }
 
 /**
@@ -333,7 +322,7 @@ export const updateReservationStatus = withPermission<[string, ReservationStatus
     spaceName: reservation.space.name,
     startTime: reservation.startTime,
     endTime: reservation.endTime,
-    totalPrice: reservation.totalPrice ? Number(reservation.totalPrice) : null,
+    totalPrice: reservation.totalPrice,
     notes: reservation.notes || undefined,
   }
 
@@ -347,7 +336,7 @@ export const updateReservationStatus = withPermission<[string, ReservationStatus
     endTime: reservation.endTime,
     location: reservation.space.address ?? undefined,
     notes: reservation.notes ?? undefined,
-    totalPrice: reservation.totalPrice ? Number(reservation.totalPrice) : null,
+    totalPrice: reservation.totalPrice,
   }
 
   // 確定時: 確認メール送信 + カレンダー同期
@@ -440,6 +429,7 @@ export const updateReservationNotes = withPermission<[string, string | null]>(
 
   const reservation = await prisma.reservation.findUnique({
     where: { id },
+    select: { id: true },
   })
 
   if (!reservation) {
@@ -466,6 +456,7 @@ export const deleteReservation = withPermission<[string]>(
 )(async (_user, id) => {
   const reservation = await prisma.reservation.findUnique({
     where: { id },
+    select: { id: true, googleCalendarEventId: true },
   })
 
   if (!reservation) {
@@ -562,7 +553,7 @@ export async function getReservationsForCalendar(
     startTime: r.startTime,
     endTime: r.endTime,
     status: r.status,
-    totalPrice: r.totalPrice ? Number(r.totalPrice) : null,
+    totalPrice: r.totalPrice,
     notes: r.notes,
     customerName: `${r.customer.lastName} ${r.customer.firstName}`,
     customerEmail: r.customer.email,
@@ -721,7 +712,7 @@ export const createAdminReservation = withPermission<[AdminReservationInput]>(
 
   // 時間計算
   const hours = (endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60 * 60)
-  const hourlyPrice = Number(space.hourlyPrice)
+  const hourlyPrice = space.hourlyPrice
   const basePrice = Math.floor(hourlyPrice * hours)
 
   // クーポン検証
@@ -856,6 +847,7 @@ export const createAdminReservation = withPermission<[AdminReservationInput]>(
     // 顧客の予約統計を更新
     const customer = await tx.customer.findUnique({
       where: { id: resolvedCustomerId },
+      select: { id: true, firstReservationAt: true },
     })
 
     await tx.customer.update({
@@ -965,8 +957,5 @@ export async function getSpacesForReservation(): Promise<
     orderBy: { name: 'asc' },
   })
 
-  return spaces.map((s) => ({
-    ...s,
-    hourlyPrice: Number(s.hourlyPrice),
-  }))
+  return spaces.map((s) => ({ ...s }))
 }

@@ -39,7 +39,7 @@ function sendMetric(metric: { name: string; delta: number; value: number; id: st
       metric_value: metric.value,
       metric_delta: metric.delta,
     })
-  } else if (process.env.NODE_ENV === 'development') {
+  } else if (process.env["NODE_ENV"] === 'development') {
     // 開発環境ではコンソールに出力
     console.log(`[Web Vitals] ${metric.name}: ${Math.round(metric.value)}`)
   }
@@ -56,11 +56,11 @@ export function WebVitalsReporter({ enabled }: WebVitalsReporterProps) {
   useEffect(() => {
     // Cookie同意がない場合、またはAnalyticsが無効な場合はスキップ
     // ただし開発環境ではコンソール出力のため常に有効
-    if (consentStatus !== 'accepted' && process.env.NODE_ENV !== 'development') {
+    if (consentStatus !== 'accepted' && process.env["NODE_ENV"] !== 'development') {
       return
     }
 
-    if (!enabled && process.env.NODE_ENV !== 'development') {
+    if (!enabled && process.env["NODE_ENV"] !== 'development') {
       return
     }
 

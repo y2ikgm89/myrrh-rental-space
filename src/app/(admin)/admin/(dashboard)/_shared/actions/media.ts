@@ -23,6 +23,7 @@ import { STORAGE_BUCKETS } from '@/shared/lib/supabase'
 import { uploadFile, deleteFile, deleteFiles } from '@/shared/lib/storage'
 import { parseStringArray } from '@/shared/lib/json-validators'
 import { createSuccess, createFailure, type ActionResult } from '@/shared/types/server-actions'
+import { createValidationError } from '@/shared/lib/action-helpers'
 import { checkPermission, logAction } from '@/admin/lib/action-auth'
 import { isEditorRole } from '@/admin/lib/permissions'
 import {
@@ -230,7 +231,7 @@ export async function uploadMedia(
   // Validate metadata
   const parsed = mediaUploadSchema.safeParse(metadata)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   // Infer media type from file
@@ -312,11 +313,12 @@ export async function updateMedia(
 
   const parsed = mediaUpdateSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   const existing = await prisma.media.findUnique({
     where: { id, isActive: true },
+    select: { id: true, uploadedBy: true },
   })
 
   if (!existing) {
@@ -357,6 +359,7 @@ export async function deleteMedia(id: string): Promise<ActionResult<void>> {
 
   const media = await prisma.media.findUnique({
     where: { id, isActive: true },
+    select: { id: true, storagePath: true },
   })
 
   if (!media) {

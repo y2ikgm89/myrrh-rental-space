@@ -15,7 +15,7 @@ import { describe, test, expect } from 'bun:test'
 describe('Post Public Action Integration', () => {
   describe('GetPublishedPostsOptions', () => {
     test('デフォルト値が正しく設定される', () => {
-      const options = {}
+      const options: { take?: number; orderBy?: 'publishedAt' | 'viewCount'; categoryId?: string } = {}
       const { take = 3, orderBy = 'publishedAt', categoryId } = options
 
       expect(take).toBe(3)
@@ -37,7 +37,7 @@ describe('Post Public Action Integration', () => {
     })
 
     test('部分的なオプション指定', () => {
-      const options = { take: 5 }
+      const options: { take?: number; orderBy?: 'publishedAt' | 'viewCount'; categoryId?: string } = { take: 5 }
       const { take = 3, orderBy = 'publishedAt', categoryId } = options
 
       expect(take).toBe(5)

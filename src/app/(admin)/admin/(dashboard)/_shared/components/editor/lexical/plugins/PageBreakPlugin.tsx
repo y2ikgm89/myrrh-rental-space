@@ -9,7 +9,8 @@
 
 import { useEffect } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { createCommand, COMMAND_PRIORITY_EDITOR, $insertNodes } from 'lexical'
+import { createCommand, COMMAND_PRIORITY_EDITOR } from 'lexical'
+import { $insertNodeToNearestRoot } from '@lexical/utils'
 import { $createPageBreakNode } from '../nodes/PageBreakNode'
 
 // =============================================================================
@@ -31,7 +32,7 @@ export function PageBreakPlugin() {
       () => {
         editor.update(() => {
           const pageBreakNode = $createPageBreakNode()
-          $insertNodes([pageBreakNode])
+          $insertNodeToNearestRoot(pageBreakNode)
         })
         return true
       },

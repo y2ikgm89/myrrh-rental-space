@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from '@/admin/components/ui'
 import { formatDateLabel } from '@/admin/lib/calendar'
+import { getReservationStatusFilterOrAll } from '@/shared/lib/validations/enums'
 import type { CalendarState } from './hooks'
 
 interface CalendarToolbarProps {
@@ -104,7 +105,7 @@ export function CalendarToolbar({ state }: CalendarToolbarProps) {
         <Select
           value={status}
           onValueChange={(v) =>
-            setStatusFilter(v as typeof status)
+            setStatusFilter(getReservationStatusFilterOrAll(v))
           }
         >
           <SelectTrigger className="w-32">

@@ -1,8 +1,10 @@
-/**
+﻿/**
  * Collapsible Title Node
  *
  * @description 折りたたみのタイトル部分を表すElementNode
  * <summary>要素として出力される
+ *
+ * スタイルは lexical-content.css の [data-collapsible-title] セレクターで管理
  */
 
 'use client'
@@ -13,26 +15,17 @@ import type {
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
-  NodeKey,
-  SerializedElementNode,
   RangeSelection,
 } from 'lexical'
-import { $applyNodeReplacement, ElementNode } from 'lexical'
-import { $isCollapsibleContainerNode } from './CollapsibleContainerNode'
+import { $create, $setState, ElementNode } from 'lexical'
+import { $isCollapsibleItemNode, openState } from './CollapsibleItemNode'
 import { $isCollapsibleContentNode } from './CollapsibleContentNode'
-
-// =============================================================================
-// Types
-// =============================================================================
-
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface SerializedCollapsibleTitleNode extends SerializedElementNode {}
 
 // =============================================================================
 // DOM Conversion
 // =============================================================================
 
-function $convertCollapsibleTitleElement(_domNode: Node): null | DOMConversionOutput {
+function $convertCollapsibleTitleElement(_element: HTMLElement): null | DOMConversionOutput {
   const node = $createCollapsibleTitleNode()
   return { node }
 }
@@ -42,19 +35,11 @@ function $convertCollapsibleTitleElement(_domNode: Node): null | DOMConversionOu
 // =============================================================================
 
 export class CollapsibleTitleNode extends ElementNode {
-  static getType(): string {
-    return 'collapsible-title'
+  override $config() {
+    return this.config('collapsible-title', { extends: ElementNode })
   }
 
-  static clone(node: CollapsibleTitleNode): CollapsibleTitleNode {
-    return new CollapsibleTitleNode(node.__key)
-  }
-
-  static importJSON(serializedNode: SerializedCollapsibleTitleNode): CollapsibleTitleNode {
-    return $createCollapsibleTitleNode().updateFromJSON(serializedNode)
-  }
-
-  static importDOM(): DOMConversionMap | null {
+  static override importDOM(): DOMConversionMap | null {
     return {
       summary: () => ({
         conversion: $convertCollapsibleTitleElement,
@@ -63,56 +48,35 @@ export class CollapsibleTitleNode extends ElementNode {
     }
   }
 
-  constructor(key?: NodeKey) {
-    super(key)
-  }
-
-  exportJSON(): SerializedCollapsibleTitleNode {
-    return {
-      ...super.exportJSON(),
-    }
-  }
-
-  exportDOM(): DOMExportOutput {
+  override exportDOM(): DOMExportOutput {
     const element = document.createElement('summary')
-    element.className = 'px-4 py-3 cursor-pointer font-medium bg-muted/50 flex items-center gap-2 select-none'
+    element.setAttribute('data-collapsible-title', 'true')
     return { element }
   }
 
-  createDOM(_config: EditorConfig): HTMLElement {
+  override createDOM(_config: EditorConfig): HTMLElement {
     const element = document.createElement('div')
     element.setAttribute('data-collapsible-title', 'true')
-    element.className = 'px-4 py-3 cursor-pointer font-medium bg-muted/50 flex items-center gap-2'
     return element
   }
 
-  updateDOM(): false {
+  override updateDOM(): false {
     return false
   }
 
-  canInsertTextBefore(): false {
+  override canInsertTextBefore(): false {
     return false
   }
 
-  canInsertTextAfter(): false {
+  override canInsertTextAfter(): false {
     return false
   }
 
-  collapseAtStart(_selection: RangeSelection): boolean {
-    // Container全体をアンラップ
-    const container = this.getParent()
-    if ($isCollapsibleContainerNode(container)) {
-      return container.collapseAtStart()
-    }
-    return false
-  }
-
-  insertNewAfter(_selection: RangeSelection, restoreSelection = true): null | ElementNode {
-    // Enterキーで折りたたみを開いてContentノードにフォーカス
-    const container = this.getParent()
-    if ($isCollapsibleContainerNode(container)) {
-      container.setOpen(true)
-      const content = container.getChildren().find($isCollapsibleContentNode)
+  override insertNewAfter(_selection: RangeSelection, restoreSelection = true): null | ElementNode {
+    const item = this.getParent()
+    if ($isCollapsibleItemNode(item)) {
+      $setState(item, openState, true)
+      const content = item.getChildren().find($isCollapsibleContentNode)
       if (content) {
         const firstChild = content.getFirstChild()
         if (firstChild) {
@@ -131,21 +95,10 @@ export class CollapsibleTitleNode extends ElementNode {
 // Factory Functions
 // =============================================================================
 
-/**
- * CollapsibleTitleノードを作成する
- *
- * @returns CollapsibleTitleNode インスタンス
- */
 export function $createCollapsibleTitleNode(): CollapsibleTitleNode {
-  return $applyNodeReplacement(new CollapsibleTitleNode())
+  return $create(CollapsibleTitleNode)
 }
 
-/**
- * ノードがCollapsibleTitleNodeかどうかを判定する
- *
- * @param node - 判定対象のノード
- * @returns CollapsibleTitleNodeの場合true
- */
 export function $isCollapsibleTitleNode(
   node: LexicalNode | null | undefined
 ): node is CollapsibleTitleNode {

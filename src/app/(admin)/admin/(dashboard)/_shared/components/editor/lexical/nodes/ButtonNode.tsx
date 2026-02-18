@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Button Node
  *
  * @description ボタン/CTAを表示するDecoratorNode
@@ -17,9 +17,9 @@ import type {
   EditorConfig,
   LexicalNode,
   NodeKey,
-  SerializedLexicalNode,
 } from 'lexical'
-import { $applyNodeReplacement, DecoratorNode } from 'lexical'
+import { $create, $getState, $setState, createState, DecoratorNode } from 'lexical'
+import { createEnumGuard } from '../config/type-guards'
 
 // =============================================================================
 // Types
@@ -33,34 +33,13 @@ export const BUTTON_VARIANTS: readonly ButtonVariant[] = ['primary', 'secondary'
 export const BUTTON_SIZES: readonly ButtonSize[] = ['sm', 'md', 'lg'] as const
 export const BUTTON_ALIGNMENTS: readonly ButtonAlignment[] = ['left', 'center', 'right'] as const
 
-export interface SerializedButtonNode extends SerializedLexicalNode {
-  text: string
-  href: string
-  variant: ButtonVariant
-  size: ButtonSize
-  alignment: ButtonAlignment
-  openInNewTab: boolean
-}
-
 // =============================================================================
-// Type Guards (Set-based pattern for type safety)
+// Type Guards
 // =============================================================================
 
-const BUTTON_VARIANT_SET = new Set<string>(BUTTON_VARIANTS)
-const BUTTON_SIZE_SET = new Set<string>(BUTTON_SIZES)
-const BUTTON_ALIGNMENT_SET = new Set<string>(BUTTON_ALIGNMENTS)
-
-export function isButtonVariant(value: string): value is ButtonVariant {
-  return BUTTON_VARIANT_SET.has(value)
-}
-
-export function isButtonSize(value: string): value is ButtonSize {
-  return BUTTON_SIZE_SET.has(value)
-}
-
-export function isButtonAlignment(value: string): value is ButtonAlignment {
-  return BUTTON_ALIGNMENT_SET.has(value)
-}
+export const isButtonVariant = createEnumGuard<ButtonVariant>(BUTTON_VARIANTS)
+export const isButtonSize = createEnumGuard<ButtonSize>(BUTTON_SIZES)
+export const isButtonAlignment = createEnumGuard<ButtonAlignment>(BUTTON_ALIGNMENTS)
 
 // =============================================================================
 // Constants
@@ -87,6 +66,37 @@ const ALIGNMENT_STYLES: Record<ButtonAlignment, string> = {
 const BUTTON_BASE_CLASS = 'inline-flex items-center font-medium rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
 
 // =============================================================================
+// State
+// =============================================================================
+
+export const buttonTextState = createState('text', {
+  parse: (v: unknown): string => typeof v === 'string' ? v : 'ボタン',
+})
+
+export const buttonHrefState = createState('href', {
+  parse: (v: unknown): string => typeof v === 'string' ? v : '#',
+})
+
+export const buttonVariantState = createState('variant', {
+  parse: (v: unknown): ButtonVariant =>
+    typeof v === 'string' && isButtonVariant(v) ? v : 'primary',
+})
+
+export const buttonSizeState = createState('size', {
+  parse: (v: unknown): ButtonSize =>
+    typeof v === 'string' && isButtonSize(v) ? v : 'md',
+})
+
+export const buttonAlignmentState = createState('alignment', {
+  parse: (v: unknown): ButtonAlignment =>
+    typeof v === 'string' && isButtonAlignment(v) ? v : 'center',
+})
+
+export const buttonOpenInNewTabState = createState('openInNewTab', {
+  parse: (v: unknown): boolean => typeof v === 'boolean' ? v : false,
+})
+
+// =============================================================================
 // Component
 // =============================================================================
 
@@ -111,7 +121,7 @@ function ButtonComponent({
     <div
       data-lexical-node-key={nodeKey}
       data-button-alignment={alignment}
-      className={`my-4 flex ${ALIGNMENT_STYLES[alignment]}`}
+      className={`my-6 flex ${ALIGNMENT_STYLES[alignment]}`}
     >
       <a
         href={href}
@@ -131,8 +141,7 @@ function ButtonComponent({
 // DOM Conversion
 // =============================================================================
 
-function $convertButtonElement(domNode: Node): null | DOMConversionOutput {
-  const element = domNode as HTMLElement
+function $convertButtonElement(element: HTMLElement): null | DOMConversionOutput {
   const link = element.querySelector('a')
   if (!link) return null
 
@@ -156,44 +165,23 @@ function $convertButtonElement(domNode: Node): null | DOMConversionOutput {
 // =============================================================================
 
 export class ButtonNode extends DecoratorNode<ReactElement> {
-  __text: string
-  __href: string
-  __variant: ButtonVariant
-  __size: ButtonSize
-  __alignment: ButtonAlignment
-  __openInNewTab: boolean
-
-  static getType(): string {
-    return 'button'
+  override $config() {
+    return this.config('button', {
+      extends: DecoratorNode,
+      stateConfigs: [
+        { flat: true, stateConfig: buttonTextState },
+        { flat: true, stateConfig: buttonHrefState },
+        { flat: true, stateConfig: buttonVariantState },
+        { flat: true, stateConfig: buttonSizeState },
+        { flat: true, stateConfig: buttonAlignmentState },
+        { flat: true, stateConfig: buttonOpenInNewTabState },
+      ],
+    })
   }
 
-  static clone(node: ButtonNode): ButtonNode {
-    return new ButtonNode(
-      node.__text,
-      node.__href,
-      node.__variant,
-      node.__size,
-      node.__alignment,
-      node.__openInNewTab,
-      node.__key
-    )
-  }
-
-  static importJSON(serializedNode: SerializedButtonNode): ButtonNode {
-    return $createButtonNode({
-      text: serializedNode.text,
-      href: serializedNode.href,
-      variant: serializedNode.variant,
-      size: serializedNode.size,
-      alignment: serializedNode.alignment,
-      openInNewTab: serializedNode.openInNewTab,
-    }).updateFromJSON(serializedNode)
-  }
-
-  static importDOM(): DOMConversionMap | null {
+  static override importDOM(): DOMConversionMap | null {
     return {
-      div: (domNode: Node) => {
-        const element = domNode as HTMLElement
+      div: (element: HTMLElement) => {
         if (element.hasAttribute('data-button-alignment')) {
           return {
             conversion: $convertButtonElement,
@@ -205,49 +193,24 @@ export class ButtonNode extends DecoratorNode<ReactElement> {
     }
   }
 
-  constructor(
-    text: string,
-    href: string,
-    variant: ButtonVariant = 'primary',
-    size: ButtonSize = 'md',
-    alignment: ButtonAlignment = 'center',
-    openInNewTab: boolean = false,
-    key?: NodeKey
-  ) {
-    super(key)
-    this.__text = text
-    this.__href = href
-    this.__variant = variant
-    this.__size = size
-    this.__alignment = alignment
-    this.__openInNewTab = openInNewTab
-  }
+  override exportDOM(): DOMExportOutput {
+    const text = $getState(this, buttonTextState)
+    const href = $getState(this, buttonHrefState)
+    const variant = $getState(this, buttonVariantState)
+    const size = $getState(this, buttonSizeState)
+    const alignment = $getState(this, buttonAlignmentState)
+    const openInNewTab = $getState(this, buttonOpenInNewTabState)
 
-  exportJSON(): SerializedButtonNode {
-    return {
-      ...super.exportJSON(),
-      text: this.__text,
-      href: this.__href,
-      variant: this.__variant,
-      size: this.__size,
-      alignment: this.__alignment,
-      openInNewTab: this.__openInNewTab,
-    }
-  }
-
-  exportDOM(): DOMExportOutput {
     const wrapper = document.createElement('div')
-    wrapper.setAttribute('data-button-alignment', this.__alignment)
-    wrapper.setAttribute('data-button-variant', this.__variant)
-    wrapper.setAttribute('data-button-size', this.__size)
-    wrapper.className = `my-4 flex ${ALIGNMENT_STYLES[this.__alignment]}`
+    wrapper.setAttribute('data-button-alignment', alignment)
+    wrapper.setAttribute('data-button-variant', variant)
+    wrapper.setAttribute('data-button-size', size)
 
     const link = document.createElement('a')
-    link.href = this.__href
-    link.textContent = this.__text
-    link.className = `${BUTTON_BASE_CLASS} ${VARIANT_STYLES[this.__variant]} ${SIZE_STYLES[this.__size]}`
+    link.href = href
+    link.textContent = text
 
-    if (this.__openInNewTab) {
+    if (openInNewTab) {
       link.target = '_blank'
       link.rel = 'noopener noreferrer'
     }
@@ -256,89 +219,34 @@ export class ButtonNode extends DecoratorNode<ReactElement> {
     return { element: wrapper }
   }
 
-  createDOM(config: EditorConfig): HTMLElement {
+  override createDOM(config: EditorConfig): HTMLElement {
     const div = document.createElement('div')
     const theme = config.theme
-    const className = theme.button
+    const className = theme['button']
     if (className) {
       div.className = className
     }
     return div
   }
 
-  updateDOM(): false {
+  override updateDOM(): false {
     return false
   }
 
-  decorate(): ReactElement {
+  override decorate(): ReactElement {
     return (
       <ButtonComponent
-        text={this.__text}
-        href={this.__href}
-        variant={this.__variant}
-        size={this.__size}
-        alignment={this.__alignment}
-        openInNewTab={this.__openInNewTab}
+        text={$getState(this, buttonTextState)}
+        href={$getState(this, buttonHrefState)}
+        variant={$getState(this, buttonVariantState)}
+        size={$getState(this, buttonSizeState)}
+        alignment={$getState(this, buttonAlignmentState)}
+        openInNewTab={$getState(this, buttonOpenInNewTabState)}
         nodeKey={this.__key}
       />
     )
   }
 
-  // Getters
-  getText(): string {
-    return this.getLatest().__text
-  }
-
-  getHref(): string {
-    return this.getLatest().__href
-  }
-
-  getVariant(): ButtonVariant {
-    return this.getLatest().__variant
-  }
-
-  getSize(): ButtonSize {
-    return this.getLatest().__size
-  }
-
-  getAlignment(): ButtonAlignment {
-    return this.getLatest().__alignment
-  }
-
-  getOpenInNewTab(): boolean {
-    return this.getLatest().__openInNewTab
-  }
-
-  // Setters
-  setText(text: string): void {
-    const self = this.getWritable()
-    self.__text = text
-  }
-
-  setHref(href: string): void {
-    const self = this.getWritable()
-    self.__href = href
-  }
-
-  setVariant(variant: ButtonVariant): void {
-    const self = this.getWritable()
-    self.__variant = variant
-  }
-
-  setSize(size: ButtonSize): void {
-    const self = this.getWritable()
-    self.__size = size
-  }
-
-  setAlignment(alignment: ButtonAlignment): void {
-    const self = this.getWritable()
-    self.__alignment = alignment
-  }
-
-  setOpenInNewTab(openInNewTab: boolean): void {
-    const self = this.getWritable()
-    self.__openInNewTab = openInNewTab
-  }
 }
 
 // =============================================================================
@@ -366,9 +274,14 @@ export function $createButtonNode({
   alignment?: ButtonAlignment
   openInNewTab?: boolean
 }): ButtonNode {
-  return $applyNodeReplacement(
-    new ButtonNode(text, href, variant, size, alignment, openInNewTab)
-  )
+  const node = $create(ButtonNode)
+  $setState(node, buttonTextState, text)
+  $setState(node, buttonHrefState, href)
+  $setState(node, buttonVariantState, variant)
+  $setState(node, buttonSizeState, size)
+  $setState(node, buttonAlignmentState, alignment)
+  $setState(node, buttonOpenInNewTabState, openInNewTab)
+  return node
 }
 
 /**

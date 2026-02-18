@@ -10,6 +10,7 @@ import { prisma } from '@/shared/lib/prisma'
 import { updateTag } from 'next/cache'
 import { CACHE_TAGS } from '@/shared/lib/constants'
 import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+import { createValidationError } from '@/shared/lib/action-helpers'
 import { withPermission } from '@/admin/lib/server-action-helpers'
 import { encrypt } from '@/shared/lib/crypto'
 import { testStripeConnection as testStripeConnectionLib } from '@/admin/lib/stripe'
@@ -58,7 +59,7 @@ export const updateStripeSettings = withPermission<[data: StripeSettingsInput], 
 )(async (_user, data): Promise<ActionResult<void>> => {
   const parsed = stripeSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   // シークレットキーを暗号化
@@ -72,7 +73,7 @@ export const updateStripeSettings = withPermission<[data: StripeSettingsInput], 
   // シークレットキーが入力された場合のみ更新（暗号化して保存）
   if (parsed.data.stripeSecretKey) {
     try {
-      updateData.stripeSecretKey = encrypt(parsed.data.stripeSecretKey)
+      updateData['stripeSecretKey'] = encrypt(parsed.data.stripeSecretKey)
     } catch {
       return createFailure(
         'シークレットキーの暗号化に失敗しました。ENCRYPTION_KEYが設定されていることを確認してください。'
@@ -83,7 +84,7 @@ export const updateStripeSettings = withPermission<[data: StripeSettingsInput], 
   // Webhookシークレットが入力された場合のみ更新（暗号化して保存）
   if (parsed.data.stripeWebhookSecret) {
     try {
-      updateData.stripeWebhookSecret = encrypt(parsed.data.stripeWebhookSecret)
+      updateData['stripeWebhookSecret'] = encrypt(parsed.data.stripeWebhookSecret)
     } catch {
       return createFailure(
         'Webhookシークレットの暗号化に失敗しました。ENCRYPTION_KEYが設定されていることを確認してください。'

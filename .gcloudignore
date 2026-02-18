@@ -1,0 +1,15 @@
+#!include:.gitignore
+
+# Cloud Build で不要なファイル（.gitignore に加えて除外）
+docs/
+__tests__/
+__mocks__/
+e2e/
+coverage/
+playwright.config.ts
+playwright-report/
+.claude/
+.serena/
+.agents/
+*.md
+*.log

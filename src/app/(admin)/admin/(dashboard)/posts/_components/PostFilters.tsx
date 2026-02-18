@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from '@/admin/components/ui'
 import type { PostCategoryData } from '@/admin/lib/validations/post'
-import { useFilterParamsWithCategory } from '@/shared/hooks'
+import { useFilterParamsWithCategory } from '@/admin/hooks'
 
 type PostFiltersProps = {
   categories: PostCategoryData[]

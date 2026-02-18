@@ -5,6 +5,12 @@
  *
  * Configurable height, background image overlay, SplitText title,
  * and CTA buttons via MagneticButton + text link.
+ *
+ * `minimal` variant is the DB-driven mini hero used by all system pages:
+ * bottom-aligned, gradient background, left-aligned text, chars animation.
+ *
+ * `default` variant without a background image automatically
+ * delegates to the minimal layout for visual consistency.
  */
 
 import { useRef, type ReactElement } from 'react'
@@ -19,6 +25,38 @@ import { DURATION, EASE, SCROLL_TRIGGER } from '@/public/lib/animations'
 import type { HeroConfig } from '@/shared/lib/validations/section'
 import type { SectionDesign } from '@/shared/lib/validations/section-design'
 import { getTitleClasses, getTitleStyle, getTextStyle } from '@/public/components/sections/SectionWrapper'
+
+type HeroButton = HeroConfig['buttons'][number]
+
+function HeroButtons({
+  primary,
+  secondary,
+  className = 'flex flex-wrap items-center gap-4',
+}: {
+  primary: HeroButton | undefined
+  secondary: HeroButton | undefined
+  className?: string
+}) {
+  if (!primary && !secondary) return null
+  return (
+    <div className={className}>
+      {primary && (
+        <MagneticButton href={primary.url} strength={0.35}>
+          {primary.text}
+        </MagneticButton>
+      )}
+      {secondary && (
+        <Link
+          href={secondary.url}
+          className="group relative inline-block text-xs uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-primary-dark"
+        >
+          {secondary.text}
+          <span className="absolute bottom-0 left-0 h-px w-0 bg-primary-dark/60 transition-all duration-300 group-hover:w-full" />
+        </Link>
+      )}
+    </div>
+  )
+}
 
 const HEIGHT_MAP = {
   sm: 'h-[40vh]',
@@ -37,10 +75,17 @@ export function StandardHeroSection({ config, design }: StandardHeroSectionProps
   const contentRef = useRef<HTMLDivElement>(null)
   const imageRef = useRef<HTMLDivElement>(null)
 
-  const isParallax = config.variant === 'parallax'
+  const variant = config.variant
+  const hasBackground = !!(config.backgroundImageUrl || (variant === 'video' && config.videoUrl))
+
+  // minimal layout: explicit minimal OR default without background
+  const useMinimalLayout = variant === 'minimal' || (variant === 'default' && !hasBackground)
 
   useGSAP(
     () => {
+      // Minimal layout delegates animation to SplitText/ScrollReveal
+      if (useMinimalLayout) return
+
       const content = contentRef.current
       if (!content) return
 
@@ -61,7 +106,7 @@ export function StandardHeroSection({ config, design }: StandardHeroSectionProps
         // Parallax background when variant is 'parallax'
         const image = imageRef.current
         const section = sectionRef.current
-        if (!image || !section || !isParallax) return
+        if (!image || !section || variant !== 'parallax') return
 
         const displacement = config.parallaxSpeed * 200
         gsap.set(image, { scale: 1.15 })
@@ -85,29 +130,47 @@ export function StandardHeroSection({ config, design }: StandardHeroSectionProps
   const heightClass = HEIGHT_MAP[config.height] ?? HEIGHT_MAP.md
   const primaryButton = config.buttons.find((b) => b.variant === 'primary')
   const secondaryButton = config.buttons.find((b) => b.variant === 'secondary')
-  const variant = config.variant
 
-  // minimal: no background image, smaller height
-  if (variant === 'minimal') {
+  // =========================================================================
+  // Minimal: bottom-aligned, gradient bg, left-aligned
+  // Used by system pages (DB-driven hero sections)
+  // =========================================================================
+  if (useMinimalLayout) {
     return (
       <section
         ref={sectionRef}
         data-hero=""
-        className="relative flex items-center justify-center overflow-hidden pt-[var(--header-height)] h-[40vh]"
+        className="relative flex h-[40vh] min-h-[280px] items-end overflow-hidden pb-10 pt-[var(--header-height)] md:pb-16"
       >
-        <div ref={contentRef} className="relative z-10 px-5 text-center md:px-8">
+        <div
+          className="absolute inset-0 bg-gradient-to-b from-surface via-background to-background"
+          aria-hidden="true"
+        />
+
+        <div className="relative mx-auto w-full max-w-6xl px-5 md:px-8">
           {config.title && (
-            <h1 className={`font-heading ${getTitleClasses(design)} font-bold leading-tight tracking-tight`} style={getTitleStyle(design)}>
-              <SplitText variant="words" trigger={false} delay={0.3}>
+            <h1
+              className={`font-heading ${getTitleClasses(design)} font-bold uppercase tracking-tight`}
+              style={getTitleStyle(design)}
+            >
+              <SplitText variant="chars" trigger={false} delay={0.3}>
                 {config.title}
               </SplitText>
             </h1>
           )}
           {config.subtitle && (
-            <ScrollReveal delay={0.2}>
-              <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-muted-foreground md:mt-6 md:text-base" style={getTextStyle(design)}>
+            <ScrollReveal delay={0.5}>
+              <p
+                className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground md:text-base"
+                style={getTextStyle(design)}
+              >
                 {config.subtitle}
               </p>
+            </ScrollReveal>
+          )}
+          {(primaryButton ?? secondaryButton) && (
+            <ScrollReveal delay={0.6}>
+              <HeroButtons primary={primaryButton} secondary={secondaryButton} className="mt-6 flex flex-wrap items-center gap-4 md:mt-10" />
             </ScrollReveal>
           )}
         </div>
@@ -115,7 +178,9 @@ export function StandardHeroSection({ config, design }: StandardHeroSectionProps
     )
   }
 
-  // split: 2-column layout (text left, image right)
+  // =========================================================================
+  // Split: 2-column layout (text left, image right)
+  // =========================================================================
   if (variant === 'split') {
     return (
       <section
@@ -141,22 +206,7 @@ export function StandardHeroSection({ config, design }: StandardHeroSectionProps
             )}
             {(primaryButton ?? secondaryButton) && (
               <ScrollReveal delay={0.3}>
-                <div className="mt-6 flex flex-wrap items-center gap-4 md:mt-10">
-                  {primaryButton && (
-                    <MagneticButton href={primaryButton.url} strength={0.35}>
-                      {primaryButton.text}
-                    </MagneticButton>
-                  )}
-                  {secondaryButton && (
-                    <Link
-                      href={secondaryButton.url}
-                      className="group relative inline-block text-xs uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-primary-dark"
-                    >
-                      {secondaryButton.text}
-                      <span className="absolute bottom-0 left-0 h-px w-0 bg-primary-dark/60 transition-all duration-300 group-hover:w-full" />
-                    </Link>
-                  )}
-                </div>
+                <HeroButtons primary={primaryButton} secondary={secondaryButton} className="mt-6 flex flex-wrap items-center gap-4 md:mt-10" />
               </ScrollReveal>
             )}
           </div>
@@ -179,7 +229,9 @@ export function StandardHeroSection({ config, design }: StandardHeroSectionProps
     )
   }
 
-  // video: same as default but with <video> background when videoUrl is set
+  // =========================================================================
+  // Default / Parallax / Video: centered with background
+  // =========================================================================
   const useVideo = variant === 'video' && config.videoUrl
 
   return (
@@ -243,22 +295,7 @@ export function StandardHeroSection({ config, design }: StandardHeroSectionProps
 
         {(primaryButton ?? secondaryButton) && (
           <ScrollReveal delay={0.3}>
-            <div className="mt-6 flex flex-col items-center gap-4 md:mt-10">
-              {primaryButton && (
-                <MagneticButton href={primaryButton.url} strength={0.35}>
-                  {primaryButton.text}
-                </MagneticButton>
-              )}
-              {secondaryButton && (
-                <Link
-                  href={secondaryButton.url}
-                  className="group relative inline-block text-xs uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-primary-dark"
-                >
-                  {secondaryButton.text}
-                  <span className="absolute bottom-0 left-0 h-px w-0 bg-primary-dark/60 transition-all duration-300 group-hover:w-full" />
-                </Link>
-              )}
-            </div>
+            <HeroButtons primary={primaryButton} secondary={secondaryButton} className="mt-6 flex flex-col items-center gap-4 md:mt-10" />
           </ScrollReveal>
         )}
       </div>

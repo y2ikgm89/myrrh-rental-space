@@ -2,9 +2,7 @@ import type { NextConfig } from 'next'
 // 環境変数バリデーション（ビルド時検証）
 import '@/shared/lib/env'
 
-// Windows環境ではstandalone出力でエラーが発生するため、Docker環境でのみ有効化
-const isDockerBuild = process.env.DOCKER_BUILD === 'true'
-const isDev = process.env.NODE_ENV === 'development'
+const isDev = process.env["NODE_ENV"] === 'development'
 
 // Content Security Policy 設定
 // https://developer.mozilla.org/ja/docs/Web/HTTP/CSP
@@ -69,8 +67,10 @@ const nextConfig: NextConfig = {
     },
   },
 
-  // Standalone output for Docker deployment (Linux only)
-  ...(isDockerBuild && { output: 'standalone' }),
+  // Standalone output for Docker / Cloud Run deployment
+  // Docker ビルド時に STANDALONE=true を設定。ローカル開発では不要
+  // (Windows の Turbopack が node: protocol をファイル名に含めるため standalone コピーが失敗する)
+  ...(process.env["STANDALONE"] === 'true' && { output: 'standalone' }),
 
   // Image optimization
   images: {
@@ -165,46 +165,6 @@ const nextConfig: NextConfig = {
       '@dnd-kit/sortable',
       '@dnd-kit/utilities',
     ],
-  },
-
-  // Redirects for legacy URLs
-  async redirects() {
-    return [
-      // =============================================================================
-      // Blog → Posts リダイレクト（後方互換性）
-      // =============================================================================
-      // 公開ページ
-      { source: '/blog', destination: '/posts', permanent: true },
-      { source: '/blog/:slug', destination: '/posts/:slug', permanent: true },
-      { source: '/blog/category/:slug', destination: '/posts/category/:slug', permanent: true },
-      { source: '/blog/tag/:slug', destination: '/posts/tag/:slug', permanent: true },
-      // 管理画面
-      { source: '/admin/blog', destination: '/admin/posts', permanent: true },
-      { source: '/admin/blog/:path*', destination: '/admin/posts/:path*', permanent: true },
-      // =============================================================================
-      // 投稿関連の旧URLを新しいタブURLにリダイレクト
-      // =============================================================================
-      {
-        source: '/admin/posts/taxonomy',
-        destination: '/admin/posts?tab=categories',
-        permanent: true,
-      },
-      {
-        source: '/admin/posts/categories',
-        destination: '/admin/posts?tab=categories',
-        permanent: true,
-      },
-      {
-        source: '/admin/posts/tags',
-        destination: '/admin/posts?tab=tags',
-        permanent: true,
-      },
-      {
-        source: '/admin/posts/comments',
-        destination: '/admin/posts?tab=comments',
-        permanent: true,
-      },
-    ]
   },
 
   // Security headers and Cache-Control

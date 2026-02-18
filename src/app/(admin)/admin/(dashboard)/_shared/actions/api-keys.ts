@@ -10,6 +10,7 @@ import { prisma } from '@/shared/lib/prisma'
 import { updateTag } from 'next/cache'
 import { CACHE_TAGS } from '@/shared/lib/constants'
 import { createSuccess, createFailure } from '@/admin/types/server-actions'
+import { createValidationError } from '@/shared/lib/action-helpers'
 import { withPermission } from '@/admin/lib/server-action-helpers'
 import { encrypt, safeDecrypt } from '@/shared/lib/crypto'
 import { verifyAdminSession } from '@/shared/lib/auth'
@@ -77,11 +78,11 @@ function parseConnectionStatus(value: unknown): ConnectionStatus | null {
 function isCustomApiKeyStored(value: unknown): value is import('@/admin/types/api-keys').CustomApiKeyStored {
   if (!isRecord(value)) return false
   return (
-    typeof value.name === 'string' &&
-    typeof value.keyName === 'string' &&
-    typeof value.keyValue === 'string' &&
-    typeof value.createdAt === 'string' &&
-    typeof value.updatedAt === 'string'
+    typeof value['name'] === 'string' &&
+    typeof value['keyName'] === 'string' &&
+    typeof value['keyValue'] === 'string' &&
+    typeof value['createdAt'] === 'string' &&
+    typeof value['updatedAt'] === 'string'
   )
 }
 
@@ -225,14 +226,14 @@ export const updateResendSettings = withPermission<[ResendSettingsInput]>(
 )(async (_user, data) => {
   const parsed = resendSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   const updateData: Record<string, unknown> = {}
 
   if (parsed.data.resendApiKey) {
     try {
-      updateData.resendApiKey = encrypt(parsed.data.resendApiKey)
+      updateData['resendApiKey'] = encrypt(parsed.data.resendApiKey)
     } catch {
       return createFailure('APIキーの暗号化に失敗しました')
     }
@@ -328,18 +329,18 @@ export const updateTurnstileSettings = withPermission<[TurnstileSettingsInput]>(
 )(async (_user, data) => {
   const parsed = turnstileSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   const updateData: Record<string, unknown> = {}
 
   if (parsed.data.turnstileSiteKey !== undefined) {
-    updateData.turnstileSiteKey = parsed.data.turnstileSiteKey
+    updateData['turnstileSiteKey'] = parsed.data.turnstileSiteKey
   }
 
   if (parsed.data.turnstileSecretKey) {
     try {
-      updateData.turnstileSecretKey = encrypt(parsed.data.turnstileSecretKey)
+      updateData['turnstileSecretKey'] = encrypt(parsed.data.turnstileSecretKey)
     } catch {
       return createFailure('シークレットキーの暗号化に失敗しました')
     }
@@ -384,7 +385,7 @@ export const testTurnstileConnectionAction = withPermission<
     updateTag(CACHE_TAGS.SETTINGS)
     return createSuccess(result.message || '検証に成功しました', {
       message: result.message || '',
-      note: result.metadata?.note as string | undefined,
+      note: typeof result.metadata?.['note'] === 'string' ? result.metadata?.['note'] : undefined,
     })
   }
 
@@ -440,14 +441,14 @@ export const updateGoogleMapsSettings = withPermission<[GoogleMapsSettingsInput]
 )(async (_user, data) => {
   const parsed = googleMapsSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   const updateData: Record<string, unknown> = {}
 
   if (parsed.data.googleMapsApiKey) {
     try {
-      updateData.googleMapsApiKey = encrypt(parsed.data.googleMapsApiKey)
+      updateData['googleMapsApiKey'] = encrypt(parsed.data.googleMapsApiKey)
     } catch {
       return createFailure('APIキーの暗号化に失敗しました')
     }
@@ -569,18 +570,18 @@ export const updateCloudflareSettings = withPermission<[CloudflareSettingsInput]
 )(async (_user, data) => {
   const parsed = cloudflareSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   const updateData: Record<string, unknown> = {}
 
   if (parsed.data.cloudflareZoneId !== undefined) {
-    updateData.cloudflareZoneId = parsed.data.cloudflareZoneId
+    updateData['cloudflareZoneId'] = parsed.data.cloudflareZoneId
   }
 
   if (parsed.data.cloudflareApiToken) {
     try {
-      updateData.cloudflareApiToken = encrypt(parsed.data.cloudflareApiToken)
+      updateData['cloudflareApiToken'] = encrypt(parsed.data.cloudflareApiToken)
     } catch {
       return createFailure('API Tokenの暗号化に失敗しました')
     }
@@ -625,8 +626,8 @@ export const testCloudflareConnectionAction = withPermission<
     updateTag(CACHE_TAGS.SETTINGS)
     return createSuccess(result.message || '接続に成功しました', {
       message: result.message || '',
-      zoneName: result.metadata?.zoneName as string | undefined,
-      plan: result.metadata?.plan as string | undefined,
+      zoneName: typeof result.metadata?.['zoneName'] === 'string' ? result.metadata?.['zoneName'] : undefined,
+      plan: typeof result.metadata?.['plan'] === 'string' ? result.metadata?.['plan'] : undefined,
     })
   }
 
@@ -682,7 +683,7 @@ export const addCustomApiKey = withPermission<[CustomApiKeyInput]>(
 )(async (_user, data) => {
   const parsed = customApiKeySchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   const settings = await prisma.settings.findUnique({
@@ -809,18 +810,18 @@ export const updateGoogleOAuthSettings = withPermission<[GoogleOAuthSettingsInpu
 )(async (_user, data) => {
   const parsed = googleOAuthSettingsSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   const updateData: Record<string, unknown> = {}
 
   if (parsed.data.googleOAuthClientId !== undefined) {
-    updateData.googleOAuthClientId = parsed.data.googleOAuthClientId
+    updateData['googleOAuthClientId'] = parsed.data.googleOAuthClientId
   }
 
   if (parsed.data.googleOAuthClientSecret) {
     try {
-      updateData.googleOAuthClientSecret = encrypt(parsed.data.googleOAuthClientSecret)
+      updateData['googleOAuthClientSecret'] = encrypt(parsed.data.googleOAuthClientSecret)
     } catch {
       return createFailure('Client Secretの暗号化に失敗しました')
     }

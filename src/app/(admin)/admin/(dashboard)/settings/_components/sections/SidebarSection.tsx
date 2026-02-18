@@ -22,7 +22,7 @@ import {
 import { Switch } from '@/admin/components/ui/switch'
 import { updateSidebarSettings } from '@/admin/actions/settings'
 import type { SettingsData } from '@/admin/actions/settings'
-import type { SidebarWidgets } from '@/shared/lib/validations/sidebar'
+import { sidebarWidgetsSchema, type SidebarWidgets } from '@/shared/lib/validations/sidebar'
 
 // =============================================================================
 // Types
@@ -49,13 +49,10 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
     tags: true,
   }
 
-  // JSONパースの安全な処理
+  // JSONパースの安全な処理（Zodバリデーション）
   const parseWidgets = (widgetsData: unknown): SidebarWidgets => {
-    if (!widgetsData) return defaultWidgets
-    if (typeof widgetsData === 'object' && widgetsData !== null) {
-      return { ...defaultWidgets, ...widgetsData } as SidebarWidgets
-    }
-    return defaultWidgets
+    const result = sidebarWidgetsSchema.safeParse(widgetsData)
+    return result.success ? result.data : defaultWidgets
   }
 
   const [formData, setFormData] = useState({

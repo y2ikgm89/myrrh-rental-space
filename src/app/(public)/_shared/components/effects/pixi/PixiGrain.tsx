@@ -100,8 +100,10 @@ export function PixiGrain({
       // ticker で uTime を更新 → アニメーショングレイン
       const tickerCallback = (ticker: import('pixi.js').Ticker) => {
         if (filter) {
-          const uniforms = filter.resources['grainUniforms'] as { uniforms: { uTime: number } }
-          uniforms.uniforms.uTime += ticker.deltaTime * 0.01 * speed
+          const resource = filter.resources['grainUniforms']
+          if (resource?.uniforms) {
+            resource.uniforms.uTime += ticker.deltaTime * 0.01 * speed
+          }
         }
       }
       app.ticker.add(tickerCallback)

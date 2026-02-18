@@ -22,7 +22,7 @@ import {
 import { getFieldError, getErrorMessage } from '../types'
 import type { FieldComponentProps } from '../content-types/types'
 
-/** 公開方式の型（後方互換性のため維持） */
+/** コンテンツ種別に応じた公開制御方式の型 */
 type PublishControlType = 'status' | 'isPublished'
 
 const STATUS_OPTIONS = [

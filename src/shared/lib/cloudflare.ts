@@ -272,7 +272,7 @@ export async function purgeCloudflareByPaths(
 }
 
 function getSiteUrl(): string {
-  return process.env.NEXT_PUBLIC_BASE_URL || 'https://localhost:3000'
+  return process.env["NEXT_PUBLIC_BASE_URL"] || 'https://localhost:3000'
 }
 
 function purgeContentCache(

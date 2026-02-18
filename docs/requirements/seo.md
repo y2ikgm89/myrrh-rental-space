@@ -1,6 +1,6 @@
 # SEO要件定義
 
-> **Note**: このドキュメントには、レンタルスペース管理システムのSEO（検索エンジン最適化）に関する包括的な要件定義が記載されています。サイト全体のSEO設定については[`settings.md`](./settings.md)を、ブログ機能のSEO要件については[`blog.md`](./blog.md)を参照してください。
+> **Note**: このドキュメントには、レンタルスペース管理システムのSEO（検索エンジン最適化）に関する包括的な要件定義が記載されています。サイト全体のSEO設定については[`settings.md`](./settings.md)を、ブログ機能のSEO要件については[`posts.md`](./posts.md)を参照してください。
 
 **最終更新**: 2026-01-08
 
@@ -93,7 +93,7 @@
 
 **4. Article（記事情報）**
 - ブログ記事の詳細情報
-- 実装場所: ブログ詳細ページ（`src/app/(public)/blog/[slug]/page.tsx`）
+- 実装場所: ブログ詳細ページ（`src/app/(public)/posts/[slug]/page.tsx`）
 - 使用フィールド: タイトル、公開日時、更新日時、著者、カテゴリ、画像
 
 **5. BreadcrumbList（パンくずリスト）**
@@ -146,8 +146,8 @@
 - トップページ（`/`）
 - スペース一覧ページ（`/spaces`）
 - 各スペース詳細ページ（`/spaces/[id]`）
-- ブログ一覧ページ（`/blog`）
-- 各ブログ記事ページ（`/blog/[slug]`）
+- ブログ一覧ページ（`/posts`）
+- 各ブログ記事ページ（`/posts/[slug]`）
 - お知らせ一覧ページ（`/news`）
 - 各お知らせページ（`/news/[id]`）
 - 静的ページ（`/privacy`、`/terms`など）
@@ -164,7 +164,7 @@
 - サイトマップファイルサイズ: 最大50MB（圧縮時: 10MB）
 - 分割例:
   - `sitemap-spaces.xml`: スペース関連ページ
-  - `sitemap-blog.xml`: ブログ記事
+  - `sitemap-posts.xml`: ブログ記事
   - `sitemap-news.xml`: お知らせ
   - `sitemap-static.xml`: 静的ページ
 
@@ -196,8 +196,8 @@
 - `/`（トップページ）
 - `/spaces`（スペース一覧）
 - `/spaces/*`（スペース詳細）
-- `/blog`（ブログ一覧）
-- `/blog/*`（ブログ記事）
+- `/posts`（ブログ一覧）
+- `/posts/*`（ブログ記事）
 - `/news`（お知らせ一覧）
 - `/news/*`（お知らせ詳細）
 - `/privacy`、`/terms`（静的ページ）
@@ -221,7 +221,7 @@
 **すべてのページに実装**:
 - `<link rel="canonical">`タグを追加
 - 重複コンテンツの防止
-- パラメータ付きURLの正規化（例: `/blog?page=1` → `/blog`）
+- パラメータ付きURLの正規化（例: `/posts?page=1` → `/posts`）
 
 **実装方法**:
 - Next.js 16の`Metadata` APIで`alternates.canonical`プロパティを使用
@@ -290,7 +290,7 @@
 - 画像: スペースのメイン画像（複数可能）
 - タイプ: `website`または`business.business`
 
-#### ブログ一覧ページ（`/blog`）
+#### ブログ一覧ページ（`/posts`）
 
 **メタタグ**:
 - タイトル: `ブログ | サイト名`
@@ -309,9 +309,9 @@
 - 説明: ブログの概要
 - 画像: デフォルトOGP画像
 
-**詳細**: [`blog.md`](./blog.md)の「SEO最適化」セクションを参照
+**詳細**: [`posts.md`](./posts.md)の「SEO最適化」セクションを参照
 
-#### ブログ記事詳細ページ（`/blog/[slug]`）
+#### ブログ記事詳細ページ（`/posts/[slug]`）
 
 **メタタグ**:
 - タイトル: `{記事タイトル} | サイト名`（`ogpTitle`があれば優先）
@@ -328,7 +328,7 @@
 - 画像: OGP画像（`ogpImageUrl`があれば優先、なければ`thumbnailUrl`）
 - タイプ: `article`
 
-**詳細**: [`blog.md`](./blog.md)の「SEO最適化」セクションを参照
+**詳細**: [`posts.md`](./posts.md)の「SEO最適化」セクションを参照
 
 #### お知らせページ（`/news`、`/news/[id]`）
 
@@ -376,7 +376,7 @@
 
 **例**:
 ```typescript
-// src/app/(public)/blog/[slug]/page.tsx
+// src/app/(public)/posts/[slug]/page.tsx
 export async function generateMetadata(
   props: { params: Promise<{ slug: string }> }
 ): Promise<Metadata> {
@@ -409,7 +409,7 @@ export async function generateMetadata(
       images: [post.ogpImageUrl || post.thumbnailUrl],
     },
     alternates: {
-      canonical: `https://example.com/blog/${post.slug}`,
+      canonical: `https://example.com/posts/${post.slug}`,
     },
   }
 }
@@ -423,7 +423,7 @@ export async function generateMetadata(
 
 **例**:
 ```typescript
-// src/app/(public)/blog/[slug]/page.tsx
+// src/app/(public)/posts/[slug]/page.tsx
 export default async function BlogPostPage(
   props: { params: Promise<{ slug: string }> }
 ) {
@@ -493,7 +493,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     },
     {
-      url: `${baseUrl}/blog`,
+      url: `${baseUrl}/posts`,
       lastModified: new Date(),
       changeFrequency: 'daily',
       priority: 0.7,
@@ -518,7 +518,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     select: { slug: true, updatedAt: true },
   })
   const blogPages: MetadataRoute.Sitemap = blogPosts.map(post => ({
-    url: `${baseUrl}/blog/${post.slug}`,
+    url: `${baseUrl}/posts/${post.slug}`,
     lastModified: post.updatedAt,
     changeFrequency: 'daily',
     priority: 0.7,
@@ -925,7 +925,7 @@ export const metadata: Metadata = {
 ### プロジェクトドキュメント
 
 - [`settings.md`](./settings.md) - サイト設定画面のSEO設定
-- [`blog.md`](./blog.md) - ブログ機能のSEO要件
+- [`posts.md`](./posts.md) - 投稿機能のSEO要件
 - [`README.md`](./README.md) - 機能要件（SEO関連）
 - [`DATABASE_DESIGN.md`](../architecture/DATABASE_DESIGN.md) - データベース設計（SEOフィールド）
 - [`ARCHITECTURE.md`](../architecture/ARCHITECTURE.md) - システムアーキテクチャ
@@ -974,3 +974,4 @@ export const metadata: Metadata = {
   - パフォーマンス最適化の詳細化
   - テストツールと確認項目の拡充
 - **2026-01-07**: 初版作成、包括的なSEO要件定義を追加
+

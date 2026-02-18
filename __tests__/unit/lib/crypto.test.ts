@@ -14,19 +14,19 @@ import {
 } from '@/shared/lib/crypto'
 
 describe('crypto', () => {
-  const originalKey = process.env.ENCRYPTION_KEY
+  const originalKey = process.env["ENCRYPTION_KEY"]
   // テスト用の有効なキー（64文字の16進数）
   const testKey = 'a'.repeat(64)
 
   beforeAll(() => {
-    process.env.ENCRYPTION_KEY = testKey
+    process.env["ENCRYPTION_KEY"] = testKey
   })
 
   afterAll(() => {
     if (originalKey) {
-      process.env.ENCRYPTION_KEY = originalKey
+      process.env["ENCRYPTION_KEY"] = originalKey
     } else {
-      delete process.env.ENCRYPTION_KEY
+      delete process.env["ENCRYPTION_KEY"]
     }
   })
 
@@ -140,13 +140,13 @@ describe('crypto', () => {
     })
 
     test('safeEncrypt は環境変数が無い場合nullを返す', () => {
-      const originalKey = process.env.ENCRYPTION_KEY
-      delete process.env.ENCRYPTION_KEY
+      const originalKey = process.env["ENCRYPTION_KEY"]
+      delete process.env["ENCRYPTION_KEY"]
 
       const result = safeEncrypt('test')
       expect(result).toBeNull()
 
-      process.env.ENCRYPTION_KEY = originalKey || testKey
+      process.env["ENCRYPTION_KEY"] = originalKey || testKey
     })
   })
 

@@ -242,11 +242,11 @@ export function convertToOpeningHoursSpecification(
     const englishDay = DAY_MAP[dayKey]
     if (!englishDay) continue
 
-    if (!isRecord(dayValue) || !dayValue.isOpen || !Array.isArray(dayValue.slots)) continue
+    if (!isRecord(dayValue) || !dayValue['isOpen'] || !Array.isArray(dayValue['slots'])) continue
 
-    for (const slot of dayValue.slots) {
-      if (!isRecord(slot) || typeof slot.openTime !== 'string' || typeof slot.closeTime !== 'string') continue
-      const key = `${slot.openTime}-${slot.closeTime}`
+    for (const slot of dayValue['slots']) {
+      if (!isRecord(slot) || typeof slot['openTime'] !== 'string' || typeof slot['closeTime'] !== 'string') continue
+      const key = `${slot['openTime']}-${slot['closeTime']}`
       const existing = groupMap.get(key)
       if (existing) {
         existing.push(englishDay)

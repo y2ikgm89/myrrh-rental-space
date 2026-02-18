@@ -7,6 +7,9 @@ import {
 } from '@/admin/lib/validations/news'
 import { LayoutWidth } from '@/shared/types/prisma'
 
+// 有効なLexical EditorState JSON（lexicalJsonSchema準拠）
+const VALID_LEXICAL_JSON = '{"root":{"children":[],"direction":null,"format":"","indent":0,"type":"root","version":1}}'
+
 describe('newsSlugSchema', () => {
   test('有効なスラッグでバリデーションに成功する', () => {
     const validSlugs = ['news-123', 'my-article', 'test-123-abc']
@@ -66,7 +69,7 @@ describe('createNewsSchema', () => {
     const validData = {
       slug: 'sample-news',
       title: 'サンプルニュース',
-      content: '',
+      contentJson: '',
     }
 
     const result = createNewsSchema.safeParse(validData)
@@ -77,7 +80,7 @@ describe('createNewsSchema', () => {
     const invalidData = {
       slug: 'sample-news',
       title: '',
-      content: '',
+      contentJson: '',
     }
 
     const result = createNewsSchema.safeParse(invalidData)
@@ -91,7 +94,7 @@ describe('createNewsSchema', () => {
     const invalidData = {
       slug: 'sample-news',
       title: 'あ'.repeat(201),
-      content: '',
+      contentJson: '',
     }
 
     const result = createNewsSchema.safeParse(invalidData)
@@ -101,7 +104,7 @@ describe('createNewsSchema', () => {
     }
   })
 
-  test('contentフィールドはデフォルトで空文字列', () => {
+  test('contentJsonフィールドはデフォルトで空文字列', () => {
     const data = {
       slug: 'sample-news',
       title: 'サンプルニュース',
@@ -110,7 +113,7 @@ describe('createNewsSchema', () => {
     const result = createNewsSchema.safeParse(data)
     expect(result.success).toBe(true)
     if (result.success) {
-      expect(result.data.content).toBe('')
+      expect(result.data.contentJson).toBe('')
     }
   })
 })
@@ -120,8 +123,8 @@ describe('updateNewsSchema', () => {
     const validData = {
       slug: 'sample-news',
       title: 'サンプルニュース',
-      content: '<p>ニュース本文</p>',
-      contentWidth: LayoutWidth.WIDE,
+      contentJson: VALID_LEXICAL_JSON,
+      contentWidth: LayoutWidth.LG,
       contentWidthCustom: 1200,
       metaDescription: 'ニュースの概要',
       metaKeywords: 'ニュース, お知らせ',
@@ -138,21 +141,18 @@ describe('updateNewsSchema', () => {
     const invalidData = {
       slug: 'sample-news',
       title: 'サンプルニュース',
-      content: '',
+      contentJson: '',
     }
 
     const result = updateNewsSchema.safeParse(invalidData)
     expect(result.success).toBe(false)
-    if (!result.success) {
-      expect(result.error.issues[0].message).toContain('本文は必須です')
-    }
   })
 
   test('contentWidthにnullを許可', () => {
     const validData = {
       slug: 'sample-news',
       title: 'サンプルニュース',
-      content: '<p>本文</p>',
+      contentJson: VALID_LEXICAL_JSON,
       contentWidth: null,
     }
 
@@ -164,7 +164,7 @@ describe('updateNewsSchema', () => {
     const validData = {
       slug: 'sample-news',
       title: 'サンプルニュース',
-      content: '<p>本文</p>',
+      contentJson: VALID_LEXICAL_JSON,
       contentWidthCustom: 1200,
     }
 
@@ -176,7 +176,7 @@ describe('updateNewsSchema', () => {
     const invalidData = {
       slug: 'sample-news',
       title: 'サンプルニュース',
-      content: '<p>本文</p>',
+      contentJson: VALID_LEXICAL_JSON,
       contentWidthCustom: 319,
     }
 
@@ -188,7 +188,7 @@ describe('updateNewsSchema', () => {
     const invalidData = {
       slug: 'sample-news',
       title: 'サンプルニュース',
-      content: '<p>本文</p>',
+      contentJson: VALID_LEXICAL_JSON,
       contentWidthCustom: 1921,
     }
 
@@ -200,7 +200,7 @@ describe('updateNewsSchema', () => {
     const validData = {
       slug: 'sample-news',
       title: 'サンプルニュース',
-      content: '<p>本文</p>',
+      contentJson: VALID_LEXICAL_JSON,
     }
 
     const result = updateNewsSchema.safeParse(validData)
@@ -213,10 +213,10 @@ describe('newsFormSchema', () => {
     const validData = {
       slug: 'sample-news',
       title: 'サンプルニュース',
-      content: '<p>本文</p>',
+      contentJson: VALID_LEXICAL_JSON,
       isPublished: true,
       publishedAt: '2026-01-01T00:00:00Z',
-      contentWidth: 'WIDE',
+      contentWidth: 'LG',
       contentWidthCustom: '1200',
       metaDescription: 'ニュースの概要',
       metaKeywords: 'ニュース, お知らせ',
@@ -233,7 +233,7 @@ describe('newsFormSchema', () => {
     const invalidData = {
       slug: 'sample-news',
       title: 'サンプルニュース',
-      content: '<p>本文</p>',
+      contentJson: VALID_LEXICAL_JSON,
     }
 
     const result = newsFormSchema.safeParse(invalidData)
@@ -244,7 +244,7 @@ describe('newsFormSchema', () => {
     const validData = {
       slug: 'sample-news',
       title: 'サンプルニュース',
-      content: '<p>本文</p>',
+      contentJson: VALID_LEXICAL_JSON,
       isPublished: false,
     }
 
@@ -256,9 +256,9 @@ describe('newsFormSchema', () => {
     const validData = {
       slug: 'sample-news',
       title: 'サンプルニュース',
-      content: '<p>本文</p>',
+      contentJson: VALID_LEXICAL_JSON,
       isPublished: true,
-      contentWidth: 'NARROW',
+      contentWidth: 'SM',
     }
 
     const result = newsFormSchema.safeParse(validData)
@@ -269,7 +269,7 @@ describe('newsFormSchema', () => {
     const validData = {
       slug: 'sample-news',
       title: 'サンプルニュース',
-      content: '<p>本文</p>',
+      contentJson: VALID_LEXICAL_JSON,
       isPublished: true,
       contentWidthCustom: '1200',
     }

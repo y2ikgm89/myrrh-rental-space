@@ -12,11 +12,12 @@ import {
   type SpacePagination,
 } from '@/admin/lib/validations/space'
 import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+import { createValidationError } from '@/shared/lib/action-helpers'
 import { withPermission } from '@/admin/lib/server-action-helpers'
 import type { SpaceWhereInput } from '@/shared/types/prisma'
-import { parseStringArray, parseBusinessHours, parseDiscountType, parseDurationDiscountOverride, parseTaxRateType } from '@/shared/lib/json-validators'
+import { parseStringArray, parseBusinessHours } from '@/shared/lib/json-validators'
 import { checkReadPermissionFor } from '@/admin/lib/permissions'
-import { ACTIVE_RESERVATION_STATUSES } from '@/shared/lib/validations/enums'
+import { ACTIVE_RESERVATION_STATUSES, getValidDiscountType, getValidDurationDiscountOverride, getValidTaxRateType } from '@/shared/lib/validations/enums'
 import { purgeSpaceCache } from '@/shared/lib/cloudflare'
 import { fireAndForget } from '@/shared/lib/async-utils'
 import { ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
@@ -26,6 +27,24 @@ import { DiscountType, DurationDiscountOverride, TaxRateType } from '@/shared/ge
 // =============================================================================
 // Helper Functions
 // =============================================================================
+
+/**
+ * Lexical JSON 文字列を HTML に変換（非JSON文字列はそのまま返す）
+ * Space.description は非移行モデルのため、JSON→HTML変換をサーバー側で行う
+ */
+async function renderDescriptionHtml(value: string | null | undefined): Promise<string | null> {
+  if (!value) return value ?? null
+  try {
+    const parsed: unknown = JSON.parse(value)
+    if (parsed && typeof parsed === 'object' && 'root' in parsed) {
+      const { renderEditorStateToHtmlLazy } = await import('@/admin/lib/lazy-renderer')
+      return renderEditorStateToHtmlLazy(value)
+    }
+  } catch {
+    // Not JSON — already HTML or plain text
+  }
+  return value
+}
 
 /**
  * 読み取り権限チェック（共通ヘルパー使用）
@@ -103,9 +122,9 @@ export async function getSpaces(
     address: s.address,
     access: s.access,
     capacity: s.capacity,
-    area: s.area ? Number(s.area) : null,
-    hourlyPrice: Number(s.hourlyPrice),
-    dailyPrice: s.dailyPrice ? Number(s.dailyPrice) : null,
+    area: s.area,
+    hourlyPrice: s.hourlyPrice,
+    dailyPrice: s.dailyPrice,
     mainImageUrl: s.mainImageUrl,
     imageUrls: parseStringArray(s.imageUrls),
     facilities: parseStringArray(s.facilities),
@@ -119,11 +138,11 @@ export async function getSpaces(
     locationId: s.locationId,
     categoryId: s.categoryId,
     // 割引設定
-    discountType: parseDiscountType(s.discountType),
-    discountValue: s.discountValue ? Number(s.discountValue) : null,
-    durationDiscountOverride: parseDurationDiscountOverride(s.durationDiscountOverride),
+    discountType: getValidDiscountType(s.discountType),
+    discountValue: s.discountValue,
+    durationDiscountOverride: getValidDurationDiscountOverride(s.durationDiscountOverride),
     // 税率設定
-    taxRateType: parseTaxRateType(s.taxRateType),
+    taxRateType: getValidTaxRateType(s.taxRateType),
     // SEO/OGP
     metaDescription: s.metaDescription,
     metaKeywords: s.metaKeywords,
@@ -176,9 +195,9 @@ export async function getSpaceById(id: string): Promise<SpaceWithStats | null> {
     address: space.address,
     access: space.access,
     capacity: space.capacity,
-    area: space.area ? Number(space.area) : null,
-    hourlyPrice: Number(space.hourlyPrice),
-    dailyPrice: space.dailyPrice ? Number(space.dailyPrice) : null,
+    area: space.area,
+    hourlyPrice: space.hourlyPrice,
+    dailyPrice: space.dailyPrice,
     mainImageUrl: space.mainImageUrl,
     imageUrls: parseStringArray(space.imageUrls),
     facilities: parseStringArray(space.facilities),
@@ -192,11 +211,11 @@ export async function getSpaceById(id: string): Promise<SpaceWithStats | null> {
     locationId: space.locationId,
     categoryId: space.categoryId,
     // 割引設定
-    discountType: parseDiscountType(space.discountType),
-    discountValue: space.discountValue ? Number(space.discountValue) : null,
-    durationDiscountOverride: parseDurationDiscountOverride(space.durationDiscountOverride),
+    discountType: getValidDiscountType(space.discountType),
+    discountValue: space.discountValue,
+    durationDiscountOverride: getValidDurationDiscountOverride(space.durationDiscountOverride),
     // 税率設定
-    taxRateType: parseTaxRateType(space.taxRateType),
+    taxRateType: getValidTaxRateType(space.taxRateType),
     // SEO/OGP
     metaDescription: space.metaDescription,
     metaKeywords: space.metaKeywords,
@@ -295,7 +314,7 @@ export const createSpace = withPermission<[input: SpaceFormData], { id: string }
 )(async (_user, input): Promise<ActionResult<{ id: string }>> => {
   const parsed = spaceFormSchema.safeParse(input)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message || '入力が不正です')
+    return createValidationError(parsed.error)
   }
 
   const data = parsed.data
@@ -312,7 +331,7 @@ export const createSpace = withPermission<[input: SpaceFormData], { id: string }
     data: {
       slug: data.slug,
       name: data.name,
-      description: data.description,
+      description: (await renderDescriptionHtml(data.description)) ?? data.description,
       address: data.address,
       access: data.access || null,
       capacity: data.capacity,
@@ -360,7 +379,7 @@ export const updateSpace = withPermission<[id: string, input: SpaceFormData], vo
 )(async (_user, id, input): Promise<ActionResult<void>> => {
   const parsed = spaceFormSchema.safeParse(input)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message || '入力が不正です')
+    return createValidationError(parsed.error)
   }
 
   const existingSpace = await prisma.space.findUnique({
@@ -396,7 +415,7 @@ export const updateSpace = withPermission<[id: string, input: SpaceFormData], vo
     data: {
       slug: data.slug,
       name: data.name,
-      description: data.description,
+      description: (await renderDescriptionHtml(data.description)) ?? data.description,
       address: data.address,
       access: data.access || null,
       capacity: data.capacity,

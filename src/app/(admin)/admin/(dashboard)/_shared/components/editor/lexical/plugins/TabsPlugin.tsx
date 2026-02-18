@@ -3,7 +3,7 @@
  *
  * @description タブ切り替えUIの挿入を提供するプラグイン
  *
- * ダイアログでタブ数を選択し、Tabs構造を挿入
+ * ダイアログでスタイルとカラーを選択し、2タブのTabs構造を挿入
  */
 
 'use client'
@@ -14,20 +14,33 @@ import {
   $createParagraphNode,
   $createTextNode,
   $getSelection,
+  $getState,
   $isRangeSelection,
+  $setState,
   COMMAND_PRIORITY_LOW,
   KEY_ARROW_DOWN_COMMAND,
   KEY_ARROW_UP_COMMAND,
   mergeRegister,
 } from 'lexical'
+import { $insertNodeToNearestRoot } from '@lexical/utils'
 import {
   $createTabsContainerNode,
   $isTabsContainerNode,
   TabsContainerNode,
+  activeIndexState,
+  TABS_STYLES,
+  TABS_SIZES,
+  TABS_FIXED_WIDTHS,
+  isTabsStyle,
+  isTabsSize,
+  isTabsFixedWidth,
+  type TabsStyle,
+  type TabsSize,
+  type TabsFixedWidth,
 } from '../nodes/TabsContainerNode'
 import { $createTabListNode, TabListNode, $isTabListNode } from '../nodes/TabListNode'
-import { $createTabTitleNode, TabTitleNode, $isTabTitleNode } from '../nodes/TabTitleNode'
-import { $createTabPanelNode, TabPanelNode, $isTabPanelNode } from '../nodes/TabPanelNode'
+import { $createTabTitleNode, TabTitleNode, $isTabTitleNode, tabTitleIndexState, tabTitleActiveState } from '../nodes/TabTitleNode'
+import { $createTabPanelNode, TabPanelNode, $isTabPanelNode, tabPanelIndexState, tabPanelActiveState } from '../nodes/TabPanelNode'
 import {
   Dialog,
   DialogContent,
@@ -36,36 +49,29 @@ import {
   DialogFooter,
   Button,
   Label,
-  SelectionBox,
 } from '@/admin/components/ui'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/admin/components/ui/select'
+import {
+  TABS_STYLE_LABELS,
+  TABS_SIZE_LABELS,
+  TABS_FIXED_WIDTH_LABELS,
+} from '../config/node-labels'
 
 // =============================================================================
-// Options
+// Preview
 // =============================================================================
 
-const TAB_COUNT_OPTIONS = [
-  { value: '2', label: '2', description: '2タブ' },
-  { value: '3', label: '3', description: '3タブ' },
-  { value: '4', label: '4', description: '4タブ' },
-  { value: '5', label: '5', description: '5タブ' },
-]
-
-// =============================================================================
-// Hook
-// =============================================================================
-
-export function useTabsDialog() {
-  const [isTabsDialogOpen, setIsTabsDialogOpen] = useState(false)
-
-  const openTabsDialog = () => setIsTabsDialogOpen(true)
-  const closeTabsDialog = () => setIsTabsDialogOpen(false)
-
-  return {
-    isTabsDialogOpen,
-    openTabsDialog,
-    closeTabsDialog,
-  }
-}
+// TabTitleNode と同じベースクラスを使い、lexical-content.css がスタイルを上書き
+const TAB_BASE_CLASS = 'px-3 py-2.5 text-xs font-medium border-b-2 -mb-px transition-colors cursor-pointer select-none'
+const TAB_ACTIVE_CLASS = 'border-primary text-foreground bg-background'
+const TAB_INACTIVE_CLASS = 'border-transparent text-muted-foreground'
+const TAB_LIST_CLASS = 'flex border-b bg-muted/50'
 
 // =============================================================================
 // Utilities
@@ -115,7 +121,7 @@ function $onEscape(direction: 'up' | 'down'): boolean {
 /**
  * タブをクリックしてアクティブ状態を切り替える
  */
-function handleTabClick(
+export function handleTabClick(
   tabsContainer: TabsContainerNode,
   clickedIndex: number
 ): void {
@@ -127,17 +133,140 @@ function handleTabClick(
   if (tabList) {
     const titles = tabList.getChildren().filter($isTabTitleNode)
     for (const title of titles) {
-      title.setIsActive(title.getTabIndex() === clickedIndex)
+      $setState(title, tabTitleActiveState, $getState(title, tabTitleIndexState) === clickedIndex)
     }
   }
 
   // パネルのアクティブ状態を更新
   for (const panel of panels) {
-    panel.setIsActive(panel.getTabIndex() === clickedIndex)
+    $setState(panel, tabPanelActiveState, $getState(panel, tabPanelIndexState) === clickedIndex)
   }
 
   // コンテナのactiveIndexを更新
-  tabsContainer.setActiveIndex(clickedIndex)
+  $setState(tabsContainer, activeIndexState, clickedIndex)
+}
+
+/**
+ * 全TabTitle/TabPanelのindexとisActiveを再設定
+ */
+export function $reindexTabs(container: TabsContainerNode, newActiveIndex?: number): void {
+  const children = container.getChildren()
+  const tabList = children.find($isTabListNode)
+  const panels = children.filter($isTabPanelNode)
+  const current = $getState(container, activeIndexState)
+  const maxIdx = Math.max(0, panels.length - 1)
+  const activeIdx = newActiveIndex !== undefined
+    ? Math.min(newActiveIndex, maxIdx)
+    : Math.min(current, maxIdx)
+
+  if (tabList) {
+    const titles = tabList.getChildren().filter($isTabTitleNode)
+    for (let i = 0; i < titles.length; i++) {
+      const t = titles[i]
+      if (!t) continue
+      $setState(t, tabTitleIndexState, i)
+      $setState(t, tabTitleActiveState, i === activeIdx)
+    }
+  }
+  for (let i = 0; i < panels.length; i++) {
+    const p = panels[i]
+    if (!p) continue
+    $setState(p, tabPanelIndexState, i)
+    $setState(p, tabPanelActiveState, i === activeIdx)
+  }
+  $setState(container, activeIndexState, activeIdx)
+}
+
+/**
+ * 末尾にタブを追加し、新規TabPanelNodeを返す
+ */
+export function $addTab(container: TabsContainerNode): TabPanelNode {
+  const children = container.getChildren()
+  const tabList = children.find($isTabListNode)
+  const panelCount = children.filter($isTabPanelNode).length
+  const newIndex = panelCount
+
+  if (tabList) {
+    const title = $createTabTitleNode(newIndex, false)
+    const titleParagraph = $createParagraphNode()
+    titleParagraph.append($createTextNode(`タブ${newIndex + 1}`))
+    title.append(titleParagraph)
+    tabList.append(title)
+  }
+
+  const panel = $createTabPanelNode(newIndex, false)
+  const panelParagraph = $createParagraphNode()
+  panelParagraph.append($createTextNode(`タブ${newIndex + 1}のコンテンツを入力`))
+  panel.append(panelParagraph)
+  container.append(panel)
+
+  $reindexTabs(container)
+  return panel
+}
+
+/**
+ * 0-based indexでタブを削除。最小2つ保証
+ */
+export function $removeTab(container: TabsContainerNode, index: number): boolean {
+  const children = container.getChildren()
+  const tabList = children.find($isTabListNode)
+  const panels = children.filter($isTabPanelNode)
+  if (panels.length <= 2) return false
+
+  if (tabList) {
+    const titles = tabList.getChildren().filter($isTabTitleNode)
+    titles[index]?.remove()
+  }
+  const targetPanel = panels[index]
+  if (!targetPanel) return false
+  targetPanel.remove()
+
+  const currentActive = $getState(container, activeIndexState)
+  const newActive = index <= currentActive
+    ? Math.max(0, currentActive - 1)
+    : currentActive
+  $reindexTabs(container, newActive)
+  return true
+}
+
+export function $reorderTab(
+  container: TabsContainerNode,
+  fromIndex: number,
+  toIndex: number,
+): void {
+  if (fromIndex === toIndex) return
+  const children = container.getChildren()
+  const tabList = children.find($isTabListNode)
+  const panels = children.filter($isTabPanelNode)
+  if (!tabList) return
+
+  const titles = tabList.getChildren().filter($isTabTitleNode)
+  const movedTitle = titles[fromIndex]
+  const targetTitle = titles[toIndex]
+  const movedPanel = panels[fromIndex]
+  const targetPanel = panels[toIndex]
+  if (!movedTitle || !targetTitle || !movedPanel || !targetPanel) return
+
+  if (fromIndex < toIndex) {
+    targetTitle.insertAfter(movedTitle)
+    targetPanel.insertAfter(movedPanel)
+  } else {
+    targetTitle.insertBefore(movedTitle)
+    targetPanel.insertBefore(movedPanel)
+  }
+
+  // アクティブインデックスを追従
+  const currentActive = $getState(container, activeIndexState)
+  let newActive = currentActive
+  if (currentActive === fromIndex) {
+    newActive = toIndex
+  } else if (fromIndex < toIndex) {
+    if (currentActive > fromIndex && currentActive <= toIndex) newActive = currentActive - 1
+  } else {
+    if (currentActive >= toIndex && currentActive < fromIndex) newActive = currentActive + 1
+  }
+
+  $reindexTabs(container, newActive)
 }
 
 // =============================================================================
@@ -155,7 +284,9 @@ type TabsPluginProps = {
 
 export function TabsPlugin({ isOpen, onClose }: TabsPluginProps) {
   const [editor] = useLexicalComposerContext()
-  const [tabCount, setTabCount] = useState('3')
+  const [selectedStyle, setSelectedStyle] = useState<TabsStyle>('underline')
+  const [selectedSize, setSelectedSize] = useState<TabsSize>('auto')
+  const [selectedFixedWidth, setSelectedFixedWidth] = useState<TabsFixedWidth>('120')
 
   // リスナー登録（mergeRegisterで統一）
   useEffect(() => {
@@ -269,16 +400,16 @@ export function TabsPlugin({ isOpen, onClose }: TabsPluginProps) {
   }, [editor])
 
   const resetForm = () => {
-    setTabCount('3')
+    setSelectedStyle('underline')
+    setSelectedSize('auto')
+    setSelectedFixedWidth('120')
   }
 
   const handleInsert = () => {
-    editor.update(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
+    const count = 2
 
-      const count = parseInt(tabCount, 10)
-      const tabsContainer = $createTabsContainerNode(0)
+    editor.update(() => {
+      const tabsContainer = $createTabsContainerNode(0, selectedStyle, selectedSize, selectedFixedWidth)
 
       // タブリストを作成
       const tabList = $createTabListNode()
@@ -300,7 +431,7 @@ export function TabsPlugin({ isOpen, onClose }: TabsPluginProps) {
         tabsContainer.append(panel)
       }
 
-      selection.insertNodes([tabsContainer])
+      $insertNodeToNearestRoot(tabsContainer)
 
       // 最初のタブのコンテンツを選択
       const panels = tabsContainer.getChildren().filter($isTabPanelNode)
@@ -330,35 +461,75 @@ export function TabsPlugin({ isOpen, onClose }: TabsPluginProps) {
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {/* タブ数選択 */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">タブ数</Label>
-            <SelectionBox
-              options={TAB_COUNT_OPTIONS}
-              value={tabCount}
-              onChange={setTabCount}
-              columns={2}
-              name="タブ数"
-            />
+          <div>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">スタイル</Label>
+              <Select value={selectedStyle} onValueChange={(v) => isTabsStyle(v) && setSelectedStyle(v)}>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TABS_STYLES.map((s) => (
+                    <SelectItem key={s} value={s}>{TABS_STYLE_LABELS[s]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">タブ幅</Label>
+              <Select value={selectedSize} onValueChange={(v) => isTabsSize(v) && setSelectedSize(v)}>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TABS_SIZES.map((s) => (
+                    <SelectItem key={s} value={s}>{TABS_SIZE_LABELS[s]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {selectedSize === 'fixed' && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">固定幅サイズ</Label>
+                <Select value={selectedFixedWidth} onValueChange={(v) => isTabsFixedWidth(v) && setSelectedFixedWidth(v)}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TABS_FIXED_WIDTHS.map((w) => (
+                      <SelectItem key={w} value={w}>{TABS_FIXED_WIDTH_LABELS[w]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
           </div>
 
-          {/* プレビュー */}
-          <div className="border rounded-lg overflow-hidden">
-            <div className="flex border-b bg-muted/50">
-              {Array.from({ length: parseInt(tabCount, 10) }, (_, i) => (
+          {/* プレビュー — エディタと同じ data 属性 + role で lexical-content.css を適用 */}
+          <div
+            className="my-0 border rounded-lg overflow-hidden"
+            data-tabs-container="true"
+            data-tabs-style={selectedStyle}
+            data-tabs-size={selectedSize}
+            data-tabs-fixed-width={selectedFixedWidth}
+            data-tabs-active="0"
+          >
+            <div role="tablist" className={TAB_LIST_CLASS}>
+              {Array.from({ length: 2 }, (_, i) => (
                 <div
                   key={i}
-                  className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
-                    i === 0
-                      ? 'border-primary text-primary bg-background'
-                      : 'border-transparent text-muted-foreground'
-                  }`}
+                  role="tab"
+                  aria-selected={i === 0}
+                  className={`${TAB_BASE_CLASS} ${i === 0 ? TAB_ACTIVE_CLASS : TAB_INACTIVE_CLASS}`}
                 >
                   タブ{i + 1}
                 </div>
               ))}
             </div>
-            <div className="p-4 text-sm text-muted-foreground">
+            <div role="tabpanel" className="p-4 text-sm text-muted-foreground">
               タブ1のコンテンツ
             </div>
           </div>

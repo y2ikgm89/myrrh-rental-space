@@ -72,7 +72,7 @@ import type { FaqEditorFormData } from '@/admin/components/editor/inline/types'
 
 const formSchema = z.object({
   question: z.string().min(1, { error: '質問は必須です' }).max(500, { error: '質問は500文字以内で入力してください' }),
-  answer: z.string().min(1, { error: '回答は必須です' }),
+  answerJson: z.string().min(1, { error: '回答は必須です' }),
   categoryId: z.string().uuid({ error: 'カテゴリを選択してください' }),
   order: z.number().int().min(0),
   isPublished: z.boolean(),
@@ -130,7 +130,7 @@ export function FaqItemInlineEditor({
     defaultValues: item
       ? {
           question: item.question,
-          answer: item.answer,
+          answerJson: item.answerJson ? JSON.stringify(item.answerJson) : '',
           categoryId: item.categoryId,
           order: item.order,
           isPublished: item.isPublished,
@@ -142,7 +142,7 @@ export function FaqItemInlineEditor({
         }
       : {
           question: '',
-          answer: '',
+          answerJson: '',
           categoryId: defaultCategoryId || '',
           order: 0,
           isPublished: true,
@@ -156,10 +156,10 @@ export function FaqItemInlineEditor({
 
   const question = useWatch({ control, name: 'question' })
   const isPublished = useWatch({ control, name: 'isPublished' })
-  const answer = useWatch({ control, name: 'answer' })
+  const answerJson = useWatch({ control, name: 'answerJson' })
 
-  const handleHtmlChange = (html: string) => {
-    setValue('answer', html, { shouldDirty: true })
+  const handleJsonChange = (json: string) => {
+    setValue('answerJson', json, { shouldDirty: true })
     setHasEditorChanges(true)
   }
 
@@ -168,7 +168,7 @@ export function FaqItemInlineEditor({
       try {
         const payload = {
           question: data.question,
-          answer: data.answer,
+          answerJson: data.answerJson,
           categoryId: data.categoryId,
           order: data.order,
           isPublished: data.isPublished,
@@ -421,7 +421,9 @@ export function FaqItemInlineEditor({
                 <CardContent>
                   <OGPFields
                     register={register}
+                    control={control}
                     errors={errors}
+                    setValue={setValue}
                     disabled={isPending}
                     fields={{
                       ogpTitle: 'ogpTitle',
@@ -459,8 +461,9 @@ export function FaqItemInlineEditor({
           回答
         </Label>
         <LexicalEditor
-          content={answer}
-          onChange={handleHtmlChange}
+          contentJson={answerJson || undefined}
+          contentHtml={item?.answerHtml ?? ''}
+          onChange={handleJsonChange}
           disabled={isPending}
           className={EDITOR_PROSE_CLASSES}
           showToolbar

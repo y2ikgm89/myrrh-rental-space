@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from '@/admin/components/ui'
 import { cn } from '@/shared/lib/utils'
+import { CouponType, isValidCouponType, getValidCouponType } from '@/shared/lib/validations/enums'
 
 // =============================================================================
 // Types
@@ -85,7 +86,7 @@ export function CouponForm({ coupon }: CouponFormProps): ReactElement {
       code: getFormString(formData, 'code') ?? '',
       name: getFormString(formData, 'name') ?? '',
       description: getFormString(formData, 'description') ?? '',
-      type: (getFormString(formData, 'type') as 'PERCENTAGE' | 'FIXED_AMOUNT') ?? 'PERCENTAGE',
+      type: getValidCouponType(getFormString(formData, 'type'), CouponType.PERCENTAGE),
       discountValue: getFormNumber(formData, 'discountValue') ?? 0,
       minReservationAmount: getFormNumber(formData, 'minReservationAmount') ?? null,
       maxDiscountAmount: getFormNumber(formData, 'maxDiscountAmount') ?? null,
@@ -141,7 +142,7 @@ export function CouponForm({ coupon }: CouponFormProps): ReactElement {
           code: '',
           name: '',
           description: '',
-          type: 'PERCENTAGE',
+          type: CouponType.PERCENTAGE,
           discountValue: 10,
           validFrom: new Date(),
           isActive: true,
@@ -238,15 +239,15 @@ export function CouponForm({ coupon }: CouponFormProps): ReactElement {
                   割引タイプ <span className="text-destructive">*</span>
                 </Label>
                 <Select
-                  defaultValue={coupon?.type ?? 'PERCENTAGE'}
-                  onValueChange={(value) => setValue('type', value as 'PERCENTAGE' | 'FIXED_AMOUNT')}
+                  defaultValue={coupon?.type ?? CouponType.PERCENTAGE}
+                  onValueChange={(value) => { if (isValidCouponType(value)) setValue('type', value) }}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="PERCENTAGE">パーセント割引</SelectItem>
-                    <SelectItem value="FIXED_AMOUNT">定額割引</SelectItem>
+                    <SelectItem value={CouponType.PERCENTAGE}>パーセント割引</SelectItem>
+                    <SelectItem value={CouponType.FIXED_AMOUNT}>定額割引</SelectItem>
                   </SelectContent>
                 </Select>
                 <input type="hidden" name="type" value={couponType} />
@@ -262,12 +263,12 @@ export function CouponForm({ coupon }: CouponFormProps): ReactElement {
                     type="number"
                     {...register('discountValue')}
                     min={1}
-                    max={couponType === 'PERCENTAGE' ? 100 : undefined}
+                    max={couponType === CouponType.PERCENTAGE ? 100 : undefined}
                     aria-invalid={!!errors.discountValue}
                     aria-describedby={errors.discountValue ? 'discountValue-error' : undefined}
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                    {couponType === 'PERCENTAGE' ? '%' : '円'}
+                    {couponType === CouponType.PERCENTAGE ? '%' : '円'}
                   </span>
                 </div>
                 {errors.discountValue && (
@@ -298,7 +299,7 @@ export function CouponForm({ coupon }: CouponFormProps): ReactElement {
                 </p>
               </div>
 
-              {couponType === 'PERCENTAGE' && (
+              {couponType === CouponType.PERCENTAGE && (
                 <div className="space-y-2">
                   <Label htmlFor="maxDiscountAmount">最大割引額</Label>
                   <div className="relative">

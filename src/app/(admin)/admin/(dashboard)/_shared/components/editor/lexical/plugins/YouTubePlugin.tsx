@@ -8,7 +8,7 @@
 
 import { useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $insertNodes } from 'lexical'
+import { $insertNodeToNearestRoot } from '@lexical/utils'
 import {
   Dialog,
   DialogContent,
@@ -78,7 +78,7 @@ export function YouTubePlugin({ isOpen, onClose }: YouTubePluginProps) {
 
     editor.update(() => {
       const node = $createYouTubeNode({ videoId })
-      $insertNodes([node])
+      $insertNodeToNearestRoot(node)
     })
 
     setUrl('')
@@ -132,22 +132,3 @@ export function YouTubePlugin({ isOpen, onClose }: YouTubePluginProps) {
   )
 }
 
-// =============================================================================
-// Hook
-// =============================================================================
-
-/**
- * YouTubeダイアログの状態管理フック
- */
-export function useYouTubeDialog() {
-  const [isOpen, setIsOpen] = useState(false)
-
-  const openYouTubeDialog = () => setIsOpen(true)
-  const closeYouTubeDialog = () => setIsOpen(false)
-
-  return {
-    isYouTubeDialogOpen: isOpen,
-    openYouTubeDialog,
-    closeYouTubeDialog,
-  }
-}

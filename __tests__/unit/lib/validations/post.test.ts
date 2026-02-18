@@ -9,12 +9,15 @@ import {
 import { LayoutWidth } from '@/shared/types/prisma'
 import { PostStatus } from '@/shared/generated/prisma/enums'
 
+// 有効なLexical EditorState JSON（lexicalJsonSchema準拠）
+const VALID_LEXICAL_JSON = '{"root":{"children":[],"direction":null,"format":"","indent":0,"type":"root","version":1}}'
+
 describe('createPostSchema', () => {
   const validBaseData = {
     title: '投稿記事タイトル',
     slug: 'sample-post',
     excerpt: '記事の抜粋です',
-    content: '',
+    contentJson: '',
     thumbnailUrl: 'https://example.com/image.jpg',
     categoryId: '123e4567-e89b-12d3-a456-426614174000',
     tags: ['123e4567-e89b-12d3-a456-426614174001', '123e4567-e89b-12d3-a456-426614174002'],
@@ -105,7 +108,7 @@ describe('createPostSchema', () => {
 
   test('tagsフィールドはデフォルトで空配列', () => {
     const data = { ...validBaseData }
-    delete (data as Record<string, unknown>).tags
+    delete (data as Record<string, unknown>)['tags']
     const result = createPostSchema.safeParse(data)
     expect(result.success).toBe(true)
     if (result.success) {
@@ -113,11 +116,11 @@ describe('createPostSchema', () => {
     }
   })
 
-  test('contentフィールドはデフォルトで空文字列', () => {
+  test('contentJsonフィールドはデフォルトで空文字列', () => {
     const result = createPostSchema.safeParse(validBaseData)
     expect(result.success).toBe(true)
     if (result.success) {
-      expect(result.data.content).toBe('')
+      expect(result.data.contentJson).toBe('')
     }
   })
 })
@@ -127,7 +130,7 @@ describe('updatePostSchema', () => {
     title: '投稿記事タイトル',
     slug: 'sample-post',
     excerpt: '記事の抜粋です',
-    content: '<p>記事本文</p>',
+    contentJson: VALID_LEXICAL_JSON,
     thumbnailUrl: 'https://example.com/image.jpg',
     categoryId: '123e4567-e89b-12d3-a456-426614174000',
     tags: ['123e4567-e89b-12d3-a456-426614174001', '123e4567-e89b-12d3-a456-426614174002'],
@@ -139,16 +142,19 @@ describe('updatePostSchema', () => {
   })
 
   test('本文が空の場合にエラー', () => {
-    const invalidData = { ...validBaseData, content: '' }
+    const invalidData = { ...validBaseData, contentJson: '' }
     const result = updatePostSchema.safeParse(invalidData)
     expect(result.success).toBe(false)
-    if (!result.success) {
-      expect(result.error.issues[0].message).toContain('本文は必須です')
-    }
+  })
+
+  test('無効なLexical JSONはエラー', () => {
+    const invalidData = { ...validBaseData, contentJson: '<p>記事本文</p>' }
+    const result = updatePostSchema.safeParse(invalidData)
+    expect(result.success).toBe(false)
   })
 
   test('contentWidthフィールドを許可', () => {
-    const validData = { ...validBaseData, contentWidth: LayoutWidth.WIDE }
+    const validData = { ...validBaseData, contentWidth: LayoutWidth.LG }
     const result = updatePostSchema.safeParse(validData)
     expect(result.success).toBe(true)
   })
@@ -188,7 +194,7 @@ describe('postFormSchema', () => {
     title: '投稿記事タイトル',
     slug: 'sample-post',
     excerpt: '記事の抜粋です',
-    content: '<p>記事本文</p>',
+    contentJson: VALID_LEXICAL_JSON,
     thumbnailUrl: 'https://example.com/image.jpg',
     categoryId: '123e4567-e89b-12d3-a456-426614174000',
     tags: 'tag1,tag2',
@@ -202,7 +208,7 @@ describe('postFormSchema', () => {
 
   test('statusフィールドは必須', () => {
     const invalidData = { ...validFormData }
-    delete (invalidData as Record<string, unknown>).status
+    delete (invalidData as Record<string, unknown>)['status']
     const result = postFormSchema.safeParse(invalidData)
     expect(result.success).toBe(false)
   })
@@ -228,7 +234,7 @@ describe('postFormSchema', () => {
   })
 
   test('contentWidthフィールドは文字列として受け取る', () => {
-    const data = { ...validFormData, contentWidth: 'WIDE' }
+    const data = { ...validFormData, contentWidth: 'LG' }
     const result = postFormSchema.safeParse(data)
     expect(result.success).toBe(true)
   })
@@ -282,7 +288,7 @@ describe('postCategorySchema', () => {
 
   test('orderフィールドはデフォルトで0', () => {
     const data = { ...validCategoryData }
-    delete (data as Record<string, unknown>).order
+    delete (data as Record<string, unknown>)['order']
     const result = postCategorySchema.safeParse(data)
     expect(result.success).toBe(true)
     if (result.success) {

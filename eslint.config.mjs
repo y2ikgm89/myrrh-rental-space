@@ -4,7 +4,7 @@ import nextTs from "eslint-config-next/typescript";
 import prettier from "eslint-config-prettier/flat";
 
 const eslintConfig = defineConfig([
-  // Next.js recommended configs (includes eslint-plugin-react-hooks@7.x with React Compiler rules)
+  // Next.js recommended configs
   ...nextVitals,
   ...nextTs,
   // Prettier compatibility (disables conflicting rules)

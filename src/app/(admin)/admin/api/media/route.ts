@@ -16,6 +16,7 @@ import {
   parseMediaUsageFilter,
 } from '@/admin/lib/validations/media'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
+import { extractFieldErrors } from '@/shared/lib/action-helpers'
 
 function getErrorStatus(message: string): number {
   if (message.includes('ログイン') || message.includes('権限')) {
@@ -38,18 +39,16 @@ export async function GET(request: Request): Promise<NextResponse> {
     })
 
     if (!filtersResult.success) {
-      const firstIssue = filtersResult.error.issues[0]
       return NextResponse.json(
-        { error: firstIssue?.message ?? 'バリデーションエラー' },
+        { error: 'バリデーションエラー', fieldErrors: extractFieldErrors(filtersResult.error) },
         { status: 400 }
       )
     }
 
     const paginationResult = mediaPaginationSchema.safeParse({ page, limit })
     if (!paginationResult.success) {
-      const firstIssue = paginationResult.error.issues[0]
       return NextResponse.json(
-        { error: firstIssue?.message ?? 'バリデーションエラー' },
+        { error: 'バリデーションエラー', fieldErrors: extractFieldErrors(paginationResult.error) },
         { status: 400 }
       )
     }

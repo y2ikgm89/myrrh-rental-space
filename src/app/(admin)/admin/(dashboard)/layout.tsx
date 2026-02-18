@@ -11,6 +11,7 @@
  */
 
 import { Suspense } from 'react'
+import { connection } from 'next/server'
 import { cacheLife, cacheTag } from 'next/cache'
 import { CACHE_TAGS } from '@/shared/lib/constants'
 import { AdminLayoutProvider } from '@/admin/contexts/admin-layout-context'
@@ -22,7 +23,7 @@ import { UserInfo, UserInfoSkeleton } from './_components/UserInfo'
 import { prisma } from '@/shared/lib/prisma'
 import type { ReactElement, ReactNode } from 'react'
 
-const ADMIN_LOGIN_TOKEN = process.env.ADMIN_LOGIN_TOKEN || ''
+const ADMIN_LOGIN_TOKEN = process.env["ADMIN_LOGIN_TOKEN"] || ''
 
 async function getAdminBrandingSettings() {
   'use cache'
@@ -49,6 +50,8 @@ export default async function DashboardLayout({
 }: {
   children: ReactNode
 }): Promise<ReactElement> {
+  await connection()
+
   const brandingSettings = await getAdminBrandingSettings()
 
   return (

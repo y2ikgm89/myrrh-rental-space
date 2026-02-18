@@ -1,4 +1,4 @@
-/**
+﻿/**
  * PullQuoteText Node
  *
  * @description プルクォートの引用テキスト部分
@@ -13,29 +13,14 @@ import type {
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
-  NodeKey,
-  SerializedElementNode,
 } from 'lexical'
-import { $applyNodeReplacement, ElementNode, $createParagraphNode, $isElementNode } from 'lexical'
-
-// =============================================================================
-// Types
-// =============================================================================
-
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface SerializedPullQuoteTextNode extends SerializedElementNode {}
-
-// =============================================================================
-// Constants
-// =============================================================================
-
-const TEXT_CLASS = 'text-xl font-medium italic text-foreground leading-relaxed'
+import { $create, ElementNode } from 'lexical'
 
 // =============================================================================
 // DOM Conversion
 // =============================================================================
 
-function $convertPullQuoteTextElement(_domNode: Node): null | DOMConversionOutput {
+function $convertPullQuoteTextElement(_element: HTMLElement): null | DOMConversionOutput {
   const node = $createPullQuoteTextNode()
   return { node }
 }
@@ -45,22 +30,13 @@ function $convertPullQuoteTextElement(_domNode: Node): null | DOMConversionOutpu
 // =============================================================================
 
 export class PullQuoteTextNode extends ElementNode {
-  static getType(): string {
-    return 'pull-quote-text'
+  override $config() {
+    return this.config('pull-quote-text', { extends: ElementNode })
   }
 
-  static clone(node: PullQuoteTextNode): PullQuoteTextNode {
-    return new PullQuoteTextNode(node.__key)
-  }
-
-  static importJSON(serializedNode: SerializedPullQuoteTextNode): PullQuoteTextNode {
-    return $createPullQuoteTextNode().updateFromJSON(serializedNode)
-  }
-
-  static importDOM(): DOMConversionMap | null {
+  static override importDOM(): DOMConversionMap | null {
     return {
-      blockquote: (domNode: Node) => {
-        const element = domNode as HTMLElement
+      blockquote: (element: HTMLElement) => {
         if (element.hasAttribute('data-pull-quote-text')) {
           return {
             conversion: $convertPullQuoteTextElement,
@@ -72,61 +48,28 @@ export class PullQuoteTextNode extends ElementNode {
     }
   }
 
-  constructor(key?: NodeKey) {
-    super(key)
-  }
-
-  exportJSON(): SerializedPullQuoteTextNode {
-    return {
-      ...super.exportJSON(),
-    }
-  }
-
-  exportDOM(): DOMExportOutput {
+  override exportDOM(): DOMExportOutput {
     const element = document.createElement('blockquote')
     element.setAttribute('data-pull-quote-text', 'true')
-    element.className = TEXT_CLASS
     return { element }
   }
 
-  createDOM(_config: EditorConfig): HTMLElement {
+  override createDOM(_config: EditorConfig): HTMLElement {
     const element = document.createElement('blockquote')
     element.setAttribute('data-pull-quote-text', 'true')
-    element.className = TEXT_CLASS
     return element
   }
 
-  updateDOM(): boolean {
+  override updateDOM(): boolean {
     return false
   }
 
-  canInsertTextBefore(): false {
+  override canInsertTextBefore(): false {
     return false
   }
 
-  canInsertTextAfter(): false {
+  override canInsertTextAfter(): false {
     return false
-  }
-
-  collapseAtStart(): boolean {
-    const children = this.getChildren()
-    const paragraph = $createParagraphNode()
-
-    if (children.length > 0) {
-      const firstChild = children[0]
-      if ($isElementNode(firstChild)) {
-        const firstChildChildren = firstChild.getChildren()
-        for (const child of firstChildChildren) {
-          paragraph.append(child)
-        }
-      }
-    }
-
-    const parent = this.getParent()
-    if (parent) {
-      parent.replace(paragraph)
-    }
-    return true
   }
 }
 
@@ -140,7 +83,7 @@ export class PullQuoteTextNode extends ElementNode {
  * @returns PullQuoteTextNode インスタンス
  */
 export function $createPullQuoteTextNode(): PullQuoteTextNode {
-  return $applyNodeReplacement(new PullQuoteTextNode())
+  return $create(PullQuoteTextNode)
 }
 
 /**

@@ -34,6 +34,9 @@ import {
   AnnouncementBarDesignStyle,
   HeaderScrollBehavior,
   HeaderBackgroundMode,
+  CalendarSyncMethod,
+  EditorCommentStatus,
+  PostPermalinkStructure,
 } from '@/shared/generated/prisma/client'
 
 // =============================================================================
@@ -69,6 +72,9 @@ export {
   AnnouncementBarDesignStyle,
   HeaderScrollBehavior,
   HeaderBackgroundMode,
+  CalendarSyncMethod,
+  EditorCommentStatus,
+  PostPermalinkStructure,
 }
 
 // Note: NewsStatus enum は isPublished (boolean) に移行したため削除
@@ -120,6 +126,9 @@ const VALID_ANNOUNCEMENT_BAR_ANIMATIONS = new Set<string>(Object.values(Announce
 const VALID_ANNOUNCEMENT_BAR_DESIGN_STYLES = new Set<string>(Object.values(AnnouncementBarDesignStyle))
 const VALID_HEADER_SCROLL_BEHAVIORS = new Set<string>(Object.values(HeaderScrollBehavior))
 const VALID_HEADER_BACKGROUND_MODES = new Set<string>(Object.values(HeaderBackgroundMode))
+const VALID_CALENDAR_SYNC_METHODS = new Set<string>(Object.values(CalendarSyncMethod))
+const VALID_EDITOR_COMMENT_STATUSES = new Set<string>(Object.values(EditorCommentStatus))
+const VALID_POST_PERMALINK_STRUCTURES = new Set<string>(Object.values(PostPermalinkStructure))
 
 // =============================================================================
 // Type Guards
@@ -245,6 +254,18 @@ export function isValidHeaderBackgroundMode(value: unknown): value is HeaderBack
   return typeof value === 'string' && VALID_HEADER_BACKGROUND_MODES.has(value)
 }
 
+export function isValidCalendarSyncMethod(value: unknown): value is CalendarSyncMethod {
+  return typeof value === 'string' && VALID_CALENDAR_SYNC_METHODS.has(value)
+}
+
+export function isValidEditorCommentStatus(value: unknown): value is EditorCommentStatus {
+  return typeof value === 'string' && VALID_EDITOR_COMMENT_STATUSES.has(value)
+}
+
+export function isValidPostPermalinkStructure(value: unknown): value is PostPermalinkStructure {
+  return typeof value === 'string' && VALID_POST_PERMALINK_STRUCTURES.has(value)
+}
+
 // =============================================================================
 // Helper: Get valid value or default
 // =============================================================================
@@ -302,6 +323,13 @@ export function getValidMediaUsage(
   fallback: MediaUsage
 ): MediaUsage {
   return value && isValidMediaUsage(value) ? value : fallback
+}
+
+export function getValidCouponType(
+  value: string | null | undefined,
+  fallback: CouponType = CouponType.PERCENTAGE
+): CouponType {
+  return value && isValidCouponType(value) ? value : fallback
 }
 
 export function getValidDiscountType(
@@ -385,6 +413,27 @@ export function getValidHeaderBackgroundMode(
   fallback: HeaderBackgroundMode = HeaderBackgroundMode.solid
 ): HeaderBackgroundMode {
   return value && isValidHeaderBackgroundMode(value) ? value : fallback
+}
+
+export function getValidCalendarSyncMethod(
+  value: string | null | undefined,
+  fallback: CalendarSyncMethod = CalendarSyncMethod.polling
+): CalendarSyncMethod {
+  return value && isValidCalendarSyncMethod(value) ? value : fallback
+}
+
+export function getValidEditorCommentStatus(
+  value: string | null | undefined,
+  fallback: EditorCommentStatus = EditorCommentStatus.ACTIVE
+): EditorCommentStatus {
+  return value && isValidEditorCommentStatus(value) ? value : fallback
+}
+
+export function getValidPostPermalinkStructure(
+  value: string | null | undefined,
+  fallback: PostPermalinkStructure = PostPermalinkStructure.post_name
+): PostPermalinkStructure {
+  return value && isValidPostPermalinkStructure(value) ? value : fallback
 }
 
 // =============================================================================

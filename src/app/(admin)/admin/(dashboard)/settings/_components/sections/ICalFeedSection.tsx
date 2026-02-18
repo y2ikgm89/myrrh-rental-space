@@ -74,10 +74,14 @@ export function ICalFeedSection({ onUpdate }: ICalFeedSectionProps) {
     icalFeedIncludeCustomerInfo: false,
   })
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-  const [newTokenData, setNewTokenData] = useState({
+  const [newTokenData, setNewTokenData] = useState<{
+    name: string
+    spaceId: string | null
+    expiresInDays: number | null
+  }>({
     name: '',
-    spaceId: '' as string | null,
-    expiresInDays: null as number | null,
+    spaceId: '',
+    expiresInDays: null,
   })
   const [createdTokenUrl, setCreatedTokenUrl] = useState<string | null>(null)
 

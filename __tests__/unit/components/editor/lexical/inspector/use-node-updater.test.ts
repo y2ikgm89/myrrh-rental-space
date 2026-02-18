@@ -10,13 +10,16 @@
 
 import { describe, test, expect, beforeEach } from 'bun:test'
 import { createHeadlessEditor } from '@lexical/headless'
-import { $getRoot, $getNodeByKey, type LexicalEditor } from 'lexical'
+import { $getRoot, $getNodeByKey, $getState, $setState, type LexicalEditor } from 'lexical'
 
 // テスト対象ノード
 import {
   ButtonNode,
   $createButtonNode,
   $isButtonNode,
+  buttonTextState,
+  buttonHrefState,
+  buttonVariantState,
 } from '@/admin/components/editor/lexical/nodes/ButtonNode'
 import { ImageNode, $isImageNode } from '@/admin/components/editor/lexical/nodes/ImageNode'
 
@@ -69,11 +72,11 @@ describe('useNodeUpdater pattern', () => {
       })
     })
 
-    test('型ガードが成功した場合、setterメソッドで更新できる', async () => {
+    test('型ガードが成功した場合、$setStateで更新できる', async () => {
       await editor.update(() => {
         const targetNode = $getNodeByKey(buttonNodeKey)
         if ($isButtonNode(targetNode)) {
-          targetNode.setText('更新後テキスト')
+          $setState(targetNode, buttonTextState, '更新後テキスト')
         }
       })
 
@@ -81,7 +84,7 @@ describe('useNodeUpdater pattern', () => {
       editor.getEditorState().read(() => {
         const node = $getNodeByKey(buttonNodeKey)
         if ($isButtonNode(node)) {
-          expect(node.getText()).toBe('更新後テキスト')
+          expect($getState(node, buttonTextState)).toBe('更新後テキスト')
         }
       })
     })
@@ -112,31 +115,31 @@ describe('useNodeUpdater pattern', () => {
       await editor.update(() => {
         const targetNode = $getNodeByKey(buttonNodeKey)
         if ($isButtonNode(targetNode)) {
-          targetNode.setText('新しいテキスト')
-          targetNode.setHref('https://new-url.com')
-          targetNode.setVariant('secondary')
+          $setState(targetNode, buttonTextState, '新しいテキスト')
+          $setState(targetNode, buttonHrefState, 'https://new-url.com')
+          $setState(targetNode, buttonVariantState, 'secondary')
         }
       })
 
       editor.getEditorState().read(() => {
         const node = $getNodeByKey(buttonNodeKey)
         if ($isButtonNode(node)) {
-          expect(node.getText()).toBe('新しいテキスト')
-          expect(node.getHref()).toBe('https://new-url.com')
-          expect(node.getVariant()).toBe('secondary')
+          expect($getState(node, buttonTextState)).toBe('新しいテキスト')
+          expect($getState(node, buttonHrefState)).toBe('https://new-url.com')
+          expect($getState(node, buttonVariantState)).toBe('secondary')
         }
       })
     })
   })
 
-  describe('getWritable/getLatestパターン', () => {
+  describe('$setState/$getStateパターン', () => {
     let editor: LexicalEditor
 
     beforeEach(() => {
       editor = createTestEditor()
     })
 
-    test('setterメソッドは内部でgetWritable()を使用して不変性を維持する', async () => {
+    test('$setStateでプロパティを更新し$getStateで読み取れる', async () => {
       let nodeKey: string
 
       await editor.update(() => {
@@ -155,7 +158,7 @@ describe('useNodeUpdater pattern', () => {
       editor.getEditorState().read(() => {
         const node = $getNodeByKey(nodeKey!)
         if ($isButtonNode(node)) {
-          originalText = node.getText()
+          originalText = $getState(node, buttonTextState)
         }
       })
 
@@ -165,8 +168,7 @@ describe('useNodeUpdater pattern', () => {
       await editor.update(() => {
         const node = $getNodeByKey(nodeKey!)
         if ($isButtonNode(node)) {
-          // setText内部でgetWritable()が呼ばれる
-          node.setText('更新後')
+          $setState(node, buttonTextState, '更新後')
         }
       })
 
@@ -174,13 +176,13 @@ describe('useNodeUpdater pattern', () => {
       editor.getEditorState().read(() => {
         const node = $getNodeByKey(nodeKey!)
         if ($isButtonNode(node)) {
-          expect(node.getText()).toBe('更新後')
-          expect(node.getText()).not.toBe(originalText)
+          expect($getState(node, buttonTextState)).toBe('更新後')
+          expect($getState(node, buttonTextState)).not.toBe(originalText)
         }
       })
     })
 
-    test('getterメソッドは内部でgetLatest()を使用して最新の値を返す', async () => {
+    test('$getStateは最新の値を返す', async () => {
       let nodeKey: string
 
       await editor.update(() => {
@@ -198,14 +200,14 @@ describe('useNodeUpdater pattern', () => {
       await editor.update(() => {
         const node = $getNodeByKey(nodeKey!)
         if ($isButtonNode(node)) {
-          node.setText('更新1')
+          $setState(node, buttonTextState, '更新1')
         }
       })
 
       await editor.update(() => {
         const node = $getNodeByKey(nodeKey!)
         if ($isButtonNode(node)) {
-          node.setText('更新2')
+          $setState(node, buttonTextState, '更新2')
         }
       })
 
@@ -213,7 +215,7 @@ describe('useNodeUpdater pattern', () => {
       editor.getEditorState().read(() => {
         const node = $getNodeByKey(nodeKey!)
         if ($isButtonNode(node)) {
-          expect(node.getText()).toBe('更新2')
+          expect($getState(node, buttonTextState)).toBe('更新2')
         }
       })
     })

@@ -13,7 +13,7 @@ import {
   SelectValue,
   Textarea,
 } from '@/admin/components/ui'
-import { CTAButtonEditor } from '@/shared/components/cta-button-editor'
+import { CTAButtonEditor } from '@/admin/components/cta-button-editor'
 import {
   ctaConfigSchema,
   getCtaConfig,

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * StepTitle Node
  *
  * @description ステップのタイトル部分
@@ -13,29 +13,14 @@ import type {
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
-  NodeKey,
-  SerializedElementNode,
 } from 'lexical'
-import { $applyNodeReplacement, ElementNode, $createParagraphNode, $isElementNode } from 'lexical'
-
-// =============================================================================
-// Types
-// =============================================================================
-
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface SerializedStepTitleNode extends SerializedElementNode {}
-
-// =============================================================================
-// Constants
-// =============================================================================
-
-const TITLE_CLASS = 'font-medium text-foreground'
+import { $create, ElementNode } from 'lexical'
 
 // =============================================================================
 // DOM Conversion
 // =============================================================================
 
-function $convertStepTitleElement(_domNode: Node): null | DOMConversionOutput {
+function $convertStepTitleElement(_element: HTMLElement): null | DOMConversionOutput {
   const node = $createStepTitleNode()
   return { node }
 }
@@ -45,22 +30,13 @@ function $convertStepTitleElement(_domNode: Node): null | DOMConversionOutput {
 // =============================================================================
 
 export class StepTitleNode extends ElementNode {
-  static getType(): string {
-    return 'step-title'
+  override $config() {
+    return this.config('step-title', { extends: ElementNode })
   }
 
-  static clone(node: StepTitleNode): StepTitleNode {
-    return new StepTitleNode(node.__key)
-  }
-
-  static importJSON(serializedNode: SerializedStepTitleNode): StepTitleNode {
-    return $createStepTitleNode().updateFromJSON(serializedNode)
-  }
-
-  static importDOM(): DOMConversionMap | null {
+  static override importDOM(): DOMConversionMap | null {
     return {
-      h4: (domNode: Node) => {
-        const element = domNode as HTMLElement
+      h4: (element: HTMLElement) => {
         if (element.hasAttribute('data-step-title')) {
           return {
             conversion: $convertStepTitleElement,
@@ -72,64 +48,30 @@ export class StepTitleNode extends ElementNode {
     }
   }
 
-  constructor(key?: NodeKey) {
-    super(key)
-  }
-
-  exportJSON(): SerializedStepTitleNode {
-    return {
-      ...super.exportJSON(),
-    }
-  }
-
-  exportDOM(): DOMExportOutput {
+  override exportDOM(): DOMExportOutput {
     const element = document.createElement('h4')
     element.setAttribute('data-step-title', 'true')
-    element.className = TITLE_CLASS
+
     return { element }
   }
 
-  createDOM(_config: EditorConfig): HTMLElement {
+  override createDOM(_config: EditorConfig): HTMLElement {
     const element = document.createElement('h4')
     element.setAttribute('data-step-title', 'true')
-    element.className = TITLE_CLASS
+
     return element
   }
 
-  updateDOM(): boolean {
+  override updateDOM(): boolean {
     return false
   }
 
-  canInsertTextBefore(): false {
+  override canInsertTextBefore(): false {
     return false
   }
 
-  canInsertTextAfter(): false {
+  override canInsertTextAfter(): false {
     return false
-  }
-
-  collapseAtStart(): boolean {
-    const children = this.getChildren()
-    const paragraph = $createParagraphNode()
-
-    if (children.length > 0) {
-      const firstChild = children[0]
-      if ($isElementNode(firstChild)) {
-        const firstChildChildren = firstChild.getChildren()
-        for (const child of firstChildChildren) {
-          paragraph.append(child)
-        }
-      }
-    }
-
-    const parent = this.getParent()
-    if (parent) {
-      const grandParent = parent.getParent()
-      if (grandParent) {
-        grandParent.replace(paragraph)
-      }
-    }
-    return true
   }
 }
 
@@ -143,7 +85,7 @@ export class StepTitleNode extends ElementNode {
  * @returns StepTitleNode インスタンス
  */
 export function $createStepTitleNode(): StepTitleNode {
-  return $applyNodeReplacement(new StepTitleNode())
+  return $create(StepTitleNode)
 }
 
 /**

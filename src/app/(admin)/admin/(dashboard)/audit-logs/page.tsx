@@ -82,7 +82,7 @@ export default async function AuditLogsPage({ searchParams }: Props) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {(stats.byAction.CREATE ?? 0).toLocaleString()}
+              {(stats.byAction['CREATE'] ?? 0).toLocaleString()}
             </div>
           </CardContent>
         </Card>

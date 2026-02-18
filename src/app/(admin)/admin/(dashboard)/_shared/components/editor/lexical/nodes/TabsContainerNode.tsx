@@ -1,4 +1,4 @@
-/**
+﻿/**
  * TabsContainer Node
  *
  * @description タブ切り替えの親コンテナ
@@ -13,34 +13,68 @@ import type {
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
-  NodeKey,
-  SerializedElementNode,
 } from 'lexical'
-import { $applyNodeReplacement, ElementNode, $createParagraphNode, $isElementNode } from 'lexical'
+import { $create, $getState, $getStateChange, $setState, createState, ElementNode, $createParagraphNode, $isElementNode } from 'lexical'
+import { createEnumGuard } from '../config/type-guards'
 
 // =============================================================================
 // Types
 // =============================================================================
 
-export interface SerializedTabsContainerNode extends SerializedElementNode {
-  activeIndex: number
-}
+export type TabsStyle = 'underline' | 'pills' | 'boxed' | 'minimal'
+export type TabsSize = 'auto' | 'fixed' | 'fill' | 'uniform'
+export type TabsFixedWidth = '80' | '120' | '160' | '200'
+
+export const TABS_STYLES: readonly TabsStyle[] = ['underline', 'pills', 'boxed', 'minimal'] as const
+export const TABS_SIZES: readonly TabsSize[] = ['auto', 'fixed', 'fill', 'uniform'] as const
+export const TABS_FIXED_WIDTHS: readonly TabsFixedWidth[] = ['80', '120', '160', '200'] as const
 
 // =============================================================================
-// Constants
+// Type Guards
 // =============================================================================
 
-const CONTAINER_CLASS = 'my-4 border rounded-lg overflow-hidden'
+export const isTabsStyle = createEnumGuard<TabsStyle>(TABS_STYLES)
+export const isTabsSize = createEnumGuard<TabsSize>(TABS_SIZES)
+export const isTabsFixedWidth = createEnumGuard<TabsFixedWidth>(TABS_FIXED_WIDTHS)
+
+// =============================================================================
+// State
+// =============================================================================
+
+export const activeIndexState = createState('activeIndex', {
+  parse: (v: unknown): number =>
+    typeof v === 'number' && Number.isFinite(v) ? v : 0,
+})
+
+export const tabsStyleState = createState('tabsStyle', {
+  parse: (v: unknown): TabsStyle =>
+    typeof v === 'string' && isTabsStyle(v) ? v : 'underline',
+})
+
+export const tabsSizeState = createState('tabsSize', {
+  parse: (v: unknown): TabsSize =>
+    typeof v === 'string' && isTabsSize(v) ? v : 'auto',
+})
+
+export const tabsFixedWidthState = createState('tabsFixedWidth', {
+  parse: (v: unknown): TabsFixedWidth =>
+    typeof v === 'string' && isTabsFixedWidth(v) ? v : '120',
+})
 
 // =============================================================================
 // DOM Conversion
 // =============================================================================
 
-function $convertTabsContainerElement(domNode: Node): null | DOMConversionOutput {
-  const element = domNode as HTMLElement
+function $convertTabsContainerElement(element: HTMLElement): null | DOMConversionOutput {
   const activeAttr = element.getAttribute('data-tabs-active')
   const activeIndex = activeAttr ? parseInt(activeAttr, 10) : 0
-  const node = $createTabsContainerNode(activeIndex)
+  const styleAttr = element.getAttribute('data-tabs-style')
+  const style = styleAttr && isTabsStyle(styleAttr) ? styleAttr : 'underline'
+  const sizeAttr = element.getAttribute('data-tabs-size')
+  const size = sizeAttr && isTabsSize(sizeAttr) ? sizeAttr : 'auto'
+  const fixedWidthAttr = element.getAttribute('data-tabs-fixed-width')
+  const fixedWidth = fixedWidthAttr && isTabsFixedWidth(fixedWidthAttr) ? fixedWidthAttr : '120'
+  const node = $createTabsContainerNode(activeIndex, style, size, fixedWidth)
   return { node }
 }
 
@@ -49,24 +83,21 @@ function $convertTabsContainerElement(domNode: Node): null | DOMConversionOutput
 // =============================================================================
 
 export class TabsContainerNode extends ElementNode {
-  __activeIndex: number
-
-  static getType(): string {
-    return 'tabs-container'
+  override $config() {
+    return this.config('tabs-container', {
+      extends: ElementNode,
+      stateConfigs: [
+        { flat: true, stateConfig: activeIndexState },
+        { flat: true, stateConfig: tabsStyleState },
+        { flat: true, stateConfig: tabsSizeState },
+        { flat: true, stateConfig: tabsFixedWidthState },
+      ],
+    })
   }
 
-  static clone(node: TabsContainerNode): TabsContainerNode {
-    return new TabsContainerNode(node.__activeIndex, node.__key)
-  }
-
-  static importJSON(serializedNode: SerializedTabsContainerNode): TabsContainerNode {
-    return $createTabsContainerNode(serializedNode.activeIndex).updateFromJSON(serializedNode)
-  }
-
-  static importDOM(): DOMConversionMap | null {
+  static override importDOM(): DOMConversionMap | null {
     return {
-      div: (domNode: Node) => {
-        const element = domNode as HTMLElement
+      div: (element: HTMLElement) => {
         if (element.hasAttribute('data-tabs-container')) {
           return {
             conversion: $convertTabsContainerElement,
@@ -78,60 +109,77 @@ export class TabsContainerNode extends ElementNode {
     }
   }
 
-  constructor(activeIndex: number = 0, key?: NodeKey) {
-    super(key)
-    this.__activeIndex = activeIndex
-  }
-
-  exportJSON(): SerializedTabsContainerNode {
-    return {
-      ...super.exportJSON(),
-      activeIndex: this.__activeIndex,
-    }
-  }
-
-  exportDOM(): DOMExportOutput {
+  override exportDOM(): DOMExportOutput {
+    const activeIndex = $getState(this, activeIndexState)
+    const tabsStyle = $getState(this, tabsStyleState)
+    const tabsSize = $getState(this, tabsSizeState)
+    const fixedWidth = $getState(this, tabsFixedWidthState)
     const element = document.createElement('div')
     element.setAttribute('data-tabs-container', 'true')
-    element.setAttribute('data-tabs-active', String(this.__activeIndex))
-    element.className = CONTAINER_CLASS
+    element.setAttribute('data-tabs-active', String(activeIndex))
+    element.setAttribute('data-tabs-style', tabsStyle)
+    element.setAttribute('data-tabs-size', tabsSize)
+    element.setAttribute('data-tabs-fixed-width', fixedWidth)
+
     return { element }
   }
 
-  createDOM(_config: EditorConfig): HTMLElement {
+  override createDOM(_config: EditorConfig): HTMLElement {
+    const activeIndex = $getState(this, activeIndexState)
+    const tabsStyle = $getState(this, tabsStyleState)
+    const tabsSize = $getState(this, tabsSizeState)
+    const fixedWidth = $getState(this, tabsFixedWidthState)
     const element = document.createElement('div')
     element.setAttribute('data-tabs-container', 'true')
-    element.setAttribute('data-tabs-active', String(this.__activeIndex))
-    element.className = CONTAINER_CLASS
+    element.setAttribute('data-tabs-active', String(activeIndex))
+    element.setAttribute('data-tabs-style', tabsStyle)
+    element.setAttribute('data-tabs-size', tabsSize)
+    element.setAttribute('data-tabs-fixed-width', fixedWidth)
+
     return element
   }
 
-  updateDOM(prevNode: TabsContainerNode, dom: HTMLElement): boolean {
-    if (prevNode.__activeIndex !== this.__activeIndex) {
-      dom.setAttribute('data-tabs-active', String(this.__activeIndex))
-      return false
+  override updateDOM(prevNode: TabsContainerNode, dom: HTMLElement): boolean {
+    const indexChange = $getStateChange(this, prevNode, activeIndexState)
+    if (indexChange) {
+      const [newIndex] = indexChange
+      dom.setAttribute('data-tabs-active', String(newIndex))
+    }
+    const styleChange = $getStateChange(this, prevNode, tabsStyleState)
+    if (styleChange) {
+      const [newStyle] = styleChange
+      dom.setAttribute('data-tabs-style', newStyle)
+    }
+    const sizeChange = $getStateChange(this, prevNode, tabsSizeState)
+    if (sizeChange) {
+      const [newSize] = sizeChange
+      dom.setAttribute('data-tabs-size', newSize)
+    }
+    const fixedWidthChange = $getStateChange(this, prevNode, tabsFixedWidthState)
+    if (fixedWidthChange) {
+      const [newFixedWidth] = fixedWidthChange
+      dom.setAttribute('data-tabs-fixed-width', newFixedWidth)
     }
     return false
   }
 
-  getActiveIndex(): number {
-    return this.getLatest().__activeIndex
+  override isShadowRoot(): boolean {
+    return true
   }
 
-  setActiveIndex(index: number): void {
-    const self = this.getWritable()
-    self.__activeIndex = index
-  }
-
-  canInsertTextBefore(): false {
+  override canBeEmpty(): boolean {
     return false
   }
 
-  canInsertTextAfter(): false {
+  override canInsertTextBefore(): false {
     return false
   }
 
-  collapseAtStart(): boolean {
+  override canInsertTextAfter(): false {
+    return false
+  }
+
+  override collapseAtStart(): boolean {
     const children = this.getChildren()
     const paragraph = $createParagraphNode()
 
@@ -154,14 +202,25 @@ export class TabsContainerNode extends ElementNode {
 // Factory Functions
 // =============================================================================
 
-/**
- * TabsContainerノードを作成する
- *
- * @param activeIndex - アクティブなタブのインデックス
- * @returns TabsContainerNode インスタンス
- */
-export function $createTabsContainerNode(activeIndex: number = 0): TabsContainerNode {
-  return $applyNodeReplacement(new TabsContainerNode(activeIndex))
+export function $createTabsContainerNode(
+  activeIndex: number = 0,
+  tabsStyle: TabsStyle = 'underline',
+  tabsSize: TabsSize = 'auto',
+  tabsFixedWidth: TabsFixedWidth = '120'
+): TabsContainerNode {
+  return $setState(
+    $setState(
+      $setState(
+        $setState($create(TabsContainerNode), activeIndexState, activeIndex),
+        tabsStyleState,
+        tabsStyle
+      ),
+      tabsSizeState,
+      tabsSize
+    ),
+    tabsFixedWidthState,
+    tabsFixedWidth
+  )
 }
 
 /**

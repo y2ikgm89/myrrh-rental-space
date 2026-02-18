@@ -21,7 +21,7 @@ import { PageSeoForm } from '../../../[slug]/seo/_components/PageSeoForm'
 // Types
 // =============================================================================
 
-const tabValues = ['sections', 'seo'] as [string, ...string[]]
+const tabValues = ['sections', 'seo'] satisfies [string, ...string[]]
 
 interface PageSeoData {
   slug: string

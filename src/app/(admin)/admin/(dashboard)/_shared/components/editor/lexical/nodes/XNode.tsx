@@ -1,4 +1,4 @@
-/**
+﻿/**
  * X (Twitter) Node
  *
  * @description X（Twitter）投稿を埋め込むDecoratorNode
@@ -14,17 +14,8 @@ import type {
   EditorConfig,
   LexicalNode,
   NodeKey,
-  SerializedLexicalNode,
 } from 'lexical'
-import { $applyNodeReplacement, DecoratorNode } from 'lexical'
-
-// =============================================================================
-// Types
-// =============================================================================
-
-export interface SerializedXNode extends SerializedLexicalNode {
-  tweetId: string
-}
+import { $create, $getState, $setState, createState, DecoratorNode } from 'lexical'
 
 // =============================================================================
 // Validation
@@ -37,6 +28,17 @@ export interface SerializedXNode extends SerializedLexicalNode {
 function isValidTweetId(tweetId: string): boolean {
   return /^\d{15,19}$/.test(tweetId)
 }
+
+// =============================================================================
+// State
+// =============================================================================
+
+export const tweetIdState = createState('tweetId', {
+  parse: (v: unknown): string => {
+    if (typeof v === 'string' && isValidTweetId(v)) return v
+    return ''
+  },
+})
 
 // =============================================================================
 // Component
@@ -52,7 +54,7 @@ function XComponent({
   return (
     <div
       data-lexical-node-key={nodeKey}
-      className="relative my-4 mx-auto max-w-xl"
+      className="relative my-6 mx-auto max-w-xl"
     >
       <iframe
         src={`https://platform.twitter.com/embed/Tweet.html?id=${tweetId}`}
@@ -68,9 +70,9 @@ function XComponent({
 // DOM Conversion
 // =============================================================================
 
-function $convertXElement(domNode: Node): null | DOMConversionOutput {
-  if (domNode instanceof HTMLIFrameElement) {
-    const src = domNode.getAttribute('src')
+function $convertXElement(element: HTMLElement): null | DOMConversionOutput {
+  if (element instanceof HTMLIFrameElement) {
+    const src = element.getAttribute('src')
     if (src) {
       // platform.twitter.com/embed/Tweet.html?id=xxx 形式
       const embedMatch = src.match(/platform\.twitter\.com\/embed\/Tweet\.html\?id=(\d+)/)
@@ -88,21 +90,14 @@ function $convertXElement(domNode: Node): null | DOMConversionOutput {
 // =============================================================================
 
 export class XNode extends DecoratorNode<ReactElement> {
-  __tweetId: string
-
-  static getType(): string {
-    return 'x'
+  override $config() {
+    return this.config('x', {
+      extends: DecoratorNode,
+      stateConfigs: [{ flat: true, stateConfig: tweetIdState }],
+    })
   }
 
-  static clone(node: XNode): XNode {
-    return new XNode(node.__tweetId, node.__key)
-  }
-
-  static importJSON(serializedNode: SerializedXNode): XNode {
-    return $createXNode({ tweetId: serializedNode.tweetId }).updateFromJSON(serializedNode)
-  }
-
-  static importDOM(): DOMConversionMap | null {
+  static override importDOM(): DOMConversionMap | null {
     return {
       iframe: () => ({
         conversion: $convertXElement,
@@ -111,52 +106,36 @@ export class XNode extends DecoratorNode<ReactElement> {
     }
   }
 
-  constructor(tweetId: string, key?: NodeKey) {
-    super(key)
-    // セキュリティ: tweetIdは数字のみ許可（XSS防止）
-    if (!isValidTweetId(tweetId)) {
-      throw new Error(`Invalid tweetId: ${tweetId}. Must be 15-19 digits.`)
-    }
-    this.__tweetId = tweetId
-  }
-
-  exportJSON(): SerializedXNode {
-    return {
-      ...super.exportJSON(),
-      tweetId: this.__tweetId,
-    }
-  }
-
-  exportDOM(): DOMExportOutput {
+  override exportDOM(): DOMExportOutput {
+    const tweetId = $getState(this, tweetIdState)
     const div = document.createElement('div')
-    div.className = 'my-4 mx-auto max-w-xl'
+    div.setAttribute('data-x-tweet', 'true')
 
     const iframe = document.createElement('iframe')
-    iframe.setAttribute('src', `https://platform.twitter.com/embed/Tweet.html?id=${this.__tweetId}`)
+    iframe.setAttribute('src', `https://platform.twitter.com/embed/Tweet.html?id=${tweetId}`)
     iframe.setAttribute('title', 'X (Twitter) post')
     iframe.setAttribute('scrolling', 'no')
-    iframe.className = 'w-full min-h-[400px] rounded-lg border-0'
 
     div.appendChild(iframe)
     return { element: div }
   }
 
-  createDOM(config: EditorConfig): HTMLElement {
+  override createDOM(config: EditorConfig): HTMLElement {
     const div = document.createElement('div')
     const theme = config.theme
-    const className = theme.x
+    const className = theme['x']
     if (className) {
       div.className = className
     }
     return div
   }
 
-  updateDOM(): false {
+  override updateDOM(): false {
     return false
   }
 
-  decorate(): ReactElement {
-    return <XComponent tweetId={this.__tweetId} nodeKey={this.__key} />
+  override decorate(): ReactElement {
+    return <XComponent tweetId={$getState(this, tweetIdState)} nodeKey={this.__key} />
   }
 }
 
@@ -175,7 +154,11 @@ export function $createXNode({
 }: {
   tweetId: string
 }): XNode {
-  return $applyNodeReplacement(new XNode(tweetId))
+  // セキュリティ: tweetIdは数字のみ許可（XSS防止）
+  if (!isValidTweetId(tweetId)) {
+    throw new Error(`Invalid tweetId: ${tweetId}. Must be 15-19 digits.`)
+  }
+  return $setState($create(XNode), tweetIdState, tweetId)
 }
 
 /**

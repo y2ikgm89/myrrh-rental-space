@@ -18,7 +18,7 @@ import {
   Textarea,
 } from '@/admin/components/ui'
 import { cn } from '@/shared/lib/utils'
-import { useKanaInput } from '@/shared/hooks'
+import { useKanaInput } from '@/admin/hooks'
 import {
   getFormString,
   getFormStringRequired,

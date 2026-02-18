@@ -230,7 +230,10 @@ export const updateLocation = withPermission<[id: string, input: LocationFormInp
     return createValidationError(parsed.error)
   }
 
-  const existing = await prisma.location.findUnique({ where: { id } })
+  const existing = await prisma.location.findUnique({
+    where: { id },
+    select: { id: true },
+  })
   if (!existing) {
     return createFailure('場所が見つかりません')
   }
@@ -264,7 +267,10 @@ export const toggleLocationPublish = withPermission<[id: string, isPublished: bo
   'location',
   'publish'
 )(async (_user, id, isPublished): Promise<ActionResult<{ id: string; isPublished: boolean }>> => {
-  const existing = await prisma.location.findUnique({ where: { id } })
+  const existing = await prisma.location.findUnique({
+    where: { id },
+    select: { id: true },
+  })
   if (!existing) {
     return createFailure('場所が見つかりません')
   }

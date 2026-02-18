@@ -17,7 +17,7 @@ import {
 } from '@/admin/components/ui'
 import { ImagePlus } from 'lucide-react'
 import { useSingleMediaPicker } from '@/admin/hooks/use-media-picker'
-import { CTAButtonEditor } from '@/shared/components/cta-button-editor'
+import { CTAButtonEditor } from '@/admin/components/cta-button-editor'
 import {
   heroParallaxConfigSchema,
   getHeroParallaxConfig,

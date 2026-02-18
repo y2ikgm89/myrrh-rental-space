@@ -369,8 +369,25 @@ export type LayoutFormFields = {
  */
 export type ContentBaseFormFields = {
   title: string
-  content: string
+  contentJson: string
 }
+
+// =============================================================================
+// サイドパネル共通フィールド名定数
+// =============================================================================
+
+/** SEO フィールド名（SEOFields コンポーネント用） */
+export const SEO_FIELD_NAMES = {
+  metaDescription: 'metaDescription',
+  metaKeywords: 'metaKeywords',
+} as const
+
+/** OGP フィールド名（OGPFields コンポーネント用） */
+export const OGP_FIELD_NAMES = {
+  ogpTitle: 'ogpTitle',
+  ogpDescription: 'ogpDescription',
+  ogpImageUrl: 'ogpImageUrl',
+} as const
 
 // =============================================================================
 // 型ガード
@@ -392,4 +409,25 @@ export function isBooleanPublishControl(
   control: PublishControl
 ): control is BooleanPublishControl {
   return control.type === 'isPublished'
+}
+
+// =============================================================================
+// RHF setValue ヘルパー
+// =============================================================================
+
+/**
+ * React Hook Form の setValue で string 値をセットする
+ *
+ * ジェネリックコンポーネントで setValue(path, stringValue) を呼ぶ際、
+ * TypeScript は string が PathValue<T, Path<T>> を満たすことを証明できない。
+ * JSON.parse が返す any 型を利用してジェネリック境界を橋渡しする。
+ */
+export function setFieldString<T extends FieldValues>(
+  setValue: UseFormSetValue<T>,
+  name: string,
+  value: string,
+  options?: { shouldDirty?: boolean; shouldValidate?: boolean }
+): void {
+  // JSON.parse(JSON.stringify(x)) returns `any` → PathValue<T, Path<T>> に暗黙代入可能
+  setValue(JSON.parse(JSON.stringify(name)), JSON.parse(JSON.stringify(value)), options)
 }

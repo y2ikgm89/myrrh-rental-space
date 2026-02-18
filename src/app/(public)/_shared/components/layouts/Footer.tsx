@@ -44,14 +44,14 @@ function parseFooterHours(businessHours: unknown): FooterHoursDisplay[] {
   const dayTimes: { key: string; label: string; time: string }[] = []
   for (const dayKey of DAY_ORDER) {
     const dayValue = businessHours[dayKey]
-    if (!isRecord(dayValue) || !dayValue.isOpen || !Array.isArray(dayValue.slots)) continue
+    if (!isRecord(dayValue) || !dayValue['isOpen'] || !Array.isArray(dayValue['slots'])) continue
 
-    for (const slot of dayValue.slots) {
-      if (!isRecord(slot) || typeof slot.openTime !== 'string' || typeof slot.closeTime !== 'string') continue
+    for (const slot of dayValue['slots']) {
+      if (!isRecord(slot) || typeof slot['openTime'] !== 'string' || typeof slot['closeTime'] !== 'string') continue
       dayTimes.push({
         key: dayKey,
         label: DAY_LABELS[dayKey] ?? dayKey,
-        time: `${slot.openTime}-${slot.closeTime}`,
+        time: `${slot['openTime']}-${slot['closeTime']}`,
       })
     }
   }

@@ -4,7 +4,7 @@ import { ArrowLeft } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { getTermsById, getTermsVersionById } from '@/admin/actions/terms'
-import { SanitizedHtml } from '@/shared/components/SanitizedHtml'
+import { SanitizedHtml } from '@/admin/components/SanitizedHtml'
 import { PROSE_CLASSES } from '@/shared/lib/styles/prose'
 import { cn } from '@/shared/lib/utils'
 import {
@@ -134,7 +134,7 @@ export default async function VersionPreviewPage({
         <CardContent>
           <div className="border rounded-lg p-6 bg-card">
             <SanitizedHtml
-              html={version.content}
+              html={version.contentHtml}
               className={cn(PROSE_CLASSES, 'prose-sm max-w-none')}
             />
           </div>

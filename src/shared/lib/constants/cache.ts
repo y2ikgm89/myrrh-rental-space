@@ -52,7 +52,7 @@ export const CACHE_LIFE = {
 /**
  * キャッシュタグのプレフィックス
  *
- * revalidateTag() で使用するタグ名の一元管理
+ * updateTag() / revalidateTag() で使用するタグ名の一元管理
  *
  * @example
  * ```typescript
@@ -144,6 +144,10 @@ export const CACHE_TAGS = {
   INSTAGRAM_FEED: 'instagram-feed',
   /** キャンセルポリシー */
   CANCELLATION_POLICY: 'cancellation-policy',
+  /** ブロックテンプレート */
+  BLOCK_TEMPLATES: 'block-templates',
+  /** 権限 */
+  PERMISSIONS: 'permissions',
 } as const
 
 /**

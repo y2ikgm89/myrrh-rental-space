@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Bookmark Node
  *
  * @description ブックマーク/リンクカードを表示するDecoratorNode
@@ -15,23 +15,37 @@ import type {
   EditorConfig,
   LexicalNode,
   NodeKey,
-  SerializedLexicalNode,
 } from 'lexical'
-import { $applyNodeReplacement, DecoratorNode } from 'lexical'
+import { $create, $getState, $setState, createState, DecoratorNode } from 'lexical'
 import { ExternalLink } from 'lucide-react'
 
 // =============================================================================
-// Types
+// State
 // =============================================================================
 
-export interface SerializedBookmarkNode extends SerializedLexicalNode {
-  url: string
-  title: string
-  description: string
-  imageUrl: string
-  faviconUrl: string
-  siteName: string
-}
+export const bookmarkUrlState = createState('url', {
+  parse: (v: unknown): string => typeof v === 'string' ? v : '',
+})
+
+export const bookmarkTitleState = createState('title', {
+  parse: (v: unknown): string => typeof v === 'string' ? v : '',
+})
+
+export const bookmarkDescriptionState = createState('description', {
+  parse: (v: unknown): string => typeof v === 'string' ? v : '',
+})
+
+export const bookmarkImageUrlState = createState('imageUrl', {
+  parse: (v: unknown): string => typeof v === 'string' ? v : '',
+})
+
+export const bookmarkFaviconUrlState = createState('faviconUrl', {
+  parse: (v: unknown): string => typeof v === 'string' ? v : '',
+})
+
+export const bookmarkSiteNameState = createState('siteName', {
+  parse: (v: unknown): string => typeof v === 'string' ? v : '',
+})
 
 // =============================================================================
 // Component
@@ -58,7 +72,7 @@ function BookmarkComponent({
     <div
       data-lexical-node-key={nodeKey}
       data-bookmark
-      className="my-4"
+      className="my-6"
     >
       <a
         href={url}
@@ -123,8 +137,7 @@ function BookmarkComponent({
 // DOM Conversion
 // =============================================================================
 
-function $convertBookmarkElement(domNode: Node): null | DOMConversionOutput {
-  const element = domNode as HTMLElement
+function $convertBookmarkElement(element: HTMLElement): null | DOMConversionOutput {
   const link = element.querySelector('a')
   if (!link) return null
 
@@ -151,44 +164,23 @@ function $convertBookmarkElement(domNode: Node): null | DOMConversionOutput {
 // =============================================================================
 
 export class BookmarkNode extends DecoratorNode<ReactElement> {
-  __url: string
-  __title: string
-  __description: string
-  __imageUrl: string
-  __faviconUrl: string
-  __siteName: string
-
-  static getType(): string {
-    return 'bookmark'
+  override $config() {
+    return this.config('bookmark', {
+      extends: DecoratorNode,
+      stateConfigs: [
+        { flat: true, stateConfig: bookmarkUrlState },
+        { flat: true, stateConfig: bookmarkTitleState },
+        { flat: true, stateConfig: bookmarkDescriptionState },
+        { flat: true, stateConfig: bookmarkImageUrlState },
+        { flat: true, stateConfig: bookmarkFaviconUrlState },
+        { flat: true, stateConfig: bookmarkSiteNameState },
+      ],
+    })
   }
 
-  static clone(node: BookmarkNode): BookmarkNode {
-    return new BookmarkNode(
-      node.__url,
-      node.__title,
-      node.__description,
-      node.__imageUrl,
-      node.__faviconUrl,
-      node.__siteName,
-      node.__key
-    )
-  }
-
-  static importJSON(serializedNode: SerializedBookmarkNode): BookmarkNode {
-    return $createBookmarkNode({
-      url: serializedNode.url,
-      title: serializedNode.title,
-      description: serializedNode.description,
-      imageUrl: serializedNode.imageUrl,
-      faviconUrl: serializedNode.faviconUrl,
-      siteName: serializedNode.siteName,
-    }).updateFromJSON(serializedNode)
-  }
-
-  static importDOM(): DOMConversionMap | null {
+  static override importDOM(): DOMConversionMap | null {
     return {
-      div: (domNode: Node) => {
-        const element = domNode as HTMLElement
+      div: (element: HTMLElement) => {
         if (element.hasAttribute('data-bookmark')) {
           return {
             conversion: $convertBookmarkElement,
@@ -200,101 +192,72 @@ export class BookmarkNode extends DecoratorNode<ReactElement> {
     }
   }
 
-  constructor(
-    url: string,
-    title: string = '',
-    description: string = '',
-    imageUrl: string = '',
-    faviconUrl: string = '',
-    siteName: string = '',
-    key?: NodeKey
-  ) {
-    super(key)
-    this.__url = url
-    this.__title = title
-    this.__description = description
-    this.__imageUrl = imageUrl
-    this.__faviconUrl = faviconUrl
-    this.__siteName = siteName
-  }
+  override exportDOM(): DOMExportOutput {
+    const url = $getState(this, bookmarkUrlState)
+    const title = $getState(this, bookmarkTitleState)
+    const description = $getState(this, bookmarkDescriptionState)
+    const imageUrl = $getState(this, bookmarkImageUrlState)
+    const faviconUrl = $getState(this, bookmarkFaviconUrlState)
+    const siteName = $getState(this, bookmarkSiteNameState)
 
-  exportJSON(): SerializedBookmarkNode {
-    return {
-      ...super.exportJSON(),
-      url: this.__url,
-      title: this.__title,
-      description: this.__description,
-      imageUrl: this.__imageUrl,
-      faviconUrl: this.__faviconUrl,
-      siteName: this.__siteName,
-    }
-  }
-
-  exportDOM(): DOMExportOutput {
     const wrapper = document.createElement('div')
     wrapper.setAttribute('data-bookmark', 'true')
-    wrapper.setAttribute('data-bookmark-title', this.__title)
-    wrapper.setAttribute('data-bookmark-description', this.__description)
-    wrapper.setAttribute('data-bookmark-image', this.__imageUrl)
-    wrapper.setAttribute('data-bookmark-favicon', this.__faviconUrl)
-    wrapper.setAttribute('data-bookmark-site', this.__siteName)
-    wrapper.className = 'my-4'
+    wrapper.setAttribute('data-bookmark-title', title)
+    wrapper.setAttribute('data-bookmark-description', description)
+    wrapper.setAttribute('data-bookmark-image', imageUrl)
+    wrapper.setAttribute('data-bookmark-favicon', faviconUrl)
+    wrapper.setAttribute('data-bookmark-site', siteName)
 
     const link = document.createElement('a')
-    link.href = this.__url
+    link.href = url
     link.target = '_blank'
     link.rel = 'noopener noreferrer'
-    link.className = 'block border rounded-lg overflow-hidden hover:bg-muted/50 transition-colors'
 
     const content = document.createElement('div')
-    content.className = 'flex'
+    content.setAttribute('data-bookmark-content', '')
 
     // テキスト部分
     const textDiv = document.createElement('div')
-    textDiv.className = 'flex-1 p-4 min-w-0'
+    textDiv.setAttribute('data-bookmark-text', '')
 
     // サイト情報
     const siteInfo = document.createElement('div')
-    siteInfo.className = 'flex items-center gap-2 mb-2'
+    siteInfo.setAttribute('data-bookmark-site-info', '')
 
-    if (this.__faviconUrl) {
+    if (faviconUrl) {
       const favicon = document.createElement('img')
-      favicon.src = this.__faviconUrl
+      favicon.src = faviconUrl
       favicon.alt = ''
-      favicon.className = 'w-4 h-4 rounded-sm'
+      favicon.setAttribute('data-bookmark-favicon-img', '')
       siteInfo.appendChild(favicon)
     }
 
-    const siteName = document.createElement('span')
-    siteName.className = 'text-xs text-muted-foreground truncate'
-    siteName.textContent = this.__siteName || new URL(this.__url).hostname
-    siteInfo.appendChild(siteName)
+    const siteNameEl = document.createElement('span')
+    siteNameEl.textContent = siteName || new URL(url).hostname
+    siteInfo.appendChild(siteNameEl)
     textDiv.appendChild(siteInfo)
 
     // タイトル
-    const title = document.createElement('h4')
-    title.className = 'font-medium text-sm line-clamp-2 mb-1'
-    title.textContent = this.__title || this.__url
-    textDiv.appendChild(title)
+    const titleEl = document.createElement('h4')
+    titleEl.textContent = title || url
+    textDiv.appendChild(titleEl)
 
     // 説明
-    if (this.__description) {
-      const description = document.createElement('p')
-      description.className = 'text-xs text-muted-foreground line-clamp-2'
-      description.textContent = this.__description
-      textDiv.appendChild(description)
+    if (description) {
+      const descEl = document.createElement('p')
+      descEl.textContent = description
+      textDiv.appendChild(descEl)
     }
 
     content.appendChild(textDiv)
 
     // 画像部分
-    if (this.__imageUrl) {
+    if (imageUrl) {
       const imageDiv = document.createElement('div')
-      imageDiv.className = 'w-32 h-24 flex-shrink-0'
+      imageDiv.setAttribute('data-bookmark-image-wrap', '')
       const image = document.createElement('img')
-      image.src = this.__imageUrl
+      image.src = imageUrl
       image.alt = ''
-      image.className = 'w-full h-full object-cover'
       imageDiv.appendChild(image)
       content.appendChild(imageDiv)
     }
@@ -305,84 +268,34 @@ export class BookmarkNode extends DecoratorNode<ReactElement> {
     return { element: wrapper }
   }
 
-  createDOM(config: EditorConfig): HTMLElement {
+  override createDOM(config: EditorConfig): HTMLElement {
     const div = document.createElement('div')
     const theme = config.theme
-    const className = theme.bookmark
+    const className = theme['bookmark']
     if (className) {
       div.className = className
     }
     return div
   }
 
-  updateDOM(): false {
+  override updateDOM(): false {
     return false
   }
 
-  decorate(): ReactElement {
+  override decorate(): ReactElement {
     return (
       <BookmarkComponent
-        url={this.__url}
-        title={this.__title}
-        description={this.__description}
-        imageUrl={this.__imageUrl}
-        faviconUrl={this.__faviconUrl}
-        siteName={this.__siteName}
+        url={$getState(this, bookmarkUrlState)}
+        title={$getState(this, bookmarkTitleState)}
+        description={$getState(this, bookmarkDescriptionState)}
+        imageUrl={$getState(this, bookmarkImageUrlState)}
+        faviconUrl={$getState(this, bookmarkFaviconUrlState)}
+        siteName={$getState(this, bookmarkSiteNameState)}
         nodeKey={this.__key}
       />
     )
   }
 
-  // Getters
-  getUrl(): string {
-    return this.getLatest().__url
-  }
-
-  getTitle(): string {
-    return this.getLatest().__title
-  }
-
-  getDescription(): string {
-    return this.getLatest().__description
-  }
-
-  getImageUrl(): string {
-    return this.getLatest().__imageUrl
-  }
-
-  getFaviconUrl(): string {
-    return this.getLatest().__faviconUrl
-  }
-
-  getSiteName(): string {
-    return this.getLatest().__siteName
-  }
-
-  // Setters
-  setTitle(title: string): void {
-    const self = this.getWritable()
-    self.__title = title
-  }
-
-  setDescription(description: string): void {
-    const self = this.getWritable()
-    self.__description = description
-  }
-
-  setImageUrl(imageUrl: string): void {
-    const self = this.getWritable()
-    self.__imageUrl = imageUrl
-  }
-
-  setFaviconUrl(faviconUrl: string): void {
-    const self = this.getWritable()
-    self.__faviconUrl = faviconUrl
-  }
-
-  setSiteName(siteName: string): void {
-    const self = this.getWritable()
-    self.__siteName = siteName
-  }
 }
 
 // =============================================================================
@@ -410,9 +323,14 @@ export function $createBookmarkNode({
   faviconUrl?: string
   siteName?: string
 }): BookmarkNode {
-  return $applyNodeReplacement(
-    new BookmarkNode(url, title, description, imageUrl, faviconUrl, siteName)
-  )
+  const node = $create(BookmarkNode)
+  $setState(node, bookmarkUrlState, url)
+  $setState(node, bookmarkTitleState, title)
+  $setState(node, bookmarkDescriptionState, description)
+  $setState(node, bookmarkImageUrlState, imageUrl)
+  $setState(node, bookmarkFaviconUrlState, faviconUrl)
+  $setState(node, bookmarkSiteNameState, siteName)
+  return node
 }
 
 /**

@@ -13,6 +13,14 @@ export { useMediaLibrary } from './use-media-library'
 export { useMediaSelection } from './use-media-selection'
 export { useMediaUpload } from './use-media-upload'
 
+// Filter
+export { useFilterParams } from './use-filter-params'
+export { useFilterParamsWithCategory } from './use-filter-params'
+export type { FilterParams, UseFilterParamsOptions } from './use-filter-params'
+
+// Kana
+export { useKanaInput } from './use-kana-input'
+
 // Preview
 export {
   usePreview,

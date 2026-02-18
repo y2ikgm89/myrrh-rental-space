@@ -9,7 +9,7 @@
  * @security XSS対策済み - DOMPurifyによる厳格なサニタイズを実施
  */
 
-import DOMPurify from 'isomorphic-dompurify'
+import { sanitize } from 'isomorphic-dompurify'
 
 // DOMPurify設定
 const DOMPURIFY_CONFIG = {
@@ -34,7 +34,7 @@ interface SanitizedHtmlProps {
 
 export function SanitizedHtml({ html, className }: SanitizedHtmlProps) {
   // DOMPurifyでXSS対策済み - 全てのHTML入力をサニタイズ
-  const cleanHtml = DOMPurify.sanitize(html, DOMPURIFY_CONFIG)
+  const cleanHtml = sanitize(html, DOMPURIFY_CONFIG)
 
   return (
     <div

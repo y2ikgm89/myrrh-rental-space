@@ -20,34 +20,15 @@ import { z } from 'zod'
 /**
  * 本番環境かどうかを判定
  *
- * NOTE: ビルド時は NODE_ENV=production になるため、以下を考慮:
- * - SKIP_ENV_VALIDATION=true でスキップ（CI/ビルド用）
- * - VERCEL_ENV で本番デプロイを検出（Vercel）
- * - RAILWAY_ENVIRONMENT で本番デプロイを検出（Railway）
+ * ビルド時は NODE_ENV=production になるため、
+ * ビルドで厳密検証を無効化する場合は SKIP_ENV_VALIDATION=true を指定する。
  *
- * 本番環境と判定される条件:
- * - NODE_ENV=production AND
- * - SKIP_ENV_VALIDATION=falsy AND
- * - (VERCEL_ENV=production OR RAILWAY_ENVIRONMENT=production OR それらが未設定)
- *
- * ビルド時は VERCEL_ENV や RAILWAY_ENVIRONMENT が設定されていないため、
- * 明示的にスキップする必要がある場合は SKIP_ENV_VALIDATION=true を設定
+ * 本番環境判定:
+ * - NODE_ENV=production
+ * - SKIP_ENV_VALIDATION が未設定
  */
 export const isProduction = (): boolean => {
-  if (process.env.NODE_ENV !== 'production') return false
-  if (process.env.SKIP_ENV_VALIDATION) return false
-
-  // プラットフォーム検出（設定されている場合のみ判定）
-  const vercelEnv = process.env.VERCEL_ENV
-  const railwayEnv = process.env.RAILWAY_ENVIRONMENT
-
-  // プラットフォーム変数が設定されている場合、productionのみ本番とみなす
-  if (vercelEnv) return vercelEnv === 'production'
-  if (railwayEnv) return railwayEnv === 'production'
-
-  // プラットフォーム変数が未設定の場合、NODE_ENVのみで判定
-  // ただし、ビルド時にこれが問題になる場合は SKIP_ENV_VALIDATION=true を設定
-  return true
+  return process.env["NODE_ENV"] === 'production' && !process.env["SKIP_ENV_VALIDATION"]
 }
 
 export const serverEnv = createEnv({
@@ -101,23 +82,23 @@ export const serverEnv = createEnv({
       .default('development'),
   },
   runtimeEnv: {
-    DATABASE_URL: process.env.DATABASE_URL,
-    BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
-    BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
-    RESEND_API_KEY: process.env.RESEND_API_KEY,
-    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
-    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
-    INSTAGRAM_APP_ID: process.env.INSTAGRAM_APP_ID,
-    INSTAGRAM_APP_SECRET: process.env.INSTAGRAM_APP_SECRET,
-    INSTAGRAM_REDIRECT_URI: process.env.INSTAGRAM_REDIRECT_URI,
-    TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY,
-    ENCRYPTION_KEY: process.env.ENCRYPTION_KEY,
-    CRON_SECRET: process.env.CRON_SECRET,
-    ADMIN_LOGIN_TOKEN: process.env.ADMIN_LOGIN_TOKEN,
-    NODE_ENV: process.env.NODE_ENV,
+    DATABASE_URL: process.env["DATABASE_URL"],
+    BETTER_AUTH_SECRET: process.env["BETTER_AUTH_SECRET"],
+    BETTER_AUTH_URL: process.env["BETTER_AUTH_URL"],
+    RESEND_API_KEY: process.env["RESEND_API_KEY"],
+    GOOGLE_CLIENT_ID: process.env["GOOGLE_CLIENT_ID"],
+    GOOGLE_CLIENT_SECRET: process.env["GOOGLE_CLIENT_SECRET"],
+    INSTAGRAM_APP_ID: process.env["INSTAGRAM_APP_ID"],
+    INSTAGRAM_APP_SECRET: process.env["INSTAGRAM_APP_SECRET"],
+    INSTAGRAM_REDIRECT_URI: process.env["INSTAGRAM_REDIRECT_URI"],
+    TURNSTILE_SECRET_KEY: process.env["TURNSTILE_SECRET_KEY"],
+    ENCRYPTION_KEY: process.env["ENCRYPTION_KEY"],
+    CRON_SECRET: process.env["CRON_SECRET"],
+    ADMIN_LOGIN_TOKEN: process.env["ADMIN_LOGIN_TOKEN"],
+    NODE_ENV: process.env["NODE_ENV"],
   },
   // ビルド時検証をスキップするオプション（CI環境用）
-  skipValidation: !!process.env.SKIP_ENV_VALIDATION,
+  skipValidation: !!process.env["SKIP_ENV_VALIDATION"],
   // 空文字列をundefinedとして扱う
   emptyStringAsUndefined: true,
 })

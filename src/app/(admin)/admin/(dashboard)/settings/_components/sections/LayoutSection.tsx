@@ -32,10 +32,14 @@ import {
   isValidLayoutWidth,
   getValidLayoutWidth,
 } from '@/shared/lib/validations/enums'
-import { getContentStyles } from '@/shared/lib/styles/layout-mapper'
+import {
+  SITE_WIDTH_PRESETS,
+  CONTENT_WIDTH_PRESETS,
+  resolveWidthStyles,
+} from '@/shared/lib/styles/layout-mapper'
+import { keysOf } from '@/shared/lib/serialize'
 import { LazyLexicalEditor } from '@/admin/components/editor/lexical'
 import { EDITOR_PROSE_CLASSES } from '@/shared/lib/styles/prose'
-import { LayoutWidth as LayoutWidthEnum } from '@/shared/types/prisma'
 
 // =============================================================================
 // Types
@@ -46,34 +50,30 @@ interface LayoutSectionProps {
 }
 
 // =============================================================================
-// Constants
+// Options (derived from PRESETS — Single Source of Truth)
 // =============================================================================
 
-const SITE_WIDTH_OPTIONS: Array<{
-  value: LayoutWidth
-  label: string
-  description: string
-}> = [
-  { value: 'SM', label: '小 (1000px)', description: 'コンパクト' },
-  { value: 'MD', label: '中 (1100px)', description: 'スタンダード' },
-  { value: 'LG', label: '大 (1200px)', description: 'ワイド' },
-  { value: 'XL', label: '特大 (1400px)', description: 'エクストラワイド' },
-  { value: 'FULL', label: '全幅', description: '画面幅いっぱい' },
-  { value: 'CUSTOM', label: 'カスタム', description: '任意の幅を指定' },
-]
+const siteWidthOptions = keysOf(SITE_WIDTH_PRESETS)
+  .filter((key) => key !== LayoutWidth.XS)
+  .map((key) => {
+    const preset = SITE_WIDTH_PRESETS[key]
+    return {
+      value: key,
+      label: preset.px ? `${preset.label} (${preset.px}px)` : preset.label,
+      description: preset.description,
+    }
+  })
 
-const CONTENT_WIDTH_OPTIONS: Array<{
-  value: LayoutWidth
-  label: string
-  description: string
-}> = [
-  { value: 'XS', label: '極小 (640px)', description: '長文テキスト向け' },
-  { value: 'SM', label: '小 (720px)', description: 'コンパクト' },
-  { value: 'MD', label: '中 (800px)', description: 'スタンダード' },
-  { value: 'LG', label: '大 (900px)', description: 'ワイド' },
-  { value: 'XL', label: '特大 (1024px)', description: '画像・ギャラリー向け' },
-  { value: 'CUSTOM', label: 'カスタム', description: '任意の幅を指定' },
-]
+const contentWidthOptions = keysOf(CONTENT_WIDTH_PRESETS)
+  .filter((key) => key !== LayoutWidth.FULL)
+  .map((key) => {
+    const preset = CONTENT_WIDTH_PRESETS[key]
+    return {
+      value: key,
+      label: preset.px ? `${preset.label} (${preset.px}px)` : preset.label,
+      description: preset.description,
+    }
+  })
 
 // =============================================================================
 // Component
@@ -84,13 +84,13 @@ export function LayoutSection({ settings }: LayoutSectionProps) {
   const [isPending, startTransition] = useTransition()
 
   const [containerWidth, setContainerWidth] = useState<LayoutWidth>(
-    getValidLayoutWidth(settings.containerWidth, 'LG')
+    getValidLayoutWidth(settings.containerWidth, LayoutWidth.LG)
   )
   const [containerWidthCustom, setContainerWidthCustom] = useState<string>(
     settings.containerWidthCustom?.toString() || ''
   )
   const [contentWidth, setContentWidth] = useState<LayoutWidth>(
-    getValidLayoutWidth(settings.contentWidth, 'MD')
+    getValidLayoutWidth(settings.contentWidth, LayoutWidth.MD)
   )
   const [contentWidthCustom, setContentWidthCustom] = useState<string>(
     settings.contentWidthCustom?.toString() || ''
@@ -100,11 +100,11 @@ export function LayoutSection({ settings }: LayoutSectionProps) {
     startTransition(async () => {
       const result = await updateLayoutSettings({
         containerWidth,
-        containerWidthCustom: containerWidth === 'CUSTOM'
+        containerWidthCustom: containerWidth === LayoutWidth.CUSTOM
           ? parseInt(containerWidthCustom, 10) || null
           : null,
         contentWidth,
-        contentWidthCustom: contentWidth === 'CUSTOM'
+        contentWidthCustom: contentWidth === LayoutWidth.CUSTOM
           ? parseInt(contentWidthCustom, 10) || null
           : null,
       })
@@ -131,11 +131,9 @@ export function LayoutSection({ settings }: LayoutSectionProps) {
       ? parsedCustomWidth
       : null
 
-  const previewStyles = getContentStyles({
-    containerWidth: LayoutWidthEnum.LG,
-    containerWidthCustom: null,
-    contentWidth: contentWidth as LayoutWidthEnum,
-    contentWidthCustom: validCustomWidth,
+  const previewStyles = resolveWidthStyles({
+    width: contentWidth,
+    customPx: validCustomWidth,
   })
 
   // サンプルコンテンツ（HTMLを直接生成）
@@ -173,7 +171,7 @@ export function LayoutSection({ settings }: LayoutSectionProps) {
                   <SelectValue placeholder="幅を選択" />
                 </SelectTrigger>
                 <SelectContent>
-                  {SITE_WIDTH_OPTIONS.map((option) => (
+                  {siteWidthOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       <div className="flex flex-col">
                         <span>{option.label}</span>
@@ -187,7 +185,7 @@ export function LayoutSection({ settings }: LayoutSectionProps) {
               </Select>
             </div>
 
-            {containerWidth === 'CUSTOM' && (
+            {containerWidth === LayoutWidth.CUSTOM && (
               <div className="space-y-2">
                 <Label htmlFor="containerWidthCustom">カスタム幅 (px)</Label>
                 <Input
@@ -228,7 +226,7 @@ export function LayoutSection({ settings }: LayoutSectionProps) {
                   <SelectValue placeholder="幅を選択" />
                 </SelectTrigger>
                 <SelectContent>
-                  {CONTENT_WIDTH_OPTIONS.map((option) => (
+                  {contentWidthOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       <div className="flex flex-col">
                         <span>{option.label}</span>
@@ -242,7 +240,7 @@ export function LayoutSection({ settings }: LayoutSectionProps) {
               </Select>
             </div>
 
-            {contentWidth === 'CUSTOM' && (
+            {contentWidth === LayoutWidth.CUSTOM && (
               <div className="space-y-2">
                 <Label htmlFor="contentWidthCustom">カスタム幅 (px)</Label>
                 <Input
@@ -273,7 +271,7 @@ export function LayoutSection({ settings }: LayoutSectionProps) {
           </div>
           <div className="rounded-lg border bg-muted/20 p-4 overflow-x-auto">
             <LazyLexicalEditor
-              content={sampleContent}
+              contentHtml={sampleContent}
               disabled
               className={EDITOR_PROSE_CLASSES}
               showToolbar={false}

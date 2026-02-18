@@ -356,9 +356,18 @@ export async function retryFailedSyncs(): Promise<{
       calendarSyncError: { not: null },
       status: { in: [...ACTIVE_RESERVATION_STATUSES] },
     },
-    include: {
-      space: true,
-      customer: true,
+    select: {
+      id: true,
+      startTime: true,
+      endTime: true,
+      notes: true,
+      totalPrice: true,
+      space: {
+        select: { name: true, address: true },
+      },
+      customer: {
+        select: { firstName: true, lastName: true, email: true },
+      },
     },
     take: 50, // 一度に処理する最大数
   })
@@ -377,7 +386,7 @@ export async function retryFailedSyncs(): Promise<{
       endTime: reservation.endTime,
       location: reservation.space.address ?? undefined,
       notes: reservation.notes ?? undefined,
-      totalPrice: reservation.totalPrice ? Number(reservation.totalPrice) : null,
+      totalPrice: reservation.totalPrice,
     })
 
     if (result.success) {

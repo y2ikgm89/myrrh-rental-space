@@ -6,15 +6,16 @@
  * 統一 Section モデル（pageId 指定でページセクション判別）
  */
 
-import type { Prisma } from '@/shared/generated/prisma/client'
 import { prisma } from '@/shared/lib/prisma'
 import { updateTag } from 'next/cache'
 import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
 import { createSuccess, createFailure } from '@/admin/types/server-actions'
+import { createValidationError } from '@/shared/lib/action-helpers'
 import { withPermission } from '@/admin/lib/server-action-helpers'
 import { getSession, getRoleFromSession } from '@/shared/lib/auth'
 import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'
 import { logPermissionDenied } from '@/admin/lib/audit'
+import { renderEditorStateToHtmlLazy } from '@/admin/lib/lazy-renderer'
 import {
   SectionType,
   createSectionSchema,
@@ -34,8 +35,7 @@ import {
 function parseSectionConfig(type: SectionType, config: unknown): SectionConfig {
   const result = validateSectionConfig(type, config)
   if (result.success) {
-    // Safe widening: validated individual config type → SectionConfig union
-    return result.data as SectionConfig
+    return result.data
   }
   return defaultSectionConfigs[type]
 }
@@ -51,7 +51,8 @@ export type PageSectionData = {
   title: string | null
   config: SectionConfig
   design: unknown
-  content: string | null
+  contentHtml: string | null
+  contentJson: unknown
   order: number
   isActive: boolean
   createdAt: Date
@@ -141,7 +142,10 @@ export async function getPageWithSections(slug: string): Promise<PageWithSection
 
   const page = await prisma.page.findUnique({
     where: { slug },
-    include: {
+    select: {
+      id: true,
+      slug: true,
+      title: true,
       sections: {
         orderBy: { order: 'asc' },
       },
@@ -264,10 +268,10 @@ export const createPageSection = withPermission<[CreateSectionInput], { id: stri
 )(async (_user, input) => {
   const parsed = createSectionSchema.safeParse(input)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
-  const { pageId, type, title, config, design, content, order, isActive } = parsed.data
+  const { pageId, type, title, config, design, contentJson, order, isActive } = parsed.data
 
   if (!pageId) {
     return createFailure('ページIDは必須です')
@@ -286,7 +290,7 @@ export const createPageSection = withPermission<[CreateSectionInput], { id: stri
   // 設定を検証
   const configValidation = validateSectionConfig(type, config)
   if (!configValidation.success) {
-    return createFailure(`設定エラー: ${configValidation.error.issues[0]?.message ?? 'バリデーションエラー'}`)
+    return createValidationError(configValidation.error, '設定エラー')
   }
 
   // 次のorder値を取得
@@ -296,14 +300,18 @@ export const createPageSection = withPermission<[CreateSectionInput], { id: stri
   })
   const nextOrder = order ?? (maxOrder._max.order ?? -1) + 1
 
+  // JSON → HTML 変換（contentJsonが提供されている場合）
+  const contentHtml = contentJson ? await renderEditorStateToHtmlLazy(contentJson) : null
+
   const section = await prisma.section.create({
     data: {
       pageId,
       type,
       title,
       config: configValidation.data,
-      design: (design ?? {}) as Prisma.InputJsonObject,
-      content,
+      design: JSON.parse(JSON.stringify(design ?? {})),
+      contentJson: contentJson ? JSON.parse(contentJson) : null,
+      contentHtml,
       order: nextOrder,
       isActive,
     },
@@ -326,11 +334,12 @@ export const updatePageSection = withPermission<[string, UpdateSectionInput], vo
 )(async (_user, id, input) => {
   const parsed = updateSectionSchema.safeParse(input)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   const existing = await prisma.section.findUnique({
     where: { id },
+    select: { id: true, pageId: true, type: true },
   })
 
   if (!existing || !existing.pageId) {
@@ -341,7 +350,7 @@ export const updatePageSection = withPermission<[string, UpdateSectionInput], vo
   if (parsed.data.config) {
     const configValidation = validateSectionConfig(existing.type, parsed.data.config)
     if (!configValidation.success) {
-      return createFailure(`設定エラー: ${configValidation.error.issues[0]?.message ?? 'バリデーションエラー'}`)
+      return createValidationError(configValidation.error, '設定エラー')
     }
     parsed.data.config = configValidation.data
   }
@@ -350,9 +359,12 @@ export const updatePageSection = withPermission<[string, UpdateSectionInput], vo
     where: { id },
     data: {
       title: parsed.data.title,
-      config: parsed.data.config as object | undefined,
-      design: parsed.data.design as object | undefined,
-      content: parsed.data.content,
+      config: parsed.data.config ? JSON.parse(JSON.stringify(parsed.data.config)) : undefined,
+      design: parsed.data.design ? JSON.parse(JSON.stringify(parsed.data.design)) : undefined,
+      ...(parsed.data.contentJson !== undefined ? {
+        contentJson: parsed.data.contentJson ? JSON.parse(parsed.data.contentJson) : null,
+        contentHtml: parsed.data.contentJson ? await renderEditorStateToHtmlLazy(parsed.data.contentJson) : null,
+      } : {}),
       isActive: parsed.data.isActive,
     },
   })
@@ -370,6 +382,7 @@ export const togglePageSection = withPermission<[string, boolean], void>(
 )(async (_user, id, isActive) => {
   const existing = await prisma.section.findUnique({
     where: { id },
+    select: { id: true, pageId: true },
   })
 
   if (!existing || !existing.pageId) {
@@ -394,7 +407,7 @@ export const updatePageSectionOrder = withPermission<[string, UpdateSectionOrder
 )(async (_user, pageId, input) => {
   const parsed = updateSectionOrderSchema.safeParse(input)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   // ページ存在確認
@@ -433,6 +446,7 @@ export const deletePageSection = withPermission<[string], void>(
 )(async (_user, id) => {
   const existing = await prisma.section.findUnique({
     where: { id },
+    select: { id: true, pageId: true },
   })
 
   if (!existing || !existing.pageId) {
@@ -482,7 +496,8 @@ export const duplicatePageSection = withPermission<[string], PageSectionData>(
       title: existing.title ? `コピー - ${existing.title}` : null,
       config: existing.config ?? undefined,
       design: existing.design ?? undefined,
-      content: existing.content,
+      contentHtml: existing.contentHtml,
+      contentJson: existing.contentJson ?? undefined,
       order: newOrder,
       isActive: existing.isActive,
     },
@@ -497,7 +512,8 @@ export const duplicatePageSection = withPermission<[string], PageSectionData>(
     title: duplicated.title,
     config: parseSectionConfig(existing.type, duplicated.config),
     design: duplicated.design,
-    content: duplicated.content,
+    contentHtml: duplicated.contentHtml,
+    contentJson: duplicated.contentJson,
     order: duplicated.order,
     isActive: duplicated.isActive,
     createdAt: duplicated.createdAt,

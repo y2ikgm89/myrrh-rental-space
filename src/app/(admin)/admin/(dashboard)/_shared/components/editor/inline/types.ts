@@ -8,8 +8,8 @@ import type {
   FieldErrors,
   FieldValues,
   UseFormRegister,
-  Control,
   UseFormSetValue,
+  Control,
   Path,
 } from 'react-hook-form'
 import type { PostStatus } from '@/shared/generated/prisma/enums'
@@ -76,7 +76,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  */
 function isFieldError(value: unknown): value is FieldError {
   if (!isRecord(value)) return false
-  return 'type' in value && typeof value.type === 'string'
+  return 'type' in value && typeof value['type'] === 'string'
 }
 
 /**
@@ -177,7 +177,9 @@ export type SEOFieldsProps<T extends FieldValues> = {
  */
 export type OGPFieldsProps<T extends FieldValues> = {
   register: UseFormRegister<T>
+  control: Control<T>
   errors: FieldErrors<T>
+  setValue: UseFormSetValue<T>
   disabled?: boolean
   /** フィールド名マッピング */
   fields: {
@@ -321,7 +323,7 @@ export const SPACE_PUBLISH_FIELDS = {
  */
 export type FaqEditorFormData = {
   question: string
-  answer: string
+  answerJson: string
   categoryId: string
   order: number
 } & SEOFormFields & OGPFormFields & PublishFormFields

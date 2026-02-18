@@ -5,6 +5,7 @@ import { updateTag } from 'next/cache'
 import { CACHE_TAGS } from '@/shared/lib/constants'
 import { z } from 'zod'
 import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+import { createValidationError } from '@/shared/lib/action-helpers'
 import { withPermission } from '@/admin/lib/server-action-helpers'
 import { getSession, getRoleFromSession } from '@/shared/lib/auth'
 import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'
@@ -153,7 +154,7 @@ export const createAnnouncementBar = withPermission<
 >('announcementBar', 'create')(async (user, data): Promise<ActionResult<{ id: string }>> => {
   const parsed = announcementBarSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   const {
@@ -201,11 +202,12 @@ export const updateAnnouncementBar = withPermission<
 >('announcementBar', 'update')(async (user, id, data): Promise<ActionResult<void>> => {
   const parsed = announcementBarSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   const existing = await prisma.announcementBar.findUnique({
     where: { id },
+    select: { id: true },
   })
 
   if (!existing) {
@@ -258,6 +260,7 @@ export const deleteAnnouncementBar = withPermission<[id: string], void>(
 )(async (user, id): Promise<ActionResult<void>> => {
   const bar = await prisma.announcementBar.findUnique({
     where: { id },
+    select: { id: true },
   })
 
   if (!bar) {
@@ -285,6 +288,7 @@ export const toggleAnnouncementBarActive = withPermission<[id: string], void>(
 )(async (user, id): Promise<ActionResult<void>> => {
   const bar = await prisma.announcementBar.findUnique({
     where: { id },
+    select: { id: true, isActive: true },
   })
 
   if (!bar) {

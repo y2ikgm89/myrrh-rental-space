@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Instagram Node
  *
  * @description Instagram投稿を埋め込むDecoratorNode
@@ -14,17 +14,8 @@ import type {
   EditorConfig,
   LexicalNode,
   NodeKey,
-  SerializedLexicalNode,
 } from 'lexical'
-import { $applyNodeReplacement, DecoratorNode } from 'lexical'
-
-// =============================================================================
-// Types
-// =============================================================================
-
-export interface SerializedInstagramNode extends SerializedLexicalNode {
-  postId: string
-}
+import { $create, $getState, $setState, createState, DecoratorNode } from 'lexical'
 
 // =============================================================================
 // Validation
@@ -37,6 +28,17 @@ export interface SerializedInstagramNode extends SerializedLexicalNode {
 function isValidPostId(postId: string): boolean {
   return /^[a-zA-Z0-9_-]{1,50}$/.test(postId)
 }
+
+// =============================================================================
+// State
+// =============================================================================
+
+export const postIdState = createState('postId', {
+  parse: (v: unknown): string => {
+    if (typeof v === 'string' && isValidPostId(v)) return v
+    return ''
+  },
+})
 
 // =============================================================================
 // Component
@@ -52,7 +54,7 @@ function InstagramComponent({
   return (
     <div
       data-lexical-node-key={nodeKey}
-      className="relative my-4 mx-auto max-w-[540px]"
+      className="relative my-6 mx-auto max-w-[540px]"
     >
       <iframe
         src={`https://www.instagram.com/p/${postId}/embed`}
@@ -69,17 +71,17 @@ function InstagramComponent({
 // DOM Conversion
 // =============================================================================
 
-function $convertInstagramElement(domNode: Node): null | DOMConversionOutput {
-  if (domNode instanceof HTMLDivElement) {
-    const postId = domNode.getAttribute('data-instagram-post-id')
+function $convertInstagramElement(element: HTMLElement): null | DOMConversionOutput {
+  if (element instanceof HTMLDivElement) {
+    const postId = element.getAttribute('data-instagram-post-id')
     if (postId && isValidPostId(postId)) {
       const node = $createInstagramNode({ postId })
       return { node }
     }
   }
 
-  if (domNode instanceof HTMLIFrameElement) {
-    const src = domNode.getAttribute('src')
+  if (element instanceof HTMLIFrameElement) {
+    const src = element.getAttribute('src')
     if (src) {
       // instagram.com/p/xxx/embed 形式
       const embedMatch = src.match(/instagram\.com\/p\/([a-zA-Z0-9_-]+)\/embed/)
@@ -97,26 +99,17 @@ function $convertInstagramElement(domNode: Node): null | DOMConversionOutput {
 // =============================================================================
 
 export class InstagramNode extends DecoratorNode<ReactElement> {
-  __postId: string
-
-  static getType(): string {
-    return 'instagram'
+  override $config() {
+    return this.config('instagram', {
+      extends: DecoratorNode,
+      stateConfigs: [{ flat: true, stateConfig: postIdState }],
+    })
   }
 
-  static clone(node: InstagramNode): InstagramNode {
-    return new InstagramNode(node.__postId, node.__key)
-  }
-
-  static importJSON(serializedNode: SerializedInstagramNode): InstagramNode {
-    return $createInstagramNode({
-      postId: serializedNode.postId,
-    }).updateFromJSON(serializedNode)
-  }
-
-  static importDOM(): DOMConversionMap | null {
+  static override importDOM(): DOMConversionMap | null {
     return {
-      div: (domNode: HTMLElement) => {
-        if (domNode.hasAttribute('data-instagram-post-id')) {
+      div: (element: HTMLElement) => {
+        if (element.hasAttribute('data-instagram-post-id')) {
           return {
             conversion: $convertInstagramElement,
             priority: 2,
@@ -131,55 +124,36 @@ export class InstagramNode extends DecoratorNode<ReactElement> {
     }
   }
 
-  constructor(postId: string, key?: NodeKey) {
-    super(key)
-    // セキュリティ: postIdは英数字とアンダースコア、ハイフンのみ許可（XSS防止）
-    if (!isValidPostId(postId)) {
-      throw new Error(
-        `Invalid postId: ${postId}. Must contain only alphanumeric characters, underscores, and hyphens.`
-      )
-    }
-    this.__postId = postId
-  }
-
-  exportJSON(): SerializedInstagramNode {
-    return {
-      ...super.exportJSON(),
-      postId: this.__postId,
-    }
-  }
-
-  exportDOM(): DOMExportOutput {
+  override exportDOM(): DOMExportOutput {
+    const postId = $getState(this, postIdState)
     const div = document.createElement('div')
-    div.className = 'my-4 mx-auto max-w-[540px]'
-    div.setAttribute('data-instagram-post-id', this.__postId)
+    div.setAttribute('data-instagram-post-id', postId)
 
     const iframe = document.createElement('iframe')
-    iframe.setAttribute('src', `https://www.instagram.com/p/${this.__postId}/embed`)
+    iframe.setAttribute('src', `https://www.instagram.com/p/${postId}/embed`)
     iframe.setAttribute('title', 'Instagram post')
     iframe.setAttribute('scrolling', 'no')
-    iframe.className = 'w-full min-h-[500px] rounded-lg border-0'
 
     div.appendChild(iframe)
     return { element: div }
   }
 
-  createDOM(config: EditorConfig): HTMLElement {
+  override createDOM(config: EditorConfig): HTMLElement {
     const div = document.createElement('div')
     const theme = config.theme
-    const className = theme.instagram
+    const className = theme['instagram']
     if (className) {
       div.className = className
     }
     return div
   }
 
-  updateDOM(): false {
+  override updateDOM(): false {
     return false
   }
 
-  decorate(): ReactElement {
-    return <InstagramComponent postId={this.__postId} nodeKey={this.__key} />
+  override decorate(): ReactElement {
+    return <InstagramComponent postId={$getState(this, postIdState)} nodeKey={this.__key} />
   }
 }
 
@@ -198,7 +172,13 @@ export function $createInstagramNode({
 }: {
   postId: string
 }): InstagramNode {
-  return $applyNodeReplacement(new InstagramNode(postId))
+  // セキュリティ: postIdは英数字とアンダースコア、ハイフンのみ許可（XSS防止）
+  if (!isValidPostId(postId)) {
+    throw new Error(
+      `Invalid postId: ${postId}. Must contain only alphanumeric characters, underscores, and hyphens.`
+    )
+  }
+  return $setState($create(InstagramNode), postIdState, postId)
 }
 
 /**

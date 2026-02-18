@@ -9,7 +9,7 @@
 
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { LexicalComposer } from '@lexical/react/LexicalComposer'
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin'
 import { ContentEditable } from '@lexical/react/LexicalContentEditable'
@@ -23,219 +23,51 @@ import { AutoLinkPlugin } from '@lexical/react/LexicalAutoLinkPlugin'
 import { CheckListPlugin } from '@lexical/react/LexicalCheckListPlugin'
 import { ClickableLinkPlugin } from '@lexical/react/LexicalClickableLinkPlugin'
 import { MarkdownShortcutPlugin } from '@lexical/react/LexicalMarkdownShortcutPlugin'
-
-import { EDITOR_TRANSFORMERS } from './MarkdownTransformers'
-import { $generateHtmlFromNodes, $generateNodesFromDOM } from '@lexical/html'
 import { TablePlugin } from '@lexical/react/LexicalTablePlugin'
-import { TableCellNode, TableNode, TableRowNode } from '@lexical/table'
 import { HorizontalRulePlugin } from '@lexical/react/LexicalHorizontalRulePlugin'
-import { HorizontalRuleNode } from '@lexical/react/LexicalHorizontalRuleNode'
-import { $getRoot, $insertNodes, type EditorState, type LexicalEditor as LexicalEditorType } from 'lexical'
-import { HeadingNode, QuoteNode } from '@lexical/rich-text'
-import { ListItemNode, ListNode } from '@lexical/list'
-import { LinkNode, AutoLinkNode } from '@lexical/link'
-import { CodeNode, CodeHighlightNode } from '@lexical/code'
-import { MarkNode } from '@lexical/mark'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
+import type { EditorState, LexicalEditor as LexicalEditorType } from 'lexical'
 
+import { useMediaQuery } from '@/shared/hooks'
 import { cn } from '@/shared/lib/utils'
-import { ImageNode } from './nodes/ImageNode'
-import { YouTubeNode } from './nodes/YouTubeNode'
-import { XNode } from './nodes/XNode'
-import { InstagramNode } from './nodes/InstagramNode'
-import { LayoutContainerNode } from './nodes/LayoutContainerNode'
-import { LayoutItemNode } from './nodes/LayoutItemNode'
-import { PageBreakNode } from './nodes/PageBreakNode'
-import { CalloutNode } from './nodes/CalloutNode'
-import { CollapsibleContainerNode } from './nodes/CollapsibleContainerNode'
-import { CollapsibleTitleNode } from './nodes/CollapsibleTitleNode'
-import { CollapsibleContentNode } from './nodes/CollapsibleContentNode'
-// New custom block nodes
-import { ButtonNode } from './nodes/ButtonNode'
-import { PullQuoteNode } from './nodes/PullQuoteNode'
-import { PullQuoteTextNode } from './nodes/PullQuoteTextNode'
-import { PullQuoteCitationNode } from './nodes/PullQuoteCitationNode'
-import { BookmarkNode } from './nodes/BookmarkNode'
-import { StepsContainerNode } from './nodes/StepsContainerNode'
-import { StepItemNode } from './nodes/StepItemNode'
-import { StepTitleNode } from './nodes/StepTitleNode'
-import { StepContentNode } from './nodes/StepContentNode'
-import { TabsContainerNode } from './nodes/TabsContainerNode'
-import { TabListNode } from './nodes/TabListNode'
-import { TabTitleNode } from './nodes/TabTitleNode'
-import { TabPanelNode } from './nodes/TabPanelNode'
+import { EDITOR_TRANSFORMERS } from './MarkdownTransformers'
+import { EDITOR_NODES } from './config/nodes'
+import { MATCHERS, validateUrl } from './config/url-matchers'
+import { HtmlInitializerPlugin } from './internal-plugins/HtmlInitializerPlugin'
+import { DisablePlugin } from './internal-plugins/DisablePlugin'
+import { useDialogManager } from './dialogs/use-dialog-manager'
+import { DialogRenderer } from './dialogs/DialogRenderer'
 import {
   ToolbarPlugin,
-  ImagePlugin,
-  YouTubePlugin,
-  XPlugin,
-  InstagramPlugin,
-  LinkDialogPlugin,
-  TableInsertPlugin,
-  LayoutPlugin,
   ComponentPickerPlugin,
   DraggableBlockPlugin,
   FloatingToolbarPlugin,
   CommentPlugin,
   PageBreakPlugin,
-  CalloutPlugin,
   CollapsiblePlugin,
   EmojiPickerPlugin,
-  ButtonPlugin,
-  PullQuotePlugin,
-  BookmarkPlugin,
-  StepsPlugin,
-  TabsPlugin,
-  useImageDialog,
-  useYouTubeDialog,
-  useXDialog,
-  useInstagramDialog,
-  useLinkDialog,
-  useTableDialog,
-  useLayoutDialog,
-  useCalloutDialog,
-  useButtonDialog,
-  usePullQuoteDialog,
-  useBookmarkDialog,
-  useStepsDialog,
-  useTabsDialog,
+  TableOfContentsPlugin,
+  KeyboardShortcutsPlugin,
+  CodeBlockPlugin,
   useComment,
 } from './plugins'
+import { WordCountPlugin, useWordCount } from './plugins/WordCountPlugin'
+import { AutoSavePlugin, useAutoSaveStatus } from './plugins/AutoSavePlugin'
+import { ImageDropPlugin } from './plugins/ImageDropPlugin'
+import { FindReplacePlugin } from './plugins/FindReplacePlugin'
+import { BlockTemplatePlugin } from './plugins/BlockTemplatePlugin'
+import { StatusBar } from './parts/StatusBar'
 import { editorTheme } from './theme'
 import { InspectorSidebar } from './inspector'
+import { MobileEditorFallback } from './parts/MobileEditorFallback'
 import type { LexicalEditorProps } from './types'
-
-// =============================================================================
-// AutoLink URL Matcher
-// =============================================================================
-
-const URL_MATCHER =
-  /((https?:\/\/(www\.)?)|(www\.))[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)/
-
-const EMAIL_MATCHER =
-  /(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))/
-
-function createMatcher(regex: RegExp, urlTransform: (match: string) => string) {
-  return (text: string) => {
-    const match = regex.exec(text)
-    if (match === null) return null
-    const fullMatch = match[0]
-    return {
-      index: match.index,
-      length: fullMatch.length,
-      text: fullMatch,
-      url: urlTransform(fullMatch),
-    }
-  }
-}
-
-const MATCHERS = [
-  createMatcher(URL_MATCHER, (m) => (m.startsWith('http') ? m : `https://${m}`)),
-  createMatcher(EMAIL_MATCHER, (m) => `mailto:${m}`),
-]
-
-// =============================================================================
-// URL Validation
-// =============================================================================
-
-/**
- * URLの妥当性を検証する
- *
- * @param url - 検証対象のURL
- * @returns 有効なURLの場合true
- */
-function validateUrl(url: string): boolean {
-  // 空文字はfalse
-  if (!url) return false
-
-  // mailto: と tel: は許可
-  if (url.startsWith('mailto:') || url.startsWith('tel:')) {
-    return true
-  }
-
-  // 相対パスは許可
-  if (url.startsWith('/') || url.startsWith('#')) {
-    return true
-  }
-
-  // URL形式のチェック
-  try {
-    new URL(url)
-    return true
-  } catch {
-    // http:// や https:// が付いていない場合に補完して再チェック
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      try {
-        new URL(`https://${url}`)
-        return true
-      } catch {
-        return false
-      }
-    }
-    return false
-  }
-}
-
-// =============================================================================
-// HTMLからノードへの変換プラグイン
-// =============================================================================
-
-function HtmlInitializerPlugin({
-  content,
-  editorRef,
-}: {
-  content?: string
-  editorRef: React.MutableRefObject<LexicalEditorType | null>
-}) {
-  const [editor] = useLexicalComposerContext()
-  const hasInitialized = useRef(false)
-
-  useEffect(() => {
-    editorRef.current = editor
-  }, [editor, editorRef])
-
-  useEffect(() => {
-    if (hasInitialized.current || !content) return
-
-    try {
-      editor.update(() => {
-        const parser = new DOMParser()
-        const dom = parser.parseFromString(content, 'text/html')
-        const nodes = $generateNodesFromDOM(editor, dom)
-        const root = $getRoot()
-        root.clear()
-        $insertNodes(nodes)
-      })
-    } catch (error) {
-      console.error('Failed to parse HTML content:', error)
-    }
-
-    hasInitialized.current = true
-  }, [editor, content])
-
-  return null
-}
-
-// =============================================================================
-// 編集無効化プラグイン
-// =============================================================================
-
-function DisablePlugin({ disabled }: { disabled: boolean }) {
-  const [editor] = useLexicalComposerContext()
-
-  useEffect(() => {
-    editor.setEditable(!disabled)
-  }, [editor, disabled])
-
-  return null
-}
 
 // =============================================================================
 // EditorInner - LexicalComposer内で使用
 // =============================================================================
 
 function EditorInner({
-  content,
+  contentJson,
+  contentHtml,
   onChange,
   disabled = false,
   className,
@@ -247,66 +79,25 @@ function EditorInner({
   onAddComment,
   contentWidthClassName,
   contentWidthStyle,
+  onAutoSave,
+  autoSaveKey,
 }: LexicalEditorProps) {
   const editorRef = useRef<LexicalEditorType | null>(null)
   const [contentWrapperRef, setContentWrapperRef] = useState<HTMLDivElement | null>(null)
   const [contentWidthRef, setContentWidthRef] = useState<HTMLDivElement | null>(null)
 
-  // 画像ダイアログ
-  const { isImageDialogOpen, openImageDialog, closeImageDialog } =
-    useImageDialog()
+  // ダイアログ管理（13個の個別フック → 単一マネージャー）
+  const dialogManager = useDialogManager()
 
-  // YouTubeダイアログ
-  const { isYouTubeDialogOpen, openYouTubeDialog, closeYouTubeDialog } =
-    useYouTubeDialog()
+  // 文字数カウント
+  const { wordCountData, updateWordCount } = useWordCount()
 
-  // Xダイアログ
-  const { isXDialogOpen, openXDialog, closeXDialog } = useXDialog()
-
-  // Instagramダイアログ
-  const { isInstagramDialogOpen, openInstagramDialog, closeInstagramDialog } =
-    useInstagramDialog()
-
-  // リンクダイアログ
-  const { isLinkDialogOpen, openLinkDialog, closeLinkDialog } =
-    useLinkDialog()
-
-  // テーブルダイアログ
-  const { isTableDialogOpen, openTableDialog, closeTableDialog } =
-    useTableDialog()
-
-  // レイアウトダイアログ
-  const { isLayoutDialogOpen, openLayoutDialog, closeLayoutDialog } =
-    useLayoutDialog()
-
-  // コールアウトダイアログ
-  const { isCalloutDialogOpen, openCalloutDialog, closeCalloutDialog } =
-    useCalloutDialog()
-
-  // ボタンダイアログ
-  const { isButtonDialogOpen, openButtonDialog, closeButtonDialog } =
-    useButtonDialog()
-
-  // プルクォートダイアログ
-  const { isPullQuoteDialogOpen, openPullQuoteDialog, closePullQuoteDialog } =
-    usePullQuoteDialog()
-
-  // ブックマークダイアログ
-  const { isBookmarkDialogOpen, openBookmarkDialog, closeBookmarkDialog } =
-    useBookmarkDialog()
-
-  // ステップダイアログ
-  const { isStepsDialogOpen, openStepsDialog, closeStepsDialog } =
-    useStepsDialog()
-
-  // タブダイアログ
-  const { isTabsDialogOpen, openTabsDialog, closeTabsDialog } =
-    useTabsDialog()
+  // オートセーブ
+  const { saveStatus, setSaveStatus } = useAutoSaveStatus()
 
   // コメント機能
   const { canAddComment, addComment } = useComment()
 
-  // コメント追加ハンドラ
   const handleAddComment = () => {
     if (!canAddComment || !onAddComment) return
     const payload = addComment()
@@ -315,14 +106,11 @@ function EditorInner({
     }
   }
 
-  // コンテンツ変更ハンドラ
-  const handleChange = (editorState: EditorState, editor: LexicalEditorType) => {
+  // コンテンツ変更ハンドラ（JSON出力）
+  const handleChange = (editorState: EditorState, _editor: LexicalEditorType) => {
     if (!onChange) return
-
-    editorState.read(() => {
-      const html = $generateHtmlFromNodes(editor, null)
-      onChange(html)
-    })
+    const json = JSON.stringify(editorState.toJSON())
+    onChange(json)
   }
 
   return (
@@ -332,30 +120,15 @@ function EditorInner({
         className="flex flex-col flex-1 bg-background min-w-0"
         style={{ height }}
       >
-        {/* ツールバー - 固定（スクロールしない）、フルワイド */}
+        {/* ツールバー */}
         {showToolbar && (
           <div className="shrink-0">
-            <ToolbarPlugin
-              onInsertImage={openImageDialog}
-              onInsertYouTube={openYouTubeDialog}
-              onInsertX={openXDialog}
-              onInsertInstagram={openInstagramDialog}
-              onInsertLink={openLinkDialog}
-              onInsertTable={openTableDialog}
-              onInsertLayout={openLayoutDialog}
-              onInsertCallout={openCalloutDialog}
-              onInsertButton={openButtonDialog}
-              onInsertPullQuote={openPullQuoteDialog}
-              onInsertBookmark={openBookmarkDialog}
-              onInsertSteps={openStepsDialog}
-              onInsertTabs={openTabsDialog}
-            />
+            <ToolbarPlugin openDialog={dialogManager.openDialog} />
           </div>
         )}
 
-        {/* コンテンツラッパー - スクロール可能 */}
+        {/* コンテンツラッパー */}
         <div ref={setContentWrapperRef} className="flex-1 overflow-y-auto">
-          {/* 幅制御ラッパー（公開ページと同じコンテンツ幅を適用） */}
           <div
             ref={setContentWidthRef}
             className={cn('relative', contentWidthClassName)}
@@ -364,11 +137,11 @@ function EditorInner({
             <RichTextPlugin
               contentEditable={
                 <ContentEditable
-                  className={`outline-none pl-10 pr-2 py-2 min-h-full ${className ?? ''}`}
+                  className={`outline-none pl-10 pr-6 py-6 min-h-full ${className ?? ''}`}
                 />
               }
               placeholder={
-                <div className="pointer-events-none absolute top-2 left-10 text-muted-foreground">
+                <div className="pointer-events-none absolute top-6 left-10 text-muted-foreground">
                   {placeholder}
                 </div>
               }
@@ -391,51 +164,52 @@ function EditorInner({
         <OnChangePlugin onChange={handleChange} ignoreSelectionChange />
 
         {/* カスタムプラグイン */}
-        <HtmlInitializerPlugin content={content} editorRef={editorRef} />
+        {/* contentJson がない場合のみ HTML フォールバック初期化 */}
+        {!contentJson && (
+          <HtmlInitializerPlugin content={contentHtml} editorRef={editorRef} />
+        )}
         <DisablePlugin disabled={disabled} />
         <DraggableBlockPlugin anchorElem={contentWidthRef} />
         {contentWrapperRef && (
           <FloatingToolbarPlugin
             anchorElem={contentWrapperRef}
             setIsLinkEditMode={(isEditMode) => {
-              if (isEditMode) openLinkDialog()
+              if (isEditMode) dialogManager.openDialog('link')
             }}
             onAddComment={onAddComment ? handleAddComment : undefined}
           />
         )}
         <CommentPlugin onMarkClick={onMarkClick} />
         <PageBreakPlugin />
-        <ComponentPickerPlugin
-          onInsertImage={openImageDialog}
-          onInsertYouTube={openYouTubeDialog}
-          onInsertX={openXDialog}
-          onInsertInstagram={openInstagramDialog}
-          onInsertTable={openTableDialog}
-          onInsertLayout={openLayoutDialog}
-          onInsertCallout={openCalloutDialog}
-          onInsertButton={openButtonDialog}
-          onInsertPullQuote={openPullQuoteDialog}
-          onInsertBookmark={openBookmarkDialog}
-          onInsertSteps={openStepsDialog}
-          onInsertTabs={openTabsDialog}
+        <ComponentPickerPlugin openDialog={dialogManager.openDialog} />
+        <ImageDropPlugin />
+        <FindReplacePlugin anchorElem={contentWrapperRef} />
+        <TableOfContentsPlugin />
+        <KeyboardShortcutsPlugin openDialog={dialogManager.openDialog} />
+        <CodeBlockPlugin anchorElem={contentWrapperRef} />
+        {(onAutoSave ?? autoSaveKey) && (
+          <AutoSavePlugin
+            onAutoSave={onAutoSave}
+            autoSaveKey={autoSaveKey}
+            onStatusChange={setSaveStatus}
+          />
+        )}
+
+        {/* ブロックテンプレート */}
+        <BlockTemplatePlugin
+          isSaveOpen={dialogManager.activeDialog === 'blockTemplateSave'}
+          isInsertOpen={dialogManager.activeDialog === 'blockTemplateInsert'}
+          onClose={dialogManager.closeDialog}
         />
 
         {/* ダイアログ */}
-        <ImagePlugin isOpen={isImageDialogOpen} onClose={closeImageDialog} />
-        <YouTubePlugin isOpen={isYouTubeDialogOpen} onClose={closeYouTubeDialog} />
-        <XPlugin isOpen={isXDialogOpen} onClose={closeXDialog} />
-        <InstagramPlugin isOpen={isInstagramDialogOpen} onClose={closeInstagramDialog} />
-        <LinkDialogPlugin isOpen={isLinkDialogOpen} onClose={closeLinkDialog} />
-        <TableInsertPlugin isOpen={isTableDialogOpen} onClose={closeTableDialog} />
-        <LayoutPlugin isOpen={isLayoutDialogOpen} onClose={closeLayoutDialog} />
-        <CalloutPlugin isOpen={isCalloutDialogOpen} onClose={closeCalloutDialog} />
-        <ButtonPlugin isOpen={isButtonDialogOpen} onClose={closeButtonDialog} />
-        <PullQuotePlugin isOpen={isPullQuoteDialogOpen} onClose={closePullQuoteDialog} />
-        <BookmarkPlugin isOpen={isBookmarkDialogOpen} onClose={closeBookmarkDialog} />
-        <StepsPlugin isOpen={isStepsDialogOpen} onClose={closeStepsDialog} />
-        <TabsPlugin isOpen={isTabsDialogOpen} onClose={closeTabsDialog} />
+        <DialogRenderer dialogManager={dialogManager} />
         <CollapsiblePlugin />
         <EmojiPickerPlugin />
+        <WordCountPlugin onUpdate={updateWordCount} />
+
+        {/* ステータスバー */}
+        <StatusBar wordCount={wordCountData} saveStatus={saveStatus} />
       </div>
 
       {/* インスペクターサイドバー */}
@@ -449,54 +223,37 @@ function EditorInner({
 // =============================================================================
 
 export function LexicalEditor(props: LexicalEditorProps) {
+  const isDesktop = useMediaQuery('(min-width: 1024px)')
+
+  // モバイルデバイスでは読み取り専用フォールバック
+  // コンポーネント境界で分離し、モバイルでは Lexical 初期化コストを完全回避
+  if (!isDesktop) {
+    return <MobileEditorFallback contentHtml={props.contentHtml} height={props.height} />
+  }
+
+  return <LexicalEditorDesktop {...props} />
+}
+
+// =============================================================================
+// LexicalEditorDesktop - デスクトップ専用（Lexical初期化）
+// =============================================================================
+
+function LexicalEditorDesktop(props: LexicalEditorProps) {
+  // contentJson は初期値としてのみ使用（非制御コンポーネント）
+  // useMemo の closure が初回マウント時の props.contentJson をキャプチャし、
+  // 空の依存配列で以降の props 変更を無視。Lexical エディタの初期化は一度のみ
+  // 意図的: contentJson は依存配列から除外（初回マウント時の値のみをキャプチャ）
   const initialConfig = useMemo(
     () => ({
       namespace: 'LexicalEditor',
       theme: editorTheme,
-      nodes: [
-        HeadingNode,
-        QuoteNode,
-        ListNode,
-        ListItemNode,
-        LinkNode,
-        AutoLinkNode,
-        CodeNode,
-        CodeHighlightNode,
-        ImageNode,
-        YouTubeNode,
-        XNode,
-        InstagramNode,
-        TableNode,
-        TableRowNode,
-        TableCellNode,
-        HorizontalRuleNode,
-        LayoutContainerNode,
-        LayoutItemNode,
-        MarkNode,
-        PageBreakNode,
-        CalloutNode,
-        CollapsibleContainerNode,
-        CollapsibleTitleNode,
-        CollapsibleContentNode,
-        // New custom block nodes
-        ButtonNode,
-        PullQuoteNode,
-        PullQuoteTextNode,
-        PullQuoteCitationNode,
-        BookmarkNode,
-        StepsContainerNode,
-        StepItemNode,
-        StepTitleNode,
-        StepContentNode,
-        TabsContainerNode,
-        TabListNode,
-        TabTitleNode,
-        TabPanelNode,
-      ],
+      nodes: [...EDITOR_NODES],
+      ...(props.contentJson ? { editorState: props.contentJson } : {}),
       onError: (error: Error) => {
         console.error('Lexical Error:', error)
       },
     }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   )
 

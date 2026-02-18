@@ -33,7 +33,7 @@ import { createPostCategory, createPostTag } from '@/admin/actions/post'
 import { generateSlug } from '@/shared/lib/utils'
 import { isValidPostStatus } from '@/shared/lib/validations/enums'
 import type { PostData, PostCategoryData, PostTagData } from '@/admin/lib/validations/post'
-import type { ContentWidthSettings } from '@/shared/types'
+import type { ContentWidth } from '@/shared/types'
 
 // =============================================================================
 // Types
@@ -45,14 +45,14 @@ type PostEditorProps = {
   tags: PostTagData[]
   mode?: 'create' | 'edit'
   /** グローバルレイアウト設定（フォールバック値として使用） */
-  layoutSettings?: ContentWidthSettings | null
+  fallbackContentWidth?: ContentWidth
 }
 
 // =============================================================================
 // Component
 // =============================================================================
 
-export function PostEditor({ post, categories, tags, mode = 'edit', layoutSettings }: PostEditorProps) {
+export function PostEditor({ post, categories, tags, mode = 'edit', fallbackContentWidth }: PostEditorProps) {
   // カテゴリ/タグ作成ハンドラー
   const handleCreateCategory = async (name: string) => {
     const slug = generateSlug(name, 'category')
@@ -154,7 +154,9 @@ export function PostEditor({ post, categories, tags, mode = 'edit', layoutSettin
   // コンテンツ幅スタイル（useWatch公式パターン + グローバル設定フォールバック）
   const contentStyles = useContentWidthStyles({
     control: editor.form.control,
-    layoutSettings,
+    widthFieldName: 'contentWidth',
+    customFieldName: 'contentWidthCustom',
+    fallback: fallbackContentWidth,
   })
 
   // サイドパネル用extraProps
@@ -224,7 +226,8 @@ export function PostEditor({ post, categories, tags, mode = 'edit', layoutSettin
       }
     >
       <LazyLexicalEditor
-        content={editor.content}
+        contentJson={editor.contentJson}
+        contentHtml={editor.contentHtml}
         onChange={editor.handleContentChange}
         disabled={editor.isPending}
         className={EDITOR_PROSE_CLASSES}

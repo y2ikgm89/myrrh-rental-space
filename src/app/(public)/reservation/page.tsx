@@ -1,21 +1,30 @@
 /**
- * Reservation Page — 3-step dummy reservation form
+ * /reservation — ご予約ページ
  *
- * SEO: Dynamic metadata via unified pipeline
+ * パターンB: セクション + カスタムコンテンツ
+ * セクション（Hero + SpaceList等）をレンダー後、予約フォームを配置
+ *
+ * SEO: generatePageMetadata + BreadcrumbList JSON-LD
  */
 
 import type { Metadata } from 'next'
 import type { ReactElement } from 'react'
+import { connection } from 'next/server'
 import { BreadcrumbJsonLd } from '@/public/components/seo/JsonLd'
 import { generatePageMetadata } from '@/public/lib/page-metadata'
-import { ReservationHero } from './_components/ReservationHero'
+import { getPageSectionsWithFallback } from '@/public/actions/section'
+import { SectionRenderer } from '@/public/components/sections/SectionRenderer'
 import { ReservationForm } from './_components/ReservationForm'
 
 export async function generateMetadata(): Promise<Metadata> {
   return generatePageMetadata('reservation')
 }
 
-export default function ReservationPage(): ReactElement {
+export default async function ReservationPage(): Promise<ReactElement> {
+  await connection()
+
+  const sections = await getPageSectionsWithFallback('reservation')
+
   return (
     <>
       <BreadcrumbJsonLd
@@ -24,7 +33,11 @@ export default function ReservationPage(): ReactElement {
           { name: 'ご予約', url: '/reservation' },
         ]}
       />
-      <ReservationHero />
+
+      {sections.map((section) => (
+        <SectionRenderer key={section.id} section={section} />
+      ))}
+
       <ReservationForm />
     </>
   )

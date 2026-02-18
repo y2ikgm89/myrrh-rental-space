@@ -598,10 +598,10 @@ describe('createSectionSchema', () => {
     }
   })
 
-  test('contentの文字数制限', () => {
+  test('contentJsonの文字数制限', () => {
     const data = {
       type: 'CUSTOM',
-      content: 'a'.repeat(500001),
+      contentJson: 'a'.repeat(500001),
     }
     const result = createSectionSchema.safeParse(data)
     expect(result.success).toBe(false)

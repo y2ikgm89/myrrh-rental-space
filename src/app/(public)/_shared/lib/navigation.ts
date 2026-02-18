@@ -18,6 +18,8 @@ export type PublicNavItem = {
   readonly children: readonly PublicNavItem[]
 }
 
+const EMPTY_NAV_CHILDREN: readonly PublicNavItem[] = Object.freeze([])
+
 /**
  * 指定タイプのアクティブなナビゲーションアイテムを取得
  */
@@ -61,7 +63,7 @@ export async function getPublicNavigation(type: NavigationType): Promise<readonl
       label: child.label,
       url: child.url,
       isExternal: child.isExternal,
-      children: [] as readonly PublicNavItem[],
+      children: EMPTY_NAV_CHILDREN,
     })),
   }))
 }

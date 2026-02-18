@@ -9,14 +9,16 @@ import { cacheLife, cacheTag } from 'next/cache'
 import { prisma } from '@/shared/lib/prisma'
 import { CACHE_TAGS } from '@/shared/lib/constants'
 import { toPlainArray } from '@/shared/lib/serialize'
-import type { SectionType } from '@/shared/generated/prisma/enums'
-import { PostStatus } from '@/shared/generated/prisma/enums'
+import { SectionType, PostStatus } from '@/shared/generated/prisma/enums'
+import { slugParamSchema, idParamSchema } from '@/shared/lib/validations/params'
+import { DEFAULT_PAGE_SECTIONS } from '@/shared/lib/constants/default-page-sections'
 
 export type PublicSection = {
   readonly id: string
   readonly type: SectionType
   readonly title: string | null
-  readonly content: string | null
+  readonly contentHtml: string | null
+  readonly contentJson: unknown | null
   readonly config: unknown
   readonly design: unknown
   readonly order: number
@@ -39,7 +41,8 @@ export async function getHomepageSections(): Promise<readonly PublicSection[]> {
       id: true,
       type: true,
       title: true,
-      content: true,
+      contentHtml: true,
+      contentJson: true,
       config: true,
       design: true,
       order: true,
@@ -51,7 +54,7 @@ export async function getHomepageSections(): Promise<readonly PublicSection[]> {
 }
 
 /**
- * SpaceShowcase 用のスペースデータ取得
+ * 公開スペースデータ取得（SpaceShowcase / SpaceList 共通）
  */
 export async function getShowcaseSpaces(maxItems: number, showOnlyPublished: boolean) {
   'use cache'
@@ -88,6 +91,8 @@ export async function getPageSections(pageId: string): Promise<readonly PublicSe
   cacheLife('hours')
   cacheTag(CACHE_TAGS.SECTIONS, CACHE_TAGS.PAGE_SECTIONS)
 
+  if (!idParamSchema.safeParse(pageId).success) return []
+
   const sections = await prisma.section.findMany({
     where: {
       pageId,
@@ -97,7 +102,8 @@ export async function getPageSections(pageId: string): Promise<readonly PublicSe
       id: true,
       type: true,
       title: true,
-      content: true,
+      contentHtml: true,
+      contentJson: true,
       config: true,
       design: true,
       order: true,
@@ -108,39 +114,42 @@ export async function getPageSections(pageId: string): Promise<readonly PublicSe
   return sections
 }
 
+/**
+ * ページの全セクションを取得（slug ベース、フォールバック付き）
+ *
+ * DB にページ / セクションが存在しない場合は
+ * DEFAULT_PAGE_SECTIONS のデフォルト定義にフォールバック。
+ * about, privacy, terms, spaces, faq 等のセクション駆動ページで使用。
+ */
+export async function getPageSectionsWithFallback(
+  slug: string,
+): Promise<readonly PublicSection[]> {
+  const page = await getPublicPage(slug)
+  if (page) {
+    const sections = await getPageSections(page.id)
+    if (sections.length > 0) return sections
+  }
+
+  // Fallback: DEFAULT_PAGE_SECTIONS のデフォルト定義を使用
+  const defaults = DEFAULT_PAGE_SECTIONS[slug]
+  if (!defaults || defaults.length === 0) return []
+
+  return defaults.map((d, i) => ({
+    id: `default-${slug}-${i}`,
+    type: d.type,
+    title: d.title,
+    contentHtml: d.content,
+    contentJson: null,
+    config: d.config,
+    design: d.design ?? {},
+    order: d.order,
+  }))
+}
+
+
 // =============================================================================
 // DB 依存セクション用データ取得
 // =============================================================================
-
-/**
- * SpaceList セクション用: スペース一覧取得
- */
-export async function getListSpaces(maxItems: number, showOnlyPublished: boolean) {
-  'use cache'
-  cacheLife('hours')
-  cacheTag(CACHE_TAGS.SPACES)
-
-  const spaces = await prisma.space.findMany({
-    where: {
-      isActive: true,
-      ...(showOnlyPublished ? { isPublished: true } : {}),
-    },
-    select: {
-      id: true,
-      slug: true,
-      name: true,
-      description: true,
-      capacity: true,
-      hourlyPrice: true,
-      area: true,
-      mainImageUrl: true,
-    },
-    orderBy: { createdAt: 'desc' },
-    take: maxItems,
-  })
-
-  return toPlainArray(spaces)
-}
 
 /**
  * NewsList セクション用: 公開済みニュース取得
@@ -216,7 +225,8 @@ export async function getPublishedFaqItems(maxItems: number, categoryId?: string
     select: {
       id: true,
       question: true,
-      answer: true,
+      answerHtml: true,
+      answerJson: true,
     },
     orderBy: { order: 'asc' },
     take: maxItems,
@@ -232,6 +242,8 @@ export async function getPublicPage(slug: string) {
   'use cache'
   cacheLife('hours')
   cacheTag(CACHE_TAGS.PAGES, `${CACHE_TAGS.PAGES}-${slug}`)
+
+  if (!slugParamSchema.safeParse(slug).success) return null
 
   const page = await prisma.page.findUnique({
     where: {
@@ -250,23 +262,3 @@ export async function getPublicPage(slug: string) {
   return page
 }
 
-/**
- * generateStaticParams 用: 全公開ページのスラッグ取得
- */
-export async function getAllPublishedPageSlugs() {
-  'use cache'
-  cacheLife('hours')
-  cacheTag(CACHE_TAGS.PAGES)
-
-  const pages = await prisma.page.findMany({
-    where: {
-      isPublished: true,
-      isActive: true,
-    },
-    select: {
-      slug: true,
-    },
-  })
-
-  return pages.map((p) => p.slug)
-}

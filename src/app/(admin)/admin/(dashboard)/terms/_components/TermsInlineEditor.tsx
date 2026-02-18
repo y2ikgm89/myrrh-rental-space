@@ -64,7 +64,7 @@ const termsFormSchema = z.object({
   title: z.string().min(1, { error: 'タイトルを入力してください' }).max(100),
   slug: z.string().min(1, { error: 'スラッグを入力してください' }).max(50).regex(/^[a-z0-9-]+$/, { error: '小文字英数字とハイフンのみ' }),
   type: z.string().min(1, { error: '規約タイプを選択してください' }),
-  content: z.string().min(1, { error: 'コンテンツを入力してください' }),
+  contentJson: z.string().min(1, { error: 'コンテンツを入力してください' }),
   selectedTemplate: z.string().optional(),
 })
 
@@ -81,7 +81,8 @@ interface TermsData {
   type: TermsType
   isActive: boolean
   currentVersionId?: string
-  currentVersionContent?: string
+  currentVersionContentJson?: unknown
+  currentVersionContentHtml?: string
 }
 
 interface TermsInlineEditorProps {
@@ -101,6 +102,8 @@ export function TermsInlineEditor({ terms, businessInfo, mode = 'edit' }: TermsI
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(true)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [hasEditorChanges, setHasEditorChanges] = useState(false)
+  const [editorKey, setEditorKey] = useState(0)
+  const [templateHtml, setTemplateHtml] = useState<string | null>(null)
 
   const {
     register,
@@ -115,20 +118,22 @@ export function TermsInlineEditor({ terms, businessInfo, mode = 'edit' }: TermsI
           title: terms.title,
           slug: terms.slug,
           type: terms.type,
-          content: terms.currentVersionContent ?? '',
+          contentJson: terms.currentVersionContentJson
+            ? JSON.stringify(terms.currentVersionContentJson)
+            : '',
           selectedTemplate: '',
         }
       : {
           title: '',
           slug: '',
           type: '',
-          content: '',
+          contentJson: '',
           selectedTemplate: '',
         },
   })
 
   const title = useWatch({ control, name: 'title' })
-  const content = useWatch({ control, name: 'content' })
+  const contentJson = useWatch({ control, name: 'contentJson' })
   const slug = useWatch({ control, name: 'slug' })
   const selectedTypeRaw = useWatch({ control, name: 'type' })
   const selectedTemplate = useWatch({ control, name: 'selectedTemplate' })
@@ -153,7 +158,9 @@ export function TermsInlineEditor({ terms, businessInfo, mode = 'edit' }: TermsI
   const handleTemplateChange = (templateId: string) => {
     setValue('selectedTemplate', templateId)
     if (templateId === 'blank') {
-      setValue('content', '', { shouldDirty: true })
+      setValue('contentJson', '', { shouldDirty: true })
+      setTemplateHtml('')
+      setEditorKey((k) => k + 1)
       setHasEditorChanges(true)
       return
     }
@@ -162,13 +169,15 @@ export function TermsInlineEditor({ terms, businessInfo, mode = 'edit' }: TermsI
       const appliedContent = businessInfo
         ? applyBusinessInfo(template.content, businessInfo)
         : template.content
-      setValue('content', appliedContent, { shouldDirty: true })
+      setValue('contentJson', '', { shouldDirty: true })
+      setTemplateHtml(appliedContent)
+      setEditorKey((k) => k + 1)
       setHasEditorChanges(true)
     }
   }
 
-  const handleHtmlChange = (html: string) => {
-    setValue('content', html, { shouldDirty: true })
+  const handleJsonChange = (json: string) => {
+    setValue('contentJson', json, { shouldDirty: true })
     setHasEditorChanges(true)
   }
 
@@ -188,7 +197,7 @@ export function TermsInlineEditor({ terms, businessInfo, mode = 'edit' }: TermsI
             slug: data.slug,
             type: termsType,
             isActive: true,
-            content: data.content,
+            contentJson: data.contentJson,
           })
           if (result.success) {
             toast.success('規約を作成しました')
@@ -209,7 +218,7 @@ export function TermsInlineEditor({ terms, businessInfo, mode = 'edit' }: TermsI
 
           if (terms.currentVersionId) {
             const versionResult = await updateTermsVersion(terms.currentVersionId, {
-              content: data.content,
+              contentJson: data.contentJson,
             })
             if (!versionResult.success) {
               toast.error(versionResult.error)
@@ -462,8 +471,10 @@ export function TermsInlineEditor({ terms, businessInfo, mode = 'edit' }: TermsI
       }
     >
       <LexicalEditor
-        content={content}
-        onChange={handleHtmlChange}
+        key={editorKey}
+        contentJson={contentJson || undefined}
+        contentHtml={templateHtml ?? terms?.currentVersionContentHtml ?? ''}
+        onChange={handleJsonChange}
         disabled={isPending}
         className={EDITOR_PROSE_CLASSES}
         showToolbar

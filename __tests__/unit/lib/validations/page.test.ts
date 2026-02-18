@@ -357,9 +357,7 @@ describe('createPageSchema', () => {
 
 describe('SYSTEM_PAGES', () => {
   test('システムページが正しく定義されている', () => {
-    // terms, posts, news は専用ルートがあるためシステムページから除外
-    // home はホームページとして含まれる
-    expect(SYSTEM_PAGES.length).toBe(7)
+    expect(SYSTEM_PAGES.length).toBe(10)
 
     const slugs = SYSTEM_PAGES.map((p) => p.slug)
     expect(slugs).toContain('home')
@@ -369,6 +367,9 @@ describe('SYSTEM_PAGES', () => {
     expect(slugs).toContain('reservation')
     expect(slugs).toContain('spaces')
     expect(slugs).toContain('contact')
+    expect(slugs).toContain('posts')
+    expect(slugs).toContain('news')
+    expect(slugs).toContain('terms')
   })
 
   test('すべてのシステムページにslug/title/descriptionがある', () => {

@@ -121,8 +121,8 @@ export function TermsForm({ terms }: TermsFormProps) {
               required
               disabled={isPending}
             />
-            {errors.title && (
-              <p className="text-sm text-destructive">{errors.title}</p>
+            {errors['title'] && (
+              <p className="text-sm text-destructive">{errors['title']}</p>
             )}
           </div>
 
@@ -141,8 +141,8 @@ export function TermsForm({ terms }: TermsFormProps) {
             <p className="text-xs text-muted-foreground">
               URLやシステム内部で使用される識別子です。半角英数字とハイフンのみ使用可能。
             </p>
-            {errors.slug && (
-              <p className="text-sm text-destructive">{errors.slug}</p>
+            {errors['slug'] && (
+              <p className="text-sm text-destructive">{errors['slug']}</p>
             )}
           </div>
 

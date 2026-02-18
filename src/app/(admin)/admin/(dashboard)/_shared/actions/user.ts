@@ -7,6 +7,7 @@ import { Role } from '@/shared/generated/prisma/enums'
 import type { Prisma } from '@/shared/generated/prisma/client'
 import { hashPassword } from 'better-auth/crypto'
 import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+import { createValidationError } from '@/shared/lib/action-helpers'
 import { withPermission, withRole } from '@/admin/lib/server-action-helpers'
 import { type User } from '@/shared/lib/auth'
 import { checkReadPermissionFor } from '@/admin/lib/permissions'
@@ -156,12 +157,13 @@ export const createUser = withPermission<[CreateUserInput], { id: string }>(
 )(async (_user: User, data: CreateUserInput): Promise<ActionResult<{ id: string }>> => {
   const parsed = createUserSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   // メールアドレスの重複チェック
   const existing = await prisma.user.findUnique({
     where: { email: parsed.data.email },
+    select: { id: true },
   })
 
   if (existing) {
@@ -201,11 +203,12 @@ export const updateUser = withPermission<[string, UpdateUserInput], void>(
 )(async (_user: User, id: string, data: UpdateUserInput): Promise<ActionResult<void>> => {
   const parsed = updateUserSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure(parsed.error.issues[0]?.message ?? 'バリデーションエラー')
+    return createValidationError(parsed.error)
   }
 
   const existing = await prisma.user.findUnique({
     where: { id },
+    select: { id: true },
   })
 
   if (!existing) {
@@ -218,6 +221,7 @@ export const updateUser = withPermission<[string, UpdateUserInput], void>(
       email: parsed.data.email,
       NOT: { id },
     },
+    select: { id: true },
   })
 
   if (duplicate) {
@@ -302,6 +306,7 @@ export const updateUserRole = withRole<[string, Role], void>(Role.SUPER_ADMIN)(
   async (user: User, id: string, role: Role): Promise<ActionResult<void>> => {
     const targetUser = await prisma.user.findUnique({
       where: { id },
+      select: { id: true, role: true },
     })
 
     if (!targetUser) {

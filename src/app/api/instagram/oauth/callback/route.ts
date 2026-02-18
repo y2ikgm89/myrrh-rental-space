@@ -167,7 +167,7 @@ function getBaseUrl(): string {
     return serverEnv.BETTER_AUTH_URL
   }
   // フォールバック
-  return process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
+  return process.env["VERCEL_URL"]
+    ? `https://${process.env["VERCEL_URL"]}`
     : 'http://localhost:3000'
 }

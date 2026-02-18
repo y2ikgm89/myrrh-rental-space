@@ -20,6 +20,7 @@ import {
   $getSelection,
   $isRangeSelection,
   $isElementNode,
+  $setState,
   COMMAND_PRIORITY_EDITOR,
   COMMAND_PRIORITY_LOW,
   KEY_ARROW_DOWN_COMMAND,
@@ -27,14 +28,17 @@ import {
   KEY_ARROW_RIGHT_COMMAND,
   KEY_ARROW_UP_COMMAND,
   createCommand,
+  mergeRegister,
   type LexicalCommand,
   type LexicalEditor,
   type NodeKey,
 } from 'lexical'
+import { $insertNodeToNearestRoot } from '@lexical/utils'
 import {
   $createLayoutContainerNode,
   $isLayoutContainerNode,
   LayoutContainerNode,
+  templateColumnsState,
 } from '../nodes/LayoutContainerNode'
 import {
   $createLayoutItemNode,
@@ -49,8 +53,14 @@ import {
   DialogFooter,
   Button,
   Label,
-  SelectionBox,
 } from '@/admin/components/ui'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/admin/components/ui/select'
 
 // =============================================================================
 // Commands
@@ -83,12 +93,6 @@ const LAYOUT_TEMPLATES = [
   { value: '1fr 1fr 1fr 1fr', label: '4カラム（均等）', columns: 4, description: '25% / 25% / 25% / 25%' },
 ] as const
 
-// SelectionBox用のオプション
-const LAYOUT_SELECTION_OPTIONS = LAYOUT_TEMPLATES.map((t) => ({
-  value: t.value,
-  label: t.label,
-  description: t.description,
-}))
 
 // =============================================================================
 // Utilities
@@ -159,23 +163,6 @@ function $onEscape(
 }
 
 // =============================================================================
-// Hook
-// =============================================================================
-
-export function useLayoutDialog() {
-  const [isLayoutDialogOpen, setIsLayoutDialogOpen] = useState(false)
-
-  const openLayoutDialog = () => setIsLayoutDialogOpen(true)
-  const closeLayoutDialog = () => setIsLayoutDialogOpen(false)
-
-  return {
-    isLayoutDialogOpen,
-    openLayoutDialog,
-    closeLayoutDialog,
-  }
-}
-
-// =============================================================================
 // Types
 // =============================================================================
 
@@ -194,153 +181,141 @@ export function LayoutPlugin({ isOpen, onClose }: LayoutPluginProps) {
 
   // コマンドリスナー登録
   useEffect(() => {
-    // INSERT_LAYOUT_COMMAND
-    const insertUnregister = editor.registerCommand(
-      INSERT_LAYOUT_COMMAND,
-      (payload) => {
-        editor.update(() => {
-          const selection = $getSelection()
-          if (!$isRangeSelection(selection)) return false
+    return mergeRegister(
+      // INSERT_LAYOUT_COMMAND
+      editor.registerCommand(
+        INSERT_LAYOUT_COMMAND,
+        (payload) => {
+          editor.update(() => {
+            const container = $createLayoutContainerNode(payload.templateColumns)
+            const columns = getColumnsFromTemplate(payload.templateColumns)
 
-          const container = $createLayoutContainerNode(payload.templateColumns)
-          const columns = getColumnsFromTemplate(payload.templateColumns)
-
-          // カラム数分のLayoutItemを作成
-          for (let i = 0; i < columns; i++) {
-            const item = $createLayoutItemNode()
-            const paragraph = $createParagraphNode()
-            item.append(paragraph)
-            container.append(item)
-          }
-
-          selection.insertNodes([container])
-
-          // 最初のカラムの段落を選択
-          const firstItem = container.getFirstChild()
-          if ($isLayoutItemNode(firstItem)) {
-            const firstParagraph = firstItem.getFirstChild()
-            if (firstParagraph && $isElementNode(firstParagraph)) {
-              firstParagraph.selectEnd()
-            }
-          }
-        })
-        return true
-      },
-      COMMAND_PRIORITY_EDITOR
-    )
-
-    // UPDATE_LAYOUT_COMMAND
-    const updateUnregister = editor.registerCommand(
-      UPDATE_LAYOUT_COMMAND,
-      (payload) => {
-        editor.update(() => {
-          const node = $getNodeByKey(payload.nodeKey)
-          if (!$isLayoutContainerNode(node)) return false
-
-          const currentColumns = node.getChildren().length
-          const newColumns = getColumnsFromTemplate(payload.templateColumns)
-
-          node.setTemplateColumns(payload.templateColumns)
-
-          if (newColumns > currentColumns) {
-            // カラム追加
-            for (let i = currentColumns; i < newColumns; i++) {
+            // カラム数分のLayoutItemを作成
+            for (let i = 0; i < columns; i++) {
               const item = $createLayoutItemNode()
               const paragraph = $createParagraphNode()
               item.append(paragraph)
-              node.append(item)
+              container.append(item)
             }
-          } else if (newColumns < currentColumns) {
-            // カラム削除（末尾から）
+
+            $insertNodeToNearestRoot(container)
+
+            // 最初のカラムの段落を選択
+            const firstItem = container.getFirstChild()
+            if ($isLayoutItemNode(firstItem)) {
+              const firstParagraph = firstItem.getFirstChild()
+              if (firstParagraph && $isElementNode(firstParagraph)) {
+                firstParagraph.selectEnd()
+              }
+            }
+          })
+          return true
+        },
+        COMMAND_PRIORITY_EDITOR
+      ),
+
+      // UPDATE_LAYOUT_COMMAND
+      editor.registerCommand(
+        UPDATE_LAYOUT_COMMAND,
+        (payload) => {
+          editor.update(() => {
+            const node = $getNodeByKey(payload.nodeKey)
+            if (!$isLayoutContainerNode(node)) return false
+
+            const currentColumns = node.getChildren().length
+            const newColumns = getColumnsFromTemplate(payload.templateColumns)
+
+            $setState(node, templateColumnsState, payload.templateColumns)
+
+            if (newColumns > currentColumns) {
+              // カラム追加
+              for (let i = currentColumns; i < newColumns; i++) {
+                const item = $createLayoutItemNode()
+                const paragraph = $createParagraphNode()
+                item.append(paragraph)
+                node.append(item)
+              }
+            } else if (newColumns < currentColumns) {
+              // カラム削除（末尾から）
+              const children = node.getChildren()
+              for (let i = currentColumns - 1; i >= newColumns; i--) {
+                children[i]?.remove()
+              }
+            }
+          })
+          return true
+        },
+        COMMAND_PRIORITY_EDITOR
+      ),
+
+      // 矢印キーリスナー
+      editor.registerCommand(
+        KEY_ARROW_UP_COMMAND,
+        () => $onEscape(editor, 'up'),
+        COMMAND_PRIORITY_LOW
+      ),
+      editor.registerCommand(
+        KEY_ARROW_DOWN_COMMAND,
+        () => $onEscape(editor, 'down'),
+        COMMAND_PRIORITY_LOW
+      ),
+      editor.registerCommand(
+        KEY_ARROW_LEFT_COMMAND,
+        () => $onEscape(editor, 'left'),
+        COMMAND_PRIORITY_LOW
+      ),
+      editor.registerCommand(
+        KEY_ARROW_RIGHT_COMMAND,
+        () => $onEscape(editor, 'right'),
+        COMMAND_PRIORITY_LOW
+      ),
+
+      // 構造検証トランスフォーマー: LayoutItem
+      editor.registerNodeTransform(
+        LayoutItemNode,
+        (node) => {
+          const parent = node.getParent()
+          // 親がLayoutContainerでない場合、アンラップ
+          if (!$isLayoutContainerNode(parent)) {
             const children = node.getChildren()
-            for (let i = currentColumns - 1; i >= newColumns; i--) {
-              children[i]?.remove()
+            for (const child of children) {
+              node.insertBefore(child)
             }
+            node.remove()
+            return
           }
-        })
-        return true
-      },
-      COMMAND_PRIORITY_EDITOR
-    )
 
-    // 矢印キーリスナー
-    const arrowUpUnregister = editor.registerCommand(
-      KEY_ARROW_UP_COMMAND,
-      () => $onEscape(editor, 'up'),
-      COMMAND_PRIORITY_LOW
-    )
-    const arrowDownUnregister = editor.registerCommand(
-      KEY_ARROW_DOWN_COMMAND,
-      () => $onEscape(editor, 'down'),
-      COMMAND_PRIORITY_LOW
-    )
-    const arrowLeftUnregister = editor.registerCommand(
-      KEY_ARROW_LEFT_COMMAND,
-      () => $onEscape(editor, 'left'),
-      COMMAND_PRIORITY_LOW
-    )
-    const arrowRightUnregister = editor.registerCommand(
-      KEY_ARROW_RIGHT_COMMAND,
-      () => $onEscape(editor, 'right'),
-      COMMAND_PRIORITY_LOW
-    )
+          // 空のLayoutItemに段落を追加
+          if (node.getChildren().length === 0) {
+            const paragraph = $createParagraphNode()
+            node.append(paragraph)
+          }
+        }
+      ),
 
-    // 構造検証トランスフォーマー: LayoutItem
-    const itemTransformUnregister = editor.registerNodeTransform(
-      LayoutItemNode,
-      (node) => {
-        const parent = node.getParent()
-        // 親がLayoutContainerでない場合、アンラップ
-        if (!$isLayoutContainerNode(parent)) {
+      // 構造検証トランスフォーマー: LayoutContainer
+      editor.registerNodeTransform(
+        LayoutContainerNode,
+        (node) => {
           const children = node.getChildren()
+
+          // 非LayoutItem子要素をアンラップ
           for (const child of children) {
-            node.insertBefore(child)
-          }
-          node.remove()
-          return
-        }
-
-        // 空のLayoutItemに段落を追加
-        if (node.getChildren().length === 0) {
-          const paragraph = $createParagraphNode()
-          node.append(paragraph)
-        }
-      }
-    )
-
-    // 構造検証トランスフォーマー: LayoutContainer
-    const containerTransformUnregister = editor.registerNodeTransform(
-      LayoutContainerNode,
-      (node) => {
-        const children = node.getChildren()
-
-        // 非LayoutItem子要素をアンラップ
-        for (const child of children) {
-          if (!$isLayoutItemNode(child)) {
-            // 最初のLayoutItemに移動するか、新しいItemを作成
-            const firstItem = children.find($isLayoutItemNode)
-            if (firstItem && $isLayoutItemNode(firstItem)) {
-              firstItem.append(child)
-            } else {
-              const item = $createLayoutItemNode()
-              item.append(child)
-              node.append(item)
+            if (!$isLayoutItemNode(child)) {
+              // 最初のLayoutItemに移動するか、新しいItemを作成
+              const firstItem = children.find($isLayoutItemNode)
+              if (firstItem && $isLayoutItemNode(firstItem)) {
+                firstItem.append(child)
+              } else {
+                const item = $createLayoutItemNode()
+                item.append(child)
+                node.append(item)
+              }
             }
           }
         }
-      }
+      ),
     )
-
-    return () => {
-      insertUnregister()
-      updateUnregister()
-      arrowUpUnregister()
-      arrowDownUnregister()
-      arrowLeftUnregister()
-      arrowRightUnregister()
-      itemTransformUnregister()
-      containerTransformUnregister()
-    }
   }, [editor])
 
   const handleInsert = () => {
@@ -367,13 +342,18 @@ export function LayoutPlugin({ isOpen, onClose }: LayoutPluginProps) {
           <Label className="text-sm font-medium mb-3 block">
             レイアウトを選択
           </Label>
-          <SelectionBox
-            options={LAYOUT_SELECTION_OPTIONS}
-            value={selectedTemplate}
-            onChange={setSelectedTemplate}
-            columns={1}
-            name="カラムレイアウト"
-          />
+          <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {LAYOUT_TEMPLATES.map((t) => (
+                <SelectItem key={t.value} value={t.value}>
+                  {t.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <DialogFooter>

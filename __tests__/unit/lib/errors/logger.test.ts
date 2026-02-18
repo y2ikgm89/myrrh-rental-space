@@ -11,7 +11,7 @@ import type { ErrorLogContext } from '@/shared/lib/errors/types'
 
 // console.error をモック化
 const originalConsoleError = console.error
-const originalNodeEnv = process.env.NODE_ENV
+const originalNodeEnv = process.env["NODE_ENV"]
 
 beforeEach(() => {
   console.error = mock(() => {})
@@ -19,7 +19,7 @@ beforeEach(() => {
 
 afterEach(() => {
   console.error = originalConsoleError
-  process.env.NODE_ENV = originalNodeEnv
+  process.env["NODE_ENV"] = originalNodeEnv
 })
 
 // =============================================================================
@@ -182,7 +182,7 @@ describe('logError', () => {
 
   describe('本番環境', () => {
     test('JSON形式で出力される', () => {
-      process.env.NODE_ENV = 'production'
+      process.env["NODE_ENV"] = 'production'
       logError(new Error('本番エラー'), baseContext)
       expect(console.error).toHaveBeenCalledTimes(1)
 
@@ -201,7 +201,7 @@ describe('logError', () => {
 
   describe('開発環境', () => {
     test('オブジェクト形式で出力される', () => {
-      process.env.NODE_ENV = 'development'
+      process.env["NODE_ENV"] = 'development'
       logError(new Error('開発エラー'), baseContext)
       expect(console.error).toHaveBeenCalledTimes(1)
 
@@ -215,7 +215,7 @@ describe('logError', () => {
 
   describe('エラー種別ごとのメッセージ抽出', () => {
     test('Errorオブジェクトからmessageを抽出する', () => {
-      process.env.NODE_ENV = 'production'
+      process.env["NODE_ENV"] = 'production'
       logError(new Error('Errorメッセージ'), baseContext)
       const mockFn = console.error as ReturnType<typeof mock>
       const parsed = JSON.parse(mockFn.mock.calls[0][0])
@@ -223,7 +223,7 @@ describe('logError', () => {
     })
 
     test('文字列からメッセージを抽出する', () => {
-      process.env.NODE_ENV = 'production'
+      process.env["NODE_ENV"] = 'production'
       logError('文字列メッセージ', baseContext)
       const mockFn = console.error as ReturnType<typeof mock>
       const parsed = JSON.parse(mockFn.mock.calls[0][0])
@@ -231,7 +231,7 @@ describe('logError', () => {
     })
 
     test('Errorオブジェクトの場合stackが含まれる', () => {
-      process.env.NODE_ENV = 'production'
+      process.env["NODE_ENV"] = 'production'
       const error = new Error('stackテスト')
       logError(error, baseContext)
       const mockFn = console.error as ReturnType<typeof mock>
@@ -241,7 +241,7 @@ describe('logError', () => {
     })
 
     test('文字列エラーの場合stackはundefined', () => {
-      process.env.NODE_ENV = 'production'
+      process.env["NODE_ENV"] = 'production'
       logError('string error', baseContext)
       const mockFn = console.error as ReturnType<typeof mock>
       const parsed = JSON.parse(mockFn.mock.calls[0][0])
@@ -275,7 +275,7 @@ describe('createErrorLogger', () => {
   })
 
   test('追加コンテキストを上書きできる', () => {
-    process.env.NODE_ENV = 'production'
+    process.env["NODE_ENV"] = 'production'
     const logger = createErrorLogger({
       category: ErrorCategory.DATABASE,
       severity: ErrorSeverity.LOW,
@@ -294,7 +294,7 @@ describe('createErrorLogger', () => {
   })
 
   test('デフォルトコンテキストがマージされる', () => {
-    process.env.NODE_ENV = 'production'
+    process.env["NODE_ENV"] = 'production'
     const logger = createErrorLogger({
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.MEDIUM,

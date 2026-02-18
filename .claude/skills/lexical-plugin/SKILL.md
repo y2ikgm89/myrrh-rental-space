@@ -47,7 +47,7 @@ Lexicalエディタ用のカスタムプラグインを作成します。
 
 import { useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $insertNodes } from 'lexical'
+import { $insertNodeToNearestRoot } from '@lexical/utils'
 import {
   Dialog,
   DialogContent,
@@ -77,7 +77,7 @@ export function ${PluginName}Plugin({ isOpen, onClose }: ${PluginName}PluginProp
 
     editor.update(() => {
       const node = $create${PluginName}Node(formData)
-      $insertNodes([node])
+      $insertNodeToNearestRoot(node)
     })
     onClose()
     setFormData({/* reset */})
