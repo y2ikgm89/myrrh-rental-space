@@ -1,3 +1,8 @@
+---
+paths:
+  - src/**
+---
+
 # React パターンルール
 
 > React 19.2 / React Compiler 1.0 対応
@@ -49,12 +54,21 @@ function RadioGroup({ ref, className, ...props }: ComponentPropsWithRef<typeof R
 
 ---
 
-## React Compiler 互換ルール
+## React Compiler 1.0（自動メモ化）
 
-React Compiler（Next.js 16 でデフォルト有効）が自動メモ化するため、
-手動での最適化は原則不要。不適切なパターンはコンパイラエラーの原因になる。
+React Compiler 1.0（2025年10月 stable リリース、Next.js 16 でデフォルト有効）が
+コンポーネント・フックを自動メモ化するため、手動の最適化は原則不要になった。
+不適切なパターンはコンパイラエラーの原因になる。
 
-### useCallback / useMemo（原則不要）
+### 不要になった手動最適化
+
+React Compiler が自動処理するため、以下は原則禁止:
+
+| 廃止パターン | React Compiler が自動処理 |
+|------------|--------------------------|
+| `useCallback` | 関数参照の同一性を自動保持 |
+| `useMemo` | 計算結果の自動キャッシュ |
+| `React.memo()` | 親再レンダリング時の不要な子再レンダリング防止 |
 
 ```typescript
 // NG: 不要なメモ化（React Compiler が自動処理）
@@ -64,12 +78,20 @@ const handleClick = useCallback(() => {
 
 const total = useMemo(() => items.reduce((s, i) => s + i.price, 0), [items])
 
+const HeavyList = React.memo(function HeavyList({ data }: { data: Item[] }) {
+  return <ul>{data.map((item) => <li key={item.id}>{item.name}</li>)}</ul>
+})
+
 // OK: プレーン関数・式で記述（Compiler が最適化）
 const handleClick = () => {
   doSomething(value)
 }
 
 const total = items.reduce((s, i) => s + i.price, 0)
+
+function HeavyList({ data }: { data: Item[] }) {
+  return <ul>{data.map((item) => <li key={item.id}>{item.name}</li>)}</ul>
+}
 ```
 
 **例外: 明示的に使用してよい場合**
@@ -110,6 +132,95 @@ const handleMove = (e: React.MouseEvent) => {
 **ルール**: `ref` を参照するイベントハンドラでは `useCallback` を使わずプレーン関数で定義する。
 GSAP アニメーション系のイベントハンドラで特に頻出（→ `gsap-patterns.md` パターン C）。
 
+### 'use no memo' — コンパイル除外（一時的エスケープハッチ）
+
+コンパイラに問題があるコンポーネントを一時的に除外する。**恒久的な使用は禁止**:
+
+```typescript
+// NG: 恒久的に 'use no memo' を使い続ける（Rules of React 違反を放置）
+function ProblematicComponent() {
+  "use no memo"  // 根本原因を修正しないまま放置
+  // ...
+}
+
+// OK: 一時的なデバッグ・段階的移行（TODO コメント必須）
+function TemporarilyExcluded() {
+  "use no memo" // TODO: #123 — 副作用がレンダリング中に発生している問題を修正後に削除
+  // ...
+}
+```
+
+**使用ルール:**
+- 関数本体の**先頭**に配置（コメントは先でも可）
+- `// TODO: Issue番号 — 根本原因の説明` を必ず付記
+- Rules of React 違反を修正したら即座に削除
+
+### 'use memo' — コンパイル強制 opt-in（annotation モードのみ）
+
+Next.js 16 では全コンポーネントが自動コンパイル対象のため通常不要。
+`compilationMode: 'annotation'` による段階的採用時のみ使用:
+
+```typescript
+// compilationMode: 'annotation' 設定時: 明示的に最適化対象にする
+function ExpensiveList({ items }: { items: Item[] }) {
+  "use memo"  // このコンポーネントのみ Compiler 対象にする
+  return <ul>{items.map((item) => <li key={item.id}>{item.name}</li>)}</ul>
+}
+```
+
+### Rules of React（コンパイラが最適化できる条件）
+
+React Compiler は以下のルールに準拠したコードのみ最適化する。
+**違反するとそのコンポーネントはコンパイルをスキップされる**:
+
+1. **べき等性**: 同じ props/state に対して常に同じ JSX を返す
+2. **読み取り専用の props/state**: 直接変更しない（mutable ref は除く）
+3. **副作用は `useEffect` 内のみ**: レンダリング中の副作用禁止
+4. **フックはトップレベルのみ**: 条件・ループ・ネスト関数内で呼び出し禁止
+
+```typescript
+// NG: props の直接変更（コンパイルをスキップされる）
+function BadList({ items }: { items: string[] }) {
+  items.push('new item')  // Rules of React 違反
+  return <ul>{items.map((i) => <li key={i}>{i}</li>)}</ul>
+}
+
+// OK: イミュータブルな操作
+function GoodList({ items }: { items: string[] }) {
+  const withNew = [...items, 'new item']
+  return <ul>{withNew.map((i) => <li key={i}>{i}</li>)}</ul>
+}
+
+// NG: レンダリング中の副作用（コンパイルをスキップされる）
+function BadTitle() {
+  document.title = 'Hello'  // Rules of React 違反（副作用はレンダリング外で）
+  return <div>Hello</div>
+}
+
+// OK: useEffect 内で副作用
+function GoodTitle() {
+  useEffect(() => { document.title = 'Hello' }, [])
+  return <div>Hello</div>
+}
+```
+
+### ESLint — eslint-plugin-react-hooks（Compiler ルール統合済み）
+
+React Compiler 1.0 から、コンパイラ用 lint ルールは `eslint-plugin-react-hooks` に統合された。
+**`eslint-plugin-react-compiler` は非推奨 → 削除してよい**:
+
+```typescript
+// NG: 非推奨（react-compiler 専用プラグイン、削除可能）
+// "eslint-plugin-react-compiler": "..."
+
+// OK: eslint-plugin-react-hooks@latest を使用（recommended-latest プリセット）
+// recommended-latest に以下のコンパイラルールが含まれる:
+//   - exhaustive-deps       — useEffect 依存配列漏れ検出
+//   - rules-of-hooks        — フック使用規則強制
+//   - preserve-manual-memoization — Compiler との衝突検出
+//   - purity                — コンポーネント純粋性チェック
+```
+
 ### React Hook Form — watch() 禁止
 
 `watch()` は使用禁止。代わりに `useWatch()` を使用:
@@ -143,241 +254,7 @@ const isValid = useWatch({
 
 ---
 
-## React 19.2 新機能
-
-### useEffectEvent
-
-Effect 内で最新の props/state にアクセスしつつ、依存配列に含めたくない場合に使用。
-Effect Event は「Effect の中で起きたことに反応するが、それ自体は非リアクティブ」。
-
-```typescript
-import { useEffect, useEffectEvent } from 'react'
-
-// OK: Effect Event で最新値にアクセス（roomId の変化のみでエフェクトを再実行）
-function ChatRoom({ roomId, theme }: { roomId: string; theme: string }) {
-  const onConnected = useEffectEvent(() => {
-    showNotification('Connected!', theme)  // theme は常に最新値
-  })
-
-  useEffect(() => {
-    const connection = createConnection(serverUrl, roomId)
-    connection.on('connected', () => {
-      onConnected()  // Effect 内でローカルに呼び出す
-    })
-    connection.connect()
-    return () => connection.disconnect()
-  }, [roomId])  // theme を依存配列に含めない（onConnected も含めない）
-}
-```
-
-```typescript
-// NG: 依存配列に Effect Event を含める（不要な再実行）
-useEffect(() => {
-  onConnected()
-}, [onConnected])  // エラー: Effect Event を deps に含めてはいけない
-
-// NG: Effect Event を別のフックや関数に props として渡す
-function useTimer(callback: () => void, delay: number) {
-  const onTick = useEffectEvent(callback)
-  // ...
-}
-useTimer(onTick, 1000)  // onTick を渡してはいけない
-```
-
-**ルール:**
-- 同じコンポーネント/フック内で宣言し、Effect 内でローカルに呼び出す
-- 依存配列（`[]`）に Effect Event を含めない
-- 他のフックやコンポーネントに props として渡さない
-- リンターエラー回避目的での乱用禁止
-
-### useOptimistic
-
-Server Actions の完了前に UI を楽観的に更新するパターン:
-
-```typescript
-import { useOptimistic, useRef } from 'react'
-import { sendMessage } from './actions'
-
-function MessageThread({ messages }: { messages: Message[] }) {
-  const formRef = useRef<HTMLFormElement>(null)
-
-  const [optimisticMessages, addOptimisticMessage] = useOptimistic(
-    messages,
-    (state: Message[], newText: string) => [
-      ...state,
-      { id: crypto.randomUUID(), text: newText, sending: true },
-    ]
-  )
-
-  async function formAction(formData: FormData) {
-    const text = formData.get('message') as string
-    addOptimisticMessage(text)  // 即時 UI 反映
-    formRef.current?.reset()
-    await sendMessage(formData)  // Server Action 完了後に実態が反映
-  }
-
-  return (
-    <>
-      {optimisticMessages.map((msg) => (
-        <div key={msg.id}>
-          {msg.text}
-          {msg.sending && <small> (送信中...)</small>}
-        </div>
-      ))}
-      <form action={formAction} ref={formRef}>
-        <input type="text" name="message" />
-        <button type="submit">送信</button>
-      </form>
-    </>
-  )
-}
-```
-
-### useActionState
-
-フォームの Server Action の状態（結果・pending）を管理する:
-
-```typescript
-import { useActionState } from 'react'
-import { submitForm } from './actions'
-import type { ActionResult } from '@/shared/types/server-actions'
-
-// NG: useState + 手動の try/catch でフォーム状態を管理
-const [error, setError] = useState<string | null>(null)
-const [isPending, setIsPending] = useState(false)
-const handleSubmit = async (data: FormData) => {
-  setIsPending(true)
-  try {
-    const result = await submitForm(data)
-    if (!result.success) setError(result.error)
-  } finally {
-    setIsPending(false)
-  }
-}
-
-// OK: useActionState で状態を一元管理
-const [state, formAction, isPending] = useActionState(
-  async (prev: ActionResult | null, formData: FormData) => {
-    return await submitForm(formData)
-  },
-  null
-)
-
-return (
-  <form action={formAction}>
-    {state && !state.success && <p className="text-destructive">{state.error}</p>}
-    <input name="email" type="email" />
-    <button type="submit" disabled={isPending}>
-      {isPending ? '送信中...' : '送信'}
-    </button>
-  </form>
-)
-```
-
-### useFormStatus
-
-フォームの送信状態（pending）を子コンポーネントで取得する。
-props のバケツリレーなしにフォームの状態にアクセスできる:
-
-```typescript
-import { useFormStatus } from 'react-dom'
-
-// OK: デザインシステムのボタンコンポーネントでフォーム状態を利用
-function SubmitButton({ children }: { children: React.ReactNode }) {
-  const { pending } = useFormStatus()
-  return (
-    <button type="submit" disabled={pending}>
-      {pending ? '処理中...' : children}
-    </button>
-  )
-}
-
-// 使用側: SubmitButton は form の子孫に配置すればよい
-function ContactForm() {
-  return (
-    <form action={submitContactAction}>
-      <input name="email" type="email" />
-      <SubmitButton>送信</SubmitButton>  {/* props 不要 */}
-    </form>
-  )
-}
-```
-
-**注意**: `useFormStatus` は `<form>` 要素の**子孫コンポーネント**内でのみ機能する。同一コンポーネント内では使用不可。
-
-### Activity コンポーネント
-
-UI を非表示にしながら内部状態（スクロール位置・フォーム入力等）を保持する:
-
-```typescript
-import { Activity } from 'react'
-
-// OK: タブ切り替えで状態を保持したまま非表示
-function TabPanel({ activeTab }: { activeTab: string }) {
-  return (
-    <>
-      <Activity mode={activeTab === 'profile' ? 'visible' : 'hidden'}>
-        <ProfileTab />  {/* 非表示でも内部状態を保持 */}
-      </Activity>
-      <Activity mode={activeTab === 'settings' ? 'visible' : 'hidden'}>
-        <SettingsTab />
-      </Activity>
-    </>
-  )
-}
-
-// NG: 条件レンダリング（再マウントで状態がリセット）
-{activeTab === 'profile' && <ProfileTab />}
-```
-
-**使い分け**:
-- 状態を保持しながら非表示 → `Activity`
-- 状態のリセットが必要 → 条件レンダリング（`&&`）
-- アニメーション付き表示切替 → CSS `visibility` / `opacity` + `Activity`
-
----
-
-## Server Components / Server Actions パターン
-
-### データ取得（Server Component）
-
-```typescript
-// OK: async Server Component でデータ取得
-export default async function PostList() {
-  const posts = await getPosts()  // サーバー側で直接 DB アクセス
-
-  return (
-    <ul>
-      {posts.map((post) => (
-        <li key={post.id}>{post.title}</li>
-      ))}
-    </ul>
-  )
-}
-```
-
-### Server Action の基本パターン
-
-詳細は `server-actions.md` を参照。基本構造のみ示す:
-
-```typescript
-'use server'
-
-// OK: 型安全な Server Action
-export async function createPost(formData: FormData): Promise<ActionResult> {
-  const auth = await checkPermission('post', 'create')
-  if (!auth.success) return auth.error
-
-  const validated = postSchema.safeParse(Object.fromEntries(formData))
-  if (!validated.success) {
-    return { success: false, error: z.flattenError(validated.error) }
-  }
-
-  const post = await prisma.post.create({ data: validated.data })
-  updateTag(CACHE_TAGS.POSTS)
-  return { success: true, data: post }
-}
-```
+> **詳細リファレンス（React 19.2 新API / Compiler 制限事項）**: `docs/reference/claude-rules/react-api-reference.md`
 
 ---
 
@@ -389,20 +266,28 @@ export async function createPost(formData: FormData): Promise<ActionResult> {
 | `ComponentPropsWithoutRef` | `ComponentPropsWithRef` |
 | `Input.displayName = 'Input'` | 名前付き関数で自動推論 |
 | `useCallback` / `useMemo`（原則） | プレーン関数・式（Compiler が最適化） |
+| `React.memo()`（原則） | プレーン関数コンポーネント（Compiler が最適化） |
 | `useCallback` 内で `ref.current` を参照 | プレーン関数に変更 |
 | `watch('fieldName')` (React Hook Form) | `useWatch({ control, name: 'fieldName' })` |
 | `useOptimistic` なし で楽観的 UI を手動実装 | `useOptimistic` を使用 |
 | `useFormStatus` を form の外で使用 | `<form>` 子孫コンポーネント内に配置 |
+| `"use no memo"` を恒久的に使用 | Rules of React 違反を修正して削除 |
+| `eslint-plugin-react-compiler` の継続使用 | `eslint-plugin-react-hooks@latest` に統合済み |
+| クラスコンポーネント（新規作成） | 関数コンポーネントに書き換える（Compiler 対応） |
+| `use(fetchData())` をコンポーネント内に直接記述 | Suspense boundary の外で Promise を生成して渡す |
+| `ViewTransition` を `startTransition` 外で使用 | `startTransition` で状態更新をラップする |
+| `useId` の生成値を文字列として依存 | 形式が変更される（19.0: `:r:` → 19.2: `_r_`）。`id` 属性への渡し方のみ使用する |
 
 ---
 
 ## 参考
 
 - [React 19 リリースノート](https://react.dev/blog/2024/12/05/react-19)
+- [React Compiler 1.0 リリースノート](https://react.dev/blog/2025/10/07/react-compiler-1)
 - [ref as a prop（forwardRef 廃止）](https://react.dev/blog/2024/04/25/react-19#ref-as-a-prop)
-- [useEffectEvent](https://react.dev/reference/react/useEffectEvent)
-- [useOptimistic](https://react.dev/reference/react/useOptimistic)
-- [useActionState](https://react.dev/reference/react/useActionState)
-- [useFormStatus](https://react.dev/reference/react-dom/hooks/useFormStatus)
+- [React Compiler — インストール](https://react.dev/learn/react-compiler/installation)
+- [React Compiler — 段階的採用](https://react.dev/learn/react-compiler/incremental-adoption)
+- [React Compiler — デバッグ](https://react.dev/learn/react-compiler/debugging)
+- ['use no memo' ディレクティブ](https://react.dev/reference/react-compiler/directives/use-no-memo)
+- [eslint-plugin-react-hooks](https://react.dev/reference/eslint-plugin-react-hooks)
 - [React Hook Form useWatch](https://react-hook-form.com/docs/usewatch)
-- [React Compiler](https://react.dev/learn/react-compiler)
