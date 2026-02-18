@@ -44,13 +44,13 @@ const subscribe = useCallback((callback) => {
 LexicalComposerはuseMemoでエディタを作成するため、StrictModeでも問題なし:
 
 ```typescript
-// useMemoで初期化（Lexical内部で実装済み）
-const initialConfig = useMemo(() => ({
+// 設定オブジェクト（安定した参照が必要な場合はコンポーネント外に定義）
+const initialConfig = {
   namespace: 'LexicalEditor',
   theme: editorTheme,
   nodes: [...],
-  onError: (error: Error) => console.error('Lexical Error:', error),
-}), [])
+  onError: (error: Error) => logger.error('Lexical Error', { error: error.message }),
+}
 ```
 
 ## アーキテクチャ
@@ -530,9 +530,8 @@ editorState.read(() => {
 ```typescript
 const initialConfig = {
   onError: (error: Error) => {
-    // ログ記録（本番）またはスロー（開発）
-    console.error('Lexical Error:', error)
-    // 例外をスローしなければLexicalは自動回復
+    // logger.error でログ記録。例外をスローしなければLexicalは自動回復
+    logger.error('Lexical Error', { error: error.message })
   },
 }
 ```
