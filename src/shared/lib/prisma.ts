@@ -49,11 +49,7 @@ const adapter = new PrismaPg({
   connectionString: serverEnv.DATABASE_URL,
   connectionTimeoutMillis: 10000,
   idleTimeoutMillis: 10000,
-  max: process.env["DATABASE_POOL_MAX"]
-    ? Number(process.env["DATABASE_POOL_MAX"])
-    : serverEnv.NODE_ENV === 'production'
-      ? 3
-      : 5,
+  max: serverEnv.DATABASE_POOL_MAX ?? (serverEnv.NODE_ENV === 'production' ? 3 : 5),
 })
 
 // グローバル変数（型は src/shared/types/global.d.ts で定義）
