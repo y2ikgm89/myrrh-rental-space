@@ -6,7 +6,9 @@
 
 ### 基本インポート
 
-Bun Test は `bun:test` からインポートする。Vitest の `vi.*` API は**完全禁止**。
+Bun Test は `bun:test` からインポートする。
+
+**Bun は Vitest 互換エイリアス（`vi.fn()` / `vi.spyOn()` / `vi.mock()` 等）を提供しているが、プロジェクトではネイティブ API を使用する**。理由: ネイティブ API を使うことで Bun 固有の機能（`mock.restore()` / `Symbol.dispose` 等）を明示的に利用でき、コードベースの一貫性が保たれるため。
 
 ```typescript
 import { describe, test, expect, mock, spyOn, beforeAll, afterAll, beforeEach, afterEach } from 'bun:test'
@@ -198,11 +200,41 @@ beforeEach(() => {
 | `vi.mock('module', factory)` | `mock.module('module', factory)` | import より前に呼ぶ |
 | `vi.spyOn(obj, 'method')` | `spyOn(obj, 'method')` | `bun:test` からインポート |
 | `vi.restoreAllMocks()` | `mock.restore()` | モジュールモック復元 |
-| `vi.clearAllMocks()` | `mockFn.mockClear()` | 個別に呼ぶ |
+| `vi.clearAllMocks()` | `mock.clearAllMocks()` | 全モック状態をリセット（実装は保持） |
 | `vi.resetAllMocks()` | `mockFn.mockReset()` | 個別に呼ぶ |
 | `vi.resetModules()` | 不要（`mock.restore()` で対応） | |
 | `vi.mocked(fn)` | 型は `mock<T>()` で付与 | |
 | `vi.importMock('module')` | 未サポート | `mock.module()` を使う |
+
+### Symbol.dispose（`using` キーワードによる自動クリーンアップ）
+
+Bun の `mock()` と `spyOn()` は `Symbol.dispose` を実装しており、`using` キーワードで自動的に `mockRestore()` が呼ばれる。`afterEach` でのクリーンアップが不要になる:
+
+```typescript
+import { test, expect, spyOn } from 'bun:test'
+
+// OK: using キーワードでスコープ終了時に自動クリーンアップ
+test('console.error をスパイ（自動復元）', () => {
+  using spy = spyOn(console, 'error')  // スコープ終了時に mockRestore() が自動呼び出し
+  doSomething()
+  expect(spy).toHaveBeenCalledWith('expected error')
+  // ← ここで spy.mockRestore() が自動実行
+})
+
+// OK: mock() でも同様
+test('関数を一時的にモック', () => {
+  using fn = mock(() => 'mocked')
+  expect(fn()).toBe('mocked')
+})
+
+// 従来パターン（afterEach が必要 — 複数テストで共有するモックに使用）
+const spy = spyOn(console, 'error')
+afterEach(() => {
+  spy.mockRestore()
+})
+```
+
+**使い分け**: テストスコープに閉じるモックは `using` キーワード推奨。複数テストで共有・設定が必要なモックは従来パターン。
 
 ## 環境変数のモック
 

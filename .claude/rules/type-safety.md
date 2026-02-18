@@ -6,6 +6,47 @@
 
 `tsconfig.json` で `noUncheckedIndexedAccess: true` を有効化済み。配列・オブジェクトのインデックスアクセスは `T | undefined` を返す（`strict` フラグには含まれないため明示的に有効化）。
 
+## TypeScript 6.0 beta 主な変更点
+
+### デフォルト設定の変更
+
+TypeScript 6.0 から以下のデフォルト値が変更された。Next.js が tsconfig を自動管理するため実害は少ないが把握しておく:
+
+| オプション | 旧デフォルト | 新デフォルト | 影響 |
+|-----------|------------|------------|------|
+| `strict` | `false` | **`true`** | Next.js が注入するため明示設定が重要（MEMORY.md 参照） |
+| `module` | `commonjs` | `esnext` | Next.js が `bundler` を注入 |
+| `target` | `es2020` | `es2025` | Next.js が管理 |
+| `types` | 自動（`@types/*`）| `[]` | Next.js が管理 |
+
+### 禁止オプション（TS 6.0 で使用不可）
+
+```typescript
+// NG: tsconfig.json で設定するとコンパイルエラー
+{
+  "compilerOptions": {
+    "esModuleInterop": false,           // 禁止（true のみ許可）
+    "allowSyntheticDefaultImports": false  // 禁止（true のみ許可）
+  }
+}
+```
+
+### 新組み込み型（ES2025 / Stage 3 対応）
+
+```typescript
+// Temporal API（日時操作）— 組み込み型として利用可
+const now = Temporal.Now.instant()
+const yesterday = now.subtract({ hours: 24 })
+
+// RegExp.escape（動的正規表現の文字エスケープ）
+const pattern = new RegExp(RegExp.escape(userInput))  // 特殊文字を自動エスケープ
+
+// Map/WeakMap の upsert メソッド
+const map = new Map<string, number>()
+map.getOrInsert('count', 0)             // キーがなければ挿入
+map.getOrInsertComputed('total', () => heavyCompute())
+```
+
 ### 配列アクセス
 
 ```typescript
