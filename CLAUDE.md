@@ -22,37 +22,13 @@
 
 ### 詳細ルール
 
-#### 常時ロード（全作業共通）
+ルールは `.claude/rules/` ディレクトリで管理。Claude Code が自動ロード（再帰的）:
 
-- `.claude/rules/type-safety.md` - 型安全ルール
-- `.claude/rules/implementation-quality.md` - 実装品質ルール
-- `.claude/rules/test-quality.md` - テスト品質ルール
-- `.claude/rules/bun-patterns.md` - Bun Test / モック / ランタイム
-- `.claude/rules/error-handling.md` - エラーハンドリング / safeFetch / logger
-- `.claude/rules/react-patterns.md` - React 19.2 / React Compiler
-- `.claude/rules/server-actions.md` - Next.js 16 Server Actions / キャッシュ
-- `.claude/rules/auth-patterns.md` - Better Auth 1.4 / RBAC
-- `.claude/rules/prisma-patterns.md` - Prisma 7 / JSON型安全
-- `.claude/rules/zod-patterns.md` - Zod 4 バリデーション
-- `.claude/rules/nuqs-patterns.md` - nuqs URL状態管理
-- `.claude/rules/tailwind-patterns.md` - Tailwind CSS 4 / CSS-first設定
-
-#### 条件付きロード（対象ファイル作業時のみ）
-
-| ルール | 対象パス |
-|--------|---------|
-| `anti-ai-design.md` - Anti-AI デザイン強制 | `src/app/(public*)/**` |
-| `project-design-config.md` - プロジェクト固有デザイン値 | `src/app/(public*)/**` |
-| `design-system-memory.md` - デザイン記憶プロトコル | `src/app/(public*)/**` |
-| `gsap-patterns.md` - GSAP / ScrollTrigger / Lenis | `src/app/(public*)/**` |
-| `visual-effects-patterns.md` - エフェクトアーキテクチャ | `src/app/(public*)/**` |
-| `threejs-patterns.md` - Three.js / R3F | `src/app/(public*)/**` |
-| `pixijs-patterns.md` - PixiJS v8 | `src/app/(public*)/**` |
-| `accessibility.md` - WCAG 2.2 AA / prefers-reduced-motion / a11y | `src/app/(public*)/**`, `src/app/(admin)/**` |
-| `lexical-patterns.md` - Lexical 0.40 エディタ | `src/app/(admin)/**/lexical/**` |
-| `seo-patterns.md` - SEO / 構造化データ / NAP | `src/app/(public*)/**/seo/**`, `**/layouts/**` |
-| `ui-ux-patterns.md` - UI/UX スキル使用ガイドライン | `src/app/(public*\|admin)/**` |
-| `deployment-patterns.md` - Docker / Cloud Run / Cloud Build | `Dockerfile`, `cloudbuild.yaml`, `.dockerignore`, `.gcloudignore`, `docs/operations/**` |
+| ディレクトリ | ロード条件 | 内容 |
+|------------|-----------|------|
+| `.claude/rules/*.md` | **常時** | 型安全・実装品質・Server Actions 等（全作業共通） |
+| `.claude/rules/frontend/*.md` | **`src/app/**` 作業時** | UI・アニメーション・アクセシビリティ・SEO 等 |
+| `.claude/rules/ops/*.md` | **`Dockerfile` 等作業時** | Docker / Cloud Run / Cloud Build |
 
 > 詳細リファレンス: `docs/reference/claude-rules/` に配置（必要時に参照）
 
