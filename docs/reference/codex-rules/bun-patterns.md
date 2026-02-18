@@ -1,3 +1,9 @@
+---
+paths:
+  - __tests__/**
+  - e2e/**
+---
+
 # Bun パターンルール
 
 > Bun 1.3.x / Bun Test ランタイム対応
@@ -6,7 +12,9 @@
 
 ### 基本インポート
 
-Bun Test は `bun:test` からインポートする。Vitest の `vi.*` API は**完全禁止**。
+Bun Test は `bun:test` からインポートする。
+
+**Bun は Vitest 互換エイリアス（`vi.fn()` / `vi.spyOn()` / `vi.mock()` 等）を提供しているが、プロジェクトではネイティブ API を使用する**。理由: ネイティブ API を使うことで Bun 固有の機能（`mock.restore()` / `Symbol.dispose` 等）を明示的に利用でき、コードベースの一貫性が保たれるため。
 
 ```typescript
 import { describe, test, expect, mock, spyOn, beforeAll, afterAll, beforeEach, afterEach } from 'bun:test'
@@ -79,30 +87,6 @@ expect(fn).toHaveBeenCalledTimes(2)
 expect(fn).toHaveBeenCalledWith('arg1', 'arg2')
 expect(fn.mock.calls).toEqual([['arg1'], ['arg2']])
 expect(fn.mock.results[0]).toEqual({ type: 'return', value: 'result' })
-```
-
-### 戻り値の設定
-
-```typescript
-const fn = mock<() => Promise<User | null>>()
-
-// 次の1回だけ特定値を返す
-fn.mockResolvedValueOnce({ id: '1', name: 'Alice' })
-fn.mockResolvedValueOnce(null)
-
-// 常に特定値を返す
-fn.mockResolvedValue({ id: '1' })
-fn.mockReturnValue('always this')
-
-// 実装を差し替える（1回のみ）
-fn.mockImplementationOnce(async (id) => {
-  if (id === 'not-found') return null
-  return { id, name: 'Alice' }
-})
-
-// 常に例外をスローする
-fn.mockImplementation(() => { throw new Error('DB error') })
-fn.mockRejectedValue(new Error('Network error'))
 ```
 
 ### モジュールモック（mock.module()）
@@ -198,11 +182,41 @@ beforeEach(() => {
 | `vi.mock('module', factory)` | `mock.module('module', factory)` | import より前に呼ぶ |
 | `vi.spyOn(obj, 'method')` | `spyOn(obj, 'method')` | `bun:test` からインポート |
 | `vi.restoreAllMocks()` | `mock.restore()` | モジュールモック復元 |
-| `vi.clearAllMocks()` | `mockFn.mockClear()` | 個別に呼ぶ |
+| `vi.clearAllMocks()` | `mock.clearAllMocks()` | 全モック状態をリセット（実装は保持） |
 | `vi.resetAllMocks()` | `mockFn.mockReset()` | 個別に呼ぶ |
 | `vi.resetModules()` | 不要（`mock.restore()` で対応） | |
 | `vi.mocked(fn)` | 型は `mock<T>()` で付与 | |
 | `vi.importMock('module')` | 未サポート | `mock.module()` を使う |
+
+### Symbol.dispose（`using` キーワードによる自動クリーンアップ）
+
+Bun の `mock()` と `spyOn()` は `Symbol.dispose` を実装しており、`using` キーワードで自動的に `mockRestore()` が呼ばれる。`afterEach` でのクリーンアップが不要になる:
+
+```typescript
+import { test, expect, spyOn } from 'bun:test'
+
+// OK: using キーワードでスコープ終了時に自動クリーンアップ
+test('console.error をスパイ（自動復元）', () => {
+  using spy = spyOn(console, 'error')  // スコープ終了時に mockRestore() が自動呼び出し
+  doSomething()
+  expect(spy).toHaveBeenCalledWith('expected error')
+  // ← ここで spy.mockRestore() が自動実行
+})
+
+// OK: mock() でも同様
+test('関数を一時的にモック', () => {
+  using fn = mock(() => 'mocked')
+  expect(fn()).toBe('mocked')
+})
+
+// 従来パターン（afterEach が必要 — 複数テストで共有するモックに使用）
+const spy = spyOn(console, 'error')
+afterEach(() => {
+  spy.mockRestore()
+})
+```
+
+**使い分け**: テストスコープに閉じるモックは `using` キーワード推奨。複数テストで共有・設定が必要なモックは従来パターン。
 
 ## 環境変数のモック
 
@@ -302,244 +316,9 @@ describe('createPost', () => {
 })
 ```
 
-## Prisma モック
+> **詳細リファレンス（モック詳細実装・Bun ランタイム API）**: `docs/reference/claude-rules/bun-test-reference.md`
 
-プロジェクト固有の Prisma モックは `__tests__/mocks/prisma.ts` に集約済み。
-
-```typescript
-// __tests__/mocks/prisma.ts の使用方法
-
-import { mock } from 'bun:test'
-
-// 型定義パターン — 引数なし・戻り値 Promise<unknown> のモック関数
-type MockFunction = ReturnType<typeof mock<() => Promise<unknown>>>
-
-// createMockPrismaClient() でデフォルトモックを生成
-// デフォルト: findUnique/findFirst → null, findMany → [], create/update/delete → { id: 'test-id' }
-export function createMockPrismaClient(): MockPrismaClient {
-  return {
-    space: {
-      findUnique: mock(() => Promise.resolve(null)),
-      findMany: mock(() => Promise.resolve([])),
-      create: mock(() => Promise.resolve({ id: 'test-space-id' })),
-      // ...
-    },
-    $transaction: mock(() => Promise.resolve([])),
-  }
-}
-
-// グローバルインスタンスをリセット（テスト間の副作用を防ぐ）
-export let mockPrisma: MockPrismaClient = createMockPrismaClient()
-
-export function resetPrismaMock(): void {
-  mockPrisma = createMockPrismaClient()  // 新しいインスタンスで完全リセット
-}
-```
-
-```typescript
-// テストファイルでの使用例
-import { mock, beforeEach } from 'bun:test'
-import { createMockPrismaClient, resetPrismaMock, mockPrisma } from '../../mocks/prisma'
-
-mock.module('@/shared/lib/prisma', () => ({
-  prisma: mockPrisma,
-}))
-
-beforeEach(() => {
-  resetPrismaMock()
-})
-
-test('スペースを取得できる', async () => {
-  // 特定テストのみ戻り値を上書き
-  mockPrisma.space.findUnique.mockResolvedValueOnce({
-    id: 'space-1',
-    name: 'テストスペース',
-  })
-
-  const result = await getSpace('space-1')
-  expect(result).toEqual({ id: 'space-1', name: 'テストスペース' })
-})
-```
-
-## 認証モック
-
-プロジェクト固有の認証モックは `__tests__/mocks/auth.ts` に集約済み。
-
-```typescript
-// __tests__/mocks/auth.ts のパターン
-
-import { mock } from 'bun:test'
-import { Role } from '@/shared/generated/prisma/enums'
-
-export const mockGetSession = mock<() => Promise<MockSession | null>>(() =>
-  Promise.resolve(null)  // デフォルト: 未認証
-)
-
-// ファクトリ関数でモックユーザーを生成（overrides で部分変更）
-export function createMockUser(overrides?: Partial<MockUser>): MockUser {
-  return {
-    id: 'test-user-id',
-    email: 'test@example.com',
-    name: 'Test User',
-    role: Role.ADMIN,
-    emailVerified: true,
-    image: null,
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01'),
-    ...overrides,
-  }
-}
-
-// セッションを設定するヘルパー
-export function setMockSession(session: MockSession | null): void {
-  mockGetSession.mockResolvedValue(session)
-}
-
-// 認証モックのリセット（デフォルト: null = 未認証）
-export function resetAuthMock(): void {
-  mockGetSession.mockReset()
-  mockGetSession.mockResolvedValue(null)
-}
-```
-
-```typescript
-// テストファイルでの使用例
-import { mock, beforeEach } from 'bun:test'
-import { mockGetSession, createMockSession, resetAuthMock } from '../../mocks/auth'
-import { Role } from '@/shared/generated/prisma/enums'
-
-mock.module('@/shared/lib/auth', () => ({
-  getSession: () => mockGetSession(),
-}))
-
-beforeEach(() => {
-  resetAuthMock()
-})
-
-test('ADMIN は操作できる', async () => {
-  // ADMIN ロールのセッションをセット
-  mockGetSession.mockResolvedValueOnce(createMockSession({ role: Role.ADMIN }))
-
-  const result = await someAction()
-  expect(result.success).toBe(true)
-})
-
-test('VIEWER は拒否される', async () => {
-  mockGetSession.mockResolvedValueOnce(createMockSession({ role: Role.VIEWER }))
-
-  const result = await someAction()
-  expect(result.success).toBe(false)
-})
-```
-
-## Next.js API モック
-
-`headers()`, `redirect()`, `revalidateTag()` などの Next.js API は `__tests__/mocks/next.ts` に集約済み。
-
-```typescript
-// mock.module() で Next.js モジュールを差し替え
-mock.module('next/headers', () => ({
-  headers: mock(() => new Headers()),
-}))
-
-mock.module('next/cache', () => ({
-  revalidateTag: mock((_tag: string) => {}),
-  updateTag: mock((_tag: string) => {}),
-  revalidatePath: mock((_path: string) => {}),
-}))
-
-// redirect() は next/navigation から
-// redirect はエラーをスローするため RedirectError クラスで検証
-import { RedirectError } from '../../mocks/next'
-
-mock.module('next/navigation', () => ({
-  redirect: mock((url: string): never => {
-    throw new RedirectError(url)
-  }),
-}))
-
-// redirect が呼ばれたかチェック
-test('ログイン後にリダイレクトされる', async () => {
-  await expect(loginAction(validData)).rejects.toThrow(RedirectError)
-})
-```
-
-## グローバル API のモック
-
-`fetch`, `console.*` などのグローバル API は `spyOn` または直接差し替えで対応。
-
-```typescript
-import { mock, spyOn, beforeEach, afterEach } from 'bun:test'
-
-// console のモック（spyOn パターン）
-const originalConsoleError = console.error
-
-beforeEach(() => {
-  console.error = mock(() => {})
-})
-
-afterEach(() => {
-  console.error = originalConsoleError
-})
-
-// fetch のモック（直接差し替えパターン）
-const mockFetch = mock(() => Promise.resolve(new Response()))
-const originalFetch = globalThis.fetch
-
-beforeEach(() => {
-  globalThis.fetch = mockFetch as unknown as typeof fetch
-})
-
-afterEach(() => {
-  globalThis.fetch = originalFetch
-  mockFetch.mockClear()
-})
-
-test('API を呼び出す', async () => {
-  mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true })))
-
-  const result = await callApi()
-  expect(result).toEqual({ ok: true })
-  expect(mockFetch).toHaveBeenCalledTimes(1)
-})
-```
-
-## Bun ランタイム固有機能
-
-### Bun.file / Bun.write
-
-テスト内でのファイル操作（統合テスト等）:
-
-```typescript
-// ファイル読み取り
-const file = Bun.file('./path/to/file.json')
-const content = await file.json()
-const text = await file.text()
-
-// ファイル書き込み（テスト用一時ファイル）
-await Bun.write('/tmp/test-output.json', JSON.stringify(data))
-
-// ファイルの存在確認
-const exists = await Bun.file('./test.txt').exists()
-```
-
-### Bun.env
-
-環境変数アクセス（`process.env` の Bun 版）:
-
-```typescript
-// OK: process.env（Node.js 互換、テストでも使用）
-const key = process.env['ENCRYPTION_KEY']
-
-// OK: Bun.env（同等、型は string | undefined）
-const key = Bun.env.ENCRYPTION_KEY
-
-// テストセットアップで直接設定
-process.env['NODE_ENV'] = 'test'
-process.env['SKIP_ENV_VALIDATION'] = 'true'
-```
-
-**注意**: `__tests__/setup.ts` でテスト用環境変数が一括設定済み。個別テストで上書きが必要な場合のみ `beforeAll` / `afterAll` で設定・復元する。
+---
 
 ## ファイル配置と命名規則
 
