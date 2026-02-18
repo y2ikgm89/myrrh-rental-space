@@ -22,6 +22,7 @@ import {
   type CustomerPagination,
 } from '@/admin/lib/validations/customer'
 import { CustomerStatus } from '@/shared/lib/validations/enums'
+import { toPlainObject, toPlainArray } from '@/shared/lib/serialize'
 
 // Re-export types for consumers
 export type {
@@ -98,9 +99,7 @@ export async function getCustomers(
     }),
   ])
 
-  const formattedCustomers: CustomerData[] = customers.map((c) => ({
-    ...c,
-  }))
+  const formattedCustomers: CustomerData[] = toPlainArray(customers)
 
   return {
     customers: formattedCustomers,
@@ -185,7 +184,7 @@ export async function getCustomerById(id: string): Promise<CustomerWithReservati
 
   if (!customer) return null
 
-  return {
+  return toPlainObject({
     ...customer,
     reservations: customer.reservations.map((r) => ({
       id: r.id,
@@ -195,7 +194,7 @@ export async function getCustomerById(id: string): Promise<CustomerWithReservati
       totalPrice: r.totalPrice,
       space: r.space,
     })),
-  }
+  })
 }
 
 /**
@@ -287,6 +286,54 @@ export const toggleCustomerActive = withPermission<[id: string], void>(
   updateTag(getCacheTag.customers.detail(id))
 
   return createSuccess('アクティブ状態を変更しました')
+})
+
+/**
+ * 顧客情報を全フィールド更新
+ */
+export const updateCustomer = withPermission<[id: string, input: CustomerFormInput], void>(
+  'customer',
+  'update'
+)(async (_user, id, input): Promise<ActionResult<void>> => {
+  const parsed = customerFormSchema.safeParse(input)
+  if (!parsed.success) {
+    return createValidationError(parsed.error)
+  }
+
+  const { lastName, firstName, lastNameKana, firstNameKana, email, phoneNumber, address, notes } = parsed.data
+
+  // 存在確認
+  const customer = await prisma.customer.findUnique({
+    where: { id },
+    select: { id: true },
+  })
+  if (!customer) return createFailure('顧客が見つかりません')
+
+  // メールアドレスの重複チェック（自分自身を除外）
+  const emailConflict = await prisma.customer.findFirst({
+    where: { email, NOT: { id } },
+    select: { id: true },
+  })
+  if (emailConflict) return createFailure('このメールアドレスは既に登録されています')
+
+  await prisma.customer.update({
+    where: { id },
+    data: {
+      lastName,
+      firstName,
+      lastNameKana: lastNameKana || null,
+      firstNameKana: firstNameKana || null,
+      email,
+      phoneNumber: phoneNumber || null,
+      address: address || null,
+      notes: notes || null,
+    },
+  })
+
+  updateTag(CACHE_TAGS.CUSTOMERS)
+  updateTag(getCacheTag.customers.detail(id))
+
+  return createSuccess('顧客情報を更新しました')
 })
 
 /**
@@ -387,5 +434,5 @@ export async function searchCustomers(query: string): Promise<CustomerSearchResu
     take: 10,
   })
 
-  return customers
+  return toPlainArray(customers)
 }
