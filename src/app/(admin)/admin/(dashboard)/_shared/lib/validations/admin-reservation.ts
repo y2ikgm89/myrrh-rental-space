@@ -124,3 +124,63 @@ export type AdminReservationResult =
       error: string
       fieldErrors?: Record<string, string[]>
     }
+
+// =============================================================================
+// 予約編集スキーマ（既存予約の更新用）
+// =============================================================================
+
+/**
+ * 管理者用予約更新バリデーションスキーマ
+ *
+ * 作成スキーマとの違い:
+ * - customerId 必須（既存顧客のみ、新規作成なし）
+ * - customerData 削除
+ * - sendNotificationEmail 追加（デフォルト false）
+ * - sendEmail 削除（作成時専用）
+ */
+export const updateReservationSchema = z
+  .object({
+    spaceId: z.string().uuid({ error: 'スペースを選択してください' }),
+    date: dateStringSchema,
+    startTime: timeStringSchema,
+    endTime: timeStringSchema,
+    customerId: z.string().uuid({ error: '顧客を選択してください' }),
+    totalPrice: z
+      .number()
+      .nonnegative({ error: '料金は0以上で入力してください' })
+      .optional(),
+    couponCode: z.string().max(20).optional().or(z.literal('')),
+    status: z.enum(ReservationStatus).default('CONFIRMED'),
+    notes: z
+      .string()
+      .max(1000, { error: 'メモは1000文字以内で入力してください' })
+      .optional()
+      .or(z.literal('')),
+    sendNotificationEmail: z.boolean().default(false),
+  })
+  .refine(
+    (data) => {
+      const start = new Date(`${data.date}T${data.startTime}`)
+      const end = new Date(`${data.date}T${data.endTime}`)
+      return end > start
+    },
+    {
+      error: '終了時間は開始時間より後に設定してください',
+      path: ['endTime'],
+    }
+  )
+  .refine(
+    (data) => {
+      const start = new Date(`${data.date}T${data.startTime}`)
+      const end = new Date(`${data.date}T${data.endTime}`)
+      const diffHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60)
+      return diffHours >= 1
+    },
+    {
+      error: '最低1時間以上の予約が必要です',
+      path: ['endTime'],
+    }
+  )
+
+export type UpdateReservationInput = z.input<typeof updateReservationSchema>
+export type UpdateReservationData = z.output<typeof updateReservationSchema>
