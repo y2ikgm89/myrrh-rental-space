@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Collapsible Container Node
  *
  * @description 折りたたみグループの親コンテナを表すElementNode
@@ -18,6 +18,7 @@ import type {
 } from 'lexical'
 import { $create, $getState, $getStateChange, $setState, createState, ElementNode, $isElementNode, $createParagraphNode } from 'lexical'
 import { createEnumGuard } from '../config/type-guards'
+import { isAccentColor, type AccentColor } from '../config/accent-colors'
 import { $isCollapsibleItemNode } from './CollapsibleItemNode'
 
 // =============================================================================
@@ -32,19 +33,12 @@ export type CollapsibleRadius = 'none' | 'sm' | 'md' | 'lg'
 
 export const COLLAPSIBLE_RADII: readonly CollapsibleRadius[] = ['none', 'sm', 'md', 'lg'] as const
 
-export type CollapsibleTitleColor = 'default' | 'primary' | 'muted' | 'info' | 'warning' | 'success' | 'error' | 'custom'
-
-export const COLLAPSIBLE_TITLE_COLORS: readonly CollapsibleTitleColor[] = [
-  'default', 'primary', 'muted', 'info', 'warning', 'success', 'error', 'custom',
-] as const
-
 // =============================================================================
 // Type Guards
 // =============================================================================
 
 export const isCollapsibleStyle = createEnumGuard<CollapsibleStyle>(COLLAPSIBLE_STYLES)
 export const isCollapsibleRadius = createEnumGuard<CollapsibleRadius>(COLLAPSIBLE_RADII)
-export const isCollapsibleTitleColor = createEnumGuard<CollapsibleTitleColor>(COLLAPSIBLE_TITLE_COLORS)
 
 // =============================================================================
 // State
@@ -60,19 +54,9 @@ export const borderRadiusState = createState('borderRadius', {
     typeof v === 'string' && isCollapsibleRadius(v) ? v : 'md',
 })
 
-export const titleColorState = createState('titleColor', {
-  parse: (v: unknown): CollapsibleTitleColor =>
-    typeof v === 'string' && isCollapsibleTitleColor(v) ? v : 'default',
-})
-
-export const titleCustomColorState = createState('titleCustomColor', {
-  parse: (v: unknown): string =>
-    typeof v === 'string' && /^#[\da-f]{6}$/i.test(v) ? v : '#3b82f6',
-})
-
-export const titleCustomLightState = createState('titleCustomLight', {
-  parse: (v: unknown): boolean =>
-    typeof v === 'boolean' ? v : false,
+export const collapsibleColorState = createState('collapsibleColor', {
+  parse: (v: unknown): AccentColor =>
+    typeof v === 'string' && isAccentColor(v) ? v : 'default',
 })
 
 // =============================================================================
@@ -84,50 +68,11 @@ function $convertCollapsibleContainerElement(element: HTMLElement): null | DOMCo
   const style = rawStyle && isCollapsibleStyle(rawStyle) ? rawStyle : 'default'
   const rawRadius = element.getAttribute('data-collapsible-radius')
   const radius = rawRadius && isCollapsibleRadius(rawRadius) ? rawRadius : 'md'
+  const colorAttr = element.getAttribute('data-color')
+  const color: AccentColor = colorAttr && isAccentColor(colorAttr) ? colorAttr : 'default'
 
-  const rawTitleColor = element.getAttribute('data-collapsible-title-color')
-  const titleColor = rawTitleColor && isCollapsibleTitleColor(rawTitleColor) ? rawTitleColor : 'default'
-
-  let titleCustomColor = '#3b82f6'
-  let titleCustomLight = false
-  if (titleColor === 'custom') {
-    const inlineStyle = element.getAttribute('style') ?? ''
-    const bgMatch = /--collapsible-title-bg:\s*(#[\da-f]{6})/i.exec(inlineStyle)
-    if (bgMatch?.[1]) titleCustomColor = bgMatch[1]
-    titleCustomLight = /--collapsible-title-fg:.*var\(--color-foreground/.test(inlineStyle)
-  }
-
-  const node = $createCollapsibleContainerNode(style, radius, titleColor, titleCustomColor, titleCustomLight)
+  const node = $createCollapsibleContainerNode(style, radius, color)
   return { node }
-}
-
-// =============================================================================
-// DOM Helpers
-// =============================================================================
-
-function applyTitleColorToDOM(
-  element: HTMLElement,
-  titleColor: CollapsibleTitleColor,
-  customColor: string,
-  customLight: boolean,
-): void {
-  if (titleColor === 'default') {
-    element.removeAttribute('data-collapsible-title-color')
-    element.style.removeProperty('--collapsible-title-bg')
-    element.style.removeProperty('--collapsible-title-fg')
-  } else {
-    element.setAttribute('data-collapsible-title-color', titleColor)
-    if (titleColor === 'custom') {
-      element.style.setProperty('--collapsible-title-bg', customColor)
-      element.style.setProperty(
-        '--collapsible-title-fg',
-        customLight ? 'var(--color-foreground, #000)' : 'var(--color-primary-foreground, #fff)',
-      )
-    } else {
-      element.style.removeProperty('--collapsible-title-bg')
-      element.style.removeProperty('--collapsible-title-fg')
-    }
-  }
 }
 
 // =============================================================================
@@ -141,9 +86,7 @@ export class CollapsibleContainerNode extends ElementNode {
       stateConfigs: [
         { flat: true, stateConfig: collapsibleStyleState },
         { flat: true, stateConfig: borderRadiusState },
-        { flat: true, stateConfig: titleColorState },
-        { flat: true, stateConfig: titleCustomColorState },
-        { flat: true, stateConfig: titleCustomLightState },
+        { flat: true, stateConfig: collapsibleColorState },
       ],
     })
   }
@@ -165,28 +108,24 @@ export class CollapsibleContainerNode extends ElementNode {
   override exportDOM(): DOMExportOutput {
     const style = $getState(this, collapsibleStyleState)
     const radius = $getState(this, borderRadiusState)
-    const titleColor = $getState(this, titleColorState)
-    const customColor = $getState(this, titleCustomColorState)
-    const customLight = $getState(this, titleCustomLightState)
+    const color = $getState(this, collapsibleColorState)
     const element = document.createElement('div')
     element.setAttribute('data-collapsible-container', 'true')
     element.setAttribute('data-collapsible-style', style)
     element.setAttribute('data-collapsible-radius', radius)
-    applyTitleColorToDOM(element, titleColor, customColor, customLight)
+    element.setAttribute('data-color', color)
     return { element }
   }
 
   override createDOM(_config: EditorConfig): HTMLElement {
     const style = $getState(this, collapsibleStyleState)
     const radius = $getState(this, borderRadiusState)
-    const titleColor = $getState(this, titleColorState)
-    const customColor = $getState(this, titleCustomColorState)
-    const customLight = $getState(this, titleCustomLightState)
+    const color = $getState(this, collapsibleColorState)
     const element = document.createElement('div')
     element.setAttribute('data-collapsible-container', 'true')
     element.setAttribute('data-collapsible-style', style)
     element.setAttribute('data-collapsible-radius', radius)
-    applyTitleColorToDOM(element, titleColor, customColor, customLight)
+    element.setAttribute('data-color', color)
     return element
   }
 
@@ -201,16 +140,10 @@ export class CollapsibleContainerNode extends ElementNode {
       const [newRadius] = radiusChange
       dom.setAttribute('data-collapsible-radius', newRadius)
     }
-    const titleColorChange = $getStateChange(this, prevNode, titleColorState)
-    const customColorChange = $getStateChange(this, prevNode, titleCustomColorState)
-    const customLightChange = $getStateChange(this, prevNode, titleCustomLightState)
-    if (titleColorChange || customColorChange || customLightChange) {
-      applyTitleColorToDOM(
-        dom,
-        $getState(this, titleColorState),
-        $getState(this, titleCustomColorState),
-        $getState(this, titleCustomLightState),
-      )
+    const colorChange = $getStateChange(this, prevNode, collapsibleColorState)
+    if (colorChange) {
+      const [newColor] = colorChange
+      dom.setAttribute('data-color', newColor)
     }
     return false
   }
@@ -264,16 +197,12 @@ export class CollapsibleContainerNode extends ElementNode {
 export function $createCollapsibleContainerNode(
   style: CollapsibleStyle = 'default',
   radius: CollapsibleRadius = 'md',
-  titleColor: CollapsibleTitleColor = 'default',
-  titleCustomColor = '#3b82f6',
-  titleCustomLight = false,
+  color: AccentColor = 'default',
 ): CollapsibleContainerNode {
   const node = $create(CollapsibleContainerNode)
   $setState(node, collapsibleStyleState, style)
   $setState(node, borderRadiusState, radius)
-  $setState(node, titleColorState, titleColor)
-  $setState(node, titleCustomColorState, titleCustomColor)
-  $setState(node, titleCustomLightState, titleCustomLight)
+  $setState(node, collapsibleColorState, color)
   return node
 }
 
