@@ -15,6 +15,8 @@
 import { connection } from 'next/server'
 import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
+import { CACHE_TAGS, CACHE_LIFE, getCacheTag } from '@/shared/lib/constants'
 import { syncFromCalendar } from '@/shared/lib/calendar-sync'
 import {
   isTwoWaySyncEnabled,
@@ -166,6 +168,10 @@ export async function GET() {
         { status: 500 }
       )
     }
+
+    // キャッシュ無効化: カレンダー同期後に予約データを最新化
+    revalidateTag(CACHE_TAGS.RESERVATIONS, CACHE_LIFE.DYNAMIC_DATA)
+    revalidateTag(getCacheTag.reservations.calendar(), CACHE_LIFE.DYNAMIC_DATA)
 
     return NextResponse.json({
       success: true,

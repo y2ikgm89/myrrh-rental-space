@@ -5,6 +5,8 @@
  * 将来的にSentry等の監視サービスと統合可能
  */
 
+import 'server-only'
+
 import type { ErrorLogContext } from './types'
 
 interface ErrorDetails {

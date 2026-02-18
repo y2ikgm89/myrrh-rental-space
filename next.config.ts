@@ -117,6 +117,8 @@ const nextConfig: NextConfig = {
 
   // Experimental features
   experimental: {
+    // Turbopack ファイルシステムキャッシュ: 開発サーバー再起動後もビルドキャッシュを永続化
+    turbopackFileSystemCacheForDev: true,
     // Optimize package imports - tree shaking for barrel exports
     optimizePackageImports: [
       // Icons

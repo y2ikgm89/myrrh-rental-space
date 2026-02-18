@@ -7,6 +7,8 @@
  * - EDITOR用のリソース単位アクセス制御
  */
 
+import 'server-only'
+
 import { cacheLife, cacheTag } from 'next/cache'
 import { prisma, Role } from '@/shared/lib/prisma'
 import { getSession, getRoleFromSession, type User } from '@/shared/lib/auth'

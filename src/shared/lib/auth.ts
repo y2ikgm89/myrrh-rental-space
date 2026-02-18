@@ -25,6 +25,8 @@
  * @module shared/lib/auth
  */
 
+import 'server-only'
+
 import { cache } from 'react'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'

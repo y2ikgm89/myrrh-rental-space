@@ -5,6 +5,8 @@
  * 開発環境では Hot Reload 時に新しいインスタンスが作成されないようにします。
  */
 
+import 'server-only'
+
 import { PrismaPg } from '@prisma/adapter-pg'
 import {
   PrismaClient,

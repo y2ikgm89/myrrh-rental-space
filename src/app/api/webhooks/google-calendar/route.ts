@@ -13,6 +13,8 @@
  */
 
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
+import { CACHE_TAGS, CACHE_LIFE, getCacheTag } from '@/shared/lib/constants'
 import { prisma } from '@/shared/lib/prisma'
 import { syncFromCalendar } from '@/shared/lib/calendar-sync'
 import { isTwoWaySyncEnabled, getTwoWaySyncSettings } from '@/shared/lib/google-calendar'
@@ -126,6 +128,10 @@ export async function POST(request: Request) {
         errors: result.errors,
       })
     }
+
+    // キャッシュ無効化: カレンダー同期後に予約データを最新化
+    revalidateTag(CACHE_TAGS.RESERVATIONS, CACHE_LIFE.DYNAMIC_DATA)
+    revalidateTag(getCacheTag.reservations.calendar(), CACHE_LIFE.DYNAMIC_DATA)
 
     return NextResponse.json({
       success: true,

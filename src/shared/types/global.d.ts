@@ -9,13 +9,18 @@
 
 import type { PrismaClient } from '@/shared/generated/prisma/client'
 
+/** gtag() の第1引数コマンド型 */
+type GtagCommand = 'config' | 'event' | 'get' | 'set' | 'consent' | 'js'
+
+/** gtag() のパラメータ型 */
+type GtagParams = Record<string, string | number | boolean | null | undefined>
+
 declare global {
   // Prisma シングルトン
   var prisma: PrismaClient | undefined
 
   // Google Analytics gtag（@next/third-parties が注入）
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  var gtag: ((...args: any[]) => void) | undefined
+  var gtag: ((command: GtagCommand, target: string, params?: GtagParams) => void) | undefined
 }
 
 export {}

@@ -8,6 +8,8 @@
  * @module admin/lib/audit
  */
 
+import 'server-only'
+
 import { headers } from 'next/headers'
 import { prisma } from '@/shared/lib/prisma'
 import { AuditAction } from '@/shared/generated/prisma/enums'
