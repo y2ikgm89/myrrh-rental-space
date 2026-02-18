@@ -151,7 +151,7 @@ type CommentButtonProps = {
   disabled?: boolean
 }
 
-export function CommentButton({ onClick, disabled }: CommentButtonProps): React.ReactElement {
+export function CommentButton({ onClick, disabled }: CommentButtonProps) {
   return (
     <Button
       type="button"

@@ -9,7 +9,7 @@
 
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
@@ -499,29 +499,26 @@ export function EmojiPickerPlugin() {
     return filtered.slice(0, 15).map((item) => new EmojiOption(item.emoji, item.keywords))
   })()
 
-  const onSelectOption = useCallback(
-    (
-      selectedOption: EmojiOption,
-      nodeToRemove: TextNode | null,
-      closeMenu: () => void,
-      _matchingString: string
-    ) => {
-      editor.update(() => {
-        if (!selectedOption) return
+  const onSelectOption = (
+    selectedOption: EmojiOption,
+    nodeToRemove: TextNode | null,
+    closeMenu: () => void,
+    _matchingString: string
+  ) => {
+    editor.update(() => {
+      if (!selectedOption) return
 
-        // トリガー文字（":keyword"）を削除
-        if (nodeToRemove) {
-          nodeToRemove.remove()
-        }
+      // トリガー文字（":keyword"）を削除
+      if (nodeToRemove) {
+        nodeToRemove.remove()
+      }
 
-        // 絵文字をTextNodeとして挿入
-        $insertNodes([$createTextNode(selectedOption.emoji)])
+      // 絵文字をTextNodeとして挿入
+      $insertNodes([$createTextNode(selectedOption.emoji)])
 
-        closeMenu()
-      })
-    },
-    [editor]
-  )
+      closeMenu()
+    })
+  }
 
   return (
     <LexicalTypeaheadMenuPlugin<EmojiOption>

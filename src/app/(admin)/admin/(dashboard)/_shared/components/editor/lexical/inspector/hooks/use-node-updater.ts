@@ -10,7 +10,6 @@
 
 'use client'
 
-import { useCallback } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { $getNodeByKey, type LexicalNode } from 'lexical'
 
@@ -91,15 +90,12 @@ export function useNodeUpdater<T extends LexicalNode>(
 ): (updater: NodeUpdater<T>) => void {
   const [editor] = useLexicalComposerContext()
 
-  return useCallback(
-    (updater: NodeUpdater<T>) => {
-      editor.update(() => {
-        const targetNode = $getNodeByKey(nodeKey)
-        if (typeGuard(targetNode)) {
-          updater(targetNode)
-        }
-      })
-    },
-    [editor, nodeKey, typeGuard]
-  )
+  return (updater: NodeUpdater<T>) => {
+    editor.update(() => {
+      const targetNode = $getNodeByKey(nodeKey)
+      if (typeGuard(targetNode)) {
+        updater(targetNode)
+      }
+    })
+  }
 }

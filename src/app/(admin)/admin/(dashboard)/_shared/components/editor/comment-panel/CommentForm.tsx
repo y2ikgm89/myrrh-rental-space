@@ -21,7 +21,7 @@ export function CommentForm({
   onSubmit,
   placeholder = '返信を入力...',
   disabled = false,
-}: CommentFormProps): React.ReactElement {
+}: CommentFormProps) {
   const [content, setContent] = useState('')
   const [isPending, startTransition] = useTransition()
 

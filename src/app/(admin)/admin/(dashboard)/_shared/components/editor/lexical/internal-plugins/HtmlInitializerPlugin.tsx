@@ -10,6 +10,7 @@ import { useEffect, useRef } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { $generateNodesFromDOM } from '@lexical/html'
 import { $getRoot, $insertNodes, type LexicalEditor } from 'lexical'
+import { logger } from '@/shared/lib/logger'
 
 type HtmlInitializerPluginProps = {
   content?: string
@@ -40,7 +41,9 @@ export function HtmlInitializerPlugin({
         $insertNodes(nodes)
       })
     } catch (error) {
-      console.error('Failed to parse HTML content:', error)
+      logger.error('Failed to initialize editor from HTML', {
+        error: error instanceof Error ? error.message : String(error),
+      })
     }
 
     hasInitialized.current = true

@@ -22,7 +22,7 @@ export function CommentItem({
   comment,
   onDelete,
   canDelete = true,
-}: CommentItemProps): React.ReactElement {
+}: CommentItemProps) {
   const timeAgo = formatDistanceToNow(new Date(comment.createdAt), {
     addSuffix: true,
     locale: ja,

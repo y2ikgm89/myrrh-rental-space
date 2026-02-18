@@ -236,7 +236,7 @@ export function useTextColor() {
 // Component
 // =============================================================================
 
-export function TextColorPlugin(): React.ReactElement {
+export function TextColorPlugin() {
   const { textColor, currentColorValue, applyTextColor } = useTextColor()
   const hasColor = textColor !== 'none'
 
@@ -296,7 +296,7 @@ function TextColorMenu({
   onColorSelect,
   onCustomColorChange,
   compactRemoveLabel = false,
-}: TextColorMenuProps): React.ReactElement {
+}: TextColorMenuProps) {
   const hasColor = textColor !== 'none'
 
   return (
@@ -368,7 +368,7 @@ export function TextColorCompact({
   textColor,
   currentColorValue,
   onColorSelect,
-}: TextColorCompactProps): React.ReactElement {
+}: TextColorCompactProps) {
   const hasColor = textColor !== 'none'
 
   const handleCustomColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {

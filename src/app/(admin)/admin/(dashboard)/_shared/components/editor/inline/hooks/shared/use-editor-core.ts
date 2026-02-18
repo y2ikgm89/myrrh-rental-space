@@ -4,10 +4,10 @@
  * エディターコアフック
  *
  * 全エディターで共通のstate管理とパネル管理を提供
- * React Compiler対応（useCallback使用）
+ * React Compiler対応
  */
 
-import { useState, useTransition, useCallback } from 'react'
+import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import type { UseFormReturn, FieldValues } from 'react-hook-form'
 import { useConfirm } from '@/admin/contexts/confirm-context'
@@ -45,7 +45,7 @@ export function useEditorCore<TFormData extends FieldValues>({
   const isDirty = form.formState.isDirty || hasEditorChanges
 
   // 戻るボタンハンドラー
-  const handleBack = useCallback(async () => {
+  const handleBack = async () => {
     if (isDirty) {
       const confirmed = await confirm({
         title: '変更を破棄しますか？',
@@ -56,14 +56,14 @@ export function useEditorCore<TFormData extends FieldValues>({
       if (!confirmed) return
     }
     router.push(listPath)
-  }, [isDirty, listPath, router, confirm])
+  }
 
   // startTransitionを非同期対応でラップ
-  const wrappedStartTransition = useCallback((callback: () => void | Promise<void>) => {
+  const wrappedStartTransition = (callback: () => void | Promise<void>) => {
     startTransition(async () => {
       await callback()
     })
-  }, [])
+  }
 
   return {
     isPending,

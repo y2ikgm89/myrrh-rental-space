@@ -58,7 +58,7 @@ export function CommentThread({
   onDelete,
   onAddReply,
   onDeleteComment,
-}: CommentThreadProps): React.ReactElement {
+}: CommentThreadProps) {
   const [isOpen, setIsOpen] = useState(isActive)
   const [isResolvePending, startResolveTransition] = useTransition()
   const [isReopenPending, startReopenTransition] = useTransition()

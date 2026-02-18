@@ -8,7 +8,7 @@
 
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
@@ -220,11 +220,11 @@ function FloatingToolbar({
   currentTextColorValue,
   setIsLinkEditMode,
   onAddComment,
-}: FloatingToolbarProps): React.ReactElement {
+}: FloatingToolbarProps) {
   const popupRef = useRef<HTMLDivElement>(null)
 
   // ポジション更新コールバック
-  const updateFloatingToolbar = useCallback(() => {
+  const updateFloatingToolbar = useEffectEvent(() => {
     const selection = $getSelection()
     const popup = popupRef.current
     const nativeSelection = window.getSelection()
@@ -244,7 +244,7 @@ function FloatingToolbar({
 
     const rangeRect = getDOMRangeRect(nativeSelection, rootElement)
     setFloatingElemPosition(rangeRect, popup, anchorElem)
-  }, [editor, anchorElem])
+  })
 
   // マウスイベントハンドラ（ドラッグ選択対応 - 公式パターン）
   useEffect(() => {
@@ -279,7 +279,7 @@ function FloatingToolbar({
     const scrollerElem = anchorElem.parentElement
 
     const update = () => {
-      editor.getEditorState().read(updateFloatingToolbar)
+      editor.getEditorState().read(() => updateFloatingToolbar())
     }
 
     window.addEventListener('resize', update)
@@ -289,15 +289,15 @@ function FloatingToolbar({
       window.removeEventListener('resize', update)
       scrollerElem?.removeEventListener('scroll', update)
     }
-  }, [editor, updateFloatingToolbar, anchorElem])
+  }, [editor, anchorElem])
 
   // 選択変更・エディタ更新時のポジション更新
   useEffect(() => {
-    editor.getEditorState().read(updateFloatingToolbar)
+    editor.getEditorState().read(() => updateFloatingToolbar())
 
     return mergeRegister(
       editor.registerUpdateListener(({ editorState }) => {
-        editorState.read(updateFloatingToolbar)
+        editorState.read(() => updateFloatingToolbar())
       }),
       editor.registerCommand(
         SELECTION_CHANGE_COMMAND,
@@ -308,7 +308,7 @@ function FloatingToolbar({
         COMMAND_PRIORITY_LOW
       )
     )
-  }, [editor, updateFloatingToolbar])
+  }, [editor])
 
   // フォーマットコマンドディスパッチ
   const formatText = (format: TextFormatType) => {
@@ -542,7 +542,7 @@ function useFloatingToolbar(
   anchorElem: HTMLElement,
   setIsLinkEditMode: (isLinkEditMode: boolean) => void,
   onAddComment?: () => void
-): React.ReactElement | null {
+) {
   // 公式パターン: 個別のuseStateで各フォーマット状態を管理
   const [isText, setIsText] = useState(false)
   const [isBold, setIsBold] = useState(false)
@@ -559,7 +559,7 @@ function useFloatingToolbar(
   const [textColor, setTextColor] = useState<TextColor>('none')
   const [currentTextColorValue, setCurrentTextColorValue] = useState<string>('#000000')
 
-  const updatePopup = useCallback(() => {
+  const updatePopup = useEffectEvent(() => {
     editor.getEditorState().read(() => {
       // IME入力中は非表示（公式パターン）
       if (editor.isComposing()) {
@@ -653,15 +653,16 @@ function useFloatingToolbar(
         setCurrentTextColorValue(color)
       }
     })
-  }, [editor])
+  })
 
   // ドキュメント選択変更イベント
   useEffect(() => {
-    document.addEventListener('selectionchange', updatePopup)
+    const onSelectionChange = () => updatePopup()
+    document.addEventListener('selectionchange', onSelectionChange)
     return () => {
-      document.removeEventListener('selectionchange', updatePopup)
+      document.removeEventListener('selectionchange', onSelectionChange)
     }
-  }, [updatePopup])
+  }, [])
 
   // エディタ更新・選択変更コマンド
   useEffect(() => {
@@ -678,7 +679,7 @@ function useFloatingToolbar(
         COMMAND_PRIORITY_LOW
       )
     )
-  }, [editor, updatePopup])
+  }, [editor])
 
   if (!isText) {
     return null
@@ -740,7 +741,7 @@ export function FloatingToolbarPlugin({
   anchorElem,
   setIsLinkEditMode,
   onAddComment,
-}: FloatingToolbarPluginProps): React.ReactElement | null {
+}: FloatingToolbarPluginProps) {
   const handleSetIsLinkEditMode = (isLinkEditMode: boolean) => {
     setIsLinkEditMode?.(isLinkEditMode)
   }

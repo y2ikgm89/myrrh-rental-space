@@ -67,7 +67,7 @@ export function CommentPanel({
   onAddComment,
   pendingComment,
   onPendingCommentSubmit,
-}: CommentPanelProps): React.ReactElement | null {
+}: CommentPanelProps) {
   const [tab, setTab] = useState<TabValue>('active')
   const [threads, setThreads] = useState<ThreadListItem[]>([])
   const [expandedThread, setExpandedThread] = useState<EditorCommentThread | null>(null)
@@ -421,7 +421,7 @@ function ThreadList({
   onDelete,
   onAddReply,
   onDeleteComment,
-}: ThreadListProps): React.ReactElement {
+}: ThreadListProps) {
   if (isLoading) {
     return (
       <div className="flex-1 h-full overflow-y-auto">

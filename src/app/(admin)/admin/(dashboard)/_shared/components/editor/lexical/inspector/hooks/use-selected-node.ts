@@ -14,7 +14,7 @@
 
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useEffectEvent, useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
   $getSelection,
@@ -80,7 +80,7 @@ export function useSelectedNode(): SelectedNodeInfo {
   /**
    * 選択状態を読み取り、インスペクター対象ノードを特定する
    */
-  const updateSelectedNode = useCallback(() => {
+  const updateSelectedNode = useEffectEvent(() => {
     editor.getEditorState().read(() => {
       const selection = $getSelection()
 
@@ -115,7 +115,7 @@ export function useSelectedNode(): SelectedNodeInfo {
       // 該当なし
       setSelectedNode(null)
     })
-  }, [editor])
+  })
 
   useEffect(() => {
     // 初回実行
@@ -137,7 +137,7 @@ export function useSelectedNode(): SelectedNodeInfo {
         updateSelectedNode()
       })
     )
-  }, [editor, updateSelectedNode])
+  }, [editor])
 
   return selectedNode
 }

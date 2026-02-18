@@ -9,7 +9,7 @@
 
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { LexicalComposer } from '@lexical/react/LexicalComposer'
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin'
 import { ContentEditable } from '@lexical/react/LexicalContentEditable'
@@ -59,6 +59,7 @@ import { StatusBar } from './parts/StatusBar'
 import { editorTheme } from './theme'
 import { InspectorSidebar } from './inspector'
 import { MobileEditorFallback } from './parts/MobileEditorFallback'
+import { logger } from '@/shared/lib/logger'
 import type { LexicalEditorProps } from './types'
 
 // =============================================================================
@@ -239,23 +240,17 @@ export function LexicalEditor(props: LexicalEditorProps) {
 // =============================================================================
 
 function LexicalEditorDesktop(props: LexicalEditorProps) {
-  // contentJson は初期値としてのみ使用（非制御コンポーネント）
-  // useMemo の closure が初回マウント時の props.contentJson をキャプチャし、
-  // 空の依存配列で以降の props 変更を無視。Lexical エディタの初期化は一度のみ
-  // 意図的: contentJson は依存配列から除外（初回マウント時の値のみをキャプチャ）
-  const initialConfig = useMemo(
-    () => ({
-      namespace: 'LexicalEditor',
-      theme: editorTheme,
-      nodes: [...EDITOR_NODES],
-      ...(props.contentJson ? { editorState: props.contentJson } : {}),
-      onError: (error: Error) => {
-        console.error('Lexical Error:', error)
-      },
-    }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
-  )
+  // useState lazy initializer: 初回マウント時のみ実行（非制御コンポーネント設計）
+  // contentJson は初期値としてのみ使用。以降の props.contentJson 変更は無視される
+  const [initialConfig] = useState(() => ({
+    namespace: 'LexicalEditor',
+    theme: editorTheme,
+    nodes: [...EDITOR_NODES],
+    ...(props.contentJson ? { editorState: props.contentJson } : {}),
+    onError: (error: Error) => {
+      logger.error('Lexical initialization error', { error: error.message })
+    },
+  }))
 
   return (
     <LexicalComposer initialConfig={initialConfig}>

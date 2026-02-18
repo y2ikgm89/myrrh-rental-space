@@ -122,7 +122,7 @@ export function useTextCase() {
 // Component
 // =============================================================================
 
-export function TextCasePlugin(): React.ReactElement {
+export function TextCasePlugin() {
   const { activeCase, applyTextCase } = useTextCase()
 
   // アクティブな状態のアイコンを取得

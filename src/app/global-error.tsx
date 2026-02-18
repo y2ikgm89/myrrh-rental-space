@@ -11,6 +11,7 @@
 
 import { useEffect, startTransition } from 'react'
 import { Noto_Sans_JP } from 'next/font/google'
+import { logger } from '@/shared/lib/logger'
 
 const notoSansJP = Noto_Sans_JP({
   variable: '--font-noto-sans-jp',
@@ -25,7 +26,10 @@ interface GlobalErrorProps {
 
 export default function GlobalError({ error, reset }: GlobalErrorProps) {
   useEffect(() => {
-    console.error('Global error:', error)
+    logger.error('Global error boundary triggered', {
+      error: error.message,
+      digest: error.digest,
+    })
   }, [error])
 
   const handleReset = () => {

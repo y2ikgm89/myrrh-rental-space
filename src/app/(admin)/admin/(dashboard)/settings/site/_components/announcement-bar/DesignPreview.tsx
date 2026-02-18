@@ -18,7 +18,7 @@ export function DesignPreview({
   stripeAnimation,
   gradientAnimation,
   glassAnimation,
-}: DesignPreviewProps): React.ReactElement {
+}: DesignPreviewProps) {
   const defaultColors = DEFAULT_TYPE_STYLE
 
   // スタイル計算

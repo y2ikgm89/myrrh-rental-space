@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { PerformanceMonitor } from '@react-three/drei'
 import type { PerformanceMonitorApi } from '@react-three/drei'
@@ -33,35 +33,29 @@ export function ThreeCanvasInner({
   }, [id])
 
   // Canvas 作成時のハンドラ
-  const handleCreated = useCallback(
-    (state: { gl: { domElement: HTMLCanvasElement } }) => {
-      const canvas = state.gl.domElement
-      canvasRef.current = canvas
+  const handleCreated = (state: { gl: { domElement: HTMLCanvasElement } }) => {
+    const canvas = state.gl.domElement
+    canvasRef.current = canvas
 
-      webGLContextManager.register({
-        id,
-        canvas,
-        type: 'three',
-        createdAt: Date.now(),
-      })
-    },
-    [id],
-  )
+    webGLContextManager.register({
+      id,
+      canvas,
+      type: 'three',
+      createdAt: Date.now(),
+    })
+  }
 
   // PerformanceMonitor: DPR 変更
-  const handlePerformanceChange = useCallback((api: PerformanceMonitorApi) => {
+  const handlePerformanceChange = (api: PerformanceMonitorApi) => {
     // factor: 0-1, 低いほど低負荷が必要
     const newDpr = Math.round(0.5 + 1.5 * api.factor) // 1 or 2
     setDpr([newDpr, newDpr])
-  }, [])
+  }
 
   // PerformanceMonitor: フォールバック（flipflops上限到達）
-  const handleFallback = useCallback(
-    (_api: PerformanceMonitorApi) => {
-      degradeTo(2)
-    },
-    [degradeTo],
-  )
+  const handleFallback = (_api: PerformanceMonitorApi) => {
+    degradeTo(2)
+  }
 
   return (
     <Canvas

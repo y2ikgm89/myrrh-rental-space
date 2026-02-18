@@ -179,7 +179,7 @@ export function useHighlight() {
 // Component
 // =============================================================================
 
-export function HighlightPlugin(): React.ReactElement {
+export function HighlightPlugin() {
   const { highlightColor, applyHighlight } = useHighlight()
   const hasHighlight = highlightColor !== 'none'
 
@@ -226,7 +226,7 @@ function HighlightColorMenu({
   highlightColor,
   onColorSelect,
   compactRemoveLabel = false,
-}: HighlightColorMenuProps): React.ReactElement {
+}: HighlightColorMenuProps) {
   const hasHighlight = highlightColor !== 'none'
 
   return (
@@ -277,7 +277,7 @@ type HighlightCompactProps = {
 export function HighlightCompact({
   highlightColor,
   onColorSelect,
-}: HighlightCompactProps): React.ReactElement {
+}: HighlightCompactProps) {
   const hasHighlight = highlightColor !== 'none'
 
   return (

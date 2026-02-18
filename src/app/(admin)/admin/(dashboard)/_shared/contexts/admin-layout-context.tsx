@@ -16,7 +16,6 @@ import {
   useContext,
   useState,
   useSyncExternalStore,
-  useCallback,
   type ReactNode,
 } from 'react'
 import type { AdminLayoutContextValue, SidebarState } from '@/admin/types/admin-layout'
@@ -39,18 +38,22 @@ function useHasMounted(): boolean {
   )
 }
 
+function subscribeWindowResize(callback: () => void): () => void {
+  window.addEventListener('resize', callback)
+  return () => window.removeEventListener('resize', callback)
+}
+
+function getWindowWidth(): number {
+  return window.innerWidth
+}
+
+function getServerWindowWidth(): number {
+  return 1024 // SSRではデスクトップ想定
+}
+
 /** 画面幅を監視（SSRではデスクトップ想定） */
 function useWindowWidth(): number {
-  const subscribe = useCallback((callback: () => void) => {
-    window.addEventListener('resize', callback)
-    return () => window.removeEventListener('resize', callback)
-  }, [])
-
-  return useSyncExternalStore(
-    subscribe,
-    () => window.innerWidth,
-    () => 1024 // SSRではデスクトップ想定
-  )
+  return useSyncExternalStore(subscribeWindowResize, getWindowWidth, getServerWindowWidth)
 }
 
 // =============================================================================

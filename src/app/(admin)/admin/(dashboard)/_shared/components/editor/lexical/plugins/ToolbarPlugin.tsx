@@ -6,7 +6,7 @@
 
 'use client'
 
-import { Fragment, useEffect, useState, useCallback } from 'react'
+import { Fragment, useEffect, useEffectEvent, useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
   $createParagraphNode,
@@ -158,7 +158,7 @@ export function ToolbarPlugin({
   const [elementFormat, setElementFormat] = useState<AlignmentType>('left')
 
   // ツールバー状態を更新
-  const updateToolbar = useCallback(() => {
+  const updateToolbar = useEffectEvent(() => {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return
 
@@ -210,7 +210,7 @@ export function ToolbarPlugin({
       const formatType = topElement.getFormatType()
       setElementFormat(isAlignmentType(formatType) ? formatType : 'left')
     }
-  }, [editor])
+  })
 
   // リスナー登録
   useEffect(() => {
@@ -237,7 +237,7 @@ export function ToolbarPlugin({
         COMMAND_PRIORITY_CRITICAL
       )
     )
-  }, [editor, updateToolbar])
+  }, [editor])
 
   // ハンドラー
   const handleUndo = () => {

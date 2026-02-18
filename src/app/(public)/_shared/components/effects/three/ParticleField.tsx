@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useMemo, useEffect } from 'react'
+import { useRef, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useScrollRef } from './ThreeCanvas'
@@ -65,11 +65,8 @@ export function ParticleField({
   const scrollRef = useScrollRef()
   const colors = useThemeColors()
 
-  // 決定論的なパーティクル位置生成（React Compiler 互換）
-  const particles = useMemo(() => generateParticles(count, spread), [count, spread])
-
-  // 色を useMemo で THREE.Color に変換
-  const color = useMemo(() => new THREE.Color(colors.primary), [colors.primary])
+  // 決定論的なパーティクル位置生成（React Compiler が自動メモ化）
+  const particles = generateParticles(count, spread)
 
   // 初期行列を設定
   useEffect(() => {
@@ -119,7 +116,7 @@ export function ParticleField({
   return (
     <instancedMesh ref={meshRef} args={[undefined, undefined, count]}>
       <sphereGeometry args={[size, 6, 6]} />
-      <meshBasicMaterial color={color} transparent opacity={0.6} />
+      <meshBasicMaterial color={colors.primary} transparent opacity={0.6} />
     </instancedMesh>
   )
 }

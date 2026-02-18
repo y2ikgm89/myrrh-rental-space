@@ -1,9 +1,9 @@
 'use client'
 
-import { useRef, useMemo } from 'react'
+import { useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Float } from '@react-three/drei'
-import * as THREE from 'three'
+import type { Mesh } from 'three'
 import { useScrollRef } from './ThreeCanvas'
 import { useThemeColors } from './hooks/use-theme-colors'
 
@@ -37,11 +37,9 @@ export function FloatingGeometry({
   rotationIntensity = 1,
   opacity = 0.3,
 }: FloatingGeometryProps) {
-  const meshRef = useRef<THREE.Mesh>(null)
+  const meshRef = useRef<Mesh>(null)
   const scrollRef = useScrollRef()
   const colors = useThemeColors()
-
-  const color = useMemo(() => new THREE.Color(colors.primary), [colors.primary])
 
   useFrame(() => {
     const mesh = meshRef.current
@@ -79,7 +77,7 @@ export function FloatingGeometry({
       >
         {geometryNode}
         <meshBasicMaterial
-          color={color}
+          color={colors.primary}
           wireframe
           transparent
           opacity={opacity}

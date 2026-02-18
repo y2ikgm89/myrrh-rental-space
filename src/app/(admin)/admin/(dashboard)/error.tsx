@@ -11,6 +11,7 @@ import { useEffect, startTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/admin/components/ui'
+import { logger } from '@/shared/lib/logger'
 
 interface ErrorProps {
   error: Error & { digest?: string }
@@ -21,7 +22,10 @@ export default function AdminError({ error, reset }: ErrorProps) {
   const router = useRouter()
 
   useEffect(() => {
-    console.error('Admin error:', error)
+    logger.error('Admin error boundary triggered', {
+      error: error.message,
+      digest: error.digest,
+    })
   }, [error])
 
   const handleReset = () => {

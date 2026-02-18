@@ -310,7 +310,7 @@ export async function uploadSiteImage(
  * Supabase Storage URLからパスを抽出
  */
 export function extractPathFromUrl(url: string, bucket: StorageBucket): string | null {
-  const pattern = new RegExp(`/storage/v1/object/public/${bucket}/(.+)$`)
+  const pattern = new RegExp(`/storage/v1/object/public/${RegExp.escape(bucket)}/(.+)$`)
   const match = url.match(pattern)
   return match?.[1] ?? null
 }

@@ -20,7 +20,7 @@ import { $create, DecoratorNode } from 'lexical'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { useLexicalNodeSelection } from '@lexical/react/useLexicalNodeSelection'
 import { $getNodeByKey, CLICK_COMMAND, COMMAND_PRIORITY_LOW, KEY_BACKSPACE_COMMAND, KEY_DELETE_COMMAND, mergeRegister } from 'lexical'
-import { useCallback, useEffect } from 'react'
+import { useEffect, useEffectEvent } from 'react'
 import { Scissors } from 'lucide-react'
 
 // =============================================================================
@@ -31,21 +31,18 @@ function PageBreakComponent({ nodeKey }: { nodeKey: NodeKey }) {
   const [editor] = useLexicalComposerContext()
   const [isSelected, setSelected, clearSelection] = useLexicalNodeSelection(nodeKey)
 
-  const $onDelete = useCallback(
-    (event: KeyboardEvent) => {
-      event.preventDefault()
-      if (isSelected && $getNodeByKey(nodeKey)) {
-        editor.update(() => {
-          const node = $getNodeByKey(nodeKey)
-          if (node) {
-            node.remove()
-          }
-        })
-      }
-      return false
-    },
-    [editor, isSelected, nodeKey]
-  )
+  const $onDelete = useEffectEvent((event: KeyboardEvent) => {
+    event.preventDefault()
+    if (isSelected && $getNodeByKey(nodeKey)) {
+      editor.update(() => {
+        const node = $getNodeByKey(nodeKey)
+        if (node) {
+          node.remove()
+        }
+      })
+    }
+    return false
+  })
 
   useEffect(() => {
     return mergeRegister(
@@ -65,16 +62,16 @@ function PageBreakComponent({ nodeKey }: { nodeKey: NodeKey }) {
       ),
       editor.registerCommand(
         KEY_DELETE_COMMAND,
-        $onDelete,
+        (event: KeyboardEvent) => $onDelete(event),
         COMMAND_PRIORITY_LOW
       ),
       editor.registerCommand(
         KEY_BACKSPACE_COMMAND,
-        $onDelete,
+        (event: KeyboardEvent) => $onDelete(event),
         COMMAND_PRIORITY_LOW
       )
     )
-  }, [editor, nodeKey, clearSelection, setSelected, $onDelete])
+  }, [editor, nodeKey, clearSelection, setSelected])
 
   return (
     <div

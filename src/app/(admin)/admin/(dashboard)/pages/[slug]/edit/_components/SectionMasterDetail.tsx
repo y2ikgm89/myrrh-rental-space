@@ -12,7 +12,7 @@
  * - showAddDialog: セクション追加ダイアログ
  */
 
-import { useState, useEffect, useRef, useTransition, useCallback } from 'react'
+import { useState, useEffect, useRef, useTransition } from 'react'
 import { useQueryState, parseAsString } from 'nuqs'
 import { toast } from 'sonner'
 import { ArrowLeft } from 'lucide-react'
@@ -52,9 +52,9 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
   // Dirty state guard
   const confirm = useConfirm()
   const isDirtyRef = useRef(false)
-  const handleDirtyChange = useCallback((dirty: boolean) => {
+  const handleDirtyChange = (dirty: boolean) => {
     isDirtyRef.current = dirty
-  }, [])
+  }
 
   // Mobile responsive: list/detail toggle
   const [showMobileList, setShowMobileList] = useState(true)

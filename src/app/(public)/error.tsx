@@ -10,6 +10,7 @@
 import { useEffect, startTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { logger } from '@/shared/lib/logger'
 
 interface ErrorProps {
   error: Error & { digest?: string }
@@ -20,7 +21,10 @@ export default function PublicError({ error, reset }: ErrorProps) {
   const router = useRouter()
 
   useEffect(() => {
-    console.error('Public page error:', error)
+    logger.error('Public page error boundary triggered', {
+      error: error.message,
+      digest: error.digest,
+    })
   }, [error])
 
   const handleReset = () => {

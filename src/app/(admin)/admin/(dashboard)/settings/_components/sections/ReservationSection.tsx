@@ -28,6 +28,7 @@ import { updateReservationSettings, getCancellationPolicies } from '@/admin/acti
 import type { SettingsData } from '@/admin/actions/settings'
 import { useRefreshOnSuccess } from '../hooks'
 import { ExternalLink, AlertCircle } from 'lucide-react'
+import { logger } from '@/shared/lib/logger'
 
 interface ReservationSectionProps {
   settings: SettingsData
@@ -59,7 +60,9 @@ export function ReservationSection({ settings }: ReservationSectionProps) {
         const policies = await getCancellationPolicies()
         setCancellationPolicies(policies)
       } catch (error) {
-        console.error('Failed to fetch cancellation policies:', error)
+        logger.error('Failed to fetch cancellation policies', {
+          error: error instanceof Error ? error.message : String(error),
+        })
       } finally {
         setIsLoadingPolicies(false)
       }
