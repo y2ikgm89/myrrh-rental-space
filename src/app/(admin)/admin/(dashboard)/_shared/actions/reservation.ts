@@ -23,7 +23,7 @@
  */
 
 import { prisma } from '@/shared/lib/prisma'
-import { ErrorCategory, ErrorSeverity, ReservationOverlapError, isReservationOverlapError } from '@/shared/lib/errors'
+import { logError, ErrorCategory, ErrorSeverity, ReservationOverlapError, isReservationOverlapError } from '@/shared/lib/errors'
 import { fireAndForget } from '@/shared/lib/async-utils'
 import { updateTag } from 'next/cache'
 import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
@@ -37,14 +37,20 @@ import {
 import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
 import { withPermission } from '@/admin/lib/server-action-helpers'
 import type { ReservationWhereInput } from '@/shared/types/prisma'
+import { toPlainObject, toPlainArray } from '@/shared/lib/serialize'
 import { syncReservationToCalendar, updateCalendarSync, deleteCalendarSync, type ReservationSyncData } from '@/shared/lib/calendar-sync'
 import { checkReadPermissionFor } from '@/admin/lib/permissions'
 import { checkReservationOverlap } from '@/shared/lib/reservation'
-import { adminReservationSchema, type AdminReservationInput } from '@/admin/lib/validations/admin-reservation'
+import {
+  adminReservationSchema,
+  type AdminReservationInput,
+  updateReservationSchema,
+  type UpdateReservationInput,
+} from '@/admin/lib/validations/admin-reservation'
 import { extractFieldErrors } from '@/shared/lib/action-helpers'
 import { calculateReservationPrice, parseDurationDiscountRules } from '@/shared/lib/pricing'
 import { getValidDiscountCombinationMode } from '@/shared/lib/validations/enums'
-import { incrementCouponUsage, validateCouponCode } from '@/shared/actions/coupon'
+import { incrementCouponUsage, validateCouponCode, decrementCouponUsage } from '@/shared/actions/coupon'
 
 // =============================================================================
 // Types
@@ -224,17 +230,15 @@ export async function getReservations(
     }),
   ])
 
-  const formattedReservations: ReservationWithRelations[] = reservations.map((r) => ({
-    ...r,
-  }))
+  const formattedReservations: ReservationWithRelations[] = toPlainArray(reservations)
 
-  return {
+  return toPlainObject({
     reservations: formattedReservations,
     total,
     page,
     limit,
     totalPages: Math.ceil(total / limit),
-  }
+  })
 }
 
 /**
@@ -280,7 +284,7 @@ export async function getReservationById(
     return null
   }
 
-  return { ...reservation }
+  return toPlainObject(reservation)
 }
 
 /**
@@ -957,5 +961,249 @@ export async function getSpacesForReservation(): Promise<
     orderBy: { name: 'asc' },
   })
 
-  return spaces.map((s) => ({ ...s }))
+  return toPlainArray(spaces)
 }
+
+// =============================================================================
+// Admin Reservation Update
+// =============================================================================
+
+/**
+ * 管理者用予約更新
+ *
+ * 全項目（スペース・日時・顧客・クーポン・料金・ステータス・メモ）を更新する。
+ * 重複チェックは自分自身を除外して実施。
+ * クーポン変更時は使用回数をアトミックに調整する。
+ */
+export const updateAdminReservation = withPermission<
+  [id: string, input: UpdateReservationInput],
+  void
+>(
+  'reservation',
+  'update'
+)(async (_user, id, input): Promise<ActionResult<void>> => {
+  // バリデーション
+  const validation = updateReservationSchema.safeParse(input)
+  if (!validation.success) {
+    return createFailure('入力内容に誤りがあります', extractFieldErrors(validation.error))
+  }
+
+  const {
+    spaceId,
+    date,
+    startTime,
+    endTime,
+    customerId,
+    totalPrice,
+    couponCode,
+    status,
+    notes,
+    sendNotificationEmail,
+  } = validation.data
+
+  const startDateTime = new Date(`${date}T${startTime}:00`)
+  const endDateTime = new Date(`${date}T${endTime}:00`)
+
+  // 現在の予約・スペース・設定を並列取得
+  const [currentReservation, space, settings] = await Promise.all([
+    prisma.reservation.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        couponId: true,
+        googleCalendarEventId: true,
+        customer: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+      },
+    }),
+    prisma.space.findUnique({
+      where: { id: spaceId, isActive: true },
+      select: { id: true, name: true, address: true, hourlyPrice: true },
+    }),
+    prisma.settings.findUnique({
+      where: { id: 'singleton' },
+      select: {
+        durationDiscountEnabled: true,
+        durationDiscountRules: true,
+        discountCombinationMode: true,
+      },
+    }),
+  ])
+
+  if (!currentReservation) {
+    return createFailure('予約が見つかりません')
+  }
+  if (!space) {
+    return createFailure('指定されたスペースが見つかりません')
+  }
+
+  // 重複チェック（自分を除く）
+  const overlapCheck = await checkReservationOverlap({
+    spaceId,
+    startTime: startDateTime,
+    endTime: endDateTime,
+    excludeReservationId: id,
+  })
+  if (overlapCheck.hasOverlap) {
+    return createFailure(
+      '選択された時間帯は既に予約されています。別の時間帯をお選びください。'
+    )
+  }
+
+  // 料金計算
+  const hours = (endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60 * 60)
+  const hourlyPrice = space.hourlyPrice
+  const basePrice = Math.floor(hourlyPrice * hours)
+
+  // クーポン検証
+  let validatedCoupon: Parameters<typeof calculateReservationPrice>[0]['coupon'] = null
+  let newCouponId: string | null = null
+
+  if (couponCode && couponCode.trim()) {
+    const couponResult = await validateCouponCode(couponCode, basePrice)
+    if (!couponResult.success) {
+      return createFailure(couponResult.error)
+    }
+    validatedCoupon = couponResult.data?.coupon ?? null
+    newCouponId = validatedCoupon?.id ?? null
+  }
+
+  const priceCalculation = calculateReservationPrice({
+    hourlyPrice,
+    hours,
+    durationRules: parseDurationDiscountRules(settings?.durationDiscountRules),
+    durationDiscountEnabled: settings?.durationDiscountEnabled ?? false,
+    coupon: validatedCoupon,
+    combinationMode: getValidDiscountCombinationMode(settings?.discountCombinationMode),
+    showWarning: false,
+  })
+
+  const calculatedPrice = totalPrice ?? priceCalculation.totalPrice
+  const couponDiscountAmount =
+    priceCalculation.couponDiscount > 0 ? priceCalculation.couponDiscount : null
+  const durationDiscountAmount =
+    priceCalculation.durationDiscount > 0 ? priceCalculation.durationDiscount : null
+
+  const oldCouponId = currentReservation.couponId
+  const couponChanged = oldCouponId !== newCouponId
+
+  // トランザクション更新
+  try {
+    await prisma.$transaction(async (tx) => {
+      // Race Condition防止: トランザクション内で再チェック
+      const overlapCheckTx = await checkReservationOverlap(
+        { spaceId, startTime: startDateTime, endTime: endDateTime, excludeReservationId: id },
+        tx
+      )
+      if (overlapCheckTx.hasOverlap) {
+        throw new ReservationOverlapError()
+      }
+
+      await tx.reservation.update({
+        where: { id },
+        data: {
+          spaceId,
+          customerId,
+          startTime: startDateTime,
+          endTime: endDateTime,
+          status,
+          totalPrice: calculatedPrice,
+          basePrice,
+          couponId: newCouponId,
+          couponDiscountAmount,
+          durationDiscountAmount,
+          notes: notes || null,
+        },
+      })
+
+      // クーポン使用回数をアトミックに調整
+      if (couponChanged) {
+        if (oldCouponId) {
+          await decrementCouponUsage(oldCouponId)
+        }
+        if (newCouponId) {
+          await incrementCouponUsage(newCouponId)
+        }
+      }
+    })
+  } catch (error) {
+    if (isReservationOverlapError(error)) {
+      return createFailure(
+        '選択された時間帯は既に予約されています。別の時間帯をお選びください。'
+      )
+    }
+    logError(error, {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.HIGH,
+      context: { operation: 'updateAdminReservation', reservationId: id },
+    })
+    return createFailure('予約の更新に失敗しました')
+  }
+
+  updateTag(CACHE_TAGS.RESERVATIONS)
+
+  // Googleカレンダー更新（バックグラウンド）
+  const calendarData: ReservationSyncData = {
+    reservationId: id,
+    spaceName: space.name,
+    customerName: `${currentReservation.customer.lastName} ${currentReservation.customer.firstName}`,
+    customerEmail: currentReservation.customer.email,
+    startTime: startDateTime,
+    endTime: endDateTime,
+    location: space.address ?? undefined,
+    notes: notes ?? undefined,
+    totalPrice: calculatedPrice,
+  }
+
+  if (currentReservation.googleCalendarEventId) {
+    fireAndForget(
+      updateCalendarSync(calendarData, currentReservation.googleCalendarEventId),
+      {
+        operation: 'updateCalendarSync',
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.LOW,
+        context: { reservationId: id },
+      }
+    )
+  } else {
+    fireAndForget(
+      syncReservationToCalendar(calendarData),
+      {
+        operation: 'syncReservationToCalendar',
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.LOW,
+        context: { reservationId: id, trigger: 'updateAdminReservation' },
+      }
+    )
+  }
+
+  // 変更通知メール（オプション）
+  if (sendNotificationEmail) {
+    fireAndForget(
+      sendReservationConfirmationEmail({
+        reservationId: id,
+        customerEmail: currentReservation.customer.email,
+        customerName: `${currentReservation.customer.lastName} ${currentReservation.customer.firstName}`,
+        spaceName: space.name,
+        startTime: startDateTime,
+        endTime: endDateTime,
+        totalPrice: calculatedPrice,
+        notes: notes ?? undefined,
+        location: space.address ?? undefined,
+      }),
+      {
+        operation: 'sendNotificationEmail',
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.LOW,
+        context: { reservationId: id },
+      }
+    )
+  }
+
+  return createSuccess('予約を更新しました')
+})
