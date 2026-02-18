@@ -4,6 +4,7 @@
  * エディタからプレビュー機能を使用するためのユーティリティ
  */
 
+import { logger } from '@/shared/lib/logger'
 import {
   type PostPreviewData,
   type NewsPreviewData,
@@ -55,7 +56,7 @@ export function savePreviewData(
     sessionStorage.setItem(key, JSON.stringify(container))
   } catch (error) {
     // sessionStorageが使用できない場合（プライベートブラウジング等）
-    console.warn('Failed to save preview data:', error)
+    logger.warn('Failed to save preview data', { error })
   }
 }
 
@@ -90,7 +91,7 @@ export function clearPreviewData(
   try {
     sessionStorage.removeItem(key)
   } catch (error) {
-    console.warn('Failed to clear preview data:', error)
+    logger.warn('Failed to clear preview data', { error })
   }
 }
 

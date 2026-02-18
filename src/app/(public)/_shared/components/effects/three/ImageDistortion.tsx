@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useMemo } from 'react'
+import { useRef } from 'react'
 import { useFrame, useLoader } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useScrollRef } from './ThreeCanvas'
@@ -65,14 +65,11 @@ export function ImageDistortion({
 
   const texture = useLoader(THREE.TextureLoader, src)
 
-  const uniforms = useMemo(
-    () => ({
-      uTexture: { value: texture },
-      uDistortion: { value: 0 },
-      uProgress: { value: 0 },
-    }),
-    [texture],
-  )
+  const uniforms = {
+    uTexture: { value: texture },
+    uDistortion: { value: 0 },
+    uProgress: { value: 0 },
+  }
 
   useFrame(() => {
     const mesh = meshRef.current

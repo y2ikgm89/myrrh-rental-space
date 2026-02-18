@@ -13,6 +13,7 @@
 
 import { useEffect } from 'react'
 import { useCookieConsent } from '@/public/components/CookieConsentBanner'
+import { logger } from '@/shared/lib/logger'
 
 /**
  * gtag がグローバルに存在するか型安全にチェック
@@ -39,9 +40,8 @@ function sendMetric(metric: { name: string; delta: number; value: number; id: st
       metric_value: metric.value,
       metric_delta: metric.delta,
     })
-  } else if (process.env["NODE_ENV"] === 'development') {
-    // 開発環境ではコンソールに出力
-    console.log(`[Web Vitals] ${metric.name}: ${Math.round(metric.value)}`)
+  } else {
+    logger.debug(`[Web Vitals] ${metric.name}`, { value: Math.round(metric.value) })
   }
 }
 
