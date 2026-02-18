@@ -234,6 +234,68 @@ function SuspectedComponent() {
 // Step 4: 違反を修正後、'use no memo' を削除して再確認
 ```
 
+### React Compiler 制限事項（コンパイルをスキップする条件）
+
+以下のパターンは React Compiler が最適化できずスキップされる:
+
+**1. try/catch ブロック内の複雑なロジック**
+
+`try` ブロック内で条件分岐・optional chaining を組み合わせるとコンパイラがスコープを正しく追跡できずスキップされる（既知バグ #35570）:
+
+```typescript
+// NG: try/catch 内の条件分岐 + optional chaining（コンパイルをスキップ）
+function Component({ data }: { data?: DataType }) {
+  try {
+    const result = data?.items?.map((item) => {
+      if (!item.isValid) return null
+      return process(item)
+    })
+    return <div>{result}</div>
+  } catch (e) {
+    return <div>Error</div>
+  }
+}
+
+// OK: ロジックを外部ヘルパー関数に切り出す
+function Component({ data }: { data?: DataType }) {
+  const result = processData(data)
+  return <div>{result}</div>
+}
+
+function processData(data?: DataType) {
+  try {
+    return data?.items?.map((item) => (!item.isValid ? null : process(item)))
+  } catch {
+    return null
+  }
+}
+```
+
+**2. クラスコンポーネント（非対応）**
+
+React Compiler は関数コンポーネント専用。クラスコンポーネントは最適化されない:
+
+```typescript
+// NG: クラスコンポーネント（Compiler がスキップ）
+class Counter extends React.Component<Props, State> {
+  render() {
+    return <div>{this.state.count}</div>
+  }
+}
+
+// OK: 関数コンポーネントに書き換える
+function Counter({ initialCount }: Props) {
+  const [count, setCount] = useState(initialCount)
+  return <div>{count}</div>
+}
+```
+
+**3. メモ化の実行タイミングに依存するコード**
+
+Compiler の最適化により `useMemo`/`useCallback` の実行タイミングが変わる場合がある。
+副作用を `useMemo` 内に入れる等、メモ化のタイミングに依存するコードは動作が変わる可能性がある。
+このような場合は `'use no memo'` で一時除外し、コードを修正する（→ §Rules of React 参照）。
+
 ### React Hook Form — watch() 禁止
 
 `watch()` は使用禁止。代わりに `useWatch()` を使用:
@@ -459,6 +521,187 @@ function TabPanel({ activeTab }: { activeTab: string }) {
 - 状態のリセットが必要 → 条件レンダリング（`&&`）
 - アニメーション付き表示切替 → CSS `visibility` / `opacity` + `Activity`
 
+### use()
+
+Promise・Context をレンダー内で同期的に読む API。他のフックと異なり **`if` 文の中でも呼べる**:
+
+```typescript
+import { use, Suspense } from 'react'
+
+// Promise を読む（未解決なら Suspense に委譲）
+function Comments({ commentsPromise }: { commentsPromise: Promise<Comment[]> }) {
+  const comments = use(commentsPromise)  // Promise が解決するまでサスペンド
+  return comments.map((comment) => <p key={comment.id}>{comment.text}</p>)
+}
+
+// Context を読む（useContext の代替 — 条件分岐内でも呼べる点が異なる）
+function ThemedButton({ showTheme }: { showTheme: boolean }) {
+  if (showTheme) {
+    const theme = use(ThemeContext)  // 条件分岐内でも OK（他のフックは不可）
+    return <button style={{ color: theme.primary }}>Click</button>
+  }
+  return <button>Click</button>
+}
+
+// 使用側: Suspense でラップしてフォールバックを提供
+function Page() {
+  const commentsPromise = fetchComments()  // Suspense boundary の外で Promise を生成
+  return (
+    <Suspense fallback={<p>読み込み中...</p>}>
+      <Comments commentsPromise={commentsPromise} />
+    </Suspense>
+  )
+}
+```
+
+**注意**: `use()` に渡す Promise は **Suspense boundary の外で生成する**こと。
+コンポーネント内で直接 `use(fetchData())` を書くと毎レンダリングで新しい Promise が生成され、無限ループになる。
+
+### ViewTransition（React 19.2）
+
+ブラウザの [View Transitions API](https://developer.chrome.com/docs/web-platform/view-transitions) をラップしたコンポーネント。
+`startTransition` で囲まれた状態変化に対してアニメーションを適用する:
+
+```typescript
+import { ViewTransition, startTransition, useState } from 'react'
+
+// 基本: ViewTransition でラップした要素が状態変化時にアニメーション
+function SortableList({ videos }: { videos: Video[] }) {
+  const [ordered, setOrdered] = useState(videos)
+
+  function handleSort() {
+    startTransition(() => {  // ViewTransition は startTransition 必須
+      setOrdered((prev) => [...prev].reverse())
+    })
+  }
+
+  return (
+    <>
+      <button type="button" onClick={handleSort}>並び替え</button>
+      <ViewTransition>
+        <ul>{ordered.map((v) => <li key={v.id}>{v.title}</li>)}</ul>
+      </ViewTransition>
+    </>
+  )
+}
+
+// Shared Element Transition: name prop で要素を対応させる
+// 一覧 → 詳細 への画面遷移で、サムネイルが展開するアニメーション
+function VideoThumbnail({ video }: { video: Video }) {
+  return (
+    <ViewTransition name={`video-thumbnail-${video.id}`}>
+      <img src={video.thumbnail} alt={video.title} />
+    </ViewTransition>
+  )
+}
+
+function VideoDetail({ video }: { video: Video }) {
+  return (
+    <ViewTransition name={`video-thumbnail-${video.id}`}>
+      <img src={video.hero} alt={video.title} className="w-full" />
+    </ViewTransition>
+  )
+}
+```
+
+**CSS でアニメーションをカスタマイズ**（Tailwind `@keyframes` と組み合わせ可能）:
+
+```css
+/* ViewTransition の enter/exit で CSS クラスが付与される */
+::view-transition-old(root) { animation: fade-out 0.3s ease; }
+::view-transition-new(root) { animation: fade-in 0.3s ease; }
+```
+
+**制約:**
+- `startTransition` で囲まれた状態更新のみ対象（通常の `setState` は対象外）
+- Chrome 111+ / Safari 18+ 対応（ブラウザサポートを確認する）
+- `prefers-reduced-motion` 対応は CSS で行う（`accessibility.md` §prefers-reduced-motion 参照）
+
+### Fragment refs（React 19.2）
+
+`<Fragment ref={...}>` が使用可能になった。`FragmentInstance` を通じて複数要素をまたがるイベント・フォーカス管理ができる:
+
+```typescript
+import { Fragment, useRef } from 'react'
+
+// FragmentInstance を ref で取得
+function ClickableGroup({ children }: { children: React.ReactNode }) {
+  const groupRef = useRef<FragmentInstance>(null)
+
+  // FragmentInstance のメソッド:
+  // addEventListener, removeEventListener — イベント委譲
+  // focus, focusLast, blur         — フォーカス管理
+  // observeUsing, unobserveUsing   — ResizeObserver / IntersectionObserver
+  // getClientRects                 — 領域取得
+  // dispatchEvent                  — イベント発行
+
+  return (
+    <Fragment ref={groupRef}>
+      {children}
+    </Fragment>
+  )
+}
+
+// クリーンアップ関数を返すパターン（useEffect 不要）
+function AutoCleanup({ onActivate }: { onActivate: () => void }) {
+  return (
+    <Fragment
+      ref={(instance) => {
+        if (!instance) return
+        const handler = () => onActivate()
+        instance.addEventListener('click', handler)
+        return () => instance.removeEventListener('click', handler)  // アンマウント時に自動実行
+      }}
+    >
+      <button type="button">A</button>
+      <button type="button">B</button>
+    </Fragment>
+  )
+}
+```
+
+**ユースケース**:
+- 複数要素のグループにイベントリスナーを付与（イベント委譲）
+- `focus()` / `focusLast()` でグループ内の最初・最後の要素にフォーカス
+- 単一の DOM ノードを返せないコンポーネントへの `ref` 付与
+
+### Resource Preloading（react-dom）
+
+Next.js の `<head>` 管理とは別に、`react-dom` のリソースプリロード API でパフォーマンスを向上できる:
+
+```typescript
+import {
+  prefetchDNS,  // DNS プリフェッチ（DNSルックアップのみ）
+  preconnect,   // 接続確立（DNS + TCP + TLS）
+  preload,      // リソースの先読み（fetch priority: high）
+  preinit,      // スクリプト・スタイルシートの即時実行
+} from 'react-dom'
+
+// Server Components / Client Components 両方で使用可能
+function MyApp() {
+  // 外部オリジンへの事前接続（API サーバー、CDN 等）
+  prefetchDNS('https://fonts.googleapis.com')
+  preconnect('https://fonts.gstatic.com')
+
+  // 重要なリソースの先読み
+  preload('/fonts/NotoSansJP.woff2', { as: 'font', type: 'font/woff2', crossOrigin: 'anonymous' })
+
+  // スクリプトの事前実行（サードパーティ分析ツール等）
+  preinit('https://www.googletagmanager.com/gtag/js', { as: 'script' })
+
+  return <div>...</div>
+}
+```
+
+**使い分け:**
+
+| API | 動作 | 用途 |
+|-----|------|------|
+| `prefetchDNS` | DNS ルックアップのみ | 後で使うかもしれない外部ドメイン |
+| `preconnect` | DNS + TCP + TLS | ほぼ確実に使う外部オリジン |
+| `preload` | リソースを fetch（ブラウザキャッシュへ） | 重要なフォント・画像・JS |
+| `preinit` | fetch + 即時実行/適用 | 分析スクリプト・クリティカル CSS |
+
 ---
 
 ## Server Components / Server Actions パターン
@@ -520,6 +763,10 @@ export async function createPost(formData: FormData): Promise<ActionResult> {
 | `useFormStatus` を form の外で使用 | `<form>` 子孫コンポーネント内に配置 |
 | `"use no memo"` を恒久的に使用 | Rules of React 違反を修正して削除 |
 | `eslint-plugin-react-compiler` の継続使用 | `eslint-plugin-react-hooks@latest` に統合済み |
+| クラスコンポーネント（新規作成） | 関数コンポーネントに書き換える（Compiler 対応） |
+| `use(fetchData())` をコンポーネント内に直接記述 | Suspense boundary の外で Promise を生成して渡す |
+| `ViewTransition` を `startTransition` 外で使用 | `startTransition` で状態更新をラップする |
+| `useId` の生成値を文字列として依存 | 形式が変更される（19.0: `:r:` → 19.2: `_r_`）。`id` 属性への渡し方のみ使用する |
 
 ---
 
@@ -538,3 +785,8 @@ export async function createPost(formData: FormData): Promise<ActionResult> {
 - [useActionState](https://react.dev/reference/react/useActionState)
 - [useFormStatus](https://react.dev/reference/react-dom/hooks/useFormStatus)
 - [React Hook Form useWatch](https://react-hook-form.com/docs/usewatch)
+- [use() API](https://react.dev/reference/react/use)
+- [ViewTransition](https://react.dev/reference/react/ViewTransition)
+- [Fragment refs / FragmentInstance](https://react.dev/reference/react/Fragment#fragmentinstance)
+- [Resource Preloading（prefetchDNS / preconnect / preload / preinit）](https://react.dev/reference/react-dom#resource-preloading-apis)
+- [Activity コンポーネント](https://react.dev/reference/react/Activity)
