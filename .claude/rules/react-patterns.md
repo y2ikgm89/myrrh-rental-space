@@ -49,12 +49,21 @@ function RadioGroup({ ref, className, ...props }: ComponentPropsWithRef<typeof R
 
 ---
 
-## React Compiler 互換ルール
+## React Compiler 1.0（自動メモ化）
 
-React Compiler（Next.js 16 でデフォルト有効）が自動メモ化するため、
-手動での最適化は原則不要。不適切なパターンはコンパイラエラーの原因になる。
+React Compiler 1.0（2025年10月 stable リリース、Next.js 16 でデフォルト有効）が
+コンポーネント・フックを自動メモ化するため、手動の最適化は原則不要になった。
+不適切なパターンはコンパイラエラーの原因になる。
 
-### useCallback / useMemo（原則不要）
+### 不要になった手動最適化
+
+React Compiler が自動処理するため、以下は原則禁止:
+
+| 廃止パターン | React Compiler が自動処理 |
+|------------|--------------------------|
+| `useCallback` | 関数参照の同一性を自動保持 |
+| `useMemo` | 計算結果の自動キャッシュ |
+| `React.memo()` | 親再レンダリング時の不要な子再レンダリング防止 |
 
 ```typescript
 // NG: 不要なメモ化（React Compiler が自動処理）
@@ -64,12 +73,20 @@ const handleClick = useCallback(() => {
 
 const total = useMemo(() => items.reduce((s, i) => s + i.price, 0), [items])
 
+const HeavyList = React.memo(function HeavyList({ data }: { data: Item[] }) {
+  return <ul>{data.map((item) => <li key={item.id}>{item.name}</li>)}</ul>
+})
+
 // OK: プレーン関数・式で記述（Compiler が最適化）
 const handleClick = () => {
   doSomething(value)
 }
 
 const total = items.reduce((s, i) => s + i.price, 0)
+
+function HeavyList({ data }: { data: Item[] }) {
+  return <ul>{data.map((item) => <li key={item.id}>{item.name}</li>)}</ul>
+}
 ```
 
 **例外: 明示的に使用してよい場合**
@@ -109,6 +126,113 @@ const handleMove = (e: React.MouseEvent) => {
 
 **ルール**: `ref` を参照するイベントハンドラでは `useCallback` を使わずプレーン関数で定義する。
 GSAP アニメーション系のイベントハンドラで特に頻出（→ `gsap-patterns.md` パターン C）。
+
+### 'use no memo' — コンパイル除外（一時的エスケープハッチ）
+
+コンパイラに問題があるコンポーネントを一時的に除外する。**恒久的な使用は禁止**:
+
+```typescript
+// NG: 恒久的に 'use no memo' を使い続ける（Rules of React 違反を放置）
+function ProblematicComponent() {
+  "use no memo"  // 根本原因を修正しないまま放置
+  // ...
+}
+
+// OK: 一時的なデバッグ・段階的移行（TODO コメント必須）
+function TemporarilyExcluded() {
+  "use no memo" // TODO: #123 — 副作用がレンダリング中に発生している問題を修正後に削除
+  // ...
+}
+```
+
+**使用ルール:**
+- 関数本体の**先頭**に配置（コメントは先でも可）
+- `// TODO: Issue番号 — 根本原因の説明` を必ず付記
+- Rules of React 違反を修正したら即座に削除
+
+### 'use memo' — コンパイル強制 opt-in（annotation モードのみ）
+
+Next.js 16 では全コンポーネントが自動コンパイル対象のため通常不要。
+`compilationMode: 'annotation'` による段階的採用時のみ使用:
+
+```typescript
+// compilationMode: 'annotation' 設定時: 明示的に最適化対象にする
+function ExpensiveList({ items }: { items: Item[] }) {
+  "use memo"  // このコンポーネントのみ Compiler 対象にする
+  return <ul>{items.map((item) => <li key={item.id}>{item.name}</li>)}</ul>
+}
+```
+
+### Rules of React（コンパイラが最適化できる条件）
+
+React Compiler は以下のルールに準拠したコードのみ最適化する。
+**違反するとそのコンポーネントはコンパイルをスキップされる**:
+
+1. **べき等性**: 同じ props/state に対して常に同じ JSX を返す
+2. **読み取り専用の props/state**: 直接変更しない（mutable ref は除く）
+3. **副作用は `useEffect` 内のみ**: レンダリング中の副作用禁止
+4. **フックはトップレベルのみ**: 条件・ループ・ネスト関数内で呼び出し禁止
+
+```typescript
+// NG: props の直接変更（コンパイルをスキップされる）
+function BadList({ items }: { items: string[] }) {
+  items.push('new item')  // Rules of React 違反
+  return <ul>{items.map((i) => <li key={i}>{i}</li>)}</ul>
+}
+
+// OK: イミュータブルな操作
+function GoodList({ items }: { items: string[] }) {
+  const withNew = [...items, 'new item']
+  return <ul>{withNew.map((i) => <li key={i}>{i}</li>)}</ul>
+}
+
+// NG: レンダリング中の副作用（コンパイルをスキップされる）
+function BadTitle() {
+  document.title = 'Hello'  // Rules of React 違反（副作用はレンダリング外で）
+  return <div>Hello</div>
+}
+
+// OK: useEffect 内で副作用
+function GoodTitle() {
+  useEffect(() => { document.title = 'Hello' }, [])
+  return <div>Hello</div>
+}
+```
+
+### ESLint — eslint-plugin-react-hooks（Compiler ルール統合済み）
+
+React Compiler 1.0 から、コンパイラ用 lint ルールは `eslint-plugin-react-hooks` に統合された。
+**`eslint-plugin-react-compiler` は非推奨 → 削除してよい**:
+
+```typescript
+// NG: 非推奨（react-compiler 専用プラグイン、削除可能）
+// "eslint-plugin-react-compiler": "..."
+
+// OK: eslint-plugin-react-hooks@latest を使用（recommended-latest プリセット）
+// recommended-latest に以下のコンパイラルールが含まれる:
+//   - exhaustive-deps       — useEffect 依存配列漏れ検出
+//   - rules-of-hooks        — フック使用規則強制
+//   - preserve-manual-memoization — Compiler との衝突検出
+//   - purity                — コンポーネント純粋性チェック
+```
+
+### コンパイル問題の診断フロー
+
+```typescript
+// Step 1: 'use no memo' で問題コンポーネントのみ除外して問題を特定
+function SuspectedComponent() {
+  "use no memo" // 一時的に除外して問題が解消するか確認
+  // ...
+}
+
+// Step 2: bun run lint で Rules of React 違反を確認
+// react-hooks/purity, react-hooks/exhaustive-deps 等のエラーを調査
+
+// Step 3: React Compiler DevTools（ブラウザ拡張機能）でコンパイル状態を確認
+// ✓ Optimized = コンパイル成功 / ✗ Skipped = Rules of React 違反あり
+
+// Step 4: 違反を修正後、'use no memo' を削除して再確認
+```
 
 ### React Hook Form — watch() 禁止
 
@@ -389,20 +513,28 @@ export async function createPost(formData: FormData): Promise<ActionResult> {
 | `ComponentPropsWithoutRef` | `ComponentPropsWithRef` |
 | `Input.displayName = 'Input'` | 名前付き関数で自動推論 |
 | `useCallback` / `useMemo`（原則） | プレーン関数・式（Compiler が最適化） |
+| `React.memo()`（原則） | プレーン関数コンポーネント（Compiler が最適化） |
 | `useCallback` 内で `ref.current` を参照 | プレーン関数に変更 |
 | `watch('fieldName')` (React Hook Form) | `useWatch({ control, name: 'fieldName' })` |
 | `useOptimistic` なし で楽観的 UI を手動実装 | `useOptimistic` を使用 |
 | `useFormStatus` を form の外で使用 | `<form>` 子孫コンポーネント内に配置 |
+| `"use no memo"` を恒久的に使用 | Rules of React 違反を修正して削除 |
+| `eslint-plugin-react-compiler` の継続使用 | `eslint-plugin-react-hooks@latest` に統合済み |
 
 ---
 
 ## 参考
 
 - [React 19 リリースノート](https://react.dev/blog/2024/12/05/react-19)
+- [React Compiler 1.0 リリースノート](https://react.dev/blog/2025/10/07/react-compiler-1)
 - [ref as a prop（forwardRef 廃止）](https://react.dev/blog/2024/04/25/react-19#ref-as-a-prop)
+- [React Compiler — インストール](https://react.dev/learn/react-compiler/installation)
+- [React Compiler — 段階的採用](https://react.dev/learn/react-compiler/incremental-adoption)
+- [React Compiler — デバッグ](https://react.dev/learn/react-compiler/debugging)
+- ['use no memo' ディレクティブ](https://react.dev/reference/react-compiler/directives/use-no-memo)
+- [eslint-plugin-react-hooks](https://react.dev/reference/eslint-plugin-react-hooks)
 - [useEffectEvent](https://react.dev/reference/react/useEffectEvent)
 - [useOptimistic](https://react.dev/reference/react/useOptimistic)
 - [useActionState](https://react.dev/reference/react/useActionState)
 - [useFormStatus](https://react.dev/reference/react-dom/hooks/useFormStatus)
 - [React Hook Form useWatch](https://react-hook-form.com/docs/usewatch)
-- [React Compiler](https://react.dev/learn/react-compiler)
