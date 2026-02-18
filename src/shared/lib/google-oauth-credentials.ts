@@ -11,6 +11,7 @@ import 'server-only'
 import { prisma } from './prisma'
 import { safeDecrypt } from './crypto'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from './errors'
+import { serverEnv } from '@/shared/lib/env/server'
 
 export interface GoogleOAuthCredentials {
   clientId: string
@@ -53,8 +54,8 @@ export async function getGoogleOAuthCredentials(): Promise<GoogleOAuthCredential
   }
 
   // 環境変数フォールバック
-  const clientId = process.env["GOOGLE_CLIENT_ID"]
-  const clientSecret = process.env["GOOGLE_CLIENT_SECRET"]
+  const clientId = serverEnv.GOOGLE_CLIENT_ID
+  const clientSecret = serverEnv.GOOGLE_CLIENT_SECRET
 
   if (clientId && clientSecret) {
     return { clientId, clientSecret }

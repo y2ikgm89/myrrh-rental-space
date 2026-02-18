@@ -236,7 +236,7 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
     // CRON エンドポイント: CRON_SECRET 検証
     if (pathname.startsWith('/api/cron')) {
       const authHeader = req.headers.get('authorization')
-      const cronSecret = process.env["CRON_SECRET"]
+      const cronSecret = serverEnv.CRON_SECRET
 
       if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
         return NextResponse.json(

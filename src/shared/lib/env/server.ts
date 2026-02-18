@@ -43,6 +43,11 @@ export const serverEnv = createEnv({
 
     // Email (Resend)
     RESEND_API_KEY: z.string().optional(),
+    EMAIL_FROM: z.string().optional(),
+    EMAIL_FROM_NAME: z.string().optional(),
+
+    // Stripe
+    STRIPE_SECRET_KEY: z.string().optional(),
 
     // Google OAuth
     GOOGLE_CLIENT_ID: z.string().optional(),
@@ -87,6 +92,9 @@ export const serverEnv = createEnv({
     BETTER_AUTH_SECRET: process.env["BETTER_AUTH_SECRET"],
     BETTER_AUTH_URL: process.env["BETTER_AUTH_URL"],
     RESEND_API_KEY: process.env["RESEND_API_KEY"],
+    EMAIL_FROM: process.env["EMAIL_FROM"],
+    EMAIL_FROM_NAME: process.env["EMAIL_FROM_NAME"],
+    STRIPE_SECRET_KEY: process.env["STRIPE_SECRET_KEY"],
     GOOGLE_CLIENT_ID: process.env["GOOGLE_CLIENT_ID"],
     GOOGLE_CLIENT_SECRET: process.env["GOOGLE_CLIENT_SECRET"],
     INSTAGRAM_APP_ID: process.env["INSTAGRAM_APP_ID"],

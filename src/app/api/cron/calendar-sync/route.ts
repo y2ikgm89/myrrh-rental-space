@@ -27,6 +27,7 @@ import { sendWebhookRenewalNotification } from '@/shared/lib/email-service'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
 import { fireAndForget } from '@/shared/lib/async-utils'
 import { CalendarSyncMethod } from '@/shared/generated/prisma/enums'
+import { serverEnv } from '@/shared/lib/env/server'
 
 /**
  * カレンダー同期用Cronエンドポイント
@@ -45,10 +46,10 @@ export async function GET() {
     // Next.js 16: headers() で動的にヘッダーを取得
     const headersList = await headers()
     const authHeader = headersList.get('authorization')
-    const cronSecret = process.env["CRON_SECRET"]
+    const cronSecret = serverEnv.CRON_SECRET
 
     // 本番環境ではCRON_SECRETを必須とする
-    if (!cronSecret && process.env["NODE_ENV"] === 'production') {
+    if (!cronSecret && serverEnv.NODE_ENV === 'production') {
       logError(new Error('CRON_SECRET is not set in production environment'), {
         category: ErrorCategory.AUTHORIZATION,
         severity: ErrorSeverity.CRITICAL,
@@ -61,11 +62,11 @@ export async function GET() {
     }
 
     // 開発環境で認証をスキップする場合は警告ログ
-    if (!cronSecret && process.env["NODE_ENV"] !== 'production') {
+    if (!cronSecret && serverEnv.NODE_ENV !== 'production') {
       logError(new Error('CRON_SECRET is not set - authentication skipped in development'), {
         category: ErrorCategory.AUTHORIZATION,
         severity: ErrorSeverity.LOW,
-        context: { operation: 'calendarSyncCron', environment: process.env["NODE_ENV"] },
+        context: { operation: 'calendarSyncCron', environment: serverEnv.NODE_ENV },
       })
     }
 

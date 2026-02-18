@@ -9,6 +9,7 @@
 import 'server-only'
 import Stripe from 'stripe'
 import { safeDecrypt } from '@/shared/lib/crypto'
+import { serverEnv } from '@/shared/lib/env/server'
 
 /**
  * Stripe設定の取得元
@@ -102,7 +103,7 @@ export function maskSecretKey(key: string): string {
  * 環境変数からStripeシークレットキーを取得
  */
 function getEnvSecretKey(): string | null {
-  return process.env["STRIPE_SECRET_KEY"] || null
+  return serverEnv.STRIPE_SECRET_KEY ?? null
 }
 
 /**

@@ -8,6 +8,7 @@
 import 'server-only'
 
 import type { ErrorLogContext } from './types'
+import { serverEnv } from '@/shared/lib/env/server'
 
 interface ErrorDetails {
   message: string
@@ -47,10 +48,10 @@ export function logError(error: unknown, logContext: ErrorLogContext): void {
     context: logContext.context,
     userId: logContext.userId,
     timestamp: logContext.timestamp ?? new Date(),
-    environment: process.env["NODE_ENV"],
+    environment: serverEnv.NODE_ENV,
   }
 
-  if (process.env["NODE_ENV"] === 'production') {
+  if (serverEnv.NODE_ENV === 'production') {
     console.error(JSON.stringify(errorDetails))
   } else {
     console.error('[Error]', errorDetails)

@@ -8,6 +8,7 @@
 import 'server-only'
 
 import { PrismaPg } from '@prisma/adapter-pg'
+import { serverEnv } from '@/shared/lib/env/server'
 import {
   PrismaClient,
   Role,
@@ -45,12 +46,12 @@ export type Coupon = ConvertDecimalFields<PrismaCoupon>
 
 // Prisma アダプター（PrismaPg が Pool ライフサイクルを内部管理）
 const adapter = new PrismaPg({
-  connectionString: process.env["DATABASE_URL"],
+  connectionString: serverEnv.DATABASE_URL,
   connectionTimeoutMillis: 10000,
   idleTimeoutMillis: 10000,
   max: process.env["DATABASE_POOL_MAX"]
     ? Number(process.env["DATABASE_POOL_MAX"])
-    : process.env["NODE_ENV"] === 'production'
+    : serverEnv.NODE_ENV === 'production'
       ? 3
       : 5,
 })
@@ -69,13 +70,13 @@ const basePrisma =
   new PrismaClient({
     adapter,
     log:
-      process.env["NODE_ENV"] === 'development'
+      serverEnv.NODE_ENV === 'development'
         ? ['query', 'error', 'warn']
         : ['error'],
   })
 
 // 開発環境ではグローバル変数に保存
-if (process.env["NODE_ENV"] !== 'production') {
+if (serverEnv.NODE_ENV !== 'production') {
   globalForPrisma.prisma = basePrisma
 }
 
