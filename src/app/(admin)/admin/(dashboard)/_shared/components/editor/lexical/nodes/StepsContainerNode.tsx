@@ -16,6 +16,7 @@ import type {
 } from 'lexical'
 import { $create, $getState, $getStateChange, $setState, createState, ElementNode, $createParagraphNode, $isElementNode } from 'lexical'
 import { createEnumGuard } from '../config/type-guards'
+import { isAccentColor, type AccentColor } from '../config/accent-colors'
 
 // =============================================================================
 // Types
@@ -70,6 +71,11 @@ export const stepsFillState = createState('stepsFill', {
     typeof v === 'string' && isStepsFill(v) ? v : 'filled',
 })
 
+export const stepsColorState = createState('stepsColor', {
+  parse: (v: unknown): AccentColor =>
+    typeof v === 'string' && isAccentColor(v) ? v : 'default',
+})
+
 // =============================================================================
 // DOM Conversion
 // =============================================================================
@@ -81,6 +87,7 @@ function $convertStepsContainerElement(element: HTMLElement): null | DOMConversi
   const shapeAttr = element.getAttribute('data-steps-shape')
   const startAttr = element.getAttribute('data-steps-start')
   const fillAttr = element.getAttribute('data-steps-fill')
+  const colorAttr = element.getAttribute('data-color')
 
   const node = $createStepsContainerNode({
     style,
@@ -88,6 +95,7 @@ function $convertStepsContainerElement(element: HTMLElement): null | DOMConversi
     shape: shapeAttr && isStepsShape(shapeAttr) ? shapeAttr : 'circle',
     startNumber: startAttr ? parseInt(startAttr, 10) || 1 : 1,
     fill: fillAttr && isStepsFill(fillAttr) ? fillAttr : 'filled',
+    color: colorAttr && isAccentColor(colorAttr) ? colorAttr : 'default',
   })
   return { node }
 }
@@ -106,6 +114,7 @@ export class StepsContainerNode extends ElementNode {
         { flat: true, stateConfig: stepsShapeState },
         { flat: true, stateConfig: startNumberState },
         { flat: true, stateConfig: stepsFillState },
+        { flat: true, stateConfig: stepsColorState },
       ],
     })
   }
@@ -130,6 +139,7 @@ export class StepsContainerNode extends ElementNode {
     const shape = $getState(this, stepsShapeState)
     const startNumber = $getState(this, startNumberState)
     const fill = $getState(this, stepsFillState)
+    const color = $getState(this, stepsColorState)
 
     const element = document.createElement('div')
     element.setAttribute('data-steps', 'true')
@@ -138,6 +148,7 @@ export class StepsContainerNode extends ElementNode {
     element.setAttribute('data-steps-shape', shape)
     element.setAttribute('data-steps-start', String(startNumber))
     element.setAttribute('data-steps-fill', fill)
+    element.setAttribute('data-color', color)
     element.style.setProperty('--step-label', `"${label}"`)
 
     return { element }
@@ -149,6 +160,7 @@ export class StepsContainerNode extends ElementNode {
     const shape = $getState(this, stepsShapeState)
     const startNumber = $getState(this, startNumberState)
     const fill = $getState(this, stepsFillState)
+    const color = $getState(this, stepsColorState)
 
     const element = document.createElement('div')
     element.setAttribute('data-steps', 'true')
@@ -157,6 +169,7 @@ export class StepsContainerNode extends ElementNode {
     element.setAttribute('data-steps-shape', shape)
     element.setAttribute('data-steps-start', String(startNumber))
     element.setAttribute('data-steps-fill', fill)
+    element.setAttribute('data-color', color)
     element.style.setProperty('--step-label', `"${label}"`)
 
     return element
@@ -192,6 +205,12 @@ export class StepsContainerNode extends ElementNode {
     if (fillChange) {
       const [newFill] = fillChange
       dom.setAttribute('data-steps-fill', newFill)
+    }
+
+    const colorChange = $getStateChange(this, prevNode, stepsColorState)
+    if (colorChange) {
+      const [newColor] = colorChange
+      dom.setAttribute('data-color', newColor)
     }
 
     return false
@@ -242,6 +261,7 @@ type StepsContainerOptions = {
   shape?: StepsShape
   startNumber?: number
   fill?: StepsFill
+  color?: AccentColor
 }
 
 /**
@@ -254,6 +274,7 @@ export function $createStepsContainerNode(options: StepsContainerOptions = {}): 
     shape = 'circle',
     startNumber = 1,
     fill = 'filled',
+    color = 'default',
   } = options
 
   const node = $create(StepsContainerNode)
@@ -262,6 +283,7 @@ export function $createStepsContainerNode(options: StepsContainerOptions = {}): 
   $setState(node, stepsShapeState, shape)
   $setState(node, startNumberState, startNumber)
   $setState(node, stepsFillState, fill)
+  $setState(node, stepsColorState, color)
   return node
 }
 
