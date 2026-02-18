@@ -24,6 +24,7 @@ interface CustomerSelectorProps {
   isNewCustomer: boolean
   onToggleNewCustomer: (isNew: boolean) => void
   errors?: Record<string, string[] | undefined>
+  allowNewCustomer?: boolean
 }
 
 export function CustomerSelector({
@@ -33,6 +34,7 @@ export function CustomerSelector({
   isNewCustomer,
   onToggleNewCustomer,
   errors,
+  allowNewCustomer = true,
 }: CustomerSelectorProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<CustomerSearchResult[]>([])
@@ -169,31 +171,33 @@ export function CustomerSelector({
 
   return (
     <div className="space-y-4">
-      {/* モード切り替えボタン */}
+      {/* モード切り替えボタン（allowNewCustomer=true の場合のみ表示） */}
       <div className="flex items-center justify-between">
         <Label>顧客情報</Label>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={handleToggleNewCustomer}
-        >
-          {isNewCustomer ? (
-            <>
-              <Search className="mr-1 h-4 w-4" />
-              既存顧客を検索
-            </>
-          ) : (
-            <>
-              <Plus className="mr-1 h-4 w-4" />
-              新規顧客として入力
-            </>
-          )}
-        </Button>
+        {allowNewCustomer && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleToggleNewCustomer}
+          >
+            {isNewCustomer ? (
+              <>
+                <Search className="mr-1 h-4 w-4" />
+                既存顧客を検索
+              </>
+            ) : (
+              <>
+                <Plus className="mr-1 h-4 w-4" />
+                新規顧客として入力
+              </>
+            )}
+          </Button>
+        )}
       </div>
 
       {/* 既存顧客検索モード */}
-      {!isNewCustomer && (
+      {(!allowNewCustomer || !isNewCustomer) && (
         <div className="space-y-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -263,8 +267,8 @@ export function CustomerSelector({
         </div>
       )}
 
-      {/* 新規顧客入力モード */}
-      {isNewCustomer && (
+      {/* 新規顧客入力モード（allowNewCustomer=true の場合のみ） */}
+      {allowNewCustomer && isNewCustomer && (
         <div className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             {/* 姓 */}
