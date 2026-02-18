@@ -5,6 +5,7 @@ paths:
 
 # デザインシステム記憶ルール
 
+> **配置**: `.claude/rules/frontend/design-system-memory.md`（`paths:` フロントマター付き — public 作業時に自動適用）
 > Serena memory を使用したデザイン判断の永続化。セッション間でデザイン方針を引き継ぐ。
 
 ## Memory 名

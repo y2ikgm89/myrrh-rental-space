@@ -6,6 +6,7 @@ paths:
 
 # UI/UX パターンルール
 
+> **配置**: `.claude/rules/frontend/ui-ux-patterns.md`（`paths:` フロントマター付き — public・admin 作業時に自動適用）
 > ui-ux-pro-max / frontend-design スキル対応
 
 ## 概要

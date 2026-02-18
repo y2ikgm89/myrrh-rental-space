@@ -1,5 +1,11 @@
+---
+paths:
+  - src/app/(public*)/**
+---
+
 # SEO / 構造化データパターンルール
 
+> **配置**: `.claude/rules/frontend/seo-patterns.md`（`paths:` フロントマター付き — public 作業時に自動適用）
 > JSON-LD @graph / microdata / NAP一貫性 / MEO対応
 
 ## 構造化データ配置

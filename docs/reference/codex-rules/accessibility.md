@@ -1,5 +1,12 @@
+---
+paths:
+  - src/app/(public*)/**
+  - src/app/(admin)/**
+---
+
 # アクセシビリティ（a11y）ルール
 
+> **配置**: `.claude/rules/frontend/accessibility.md`（`paths:` フロントマター付き — public・admin 作業時に自動適用）
 > WCAG 2.2 AA / React 19 / GSAP prefers-reduced-motion / SkipLink / AriaLiveRegion 対応
 
 ## 概要

@@ -5,6 +5,7 @@ paths:
 
 # Three.js パターンルール
 
+> **配置**: `.claude/rules/frontend/threejs-patterns.md`（`paths:` フロントマター付き — public 作業時に自動適用）
 > Three.js 0.182.0 / @react-three/fiber 9.5 / @react-three/drei 10.7
 
 ## 概要

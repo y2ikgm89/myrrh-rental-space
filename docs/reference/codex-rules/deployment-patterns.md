@@ -1,5 +1,15 @@
+---
+paths:
+  - Dockerfile
+  - cloudbuild.yaml
+  - .dockerignore
+  - .gcloudignore
+  - docs/operations/**
+---
+
 # デプロイパターンルール
 
+> **配置**: `.claude/rules/ops/deployment-patterns.md`（`paths:` フロントマター付き — デプロイファイル作業時に自動適用）
 > Docker / Cloud Run / Cloud Build / Artifact Registry対応
 
 ## アーキテクチャ概要

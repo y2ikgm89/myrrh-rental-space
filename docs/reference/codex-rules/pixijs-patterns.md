@@ -5,6 +5,7 @@ paths:
 
 # PixiJS パターンルール
 
+> **配置**: `.claude/rules/frontend/pixijs-patterns.md`（`paths:` フロントマター付き — public 作業時に自動適用）
 > PixiJS 8.16.0 / WebGL2 / カスタムGLSLフィルター
 
 ## 概要

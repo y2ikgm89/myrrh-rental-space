@@ -5,6 +5,7 @@ paths:
 
 # GSAP パターンルール
 
+> **配置**: `.claude/rules/frontend/gsap-patterns.md`（`paths:` フロントマター付き — public 作業時に自動適用）
 > GSAP 3.14.2 / @gsap/react 2.1 / ScrollTrigger / Lenis 1.3.17 対応
 
 ## 基本ルール

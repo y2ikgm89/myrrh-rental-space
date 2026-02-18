@@ -5,6 +5,7 @@ paths:
 
 # Anti-AI デザイン強制ルール
 
+> **配置**: `.claude/rules/frontend/anti-ai-design.md`（`paths:` フロントマター付き — public 作業時に自動適用）
 > 公開ページ UI 実装時に自動ロード。プロジェクト固有のブランドに即した独自 UI を実現する。
 
 ## デザイン言語の参照

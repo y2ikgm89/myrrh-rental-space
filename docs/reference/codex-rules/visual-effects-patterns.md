@@ -5,6 +5,7 @@ paths:
 
 # ビジュアルエフェクトアーキテクチャ
 
+> **配置**: `.claude/rules/frontend/visual-effects-patterns.md`（`paths:` フロントマター付き — public 作業時に自動適用）
 > エフェクトレベル L1-L4 / パフォーマンスバジェット / GPU検出 / WebGLコンテキスト管理
 
 ## 概要
