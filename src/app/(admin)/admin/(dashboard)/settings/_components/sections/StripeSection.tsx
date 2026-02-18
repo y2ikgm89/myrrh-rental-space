@@ -32,7 +32,8 @@ import {
   clearStripeKeys,
 } from '@/admin/actions/settings'
 import type { SettingsData } from '@/admin/actions/settings'
-import { SUPPORTED_CURRENCIES, type SupportedCurrency } from '@/admin/lib/stripe'
+import { SUPPORTED_CURRENCIES, SUPPORTED_CURRENCY_VALUES } from '@/admin/lib/stripe-shared'
+import { createTypeGuard } from '@/shared/lib/serialize'
 import { useRefreshOnSuccess } from '../hooks'
 import { StatusBanner } from '../shared/StatusBanner'
 import { formatDateTimeShort } from '@/shared/lib/utils'
@@ -41,11 +42,7 @@ import { formatDateTimeShort } from '@/shared/lib/utils'
 // Types
 // =============================================================================
 
-const VALID_CURRENCIES = new Set<string>(SUPPORTED_CURRENCIES.map((c) => c.value))
-
-function isSupportedCurrency(value: unknown): value is SupportedCurrency {
-  return typeof value === 'string' && VALID_CURRENCIES.has(value)
-}
+const isSupportedCurrency = createTypeGuard(SUPPORTED_CURRENCY_VALUES)
 
 interface StripeSectionProps {
   settings: SettingsData
@@ -331,9 +328,9 @@ export function StripeSection({ settings }: StripeSectionProps) {
           <Label htmlFor="stripeCurrency">通貨</Label>
           <Select
             value={formData.stripeCurrency}
-            onValueChange={(value: 'jpy' | 'usd' | 'eur') =>
-              setFormData({ ...formData, stripeCurrency: value })
-            }
+            onValueChange={(value) => {
+              if (isSupportedCurrency(value)) setFormData({ ...formData, stripeCurrency: value })
+            }}
             disabled={isPending}
           >
             <SelectTrigger id="stripeCurrency" className="w-[200px]">

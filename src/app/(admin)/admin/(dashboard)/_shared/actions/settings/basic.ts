@@ -18,7 +18,7 @@ import {
   parseStringArrayOrNull,
   parseBusinessAttributes,
 } from '@/shared/lib/json-validators'
-import { maskSecretKey } from '@/admin/lib/stripe'
+import { maskSecretKey } from '@/admin/lib/stripe-shared'
 import { extractServiceAccountEmail } from '@/shared/lib/google-calendar'
 import { getSession, getRoleFromSession } from '@/shared/lib/auth'
 import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'

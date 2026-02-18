@@ -4,11 +4,12 @@
 
 import { z } from 'zod'
 import {
+  SUPPORTED_CURRENCY_VALUES,
   isValidPublishableKey,
   isValidSecretKey,
   isValidWebhookSecret,
   keysHaveMatchingMode,
-} from '@/admin/lib/stripe'
+} from '@/admin/lib/stripe-shared'
 
 // バリデーションメッセージ
 interface ValidationMessages {
@@ -58,7 +59,7 @@ export const stripeSettingsSchema = z
       .refine((val) => !val || isValidWebhookSecret(val), {
         error: MESSAGES.webhookSecret,
       }),
-    stripeCurrency: z.enum(['jpy', 'usd', 'eur']).default('jpy'),
+    stripeCurrency: z.enum(SUPPORTED_CURRENCY_VALUES).default(SUPPORTED_CURRENCY_VALUES[0]),
   })
   .refine(
     (data) => {
