@@ -1,5 +1,6 @@
-# Turbopack HMR エラー対処ルール
+# Turbopack HMR エラー対処
 
+> **Note**: このコンテンツは `.claude/rules/` から `.claude/skills/turbopack-hmr/SKILL.md`（`user-invocable: false`）に移行済み。
 > Next.js 16 + Turbopack 開発時の HMR エラー対処
 
 ## 対象エラー

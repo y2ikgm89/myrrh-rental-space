@@ -36,7 +36,6 @@
 - `.claude/rules/zod-patterns.md` - Zod 4 バリデーション
 - `.claude/rules/nuqs-patterns.md` - nuqs URL状態管理
 - `.claude/rules/tailwind-patterns.md` - Tailwind CSS 4 / CSS-first設定
-- `.claude/rules/turbopack-hmr.md` - Turbopack HMR エラー対処（開発時）
 
 #### 条件付きロード（対象ファイル作業時のみ）
 

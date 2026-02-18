@@ -1,4 +1,10 @@
-# Turbopack HMR エラー対処ルール
+---
+name: turbopack-hmr
+description: Turbopack HMR "module factory is not available" エラーの対処法。Next.js 16 開発中に 'use server' ↔ 'use client' のモジュール境界でHMRが失敗した場合の診断と回復手順を提供する
+user-invocable: false
+---
+
+# Turbopack HMR エラー対処
 
 > Next.js 16 + Turbopack 開発時の HMR エラー対処
 
@@ -23,7 +29,7 @@ Turbopack の HMR がモジュール境界（`'use server'` ↔ `'use client'`�
 
 **重要**: import パターン自体は正しい React 19 の標準パターン。コードの修正は不要。
 
-## 対処手順（開発者向け）
+## 対処手順
 
 ### 即時対処
 
