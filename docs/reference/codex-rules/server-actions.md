@@ -1,3 +1,9 @@
+---
+paths:
+  - src/app/**
+  - src/shared/**
+---
+
 # Server Actions ルール
 
 > Next.js 16 / 'use cache' / PPR 対応
@@ -145,17 +151,22 @@ export async function deletePost(id: string) {
 
 ```typescript
 import { revalidateTag } from 'next/cache'
-import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
+import { CACHE_TAGS, CACHE_LIFE, getCacheTag } from '@/shared/lib/constants'
 
-// Route Handler（CRON Job 等）
-export async function POST() {
-  await syncCalendar()
-  revalidateTag(CACHE_TAGS.RESERVATIONS)
-  return Response.json({ ok: true })
+// Route Handler（CRON / Webhook）— 実際のプロジェクト例
+// src/app/api/cron/calendar-sync/route.ts
+// src/app/api/webhooks/google-calendar/route.ts
+// ⚠️ Next.js 16: revalidateTag は第2引数（プロファイル）が必須
+export async function GET() {
+  const result = await syncFromCalendar()
+  // ⚠️ updateTag は Server Actions 専用 — Route Handler では revalidateTag を使う
+  revalidateTag(CACHE_TAGS.RESERVATIONS, CACHE_LIFE.DYNAMIC_DATA)
+  revalidateTag(getCacheTag.reservations.calendar(), CACHE_LIFE.DYNAMIC_DATA)
+  return NextResponse.json({ ok: true })
 }
 
-// 個別アイテムのみ無効化
-revalidateTag(getCacheTag.posts.detail(slug))
+// 個別アイテムのみ無効化（第2引数に適切なプロファイルを指定）
+revalidateTag(getCacheTag.posts.detail(slug), CACHE_LIFE.PUBLIC_CONTENT)
 ```
 
 ### updateTag vs revalidateTag 比較
@@ -351,18 +362,18 @@ export async function getPublicBusinessSettings() {
 `@/shared/lib/constants/cache.ts` で一元管理。**全 API（cacheTag / updateTag / revalidateTag）で定数使用必須**:
 
 ```typescript
-import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
+import { CACHE_TAGS, CACHE_LIFE, getCacheTag } from '@/shared/lib/constants'
 
-// OK: 定数を使用
+// OK: 定数を使用（Next.js 16: revalidateTag は第2引数が必須）
 cacheTag(CACHE_TAGS.POSTS)
 cacheTag(CACHE_TAGS.SETTINGS, CACHE_TAGS.LAYOUT_SETTINGS)
 updateTag(CACHE_TAGS.POSTS)
-revalidateTag(CACHE_TAGS.POSTS)
+revalidateTag(CACHE_TAGS.POSTS, CACHE_LIFE.PUBLIC_CONTENT)
 
 // NG: マジックストリング（禁止）
 cacheTag('posts')
 updateTag('settings')
-revalidateTag('layout-settings')
+revalidateTag('layout-settings', CACHE_LIFE.PUBLIC_CONTENT)
 ```
 
 ### getCacheTag（階層タグ）
@@ -395,7 +406,7 @@ updateTag(CACHE_TAGS.POSTS)
 1. **マジックストリングのタグ名禁止**
    - `cacheTag('posts')` → `cacheTag(CACHE_TAGS.POSTS)`
    - `updateTag('settings')` → `updateTag(CACHE_TAGS.SETTINGS)`
-   - `revalidateTag('posts')` → `revalidateTag(CACHE_TAGS.POSTS)`
+   - `revalidateTag('posts', 'hours')` → `revalidateTag(CACHE_TAGS.POSTS, CACHE_LIFE.PUBLIC_CONTENT)`
    - `cacheLife('hours')` → `cacheLife(CACHE_LIFE.PUBLIC_CONTENT)`
 
 2. **認証チェック漏れ禁止**
@@ -430,10 +441,10 @@ updateTag(CACHE_TAGS.POSTS)
      updateTag(CACHE_TAGS.RESERVATIONS)  // 動作しない
      return Response.json({ ok: true })
    }
-   // OK: revalidateTag を使用
+   // OK: revalidateTag を使用（Next.js 16: 第2引数に CACHE_LIFE プロファイルが必須）
    export async function POST() {
      await syncCalendar()
-     revalidateTag(CACHE_TAGS.RESERVATIONS)
+     revalidateTag(CACHE_TAGS.RESERVATIONS, CACHE_LIFE.DYNAMIC_DATA)
      return Response.json({ ok: true })
    }
    ```

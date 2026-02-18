@@ -1,3 +1,8 @@
+---
+paths:
+  - src/**
+---
+
 # Prisma パターンルール
 
 > Prisma 7.4 / WASM エンジン（`engineType = "client"` + `runtime = "bun"`）/ PostgreSQL

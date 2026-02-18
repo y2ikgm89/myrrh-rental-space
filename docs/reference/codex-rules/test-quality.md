@@ -1,3 +1,9 @@
+---
+paths:
+  - __tests__/**
+  - e2e/**
+---
+
 # テスト品質ルール
 
 > Bun Test / Playwright E2E対応

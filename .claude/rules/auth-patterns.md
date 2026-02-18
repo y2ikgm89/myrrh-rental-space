@@ -1,3 +1,9 @@
+---
+paths:
+  - src/app/**
+  - src/shared/**
+---
+
 # 認証パターンルール
 
 > Better Auth 1.4 / RBAC / Next.js 16 対応

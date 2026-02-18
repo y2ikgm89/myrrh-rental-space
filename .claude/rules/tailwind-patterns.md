@@ -1,3 +1,8 @@
+---
+paths:
+  - src/**
+---
+
 # Tailwind CSS パターンルール
 
 > Tailwind CSS 4.1 / CSS-first設定 / Multiple Root Layouts対応

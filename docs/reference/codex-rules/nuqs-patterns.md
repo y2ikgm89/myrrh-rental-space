@@ -1,3 +1,8 @@
+---
+paths:
+  - src/app/**
+---
+
 # nuqs パターンルール
 
 > nuqs 2.8.8 / Next.js 16対応

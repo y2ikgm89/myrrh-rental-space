@@ -1,3 +1,9 @@
+---
+paths:
+  - src/app/**
+  - src/shared/**
+---
+
 # Server Actions ルール
 
 > Next.js 16 / 'use cache' / PPR 対応
