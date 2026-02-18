@@ -16,6 +16,7 @@ import type {
 } from 'lexical'
 import { $create, $getState, $getStateChange, $setState, createState, ElementNode, $createParagraphNode, $isElementNode } from 'lexical'
 import { createEnumGuard } from '../config/type-guards'
+import { isAccentColor, type AccentColor } from '../config/accent-colors'
 
 // =============================================================================
 // Types
@@ -61,6 +62,11 @@ export const tabsFixedWidthState = createState('tabsFixedWidth', {
     typeof v === 'string' && isTabsFixedWidth(v) ? v : '120',
 })
 
+export const tabsColorState = createState('tabsColor', {
+  parse: (v: unknown): AccentColor =>
+    typeof v === 'string' && isAccentColor(v) ? v : 'default',
+})
+
 // =============================================================================
 // DOM Conversion
 // =============================================================================
@@ -74,7 +80,9 @@ function $convertTabsContainerElement(element: HTMLElement): null | DOMConversio
   const size = sizeAttr && isTabsSize(sizeAttr) ? sizeAttr : 'auto'
   const fixedWidthAttr = element.getAttribute('data-tabs-fixed-width')
   const fixedWidth = fixedWidthAttr && isTabsFixedWidth(fixedWidthAttr) ? fixedWidthAttr : '120'
-  const node = $createTabsContainerNode(activeIndex, style, size, fixedWidth)
+  const colorAttr = element.getAttribute('data-color')
+  const color: AccentColor = colorAttr && isAccentColor(colorAttr) ? colorAttr : 'default'
+  const node = $createTabsContainerNode(activeIndex, style, size, fixedWidth, color)
   return { node }
 }
 
@@ -91,6 +99,7 @@ export class TabsContainerNode extends ElementNode {
         { flat: true, stateConfig: tabsStyleState },
         { flat: true, stateConfig: tabsSizeState },
         { flat: true, stateConfig: tabsFixedWidthState },
+        { flat: true, stateConfig: tabsColorState },
       ],
     })
   }
@@ -114,12 +123,14 @@ export class TabsContainerNode extends ElementNode {
     const tabsStyle = $getState(this, tabsStyleState)
     const tabsSize = $getState(this, tabsSizeState)
     const fixedWidth = $getState(this, tabsFixedWidthState)
+    const color = $getState(this, tabsColorState)
     const element = document.createElement('div')
     element.setAttribute('data-tabs-container', 'true')
     element.setAttribute('data-tabs-active', String(activeIndex))
     element.setAttribute('data-tabs-style', tabsStyle)
     element.setAttribute('data-tabs-size', tabsSize)
     element.setAttribute('data-tabs-fixed-width', fixedWidth)
+    element.setAttribute('data-color', color)
 
     return { element }
   }
@@ -129,12 +140,14 @@ export class TabsContainerNode extends ElementNode {
     const tabsStyle = $getState(this, tabsStyleState)
     const tabsSize = $getState(this, tabsSizeState)
     const fixedWidth = $getState(this, tabsFixedWidthState)
+    const color = $getState(this, tabsColorState)
     const element = document.createElement('div')
     element.setAttribute('data-tabs-container', 'true')
     element.setAttribute('data-tabs-active', String(activeIndex))
     element.setAttribute('data-tabs-style', tabsStyle)
     element.setAttribute('data-tabs-size', tabsSize)
     element.setAttribute('data-tabs-fixed-width', fixedWidth)
+    element.setAttribute('data-color', color)
 
     return element
   }
@@ -159,6 +172,11 @@ export class TabsContainerNode extends ElementNode {
     if (fixedWidthChange) {
       const [newFixedWidth] = fixedWidthChange
       dom.setAttribute('data-tabs-fixed-width', newFixedWidth)
+    }
+    const colorChange = $getStateChange(this, prevNode, tabsColorState)
+    if (colorChange) {
+      const [newColor] = colorChange
+      dom.setAttribute('data-color', newColor)
     }
     return false
   }
@@ -206,21 +224,16 @@ export function $createTabsContainerNode(
   activeIndex: number = 0,
   tabsStyle: TabsStyle = 'underline',
   tabsSize: TabsSize = 'auto',
-  tabsFixedWidth: TabsFixedWidth = '120'
+  tabsFixedWidth: TabsFixedWidth = '120',
+  color: AccentColor = 'default'
 ): TabsContainerNode {
-  return $setState(
-    $setState(
-      $setState(
-        $setState($create(TabsContainerNode), activeIndexState, activeIndex),
-        tabsStyleState,
-        tabsStyle
-      ),
-      tabsSizeState,
-      tabsSize
-    ),
-    tabsFixedWidthState,
-    tabsFixedWidth
-  )
+  const node = $create(TabsContainerNode)
+  $setState(node, activeIndexState, activeIndex)
+  $setState(node, tabsStyleState, tabsStyle)
+  $setState(node, tabsSizeState, tabsSize)
+  $setState(node, tabsFixedWidthState, tabsFixedWidth)
+  $setState(node, tabsColorState, color)
+  return node
 }
 
 /**
