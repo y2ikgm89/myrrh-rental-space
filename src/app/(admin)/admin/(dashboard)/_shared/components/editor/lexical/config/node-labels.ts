@@ -5,7 +5,6 @@
  * Plugin と InspectorPanel の両方からインポートして使用
  */
 
-import type { AccentColor } from './accent-colors'
 import type { CalloutType } from '../nodes/CalloutNode'
 import type { ButtonVariant, ButtonSize, ButtonAlignment } from '../nodes/ButtonNode'
 import type { CollapsibleStyle, CollapsibleRadius } from '../nodes/CollapsibleContainerNode'
@@ -119,21 +118,4 @@ export const TABS_FIXED_WIDTH_LABELS: Record<TabsFixedWidth, string> = {
   '120': '120px（標準）',
   '160': '160px（ワイド）',
   '200': '200px（エクストラワイド）',
-}
-
-// =============================================================================
-// Accent Color（全ブロック共通）
-// =============================================================================
-
-export const ACCENT_COLOR_LABELS: Record<AccentColor, string> = {
-  default: 'デフォルト',
-  blue:    'ブルー',
-  teal:    'ティール',
-  green:   'グリーン',
-  yellow:  'イエロー',
-  orange:  'オレンジ',
-  red:     'レッド',
-  pink:    'ピンク',
-  purple:  'パープル',
-  slate:   'スレート',
 }

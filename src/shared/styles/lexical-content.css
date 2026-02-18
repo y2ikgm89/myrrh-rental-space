@@ -532,9 +532,9 @@ details[data-collapsible-item] > summary[data-collapsible-title]::-webkit-detail
 }
 
 [data-tabs-style="pills"] [role="tab"][aria-selected="true"] {
-  background-color: var(--color-background);
-  color: var(--color-foreground);
-  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  background-color: var(--accent, var(--color-primary));
+  color: var(--accent-fg, var(--color-primary-foreground));
+  box-shadow: 0 1px 3px color-mix(in oklch, var(--accent, var(--color-primary)) 35%, transparent);
   border-color: transparent;
 }
 
@@ -572,6 +572,7 @@ details[data-collapsible-item] > summary[data-collapsible-title]::-webkit-detail
   color: var(--color-foreground);
   border-color: var(--color-border);
   border-bottom-color: var(--color-background);
+  box-shadow: inset 0 2px 0 var(--accent, var(--color-primary));
 }
 
 [data-tabs-style="boxed"] [role="tab"][aria-selected="false"] {
@@ -611,7 +612,7 @@ details[data-collapsible-item] > summary[data-collapsible-title]::-webkit-detail
   color: var(--color-foreground);
   font-weight: 600;
   background: transparent;
-  border-bottom-color: var(--color-foreground);
+  border-bottom-color: var(--accent, var(--color-primary));
 }
 
 [data-tabs-style="minimal"] [role="tab"][aria-selected="false"] {

@@ -8,25 +8,17 @@
 'use client'
 
 import { Label } from '@/admin/components/ui'
-import { ACCENT_COLORS, ACCENT_COLOR_SWATCHES, type AccentColor } from '../config/accent-colors'
+import {
+  ACCENT_COLORS,
+  ACCENT_COLOR_LABELS,
+  ACCENT_COLOR_SWATCHES,
+  type AccentColor,
+} from '../config/accent-colors'
 
 type ColorSwatchPickerProps = {
   value: AccentColor
   onChange: (color: AccentColor) => void
   label?: string
-}
-
-const COLOR_NAMES: Record<AccentColor, string> = {
-  default: 'デフォルト',
-  blue:    'ブルー',
-  teal:    'ティール',
-  green:   'グリーン',
-  yellow:  'イエロー',
-  orange:  'オレンジ',
-  red:     'レッド',
-  pink:    'ピンク',
-  purple:  'パープル',
-  slate:   'スレート',
 }
 
 export function ColorSwatchPicker({ value, onChange, label = 'アクセントカラー' }: ColorSwatchPickerProps) {
@@ -36,12 +28,11 @@ export function ColorSwatchPicker({ value, onChange, label = 'アクセントカ
       <div className="grid grid-cols-5 gap-1.5">
         {ACCENT_COLORS.map((color) => {
           const isSelected = value === color
-          const swatchColor = ACCENT_COLOR_SWATCHES[color]
           return (
             <button
               key={color}
               type="button"
-              title={COLOR_NAMES[color]}
+              title={ACCENT_COLOR_LABELS[color]}
               onClick={() => onChange(color)}
               className={[
                 'h-6 w-full rounded transition-shadow',
@@ -49,8 +40,8 @@ export function ColorSwatchPicker({ value, onChange, label = 'アクセントカ
                   ? 'ring-2 ring-ring ring-offset-1'
                   : 'hover:ring-1 hover:ring-border',
               ].join(' ')}
-              style={{ backgroundColor: swatchColor }}
-              aria-label={COLOR_NAMES[color]}
+              style={{ backgroundColor: ACCENT_COLOR_SWATCHES[color] }}
+              aria-label={ACCENT_COLOR_LABELS[color]}
               aria-pressed={isSelected}
             />
           )
