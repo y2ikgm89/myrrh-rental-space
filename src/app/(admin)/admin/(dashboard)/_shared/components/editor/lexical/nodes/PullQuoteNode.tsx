@@ -16,6 +16,7 @@ import type {
 } from 'lexical'
 import { $create, $getState, $getStateChange, $setState, createState, ElementNode, $createParagraphNode, $isElementNode } from 'lexical'
 import { createEnumGuard } from '../config/type-guards'
+import { isAccentColor, type AccentColor } from '../config/accent-colors'
 
 // =============================================================================
 // Types
@@ -40,6 +41,11 @@ export const quoteStyleState = createState('quoteStyle', {
     typeof v === 'string' && isPullQuoteStyle(v) ? v : 'classic',
 })
 
+export const pullQuoteColorState = createState('pullQuoteColor', {
+  parse: (v: unknown): AccentColor =>
+    typeof v === 'string' && isAccentColor(v) ? v : 'default',
+})
+
 // =============================================================================
 // DOM Conversion
 // =============================================================================
@@ -47,7 +53,9 @@ export const quoteStyleState = createState('quoteStyle', {
 function $convertPullQuoteElement(element: HTMLElement): null | DOMConversionOutput {
   const styleAttr = element.getAttribute('data-pull-quote-style')
   const style = styleAttr && isPullQuoteStyle(styleAttr) ? styleAttr : 'classic'
-  const node = $createPullQuoteNode(style)
+  const colorAttr = element.getAttribute('data-color')
+  const color: AccentColor = colorAttr && isAccentColor(colorAttr) ? colorAttr : 'default'
+  const node = $createPullQuoteNode(style, color)
   return { node }
 }
 
@@ -59,7 +67,10 @@ export class PullQuoteNode extends ElementNode {
   override $config() {
     return this.config('pull-quote', {
       extends: ElementNode,
-      stateConfigs: [{ flat: true, stateConfig: quoteStyleState }],
+      stateConfigs: [
+        { flat: true, stateConfig: quoteStyleState },
+        { flat: true, stateConfig: pullQuoteColorState },
+      ],
     })
   }
 
@@ -79,26 +90,37 @@ export class PullQuoteNode extends ElementNode {
 
   override exportDOM(): DOMExportOutput {
     const quoteStyle = $getState(this, quoteStyleState)
+    const color = $getState(this, pullQuoteColorState)
     const element = document.createElement('figure')
     element.setAttribute('data-pull-quote', 'true')
     element.setAttribute('data-pull-quote-style', quoteStyle)
+    element.setAttribute('data-color', color)
     return { element }
   }
 
   override createDOM(_config: EditorConfig): HTMLElement {
     const quoteStyle = $getState(this, quoteStyleState)
+    const color = $getState(this, pullQuoteColorState)
     const element = document.createElement('figure')
     element.setAttribute('data-pull-quote', 'true')
     element.setAttribute('data-pull-quote-style', quoteStyle)
+    element.setAttribute('data-color', color)
     return element
   }
 
   override updateDOM(prevNode: PullQuoteNode, dom: HTMLElement): boolean {
-    const change = $getStateChange(this, prevNode, quoteStyleState)
-    if (change) {
-      const [newStyle] = change
+    const styleChange = $getStateChange(this, prevNode, quoteStyleState)
+    if (styleChange) {
+      const [newStyle] = styleChange
       dom.setAttribute('data-pull-quote-style', newStyle)
     }
+
+    const colorChange = $getStateChange(this, prevNode, pullQuoteColorState)
+    if (colorChange) {
+      const [newColor] = colorChange
+      dom.setAttribute('data-color', newColor)
+    }
+
     return false
   }
 
@@ -143,8 +165,14 @@ export class PullQuoteNode extends ElementNode {
  * @param quoteStyle - 引用スタイル
  * @returns PullQuoteNode インスタンス
  */
-export function $createPullQuoteNode(quoteStyle: PullQuoteStyle = 'classic'): PullQuoteNode {
-  return $setState($create(PullQuoteNode), quoteStyleState, quoteStyle)
+export function $createPullQuoteNode(
+  quoteStyle: PullQuoteStyle = 'classic',
+  color: AccentColor = 'default'
+): PullQuoteNode {
+  const node = $create(PullQuoteNode)
+  $setState(node, quoteStyleState, quoteStyle)
+  $setState(node, pullQuoteColorState, color)
+  return node
 }
 
 /**
