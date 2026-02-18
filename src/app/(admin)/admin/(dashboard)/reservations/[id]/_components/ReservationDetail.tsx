@@ -1,7 +1,9 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
+import { Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   Card,
@@ -80,7 +82,15 @@ export function ReservationDetail({ reservation }: ReservationDetailProps) {
       {/* ステータス・操作 */}
       <Card>
         <CardHeader>
-          <CardTitle>ステータス</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>ステータス</CardTitle>
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/admin/reservations/${reservation.id}/edit`}>
+                <Pencil className="mr-2 h-4 w-4" />
+                編集
+              </Link>
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-4">
