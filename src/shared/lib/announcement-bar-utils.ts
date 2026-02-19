@@ -12,9 +12,6 @@ import { isValidAnnouncementBarAnimation, isValidAnnouncementBarDesignStyle } fr
 // Types
 // =============================================================================
 
-export type DesignStyle = AnnouncementBarDesignStyle
-export type AnimationType = AnnouncementBarAnimation
-
 export interface TypeColorConfig {
   bg: string
   text: string
@@ -59,7 +56,7 @@ export const TYPE_STYLES: Record<string, TypeColorConfig> = {
 /**
  * デザインスタイル別クラス設定
  */
-export const DESIGN_STYLE_CLASSES: Record<DesignStyle, {
+export const DESIGN_STYLE_CLASSES: Record<AnnouncementBarDesignStyle, {
   container: string
   containerWithBg: (type: string) => string
   border?: string
@@ -185,13 +182,13 @@ export function getGlassShimmerStyle(animate: boolean): CSSProperties {
 /**
  * アニメーションタイプをバリデートする
  */
-export function validateAnimation(value: string): AnimationType {
+export function validateAnimation(value: string): AnnouncementBarAnimation {
   return isValidAnnouncementBarAnimation(value) ? value : AnnouncementBarAnimation.fade
 }
 
 /**
  * デザインスタイルをバリデートする
  */
-export function validateDesignStyle(value: string): DesignStyle {
+export function validateDesignStyle(value: string): AnnouncementBarDesignStyle {
   return isValidAnnouncementBarDesignStyle(value) ? value : AnnouncementBarDesignStyle.solid
 }

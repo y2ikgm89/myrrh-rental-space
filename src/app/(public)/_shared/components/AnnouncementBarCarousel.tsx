@@ -26,10 +26,9 @@ import {
   getTypeHexColor,
   getGradientAnimationStyle,
   getGlassShimmerStyle,
-  type DesignStyle,
-  type AnimationType,
 } from '@/shared/lib/announcement-bar-utils'
 import { AnnouncementBarDesignStyle } from '@/shared/generated/prisma/enums'
+import type { AnnouncementBarAnimation } from '@/shared/generated/prisma/enums'
 
 // =============================================================================
 // Types
@@ -47,16 +46,14 @@ export interface AnnouncementBarItem {
   endAt?: Date | string | null
 }
 
-export type { DesignStyle, AnimationType }
-
 export interface CarouselSettings {
-  animation: AnimationType
+  animation: AnnouncementBarAnimation
   duration: number // ミリ秒
   autoPlay: boolean
   pauseOnHover: boolean
   showArrows: boolean
   showIndicator: boolean
-  designStyle: DesignStyle
+  designStyle: AnnouncementBarDesignStyle
   // Common Color Settings
   bgColor: string | null
   textColor: string | null
@@ -80,13 +77,13 @@ export interface AnnouncementBarCarouselProps {
 // Animation config
 // =============================================================================
 
-const ENTER_FROM_PROPS: Record<AnimationType, gsap.TweenVars> = {
+const ENTER_FROM_PROPS: Record<AnnouncementBarAnimation, gsap.TweenVars> = {
   fade: { opacity: 0 },
   slideX: { opacity: 0, x: 50 },
   slideY: { opacity: 0, y: -20 },
 }
 
-const ENTER_TO_PROPS: Record<AnimationType, gsap.TweenVars> = {
+const ENTER_TO_PROPS: Record<AnnouncementBarAnimation, gsap.TweenVars> = {
   fade: { opacity: 1 },
   slideX: { opacity: 1, x: 0 },
   slideY: { opacity: 1, y: 0 },

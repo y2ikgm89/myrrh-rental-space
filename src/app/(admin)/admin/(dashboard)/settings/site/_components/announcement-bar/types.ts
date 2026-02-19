@@ -1,19 +1,18 @@
 import type { UseFormRegister, UseFormSetValue, FieldErrors, Control } from 'react-hook-form'
 import type { AnnouncementBarData } from '@/admin/actions/announcement-bar'
-import type { DesignStyle, AnimationType } from '@/shared/lib/announcement-bar-utils'
 import { AnnouncementBarAnimation, AnnouncementBarDesignStyle, type AnnouncementBarType } from '@/shared/generated/prisma/enums'
 
 // =============================================================================
 // Constants
 // =============================================================================
 
-export const ANIMATION_OPTIONS: readonly { value: AnimationType; label: string; description: string }[] = [
+export const ANIMATION_OPTIONS: readonly { value: AnnouncementBarAnimation; label: string; description: string }[] = [
   { value: AnnouncementBarAnimation.fade, label: 'フェード', description: '透明度でふわっと切り替え' },
   { value: AnnouncementBarAnimation.slideX, label: '横スライド', description: '左右にスライドして切り替え' },
   { value: AnnouncementBarAnimation.slideY, label: '縦スライド', description: '上下にスライドして切り替え' },
 ]
 
-export const DESIGN_STYLE_OPTIONS: readonly { value: DesignStyle; label: string; description: string }[] = [
+export const DESIGN_STYLE_OPTIONS: readonly { value: AnnouncementBarDesignStyle; label: string; description: string }[] = [
   { value: AnnouncementBarDesignStyle.solid, label: 'ソリッド', description: 'シンプルなベタ塗り' },
   { value: AnnouncementBarDesignStyle.gradient, label: 'グラデーション', description: 'モダンなグラデーション背景' },
   { value: AnnouncementBarDesignStyle.outlined, label: 'アウトライン', description: '枠線スタイルですっきり' },
@@ -47,13 +46,13 @@ export type BarFormData = {
 }
 
 export type CarouselSettings = {
-  announcementBarAnimation: AnimationType
+  announcementBarAnimation: AnnouncementBarAnimation
   announcementBarDuration: number
   announcementBarAutoPlay: boolean
   announcementBarPauseOnHover: boolean
   announcementBarShowArrows: boolean
   announcementBarShowIndicator: boolean
-  announcementBarDesignStyle: DesignStyle
+  announcementBarDesignStyle: AnnouncementBarDesignStyle
   announcementBarBgColor: string
   announcementBarTextColor: string
   announcementBarStripeColor: string
@@ -99,7 +98,7 @@ export type CarouselSettingsProps = {
 export type DesignPreviewProps = {
   message: string
   linkText?: string
-  designStyle: DesignStyle
+  designStyle: AnnouncementBarDesignStyle
   bgColor: string | null
   textColor: string | null
   stripeColor: string | null

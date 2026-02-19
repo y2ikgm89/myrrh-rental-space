@@ -16,8 +16,8 @@ import {
   SelectValue,
   Switch,
 } from '@/admin/components/ui'
-import type { DesignStyle, AnimationType } from '@/shared/lib/announcement-bar-utils'
 import { AnnouncementBarDesignStyle } from '@/shared/generated/prisma/enums'
+import { isValidAnnouncementBarAnimation, isValidAnnouncementBarDesignStyle } from '@/shared/lib/validations/enums'
 import { DesignPreview } from './DesignPreview'
 import {
   ANIMATION_OPTIONS,
@@ -48,9 +48,10 @@ export function CarouselSettingsPanel({
             <Label htmlFor="designStyle">デザインスタイル</Label>
             <Select
               value={settings.announcementBarDesignStyle}
-              onValueChange={(value: DesignStyle) =>
-                onSettingsChange({ ...settings, announcementBarDesignStyle: value })
-              }
+              onValueChange={(value) => {
+                if (isValidAnnouncementBarDesignStyle(value))
+                  onSettingsChange({ ...settings, announcementBarDesignStyle: value })
+              }}
               disabled={isPending}
             >
               <SelectTrigger id="designStyle">
@@ -266,9 +267,10 @@ export function CarouselSettingsPanel({
             <Label htmlFor="animation">アニメーション種類</Label>
             <Select
               value={settings.announcementBarAnimation}
-              onValueChange={(value: AnimationType) =>
-                onSettingsChange({ ...settings, announcementBarAnimation: value })
-              }
+              onValueChange={(value) => {
+                if (isValidAnnouncementBarAnimation(value))
+                  onSettingsChange({ ...settings, announcementBarAnimation: value })
+              }}
               disabled={isPending}
             >
               <SelectTrigger id="animation">
