@@ -55,6 +55,43 @@ function RadioGroup({ ref, className, ...props }: ComponentPropsWithRef<typeof R
 
 ---
 
+## Context API（use() フック）
+
+React 19 では `use()` フックで Context を消費する。`useContext()` は非推奨（将来削除予定）。
+
+### use() の利点
+
+- **条件分岐後でも呼べる** — 通常の Hook と異なり、条件・ループ内でも使用可能
+- **`undefined` デフォルト値** — `createContext<T | undefined>(undefined)` で Context 外使用を型で検出できる
+
+```typescript
+import { createContext, use } from "react";
+
+// NG: React 18パターン（非推奨）
+const Ctx = createContext<MyContextValue | null>(null);
+function useMyContext() {
+  const value = useContext(Ctx);
+  if (!value) throw new Error("...");
+  return value;
+}
+
+// OK: React 19パターン（このプロジェクトの標準）
+const Ctx = createContext<MyContextValue | undefined>(undefined);
+export function useMyContext() {
+  const ctx = use(Ctx);
+  if (ctx === undefined)
+    throw new Error("useMyContext must be used within Provider");
+  return ctx;
+}
+```
+
+**ルール**:
+
+- `useContext` 禁止 → `use(Context)` を使用
+- `createContext<T | null>(null)` 禁止 → `createContext<T | undefined>(undefined)` を使用
+
+---
+
 ## React Compiler 1.0（自動メモ化）
 
 React Compiler 1.0（2025年10月 stable リリース、Next.js 16 でデフォルト有効）が
@@ -132,6 +169,37 @@ const handleMove = (e: React.MouseEvent) => {
 
 **ルール**: `ref` を参照するイベントハンドラでは `useCallback` を使わずプレーン関数で定義する。
 GSAP アニメーション系のイベントハンドラで特に頻出（→ `gsap-patterns.md` パターン C）。
+
+### useEffectEvent — コールバックを deps から除外
+
+イベントハンドラのような「最新値を読む副作用」は `useEffectEvent` でラップすることで deps 配列から除外できる（stable、`react` からインポート）:
+
+```typescript
+import { useEffect, useEffectEvent } from "react";
+
+// NG: コールバックが deps に入り、余分な re-subscribe が発生
+useEffect(() => {
+  const handler = (e: KeyboardEvent) => {
+    if (e.key === "Escape") onClose();
+  };
+  document.addEventListener("keydown", handler);
+  return () => document.removeEventListener("keydown", handler);
+}, [isOpen, onClose]); // onClose が変わるたびに再登録
+
+// OK: useEffectEvent でコールバックをイベント化（deps 不要）
+const handleEsc = useEffectEvent(() => {
+  onClose();
+});
+useEffect(() => {
+  const handler = (e: KeyboardEvent) => {
+    if (e.key === "Escape") handleEsc();
+  };
+  document.addEventListener("keydown", handler);
+  return () => document.removeEventListener("keydown", handler);
+}, [isOpen]); // onClose を deps に含めない
+```
+
+**使いどころ**: `useEffect` 内で最新の props/state/コールバックを読みたいが、deps に入れると不要な effect の再実行が起きる場合。
 
 ### 'use no memo' — コンパイル除外（一時的エスケープハッチ）
 
@@ -278,6 +346,8 @@ const isValid = useWatch({
 
 | 禁止パターン                                    | 代替                                                                           |
 | ----------------------------------------------- | ------------------------------------------------------------------------------ |
+| `useContext(Context)`                           | `use(Context)` を使用（React 19 stable）                                       |
+| `createContext<T \| null>(null)`                | `createContext<T \| undefined>(undefined)` を使用                              |
 | `forwardRef` / `React.forwardRef`               | `ref` を通常の prop として受け取る                                             |
 | `ComponentPropsWithoutRef`                      | `ComponentPropsWithRef`                                                        |
 | `Input.displayName = 'Input'`                   | 名前付き関数で自動推論                                                         |

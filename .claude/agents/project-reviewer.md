@@ -38,9 +38,12 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
 **React patterns** (`.claude/rules/react-patterns.md`):
 
 - **No `forwardRef`** (React 19 — `ref` is a regular prop now)
+- **No `useContext`** — use `use(Context)` instead (React 19 stable; can be called after conditionals)
+- **No `createContext<T | null>(null)`** — use `createContext<T | undefined>(undefined)` (pairs with `use()`)
 - **No `watch()` from React Hook Form** — must use `useWatch()` for React Compiler compatibility
 - **No manual `useCallback`/`useMemo`** unless external library requires reference identity
 - **No `useCallback` with `ref.current`** — causes React Compiler `react-hooks/preserve-manual-memoization` error; use plain function
+- **Use `useEffectEvent`** for event callbacks in `useEffect` deps — `import { useEffectEvent } from 'react'`
 - **GSAP / Three.js / Lenis / Lexical を含むファイル** — 編集後は `react-compiler-reviewer` サブエージェントで互換性チェック（render中の副作用・ref不正アクセス・手動メモ化を検出）
 
 **Zod 4** (`.claude/rules/zod-patterns.md`):

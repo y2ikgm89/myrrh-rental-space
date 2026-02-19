@@ -81,23 +81,23 @@
 
 ### 技術スタック
 
-| 技術         | バージョン | 備考                                                 |
-| ------------ | ---------- | ---------------------------------------------------- |
-| Next.js      | 16.1.6     | `'use cache'`, `updateTag`, PPR対応                  |
-| React        | 19.2.4     | React Compiler 1.0, `<Activity>`, `useEffectEvent`   |
-| TypeScript   | 6.0-beta   | TS 7.0 準備用 `--stableTypeOrdering` 利用可          |
-| Bun          | 1.3.x      | Bun.SQL, HTML直接実行                                |
-| Prisma       | 7.4.0      | 型生成98%削減, mapped enums                          |
-| PostgreSQL   | -          | Supabase経由                                         |
-| Better Auth  | 1.4.18     | RBAC, Auth.js統合                                    |
-| Tailwind CSS | 4.1.18     | CSS-first設定, @theme                                |
-| Zod          | 4.3.6      | `{ error: }` パラメータ, z.fromJSONSchema()          |
-| nuqs         | 2.8.8      | createSearchParamsCache, Zod 4統合                   |
-| Lexical      | 0.40.0     | React 19対応, Node transforms, mergeRegister本体移動 |
-| GSAP         | 3.14.2     | ScrollTrigger, @gsap/react 2.1                       |
-| Three.js     | 0.182.0    | @react-three/fiber 9.5, @react-three/drei 10.7       |
-| PixiJS       | 8.16.0     | 2D WebGLレンダラー                                   |
-| Lenis        | 1.3.17     | スムーススクロール                                   |
+| 技術         | バージョン | 備考                                                   |
+| ------------ | ---------- | ------------------------------------------------------ |
+| Next.js      | 16.1.6     | `'use cache'`, `updateTag`, PPR対応                    |
+| React        | 19.2.4     | React Compiler 1.0, `use()`, `useEffectEvent` (stable) |
+| TypeScript   | 6.0-beta   | TS 7.0 準備用 `--stableTypeOrdering` 利用可            |
+| Bun          | 1.3.x      | Bun.SQL, HTML直接実行                                  |
+| Prisma       | 7.4.0      | 型生成98%削減, mapped enums                            |
+| PostgreSQL   | -          | Supabase経由                                           |
+| Better Auth  | 1.4.18     | RBAC, Auth.js統合                                      |
+| Tailwind CSS | 4.1.18     | CSS-first設定, @theme                                  |
+| Zod          | 4.3.6      | `{ error: }` パラメータ, z.fromJSONSchema()            |
+| nuqs         | 2.8.8      | createSearchParamsCache, Zod 4統合                     |
+| Lexical      | 0.40.0     | React 19対応, Node transforms, mergeRegister本体移動   |
+| GSAP         | 3.14.2     | ScrollTrigger, @gsap/react 2.1                         |
+| Three.js     | 0.182.0    | @react-three/fiber 9.5, @react-three/drei 10.7         |
+| PixiJS       | 8.16.0     | 2D WebGLレンダラー                                     |
+| Lenis        | 1.3.17     | スムーススクロール                                     |
 
 ### 構造
 
@@ -203,3 +203,6 @@ gcloud builds submit --config=cloudbuild.yaml  # Cloud Run デプロイ（Cloud 
 - **管理画面 Server Component の searchParams** — `await searchParams` + `parseInt(params.page, 10)` は禁止。`@/shared/lib/nuqs/parsers.ts` の `loadAdmin*SearchParams` ローダーを使う。未存在の場合は `createSearchParamsCache` で追加してから使う
 - **Server→Client 境界での `Date` → `string` 変換** — React 19 は Server Component → Client Component へ props を渡す際に `Date` を ISO 8601 文字列にシリアライズする（[公式ドキュメント](https://react.dev/reference/rsc/use-client#serializable-types)）。`toPlainObject()` も同様（`JSON.parse(JSON.stringify())` による変換）。**Client Component に渡す型の日付フィールドは `Date` でなく `string` で宣言**し、Server Action 側で `.toISOString()` を明示する。Client Component では date-fns へ `new Date(field)` でラップして渡す（例: `format(new Date(field), 'HH:mm')`、`isSameDay(new Date(field), day)`）。ISO 8601 UTC 文字列のソートは `localeCompare()` で代替可（辞書順 = 時系列順）。Server Component 内のみで完結する `Date` フィールドは影響なし
 - **Next.js 16 PPR + `new Date()` ビルドエラー** — PPR（`cacheComponents: true`）環境で Server Component が動的データアクセス前に `new Date()` を呼ぶと `Route "..." used new Date() before accessing uncached data` エラー。`import { connection } from 'next/server'` して `await connection()` を `new Date()` の前に呼ぶのが[公式推奨](https://nextjs.org/docs/app/api-reference/functions/connection)（`headers()` でも動くが意味的に誤り）。`audit.ts` など実際にヘッダー値を読む箇所は `headers()` のまま
+- **React 19 Context パターン** — `createContext<T | undefined>(undefined)` + `use(Context)` フック（`useContext` の代替、条件分岐後でも呼べる。`null` デフォルト値は非推奨）
+- **React 19 `useEffectEvent`** — `const onXxx = useEffectEvent(() => { callback() })` でコールバックを deps から除外。`import { useEffectEvent } from 'react'`（stable）
+- **React 19 `<Activity>` は EXPERIMENTAL 採用禁止** — `display: none` 実装のため CSS transform アニメーションと非互換。context7/WebFetch で確認済み
