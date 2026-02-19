@@ -97,21 +97,23 @@ onClick={() => void setPage(page + 1)}
 
 ## Server Actions の型インポート
 
-管理画面 Server Actions では `@/admin/types/server-actions` から import:
+管理画面内の**全ファイル**（Server Actions・`'use client'` コンポーネント・hooks・型定義ファイルを問わず）は `@/admin/types/server-actions` から import する:
 
 ```typescript
-// OK: 管理画面専用
+// OK: 管理画面専用（Server Actions・'use client' コンポーネント・hooks すべて共通）
 import {
   createSuccess,
   createFailure,
   type ActionResult,
 } from "@/admin/types/server-actions";
 
-// NG: 共有型を直接 import（管理画面では admin 版を使う）
+// NG: 共有型を直接 import（管理画面内では禁止）
 import { createSuccess, createFailure } from "@/shared/types/server-actions";
 ```
 
 `@/admin/types/server-actions` は `@/shared/types/server-actions` の re-export に加え、`AuditUser` 型も提供する。
+
+**例外**: `src/app/(admin)/admin/(dashboard)/_shared/types/server-actions.ts` バレルファイル自体（このファイルのみ `@/shared` から import する）。
 
 ## ActionResult での withPermission パターン
 

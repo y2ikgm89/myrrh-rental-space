@@ -41,6 +41,7 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
 - **No `watch()` from React Hook Form** — must use `useWatch()` for React Compiler compatibility
 - **No manual `useCallback`/`useMemo`** unless external library requires reference identity
 - **No `useCallback` with `ref.current`** — causes React Compiler `react-hooks/preserve-manual-memoization` error; use plain function
+- **GSAP / Three.js / Lenis / Lexical を含むファイル** — 編集後は `react-compiler-reviewer` サブエージェントで互換性チェック（render中の副作用・ref不正アクセス・手動メモ化を検出）
 
 **Zod 4** (`.claude/rules/zod-patterns.md`):
 

@@ -63,6 +63,7 @@
 - **専門エージェント**:
   - `security-reviewer` — auth/Stripe/OAuth/暗号化コードのセキュリティレビュー
   - `project-reviewer` — 実装完了後の総合品質チェック（型安全・カラートークン・規約）
+  - `react-compiler-reviewer` — GSAP/Three.js/Lenis/Lexical 含むファイル編集後の React Compiler 互換性チェック
   - `verification` — type-check / lint / build の検証（Haiku 使用で高速）
   - `design-memory` — ブランドデザイン決定の記憶（UI実装時）
 - **MCP**: `serena`, `context7`, `playwright`, `github`（`.mcp.json`設定済、`github-mcp-server`バイナリ要`GITHUB_PERSONAL_ACCESS_TOKEN`環境変数）推奨。`WebSearch`, `WebFetch` 必要時
@@ -198,3 +199,5 @@ gcloud builds submit --config=cloudbuild.yaml  # Cloud Run デプロイ（Cloud 
 - **`()` を含むパスは Bash コマンドで渡せない** — `src/app/(admin)/` など Next.js ルートグループパスを Bash に渡すと MINGW64 が `(` をサブシェル記法として解釈しエラー。Glob/Grep/Read ツールを使うか、クォートで回避（例: `ls 'src/app/(admin)/'`）
 - **Prettier がグロブ含み bold をエスケープする** — テーブルセルで ``**`path/**` テキスト**`` のように bold 内にグロブ `**` を含む code span があると、閉じ `**` が `\*\*` にエスケープされる。解決策: bold を削除するか code span をセルの外へ出す。
 - **PostToolUse フック後は再 Read が必要** — Edit/Write 後に Prettier/ESLint フックが走るとファイルが変更される。続けて同ファイルを Edit する場合は事前に再 Read しないと "file modified since read" エラーが発生する。
+- **管理画面ファイルのインポートパス** — `'use client'` コンポーネントを含む管理画面内**全ファイル**が `@/admin/types/server-actions` を使う（`@/shared/types/server-actions` の直接 import 禁止）。例外は `_shared/types/server-actions.ts` バレルファイルのみ
+- **管理画面 Server Component の searchParams** — `await searchParams` + `parseInt(params.page, 10)` は禁止。`@/shared/lib/nuqs/parsers.ts` の `loadAdmin*SearchParams` ローダーを使う。未存在の場合は `createSearchParamsCache` で追加してから使う
