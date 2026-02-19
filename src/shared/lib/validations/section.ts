@@ -202,7 +202,7 @@ export const faqListConfigSchema = z.object({
     .optional(),
   variant: z.enum(faqVariantValues).default('default'),
   containerWidth: z.enum(containerWidthValues).default('md'),
-  initialOpen: z.enum(faqInitialOpenValues).default('none'),
+  initialOpen: z.enum(faqInitialOpenValues).default(faqInitialOpenValues[1]),
 })
 
 // --- Features ---

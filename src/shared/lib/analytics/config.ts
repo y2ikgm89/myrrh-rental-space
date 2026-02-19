@@ -9,7 +9,7 @@
 
 import { cacheLife, cacheTag } from 'next/cache'
 import { prisma } from '@/shared/lib/prisma'
-import { CACHE_TAGS } from '@/shared/lib/constants'
+import { CACHE_TAGS, CACHE_LIFE } from '@/shared/lib/constants'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
 import { isValidAnalyticsType } from '@/shared/lib/validations/enums'
 import type { AnalyticsType } from '@/shared/generated/prisma/enums'
@@ -41,12 +41,12 @@ function getDefaultAnalyticsConfig(): AnalyticsConfig {
  * Analytics設定を取得（キャッシュ付き）
  *
  * Next.js 16 'use cache' パターン:
- * - cacheLife('hours'): 1時間キャッシュ
+ * - cacheLife(CACHE_LIFE.STATIC_SETTINGS): 1時間キャッシュ
  * - cacheTag: 設定変更時に revalidateTag('analytics-config') で無効化
  */
 export async function getAnalyticsConfig(): Promise<AnalyticsConfig> {
   'use cache'
-  cacheLife('hours')
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS)
   cacheTag(CACHE_TAGS.ANALYTICS_CONFIG, CACHE_TAGS.SETTINGS)
 
   try {

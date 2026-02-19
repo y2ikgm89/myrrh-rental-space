@@ -4,8 +4,8 @@
  * @description 全ブロック共通のアクセントカラー定義
  * CSS: [data-color="X"] { --accent: ...; --accent-fg: ...; }
  *
- * IMPORTANT: ACCENT_COLOR_SWATCHES の OKLCH 値は lexical-content.css の
- * [data-color] トークン定義と完全に一致させること（単一ソース of truth）。
+ * IMPORTANT: lexical-content.css の [data-color] --accent 値が canonical。
+ * ACCENT_COLOR_SWATCHES はその値をミラーするため、CSS 変更時は必ずここも更新する。
  */
 
 import { createEnumGuard } from './type-guards'
