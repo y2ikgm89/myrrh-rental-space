@@ -87,8 +87,13 @@
       "Bash(rd /s:*)",
       "Bash(rmdir /s:*)",
       "Read(./.env)",
-      "Read(./.env.*)"
+      "Read(./.env.*)",
+      "Write(.env)",
+      "Write(.env.local)",
+      "Write(.env.*)",
+      "Edit(.env)",
+      "Edit(.env.local)",
+      "Edit(.env.*)"
     ]
-  },
-  "enableAllProjectMcpServers": true
+  }
 }
