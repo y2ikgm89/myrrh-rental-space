@@ -46,7 +46,7 @@ export async function GET() {
   const cookieStore = await cookies()
   cookieStore.set(STATE_COOKIE_NAME, state, {
     httpOnly: true,
-    secure: process.env["NODE_ENV"] === 'production',
+    secure: serverEnv.NODE_ENV === 'production',
     sameSite: 'lax',
     maxAge: STATE_COOKIE_MAX_AGE,
     path: '/',
@@ -71,7 +71,7 @@ function getBaseUrl(): string {
     return serverEnv.BETTER_AUTH_URL
   }
   // フォールバック
-  return process.env["VERCEL_URL"]
-    ? `https://${process.env["VERCEL_URL"]}`
+  return serverEnv.VERCEL_URL
+    ? `https://${serverEnv.VERCEL_URL}`
     : 'http://localhost:3000'
 }

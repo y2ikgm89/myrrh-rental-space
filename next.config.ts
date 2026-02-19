@@ -1,6 +1,4 @@
 import type { NextConfig } from 'next'
-// 環境変数バリデーション（ビルド時検証）
-import '@/shared/lib/env'
 
 const isDev = process.env["NODE_ENV"] === 'development'
 
