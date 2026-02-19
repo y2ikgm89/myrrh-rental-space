@@ -1,53 +1,39 @@
-'use client'
+"use client";
 
-import Image from 'next/image'
-import { useRouter } from 'next/navigation'
-import { useState, useTransition } from 'react'
-import { toast } from 'sonner'
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useTransition } from "react";
+import { toast } from "sonner";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-  Button,
   Badge,
   Switch,
-} from '@/admin/components/ui'
-import { DeleteConfirmDialog } from '@/admin/components/DeleteConfirmDialog'
-import { toggleLocationPublish, deleteLocation } from '@/admin/actions/location'
-import type { LocationWithStats } from '@/admin/lib/validations/location'
-import { formatDateTimeShort } from '@/shared/lib/utils'
+} from "@/admin/components/ui";
+import { toggleLocationPublish } from "@/admin/actions/location";
+import type { LocationWithStats } from "@/admin/lib/validations/location";
+import { formatDateTimeShort } from "@/shared/lib/utils";
 
 type LocationDetailProps = {
-  location: LocationWithStats
-}
+  location: LocationWithStats;
+};
 
 export function LocationDetail({ location }: LocationDetailProps) {
-  const router = useRouter()
-  const [isPending, startTransition] = useTransition()
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
 
   const handlePublishChange = async (checked: boolean) => {
     startTransition(async () => {
-      const result = await toggleLocationPublish(location.id, checked)
+      const result = await toggleLocationPublish(location.id, checked);
       if (result.success) {
-        router.refresh()
+        router.refresh();
       } else {
-        toast.error(result.error || 'エラーが発生しました')
+        toast.error(result.error || "エラーが発生しました");
       }
-    })
-  }
-
-  const handleDelete = async () => {
-    startTransition(async () => {
-      const result = await deleteLocation(location.id)
-      if (result.success) {
-        router.push('/admin/locations')
-      } else {
-        toast.error(result.error || 'エラーが発生しました')
-      }
-    })
-  }
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -65,12 +51,12 @@ export function LocationDetail({ location }: LocationDetailProps) {
             />
             <div>
               <p className="font-medium">
-                {location.isPublished ? '公開中' : '非公開'}
+                {location.isPublished ? "公開中" : "非公開"}
               </p>
               <p className="text-sm text-muted-foreground">
                 {location.isPublished
-                  ? 'この場所は公開ページに表示されています'
-                  : 'この場所は公開ページに表示されていません'}
+                  ? "この場所は公開ページに表示されています"
+                  : "この場所は公開ページに表示されていません"}
               </p>
             </div>
           </div>
@@ -97,7 +83,9 @@ export function LocationDetail({ location }: LocationDetailProps) {
             {location.description && (
               <div className="sm:col-span-2">
                 <div className="text-sm text-muted-foreground">説明</div>
-                <div className="whitespace-pre-wrap">{location.description}</div>
+                <div className="whitespace-pre-wrap">
+                  {location.description}
+                </div>
               </div>
             )}
             <div className="sm:col-span-2">
@@ -162,18 +150,19 @@ export function LocationDetail({ location }: LocationDetailProps) {
       </Card>
 
       {/* 営業時間 */}
-      {location.businessHours && Object.keys(location.businessHours).length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>営業時間</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <pre className="text-sm whitespace-pre-wrap">
-              {JSON.stringify(location.businessHours, null, 2)}
-            </pre>
-          </CardContent>
-        </Card>
-      )}
+      {location.businessHours &&
+        Object.keys(location.businessHours).length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>営業時間</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <pre className="text-sm whitespace-pre-wrap">
+                {JSON.stringify(location.businessHours, null, 2)}
+              </pre>
+            </CardContent>
+          </Card>
+        )}
 
       {/* メタ情報 */}
       <Card>
@@ -197,38 +186,16 @@ export function LocationDetail({ location }: LocationDetailProps) {
             <div>
               <div className="text-sm text-muted-foreground">状態</div>
               <div className="font-medium">
-                <Badge variant={location.isActive ? 'secondary' : 'destructive'}>
-                  {location.isActive ? 'アクティブ' : '削除済み'}
+                <Badge
+                  variant={location.isActive ? "secondary" : "destructive"}
+                >
+                  {location.isActive ? "アクティブ" : "削除済み"}
                 </Badge>
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
-
-      {/* 危険な操作 */}
-      <Card className="border-destructive">
-        <CardHeader>
-          <CardTitle className="text-destructive">危険な操作</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Button
-            variant="destructive"
-            disabled={isPending}
-            onClick={() => setIsDeleteDialogOpen(true)}
-          >
-            場所を削除
-          </Button>
-          <DeleteConfirmDialog
-            open={isDeleteDialogOpen}
-            onOpenChange={setIsDeleteDialogOpen}
-            itemName={location.name}
-            description="この操作により、場所は非アクティブ状態になります。紐づいているスペースがある場合は削除できません。"
-            onConfirm={handleDelete}
-            isPending={isPending}
-          />
-        </CardContent>
-      </Card>
     </div>
-  )
+  );
 }

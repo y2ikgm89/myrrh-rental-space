@@ -1,72 +1,70 @@
-import { notFound } from 'next/navigation'
-import { connection } from 'next/server'
-import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
-import { getLocationById } from '@/admin/actions/location'
-import { LocationDetail } from './_components/LocationDetail'
-import { Button } from '@/admin/components/ui'
-import type { Metadata } from 'next'
+import { notFound } from "next/navigation";
+import { connection } from "next/server";
+import { Pencil } from "lucide-react";
+import Link from "next/link";
+import { getLocationById, deleteLocation } from "@/admin/actions/location";
+import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
+import { DangerZone } from "@/admin/components/DangerZone";
+import { Button } from "@/admin/components/ui";
+import { LocationDetail } from "./_components/LocationDetail";
+import type { Metadata } from "next";
 
-
-type Params = Promise<{ id: string }>
+type Params = Promise<{ id: string }>;
 
 type PageProps = {
-  params: Params
-}
+  params: Params;
+};
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  await connection()
-  const { id } = await params
-  const result = await getLocationById(id)
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  await connection();
+  const { id } = await params;
+  const result = await getLocationById(id);
 
   if (!result.success || !result.data) {
     return {
-      title: '場所が見つかりません | Myrrh Rental Space',
-    }
+      title: "場所が見つかりません | Myrrh Rental Space",
+    };
   }
 
   return {
     title: `${result.data.name} | Myrrh Rental Space`,
-  }
+  };
 }
 
 export default async function LocationDetailPage({ params }: PageProps) {
   await connection();
-  await connection()
-  const { id } = await params
-  const result = await getLocationById(id)
+  const { id } = await params;
+  const result = await getLocationById(id);
 
   if (!result.success || !result.data) {
-    notFound()
+    notFound();
   }
 
-  const location = result.data
+  const location = result.data;
 
   return (
-    <div className="space-y-6">
-      {/* ヘッダー */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/admin/locations">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              一覧に戻る
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold">{location.name}</h1>
-            <p className="text-muted-foreground">場所詳細</p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Button asChild>
-            <Link href={`/admin/locations/${location.id}/edit`}>編集</Link>
-          </Button>
-        </div>
-      </div>
-
-      {/* 詳細 */}
+    <AdminDetailLayout
+      backHref="/admin/locations"
+      title={location.name}
+      subtitle="拠点詳細"
+      actions={
+        <Button asChild size="sm">
+          <Link href={`/admin/locations/${location.id}/edit`}>
+            <Pencil className="mr-2 h-4 w-4" />
+            編集
+          </Link>
+        </Button>
+      }
+    >
       <LocationDetail location={location} />
-    </div>
-  )
+      <DangerZone
+        deleteLabel="場所を削除"
+        itemName={location.name}
+        onDelete={() => deleteLocation(location.id)}
+        redirectTo="/admin/locations"
+      />
+    </AdminDetailLayout>
+  );
 }
