@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * ページ一覧テーブル
@@ -7,10 +7,10 @@
  * ホームページ仮想行 + ページデータ行を表示
  */
 
-import { useState } from 'react'
-import Link from 'next/link'
-import { Edit, Home } from 'lucide-react'
-import { Button } from '@/admin/components/ui'
+import { useState } from "react";
+import Link from "next/link";
+import { Edit, Home } from "lucide-react";
+import { Button } from "@/admin/components/ui";
 import {
   Table,
   TableBody,
@@ -18,20 +18,20 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/admin/components/ui/table'
-import { Badge } from '@/admin/components/ui/badge'
-import { Pagination } from '@/admin/components/ui/Pagination'
-import { formatDateTimeShort } from '@/shared/lib/utils'
-import { PageActions } from './PageActions'
-import { BulkActions } from './BulkActions'
-import type { PageModel as PageData } from '@/shared/generated/prisma/models/Page'
+} from "@/admin/components/ui/table";
+import { Badge } from "@/admin/components/ui/badge";
+import { Pagination } from "@/admin/components/ui/Pagination";
+import { formatDateTimeShort } from "@/shared/lib/utils";
+import { PageActions } from "./PageActions";
+import { BulkActions } from "./BulkActions";
+import type { PageModel as PageData } from "@/shared/generated/prisma/models/Page";
 
 interface PageListTableProps {
-  pages: PageData[]
-  total: number
-  currentPage: number
-  perPage: number
-  homepageLastUpdated: Date | null
+  pages: PageData[];
+  total: number;
+  currentPage: number;
+  perPage: number;
+  homepageLastUpdated: Date | null;
 }
 
 export function PageListTable({
@@ -41,35 +41,35 @@ export function PageListTable({
   perPage,
   homepageLastUpdated,
 }: PageListTableProps) {
-  const [selectedSlugs, setSelectedSlugs] = useState<string[]>([])
+  const [selectedSlugs, setSelectedSlugs] = useState<string[]>([]);
 
   const selectableSlugs = pages
     .filter((p) => !p.isSystemPage)
-    .map((p) => p.slug)
+    .map((p) => p.slug);
 
   const allSelected =
     selectableSlugs.length > 0 &&
-    selectableSlugs.every((s) => selectedSlugs.includes(s))
+    selectableSlugs.every((s) => selectedSlugs.includes(s));
 
   const toggleAll = () => {
     if (allSelected) {
-      setSelectedSlugs([])
+      setSelectedSlugs([]);
     } else {
-      setSelectedSlugs(selectableSlugs)
+      setSelectedSlugs(selectableSlugs);
     }
-  }
+  };
 
   const toggleOne = (slug: string) => {
     setSelectedSlugs((prev) =>
-      prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]
-    )
-  }
+      prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug],
+    );
+  };
 
-  const totalPages = Math.ceil(total / perPage)
+  const totalPages = Math.ceil(total / perPage);
 
   return (
     <>
-      <div className="rounded-lg border bg-card">
+      <div className="overflow-hidden rounded-lg border bg-card">
         <Table>
           <TableHeader>
             <TableRow>
@@ -96,8 +96,7 @@ export function PageListTable({
               <TableCell />
               <TableCell className="font-mono text-sm">
                 <div className="flex items-center gap-2">
-                  <Home className="h-4 w-4 text-primary" />
-                  /
+                  <Home className="h-4 w-4 text-primary" />/
                 </div>
               </TableCell>
               <TableCell className="font-medium">ホームページ</TableCell>
@@ -110,7 +109,9 @@ export function PageListTable({
                 <Badge variant="success">公開中</Badge>
               </TableCell>
               <TableCell className="text-muted-foreground">
-                {homepageLastUpdated ? formatDateTimeShort(homepageLastUpdated) : '-'}
+                {homepageLastUpdated
+                  ? formatDateTimeShort(homepageLastUpdated)
+                  : "-"}
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-1">
@@ -134,7 +135,7 @@ export function PageListTable({
             {pages.map((page) => (
               <TableRow
                 key={page.id}
-                className={page.isSystemPage ? 'bg-muted/30' : ''}
+                className={page.isSystemPage ? "bg-muted/30" : ""}
               >
                 <TableCell>
                   {!page.isSystemPage && (
@@ -193,7 +194,10 @@ export function PageListTable({
 
             {pages.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell
+                  colSpan={7}
+                  className="text-center py-8 text-muted-foreground"
+                >
                   条件に一致するページがありません
                 </TableCell>
               </TableRow>
@@ -215,5 +219,5 @@ export function PageListTable({
         onClear={() => setSelectedSlugs([])}
       />
     </>
-  )
+  );
 }
