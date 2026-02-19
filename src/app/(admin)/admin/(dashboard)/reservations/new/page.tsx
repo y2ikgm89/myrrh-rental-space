@@ -4,14 +4,14 @@ import { getSpacesForReservation } from '@/admin/actions/reservation'
 import { ReservationForm } from '../_components/ReservationForm'
 import { Button } from '@/admin/components/ui'
 import type { Metadata } from 'next'
-import { headers } from "next/headers";
+import { connection } from "next/server";
 
 export const metadata: Metadata = {
   title: '新規予約 | Myrrh Rental Space',
 }
 
 export default async function NewReservationPage() {
-  await headers();
+  await connection();
   const spaces = await getSpacesForReservation()
 
   return (

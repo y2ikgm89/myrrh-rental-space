@@ -6,7 +6,6 @@ import { FaqCategoryList } from "./_components/FaqCategoryList";
 import { Button } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 
 export const metadata: Metadata = {
   title: "FAQ管理 | Myrrh Rental Space",
@@ -19,7 +18,7 @@ async function FaqContent() {
 }
 
 export default async function FaqPage() {
-  await headers();
+  await connection();
   await connection();
 
   return (

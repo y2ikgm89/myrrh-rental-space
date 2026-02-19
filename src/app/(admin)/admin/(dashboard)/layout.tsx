@@ -12,7 +12,6 @@
  */
 
 import { Suspense } from "react";
-import { headers } from "next/headers";
 import { connection } from "next/server";
 import { cacheLife, cacheTag } from "next/cache";
 import { CACHE_TAGS, CACHE_LIFE } from "@/shared/lib/constants";
@@ -53,10 +52,7 @@ export default async function DashboardLayout({
 }: {
   children: ReactNode;
 }): Promise<ReactElement> {
-  // Access dynamic data (headers) early to mark this route as dynamic for Next.js 16 PPR
-  // This allows Server Actions in child components to use new Date() without errors
-  await headers();
-
+  // Opt into dynamic rendering for Next.js 16 PPR (connection() is official for new Date())
   await connection();
 
   const brandingSettings = await getAdminBrandingSettings();

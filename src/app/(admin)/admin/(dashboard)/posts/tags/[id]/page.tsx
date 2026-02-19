@@ -3,7 +3,6 @@ import { connection } from 'next/server'
 import type { Metadata } from 'next'
 import { getPostTagById } from '@/admin/actions/post'
 import { TagEditor } from '../_components/TagEditor'
-import { headers } from "next/headers";
 
 
 export async function generateMetadata({
@@ -24,7 +23,7 @@ type PageProps = {
 }
 
 export default async function EditTagPage({ params }: PageProps) {
-  await headers();
+  await connection();
   await connection()
   const { id } = await params
   const tag = await getPostTagById(id)

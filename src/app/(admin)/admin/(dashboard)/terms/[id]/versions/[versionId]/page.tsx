@@ -18,7 +18,7 @@ import {
   Breadcrumb,
 } from '@/admin/components/ui'
 import type { Metadata } from 'next'
-import { headers } from "next/headers";
+import { connection } from "next/server";
 
 export const metadata: Metadata = {
   title: 'バージョンプレビュー | Myrrh Rental Space',
@@ -31,7 +31,7 @@ interface VersionPreviewPageProps {
 export default async function VersionPreviewPage({
   params,
 }: VersionPreviewPageProps) {
-  await headers();
+  await connection();
   const { id, versionId } = await params
 
   const [termsResult, versionResult] = await Promise.all([

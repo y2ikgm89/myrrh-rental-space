@@ -6,7 +6,6 @@ import { getReservationById, getSpacesForReservation } from '@/admin/actions/res
 import { ReservationEditForm } from '../../_components/ReservationEditForm'
 import { Button } from '@/admin/components/ui'
 import type { Metadata } from 'next'
-import { headers } from "next/headers";
 
 type Params = Promise<{ id: string }>
 
@@ -29,7 +28,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function ReservationEditPage({ params }: PageProps) {
-  await headers();
+  await connection();
   await connection()
   const { id } = await params
 

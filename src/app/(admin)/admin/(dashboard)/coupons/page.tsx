@@ -9,7 +9,7 @@ import { LoadingState } from "@/admin/components/LoadingState";
 import { isValidCouponType } from "@/shared/lib/validations/enums";
 import { loadAdminCouponSearchParams } from "@/shared/lib/nuqs";
 import type { Metadata } from "next";
-import { headers } from "next/headers";
+import { connection } from "next/server";
 
 export const metadata: Metadata = {
   title: "クーポン管理 | Myrrh Rental Space",
@@ -63,7 +63,7 @@ async function CouponList({ searchParams }: { searchParams: SearchParams }) {
 }
 
 export default async function CouponsPage({ searchParams }: PageProps) {
-  await headers();
+  await connection();
   return (
     <div className="space-y-6">
       {/* ヘッダー */}

@@ -32,7 +32,7 @@ import { parsePostStatusFilter } from "@/shared/lib/validations/enums";
 import { createTypeGuard } from "@/shared/lib/serialize";
 import { loadAdminPostSearchParams } from "@/shared/lib/nuqs";
 import type { Metadata } from "next";
-import { headers } from "next/headers";
+import { connection } from "next/server";
 
 export const metadata: Metadata = {
   title: "投稿管理 | Myrrh Rental Space",
@@ -143,7 +143,7 @@ async function CommentList({ searchParams }: { searchParams: SearchParams }) {
 // ==============================================================================
 
 export default async function PostsPage({ searchParams }: PageProps) {
-  await headers();
+  await connection();
   const params = await loadAdminPostSearchParams(searchParams);
   const currentTab = params.tab;
 

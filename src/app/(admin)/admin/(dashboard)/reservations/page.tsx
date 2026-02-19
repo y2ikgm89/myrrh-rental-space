@@ -9,7 +9,7 @@ import { LoadingState } from "@/admin/components/LoadingState";
 import { parseReservationStatusFilter } from "@/shared/lib/validations/enums";
 import { loadAdminReservationSearchParams } from "@/shared/lib/nuqs";
 import type { Metadata } from "next";
-import { headers } from "next/headers";
+import { connection } from "next/server";
 
 export const metadata: Metadata = {
   title: "予約管理 | Myrrh Rental Space",
@@ -47,7 +47,7 @@ async function ReservationList({
 }
 
 export default async function ReservationsPage({ searchParams }: PageProps) {
-  await headers();
+  await connection();
   return (
     <div className="space-y-6">
       {/* ヘッダー */}

@@ -15,7 +15,6 @@ import { DashboardStatsSection } from "./_components/DashboardStatsSection";
 import { DashboardChartSection } from "./_components/DashboardChartSection";
 import { DashboardTodaySection } from "./_components/DashboardTodaySection";
 import { DashboardRecentSection } from "./_components/DashboardRecentSection";
-import { headers } from "next/headers";
 import { AnalyticsCard } from "./_components/AnalyticsCard";
 import {
   StatsCardsSkeleton,
@@ -44,7 +43,7 @@ function DashboardHeaderSkeleton() {
 }
 
 export default async function AdminDashboard(): Promise<ReactElement> {
-  await headers();
+  await connection();
   await connection();
 
   return (

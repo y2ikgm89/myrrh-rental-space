@@ -6,7 +6,6 @@ import { getLayoutSettings } from '@/shared/lib/settings/public'
 import { getValidLayoutWidth, LayoutWidth } from '@/shared/lib/validations/enums'
 import type { ContentWidth } from '@/shared/types'
 import type { Metadata } from 'next'
-import { headers } from "next/headers";
 
 
 type Params = Promise<{ id: string }>
@@ -32,7 +31,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function EditPostPage({ params }: PageProps) {
-  await headers();
+  await connection();
   await connection()
   const { id } = await params
 

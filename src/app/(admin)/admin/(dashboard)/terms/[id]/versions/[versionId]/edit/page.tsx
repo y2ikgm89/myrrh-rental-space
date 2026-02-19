@@ -5,7 +5,7 @@ import { getTermsById, getTermsVersionById } from '@/admin/actions/terms'
 import { TermsVersionForm } from '../../../../_components/TermsVersionForm'
 import { Button } from '@/admin/components/ui'
 import type { Metadata } from 'next'
-import { headers } from "next/headers";
+import { connection } from "next/server";
 
 export const metadata: Metadata = {
   title: 'バージョン編集 | Myrrh Rental Space',
@@ -16,7 +16,7 @@ interface EditVersionPageProps {
 }
 
 export default async function EditVersionPage({ params }: EditVersionPageProps) {
-  await headers();
+  await connection();
   const { id, versionId } = await params
 
   const [termsResult, versionResult] = await Promise.all([

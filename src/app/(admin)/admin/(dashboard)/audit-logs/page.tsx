@@ -1,4 +1,4 @@
-import { headers } from "next/headers";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { getAuditLogs } from "@/admin/actions/audit-log";
 import { loadAdminAuditLogSearchParams } from "@/shared/lib/nuqs";
@@ -48,9 +48,8 @@ async function AuditLogList({ searchParams }: PageProps) {
 }
 
 export default async function AuditLogsPage({ searchParams }: PageProps) {
-  // Access dynamic data early to mark this route as dynamic for Next.js 16 PPR
-  // This allows Server Actions called from Suspense boundaries to use new Date()
-  await headers();
+  // Opt into dynamic rendering for Next.js 16 PPR (connection() is official for new Date())
+  await connection();
 
   return (
     <div className="space-y-6">

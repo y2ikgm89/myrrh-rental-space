@@ -20,7 +20,6 @@ import { SectionMasterDetail } from './_components/SectionMasterDetail'
 import { PublishToggle } from './_components/PublishToggle'
 import type { Metadata } from 'next'
 import type { ReactElement } from 'react'
-import { headers } from "next/headers";
 
 
 type PageParams = Promise<{ slug: string }>
@@ -40,7 +39,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function EditPagePage({ params }: PageProps): Promise<ReactElement> {
-  await headers();
+  await connection();
   await connection()
   const { slug } = await params
 

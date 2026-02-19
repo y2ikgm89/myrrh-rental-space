@@ -16,7 +16,7 @@ import {
 } from "./_components";
 import type { Metadata } from "next";
 import type { ReactElement } from "react";
-import { headers } from "next/headers";
+import { connection } from "next/server";
 
 export const metadata: Metadata = {
   title: "ページ管理",
@@ -29,7 +29,7 @@ type PageProps = {
 export default async function PagesManagementPage({
   searchParams,
 }: PageProps): Promise<ReactElement> {
-  await headers();
+  await connection();
   const params = await loadAdminPageSearchParams(searchParams);
 
   const [result, homepageLastUpdated] = await Promise.all([

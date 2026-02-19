@@ -9,7 +9,7 @@ import { LoadingState } from "@/admin/components/LoadingState";
 import { parseCustomerStatusFilter } from "@/shared/lib/validations/enums";
 import { loadAdminCustomerSearchParams } from "@/shared/lib/nuqs";
 import type { Metadata } from "next";
-import { headers } from "next/headers";
+import { connection } from "next/server";
 
 export const metadata: Metadata = {
   title: "顧客管理 | Myrrh Rental Space",
@@ -43,7 +43,7 @@ async function CustomerList({ searchParams }: { searchParams: SearchParams }) {
 }
 
 export default async function CustomersPage({ searchParams }: PageProps) {
-  await headers();
+  await connection();
   return (
     <div className="space-y-6">
       {/* ヘッダー */}

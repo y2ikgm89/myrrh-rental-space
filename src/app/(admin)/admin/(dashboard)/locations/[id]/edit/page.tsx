@@ -6,7 +6,6 @@ import { getLocationById } from '@/admin/actions/location'
 import { LocationForm } from '../../_components/LocationForm'
 import { Button } from '@/admin/components/ui'
 import type { Metadata } from 'next'
-import { headers } from "next/headers";
 
 
 type Params = Promise<{ id: string }>
@@ -32,7 +31,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function EditLocationPage({ params }: PageProps) {
-  await headers();
+  await connection();
   await connection()
   const { id } = await params
   const result = await getLocationById(id)

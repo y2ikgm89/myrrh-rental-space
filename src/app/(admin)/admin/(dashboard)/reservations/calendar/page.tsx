@@ -11,7 +11,7 @@ import { loadAdminCalendarSearchParams } from '@/shared/lib/nuqs'
 import { CalendarViewWrapper } from '../_components/calendar'
 import { Button, Breadcrumb } from '@/admin/components/ui'
 import type { Metadata } from 'next'
-import { headers } from "next/headers";
+import { connection } from "next/server";
 
 export const metadata: Metadata = {
   title: '予約カレンダー | Myrrh Rental Space',
@@ -52,7 +52,7 @@ async function CalendarData({ searchParams }: { searchParams: SearchParams }) {
 export default async function ReservationCalendarPage({
   searchParams,
 }: PageProps) {
-  await headers();
+  await connection();
   return (
     <div className="flex h-[calc(100vh-8rem)] flex-col space-y-6">
       <Breadcrumb

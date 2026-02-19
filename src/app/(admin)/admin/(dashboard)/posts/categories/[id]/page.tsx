@@ -3,7 +3,6 @@ import { connection } from 'next/server'
 import type { Metadata } from 'next'
 import { getPostCategoryById } from '@/admin/actions/post'
 import { CategoryEditor } from '../_components/CategoryEditor'
-import { headers } from "next/headers";
 
 
 export async function generateMetadata({
@@ -24,7 +23,7 @@ type PageProps = {
 }
 
 export default async function EditCategoryPage({ params }: PageProps) {
-  await headers();
+  await connection();
   await connection()
   const { id } = await params
   const category = await getPostCategoryById(id)
