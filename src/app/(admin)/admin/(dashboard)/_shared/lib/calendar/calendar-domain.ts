@@ -14,8 +14,8 @@ import {
   subWeeks,
   subMonths,
   format,
-} from 'date-fns'
-import { ja } from 'date-fns/locale'
+} from "date-fns";
+import { ja } from "date-fns/locale";
 import type {
   CalendarView,
   CalendarDateRange,
@@ -23,42 +23,42 @@ import type {
   EventPosition,
   PositionedEvent,
   BusinessHours,
-} from './calendar-types'
-import { DEFAULT_BUSINESS_HOURS, PIXELS_PER_HOUR } from './calendar-types'
+} from "./calendar-types";
+import { DEFAULT_BUSINESS_HOURS, PIXELS_PER_HOUR } from "./calendar-types";
 
 /**
  * カレンダー日付範囲を計算
  */
 export function getCalendarDateRange(
   date: Date,
-  view: CalendarView
+  view: CalendarView,
 ): CalendarDateRange {
-  let start: Date
-  let end: Date
+  let start: Date;
+  let end: Date;
 
   switch (view) {
-    case 'month': {
-      const monthStart = startOfMonth(date)
-      const monthEnd = endOfMonth(date)
-      start = startOfWeek(monthStart, { weekStartsOn: 0 })
-      end = endOfWeek(monthEnd, { weekStartsOn: 0 })
-      break
+    case "month": {
+      const monthStart = startOfMonth(date);
+      const monthEnd = endOfMonth(date);
+      start = startOfWeek(monthStart, { weekStartsOn: 0 });
+      end = endOfWeek(monthEnd, { weekStartsOn: 0 });
+      break;
     }
-    case 'week': {
-      start = startOfWeek(date, { weekStartsOn: 0 })
-      end = endOfWeek(date, { weekStartsOn: 0 })
-      break
+    case "week": {
+      start = startOfWeek(date, { weekStartsOn: 0 });
+      end = endOfWeek(date, { weekStartsOn: 0 });
+      break;
     }
-    case 'day': {
-      start = startOfDay(date)
-      end = endOfDay(date)
-      break
+    case "day": {
+      start = startOfDay(date);
+      end = endOfDay(date);
+      break;
     }
   }
 
-  const displayDates = eachDayOfInterval({ start, end })
+  const displayDates = eachDayOfInterval({ start, end });
 
-  return { start, end, displayDates }
+  return { start, end, displayDates };
 }
 
 /**
@@ -66,12 +66,12 @@ export function getCalendarDateRange(
  */
 export function navigateNext(date: Date, view: CalendarView): Date {
   switch (view) {
-    case 'month':
-      return addMonths(date, 1)
-    case 'week':
-      return addWeeks(date, 1)
-    case 'day':
-      return addDays(date, 1)
+    case "month":
+      return addMonths(date, 1);
+    case "week":
+      return addWeeks(date, 1);
+    case "day":
+      return addDays(date, 1);
   }
 }
 
@@ -80,12 +80,12 @@ export function navigateNext(date: Date, view: CalendarView): Date {
  */
 export function navigatePrevious(date: Date, view: CalendarView): Date {
   switch (view) {
-    case 'month':
-      return subMonths(date, 1)
-    case 'week':
-      return subWeeks(date, 1)
-    case 'day':
-      return subDays(date, 1)
+    case "month":
+      return subMonths(date, 1);
+    case "week":
+      return subWeeks(date, 1);
+    case "day":
+      return subDays(date, 1);
   }
 }
 
@@ -94,20 +94,20 @@ export function navigatePrevious(date: Date, view: CalendarView): Date {
  */
 export function generateTimeSlots(
   hours: BusinessHours = DEFAULT_BUSINESS_HOURS,
-  intervalMinutes: number = 60
+  intervalMinutes: number = 60,
 ): string[] {
-  const slots: string[] = []
-  const totalMinutes = (hours.endHour - hours.startHour) * 60
+  const slots: string[] = [];
+  const totalMinutes = (hours.endHour - hours.startHour) * 60;
 
   for (let min = 0; min < totalMinutes; min += intervalMinutes) {
-    const hour = hours.startHour + Math.floor(min / 60)
-    const minute = min % 60
+    const hour = hours.startHour + Math.floor(min / 60);
+    const minute = min % 60;
     slots.push(
-      `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
-    )
+      `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`,
+    );
   }
 
-  return slots
+  return slots;
 }
 
 /**
@@ -116,20 +116,21 @@ export function generateTimeSlots(
 export function calculateEventPosition(
   event: CalendarEvent,
   hours: BusinessHours = DEFAULT_BUSINESS_HOURS,
-  pixelsPerHour: number = PIXELS_PER_HOUR
+  pixelsPerHour: number = PIXELS_PER_HOUR,
 ): EventPosition {
-  const startMinutes =
-    event.startTime.getHours() * 60 + event.startTime.getMinutes()
-  const endMinutes = event.endTime.getHours() * 60 + event.endTime.getMinutes()
-  const dayStartMinutes = hours.startHour * 60
-  const dayEndMinutes = hours.endHour * 60
+  const start = new Date(event.startTime);
+  const end = new Date(event.endTime);
+  const startMinutes = start.getHours() * 60 + start.getMinutes();
+  const endMinutes = end.getHours() * 60 + end.getMinutes();
+  const dayStartMinutes = hours.startHour * 60;
+  const dayEndMinutes = hours.endHour * 60;
 
   // 範囲外クリッピング
-  const clippedStart = Math.max(startMinutes, dayStartMinutes)
-  const clippedEnd = Math.min(endMinutes, dayEndMinutes)
+  const clippedStart = Math.max(startMinutes, dayStartMinutes);
+  const clippedEnd = Math.min(endMinutes, dayEndMinutes);
 
-  const duration = Math.max(0, clippedEnd - clippedStart)
-  const offset = Math.max(0, clippedStart - dayStartMinutes)
+  const duration = Math.max(0, clippedEnd - clippedStart);
+  const offset = Math.max(0, clippedStart - dayStartMinutes);
 
   return {
     top: (offset / 60) * pixelsPerHour,
@@ -137,7 +138,7 @@ export function calculateEventPosition(
     left: 0,
     width: 100,
     zIndex: 1,
-  }
+  };
 }
 
 /**
@@ -146,71 +147,71 @@ export function calculateEventPosition(
 export function layoutOverlappingEvents(
   events: CalendarEvent[],
   hours: BusinessHours = DEFAULT_BUSINESS_HOURS,
-  pixelsPerHour: number = PIXELS_PER_HOUR
+  pixelsPerHour: number = PIXELS_PER_HOUR,
 ): PositionedEvent[] {
-  if (events.length === 0) return []
+  if (events.length === 0) return [];
 
-  // 開始時間でソート
-  const sorted = [...events].sort(
-    (a, b) => a.startTime.getTime() - b.startTime.getTime()
-  )
+  // 開始時間でソート（ISO 8601 文字列は辞書順 = 時系列順）
+  const sorted = [...events].sort((a, b) =>
+    a.startTime.localeCompare(b.startTime),
+  );
 
   // 重複グループを検出
-  const groups: CalendarEvent[][] = []
-  let currentGroup: CalendarEvent[] = []
+  const groups: CalendarEvent[][] = [];
+  let currentGroup: CalendarEvent[] = [];
 
   for (const event of sorted) {
     if (currentGroup.length === 0) {
-      currentGroup.push(event)
-      continue
+      currentGroup.push(event);
+      continue;
     }
 
     // 現在のグループと重複するか確認
     const hasOverlap = currentGroup.some(
-      (e) => e.startTime < event.endTime && event.startTime < e.endTime
-    )
+      (e) => e.startTime < event.endTime && event.startTime < e.endTime,
+    );
 
     if (hasOverlap) {
-      currentGroup.push(event)
+      currentGroup.push(event);
     } else {
-      groups.push(currentGroup)
-      currentGroup = [event]
+      groups.push(currentGroup);
+      currentGroup = [event];
     }
   }
 
   if (currentGroup.length > 0) {
-    groups.push(currentGroup)
+    groups.push(currentGroup);
   }
 
   // 各グループ内でカラム配置
-  const result: PositionedEvent[] = []
+  const result: PositionedEvent[] = [];
 
   for (const group of groups) {
-    const columns: CalendarEvent[][] = []
+    const columns: CalendarEvent[][] = [];
 
     for (const event of group) {
-      let placed = false
+      let placed = false;
 
       for (const column of columns) {
-        const lastInColumn = column[column.length - 1]
+        const lastInColumn = column[column.length - 1];
         if (lastInColumn && lastInColumn.endTime <= event.startTime) {
-          column.push(event)
-          placed = true
-          break
+          column.push(event);
+          placed = true;
+          break;
         }
       }
 
       if (!placed) {
-        columns.push([event])
+        columns.push([event]);
       }
     }
 
-    const columnCount = columns.length
-    const columnWidth = 100 / columnCount
+    const columnCount = columns.length;
+    const columnWidth = 100 / columnCount;
 
     columns.forEach((column, colIndex) => {
       for (const event of column) {
-        const position = calculateEventPosition(event, hours, pixelsPerHour)
+        const position = calculateEventPosition(event, hours, pixelsPerHour);
         result.push({
           ...event,
           position: {
@@ -219,12 +220,12 @@ export function layoutOverlappingEvents(
             width: columnWidth - 1, // 1%のマージン
             zIndex: colIndex + 1,
           },
-        })
+        });
       }
-    })
+    });
   }
 
-  return result
+  return result;
 }
 
 /**
@@ -232,9 +233,9 @@ export function layoutOverlappingEvents(
  */
 export function getEventsForDay(
   events: CalendarEvent[],
-  day: Date
+  day: Date,
 ): CalendarEvent[] {
-  return events.filter((event) => isSameDay(event.startTime, day))
+  return events.filter((event) => isSameDay(new Date(event.startTime), day));
 }
 
 /**
@@ -242,14 +243,14 @@ export function getEventsForDay(
  */
 export function getStatusColorClass(status: string): string {
   switch (status) {
-    case 'PENDING':
-      return 'bg-warning/10 border-l-warning text-warning-foreground'
-    case 'CONFIRMED':
-      return 'bg-success/10 border-l-success text-success'
-    case 'CANCELLED':
-      return 'bg-muted border-l-muted-foreground text-muted-foreground line-through'
+    case "PENDING":
+      return "bg-warning/10 border-l-warning text-warning-foreground";
+    case "CONFIRMED":
+      return "bg-success/10 border-l-success text-success";
+    case "CANCELLED":
+      return "bg-muted border-l-muted-foreground text-muted-foreground line-through";
     default:
-      return 'bg-info/10 border-l-info text-info'
+      return "bg-info/10 border-l-info text-info";
   }
 }
 
@@ -258,24 +259,24 @@ export function getStatusColorClass(status: string): string {
  */
 export function getSpaceColorClass(spaceId: string, index?: number): string {
   const colors = [
-    'border-l-blue-500',
-    'border-l-purple-500',
-    'border-l-pink-500',
-    'border-l-indigo-500',
-    'border-l-teal-500',
-    'border-l-orange-500',
-    'border-l-cyan-500',
-    'border-l-rose-500',
-  ]
+    "border-l-blue-500",
+    "border-l-purple-500",
+    "border-l-pink-500",
+    "border-l-indigo-500",
+    "border-l-teal-500",
+    "border-l-orange-500",
+    "border-l-cyan-500",
+    "border-l-rose-500",
+  ];
 
   if (index !== undefined) {
-    return colors[index % colors.length] ?? colors[0] ?? 'border-l-blue-500'
+    return colors[index % colors.length] ?? colors[0] ?? "border-l-blue-500";
   }
 
   const hash = spaceId
-    .split('')
-    .reduce((acc, char) => acc + char.charCodeAt(0), 0)
-  return colors[hash % colors.length] ?? colors[0] ?? 'border-l-blue-500'
+    .split("")
+    .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return colors[hash % colors.length] ?? colors[0] ?? "border-l-blue-500";
 }
 
 /**
@@ -283,15 +284,15 @@ export function getSpaceColorClass(spaceId: string, index?: number): string {
  */
 export function formatDateLabel(date: Date, view: CalendarView): string {
   switch (view) {
-    case 'month':
-      return format(date, 'yyyy年M月', { locale: ja })
-    case 'week': {
-      const weekStart = startOfWeek(date, { weekStartsOn: 0 })
-      const weekEnd = endOfWeek(date, { weekStartsOn: 0 })
-      return `${format(weekStart, 'M月d日', { locale: ja })} - ${format(weekEnd, 'M月d日', { locale: ja })}`
+    case "month":
+      return format(date, "yyyy年M月", { locale: ja });
+    case "week": {
+      const weekStart = startOfWeek(date, { weekStartsOn: 0 });
+      const weekEnd = endOfWeek(date, { weekStartsOn: 0 });
+      return `${format(weekStart, "M月d日", { locale: ja })} - ${format(weekEnd, "M月d日", { locale: ja })}`;
     }
-    case 'day':
-      return format(date, 'yyyy年M月d日 (E)', { locale: ja })
+    case "day":
+      return format(date, "yyyy年M月d日 (E)", { locale: ja });
   }
 }
 
@@ -299,14 +300,14 @@ export function formatDateLabel(date: Date, view: CalendarView): string {
  * 曜日ヘッダーを生成
  */
 export function getWeekdayHeaders(): string[] {
-  return ['日', '月', '火', '水', '木', '金', '土']
+  return ["日", "月", "火", "水", "木", "金", "土"];
 }
 
 /**
  * 曜日の色クラスを取得
  */
 export function getWeekdayColorClass(dayIndex: number): string {
-  if (dayIndex === 0) return 'text-destructive' // 日曜
-  if (dayIndex === 6) return 'text-info' // 土曜
-  return ''
+  if (dayIndex === 0) return "text-destructive"; // 日曜
+  if (dayIndex === 6) return "text-info"; // 土曜
+  return "";
 }

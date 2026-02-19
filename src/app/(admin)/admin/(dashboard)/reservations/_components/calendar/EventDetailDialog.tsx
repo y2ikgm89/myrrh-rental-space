@@ -1,9 +1,17 @@
-'use client'
+"use client";
 
-import Link from 'next/link'
-import { format } from 'date-fns'
-import { ja } from 'date-fns/locale'
-import { Clock, MapPin, User, Mail, Phone, FileText, ExternalLink } from 'lucide-react'
+import Link from "next/link";
+import { format } from "date-fns";
+import { ja } from "date-fns/locale";
+import {
+  Clock,
+  MapPin,
+  User,
+  Mail,
+  Phone,
+  FileText,
+  ExternalLink,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -15,19 +23,19 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/admin/components/ui'
-import { ReservationStatusBadge } from '@/admin/components/status-badges'
-import type { CalendarEvent } from '@/admin/lib/calendar'
+} from "@/admin/components/ui";
+import { ReservationStatusBadge } from "@/admin/components/status-badges";
+import type { CalendarEvent } from "@/admin/lib/calendar";
 import {
   isValidReservationStatus,
   type ReservationStatus,
-} from '@/shared/lib/validations/enums'
+} from "@/shared/lib/validations/enums";
 
 interface EventDetailDialogProps {
-  event: CalendarEvent | null
-  isPending: boolean
-  onClose: () => void
-  onStatusChange: (eventId: string, status: ReservationStatus) => void
+  event: CalendarEvent | null;
+  isPending: boolean;
+  onClose: () => void;
+  onStatusChange: (eventId: string, status: ReservationStatus) => void;
 }
 
 export function EventDetailDialog({
@@ -36,19 +44,19 @@ export function EventDetailDialog({
   onClose,
   onStatusChange,
 }: EventDetailDialogProps) {
-  if (!event) return null
+  if (!event) return null;
 
   const handleStatusChange = (status: ReservationStatus) => {
-    onStatusChange(event.id, status)
-  }
+    onStatusChange(event.id, status);
+  };
 
   const formatPrice = (price: number | null) => {
-    if (price === null) return '-'
-    return new Intl.NumberFormat('ja-JP', {
-      style: 'currency',
-      currency: 'JPY',
-    }).format(price)
-  }
+    if (price === null) return "-";
+    return new Intl.NumberFormat("ja-JP", {
+      style: "currency",
+      currency: "JPY",
+    }).format(price);
+  };
 
   return (
     <Dialog open={!!event} onOpenChange={(open) => !open && onClose()}>
@@ -66,11 +74,13 @@ export function EventDetailDialog({
             <Clock className="mt-0.5 h-4 w-4 text-muted-foreground" />
             <div>
               <div className="font-medium">
-                {format(event.startTime, 'yyyy年M月d日 (E)', { locale: ja })}
+                {format(new Date(event.startTime), "yyyy年M月d日 (E)", {
+                  locale: ja,
+                })}
               </div>
               <div className="text-sm text-muted-foreground">
-                {format(event.startTime, 'HH:mm')} -{' '}
-                {format(event.endTime, 'HH:mm')}
+                {format(new Date(event.startTime), "HH:mm")} -{" "}
+                {format(new Date(event.endTime), "HH:mm")}
               </div>
             </div>
           </div>
@@ -130,7 +140,7 @@ export function EventDetailDialog({
             <Select
               value={event.status}
               onValueChange={(value) => {
-                if (isValidReservationStatus(value)) handleStatusChange(value)
+                if (isValidReservationStatus(value)) handleStatusChange(value);
               }}
               disabled={isPending}
             >
@@ -157,5 +167,5 @@ export function EventDetailDialog({
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

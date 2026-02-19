@@ -9,7 +9,6 @@ import {
 } from "@/shared/lib/errors";
 import { safeDecrypt, encryptApiKey } from "@/shared/lib/crypto";
 import { prisma } from "@/shared/lib/prisma";
-import { formatGoogleApiError } from "./helpers";
 
 /**
  * サービスアカウントのGoogle Calendar APIクライアントを取得

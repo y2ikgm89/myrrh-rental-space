@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from "next/link";
 import {
   Button,
   Table,
@@ -7,39 +7,39 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/admin/components/ui'
-import { ReservationStatusBadge } from '@/admin/components/status-badges'
-import { ReservationStatusSelect } from './ReservationStatusSelect'
-import type { ReservationWithRelations } from '@/admin/actions/reservation'
-import { formatPrice } from '@/shared/lib/utils'
-import { EmptyState } from '@/admin/components/EmptyState'
+} from "@/admin/components/ui";
+import { ReservationStatusBadge } from "@/admin/components/status-badges";
+import { ReservationStatusSelect } from "./ReservationStatusSelect";
+import type { ReservationWithRelations } from "@/admin/actions/reservation";
+import { formatPrice } from "@/shared/lib/utils";
+import { EmptyState } from "@/admin/components/EmptyState";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type ReservationTableProps = {
-  reservations: ReservationWithRelations[]
-}
+  reservations: ReservationWithRelations[];
+};
 
 // =============================================================================
 // Helper Functions
 // =============================================================================
 
-function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat('ja-JP', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    weekday: 'short',
-  }).format(new Date(date))
+function formatDate(date: string | Date): string {
+  return new Intl.DateTimeFormat("ja-JP", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    weekday: "short",
+  }).format(new Date(date));
 }
 
-function formatTime(date: Date): string {
-  return new Intl.DateTimeFormat('ja-JP', {
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(date))
+function formatTime(date: string | Date): string {
+  return new Intl.DateTimeFormat("ja-JP", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(date));
 }
 
 // =============================================================================
@@ -51,9 +51,9 @@ export function ReservationTable({ reservations }: ReservationTableProps) {
     return (
       <EmptyState
         message="予約がありません"
-        action={{ label: '新規予約', href: '/admin/reservations/new' }}
+        action={{ label: "新規予約", href: "/admin/reservations/new" }}
       />
-    )
+    );
   }
 
   return (
@@ -64,7 +64,9 @@ export function ReservationTable({ reservations }: ReservationTableProps) {
             <TableHead>予約日時</TableHead>
             <TableHead>スペース</TableHead>
             <TableHead className="hidden lg:table-cell">顧客</TableHead>
-            <TableHead className="hidden text-right md:table-cell">料金</TableHead>
+            <TableHead className="hidden text-right md:table-cell">
+              料金
+            </TableHead>
             <TableHead>ステータス</TableHead>
             <TableHead className="text-right">操作</TableHead>
           </TableRow>
@@ -74,9 +76,12 @@ export function ReservationTable({ reservations }: ReservationTableProps) {
             <TableRow key={reservation.id}>
               <TableCell>
                 <div>
-                  <div className="font-medium">{formatDate(reservation.startTime)}</div>
+                  <div className="font-medium">
+                    {formatDate(reservation.startTime)}
+                  </div>
                   <div className="text-sm text-muted-foreground">
-                    {formatTime(reservation.startTime)} - {formatTime(reservation.endTime)}
+                    {formatTime(reservation.startTime)} -{" "}
+                    {formatTime(reservation.endTime)}
                   </div>
                 </div>
               </TableCell>
@@ -84,7 +89,8 @@ export function ReservationTable({ reservations }: ReservationTableProps) {
               <TableCell className="hidden lg:table-cell">
                 <div>
                   <div className="font-medium">
-                    {reservation.customer.lastName} {reservation.customer.firstName}
+                    {reservation.customer.lastName}{" "}
+                    {reservation.customer.firstName}
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {reservation.customer.email}
@@ -104,7 +110,9 @@ export function ReservationTable({ reservations }: ReservationTableProps) {
                     currentStatus={reservation.status}
                   />
                   <Button variant="outline" size="sm" asChild>
-                    <Link href={`/admin/reservations/${reservation.id}`}>詳細</Link>
+                    <Link href={`/admin/reservations/${reservation.id}`}>
+                      詳細
+                    </Link>
                   </Button>
                 </div>
               </TableCell>
@@ -113,5 +121,5 @@ export function ReservationTable({ reservations }: ReservationTableProps) {
         </TableBody>
       </Table>
     </div>
-  )
+  );
 }
