@@ -1,6 +1,4 @@
-import Link from 'next/link'
 import {
-  Button,
   Table,
   TableBody,
   TableCell,
@@ -12,6 +10,7 @@ import { EmptyState } from '@/admin/components/EmptyState'
 import { CouponTypeBadge, CouponStatusBadge } from '@/admin/components/status-badges'
 import { formatDateShort, formatPrice } from '@/shared/lib/utils'
 import type { CouponData } from '@/admin/actions/coupon'
+import { CouponActionCell } from './CouponActionCell'
 
 // =============================================================================
 // Types
@@ -92,9 +91,7 @@ export function CouponTable({ coupons }: CouponTableProps) {
                 </div>
               </TableCell>
               <TableCell>
-                <Button asChild variant="outline" size="sm">
-                  <Link href={`/admin/coupons/${coupon.id}`}>編集</Link>
-                </Button>
+                <CouponActionCell couponId={coupon.id} />
               </TableCell>
             </TableRow>
           ))}
