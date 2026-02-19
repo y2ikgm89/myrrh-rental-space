@@ -1,7 +1,5 @@
 import Image from 'next/image'
-import Link from 'next/link'
 import {
-  Button,
   Badge,
   Table,
   TableBody,
@@ -15,6 +13,7 @@ import { updateSpacePublish } from '@/admin/actions/space'
 import type { SpaceWithStats } from '@/admin/lib/validations/space'
 import { formatCurrency } from '@/shared/lib/utils'
 import { EmptyState } from '@/admin/components/EmptyState'
+import { SpaceActionCell } from './SpaceActionCell'
 
 // =============================================================================
 // Types
@@ -95,14 +94,7 @@ export function SpaceTable({ spaces }: SpaceTableProps) {
                 <Badge variant="secondary">{space._count.reservations}件</Badge>
               </TableCell>
               <TableCell className="text-right">
-                <div className="flex items-center justify-end gap-2">
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href={`/admin/spaces/${space.id}`}>詳細</Link>
-                  </Button>
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href={`/admin/spaces/${space.id}/edit`}>編集</Link>
-                  </Button>
-                </div>
+                <SpaceActionCell spaceId={space.id} />
               </TableCell>
             </TableRow>
           ))}
