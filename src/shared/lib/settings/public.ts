@@ -11,7 +11,7 @@
 
 import { cacheLife, cacheTag } from 'next/cache'
 import { prisma } from '@/shared/lib/prisma'
-import { CACHE_TAGS } from '@/shared/lib/constants'
+import { CACHE_TAGS, CACHE_LIFE } from '@/shared/lib/constants'
 import { safeFetch, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
 import { toPlainObject, toPlainArray } from '@/shared/lib/serialize'
 import { AnnouncementBarAnimation, AnnouncementBarDesignStyle, LayoutWidth, PostPermalinkStructure } from '@/shared/generated/prisma/enums'
@@ -57,7 +57,7 @@ const DEFAULT_ANNOUNCEMENT_BAR_SETTINGS: AnnouncementBarSettings = {
  */
 export async function getCookieConsentSettings() {
   'use cache'
-  cacheLife('hours')
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS)
   cacheTag(CACHE_TAGS.COOKIE_CONSENT, CACHE_TAGS.SETTINGS)
 
   const result = await safeFetch({
@@ -87,7 +87,7 @@ export async function getCookieConsentSettings() {
  */
 export async function getPublicBusinessSettings() {
   'use cache'
-  cacheLife('hours')
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS)
   cacheTag(CACHE_TAGS.BUSINESS_SETTINGS, CACHE_TAGS.SETTINGS)
 
   const result = await safeFetch({
@@ -136,7 +136,7 @@ export async function getPublicBusinessSettings() {
  */
 export async function getAnnouncementBarCarouselSettingsCached() {
   'use cache'
-  cacheLife('hours')
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS)
   cacheTag(CACHE_TAGS.ANNOUNCEMENT_BAR, CACHE_TAGS.SETTINGS)
 
   const result = await safeFetch({
@@ -179,7 +179,7 @@ export async function getAnnouncementBarCarouselSettingsCached() {
  */
 export async function getActiveAnnouncementBarsCached() {
   'use cache'
-  cacheLife('minutes')
+  cacheLife(CACHE_LIFE.DYNAMIC_DATA)
   cacheTag(CACHE_TAGS.ANNOUNCEMENT_BAR)
 
   const result = await safeFetch({
@@ -203,7 +203,7 @@ export async function getActiveAnnouncementBarsCached() {
  */
 export async function getPermalinkSettings() {
   'use cache'
-  cacheLife('hours')
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS)
   cacheTag(CACHE_TAGS.PERMALINK, CACHE_TAGS.SETTINGS)
 
   const result = await safeFetch({
@@ -237,7 +237,7 @@ export async function getPostUrlPrefix(): Promise<string> {
 
 export async function getPublicRobotsTxtSettings() {
   'use cache'
-  cacheLife('hours')
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS)
   cacheTag(CACHE_TAGS.ROBOTS_TXT, CACHE_TAGS.SETTINGS)
 
   const result = await safeFetch({
@@ -264,7 +264,7 @@ export async function getPublicRobotsTxtSettings() {
  */
 export async function getLayoutSettings() {
   'use cache'
-  cacheLife('hours')
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS)
   cacheTag(CACHE_TAGS.LAYOUT, CACHE_TAGS.SETTINGS)
 
   const result = await safeFetch({

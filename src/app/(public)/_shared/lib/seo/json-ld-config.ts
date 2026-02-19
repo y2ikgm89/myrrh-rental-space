@@ -8,8 +8,8 @@
 import { cacheLife, cacheTag } from 'next/cache'
 import { prisma } from '@/shared/lib/prisma'
 import { safeFetch, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
-import { getBaseUrl, SITE_DEFAULTS, CACHE_TAGS } from '@/shared/lib/constants'
-import { isRecord } from '@/shared/lib/serialize'
+import { getBaseUrl, SITE_DEFAULTS, CACHE_TAGS, CACHE_LIFE } from '@/shared/lib/constants'
+import { isRecord, toPlainObject } from '@/shared/lib/serialize'
 
 const BASE_URL = getBaseUrl()
 
@@ -107,10 +107,10 @@ export interface GraphJsonLdData {
  */
 async function getOrganizationSettings() {
   'use cache'
-  cacheLife('hours')
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS)
   cacheTag(CACHE_TAGS.ORGANIZATION_SETTINGS, CACHE_TAGS.SETTINGS)
 
-  return safeFetch({
+  const result = await safeFetch({
     fetch: () =>
       prisma.settings.findUnique({
         where: { id: 'singleton' },
@@ -143,6 +143,7 @@ async function getOrganizationSettings() {
     severity: ErrorSeverity.LOW,
     operationName: 'getOrganizationSettings',
   })
+  return toPlainObject(result)
 }
 
 // =============================================================================
@@ -346,7 +347,7 @@ function convertToAmenityFeatures(
  */
 async function getSocialLinkUrls(): Promise<string[]> {
   'use cache'
-  cacheLife('hours')
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS)
   cacheTag(CACHE_TAGS.SOCIAL_LINKS, CACHE_TAGS.SETTINGS)
 
   const links = await safeFetch({

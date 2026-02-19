@@ -19,6 +19,7 @@
 
 import 'server-only'
 import { google, calendar_v3 } from 'googleapis'
+import { serverEnv } from '@/shared/lib/env/server'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from './errors'
 import { safeDecrypt, encryptApiKey } from '@/shared/lib/crypto'
 import { prisma } from '@/shared/lib/prisma'
@@ -941,7 +942,7 @@ export async function renewWebhookIfNeeded(): Promise<WebhookRenewalResult> {
     }
 
     // 新しいWebhookを設定
-    const baseUrl = process.env["NEXT_PUBLIC_APP_URL"] || process.env["VERCEL_URL"]
+    const baseUrl = process.env["NEXT_PUBLIC_APP_URL"] || serverEnv.VERCEL_URL
     if (!baseUrl) {
       return { success: false, renewed: false, error: 'APP_URL not configured' }
     }

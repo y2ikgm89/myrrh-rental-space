@@ -7,7 +7,7 @@
 
 import { cacheLife, cacheTag } from 'next/cache'
 import { prisma } from '@/shared/lib/prisma'
-import { CACHE_TAGS } from '@/shared/lib/constants'
+import { CACHE_TAGS, CACHE_LIFE } from '@/shared/lib/constants'
 import type { NavigationType } from '@/shared/generated/prisma/enums'
 
 export type PublicNavItem = {
@@ -25,7 +25,7 @@ const EMPTY_NAV_CHILDREN: readonly PublicNavItem[] = Object.freeze([])
  */
 export async function getPublicNavigation(type: NavigationType): Promise<readonly PublicNavItem[]> {
   'use cache'
-  cacheLife('hours')
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS)
   cacheTag(CACHE_TAGS.NAVIGATION)
 
   const items = await prisma.navigationItem.findMany({

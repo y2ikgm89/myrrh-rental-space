@@ -15,7 +15,7 @@ import { getSession, getRoleFromSession, type User } from '@/shared/lib/auth'
 import { logPermissionDenied } from '@/admin/lib/audit'
 import { entriesOf } from '@/shared/lib/serialize'
 import { logError, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
-import { CACHE_TAGS } from '@/shared/lib/constants'
+import { CACHE_TAGS, CACHE_LIFE } from '@/shared/lib/constants'
 import { isEditorRole } from './role-guards'
 
 // =============================================================================
@@ -447,7 +447,7 @@ export async function checkPermissionFromDb(
   role: Role, resource: Resource, action: Action
 ): Promise<boolean> {
   'use cache'
-  cacheLife('hours')
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS)
   cacheTag(CACHE_TAGS.PERMISSIONS)
 
   const permission = await prisma.permission.findUnique({
@@ -468,7 +468,7 @@ export async function checkPermissionFromDb(
  */
 export async function getUserPermissions(role: Role): Promise<PermissionKey[]> {
   'use cache'
-  cacheLife('hours')
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS)
   cacheTag(CACHE_TAGS.PERMISSIONS)
 
   const rolePermissions = await prisma.rolePermission.findMany({

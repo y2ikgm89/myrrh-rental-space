@@ -13,7 +13,7 @@
 import { Suspense } from 'react'
 import { connection } from 'next/server'
 import { cacheLife, cacheTag } from 'next/cache'
-import { CACHE_TAGS } from '@/shared/lib/constants'
+import { CACHE_TAGS, CACHE_LIFE } from '@/shared/lib/constants'
 import { AdminLayoutProvider } from '@/admin/contexts/admin-layout-context'
 import { ConfirmProvider } from '@/admin/contexts/confirm-context'
 import { ResponsiveSidebar } from './_components/ResponsiveSidebar'
@@ -28,7 +28,7 @@ const ADMIN_LOGIN_TOKEN = serverEnv.ADMIN_LOGIN_TOKEN ?? ''
 
 async function getAdminBrandingSettings() {
   'use cache'
-  cacheLife('hours')
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS)
   cacheTag(CACHE_TAGS.SETTINGS)
 
   const settings = await prisma.settings.findFirst({

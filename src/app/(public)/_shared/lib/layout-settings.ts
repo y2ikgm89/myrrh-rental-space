@@ -7,7 +7,7 @@
 
 import { cacheLife, cacheTag } from 'next/cache'
 import { prisma } from '@/shared/lib/prisma'
-import { CACHE_TAGS } from '@/shared/lib/constants'
+import { CACHE_TAGS, CACHE_LIFE } from '@/shared/lib/constants'
 import { LayoutWidth } from '@/shared/types/prisma'
 import type { LayoutConfig } from '@/shared/types/layout'
 import { slugParamSchema, idParamSchema } from '@/shared/lib/validations/params'
@@ -32,7 +32,7 @@ const FALLBACK_LAYOUT_CONFIG: LayoutConfig = {
  */
 export async function getSiteLayoutSettings(): Promise<LayoutConfig> {
   'use cache'
-  cacheLife('hours')
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT)
   cacheTag(CACHE_TAGS.SETTINGS, CACHE_TAGS.LAYOUT_SETTINGS)
 
   const settings = await prisma.settings.findUnique({
@@ -66,7 +66,7 @@ export async function getSiteLayoutSettings(): Promise<LayoutConfig> {
  */
 export async function getPostLayoutSettings(postId: string): Promise<LayoutConfig> {
   'use cache'
-  cacheLife('hours')
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT)
   cacheTag(CACHE_TAGS.SETTINGS, CACHE_TAGS.LAYOUT_SETTINGS, `post-${postId}`)
 
   if (!idParamSchema.safeParse(postId).success) return FALLBACK_LAYOUT_CONFIG
@@ -96,7 +96,7 @@ export async function getPostLayoutSettings(postId: string): Promise<LayoutConfi
  */
 export async function getNewsLayoutSettings(newsId: string): Promise<LayoutConfig> {
   'use cache'
-  cacheLife('hours')
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT)
   cacheTag(CACHE_TAGS.SETTINGS, CACHE_TAGS.LAYOUT_SETTINGS, `news-${newsId}`)
 
   if (!idParamSchema.safeParse(newsId).success) return FALLBACK_LAYOUT_CONFIG
@@ -125,7 +125,7 @@ export async function getNewsLayoutSettings(newsId: string): Promise<LayoutConfi
  */
 export async function getPageLayoutSettings(slug: string): Promise<LayoutConfig> {
   'use cache'
-  cacheLife('hours')
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT)
   cacheTag(CACHE_TAGS.SETTINGS, CACHE_TAGS.LAYOUT_SETTINGS, `page-${slug}`)
 
   if (!slugParamSchema.safeParse(slug).success) return FALLBACK_LAYOUT_CONFIG

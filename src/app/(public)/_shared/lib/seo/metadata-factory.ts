@@ -9,7 +9,8 @@ import { cacheLife, cacheTag } from 'next/cache'
 import type { Metadata } from 'next'
 import { prisma } from '@/shared/lib/prisma'
 import { safeFetch, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
-import { SITE_DEFAULTS, CACHE_TAGS } from '@/shared/lib/constants'
+import { toPlainObject } from '@/shared/lib/serialize'
+import { SITE_DEFAULTS, CACHE_TAGS, CACHE_LIFE } from '@/shared/lib/constants'
 
 // =============================================================================
 // Types
@@ -44,10 +45,10 @@ export interface ArticleMetadata {
  */
 export async function getSeoSettings(): Promise<SeoSettings | null> {
   'use cache'
-  cacheLife('hours')
+  cacheLife(CACHE_LIFE.METADATA)
   cacheTag(CACHE_TAGS.SEO_SETTINGS, CACHE_TAGS.SETTINGS)
 
-  return safeFetch({
+  const result = await safeFetch({
     fetch: () =>
       prisma.settings.findUnique({
         where: { id: 'singleton' },
@@ -66,6 +67,7 @@ export async function getSeoSettings(): Promise<SeoSettings | null> {
     severity: ErrorSeverity.LOW,
     operationName: 'getSeoSettings',
   })
+  return toPlainObject(result)
 }
 
 // =============================================================================

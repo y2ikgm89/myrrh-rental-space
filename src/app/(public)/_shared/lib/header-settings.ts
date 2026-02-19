@@ -6,7 +6,7 @@
 
 import { cacheLife, cacheTag } from 'next/cache'
 import { prisma } from '@/shared/lib/prisma'
-import { CACHE_TAGS } from '@/shared/lib/constants'
+import { CACHE_TAGS, CACHE_LIFE } from '@/shared/lib/constants'
 import {
   HeaderScrollBehavior,
   HeaderBackgroundMode,
@@ -25,7 +25,7 @@ export interface HeaderSettings {
  */
 export async function getHeaderSettings(): Promise<HeaderSettings> {
   'use cache'
-  cacheLife('hours')
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS)
   cacheTag(CACHE_TAGS.SETTINGS, CACHE_TAGS.LAYOUT_SETTINGS)
 
   const settings = await prisma.settings.findUnique({

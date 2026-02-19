@@ -12,8 +12,9 @@
 import { cacheLife, cacheTag } from 'next/cache'
 import type { Metadata } from 'next'
 import { prisma } from '@/shared/lib/prisma'
-import { CACHE_TAGS, getBaseUrl, SITE_DEFAULTS } from '@/shared/lib/constants'
+import { CACHE_TAGS, CACHE_LIFE, getBaseUrl, SITE_DEFAULTS } from '@/shared/lib/constants'
 import { safeFetch, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
+import { toPlainObject } from '@/shared/lib/serialize'
 import { getSeoSettings } from '@/public/lib/seo/metadata-factory'
 import {
   SYSTEM_PAGES,
@@ -44,7 +45,7 @@ export interface PageSeoData {
  */
 export async function getPageSeo(slug: string): Promise<PageSeoData | null> {
   'use cache'
-  cacheLife('hours')
+  cacheLife(CACHE_LIFE.METADATA)
   cacheTag(CACHE_TAGS.PAGE_SEO, `${CACHE_TAGS.PAGE_SEO}-${slug}`)
 
   if (!slugParamSchema.safeParse(slug).success) return null
@@ -69,7 +70,7 @@ export async function getPageSeo(slug: string): Promise<PageSeoData | null> {
     operationName: 'getPageSeo',
   })
 
-  return page
+  return toPlainObject(page)
 }
 
 /**
