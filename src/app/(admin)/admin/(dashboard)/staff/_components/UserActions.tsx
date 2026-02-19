@@ -5,13 +5,6 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Button } from '@/admin/components/ui/button'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/admin/components/ui/dropdown-menu'
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -19,10 +12,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/admin/components/ui'
+import {
+  ActionDropdown,
+  ActionDropdownItem,
+  ActionDropdownSeparator,
+} from '@/admin/components/ActionDropdown'
 import { DeleteConfirmDialog } from '@/admin/components/DeleteConfirmDialog'
 import { deleteUser, updateUserRole, type UserData } from '@/admin/actions/user'
 import { Role, isAdminRole } from '@/admin/lib/role-guards'
-import Link from 'next/link'
 
 type Props = {
   user: UserData
@@ -70,32 +67,18 @@ export function UserActions({ user }: Props) {
 
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm">
-            操作
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem asChild>
-            <Link href={`/admin/staff/${user.id}`}>詳細</Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href={`/admin/staff/${user.id}/edit`}>編集</Link>
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setRoleDialogOpen(true)}>
-            {newRoleLabel}に変更
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onClick={() => setDeleteDialogOpen(true)}
-            className="text-destructive"
-          >
-            削除
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <ActionDropdown>
+        <ActionDropdownItem href={`/admin/staff/${user.id}`}>詳細</ActionDropdownItem>
+        <ActionDropdownItem href={`/admin/staff/${user.id}/edit`}>編集</ActionDropdownItem>
+        <ActionDropdownSeparator />
+        <ActionDropdownItem onClick={() => setRoleDialogOpen(true)}>
+          {newRoleLabel}に変更
+        </ActionDropdownItem>
+        <ActionDropdownSeparator />
+        <ActionDropdownItem destructive onClick={() => setDeleteDialogOpen(true)}>
+          削除
+        </ActionDropdownItem>
+      </ActionDropdown>
 
       <DeleteConfirmDialog
         open={deleteDialogOpen}
