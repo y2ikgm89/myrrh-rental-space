@@ -170,6 +170,7 @@ bun run db:generate        # Prismaスキーマ再生成
 bun run db:studio          # Prisma Studio（DB GUI）
 bun run e2e                # E2Eテスト（Playwright）
 bun run format             # Prettier フォーマット（Edit/Write 後は hook で自動実行）
+gcloud builds submit --config=cloudbuild.yaml  # Cloud Run デプロイ（Cloud Build経由）
 ```
 
 ### コーディング規約
@@ -181,6 +182,7 @@ bun run format             # Prettier フォーマット（Edit/Write 後は hoo
 
 ### ⚠️ Gotchas
 
+- **デプロイ先は Google Cloud Run**（Vercel ではない）— `Dockerfile` + `cloudbuild.yaml` が設定ファイル。URL 環境変数は `NEXT_PUBLIC_APP_URL` / `BETTER_AUTH_URL` を Cloud Run サービスに明示設定する（`VERCEL_URL` は存在しない）
 - **`enum`・`namespace`・parameter properties 禁止（コンパイラレベル）** — `erasableSyntaxOnly: true`（tsconfig）。`const enum` か union型を使う
 - **型インポートは `import type` 必須** — `verbatimModuleSyntax: true`。値と型を同一インポートで混在させるとビルドエラー
 - **`bun run build` は env チェックなし** — `SKIP_ENV_VALIDATION=true` が付く。本番デプロイ前は `bun run build:strict`
