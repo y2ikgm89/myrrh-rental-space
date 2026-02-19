@@ -190,3 +190,4 @@ gcloud builds submit --config=cloudbuild.yaml  # Cloud Run デプロイ（Cloud 
 - **インデックスシグネチャはブラケット記法強制** — `noPropertyAccessFromIndexSignature: true`。`obj.key` ではなく `obj['key']`
 - **`rm -rf` は deny ルール** — 追跡ファイルは `git rm -r <path>`、未追跡ファイル/ディレクトリは `py -c "import shutil; shutil.rmtree('path')"` で削除
 - **gitignore 追加後の既存追跡ファイル** — `git rm --cached -r <path>` でインデックスから除外（ファイルはディスクに残る）
+- **`()` を含むパスは Bash コマンドで渡せない** — `src/app/(admin)/` など Next.js ルートグループパスを Bash に渡すと MINGW64 が `(` をサブシェル記法として解釈しエラー。Glob/Grep/Read ツールを使うか、クォートで回避（例: `ls 'src/app/(admin)/'`）

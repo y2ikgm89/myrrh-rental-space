@@ -22,7 +22,7 @@ const eslintConfig = defineConfig([
   },
   // Custom rules for specific files
   {
-    files: ["src/lib/auth.ts"],
+    files: ["src/shared/lib/auth.ts"],
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
     },

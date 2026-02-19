@@ -113,6 +113,10 @@ const nextConfig: NextConfig = {
   // better-auth uses dynamic import("next/headers") without .js extension
   transpilePackages: ['better-auth'],
 
+  // Native Node.js modules that cannot be bundled by Next.js
+  // bcrypt has C++ bindings requiring native require() at runtime
+  serverExternalPackages: ['bcrypt'],
+
   // Experimental features
   experimental: {
     // Turbopack ファイルシステムキャッシュ: 開発サーバー再起動後もビルドキャッシュを永続化
