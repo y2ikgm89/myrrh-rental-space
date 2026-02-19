@@ -1,6 +1,4 @@
-import Link from "next/link";
 import {
-  Button,
   Table,
   TableBody,
   TableCell,
@@ -10,6 +8,7 @@ import {
 } from "@/admin/components/ui";
 import { ReservationStatusBadge } from "@/admin/components/status-badges";
 import { ReservationStatusSelect } from "./ReservationStatusSelect";
+import { ReservationActionCell } from "./ReservationActionCell";
 import type { ReservationWithRelations } from "@/admin/actions/reservation";
 import { formatPrice } from "@/shared/lib/utils";
 import { EmptyState } from "@/admin/components/EmptyState";
@@ -109,11 +108,7 @@ export function ReservationTable({ reservations }: ReservationTableProps) {
                     reservationId={reservation.id}
                     currentStatus={reservation.status}
                   />
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href={`/admin/reservations/${reservation.id}`}>
-                      詳細
-                    </Link>
-                  </Button>
+                  <ReservationActionCell reservationId={reservation.id} />
                 </div>
               </TableCell>
             </TableRow>
