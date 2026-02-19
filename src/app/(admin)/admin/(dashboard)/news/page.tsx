@@ -4,13 +4,13 @@
  * 2タブ構造で記事一覧・メタ情報を管理
  */
 
-import { Suspense } from 'react'
-import Link from 'next/link'
-import { getNewsList } from '@/admin/actions/news'
-import { getPageBySlug } from '@/admin/actions/page'
-import { NewsFilters } from './_components/NewsFilters'
-import { NewsTable } from './_components/NewsTable'
-import { ListPageSeoForm } from '@/admin/components/ListPageSeoForm'
+import { Suspense } from "react";
+import Link from "next/link";
+import { getNewsList } from "@/admin/actions/news";
+import { getPageBySlug } from "@/admin/actions/page";
+import { NewsFilters } from "./_components/NewsFilters";
+import { NewsTable } from "./_components/NewsTable";
+import { ListPageSeoForm } from "@/admin/components/ListPageSeoForm";
 import {
   Button,
   Pagination,
@@ -18,46 +18,34 @@ import {
   TabsList,
   TabsTrigger,
   TabsContent,
-} from '@/admin/components/ui'
-import { LoadingState } from '@/admin/components/LoadingState'
-import { parseNewsStatusFilter } from '@/shared/lib/validations/enums'
-import type { Metadata } from 'next'
+} from "@/admin/components/ui";
+import { LoadingState } from "@/admin/components/LoadingState";
+import { parseNewsStatusFilter } from "@/shared/lib/validations/enums";
+import { loadAdminNewsSearchParams } from "@/shared/lib/nuqs";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: 'お知らせ管理 | Myrrh Rental Space',
-}
+  title: "お知らせ管理 | Myrrh Rental Space",
+};
 
-// タブの型定義
-const NEWS_TABS = ['posts', 'meta'] as const
-type NewsTab = (typeof NEWS_TABS)[number]
-
-const NEWS_TABS_SET = new Set<string>(NEWS_TABS)
-function isValidTab(tab: string | undefined): tab is NewsTab {
-  return typeof tab === 'string' && NEWS_TABS_SET.has(tab)
-}
-
-type SearchParams = Promise<{
-  tab?: string
-  status?: string
-  search?: string
-  page?: string
-}>
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
 type PageProps = {
-  searchParams: SearchParams
-}
+  searchParams: SearchParams;
+};
 
 // ==============================================================================
 // 記事一覧タブのコンポーネント
 // ==============================================================================
 
 async function NewsList({ searchParams }: { searchParams: SearchParams }) {
-  const params = await searchParams
-  const status = parseNewsStatusFilter(params.status)
-  const search = params.search
-  const page = params.page ? parseInt(params.page, 10) : 1
+  const params = await loadAdminNewsSearchParams(searchParams);
+  const status = parseNewsStatusFilter(params.status);
 
-  const result = await getNewsList({ status, search }, { page, limit: 10 })
+  const result = await getNewsList(
+    { status, search: params.search || undefined },
+    { page: params.page, limit: 10 },
+  );
 
   return (
     <>
@@ -68,7 +56,7 @@ async function NewsList({ searchParams }: { searchParams: SearchParams }) {
         total={result.total}
       />
     </>
-  )
+  );
 }
 
 // ==============================================================================
@@ -76,7 +64,7 @@ async function NewsList({ searchParams }: { searchParams: SearchParams }) {
 // ==============================================================================
 
 async function SeoContent() {
-  const page = await getPageBySlug('news')
+  const page = await getPageBySlug("news");
 
   if (!page) {
     return (
@@ -85,7 +73,7 @@ async function SeoContent() {
         <br />
         シードデータを再実行するか、管理者にお問い合わせください。
       </div>
-    )
+    );
   }
 
   return (
@@ -100,7 +88,7 @@ async function SeoContent() {
         ogpImageUrl: page.ogpImageUrl,
       }}
     />
-  )
+  );
 }
 
 // ==============================================================================
@@ -108,8 +96,8 @@ async function SeoContent() {
 // ==============================================================================
 
 export default async function NewsPage({ searchParams }: PageProps) {
-  const params = await searchParams
-  const currentTab = isValidTab(params.tab) ? params.tab : 'posts'
+  const params = await loadAdminNewsSearchParams(searchParams);
+  const currentTab = params.tab;
 
   return (
     <div className="space-y-6">
@@ -121,7 +109,7 @@ export default async function NewsPage({ searchParams }: PageProps) {
             お知らせの作成・編集・公開管理を行います
           </p>
         </div>
-        {currentTab === 'posts' && (
+        {currentTab === "posts" && (
           <Button asChild className="min-h-10 sm:min-h-9">
             <Link href="/admin/news/new">新規作成</Link>
           </Button>
@@ -157,5 +145,5 @@ export default async function NewsPage({ searchParams }: PageProps) {
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }

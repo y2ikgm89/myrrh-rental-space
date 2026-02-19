@@ -4,25 +4,21 @@
  * 4タブ構造で記事一覧・カテゴリー・タグ・コメントを管理
  */
 
-import { Suspense } from 'react'
-import Link from 'next/link'
-import {
-  getPosts,
-  getPostCategories,
-  getPostTags,
-} from '@/admin/actions/post'
+import { Suspense } from "react";
+import Link from "next/link";
+import { getPosts, getPostCategories, getPostTags } from "@/admin/actions/post";
 import {
   getAdminComments,
   getCommentStats,
   type CommentFilters as CommentFiltersType,
-} from '@/admin/actions/post-comment'
-import { PostFilters } from './_components/PostFilters'
-import { PostTable } from './_components/PostTable'
-import { CategoryManager } from './taxonomy/_components/CategoryManager'
-import { TagManager } from './taxonomy/_components/TagManager'
-import { CommentFilters } from './comments/_components/CommentFilters'
-import { CommentTable } from './comments/_components/CommentTable'
-import { CommentStats } from './comments/_components/CommentStats'
+} from "@/admin/actions/post-comment";
+import { PostFilters } from "./_components/PostFilters";
+import { PostTable } from "./_components/PostTable";
+import { CategoryManager } from "./taxonomy/_components/CategoryManager";
+import { TagManager } from "./taxonomy/_components/TagManager";
+import { CommentFilters } from "./comments/_components/CommentFilters";
+import { CommentTable } from "./comments/_components/CommentTable";
+import { CommentStats } from "./comments/_components/CommentStats";
 import {
   Button,
   Pagination,
@@ -30,62 +26,48 @@ import {
   TabsList,
   TabsTrigger,
   TabsContent,
-} from '@/admin/components/ui'
-import { LoadingState } from '@/admin/components/LoadingState'
-import { parsePostStatusFilter } from '@/shared/lib/validations/enums'
-import { createTypeGuard } from '@/shared/lib/serialize'
-import type { Metadata } from 'next'
+} from "@/admin/components/ui";
+import { LoadingState } from "@/admin/components/LoadingState";
+import { parsePostStatusFilter } from "@/shared/lib/validations/enums";
+import { createTypeGuard } from "@/shared/lib/serialize";
+import { loadAdminPostSearchParams } from "@/shared/lib/nuqs";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: '投稿管理 | Myrrh Rental Space',
-}
-
-// タブの型定義
-const POST_TABS = ['posts', 'categories', 'tags', 'comments'] as const
-type PostTab = (typeof POST_TABS)[number]
+  title: "投稿管理 | Myrrh Rental Space",
+};
 
 // コメントステータスフィルター
-const COMMENT_STATUS_VALUES = ['ALL', 'ACTIVE', 'DELETED'] as const
-const isValidCommentStatus = createTypeGuard(COMMENT_STATUS_VALUES)
+const COMMENT_STATUS_VALUES = ["ALL", "ACTIVE", "DELETED"] as const;
+const isValidCommentStatus = createTypeGuard(COMMENT_STATUS_VALUES);
 
-const POST_TABS_SET = new Set<string>(POST_TABS)
-function isValidTab(tab: string | undefined): tab is PostTab {
-  return typeof tab === 'string' && POST_TABS_SET.has(tab)
-}
-
-type SearchParams = Promise<{
-  tab?: string
-  status?: string
-  categoryId?: string
-  search?: string
-  page?: string
-  postId?: string
-}>
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
 type PageProps = {
-  searchParams: SearchParams
-}
+  searchParams: SearchParams;
+};
 
 // ==============================================================================
 // 記事一覧タブのコンポーネント
 // ==============================================================================
 
 async function PostFiltersWrapper() {
-  const categories = await getPostCategories()
-  return <PostFilters categories={categories} />
+  const categories = await getPostCategories();
+  return <PostFilters categories={categories} />;
 }
 
 async function PostList({ searchParams }: { searchParams: SearchParams }) {
-  const params = await searchParams
-  const status = parsePostStatusFilter(params.status)
-  const categoryId = params.categoryId
-  const search = params.search
-  const page = params.page ? parseInt(params.page, 10) : 1
+  const params = await loadAdminPostSearchParams(searchParams);
+  const status = parsePostStatusFilter(params.status);
 
   const result = await getPosts(
-    { status, categoryId, search },
-    { page, limit: 10 }
-  )
+    {
+      status,
+      categoryId: params.categoryId || undefined,
+      search: params.search || undefined,
+    },
+    { page: params.page, limit: 10 },
+  );
 
   return (
     <>
@@ -96,7 +78,7 @@ async function PostList({ searchParams }: { searchParams: SearchParams }) {
         total={result.total}
       />
     </>
-  )
+  );
 }
 
 // ==============================================================================
@@ -104,8 +86,8 @@ async function PostList({ searchParams }: { searchParams: SearchParams }) {
 // ==============================================================================
 
 async function CategoryContent() {
-  const categories = await getPostCategories()
-  return <CategoryManager initialCategories={categories} />
+  const categories = await getPostCategories();
+  return <CategoryManager initialCategories={categories} />;
 }
 
 // ==============================================================================
@@ -113,8 +95,8 @@ async function CategoryContent() {
 // ==============================================================================
 
 async function TagContent() {
-  const tags = await getPostTags()
-  return <TagManager initialTags={tags} />
+  const tags = await getPostTags();
+  return <TagManager initialTags={tags} />;
 }
 
 // ==============================================================================
@@ -122,24 +104,26 @@ async function TagContent() {
 // ==============================================================================
 
 async function CommentStatsWrapper() {
-  const stats = await getCommentStats()
-  return <CommentStats stats={stats} />
+  const stats = await getCommentStats();
+  return <CommentStats stats={stats} />;
 }
 
 async function CommentList({ searchParams }: { searchParams: SearchParams }) {
-  const params = await searchParams
-  const status = isValidCommentStatus(params.status) ? params.status : undefined
-  const postId = params.postId
-  const search = params.search
-  const page = params.page ? parseInt(params.page, 10) : 1
+  const params = await loadAdminPostSearchParams(searchParams);
+  const status = isValidCommentStatus(params.status)
+    ? params.status
+    : undefined;
 
   const filters: CommentFiltersType = {
-    status: status ?? 'ALL',
-    postId,
-    search,
-  }
+    status: status ?? "ALL",
+    postId: params.postId || undefined,
+    search: params.search || undefined,
+  };
 
-  const result = await getAdminComments(filters, { page, limit: 20 })
+  const result = await getAdminComments(filters, {
+    page: params.page,
+    limit: 20,
+  });
 
   return (
     <>
@@ -150,7 +134,7 @@ async function CommentList({ searchParams }: { searchParams: SearchParams }) {
         total={result.total}
       />
     </>
-  )
+  );
 }
 
 // ==============================================================================
@@ -158,8 +142,8 @@ async function CommentList({ searchParams }: { searchParams: SearchParams }) {
 // ==============================================================================
 
 export default async function PostsPage({ searchParams }: PageProps) {
-  const params = await searchParams
-  const currentTab = isValidTab(params.tab) ? params.tab : 'posts'
+  const params = await loadAdminPostSearchParams(searchParams);
+  const currentTab = params.tab;
 
   return (
     <div className="space-y-6">
@@ -171,7 +155,7 @@ export default async function PostsPage({ searchParams }: PageProps) {
             投稿・カテゴリー・タグ・コメントを管理します
           </p>
         </div>
-        {currentTab === 'posts' && (
+        {currentTab === "posts" && (
           <Button asChild className="min-h-10 sm:min-h-9">
             <Link href="/admin/posts/new">新規作成</Link>
           </Button>
@@ -244,5 +228,5 @@ export default async function PostsPage({ searchParams }: PageProps) {
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }

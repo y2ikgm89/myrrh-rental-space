@@ -1,38 +1,37 @@
-import { Suspense } from 'react'
-import Link from 'next/link'
-import { Calendar, Plus } from 'lucide-react'
-import { getReservations } from '@/admin/actions/reservation'
-import { ReservationFilters } from './_components/ReservationFilters'
-import { ReservationTable } from './_components/ReservationTable'
-import { Pagination, Button } from '@/admin/components/ui'
-import { LoadingState } from '@/admin/components/LoadingState'
-import { parseReservationStatusFilter } from '@/shared/lib/validations/enums'
-import type { Metadata } from 'next'
+import { Suspense } from "react";
+import Link from "next/link";
+import { Calendar, Plus } from "lucide-react";
+import { getReservations } from "@/admin/actions/reservation";
+import { ReservationFilters } from "./_components/ReservationFilters";
+import { ReservationTable } from "./_components/ReservationTable";
+import { Pagination, Button } from "@/admin/components/ui";
+import { LoadingState } from "@/admin/components/LoadingState";
+import { parseReservationStatusFilter } from "@/shared/lib/validations/enums";
+import { loadAdminReservationSearchParams } from "@/shared/lib/nuqs";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: '予約管理 | Myrrh Rental Space',
-}
+  title: "予約管理 | Myrrh Rental Space",
+};
 
-type SearchParams = Promise<{
-  status?: string
-  search?: string
-  page?: string
-}>
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
 type PageProps = {
-  searchParams: SearchParams
-}
+  searchParams: SearchParams;
+};
 
-async function ReservationList({ searchParams }: { searchParams: SearchParams }) {
-  const params = await searchParams
-  const status = parseReservationStatusFilter(params.status)
-  const search = params.search
-  const page = params.page ? parseInt(params.page, 10) : 1
+async function ReservationList({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
+  const params = await loadAdminReservationSearchParams(searchParams);
+  const status = parseReservationStatusFilter(params.status);
 
   const result = await getReservations(
-    { status, search },
-    { page, limit: 10 }
-  )
+    { status, search: params.search || undefined },
+    { page: params.page, limit: 10 },
+  );
 
   return (
     <>
@@ -43,7 +42,7 @@ async function ReservationList({ searchParams }: { searchParams: SearchParams })
         total={result.total}
       />
     </>
-  )
+  );
 }
 
 export default async function ReservationsPage({ searchParams }: PageProps) {
@@ -83,5 +82,5 @@ export default async function ReservationsPage({ searchParams }: PageProps) {
         <ReservationList searchParams={searchParams} />
       </Suspense>
     </div>
-  )
+  );
 }

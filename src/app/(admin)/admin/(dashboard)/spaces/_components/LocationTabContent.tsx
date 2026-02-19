@@ -1,23 +1,20 @@
-import { Suspense } from 'react'
-import Link from 'next/link'
-import { getLocations } from '@/admin/actions/location'
-import { LocationFilters } from '../../locations/_components/LocationFilters'
-import { LocationTable } from '../../locations/_components/LocationTable'
-import { Button } from '@/admin/components/ui'
-import { LoadingState } from '@/admin/components/LoadingState'
+import { Suspense } from "react";
+import Link from "next/link";
+import { getLocations } from "@/admin/actions/location";
+import { LocationFilters } from "../../locations/_components/LocationFilters";
+import { LocationTable } from "../../locations/_components/LocationTable";
+import { Button } from "@/admin/components/ui";
+import { LoadingState } from "@/admin/components/LoadingState";
+import { loadAdminSpaceSearchParams } from "@/shared/lib/nuqs";
 
 // =============================================================================
 // 型定義
 // =============================================================================
 
-type SearchParams = Promise<{
-  published?: string
-  search?: string
-  tab?: string
-}>
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
 interface LocationTabContentProps {
-  searchParams: SearchParams
+  searchParams: SearchParams;
 }
 
 // =============================================================================
@@ -25,23 +22,24 @@ interface LocationTabContentProps {
 // =============================================================================
 
 async function LocationList({ searchParams }: { searchParams: SearchParams }) {
-  const params = await searchParams
-  const includeInactive = params.published !== 'true'
-  const search = params.search
+  const params = await loadAdminSpaceSearchParams(searchParams);
+  const includeInactive = params.published !== "true";
 
   const result = await getLocations({
     includeInactive,
-    search,
-  })
+    search: params.search || undefined,
+  });
 
-  return <LocationTable locations={result.locations} />
+  return <LocationTable locations={result.locations} />;
 }
 
 // =============================================================================
 // メインコンポーネント
 // =============================================================================
 
-export async function LocationTabContent({ searchParams }: LocationTabContentProps) {
+export async function LocationTabContent({
+  searchParams,
+}: LocationTabContentProps) {
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
@@ -67,5 +65,5 @@ export async function LocationTabContent({ searchParams }: LocationTabContentPro
         <LocationList searchParams={searchParams} />
       </Suspense>
     </div>
-  )
+  );
 }

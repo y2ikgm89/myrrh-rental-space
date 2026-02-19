@@ -1,35 +1,33 @@
-import { Suspense } from 'react'
-import Link from 'next/link'
-import { Plus } from 'lucide-react'
-import { getCustomers } from '@/admin/actions/customer'
-import { CustomerFilters } from './_components/CustomerFilters'
-import { CustomerTable } from './_components/CustomerTable'
-import { Pagination, Button } from '@/admin/components/ui'
-import { LoadingState } from '@/admin/components/LoadingState'
-import { parseCustomerStatusFilter } from '@/shared/lib/validations/enums'
-import type { Metadata } from 'next'
+import { Suspense } from "react";
+import Link from "next/link";
+import { Plus } from "lucide-react";
+import { getCustomers } from "@/admin/actions/customer";
+import { CustomerFilters } from "./_components/CustomerFilters";
+import { CustomerTable } from "./_components/CustomerTable";
+import { Pagination, Button } from "@/admin/components/ui";
+import { LoadingState } from "@/admin/components/LoadingState";
+import { parseCustomerStatusFilter } from "@/shared/lib/validations/enums";
+import { loadAdminCustomerSearchParams } from "@/shared/lib/nuqs";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: '顧客管理 | Myrrh Rental Space',
-}
+  title: "顧客管理 | Myrrh Rental Space",
+};
 
-type SearchParams = Promise<{
-  status?: string
-  search?: string
-  page?: string
-}>
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
 type PageProps = {
-  searchParams: SearchParams
-}
+  searchParams: SearchParams;
+};
 
 async function CustomerList({ searchParams }: { searchParams: SearchParams }) {
-  const params = await searchParams
-  const status = parseCustomerStatusFilter(params.status)
-  const search = params.search
-  const page = params.page ? parseInt(params.page, 10) : 1
+  const params = await loadAdminCustomerSearchParams(searchParams);
+  const status = parseCustomerStatusFilter(params.status);
 
-  const result = await getCustomers({ status, search }, { page, limit: 10 })
+  const result = await getCustomers(
+    { status, search: params.search || undefined },
+    { page: params.page, limit: 10 },
+  );
 
   return (
     <>
@@ -40,7 +38,7 @@ async function CustomerList({ searchParams }: { searchParams: SearchParams }) {
         total={result.total}
       />
     </>
-  )
+  );
 }
 
 export default async function CustomersPage({ searchParams }: PageProps) {
@@ -72,5 +70,5 @@ export default async function CustomersPage({ searchParams }: PageProps) {
         <CustomerList searchParams={searchParams} />
       </Suspense>
     </div>
-  )
+  );
 }

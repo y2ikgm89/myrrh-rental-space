@@ -8,13 +8,7 @@ export const metadata: Metadata = {
   title: "スペース管理 | Myrrh Rental Space",
 };
 
-type SearchParams = Promise<{
-  status?: string;
-  search?: string;
-  page?: string;
-  includeInactive?: string;
-  tab?: string;
-}>;
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
 type PageProps = {
   searchParams: SearchParams;

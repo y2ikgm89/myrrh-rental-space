@@ -1,22 +1,19 @@
-import { Suspense } from 'react'
-import { getSpaceCategories } from '@/admin/actions/space-category'
-import { CategoryFilters } from '../../space-categories/_components/CategoryFilters'
-import { CategoryTable } from '../../space-categories/_components/CategoryTable'
-import { CreateCategoryDialog } from '../../space-categories/_components/CreateCategoryDialog'
-import { LoadingState } from '@/admin/components/LoadingState'
+import { Suspense } from "react";
+import { getSpaceCategories } from "@/admin/actions/space-category";
+import { CategoryFilters } from "../../space-categories/_components/CategoryFilters";
+import { CategoryTable } from "../../space-categories/_components/CategoryTable";
+import { CreateCategoryDialog } from "../../space-categories/_components/CreateCategoryDialog";
+import { LoadingState } from "@/admin/components/LoadingState";
+import { loadAdminSpaceSearchParams } from "@/shared/lib/nuqs";
 
 // =============================================================================
 // 型定義
 // =============================================================================
 
-type SearchParams = Promise<{
-  search?: string
-  includeInactive?: string
-  tab?: string
-}>
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
 interface CategoryTabContentProps {
-  searchParams: SearchParams
+  searchParams: SearchParams;
 }
 
 // =============================================================================
@@ -24,20 +21,24 @@ interface CategoryTabContentProps {
 // =============================================================================
 
 async function CategoryList({ searchParams }: { searchParams: SearchParams }) {
-  const params = await searchParams
-  const includeInactive = params.includeInactive === 'true'
-  const search = params.search
+  const params = await loadAdminSpaceSearchParams(searchParams);
+  const includeInactive = params.includeInactive === "true";
 
-  const result = await getSpaceCategories({ includeInactive, search })
+  const result = await getSpaceCategories({
+    includeInactive,
+    search: params.search || undefined,
+  });
 
-  return <CategoryTable categories={result.categories} />
+  return <CategoryTable categories={result.categories} />;
 }
 
 // =============================================================================
 // メインコンポーネント
 // =============================================================================
 
-export async function CategoryTabContent({ searchParams }: CategoryTabContentProps) {
+export async function CategoryTabContent({
+  searchParams,
+}: CategoryTabContentProps) {
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
@@ -61,5 +62,5 @@ export async function CategoryTabContent({ searchParams }: CategoryTabContentPro
         <CategoryList searchParams={searchParams} />
       </Suspense>
     </div>
-  )
+  );
 }

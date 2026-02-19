@@ -5,29 +5,27 @@ import { InquiryTable } from "./_components/InquiryTable";
 import { Pagination } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
 import { parseInquiryStatusFilter } from "@/shared/lib/validations/enums";
+import { loadAdminInquirySearchParams } from "@/shared/lib/nuqs";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "お問い合わせ管理 | Myrrh Rental Space",
 };
 
-type SearchParams = Promise<{
-  status?: string;
-  search?: string;
-  page?: string;
-}>;
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
 type PageProps = {
   searchParams: SearchParams;
 };
 
 async function InquiryList({ searchParams }: { searchParams: SearchParams }) {
-  const params = await searchParams;
+  const params = await loadAdminInquirySearchParams(searchParams);
   const status = parseInquiryStatusFilter(params.status);
-  const search = params.search;
-  const page = params.page ? parseInt(params.page, 10) : 1;
 
-  const result = await getInquiries({ status, search }, { page, limit: 10 });
+  const result = await getInquiries(
+    { status, search: params.search || undefined },
+    { page: params.page, limit: 10 },
+  );
 
   return (
     <>

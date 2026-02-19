@@ -19,24 +19,14 @@ import {
   TabsContent,
 } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
+import { loadAdminTermsSearchParams } from "@/shared/lib/nuqs";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "利用規約管理 | Myrrh Rental Space",
 };
 
-// タブの型定義
-const TERMS_TABS = ["list", "meta"] as const;
-type TermsTab = (typeof TERMS_TABS)[number];
-
-const TERMS_TABS_SET = new Set<string>(TERMS_TABS);
-function isValidTab(tab: string | undefined): tab is TermsTab {
-  return typeof tab === "string" && TERMS_TABS_SET.has(tab);
-}
-
-type SearchParams = Promise<{
-  tab?: string;
-}>;
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
 type PageProps = {
   searchParams: SearchParams;
@@ -91,8 +81,8 @@ async function SeoContent() {
 // ==============================================================================
 
 export default async function TermsPage({ searchParams }: PageProps) {
-  const params = await searchParams;
-  const currentTab = isValidTab(params.tab) ? params.tab : "list";
+  const params = await loadAdminTermsSearchParams(searchParams);
+  const currentTab = params.tab;
 
   return (
     <div className="space-y-6">

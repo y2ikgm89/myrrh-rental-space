@@ -1,24 +1,20 @@
-import { Suspense } from 'react'
-import Link from 'next/link'
-import { getSpaces } from '@/admin/actions/space'
-import { SpaceFilters } from './SpaceFilters'
-import { SpaceTable } from './SpaceTable'
-import { Button, Pagination } from '@/admin/components/ui'
-import { LoadingState } from '@/admin/components/LoadingState'
+import { Suspense } from "react";
+import Link from "next/link";
+import { getSpaces } from "@/admin/actions/space";
+import { SpaceFilters } from "./SpaceFilters";
+import { SpaceTable } from "./SpaceTable";
+import { Button, Pagination } from "@/admin/components/ui";
+import { LoadingState } from "@/admin/components/LoadingState";
+import { loadAdminSpaceSearchParams } from "@/shared/lib/nuqs";
 
 // =============================================================================
 // 型定義
 // =============================================================================
 
-type SearchParams = Promise<{
-  status?: string
-  search?: string
-  page?: string
-  tab?: string
-}>
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
 interface SpaceTabContentProps {
-  searchParams: SearchParams
+  searchParams: SearchParams;
 }
 
 // =============================================================================
@@ -26,20 +22,14 @@ interface SpaceTabContentProps {
 // =============================================================================
 
 async function SpaceList({ searchParams }: { searchParams: SearchParams }) {
-  const params = await searchParams
+  const params = await loadAdminSpaceSearchParams(searchParams);
   const isPublished =
-    params.status === 'true'
-      ? true
-      : params.status === 'false'
-        ? false
-        : 'ALL'
-  const search = params.search
-  const page = params.page ? parseInt(params.page, 10) : 1
+    params.status === "true" ? true : params.status === "false" ? false : "ALL";
 
   const result = await getSpaces(
-    { isPublished, search },
-    { page, limit: 10 }
-  )
+    { isPublished, search: params.search || undefined },
+    { page: params.page, limit: 10 },
+  );
 
   return (
     <>
@@ -50,7 +40,7 @@ async function SpaceList({ searchParams }: { searchParams: SearchParams }) {
         total={result.total}
       />
     </>
-  )
+  );
 }
 
 // =============================================================================
@@ -83,5 +73,5 @@ export async function SpaceTabContent({ searchParams }: SpaceTabContentProps) {
         <SpaceList searchParams={searchParams} />
       </Suspense>
     </div>
-  )
+  );
 }
