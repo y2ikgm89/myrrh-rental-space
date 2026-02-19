@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * Google Calendar設定セクション
@@ -6,8 +6,8 @@
  * サービスアカウント連携、OAuth連携、iCal/Add to Calendar設定
  */
 
-import { useState, useTransition } from 'react'
-import { useConfirm } from '@/admin/contexts/confirm-context'
+import { useState, useTransition } from "react";
+import { useConfirm } from "@/admin/contexts/confirm-context";
 import {
   Button,
   Card,
@@ -17,51 +17,53 @@ import {
   CardTitle,
   Input,
   Label,
-} from '@/admin/components/ui'
-import { Switch } from '@/admin/components/ui/switch'
-import { Textarea } from '@/admin/components/ui/textarea'
+} from "@/admin/components/ui";
+import { Switch } from "@/admin/components/ui/switch";
+import { Textarea } from "@/admin/components/ui/textarea";
 import {
   updateGoogleCalendarSettings,
   testGoogleCalendarConnectionAction,
   clearGoogleCalendarServiceAccount,
   type SettingsData,
-} from '@/admin/actions/settings'
-import { useRefreshOnSuccess } from '../hooks'
-import { StatusBanner } from '../shared/StatusBanner'
-import { formatDateTimeShort } from '@/shared/lib/utils'
+} from "@/admin/actions/settings";
+import { useRefreshOnSuccess } from "../hooks";
+import { StatusBanner } from "../shared/StatusBanner";
+import { formatDateTimeShort } from "@/shared/lib/utils";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 interface GoogleCalendarSectionProps {
-  settings: SettingsData
+  settings: SettingsData;
 }
 
 // =============================================================================
 // Main Component
 // =============================================================================
 
-export function GoogleCalendarSection({ settings }: GoogleCalendarSectionProps) {
-  const confirm = useConfirm()
-  const { handleResult, refresh } = useRefreshOnSuccess()
-  const [isPending, startTransition] = useTransition()
-  const [isTesting, setIsTesting] = useState(false)
+export function GoogleCalendarSection({
+  settings,
+}: GoogleCalendarSectionProps) {
+  const confirm = useConfirm();
+  const { handleResult, refresh } = useRefreshOnSuccess();
+  const [isPending, startTransition] = useTransition();
+  const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<{
-    success: boolean
-    message: string
-    calendarName?: string
-  } | null>(null)
+    success: boolean;
+    message: string;
+    calendarName?: string;
+  } | null>(null);
 
   const [formData, setFormData] = useState({
     googleCalendarEnabled: settings.googleCalendarEnabled,
-    googleCalendarId: settings.googleCalendarId || '',
-    serviceAccountJson: '',
+    googleCalendarId: settings.googleCalendarId || "",
+    serviceAccountJson: "",
     icalAttachmentEnabled: settings.icalAttachmentEnabled,
     addToCalendarLinksEnabled: settings.addToCalendarLinksEnabled,
-  })
+  });
 
-  const [showServiceAccountInput, setShowServiceAccountInput] = useState(false)
+  const [showServiceAccountInput, setShowServiceAccountInput] = useState(false);
 
   const handleSave = () => {
     startTransition(async () => {
@@ -71,79 +73,87 @@ export function GoogleCalendarSection({ settings }: GoogleCalendarSectionProps) 
         serviceAccountJson: formData.serviceAccountJson || null,
         icalAttachmentEnabled: formData.icalAttachmentEnabled,
         addToCalendarLinksEnabled: formData.addToCalendarLinksEnabled,
-      })
+      });
       if (result.success) {
         setFormData((prev) => ({
           ...prev,
-          serviceAccountJson: '',
-        }))
-        setShowServiceAccountInput(false)
+          serviceAccountJson: "",
+        }));
+        setShowServiceAccountInput(false);
       }
-      handleResult({ ...result, message: result.success ? 'Google Calendar設定を更新しました' : undefined })
-    })
-  }
+      handleResult({
+        ...result,
+        message: result.success
+          ? "Google Calendar設定を更新しました"
+          : undefined,
+      });
+    });
+  };
 
   const handleConnectionTest = async () => {
     if (!formData.serviceAccountJson || !formData.googleCalendarId) {
       setTestResult({
         success: false,
-        message: 'サービスアカウントJSONとカレンダーIDを入力してください',
-      })
-      return
+        message: "サービスアカウントJSONとカレンダーIDを入力してください",
+      });
+      return;
     }
 
-    setIsTesting(true)
-    setTestResult(null)
+    setIsTesting(true);
+    setTestResult(null);
 
     try {
       const result = await testGoogleCalendarConnectionAction({
         serviceAccountJson: formData.serviceAccountJson,
         calendarId: formData.googleCalendarId,
-      })
+      });
       if (result.success) {
         setTestResult({
           success: true,
-          message: '接続成功',
-          calendarName: result.calendarName,
-        })
-        refresh()
+          message: "接続成功",
+          calendarName: result.data.calendarName,
+        });
+        refresh();
       } else {
         setTestResult({
           success: false,
-          message: result.error || '接続に失敗しました',
-        })
+          message: result.error || "接続に失敗しました",
+        });
       }
     } catch {
       setTestResult({
         success: false,
-        message: '接続テストでエラーが発生しました',
-      })
+        message: "接続テストでエラーが発生しました",
+      });
     } finally {
-      setIsTesting(false)
+      setIsTesting(false);
     }
-  }
+  };
 
   const handleClearCredentials = async () => {
     const confirmed = await confirm({
-      title: '認証情報をクリアしますか？',
-      description: 'サービスアカウント認証情報をクリアしますか？',
-      confirmLabel: 'クリア',
-      variant: 'destructive',
-    })
-    if (!confirmed) return
+      title: "認証情報をクリアしますか？",
+      description: "サービスアカウント認証情報をクリアしますか？",
+      confirmLabel: "クリア",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
 
     startTransition(async () => {
-      const result = await clearGoogleCalendarServiceAccount()
+      const result = await clearGoogleCalendarServiceAccount();
       if (result.success) {
         setFormData((prev) => ({
           ...prev,
-          serviceAccountJson: '',
-        }))
-        setTestResult(null)
+          serviceAccountJson: "",
+        }));
+        setTestResult(null);
       }
-      handleResult({ ...result, message: result.success ? '認証情報をクリアしました' : undefined })
-    })
-  }
+      handleResult({
+        ...result,
+        message: result.success ? "認証情報をクリアしました" : undefined,
+      });
+    });
+  };
 
   return (
     <Card>
@@ -164,18 +174,23 @@ export function GoogleCalendarSection({ settings }: GoogleCalendarSectionProps) 
           Google Calendar連携
         </CardTitle>
         <CardDescription>
-          予約をGoogle Calendarに自動登録し、予約者にカレンダー追加リンクを提供します
+          予約をGoogle
+          Calendarに自動登録し、予約者にカレンダー追加リンクを提供します
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* サービスアカウント連携セクション */}
         <div className="space-y-4">
-          <h4 className="text-sm font-medium">サービスアカウント連携（共有カレンダー）</h4>
+          <h4 className="text-sm font-medium">
+            サービスアカウント連携（共有カレンダー）
+          </h4>
 
           {/* 有効/無効 */}
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
-              <Label htmlFor="googleCalendarEnabled">Google Calendar同期を有効にする</Label>
+              <Label htmlFor="googleCalendarEnabled">
+                Google Calendar同期を有効にする
+              </Label>
               <p className="text-sm text-muted-foreground">
                 予約作成時に自動でカレンダーに登録します
               </p>
@@ -204,14 +219,18 @@ export function GoogleCalendarSection({ settings }: GoogleCalendarSectionProps) 
               disabled={isPending}
             />
             <p className="text-xs text-muted-foreground">
-              Google Calendarの「設定」→「カレンダーの統合」からIDをコピーしてください
+              Google
+              Calendarの「設定」→「カレンダーの統合」からIDをコピーしてください
             </p>
           </div>
 
           {/* サービスアカウントJSON */}
           <div className="space-y-2">
-            <Label htmlFor="serviceAccountJson">サービスアカウント認証情報（JSON）</Label>
-            {settings.googleCalendarServiceAccountEmailMasked && !showServiceAccountInput ? (
+            <Label htmlFor="serviceAccountJson">
+              サービスアカウント認証情報（JSON）
+            </Label>
+            {settings.googleCalendarServiceAccountEmailMasked &&
+            !showServiceAccountInput ? (
               <div className="flex items-center gap-2">
                 <Input
                   type="text"
@@ -232,7 +251,10 @@ export function GoogleCalendarSection({ settings }: GoogleCalendarSectionProps) 
                 id="serviceAccountJson"
                 value={formData.serviceAccountJson}
                 onChange={(e) =>
-                  setFormData({ ...formData, serviceAccountJson: e.target.value })
+                  setFormData({
+                    ...formData,
+                    serviceAccountJson: e.target.value,
+                  })
                 }
                 placeholder='{"type": "service_account", ...}'
                 rows={6}
@@ -241,29 +263,37 @@ export function GoogleCalendarSection({ settings }: GoogleCalendarSectionProps) 
               />
             )}
             <p className="text-xs text-muted-foreground">
-              Google Cloud ConsoleでサービスアカウントのJSONキーをダウンロードしてください
+              Google Cloud
+              ConsoleでサービスアカウントのJSONキーをダウンロードしてください
             </p>
           </div>
 
           {/* 接続ステータス */}
           {settings.googleCalendarConnectionStatus && (
-            <StatusBanner success={settings.googleCalendarConnectionStatus === 'connected'}>
+            <StatusBanner
+              success={settings.googleCalendarConnectionStatus === "connected"}
+            >
               <div className="flex items-center gap-2">
-                {settings.googleCalendarConnectionStatus === 'connected' ? (
+                {settings.googleCalendarConnectionStatus === "connected" ? (
                   <>
                     <span className="h-2 w-2 rounded-full bg-success" />
-                    <span className="text-sm font-medium text-success">接続済み</span>
+                    <span className="text-sm font-medium text-success">
+                      接続済み
+                    </span>
                   </>
                 ) : (
                   <>
                     <span className="h-2 w-2 rounded-full bg-destructive" />
-                    <span className="text-sm font-medium text-destructive">エラー</span>
+                    <span className="text-sm font-medium text-destructive">
+                      エラー
+                    </span>
                   </>
                 )}
               </div>
               {settings.googleCalendarLastTestedAt && (
                 <p className="text-xs text-muted-foreground">
-                  最終テスト: {formatDateTimeShort(settings.googleCalendarLastTestedAt)}
+                  最終テスト:{" "}
+                  {formatDateTimeShort(settings.googleCalendarLastTestedAt)}
                 </p>
               )}
             </StatusBanner>
@@ -272,7 +302,9 @@ export function GoogleCalendarSection({ settings }: GoogleCalendarSectionProps) 
           {/* 接続テスト結果 */}
           {testResult && (
             <StatusBanner success={testResult.success}>
-              <p className={`text-sm ${testResult.success ? 'text-success' : 'text-destructive'}`}>
+              <p
+                className={`text-sm ${testResult.success ? "text-success" : "text-destructive"}`}
+              >
                 {testResult.message}
               </p>
               {testResult.calendarName && (
@@ -290,7 +322,9 @@ export function GoogleCalendarSection({ settings }: GoogleCalendarSectionProps) 
 
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
-              <Label htmlFor="icalAttachmentEnabled">iCalファイルをメールに添付</Label>
+              <Label htmlFor="icalAttachmentEnabled">
+                iCalファイルをメールに添付
+              </Label>
               <p className="text-sm text-muted-foreground">
                 予約確認メールにiCal (.ics) ファイルを添付します
               </p>
@@ -307,9 +341,12 @@ export function GoogleCalendarSection({ settings }: GoogleCalendarSectionProps) 
 
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
-              <Label htmlFor="addToCalendarLinksEnabled">「カレンダーに追加」リンクを表示</Label>
+              <Label htmlFor="addToCalendarLinksEnabled">
+                「カレンダーに追加」リンクを表示
+              </Label>
               <p className="text-sm text-muted-foreground">
-                Google Calendar、Outlook、Apple Calendarへの追加リンクを表示します
+                Google Calendar、Outlook、Apple
+                Calendarへの追加リンクを表示します
               </p>
             </div>
             <Switch
@@ -326,7 +363,7 @@ export function GoogleCalendarSection({ settings }: GoogleCalendarSectionProps) 
         {/* アクションボタン */}
         <div className="flex flex-wrap gap-2">
           <Button onClick={handleSave} disabled={isPending}>
-            {isPending ? '保存中...' : '設定を保存'}
+            {isPending ? "保存中..." : "設定を保存"}
           </Button>
           {formData.serviceAccountJson && formData.googleCalendarId && (
             <Button
@@ -334,7 +371,7 @@ export function GoogleCalendarSection({ settings }: GoogleCalendarSectionProps) 
               onClick={handleConnectionTest}
               disabled={isPending || isTesting}
             >
-              {isTesting ? 'テスト中...' : '接続テスト'}
+              {isTesting ? "テスト中..." : "接続テスト"}
             </Button>
           )}
           {settings.googleCalendarServiceAccountEmailMasked && (
@@ -349,5 +386,5 @@ export function GoogleCalendarSection({ settings }: GoogleCalendarSectionProps) 
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
