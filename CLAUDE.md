@@ -27,7 +27,7 @@
 | ディレクトリ                  | ロード条件                | 内容                                              |
 | ----------------------------- | ------------------------- | ------------------------------------------------- |
 | `.claude/rules/*.md`          | **常時**                  | 型安全・実装品質・Server Actions 等（全作業共通） |
-| `.claude/rules/frontend/*.md` | **`src/app/**` 作業時\*\* | UI・アニメーション・アクセシビリティ・SEO 等      |
+| `.claude/rules/frontend/*.md` | `src/app/**` 作業時       | UI・アニメーション・アクセシビリティ・SEO 等      |
 | `.claude/rules/ops/*.md`      | **`Dockerfile` 等作業時** | Docker / Cloud Run / Cloud Build                  |
 
 > 詳細リファレンス: `docs/reference/claude-rules/` に配置（必要時に参照）
@@ -172,10 +172,11 @@ bun run db:generate        # Prismaスキーマ再生成
 bun run db:studio          # Prisma Studio（DB GUI）
 bun run e2e                # E2Eテスト（Playwright）
 bun run format             # Prettier フォーマット（Edit/Write 後は hook で自動実行）
-# 自動実行フック（設定済）: Prettier + ESLint --fix（.ts/.tsx編集後）/ schema-change-guard（schema.prisma編集後）
-# ブロック保護: .env*, bun.lockb, prisma/migrations/*.sql（直接編集不可）
 gcloud builds submit --config=cloudbuild.yaml  # Cloud Run デプロイ（Cloud Build経由）
 ```
+
+> **自動フック**: Prettier + ESLint --fix（.ts/.tsx）/ schema-change-guard（schema.prisma）
+> **保護**: `.env*`, `bun.lockb`, `prisma/migrations/*.sql` は直接編集不可（PreToolUse フック）
 
 ### コーディング規約
 
