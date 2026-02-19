@@ -8,6 +8,7 @@ import { Badge } from '@/admin/components/ui/badge'
 import { formatDate } from '@/shared/lib/utils'
 import { Role } from '@/shared/generated/prisma/enums'
 import { UserActions } from '../_components/UserActions'
+import { headers } from "next/headers";
 
 export const metadata = {
   title: 'スタッフ詳細 | 管理画面',
@@ -18,6 +19,7 @@ type Props = {
 }
 
 export default async function StaffDetailPage({ params }: Props) {
+  await headers();
   const { id } = await params
   const user = await getUser(id)
 

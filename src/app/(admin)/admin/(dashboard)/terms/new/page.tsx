@@ -3,12 +3,14 @@ import { connection } from 'next/server'
 import { TermsInlineEditor } from '../_components/TermsInlineEditor'
 import type { BusinessInfo } from '@/shared/lib/terms-templates'
 import type { Metadata } from 'next'
+import { headers } from "next/headers";
 
 export const metadata: Metadata = {
   title: '規約作成 | Myrrh Rental Space',
 }
 
 export default async function NewTermsPage() {
+  await headers();
   await connection()
 
   const settings = await getSettings()

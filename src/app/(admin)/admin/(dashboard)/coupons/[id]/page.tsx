@@ -8,6 +8,7 @@ import { CouponDeleteButton } from './_components/CouponDeleteButton'
 import { Card } from '@/admin/components/ui'
 import { formatDateShort, formatPrice } from '@/shared/lib/utils'
 import type { Metadata } from 'next'
+import { headers } from "next/headers";
 
 // 管理画面の動的ルートはビルド時プリレンダリングをスキップ
 
@@ -30,6 +31,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function EditCouponPage({ params }: PageProps) {
+  await headers();
   await connection()
   const { id } = await params
   const coupon = await getCouponById(id)

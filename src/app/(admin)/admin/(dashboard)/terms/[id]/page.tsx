@@ -7,6 +7,7 @@ import { TermsDetailView } from '../_components/TermsDetailView'
 import { Button } from '@/admin/components/ui'
 import type { Metadata } from 'next'
 import type { BusinessInfo } from '@/shared/lib/terms-templates'
+import { headers } from "next/headers";
 
 export const metadata: Metadata = {
   title: '規約詳細 | Myrrh Rental Space',
@@ -17,6 +18,7 @@ interface TermsDetailPageProps {
 }
 
 export default async function TermsDetailPage({ params }: TermsDetailPageProps) {
+  await headers();
   const { id } = await params
   const [result, settings] = await Promise.all([
     getTermsById(id),

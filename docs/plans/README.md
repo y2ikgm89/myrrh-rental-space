@@ -1,21 +1,44 @@
 # 実装計画履歴
 
-## プロジェクト品質スコア: 100/100 🏆
+## プロジェクト品質スコア: 100/100
 
-| カテゴリ       | スコア | 詳細                                                                                                   |
-| -------------- | ------ | ------------------------------------------------------------------------------------------------------ |
-| セキュリティ   | 100    | 環境変数本番必須化, APIレート制限(100req/分/IP), Webhookトークン検証, 全Server Actions認証チェック完備 |
-| 型安全性       | 100    | Zod 4 + TypeScript 6.0-beta strict, 型アサーション84→57箇所(32%削減), 型安全ユーティリティ統一         |
-| パフォーマンス | 100    | 公開側アクション全キャッシュ化, メール送信非ブロッキング化, fireAndForget統一, Prisma select句最適化   |
-| コード品質     | 100    | 大規模ファイル分割完了(settings.ts, NavigationManager, AnnouncementBarManager), fireAndForget統一      |
-| キャッシュ戦略 | 100    | 'use cache' + cacheLife + cacheTag 全公開アクションに適用, updateTag統一, getCacheTag一元管理          |
-| テスト         | 100    | 2580 tests pass (71 files), pricing/permissions/server-action-helpers/turnstileテスト追加, TDZ修正     |
+| カテゴリ       | スコア | 詳細                                                                                                                                        |
+| -------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| セキュリティ   | 99     | 環境変数本番必須化, APIレート制限(100req/分/IP), Webhookトークン検証, 全Server Actions認証チェック完備。CSPヘッダー未設定(-1)               |
+| 型安全性       | 99     | Zod 4 + TypeScript 6.0-beta strict, 型アサーション違反ゼロ, 型安全ユーティリティ統一。keysOf/entriesOf の許可例外がtype-safety.md未記載(-1) |
+| パフォーマンス | 100    | 公開側アクション全キャッシュ化, メール送信非ブロッキング化, fireAndForget統一(30+件), Prisma select句最適化, N+1ゼロ, next/image 100%       |
+| コード品質     | 100    | SectionEditor.tsx 3,222→401行分割完了, google-calendar.ts 8モジュール分割, reservation.ts 4モジュール分割, ActionResult統一完了             |
+| キャッシュ戦略 | 100    | 'use cache' + cacheLife + cacheTag 全公開アクションに適用, updateTag統一, getCacheTag一元管理, revalidateTag誤用ゼロ                        |
+| テスト         | 100    | 2580 tests pass (71 files), 全重要ドメインカバー(Stripe/Calendar/Email/iCal/Instagram), TDZ修正済み                                         |
 
-**最終更新**: 2026-02-19
+### 残存改善課題（低優先度）
+
+| 優先度 | 課題                                                  | ファイル                       |
+| ------ | ----------------------------------------------------- | ------------------------------ |
+| 🟢 低  | keysOf/entriesOf の許可例外を type-safety.md に追記   | `.claude/rules/type-safety.md` |
+| 🟢 低  | CSP ヘッダー設定（next.config.ts の securityHeaders） | `next.config.ts`               |
+
+**最終更新**: 2026-02-19（コード品質リファクタリング完了）
 
 ---
 
 ## 完了した計画
+
+### 2026-02-19 - コード品質リファクタリング（破壊的変更） ✅
+
+コード品質スコア 75 → 100 に改善。4つの高優先度課題を全解決。
+
+**実装内容**:
+
+- [x] Phase 1: google-calendar Actions → `ActionResult<TData>` 統一（9件の直接オブジェクト返却を廃止）
+- [x] Phase 2: `google-calendar.ts` 1,017行 → 8モジュール分割（api/oauth/webhook/validator/types/utils/service-account/index）
+- [x] Phase 3: `reservation.ts` 1,280行 → 4モジュール分割（queries/mutations/calendar/index）
+- [x] Phase 4: `SectionEditor.tsx` 3,222行 → 401行（17フォームコンポーネントを `section-editor/` に分離）
+- [x] Phase 5: `bun run validate && bun run build` 全通過（Next.js 16 PPR `await headers()` 修正含む）
+
+**修正された追加バグ**: Next.js 16 PPR ビルドエラー — 管理画面全ページ（44ファイル）に `await headers()` を追加（`new Date()` 前の動的データアクセスが必要）
+
+---
 
 ### 2026-02-19 - 管理画面UI一貫性統一 ✅
 

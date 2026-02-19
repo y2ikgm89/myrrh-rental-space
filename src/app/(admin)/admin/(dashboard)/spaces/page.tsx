@@ -3,6 +3,7 @@ import { SpaceManagementTabs } from "./_components/SpaceManagementTabs";
 import { SpaceTabContent } from "./_components/SpaceTabContent";
 import { LocationTabContent } from "./_components/LocationTabContent";
 import { CategoryTabContent } from "./_components/CategoryTabContent";
+import { headers } from "next/headers";
 
 export const metadata: Metadata = {
   title: "スペース管理 | Myrrh Rental Space",
@@ -15,6 +16,7 @@ type PageProps = {
 };
 
 export default async function SpacesPage({ searchParams }: PageProps) {
+  await headers();
   return (
     <div className="space-y-6">
       {/* ページヘッダー */}

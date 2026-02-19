@@ -5,12 +5,14 @@ import { getActiveSpaceCategories } from '@/admin/actions/space-category'
 import { getTaxSettings } from '@/admin/actions/settings'
 import { SpaceInlineEditor } from '../_components/SpaceInlineEditor'
 import type { Metadata } from 'next'
+import { headers } from "next/headers";
 
 export const metadata: Metadata = {
   title: 'スペース新規作成 | Myrrh Rental Space',
 }
 
 export default async function NewSpacePage() {
+  await headers();
   await connection()
   const [availableTerms, locationsResult, categoriesResult, taxSettings] = await Promise.all([
     getActiveTermsForSelect(),

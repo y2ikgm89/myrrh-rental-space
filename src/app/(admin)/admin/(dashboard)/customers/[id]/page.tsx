@@ -3,6 +3,7 @@ import { connection } from 'next/server'
 import { getCustomerById } from '@/admin/actions/customer'
 import { CustomerDetail } from './_components/CustomerDetail'
 import type { Metadata } from 'next'
+import { headers } from "next/headers";
 
 
 type Params = Promise<{ id: string }>
@@ -28,6 +29,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function CustomerDetailPage({ params }: PageProps) {
+  await headers();
   await connection()
   const { id } = await params
   const customer = await getCustomerById(id)

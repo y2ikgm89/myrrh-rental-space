@@ -5,6 +5,7 @@ import type { Metadata } from 'next'
 import { getFaqCategoryById } from '@/admin/actions/faq'
 import { FaqCategoryForm } from '../../../_components/FaqCategoryForm'
 import { Button } from '@/admin/components/ui'
+import { headers } from "next/headers";
 
 export const metadata: Metadata = {
   title: 'カテゴリ編集 | FAQ管理 | Myrrh Rental Space',
@@ -15,6 +16,7 @@ type PageProps = {
 }
 
 export default async function EditFaqCategoryPage({ params }: PageProps) {
+  await headers();
   const { id } = await params
   const category = await getFaqCategoryById(id)
 

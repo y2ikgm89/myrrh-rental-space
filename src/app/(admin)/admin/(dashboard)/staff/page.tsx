@@ -13,6 +13,7 @@ import {
   InvitationTable,
 } from "./_components";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 
 export const metadata: Metadata = {
   title: "スタッフ管理 | Myrrh Rental Space",
@@ -87,6 +88,7 @@ async function InvitationSection() {
 // =============================================================================
 
 export default async function StaffPage({ searchParams }: PageProps) {
+  await headers();
   return (
     <div className="space-y-6">
       {/* ヘッダー */}

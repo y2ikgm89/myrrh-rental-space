@@ -6,6 +6,7 @@ import { Button } from '@/admin/components/ui'
 import { getCustomerById } from '@/admin/actions/customer'
 import { CustomerEditForm } from '../../_components/CustomerEditForm'
 import type { Metadata } from 'next'
+import { headers } from "next/headers";
 
 type PageProps = {
   params: Promise<{ id: string }>
@@ -22,6 +23,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function CustomerEditPage({ params }: PageProps) {
+  await headers();
   await connection()
 
   const { id } = await params

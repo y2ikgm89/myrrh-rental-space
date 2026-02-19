@@ -7,6 +7,7 @@ import type { Metadata } from "next";
 import { loadAdminMediaSearchParams } from "@/shared/lib/nuqs";
 import { MediaFilters } from "./_components/MediaFilters";
 import { MediaListWrapper } from "./_components/MediaListWrapper";
+import { headers } from "next/headers";
 
 export const metadata: Metadata = {
   title: "メディア管理",
@@ -28,6 +29,7 @@ async function MediaListWithLoader({
 }
 
 export default async function MediaPage({ searchParams }: PageProps) {
+  await headers();
   return (
     <div className="space-y-6">
       {/* ヘッダー */}

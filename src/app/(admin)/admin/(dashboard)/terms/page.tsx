@@ -21,6 +21,7 @@ import {
 import { LoadingState } from "@/admin/components/LoadingState";
 import { loadAdminTermsSearchParams } from "@/shared/lib/nuqs";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 
 export const metadata: Metadata = {
   title: "利用規約管理 | Myrrh Rental Space",
@@ -81,6 +82,7 @@ async function SeoContent() {
 // ==============================================================================
 
 export default async function TermsPage({ searchParams }: PageProps) {
+  await headers();
   const params = await loadAdminTermsSearchParams(searchParams);
   const currentTab = params.tab;
 

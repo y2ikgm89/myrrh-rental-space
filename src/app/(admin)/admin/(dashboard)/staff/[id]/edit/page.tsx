@@ -5,6 +5,7 @@ import { getUser } from '@/admin/actions/user'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/admin/components/ui/card'
 import { Button } from '@/admin/components/ui/button'
 import { UserForm } from '../../_components/UserForm'
+import { headers } from "next/headers";
 
 export const metadata = {
   title: 'スタッフ編集 | 管理画面',
@@ -15,6 +16,7 @@ type Props = {
 }
 
 export default async function EditStaffPage({ params }: Props) {
+  await headers();
   const { id } = await params
   const user = await getUser(id)
 

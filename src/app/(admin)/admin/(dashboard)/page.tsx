@@ -6,29 +6,30 @@
  * - Suspense境界でプログレッシブレンダリング
  */
 
-import type { Metadata } from 'next'
-import type { ReactElement } from 'react'
-import { Suspense } from 'react'
-import { connection } from 'next/server'
-import { DashboardHeader } from './_components/DashboardHeader'
-import { DashboardStatsSection } from './_components/DashboardStatsSection'
-import { DashboardChartSection } from './_components/DashboardChartSection'
-import { DashboardTodaySection } from './_components/DashboardTodaySection'
-import { DashboardRecentSection } from './_components/DashboardRecentSection'
-import { AnalyticsCard } from './_components/AnalyticsCard'
+import type { Metadata } from "next";
+import type { ReactElement } from "react";
+import { Suspense } from "react";
+import { connection } from "next/server";
+import { DashboardHeader } from "./_components/DashboardHeader";
+import { DashboardStatsSection } from "./_components/DashboardStatsSection";
+import { DashboardChartSection } from "./_components/DashboardChartSection";
+import { DashboardTodaySection } from "./_components/DashboardTodaySection";
+import { DashboardRecentSection } from "./_components/DashboardRecentSection";
+import { headers } from "next/headers";
+import { AnalyticsCard } from "./_components/AnalyticsCard";
 import {
   StatsCardsSkeleton,
   TodayReservationsSkeleton,
   RecentItemsSkeleton,
-} from './_components/skeletons'
+} from "./_components/skeletons";
 
 function ChartSkeleton() {
-  return <div className="h-80 animate-pulse rounded-lg bg-muted" />
+  return <div className="h-80 animate-pulse rounded-lg bg-muted" />;
 }
 
 export const metadata: Metadata = {
-  title: 'ダッシュボード | 管理画面',
-}
+  title: "ダッシュボード | 管理画面",
+};
 
 function DashboardHeaderSkeleton() {
   return (
@@ -39,11 +40,12 @@ function DashboardHeaderSkeleton() {
       </div>
       <div className="h-10 w-32 animate-pulse rounded bg-muted" />
     </div>
-  )
+  );
 }
 
 export default async function AdminDashboard(): Promise<ReactElement> {
-  await connection()
+  await headers();
+  await connection();
 
   return (
     <div className="space-y-6">
@@ -63,7 +65,9 @@ export default async function AdminDashboard(): Promise<ReactElement> {
       </Suspense>
 
       {/* アクセス解析: 外部API（Google Analytics）で最も遅い */}
-      <Suspense fallback={<div className="h-64 animate-pulse rounded-lg bg-muted" />}>
+      <Suspense
+        fallback={<div className="h-64 animate-pulse rounded-lg bg-muted" />}
+      >
         <AnalyticsCard />
       </Suspense>
 
@@ -77,5 +81,5 @@ export default async function AdminDashboard(): Promise<ReactElement> {
         <DashboardRecentSection />
       </Suspense>
     </div>
-  )
+  );
 }

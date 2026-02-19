@@ -1,97 +1,105 @@
-'use server'
+"use server";
 
 /**
  * 監査ログ Server Actions
  */
 
-import { prisma } from '@/shared/lib/prisma'
-import { AuditAction } from '@/shared/generated/prisma/enums'
-import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
-import { getSession, getRoleFromSession } from '@/shared/lib/auth'
-import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'
-import { logPermissionDenied } from '@/admin/lib/audit'
-import { isRecord } from '@/shared/lib/serialize'
-import { z } from 'zod'
+import { prisma } from "@/shared/lib/prisma";
+import { AuditAction } from "@/shared/generated/prisma/enums";
+import {
+  createSuccess,
+  createFailure,
+  type ActionResult,
+} from "@/admin/types/server-actions";
+import { getSession, getRoleFromSession } from "@/shared/lib/auth";
+import { hasPermission, canAccessAdmin } from "@/admin/lib/permissions";
+import { logPermissionDenied } from "@/admin/lib/audit";
+import { isRecord } from "@/shared/lib/serialize";
+import { z } from "zod";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 export type AuditLogItem = {
-  id: string
-  userId: string | null
-  action: AuditAction
-  resource: string
-  resourceId: string | null
-  oldValue: unknown
-  newValue: unknown
+  id: string;
+  userId: string | null;
+  action: AuditAction;
+  resource: string;
+  resourceId: string | null;
+  oldValue: unknown;
+  newValue: unknown;
   metadata: {
-    ipAddress?: string
-    userAgent?: string
-    [key: string]: unknown
-  } | null
-  createdAt: Date
+    ipAddress?: string;
+    userAgent?: string;
+    [key: string]: unknown;
+  } | null;
+  createdAt: Date;
   user: {
-    id: string
-    name: string | null
-    email: string
-  } | null
-}
+    id: string;
+    name: string | null;
+    email: string;
+  } | null;
+};
 
 export type AuditLogFilters = {
-  page?: number
-  perPage?: number
-  action?: AuditAction | 'ALL'
-  resource?: string
-  userId?: string
-  dateFrom?: string
-  dateTo?: string
-}
+  page?: number;
+  perPage?: number;
+  action?: AuditAction | "ALL";
+  resource?: string;
+  userId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+};
 
 export type AuditLogResult = {
-  logs: AuditLogItem[]
-  total: number
-  page: number
-  totalPages: number
-}
+  logs: AuditLogItem[];
+  total: number;
+  page: number;
+  totalPages: number;
+};
 
 export type AuditLogStats = {
-  total: number
-  today: number
-  securityEvents: number
-  byAction: Record<string, number>
-}
+  total: number;
+  today: number;
+  securityEvents: number;
+  byAction: Record<string, number>;
+};
 
 // =============================================================================
 // Type Guards
 // =============================================================================
 
-type AuditLogMetadata = AuditLogItem['metadata']
+type AuditLogMetadata = AuditLogItem["metadata"];
 
 /**
  * PrismaのJSON値からAuditLogMetadataを安全にパースする
  */
 function parseAuditLogMetadata(value: unknown): AuditLogMetadata {
-  if (!isRecord(value)) return null
+  if (!isRecord(value)) return null;
 
-  const result: { ipAddress?: string; userAgent?: string; [key: string]: unknown } = {}
+  const result: {
+    ipAddress?: string;
+    userAgent?: string;
+    [key: string]: unknown;
+  } = {};
 
   // 既知のフィールドを型安全に抽出
-  if (typeof value['ipAddress'] === 'string') {
-    result['ipAddress'] = value['ipAddress']
+  if (typeof value["ipAddress"] === "string") {
+    result["ipAddress"] = value["ipAddress"];
   }
-  if (typeof value['userAgent'] === 'string') {
-    result['userAgent'] = value['userAgent']
+  if (typeof value["userAgent"] === "string") {
+    result["userAgent"] = value["userAgent"];
   }
 
   // その他のフィールドをコピー
   for (const [key, val] of Object.entries(value)) {
-    if (key !== 'ipAddress' && key !== 'userAgent') {
-      result[key] = val
+    if (key !== "ipAddress" && key !== "userAgent") {
+      result[key] = val;
     }
   }
 
-  return result
+  return result;
 }
 
 // =============================================================================
@@ -101,12 +109,12 @@ function parseAuditLogMetadata(value: unknown): AuditLogMetadata {
 const filtersSchema = z.object({
   page: z.number().int().positive().optional().default(1),
   perPage: z.number().int().positive().max(100).optional().default(50),
-  action: z.enum(AuditAction).or(z.literal('ALL')).optional(),
+  action: z.enum(AuditAction).or(z.literal("ALL")).optional(),
   resource: z.string().optional(),
   userId: z.string().uuid().optional(),
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
-})
+});
 
 // =============================================================================
 // Helper Functions
@@ -115,28 +123,30 @@ const filtersSchema = z.object({
 /**
  * 監査ログ権限チェック
  */
-async function checkAuditLogPermission(): Promise<{ user: { id: string } } | { error: string }> {
-  const session = await getSession()
+async function checkAuditLogPermission(): Promise<
+  { user: { id: string } } | { error: string }
+> {
+  const session = await getSession();
 
   if (!session?.user) {
-    return { error: 'ログインが必要です' }
+    return { error: "ログインが必要です" };
   }
 
-  const role = getRoleFromSession(session)
+  const role = getRoleFromSession(session);
   if (!role) {
-    return { error: '権限情報が取得できません' }
+    return { error: "権限情報が取得できません" };
   }
 
   if (!canAccessAdmin(role)) {
-    return { error: '管理者権限が必要です' }
+    return { error: "管理者権限が必要です" };
   }
 
-  if (!hasPermission(role, 'auditLog', 'read')) {
-    void logPermissionDenied(session.user.id, 'auditLog', 'read')
-    return { error: '監査ログの閲覧権限がありません' }
+  if (!hasPermission(role, "auditLog", "read")) {
+    void logPermissionDenied(session.user.id, "auditLog", "read");
+    return { error: "監査ログの閲覧権限がありません" };
   }
 
-  return { user: { id: session.user.id } }
+  return { user: { id: session.user.id } };
 }
 
 // =============================================================================
@@ -146,45 +156,48 @@ async function checkAuditLogPermission(): Promise<{ user: { id: string } } | { e
 /**
  * 監査ログ一覧を取得
  */
-export async function getAuditLogs(filters: AuditLogFilters = {}): Promise<ActionResult<AuditLogResult>> {
-  const check = await checkAuditLogPermission()
-  if ('error' in check) {
-    return createFailure(check.error)
+export async function getAuditLogs(
+  filters: AuditLogFilters = {},
+): Promise<ActionResult<AuditLogResult>> {
+  const check = await checkAuditLogPermission();
+  if ("error" in check) {
+    return createFailure(check.error);
   }
 
-  const validated = filtersSchema.safeParse(filters)
+  const validated = filtersSchema.safeParse(filters);
   if (!validated.success) {
-    return createFailure('入力が不正です')
+    return createFailure("入力が不正です");
   }
-  const { page, perPage, action, resource, userId, dateFrom, dateTo } = validated.data
+  const { page, perPage, action, resource, userId, dateFrom, dateTo } =
+    validated.data;
 
   type AuditLogWhere = {
-    action?: AuditAction
-    resource?: string
-    userId?: string
-    createdAt?: { gte?: Date; lte?: Date }
-  }
-  const where: AuditLogWhere = {}
+    action?: AuditAction;
+    resource?: string;
+    userId?: string;
+    createdAt?: { gte?: Date; lte?: Date };
+  };
+  const where: AuditLogWhere = {};
 
-  if (action && action !== 'ALL') {
-    where.action = action
+  if (action && action !== "ALL") {
+    where.action = action;
   }
 
   if (resource) {
-    where.resource = resource
+    where.resource = resource;
   }
 
   if (userId) {
-    where.userId = userId
+    where.userId = userId;
   }
 
   if (dateFrom || dateTo) {
-    where.createdAt = {}
+    where.createdAt = {};
     if (dateFrom) {
-      where.createdAt.gte = new Date(dateFrom)
+      where.createdAt.gte = new Date(dateFrom);
     }
     if (dateTo) {
-      where.createdAt.lte = new Date(dateTo)
+      where.createdAt.lte = new Date(dateTo);
     }
   }
 
@@ -200,14 +213,14 @@ export async function getAuditLogs(filters: AuditLogFilters = {}): Promise<Actio
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       skip: (page - 1) * perPage,
       take: perPage,
     }),
     prisma.auditLog.count({ where }),
-  ])
+  ]);
 
-  return createSuccess('監査ログを取得しました', {
+  return createSuccess("監査ログを取得しました", {
     logs: logs.map((log) => ({
       ...log,
       metadata: parseAuditLogMetadata(log.metadata),
@@ -215,20 +228,20 @@ export async function getAuditLogs(filters: AuditLogFilters = {}): Promise<Actio
     total,
     page,
     totalPages: Math.ceil(total / perPage),
-  })
+  });
 }
 
 /**
  * 監査ログの統計を取得
  */
 export async function getAuditLogStats(): Promise<ActionResult<AuditLogStats>> {
-  const check = await checkAuditLogPermission()
-  if ('error' in check) {
-    return createFailure(check.error)
+  const check = await checkAuditLogPermission();
+  if ("error" in check) {
+    return createFailure(check.error);
   }
 
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
   const securityActions = [
     AuditAction.LOGIN_SUCCESS,
@@ -236,7 +249,7 @@ export async function getAuditLogStats(): Promise<ActionResult<AuditLogStats>> {
     AuditAction.PERMISSION_DENIED,
     AuditAction.PASSWORD_CHANGE,
     AuditAction.ROLE_CHANGE,
-  ]
+  ];
 
   const [total, todayCount, securityEvents, actionCounts] = await Promise.all([
     prisma.auditLog.count(),
@@ -247,38 +260,41 @@ export async function getAuditLogStats(): Promise<ActionResult<AuditLogStats>> {
       where: { action: { in: securityActions } },
     }),
     prisma.auditLog.groupBy({
-      by: ['action'],
+      by: ["action"],
       _count: { action: true },
     }),
-  ])
+  ]);
 
-  const byAction: Record<string, number> = {}
+  const byAction: Record<string, number> = {};
   for (const item of actionCounts) {
-    byAction[item.action] = item._count.action
+    byAction[item.action] = item._count.action;
   }
 
-  return createSuccess('統計を取得しました', {
+  return createSuccess("統計を取得しました", {
     total,
     today: todayCount,
     securityEvents,
     byAction,
-  })
+  });
 }
 
 /**
  * リソース一覧を取得（フィルター用）
  */
 export async function getAuditLogResources(): Promise<ActionResult<string[]>> {
-  const check = await checkAuditLogPermission()
-  if ('error' in check) {
-    return createFailure(check.error)
+  const check = await checkAuditLogPermission();
+  if ("error" in check) {
+    return createFailure(check.error);
   }
 
   const resources = await prisma.auditLog.findMany({
     select: { resource: true },
-    distinct: ['resource'],
-    orderBy: { resource: 'asc' },
-  })
+    distinct: ["resource"],
+    orderBy: { resource: "asc" },
+  });
 
-  return createSuccess('リソース一覧を取得しました', resources.map((r) => r.resource))
+  return createSuccess(
+    "リソース一覧を取得しました",
+    resources.map((r) => r.resource),
+  );
 }

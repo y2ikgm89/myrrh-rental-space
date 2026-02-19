@@ -15,12 +15,14 @@ import { HomepageEditTabs } from './_components/HomepageEditTabs'
 import { connection } from 'next/server'
 import type { Metadata } from 'next'
 import type { ReactElement } from 'react'
+import { headers } from "next/headers";
 
 export const metadata: Metadata = {
   title: 'ホームページ編集',
 }
 
 export default async function HomepageEditPage(): Promise<ReactElement> {
+  await headers();
   // ensureHomepageSections/ensureSystemPage は uncached DB 呼び出しのため connection() でオプトイン
   await connection()
 

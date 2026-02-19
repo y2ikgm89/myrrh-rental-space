@@ -6,6 +6,7 @@ import { getSpaceById } from '@/admin/actions/space'
 import { SpaceDetail } from './_components/SpaceDetail'
 import { Button } from '@/admin/components/ui'
 import type { Metadata } from 'next'
+import { headers } from "next/headers";
 
 
 type Params = Promise<{ id: string }>
@@ -31,6 +32,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function SpaceDetailPage({ params }: PageProps) {
+  await headers();
   await connection()
   const { id } = await params
   const space = await getSpaceById(id)

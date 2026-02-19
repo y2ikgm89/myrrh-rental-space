@@ -7,6 +7,7 @@ import { getActiveSpaceCategories } from '@/admin/actions/space-category'
 import { getTaxSettings } from '@/admin/actions/settings'
 import { SpaceInlineEditor } from '../../_components/SpaceInlineEditor'
 import type { Metadata } from 'next'
+import { headers } from "next/headers";
 
 
 type Params = Promise<{ id: string }>
@@ -32,6 +33,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function EditSpacePage({ params }: PageProps) {
+  await headers();
   await connection()
   const { id } = await params
   const [space, availableTerms, locationsResult, categoriesResult, taxSettings] = await Promise.all([

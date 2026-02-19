@@ -16,6 +16,7 @@ import { Button, Breadcrumb } from '@/admin/components/ui'
 import { SectionEditWrapper } from './_components/SectionEditWrapper'
 import type { Metadata } from 'next'
 import type { ReactElement } from 'react'
+import { headers } from "next/headers";
 
 export const metadata: Metadata = {
   title: 'セクション編集',
@@ -28,6 +29,7 @@ interface PageProps {
 export default async function HomepageSectionEditPage({
   params,
 }: PageProps): Promise<ReactElement> {
+  await headers();
   await connection()
 
   const { sectionId } = await params
