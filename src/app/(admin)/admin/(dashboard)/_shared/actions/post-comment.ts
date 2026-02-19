@@ -23,6 +23,8 @@ import { prisma } from '@/shared/lib/prisma'
 import { verifyAdminSession } from '@/shared/lib/auth'
 import { toCommentAuthor, type CommentAuthor } from '@/shared/lib/validations/comment'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
+import { withPermission } from '@/admin/lib/server-action-helpers'
+import { createSuccess, createFailure } from '@/admin/types/server-actions'
 
 // ==============================================
 // Types
@@ -61,14 +63,6 @@ export type CommentStats = {
   deleted: number
 }
 
-export type AdminCommentActionResult =
-  | { success: true }
-  | { success: false; error: string }
-
-export type BulkDeleteResult =
-  | { success: true; count: number }
-  | { success: false; error: string }
-
 // ==============================================
 // Helper Functions
 // ==============================================
@@ -101,7 +95,7 @@ function toAdminCommentData(comment: {
 }
 
 // ==============================================
-// Admin Server Actions
+// Read Operations (verifyAdminSession — plain return types)
 // ==============================================
 
 /**
@@ -118,7 +112,6 @@ export async function getAdminComments(
   const limit = pagination.limit ?? 20
   const skip = (page - 1) * limit
 
-  // Where条件を構築
   const where: Record<string, unknown> = {}
 
   if (postId) {
@@ -244,177 +237,6 @@ export async function getCommentStats(): Promise<CommentStats> {
 }
 
 /**
- * コメントを削除（管理者用）
- */
-export async function deleteCommentAdmin(
-  commentId: string
-): Promise<AdminCommentActionResult> {
-  const user = await verifyAdminSession()
-
-  try {
-    const comment = await prisma.postComment.findUnique({
-      where: { id: commentId },
-      select: {
-        id: true,
-        post: { select: { slug: true } },
-      },
-    })
-
-    if (!comment) {
-      return {
-        success: false,
-        error: 'コメントが見つかりません',
-      }
-    }
-
-    // ソフトデリート
-    await prisma.postComment.update({
-      where: { id: commentId },
-      data: {
-        isDeleted: true,
-        deletedAt: new Date(),
-        deletedBy: user.id,
-      },
-    })
-
-    // キャッシュ無効化
-    updateTag(CACHE_TAGS.POST_COMMENTS)
-    updateTag(getCacheTag.posts.comments(comment.post.slug))
-
-    return { success: true }
-  } catch (error) {
-    logError(normalizeError(error), {
-      category: ErrorCategory.DATABASE,
-      severity: ErrorSeverity.MEDIUM,
-      context: { operation: 'deleteCommentAdmin', commentId },
-    })
-    return {
-      success: false,
-      error: 'コメントの削除中にエラーが発生しました',
-    }
-  }
-}
-
-/**
- * コメントを一括削除（管理者用）
- */
-export async function deleteCommentsAdmin(
-  commentIds: string[]
-): Promise<BulkDeleteResult> {
-  const user = await verifyAdminSession()
-
-  if (commentIds.length === 0) {
-    return {
-      success: false,
-      error: '削除するコメントを選択してください',
-    }
-  }
-
-  try {
-    // 対象コメントの記事スラッグを取得（キャッシュ無効化用）
-    const comments = await prisma.postComment.findMany({
-      where: { id: { in: commentIds } },
-      select: {
-        post: { select: { slug: true } },
-      },
-    })
-
-    const slugs = [...new Set(comments.map((c) => c.post.slug))]
-
-    // 一括ソフトデリート
-    const result = await prisma.postComment.updateMany({
-      where: { id: { in: commentIds } },
-      data: {
-        isDeleted: true,
-        deletedAt: new Date(),
-        deletedBy: user.id,
-      },
-    })
-
-    // キャッシュ無効化
-    updateTag(CACHE_TAGS.POST_COMMENTS)
-    for (const slug of slugs) {
-      updateTag(getCacheTag.posts.comments(slug))
-    }
-
-    return {
-      success: true,
-      count: result.count,
-    }
-  } catch (error) {
-    logError(normalizeError(error), {
-      category: ErrorCategory.DATABASE,
-      severity: ErrorSeverity.MEDIUM,
-      context: { operation: 'deleteCommentsAdmin', commentCount: commentIds.length },
-    })
-    return {
-      success: false,
-      error: 'コメントの削除中にエラーが発生しました',
-    }
-  }
-}
-
-/**
- * 削除したコメントを復元（管理者用）
- */
-export async function restoreCommentAdmin(
-  commentId: string
-): Promise<AdminCommentActionResult> {
-  await verifyAdminSession()
-
-  try {
-    const comment = await prisma.postComment.findUnique({
-      where: { id: commentId },
-      select: {
-        id: true,
-        isDeleted: true,
-        post: { select: { slug: true } },
-      },
-    })
-
-    if (!comment) {
-      return {
-        success: false,
-        error: 'コメントが見つかりません',
-      }
-    }
-
-    if (!comment.isDeleted) {
-      return {
-        success: false,
-        error: 'このコメントは削除されていません',
-      }
-    }
-
-    // 復元
-    await prisma.postComment.update({
-      where: { id: commentId },
-      data: {
-        isDeleted: false,
-        deletedAt: null,
-        deletedBy: null,
-      },
-    })
-
-    // キャッシュ無効化
-    updateTag(CACHE_TAGS.POST_COMMENTS)
-    updateTag(getCacheTag.posts.comments(comment.post.slug))
-
-    return { success: true }
-  } catch (error) {
-    logError(normalizeError(error), {
-      category: ErrorCategory.DATABASE,
-      severity: ErrorSeverity.MEDIUM,
-      context: { operation: 'restoreCommentAdmin', commentId },
-    })
-    return {
-      success: false,
-      error: 'コメントの復元中にエラーが発生しました',
-    }
-  }
-}
-
-/**
  * 記事ごとのコメント数を取得
  */
 export async function getCommentCountByPost(postId: string): Promise<number> {
@@ -435,3 +257,144 @@ export async function getCommentCountByPost(postId: string): Promise<number> {
     return 0
   }
 }
+
+// ==============================================
+// Write Operations (withPermission)
+// ==============================================
+
+/**
+ * コメントを削除（管理者用）
+ */
+export const deleteCommentAdmin = withPermission<[string], void>(
+  'post',
+  'delete'
+)(async (user, commentId) => {
+  try {
+    const comment = await prisma.postComment.findUnique({
+      where: { id: commentId },
+      select: {
+        id: true,
+        post: { select: { slug: true } },
+      },
+    })
+
+    if (!comment) {
+      return createFailure('コメントが見つかりません')
+    }
+
+    await prisma.postComment.update({
+      where: { id: commentId },
+      data: {
+        isDeleted: true,
+        deletedAt: new Date(),
+        deletedBy: user.id,
+      },
+    })
+
+    updateTag(CACHE_TAGS.POST_COMMENTS)
+    updateTag(getCacheTag.posts.comments(comment.post.slug))
+
+    return createSuccess('コメントを削除しました')
+  } catch (error) {
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'deleteCommentAdmin', commentId },
+    })
+    return createFailure('コメントの削除中にエラーが発生しました')
+  }
+})
+
+/**
+ * コメントを一括削除（管理者用）
+ */
+export const deleteCommentsAdmin = withPermission<[string[]], { count: number }>(
+  'post',
+  'delete'
+)(async (user, commentIds) => {
+  if (commentIds.length === 0) {
+    return createFailure('削除するコメントを選択してください')
+  }
+
+  try {
+    const comments = await prisma.postComment.findMany({
+      where: { id: { in: commentIds } },
+      select: {
+        post: { select: { slug: true } },
+      },
+    })
+
+    const slugs = [...new Set(comments.map((c) => c.post.slug))]
+
+    const result = await prisma.postComment.updateMany({
+      where: { id: { in: commentIds } },
+      data: {
+        isDeleted: true,
+        deletedAt: new Date(),
+        deletedBy: user.id,
+      },
+    })
+
+    updateTag(CACHE_TAGS.POST_COMMENTS)
+    for (const slug of slugs) {
+      updateTag(getCacheTag.posts.comments(slug))
+    }
+
+    return createSuccess(`${result.count}件のコメントを削除しました`, { count: result.count })
+  } catch (error) {
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'deleteCommentsAdmin', commentCount: commentIds.length },
+    })
+    return createFailure('コメントの削除中にエラーが発生しました')
+  }
+})
+
+/**
+ * 削除したコメントを復元（管理者用）
+ */
+export const restoreCommentAdmin = withPermission<[string], void>(
+  'post',
+  'update'
+)(async (_user, commentId) => {
+  try {
+    const comment = await prisma.postComment.findUnique({
+      where: { id: commentId },
+      select: {
+        id: true,
+        isDeleted: true,
+        post: { select: { slug: true } },
+      },
+    })
+
+    if (!comment) {
+      return createFailure('コメントが見つかりません')
+    }
+
+    if (!comment.isDeleted) {
+      return createFailure('このコメントは削除されていません')
+    }
+
+    await prisma.postComment.update({
+      where: { id: commentId },
+      data: {
+        isDeleted: false,
+        deletedAt: null,
+        deletedBy: null,
+      },
+    })
+
+    updateTag(CACHE_TAGS.POST_COMMENTS)
+    updateTag(getCacheTag.posts.comments(comment.post.slug))
+
+    return createSuccess('コメントを復元しました')
+  } catch (error) {
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'restoreCommentAdmin', commentId },
+    })
+    return createFailure('コメントの復元中にエラーが発生しました')
+  }
+})

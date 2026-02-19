@@ -17,7 +17,6 @@
  */
 
 import { prisma } from '@/shared/lib/prisma'
-import { verifyAdminSession } from '@/shared/lib/auth'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
 import type { EditorCommentStatus } from '@/shared/generated/prisma/client'
 import type {
@@ -33,6 +32,8 @@ import type {
 import { isCommentableContentType } from '@/admin/types/editor-comment'
 import { createValidationError } from '@/shared/lib/action-helpers'
 import { z } from 'zod/v4'
+import { withPermission } from '@/admin/lib/server-action-helpers'
+import { createSuccess, createFailure } from '@/admin/types/server-actions'
 
 // ==============================================
 // Validation Schemas
@@ -50,14 +51,6 @@ const addCommentSchema = z.object({
   threadId: z.string().uuid({ error: 'threadId は有効な UUID である必要があります' }),
   content: z.string().min(1, { error: 'コメントは必須です' }).max(5000, { error: 'コメントは5000文字以内' }),
 })
-
-// ==============================================
-// Result Types
-// ==============================================
-
-export type ActionResult<T = void> =
-  | { success: true; data: T }
-  | { success: false; error: string }
 
 // ==============================================
 // Helper Functions
@@ -129,18 +122,16 @@ function toThreadListItem(thread: {
 }
 
 // ==============================================
-// Server Actions
+// Write Operations (withPermission)
 // ==============================================
 
 /**
  * コメントスレッドを作成
  */
-export async function createCommentThread(
-  input: CreateThreadInput
-): Promise<ActionResult<EditorCommentThread>> {
-  const user = await verifyAdminSession()
-
-  // バリデーション
+export const createCommentThread = withPermission<
+  [CreateThreadInput],
+  EditorCommentThread
+>('post', 'update')(async (user, input) => {
   const validation = createThreadSchema.safeParse(input)
   if (!validation.success) {
     return createValidationError(validation.error)
@@ -149,7 +140,6 @@ export async function createCommentThread(
   const { markId, contentType, contentId, quotedText, initialComment } = validation.data
 
   try {
-    // 同一 markId のスレッドが既に存在しないか確認
     const existingThread = await prisma.editorCommentThread.findUnique({
       where: {
         markId_contentType_contentId: {
@@ -162,13 +152,9 @@ export async function createCommentThread(
     })
 
     if (existingThread) {
-      return {
-        success: false,
-        error: 'このマークには既にコメントスレッドが存在します',
-      }
+      return createFailure('このマークには既にコメントスレッドが存在します')
     }
 
-    // スレッドと初回コメントを作成
     const thread = await prisma.editorCommentThread.create({
       data: {
         markId,
@@ -201,32 +187,24 @@ export async function createCommentThread(
       },
     })
 
-    return {
-      success: true,
-      data: toEditorCommentThread(thread),
-    }
+    return createSuccess('コメントスレッドを作成しました', toEditorCommentThread(thread))
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.DATABASE,
       severity: ErrorSeverity.MEDIUM,
       context: { operation: 'createCommentThread', contentType, contentId },
     })
-    return {
-      success: false,
-      error: 'コメントスレッドの作成中にエラーが発生しました',
-    }
+    return createFailure('コメントスレッドの作成中にエラーが発生しました')
   }
-}
+})
 
 /**
  * コメントを追加（返信）
  */
-export async function addComment(
-  input: AddCommentInput
-): Promise<ActionResult<EditorComment>> {
-  const user = await verifyAdminSession()
-
-  // バリデーション
+export const addComment = withPermission<
+  [AddCommentInput],
+  EditorComment
+>('post', 'update')(async (user, input) => {
   const validation = addCommentSchema.safeParse(input)
   if (!validation.success) {
     return createValidationError(validation.error)
@@ -235,27 +213,19 @@ export async function addComment(
   const { threadId, content } = validation.data
 
   try {
-    // スレッドの存在確認
     const thread = await prisma.editorCommentThread.findUnique({
       where: { id: threadId },
       select: { id: true, status: true },
     })
 
     if (!thread) {
-      return {
-        success: false,
-        error: 'コメントスレッドが見つかりません',
-      }
+      return createFailure('コメントスレッドが見つかりません')
     }
 
     if (thread.status === 'DELETED') {
-      return {
-        success: false,
-        error: '削除されたスレッドにはコメントできません',
-      }
+      return createFailure('削除されたスレッドにはコメントできません')
     }
 
-    // コメントを作成
     const comment = await prisma.editorComment.create({
       data: {
         threadId,
@@ -264,31 +234,24 @@ export async function addComment(
       },
     })
 
-    return {
-      success: true,
-      data: comment,
-    }
+    return createSuccess('コメントを追加しました', comment)
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.DATABASE,
       severity: ErrorSeverity.MEDIUM,
       context: { operation: 'addComment', threadId },
     })
-    return {
-      success: false,
-      error: 'コメントの追加中にエラーが発生しました',
-    }
+    return createFailure('コメントの追加中にエラーが発生しました')
   }
-}
+})
 
 /**
  * スレッドを解決済みにする
  */
-export async function resolveThread(
-  threadId: string
-): Promise<ActionResult<void>> {
-  const user = await verifyAdminSession()
-
+export const resolveThread = withPermission<[string], void>(
+  'post',
+  'update'
+)(async (user, threadId) => {
   try {
     const thread = await prisma.editorCommentThread.findUnique({
       where: { id: threadId },
@@ -296,24 +259,15 @@ export async function resolveThread(
     })
 
     if (!thread) {
-      return {
-        success: false,
-        error: 'コメントスレッドが見つかりません',
-      }
+      return createFailure('コメントスレッドが見つかりません')
     }
 
     if (thread.status === 'RESOLVED') {
-      return {
-        success: false,
-        error: 'このスレッドは既に解決済みです',
-      }
+      return createFailure('このスレッドは既に解決済みです')
     }
 
     if (thread.status === 'DELETED') {
-      return {
-        success: false,
-        error: '削除されたスレッドは操作できません',
-      }
+      return createFailure('削除されたスレッドは操作できません')
     }
 
     await prisma.editorCommentThread.update({
@@ -325,28 +279,24 @@ export async function resolveThread(
       },
     })
 
-    return { success: true, data: undefined }
+    return createSuccess('スレッドを解決しました')
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.DATABASE,
       severity: ErrorSeverity.MEDIUM,
       context: { operation: 'resolveThread', threadId },
     })
-    return {
-      success: false,
-      error: 'スレッドの解決中にエラーが発生しました',
-    }
+    return createFailure('スレッドの解決中にエラーが発生しました')
   }
-}
+})
 
 /**
  * スレッドを再オープンする
  */
-export async function reopenThread(
-  threadId: string
-): Promise<ActionResult<void>> {
-  await verifyAdminSession()
-
+export const reopenThread = withPermission<[string], void>(
+  'post',
+  'update'
+)(async (_user, threadId) => {
   try {
     const thread = await prisma.editorCommentThread.findUnique({
       where: { id: threadId },
@@ -354,24 +304,15 @@ export async function reopenThread(
     })
 
     if (!thread) {
-      return {
-        success: false,
-        error: 'コメントスレッドが見つかりません',
-      }
+      return createFailure('コメントスレッドが見つかりません')
     }
 
     if (thread.status === 'ACTIVE') {
-      return {
-        success: false,
-        error: 'このスレッドは既にアクティブです',
-      }
+      return createFailure('このスレッドは既にアクティブです')
     }
 
     if (thread.status === 'DELETED') {
-      return {
-        success: false,
-        error: '削除されたスレッドは操作できません',
-      }
+      return createFailure('削除されたスレッドは操作できません')
     }
 
     await prisma.editorCommentThread.update({
@@ -383,28 +324,24 @@ export async function reopenThread(
       },
     })
 
-    return { success: true, data: undefined }
+    return createSuccess('スレッドを再オープンしました')
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.DATABASE,
       severity: ErrorSeverity.MEDIUM,
       context: { operation: 'reopenThread', threadId },
     })
-    return {
-      success: false,
-      error: 'スレッドの再オープン中にエラーが発生しました',
-    }
+    return createFailure('スレッドの再オープン中にエラーが発生しました')
   }
-}
+})
 
 /**
  * スレッドを削除（ソフトデリート）
  */
-export async function deleteThread(
-  threadId: string
-): Promise<ActionResult<void>> {
-  await verifyAdminSession()
-
+export const deleteThread = withPermission<[string], void>(
+  'post',
+  'delete'
+)(async (_user, threadId) => {
   try {
     const thread = await prisma.editorCommentThread.findUnique({
       where: { id: threadId },
@@ -412,17 +349,11 @@ export async function deleteThread(
     })
 
     if (!thread) {
-      return {
-        success: false,
-        error: 'コメントスレッドが見つかりません',
-      }
+      return createFailure('コメントスレッドが見つかりません')
     }
 
     if (thread.status === 'DELETED') {
-      return {
-        success: false,
-        error: 'このスレッドは既に削除されています',
-      }
+      return createFailure('このスレッドは既に削除されています')
     }
 
     await prisma.editorCommentThread.update({
@@ -432,28 +363,24 @@ export async function deleteThread(
       },
     })
 
-    return { success: true, data: undefined }
+    return createSuccess('スレッドを削除しました')
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.DATABASE,
       severity: ErrorSeverity.MEDIUM,
       context: { operation: 'deleteThread', threadId },
     })
-    return {
-      success: false,
-      error: 'スレッドの削除中にエラーが発生しました',
-    }
+    return createFailure('スレッドの削除中にエラーが発生しました')
   }
-}
+})
 
 /**
  * コメントを削除（ソフトデリート）
  */
-export async function deleteComment(
-  commentId: string
-): Promise<ActionResult<void>> {
-  const user = await verifyAdminSession()
-
+export const deleteComment = withPermission<[string], void>(
+  'post',
+  'delete'
+)(async (user, commentId) => {
   try {
     const comment = await prisma.editorComment.findUnique({
       where: { id: commentId },
@@ -461,17 +388,11 @@ export async function deleteComment(
     })
 
     if (!comment) {
-      return {
-        success: false,
-        error: 'コメントが見つかりません',
-      }
+      return createFailure('コメントが見つかりません')
     }
 
     if (comment.isDeleted) {
-      return {
-        success: false,
-        error: 'このコメントは既に削除されています',
-      }
+      return createFailure('このコメントは既に削除されています')
     }
 
     await prisma.editorComment.update({
@@ -483,35 +404,32 @@ export async function deleteComment(
       },
     })
 
-    return { success: true, data: undefined }
+    return createSuccess('コメントを削除しました')
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.DATABASE,
       severity: ErrorSeverity.MEDIUM,
       context: { operation: 'deleteComment', commentId },
     })
-    return {
-      success: false,
-      error: 'コメントの削除中にエラーが発生しました',
-    }
+    return createFailure('コメントの削除中にエラーが発生しました')
   }
-}
+})
+
+// ==============================================
+// Read Operations (withPermission, audit: false)
+// ==============================================
 
 /**
  * コンテンツに紐づくスレッド一覧を取得
  */
-export async function getCommentThreads(
-  query: GetThreadsQuery
-): Promise<ActionResult<ThreadListItem[]>> {
-  await verifyAdminSession()
-
+export const getCommentThreads = withPermission<
+  [GetThreadsQuery],
+  ThreadListItem[]
+>('post', 'read', { audit: false })(async (_user, query) => {
   const { contentType, contentId, status } = query
 
   if (!isCommentableContentType(contentType)) {
-    return {
-      success: false,
-      error: '無効なコンテンツタイプです',
-    }
+    return createFailure('無効なコンテンツタイプです')
   }
 
   try {
@@ -549,7 +467,6 @@ export async function getCommentThreads(
       orderBy: { createdAt: 'desc' },
     })
 
-    // ユーザー情報を取得
     const userIds = [
       ...new Set(
         threads
@@ -570,31 +487,24 @@ export async function getCommentThreads(
       createdByUser: thread.createdBy ? userMap.get(thread.createdBy) ?? null : null,
     }))
 
-    return {
-      success: true,
-      data: items.map(toThreadListItem),
-    }
+    return createSuccess('スレッド一覧を取得しました', items.map(toThreadListItem))
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.DATABASE,
       severity: ErrorSeverity.MEDIUM,
       context: { operation: 'getCommentThreads', contentType, contentId },
     })
-    return {
-      success: false,
-      error: 'スレッド一覧の取得中にエラーが発生しました',
-    }
+    return createFailure('スレッド一覧の取得中にエラーが発生しました')
   }
-}
+})
 
 /**
  * スレッドの詳細を取得（全コメント含む）
  */
-export async function getThreadDetail(
-  threadId: string
-): Promise<ActionResult<EditorCommentThread>> {
-  await verifyAdminSession()
-
+export const getThreadDetail = withPermission<
+  [string],
+  EditorCommentThread
+>('post', 'read', { audit: false })(async (_user, threadId) => {
   try {
     const thread = await prisma.editorCommentThread.findUnique({
       where: { id: threadId },
@@ -607,13 +517,9 @@ export async function getThreadDetail(
     })
 
     if (!thread) {
-      return {
-        success: false,
-        error: 'コメントスレッドが見つかりません',
-      }
+      return createFailure('コメントスレッドが見つかりません')
     }
 
-    // スレッドとコメントの作成者情報を取得
     const userIds = [
       thread.createdBy,
       thread.resolvedBy,
@@ -631,37 +537,29 @@ export async function getThreadDetail(
       createdByUser: comment.createdBy ? userMap.get(comment.createdBy) : undefined,
     }))
 
-    return {
-      success: true,
-      data: {
-        ...thread,
-        comments: commentsWithUsers,
-        createdByUser: thread.createdBy ? userMap.get(thread.createdBy) : undefined,
-        resolvedByUser: thread.resolvedBy ? userMap.get(thread.resolvedBy) : null,
-      },
-    }
+    return createSuccess('スレッド詳細を取得しました', {
+      ...thread,
+      comments: commentsWithUsers,
+      createdByUser: thread.createdBy ? userMap.get(thread.createdBy) : undefined,
+      resolvedByUser: thread.resolvedBy ? userMap.get(thread.resolvedBy) : null,
+    })
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.DATABASE,
       severity: ErrorSeverity.MEDIUM,
       context: { operation: 'getThreadDetail', threadId },
     })
-    return {
-      success: false,
-      error: 'スレッド詳細の取得中にエラーが発生しました',
-    }
+    return createFailure('スレッド詳細の取得中にエラーが発生しました')
   }
-}
+})
 
 /**
  * エディタで使用するマーク情報一覧を取得
  */
-export async function getMarkInfoList(
-  contentType: CommentableContentType,
-  contentId: string
-): Promise<ActionResult<MarkInfo[]>> {
-  await verifyAdminSession()
-
+export const getMarkInfoList = withPermission<
+  [CommentableContentType, string],
+  MarkInfo[]
+>('post', 'read', { audit: false })(async (_user, contentType, contentId) => {
   try {
     const threads = await prisma.editorCommentThread.findMany({
       where: {
@@ -690,19 +588,13 @@ export async function getMarkInfoList(
       commentCount: thread._count.comments,
     }))
 
-    return {
-      success: true,
-      data: markInfoList,
-    }
+    return createSuccess('マーク情報を取得しました', markInfoList)
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.DATABASE,
       severity: ErrorSeverity.LOW,
       context: { operation: 'getMarkInfoList', contentType, contentId },
     })
-    return {
-      success: false,
-      error: 'マーク情報の取得中にエラーが発生しました',
-    }
+    return createFailure('マーク情報の取得中にエラーが発生しました')
   }
-}
+})

@@ -24,6 +24,7 @@ import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared
 import { purgePageCache } from '@/shared/lib/cloudflare'
 import { fireAndForget } from '@/shared/lib/async-utils'
 import { checkSlugAvailability, getSlugErrorMessage } from '@/shared/lib/slug-validation'
+import { toPlainObject, toPlainArray } from '@/shared/lib/serialize'
 import {
   updatePageSchema,
   updatePageSeoSchema,
@@ -36,7 +37,9 @@ import {
 } from '@/shared/lib/validations/page'
 import type { PageModel as PageData } from '@/shared/generated/prisma/models/Page'
 import type { Prisma } from '@/shared/generated/prisma/client'
-import type { ActionResult } from '@/shared/types/server-actions'
+import { withPermission } from '@/admin/lib/server-action-helpers'
+import { createSuccess, createFailure } from '@/admin/types/server-actions'
+import { createValidationError } from '@/shared/lib/action-helpers'
 
 /**
  * 各専用管理ページで管理するページのスラッグ
@@ -46,6 +49,10 @@ import type { ActionResult } from '@/shared/types/server-actions'
  * - terms: Termsテーブルで管理（/admin/terms）
  */
 const PAGES_MANAGED_ELSEWHERE = ['home', 'posts', 'news', 'terms']
+
+// ==============================================
+// Read Operations (verifyAdminSession — plain return types)
+// ==============================================
 
 /**
  * ホームページセクションの最新更新日時を取得
@@ -102,13 +109,11 @@ export async function getPagesList(params: PagesListParams = {}): Promise<PagesL
     sortOrder = 'desc',
   } = params
 
-  // where条件を組み立て
   const where: Prisma.PageWhereInput = {
     isActive: true,
     slug: { notIn: [...PAGES_MANAGED_ELSEWHERE] },
   }
 
-  // テキスト検索
   if (query) {
     where.OR = [
       { title: { contains: query, mode: 'insensitive' } },
@@ -116,14 +121,12 @@ export async function getPagesList(params: PagesListParams = {}): Promise<PagesL
     ]
   }
 
-  // ステータスフィルター
   if (status === 'published') {
     where.isPublished = true
   } else if (status === 'draft') {
     where.isPublished = false
   }
 
-  // 種別フィルター
   if (type === 'system') {
     where.isSystemPage = true
   } else if (type === 'custom') {
@@ -140,7 +143,7 @@ export async function getPagesList(params: PagesListParams = {}): Promise<PagesL
     prisma.page.count({ where }),
   ])
 
-  return { pages, total, page, perPage }
+  return { pages: toPlainArray(pages), total, page, perPage }
 }
 
 /**
@@ -154,7 +157,7 @@ export async function getPageBySlug(slug: string): Promise<PageData | null> {
     where: { slug },
   })
 
-  return page
+  return toPlainObject(page)
 }
 
 /**
@@ -169,86 +172,7 @@ export async function getPageForPublic(slug: string): Promise<PageData | null> {
     },
   })
 
-  return page
-}
-
-/**
- * ページ更新
- */
-export async function updatePage(
-  slug: string,
-  input: UpdatePageInput
-): Promise<ActionResult> {
-  try {
-    await verifyAdminSession()
-  } catch {
-    return { success: false, error: 'ログインが必要です' }
-  }
-
-  // バリデーション
-  const parsed = updatePageSchema.safeParse(input)
-  if (!parsed.success) {
-    const fieldErrors: Record<string, string[]> = {}
-    for (const error of parsed.error.issues) {
-      const field = error.path.join('.')
-      if (!fieldErrors[field]) {
-        fieldErrors[field] = []
-      }
-      fieldErrors[field].push(error.message)
-    }
-    return {
-      success: false,
-      error: 'バリデーションエラー',
-      fieldErrors,
-    }
-  }
-
-  try {
-    // ページが存在するか確認
-    const existingPage = await prisma.page.findUnique({
-      where: { slug },
-      select: { id: true },
-    })
-
-    if (!existingPage) {
-      return { success: false, error: 'ページが見つかりません' }
-    }
-
-    // 更新
-    await prisma.page.update({
-      where: { slug },
-      data: {
-        title: parsed.data.title,
-        description: parsed.data.description || null,
-        metaDescription: parsed.data.metaDescription || null,
-        metaKeywords: parsed.data.metaKeywords || null,
-        ogpTitle: parsed.data.ogpTitle || null,
-        ogpDescription: parsed.data.ogpDescription || null,
-        ogpImageUrl: parsed.data.ogpImageUrl || null,
-        isPublished: parsed.data.isPublished,
-        publishedAt: parsed.data.publishedAt || null,
-        contentWidth: parsed.data.contentWidth ?? null,
-        contentWidthCustom: parsed.data.contentWidthCustom ?? null,
-        showSidebar: parsed.data.showSidebar ?? null,
-      },
-    })
-
-    // キャッシュ無効化
-    updateTag(CACHE_TAGS.PAGES)
-    updateTag(getCacheTag.pages.detail(slug))
-
-    // Cloudflare CDN キャッシュパージ
-    fireAndForget(purgePageCache(slug), { operation: 'purgePageCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
-
-    return { success: true, message: 'ページを更新しました' }
-  } catch (error) {
-    logError(normalizeError(error), {
-      category: ErrorCategory.DATABASE,
-      severity: ErrorSeverity.MEDIUM,
-      context: { operation: 'updatePage', slug },
-    })
-    return { success: false, error: 'ページの更新中にエラーが発生しました' }
-  }
+  return toPlainObject(page)
 }
 
 /**
@@ -270,7 +194,7 @@ export async function createPageIfNotExists(
     })
 
     if (existingPage) {
-      return existingPage
+      return toPlainObject(existingPage)
     }
 
     const page = await prisma.page.create({
@@ -282,7 +206,7 @@ export async function createPageIfNotExists(
       },
     })
 
-    return page
+    return toPlainObject(page)
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.DATABASE,
@@ -295,10 +219,6 @@ export async function createPageIfNotExists(
 
 /**
  * システムページを自動作成（存在しない場合）
- *
- * システムページ（about, faq, contact等）が存在しない場合、
- * SYSTEM_PAGES定義を元に自動作成します。
- * セクションシステムで編集可能な状態で作成されます。
  */
 export async function ensureSystemPage(slug: string): Promise<PageData | null> {
   try {
@@ -307,14 +227,12 @@ export async function ensureSystemPage(slug: string): Promise<PageData | null> {
     return null
   }
 
-  // システムページ定義を取得
   const definition = getSystemPageDefinition(slug)
   if (!definition) {
     return null
   }
 
   try {
-    // 既存ページを確認、なければ作成
     const existingPage = await prisma.page.findUnique({
       where: { slug },
     })
@@ -330,7 +248,6 @@ export async function ensureSystemPage(slug: string): Promise<PageData | null> {
       },
     })
 
-    // デフォルトセクションを作成（冪等: 既存セクションがあれば何もしない）
     const { ensurePageSections } = await import('@/shared/lib/section-defaults')
     await ensurePageSections(page.id, definition.slug)
 
@@ -338,7 +255,7 @@ export async function ensureSystemPage(slug: string): Promise<PageData | null> {
       updateTag(CACHE_TAGS.PAGES)
     }
 
-    return page
+    return toPlainObject(page)
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.DATABASE,
@@ -374,233 +291,6 @@ export async function checkPageSlugAvailability(
 }
 
 /**
- * 新規ページ作成
- */
-export async function createPage(
-  input: CreatePageInput
-): Promise<ActionResult<{ slug: string }>> {
-  try {
-    await verifyAdminSession()
-  } catch {
-    return { success: false, error: 'ログインが必要です' }
-  }
-
-  // バリデーション
-  const parsed = createPageSchema.safeParse(input)
-  if (!parsed.success) {
-    const fieldErrors: Record<string, string[]> = {}
-    for (const error of parsed.error.issues) {
-      const field = error.path.join('.')
-      if (!fieldErrors[field]) {
-        fieldErrors[field] = []
-      }
-      fieldErrors[field].push(error.message)
-    }
-    return {
-      success: false,
-      error: 'バリデーションエラー',
-      fieldErrors,
-    }
-  }
-
-  try {
-    // スラッグの使用可能チェック（予約パス＋全コンテンツタイプ横断）
-    const slugCheck = await checkSlugAvailability(parsed.data.slug, {
-      currentType: 'page',
-    })
-    if (!slugCheck.available) {
-      const errorMessage = getSlugErrorMessage(slugCheck.reason)
-      return {
-        success: false,
-        error: errorMessage,
-        fieldErrors: { slug: [errorMessage] },
-      }
-    }
-
-    // ページ作成
-    const page = await prisma.page.create({
-      data: {
-        slug: parsed.data.slug,
-        title: parsed.data.title,
-        description: parsed.data.description || null,
-        isPublished: parsed.data.isPublished,
-        isActive: true,
-      },
-    })
-
-    // キャッシュ無効化
-    updateTag(CACHE_TAGS.PAGES)
-
-    // Cloudflare CDN キャッシュパージ
-    fireAndForget(purgePageCache(page.slug), { operation: 'purgePageCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
-
-    return {
-      success: true,
-      message: 'ページを作成しました',
-      data: { slug: page.slug },
-    }
-  } catch (error) {
-    logError(normalizeError(error), {
-      category: ErrorCategory.DATABASE,
-      severity: ErrorSeverity.MEDIUM,
-      context: { operation: 'createPage', slug: input.slug },
-    })
-    return { success: false, error: 'ページの作成中にエラーが発生しました' }
-  }
-}
-
-/**
- * ページ削除（論理削除）
- */
-export async function deletePage(slug: string): Promise<ActionResult> {
-  try {
-    await verifyAdminSession()
-  } catch {
-    return { success: false, error: 'ログインが必要です' }
-  }
-
-  // システムページは削除不可
-  if (isSystemPageSlug(slug)) {
-    return { success: false, error: 'システムページは削除できません' }
-  }
-
-  try {
-    const existingPage = await prisma.page.findUnique({
-      where: { slug },
-      select: { id: true },
-    })
-
-    if (!existingPage) {
-      return { success: false, error: 'ページが見つかりません' }
-    }
-
-    // 論理削除（isActive = false）
-    await prisma.page.update({
-      where: { slug },
-      data: {
-        isActive: false,
-        isPublished: false,
-      },
-    })
-
-    // キャッシュ無効化
-    updateTag(CACHE_TAGS.PAGES)
-    updateTag(getCacheTag.pages.detail(slug))
-
-    // Cloudflare CDN キャッシュパージ
-    fireAndForget(purgePageCache(slug), { operation: 'purgePageCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
-
-    return { success: true, message: 'ページを削除しました' }
-  } catch (error) {
-    logError(normalizeError(error), {
-      category: ErrorCategory.DATABASE,
-      severity: ErrorSeverity.MEDIUM,
-      context: { operation: 'deletePage', slug },
-    })
-    return { success: false, error: 'ページの削除中にエラーが発生しました' }
-  }
-}
-
-/**
- * ページ完全削除（物理削除）- 管理者のみ
- */
-export async function deletePagePermanently(
-  slug: string
-): Promise<ActionResult> {
-  try {
-    await verifyAdminSession()
-  } catch {
-    return { success: false, error: 'ログインが必要です' }
-  }
-
-  // システムページは削除不可
-  if (isSystemPageSlug(slug)) {
-    return { success: false, error: 'システムページは削除できません' }
-  }
-
-  try {
-    const existingPage = await prisma.page.findUnique({
-      where: { slug },
-      select: { id: true },
-    })
-
-    if (!existingPage) {
-      return { success: false, error: 'ページが見つかりません' }
-    }
-
-    // 物理削除
-    await prisma.page.delete({
-      where: { slug },
-    })
-
-    // キャッシュ無効化
-    updateTag(CACHE_TAGS.PAGES)
-    updateTag(getCacheTag.pages.detail(slug))
-
-    // Cloudflare CDN キャッシュパージ
-    fireAndForget(purgePageCache(slug), { operation: 'purgePageCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
-
-    return { success: true, message: 'ページを完全に削除しました' }
-  } catch (error) {
-    logError(normalizeError(error), {
-      category: ErrorCategory.DATABASE,
-      severity: ErrorSeverity.MEDIUM,
-      context: { operation: 'deletePagePermanently', slug },
-    })
-    return { success: false, error: 'ページの削除中にエラーが発生しました' }
-  }
-}
-
-/**
- * ページ復元（論理削除からの復元）
- */
-export async function restorePage(slug: string): Promise<ActionResult> {
-  try {
-    await verifyAdminSession()
-  } catch {
-    return { success: false, error: 'ログインが必要です' }
-  }
-
-  try {
-    const existingPage = await prisma.page.findUnique({
-      where: { slug },
-      select: { id: true, isActive: true },
-    })
-
-    if (!existingPage) {
-      return { success: false, error: 'ページが見つかりません' }
-    }
-
-    if (existingPage.isActive) {
-      return { success: false, error: 'このページは既にアクティブです' }
-    }
-
-    // 復元
-    await prisma.page.update({
-      where: { slug },
-      data: {
-        isActive: true,
-      },
-    })
-
-    // キャッシュ無効化
-    updateTag(CACHE_TAGS.PAGES)
-
-    // Cloudflare CDN キャッシュパージ
-    fireAndForget(purgePageCache(slug), { operation: 'purgePageCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
-
-    return { success: true, message: 'ページを復元しました' }
-  } catch (error) {
-    logError(normalizeError(error), {
-      category: ErrorCategory.DATABASE,
-      severity: ErrorSeverity.MEDIUM,
-      context: { operation: 'restorePage', slug },
-    })
-    return { success: false, error: 'ページの復元中にエラーが発生しました' }
-  }
-}
-
-/**
  * 削除済みページ一覧取得
  */
 export async function getDeletedPagesList(): Promise<PageData[]> {
@@ -611,21 +301,263 @@ export async function getDeletedPagesList(): Promise<PageData[]> {
     orderBy: { updatedAt: 'desc' },
   })
 
-  return pages
+  return toPlainArray(pages)
 }
+
+/**
+ * システムページ一覧取得（SEOのみ編集可能なページ）
+ */
+export async function getSystemPagesList(): Promise<PageData[]> {
+  await verifyAdminSession()
+
+  const pages = await prisma.page.findMany({
+    where: {
+      isActive: true,
+      isSystemPage: true,
+    },
+    orderBy: { slug: 'asc' },
+  })
+
+  return toPlainArray(pages)
+}
+
+// ==============================================
+// Write Operations (withPermission)
+// ==============================================
+
+/**
+ * ページ更新
+ */
+export const updatePage = withPermission<[string, UpdatePageInput], void>(
+  'page',
+  'update'
+)(async (_user, slug, input) => {
+  const parsed = updatePageSchema.safeParse(input)
+  if (!parsed.success) {
+    return createValidationError(parsed.error)
+  }
+
+  try {
+    const existingPage = await prisma.page.findUnique({
+      where: { slug },
+      select: { id: true },
+    })
+
+    if (!existingPage) {
+      return createFailure('ページが見つかりません')
+    }
+
+    await prisma.page.update({
+      where: { slug },
+      data: {
+        title: parsed.data.title,
+        description: parsed.data.description || null,
+        metaDescription: parsed.data.metaDescription || null,
+        metaKeywords: parsed.data.metaKeywords || null,
+        ogpTitle: parsed.data.ogpTitle || null,
+        ogpDescription: parsed.data.ogpDescription || null,
+        ogpImageUrl: parsed.data.ogpImageUrl || null,
+        isPublished: parsed.data.isPublished,
+        publishedAt: parsed.data.publishedAt || null,
+        contentWidth: parsed.data.contentWidth ?? null,
+        contentWidthCustom: parsed.data.contentWidthCustom ?? null,
+        showSidebar: parsed.data.showSidebar ?? null,
+      },
+    })
+
+    updateTag(CACHE_TAGS.PAGES)
+    updateTag(getCacheTag.pages.detail(slug))
+    fireAndForget(purgePageCache(slug), { operation: 'purgePageCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
+
+    return createSuccess('ページを更新しました')
+  } catch (error) {
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'updatePage', slug },
+    })
+    return createFailure('ページの更新中にエラーが発生しました')
+  }
+})
+
+/**
+ * 新規ページ作成
+ */
+export const createPage = withPermission<[CreatePageInput], { slug: string }>(
+  'page',
+  'create'
+)(async (_user, input) => {
+  const parsed = createPageSchema.safeParse(input)
+  if (!parsed.success) {
+    return createValidationError(parsed.error)
+  }
+
+  try {
+    const slugCheck = await checkSlugAvailability(parsed.data.slug, {
+      currentType: 'page',
+    })
+    if (!slugCheck.available) {
+      const errorMessage = getSlugErrorMessage(slugCheck.reason)
+      return createFailure(errorMessage)
+    }
+
+    const page = await prisma.page.create({
+      data: {
+        slug: parsed.data.slug,
+        title: parsed.data.title,
+        description: parsed.data.description || null,
+        isPublished: parsed.data.isPublished,
+        isActive: true,
+      },
+    })
+
+    updateTag(CACHE_TAGS.PAGES)
+    fireAndForget(purgePageCache(page.slug), { operation: 'purgePageCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
+
+    return createSuccess('ページを作成しました', { slug: page.slug })
+  } catch (error) {
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'createPage', slug: input.slug },
+    })
+    return createFailure('ページの作成中にエラーが発生しました')
+  }
+})
+
+/**
+ * ページ削除（論理削除）
+ */
+export const deletePage = withPermission<[string], void>(
+  'page',
+  'delete'
+)(async (_user, slug) => {
+  if (isSystemPageSlug(slug)) {
+    return createFailure('システムページは削除できません')
+  }
+
+  try {
+    const existingPage = await prisma.page.findUnique({
+      where: { slug },
+      select: { id: true },
+    })
+
+    if (!existingPage) {
+      return createFailure('ページが見つかりません')
+    }
+
+    await prisma.page.update({
+      where: { slug },
+      data: {
+        isActive: false,
+        isPublished: false,
+      },
+    })
+
+    updateTag(CACHE_TAGS.PAGES)
+    updateTag(getCacheTag.pages.detail(slug))
+    fireAndForget(purgePageCache(slug), { operation: 'purgePageCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
+
+    return createSuccess('ページを削除しました')
+  } catch (error) {
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'deletePage', slug },
+    })
+    return createFailure('ページの削除中にエラーが発生しました')
+  }
+})
+
+/**
+ * ページ完全削除（物理削除）- 管理者のみ
+ */
+export const deletePagePermanently = withPermission<[string], void>(
+  'page',
+  'delete'
+)(async (_user, slug) => {
+  if (isSystemPageSlug(slug)) {
+    return createFailure('システムページは削除できません')
+  }
+
+  try {
+    const existingPage = await prisma.page.findUnique({
+      where: { slug },
+      select: { id: true },
+    })
+
+    if (!existingPage) {
+      return createFailure('ページが見つかりません')
+    }
+
+    await prisma.page.delete({
+      where: { slug },
+    })
+
+    updateTag(CACHE_TAGS.PAGES)
+    updateTag(getCacheTag.pages.detail(slug))
+    fireAndForget(purgePageCache(slug), { operation: 'purgePageCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
+
+    return createSuccess('ページを完全に削除しました')
+  } catch (error) {
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'deletePagePermanently', slug },
+    })
+    return createFailure('ページの削除中にエラーが発生しました')
+  }
+})
+
+/**
+ * ページ復元（論理削除からの復元）
+ */
+export const restorePage = withPermission<[string], void>(
+  'page',
+  'update'
+)(async (_user, slug) => {
+  try {
+    const existingPage = await prisma.page.findUnique({
+      where: { slug },
+      select: { id: true, isActive: true },
+    })
+
+    if (!existingPage) {
+      return createFailure('ページが見つかりません')
+    }
+
+    if (existingPage.isActive) {
+      return createFailure('このページは既にアクティブです')
+    }
+
+    await prisma.page.update({
+      where: { slug },
+      data: {
+        isActive: true,
+      },
+    })
+
+    updateTag(CACHE_TAGS.PAGES)
+    fireAndForget(purgePageCache(slug), { operation: 'purgePageCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
+
+    return createSuccess('ページを復元しました')
+  } catch (error) {
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: 'restorePage', slug },
+    })
+    return createFailure('ページの復元中にエラーが発生しました')
+  }
+})
 
 /**
  * ページ公開状態の切り替え
  */
-export async function togglePagePublished(
-  slug: string
-): Promise<ActionResult> {
-  try {
-    await verifyAdminSession()
-  } catch {
-    return { success: false, error: 'ログインが必要です' }
-  }
-
+export const togglePagePublished = withPermission<[string], void>(
+  'page',
+  'publish'
+)(async (_user, slug) => {
   try {
     const existingPage = await prisma.page.findUnique({
       where: { slug },
@@ -633,7 +565,7 @@ export async function togglePagePublished(
     })
 
     if (!existingPage) {
-      return { success: false, error: 'ページが見つかりません' }
+      return createFailure('ページが見つかりません')
     }
 
     const newPublishedState = !existingPage.isPublished
@@ -646,42 +578,30 @@ export async function togglePagePublished(
       },
     })
 
-    // キャッシュ無効化
     updateTag(CACHE_TAGS.PAGES)
     updateTag(getCacheTag.pages.detail(slug))
-
-    // Cloudflare CDN キャッシュパージ
     fireAndForget(purgePageCache(slug), { operation: 'purgePageCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
-    return {
-      success: true,
-      message: newPublishedState ? 'ページを公開しました' : 'ページを非公開にしました',
-    }
+    return createSuccess(newPublishedState ? 'ページを公開しました' : 'ページを非公開にしました')
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.DATABASE,
       severity: ErrorSeverity.MEDIUM,
       context: { operation: 'togglePagePublished', slug },
     })
-    return { success: false, error: 'ページの更新中にエラーが発生しました' }
+    return createFailure('ページの更新中にエラーが発生しました')
   }
-}
+})
 
 /**
  * ページ一括公開/非公開切り替え
  */
-export async function bulkTogglePagePublished(
-  slugs: string[],
-  publish: boolean
-): Promise<ActionResult> {
-  try {
-    await verifyAdminSession()
-  } catch {
-    return { success: false, error: 'ログインが必要です' }
-  }
-
+export const bulkTogglePagePublished = withPermission<[string[], boolean], void>(
+  'page',
+  'publish'
+)(async (_user, slugs, publish) => {
   if (slugs.length === 0) {
-    return { success: false, error: '対象ページが選択されていません' }
+    return createFailure('対象ページが選択されていません')
   }
 
   try {
@@ -696,48 +616,40 @@ export async function bulkTogglePagePublished(
       },
     })
 
-    // キャッシュ無効化
     updateTag(CACHE_TAGS.PAGES)
     for (const slug of slugs) {
       updateTag(getCacheTag.pages.detail(slug))
     }
 
-    return {
-      success: true,
-      message: publish
+    return createSuccess(
+      publish
         ? `${slugs.length}件のページを公開しました`
-        : `${slugs.length}件のページを非公開にしました`,
-    }
+        : `${slugs.length}件のページを非公開にしました`
+    )
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.DATABASE,
       severity: ErrorSeverity.MEDIUM,
       context: { operation: 'bulkTogglePagePublished', slugs },
     })
-    return { success: false, error: '一括操作中にエラーが発生しました' }
+    return createFailure('一括操作中にエラーが発生しました')
   }
-}
+})
 
 /**
  * ページ一括削除（論理削除）
  */
-export async function bulkDeletePages(
-  slugs: string[]
-): Promise<ActionResult> {
-  try {
-    await verifyAdminSession()
-  } catch {
-    return { success: false, error: 'ログインが必要です' }
-  }
-
+export const bulkDeletePages = withPermission<[string[]], void>(
+  'page',
+  'delete'
+)(async (_user, slugs) => {
   if (slugs.length === 0) {
-    return { success: false, error: '対象ページが選択されていません' }
+    return createFailure('対象ページが選択されていません')
   }
 
-  // システムページは除外
   const deletableSlugs = slugs.filter((slug) => !isSystemPageSlug(slug))
   if (deletableSlugs.length === 0) {
-    return { success: false, error: 'システムページは削除できません' }
+    return createFailure('システムページは削除できません')
   }
 
   try {
@@ -757,63 +669,39 @@ export async function bulkDeletePages(
       updateTag(getCacheTag.pages.detail(slug))
     }
 
-    return {
-      success: true,
-      message: `${deletableSlugs.length}件のページを削除しました`,
-    }
+    return createSuccess(`${deletableSlugs.length}件のページを削除しました`)
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.DATABASE,
       severity: ErrorSeverity.MEDIUM,
       context: { operation: 'bulkDeletePages', slugs },
     })
-    return { success: false, error: '一括削除中にエラーが発生しました' }
+    return createFailure('一括削除中にエラーが発生しました')
   }
-}
+})
 
 /**
  * システムページのSEO/OGP情報を更新
  */
-export async function updatePageSeo(
-  slug: string,
-  input: UpdatePageSeoInput
-): Promise<ActionResult> {
-  try {
-    await verifyAdminSession()
-  } catch {
-    return { success: false, error: 'ログインが必要です' }
-  }
-
-  // バリデーション
+export const updatePageSeo = withPermission<[string, UpdatePageSeoInput], void>(
+  'page',
+  'update'
+)(async (_user, slug, input) => {
   const parsed = updatePageSeoSchema.safeParse(input)
   if (!parsed.success) {
-    const fieldErrors: Record<string, string[]> = {}
-    for (const error of parsed.error.issues) {
-      const field = error.path.join('.')
-      if (!fieldErrors[field]) {
-        fieldErrors[field] = []
-      }
-      fieldErrors[field].push(error.message)
-    }
-    return {
-      success: false,
-      error: 'バリデーションエラー',
-      fieldErrors,
-    }
+    return createValidationError(parsed.error)
   }
 
   try {
-    // ページが存在するか確認
     const existingPage = await prisma.page.findUnique({
       where: { slug },
       select: { id: true },
     })
 
     if (!existingPage) {
-      return { success: false, error: 'ページが見つかりません' }
+      return createFailure('ページが見つかりません')
     }
 
-    // SEO/OGP情報のみ更新
     await prisma.page.update({
       where: { slug },
       data: {
@@ -826,40 +714,19 @@ export async function updatePageSeo(
       },
     })
 
-    // キャッシュ無効化
     updateTag(CACHE_TAGS.PAGES)
     updateTag(getCacheTag.pages.detail(slug))
     updateTag(CACHE_TAGS.PAGE_SEO)
     updateTag(getCacheTag.pageSeo.detail(slug))
-
-    // Cloudflare CDN キャッシュパージ
     fireAndForget(purgePageCache(slug), { operation: 'purgePageCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
 
-    return { success: true, message: 'SEO設定を更新しました' }
+    return createSuccess('SEO設定を更新しました')
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.DATABASE,
       severity: ErrorSeverity.MEDIUM,
       context: { operation: 'updatePageSeo', slug },
     })
-    return { success: false, error: 'SEO設定の更新中にエラーが発生しました' }
+    return createFailure('SEO設定の更新中にエラーが発生しました')
   }
-}
-
-/**
- * システムページ一覧取得（SEOのみ編集可能なページ）
- */
-export async function getSystemPagesList(): Promise<PageData[]> {
-  await verifyAdminSession()
-
-  const pages = await prisma.page.findMany({
-    where: {
-      isActive: true,
-      isSystemPage: true,
-    },
-    orderBy: { slug: 'asc' },
-  })
-
-  return pages
-}
-
+})

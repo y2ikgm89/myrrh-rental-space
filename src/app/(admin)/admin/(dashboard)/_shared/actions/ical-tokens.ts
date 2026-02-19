@@ -6,6 +6,7 @@ import { CACHE_TAGS } from '@/shared/lib/constants'
 import { z } from 'zod'
 import { randomBytes } from 'crypto'
 import { createSuccess, createFailure } from '@/admin/types/server-actions'
+import { createValidationError } from '@/shared/lib/action-helpers'
 import { withPermission } from '@/admin/lib/server-action-helpers'
 import { verifyAdminSession } from '@/shared/lib/auth'
 
@@ -80,7 +81,7 @@ export const createICalToken = withPermission<
 )(async (user, data) => {
   const parsed = createTokenSchema.safeParse(data)
   if (!parsed.success) {
-    return createFailure('入力が不正です', parsed.error.flatten().fieldErrors)
+    return createValidationError(parsed.error)
   }
 
   const { name, spaceId, expiresInDays } = parsed.data

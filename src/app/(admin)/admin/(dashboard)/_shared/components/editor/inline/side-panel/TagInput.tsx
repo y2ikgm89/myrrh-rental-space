@@ -212,7 +212,7 @@ export function TagInput({
     const handleClickOutside = (e: MouseEvent) => {
       if (
         containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
+        e.target instanceof Node && !containerRef.current.contains(e.target)
       ) {
         setIsOpen(false)
       }

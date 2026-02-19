@@ -1,7 +1,8 @@
 'use server'
 
 import { z } from 'zod'
-import { checkAdminAuth } from '@/admin/lib/action-auth'
+import { withPermission } from '@/admin/lib/server-action-helpers'
+import { createSuccess, createFailure } from '@/admin/types/server-actions'
 
 // =============================================================================
 // Types
@@ -15,10 +16,6 @@ export type OgpData = {
   faviconUrl: string
   siteName: string
 }
-
-type FetchOgpResult =
-  | { success: true; data: OgpData }
-  | { success: false; error: string }
 
 // =============================================================================
 // Schema
@@ -254,41 +251,38 @@ function resolveUrl(baseUrl: string, relativeUrl: string): string {
  * @param url - 取得対象のURL
  * @returns OGP情報またはエラー
  */
-export async function fetchOgp(url: string): Promise<FetchOgpResult> {
-  // 認証チェック
-  const auth = await checkAdminAuth()
-  if (!auth.success) return { success: false, error: '管理者権限が必要です' }
-
+export const fetchOgp = withPermission<[string], OgpData>(
+  'media',
+  'read',
+  { audit: false }
+)(async (_user, url) => {
   // バリデーション
   const validated = urlSchema.safeParse(url)
   if (!validated.success) {
-    return { success: false, error: '有効なURLを入力してください' }
+    return createFailure('有効なURLを入力してください')
   }
 
   // SSRF対策: URLの安全性を検証
   const safetyCheck = isUrlSafe(url)
   if (!safetyCheck.safe) {
-    return { success: false, error: safetyCheck.error ?? 'URLの検証に失敗しました' }
+    return createFailure(safetyCheck.error ?? 'URLの検証に失敗しました')
   }
 
   try {
-    // URLにアクセス
     const response = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; BookmarkBot/1.0)',
         Accept: 'text/html,application/xhtml+xml',
       },
-      // タイムアウト設定
       signal: AbortSignal.timeout(10000),
     })
 
     if (!response.ok) {
-      return { success: false, error: `URLの取得に失敗しました: ${response.status}` }
+      return createFailure(`URLの取得に失敗しました: ${response.status}`)
     }
 
     const html = await response.text()
 
-    // OGP情報を抽出
     const title = extractTitle(html)
     const description = extractDescription(html)
     const imageUrlRaw = extractImage(html)
@@ -296,21 +290,18 @@ export async function fetchOgp(url: string): Promise<FetchOgpResult> {
     const faviconUrl = getFaviconUrl(url, html)
     const siteName = extractSiteName(html)
 
-    return {
-      success: true,
-      data: {
-        url,
-        title,
-        description,
-        imageUrl,
-        faviconUrl,
-        siteName,
-      },
-    }
+    return createSuccess('OGP情報を取得しました', {
+      url,
+      title,
+      description,
+      imageUrl,
+      faviconUrl,
+      siteName,
+    })
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
-      return { success: false, error: 'URLの取得がタイムアウトしました' }
+      return createFailure('URLの取得がタイムアウトしました')
     }
-    return { success: false, error: 'URLの取得に失敗しました' }
+    return createFailure('URLの取得に失敗しました')
   }
-}
+})

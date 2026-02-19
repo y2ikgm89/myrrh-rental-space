@@ -16,6 +16,7 @@ import { CACHE_TAGS } from '@/shared/lib/constants'
 import { prisma } from '@/shared/lib/prisma'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
 import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+import { createValidationError } from '@/shared/lib/action-helpers'
 import { withPermission } from '@/admin/lib/server-action-helpers'
 import { checkReadPermissionFor } from '@/admin/lib/permissions'
 
@@ -119,7 +120,7 @@ export const createBlockTemplate = withPermission<
 >('blockTemplate', 'create')(async (user, input): Promise<ActionResult<{ id: string }>> => {
   const validated = createBlockTemplateSchema.safeParse(input)
   if (!validated.success) {
-    return createFailure(z.flattenError(validated.error).formErrors[0] ?? 'バリデーションエラー')
+    return createValidationError(validated.error)
   }
 
   try {
