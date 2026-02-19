@@ -4,9 +4,25 @@ import nextTs from "eslint-config-next/typescript";
 import prettier from "eslint-config-prettier/flat";
 
 const eslintConfig = defineConfig([
-  // Next.js recommended configs
+  // Next.js recommended configs (includes eslint-plugin-react-hooks/recommended with all
+  // React Compiler rules: preserve-manual-memoization, purity, refs, immutability, globals,
+  // static-components, use-memo, component-hook-factories, error-boundaries, etc.)
   ...nextVitals,
   ...nextTs,
+  // React Compiler strict mode
+  // eslint-plugin-react-hooks v7 integrates all Compiler rules (eslint-config-next uses
+  // the 'recommended' preset). We promote two rules from warn→error and add void-use-memo
+  // from the 'recommended-latest' preset to block non-Compiler-compatible code at lint time.
+  {
+    rules: {
+      // warn→error: libraries that break React Compiler's memoization model
+      "react-hooks/incompatible-library": "error",
+      // warn→error: syntax the Compiler cannot process (generators, async components, etc.)
+      "react-hooks/unsupported-syntax": "error",
+      // recommended-latest addition: useMemo called without a return value
+      "react-hooks/void-use-memo": "error",
+    },
+  },
   // Prettier compatibility (disables conflicting rules)
   prettier,
   // Global TypeScript rules
