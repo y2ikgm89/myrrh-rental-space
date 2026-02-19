@@ -13,9 +13,6 @@ import { PostPermalinkStructure } from '@/shared/generated/prisma/enums'
 // Types
 // =============================================================================
 
-/** パーマリンク構造タイプ */
-export type PermalinkStructure = PostPermalinkStructure
-
 /** URL生成に必要な記事データ */
 export interface PostUrlData {
   slug: string
@@ -27,7 +24,7 @@ export interface PostUrlData {
 
 /** パーマリンク設定 */
 export interface PermalinkConfig {
-  structure: PermalinkStructure
+  structure: PostPermalinkStructure
   /** プレフィックス（'/posts' または ''） */
   prefix?: string
 }
@@ -143,7 +140,7 @@ export function generateTagUrl(tagSlug: string, prefix: string): string {
  * @param structure - パーマリンク構造
  * @returns パターン文字列
  */
-export function getUrlPattern(structure: PermalinkStructure): string {
+export function getUrlPattern(structure: PostPermalinkStructure): string {
   switch (structure) {
     case PostPermalinkStructure.date_name:
       return '/:year/:month/:slug'

@@ -21,6 +21,7 @@ import {
 } from '@/admin/components/ui'
 import { updatePermalinkSettings } from '@/admin/actions/settings'
 import { PostPermalinkStructure } from '@/shared/generated/prisma/enums'
+import { isValidPostPermalinkStructure, getValidPostPermalinkStructure } from '@/shared/lib/validations/enums'
 import type { SelectionBoxOption } from '@/admin/components/ui'
 
 // =============================================================================
@@ -32,21 +33,6 @@ type PermalinkSectionProps = {
     postPermalinkStructure: PostPermalinkStructure | null
     postUrlPrefixEnabled: boolean
   }
-}
-
-// =============================================================================
-// Type Guards
-// =============================================================================
-
-const VALID_STRUCTURES = Object.values(PostPermalinkStructure)
-const VALID_STRUCTURES_SET: ReadonlySet<string> = new Set(VALID_STRUCTURES)
-
-function isValidPermalinkStructure(value: unknown): value is PostPermalinkStructure {
-  return typeof value === 'string' && VALID_STRUCTURES_SET.has(value)
-}
-
-function getValidPermalinkStructure(value: string | null): PostPermalinkStructure {
-  return isValidPermalinkStructure(value) ? value : PostPermalinkStructure.post_name
 }
 
 // =============================================================================
@@ -79,7 +65,7 @@ export function PermalinkSection({ settings }: PermalinkSectionProps) {
   const [isPending, startTransition] = useTransition()
 
   const [structure, setStructure] = useState<PostPermalinkStructure>(
-    getValidPermalinkStructure(settings.postPermalinkStructure)
+    getValidPostPermalinkStructure(settings.postPermalinkStructure)
   )
   const [prefixEnabled, setPrefixEnabled] = useState(settings.postUrlPrefixEnabled)
 
@@ -151,7 +137,7 @@ export function PermalinkSection({ settings }: PermalinkSectionProps) {
             options={PERMALINK_OPTIONS}
             value={structure}
             onChange={(value) => {
-              if (isValidPermalinkStructure(value)) {
+              if (isValidPostPermalinkStructure(value)) {
                 setStructure(value)
               }
             }}

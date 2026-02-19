@@ -12,7 +12,6 @@ export {
   getUrlPattern,
   extractSlugFromUrl,
   matchesPostUrl,
-  type PermalinkStructure,
   type PostUrlData,
   type PermalinkConfig,
 } from './post-url'
