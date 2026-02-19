@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "github": {
+      "command": "gh",
+      "args": ["mcp", "serve"],
+      "type": "stdio"
+    },
+    "supabase": {
+      "command": "bunx",
+      "args": ["@supabase/mcp-server-supabase", "--read-only"],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "${SUPABASE_ACCESS_TOKEN}"
+      },
+      "type": "stdio"
+    }
+  }
+}

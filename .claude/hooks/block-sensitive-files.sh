@@ -23,4 +23,10 @@ if [[ "$BASENAME" == "bun.lockb" ]]; then
   exit 2
 fi
 
+# Block prisma migration SQL files (auto-generated, must not be edited manually)
+if [[ "$FILE_PATH" =~ /prisma/migrations/.*\.sql$ ]] || [[ "$FILE_PATH" =~ ^prisma/migrations/.*\.sql$ ]]; then
+  echo "Blocked: prisma/migrations/ の SQL は自動生成ファイルです。手動編集は禁止されています。新しいマイグレーションは /prisma-migration を使用してください。" >&2
+  exit 2
+fi
+
 exit 0
