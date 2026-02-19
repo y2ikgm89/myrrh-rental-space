@@ -1,6 +1,4 @@
-import Link from 'next/link'
 import {
-  Button,
   Table,
   TableBody,
   TableCell,
@@ -12,6 +10,7 @@ import { EmptyState } from '@/admin/components/EmptyState'
 import { InquiryStatusBadge } from '@/admin/components/status-badges'
 import { formatDateTimeShort } from '@/shared/lib/utils'
 import type { InquiryData } from '@/admin/actions/inquiry'
+import { InquiryActionCell } from './InquiryActionCell'
 
 // =============================================================================
 // Types
@@ -67,9 +66,7 @@ export function InquiryTable({ inquiries }: InquiryTableProps) {
                 {formatDateTimeShort(inquiry.createdAt)}
               </TableCell>
               <TableCell>
-                <Button asChild variant="outline" size="sm">
-                  <Link href={`/admin/inquiries/${inquiry.id}`}>詳細</Link>
-                </Button>
+                <InquiryActionCell inquiryId={inquiry.id} />
               </TableCell>
             </TableRow>
           ))}
