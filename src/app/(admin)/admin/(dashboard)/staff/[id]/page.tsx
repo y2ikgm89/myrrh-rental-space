@@ -1,55 +1,57 @@
-import { notFound } from 'next/navigation'
-import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
-import { getUser } from '@/admin/actions/user'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/admin/components/ui/card'
-import { Button } from '@/admin/components/ui/button'
-import { Badge } from '@/admin/components/ui/badge'
-import { formatDate } from '@/shared/lib/utils'
-import { Role } from '@/shared/generated/prisma/enums'
-import { UserActions } from '../_components/UserActions'
+import { notFound } from "next/navigation";
 import { connection } from "next/server";
+import { Pencil } from "lucide-react";
+import Link from "next/link";
+import { getUser, deleteUser } from "@/admin/actions/user";
+import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
+import { DangerZone } from "@/admin/components/DangerZone";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/admin/components/ui/card";
+import { Button } from "@/admin/components/ui/button";
+import { Badge } from "@/admin/components/ui/badge";
+import { formatDate } from "@/shared/lib/utils";
+import { Role } from "@/shared/generated/prisma/enums";
+import { UserActions } from "../_components/UserActions";
 
 export const metadata = {
-  title: 'スタッフ詳細 | 管理画面',
-}
+  title: "スタッフ詳細 | 管理画面",
+};
 
 type Props = {
-  params: Promise<{ id: string }>
-}
+  params: Promise<{ id: string }>;
+};
 
 export default async function StaffDetailPage({ params }: Props) {
   await connection();
-  const { id } = await params
-  const user = await getUser(id)
+  const { id } = await params;
+  const user = await getUser(id);
 
   if (!user) {
-    notFound()
+    notFound();
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/admin/staff">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              一覧に戻る
+    <AdminDetailLayout
+      backHref="/admin/staff"
+      title={user.name ?? "(未設定)"}
+      subtitle={user.email}
+      actions={
+        <>
+          <Button size="sm" asChild>
+            <Link href={`/admin/staff/${user.id}/edit`}>
+              <Pencil className="mr-2 h-4 w-4" />
+              編集
             </Link>
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold">{user.name || '(未設定)'}</h1>
-            <p className="text-muted-foreground">{user.email}</p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Button asChild>
-            <Link href={`/admin/staff/${user.id}/edit`}>編集</Link>
-          </Button>
           <UserActions user={user} />
-        </div>
-      </div>
-
+        </>
+      }
+    >
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
@@ -57,21 +59,29 @@ export default async function StaffDetailPage({ params }: Props) {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-3 gap-4">
-              <dt className="text-sm font-medium text-muted-foreground">名前</dt>
-              <dd className="col-span-2">{user.name || '(未設定)'}</dd>
+              <dt className="text-sm font-medium text-muted-foreground">
+                名前
+              </dt>
+              <dd className="col-span-2">{user.name || "(未設定)"}</dd>
             </div>
             <div className="grid grid-cols-3 gap-4">
-              <dt className="text-sm font-medium text-muted-foreground">メールアドレス</dt>
+              <dt className="text-sm font-medium text-muted-foreground">
+                メールアドレス
+              </dt>
               <dd className="col-span-2">{user.email}</dd>
             </div>
             <div className="grid grid-cols-3 gap-4">
-              <dt className="text-sm font-medium text-muted-foreground">ロール</dt>
+              <dt className="text-sm font-medium text-muted-foreground">
+                ロール
+              </dt>
               <dd className="col-span-2">
                 <RoleBadge role={user.role} />
               </dd>
             </div>
             <div className="grid grid-cols-3 gap-4">
-              <dt className="text-sm font-medium text-muted-foreground">メール認証</dt>
+              <dt className="text-sm font-medium text-muted-foreground">
+                メール認証
+              </dt>
               <dd className="col-span-2">
                 {user.emailVerified ? (
                   <Badge variant="default">認証済み</Badge>
@@ -89,24 +99,28 @@ export default async function StaffDetailPage({ params }: Props) {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-3 gap-4">
-              <dt className="text-sm font-medium text-muted-foreground">予約数</dt>
+              <dt className="text-sm font-medium text-muted-foreground">
+                予約数
+              </dt>
               <dd className="col-span-2">{user._count.reservations}件</dd>
             </div>
             <div className="grid grid-cols-3 gap-4">
-              <dt className="text-sm font-medium text-muted-foreground">投稿数</dt>
+              <dt className="text-sm font-medium text-muted-foreground">
+                投稿数
+              </dt>
               <dd className="col-span-2">{user._count.posts}件</dd>
             </div>
             <div className="grid grid-cols-3 gap-4">
-              <dt className="text-sm font-medium text-muted-foreground">登録日</dt>
-              <dd className="col-span-2">
-                {formatDate(user.createdAt, true)}
-              </dd>
+              <dt className="text-sm font-medium text-muted-foreground">
+                登録日
+              </dt>
+              <dd className="col-span-2">{formatDate(user.createdAt, true)}</dd>
             </div>
             <div className="grid grid-cols-3 gap-4">
-              <dt className="text-sm font-medium text-muted-foreground">最終更新</dt>
-              <dd className="col-span-2">
-                {formatDate(user.updatedAt, true)}
-              </dd>
+              <dt className="text-sm font-medium text-muted-foreground">
+                最終更新
+              </dt>
+              <dd className="col-span-2">{formatDate(user.updatedAt, true)}</dd>
             </div>
           </CardContent>
         </Card>
@@ -147,17 +161,24 @@ export default async function StaffDetailPage({ params }: Props) {
           </CardContent>
         </Card>
       )}
-    </div>
-  )
+
+      <DangerZone
+        deleteLabel="スタッフを削除"
+        itemName={user.name ?? user.email}
+        onDelete={() => deleteUser(user.id)}
+        redirectTo="/admin/staff"
+      />
+    </AdminDetailLayout>
+  );
 }
 
 function RoleBadge({ role }: { role: Role }) {
   switch (role) {
-    case 'ADMIN':
-      return <Badge variant="default">管理者</Badge>
-    case 'USER':
-      return <Badge variant="secondary">スタッフ</Badge>
+    case "ADMIN":
+      return <Badge variant="default">管理者</Badge>;
+    case "USER":
+      return <Badge variant="secondary">スタッフ</Badge>;
     default:
-      return <Badge variant="outline">{role}</Badge>
+      return <Badge variant="outline">{role}</Badge>;
   }
 }
