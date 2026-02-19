@@ -1,6 +1,7 @@
 "use client";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Button } from "@/admin/components/ui/button";
 import {
   Card,
@@ -36,6 +37,7 @@ export function DangerZone({
         router.push(redirectTo);
       } else {
         setOpen(false);
+        toast.error(result.error);
       }
     });
   };
