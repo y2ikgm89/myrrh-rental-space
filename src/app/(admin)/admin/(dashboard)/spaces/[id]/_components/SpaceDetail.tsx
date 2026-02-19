@@ -9,12 +9,10 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  Button,
   Badge,
   Switch,
 } from "@/admin/components/ui";
-import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
-import { updateSpacePublish, deleteSpace } from "@/admin/actions/space";
+import { updateSpacePublish } from "@/admin/actions/space";
 import type { SpaceWithStats } from "@/admin/lib/validations/space";
 import { formatDateTimeShort, formatCurrency } from "@/shared/lib/utils";
 
@@ -25,7 +23,6 @@ type SpaceDetailProps = {
 export function SpaceDetail({ space }: SpaceDetailProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   // 画像モーダル用のstate
   const allImages = [space.mainImageUrl, ...space.imageUrls];
@@ -70,17 +67,6 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
       const result = await updateSpacePublish(space.id, checked);
       if (result.success) {
         router.refresh();
-      } else {
-        toast.error(result.error || "エラーが発生しました");
-      }
-    });
-  };
-
-  const handleDelete = async () => {
-    startTransition(async () => {
-      const result = await deleteSpace(space.id);
-      if (result.success) {
-        router.push("/admin/spaces");
       } else {
         toast.error(result.error || "エラーが発生しました");
       }
@@ -384,30 +370,6 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
               </div>
             )}
           </div>
-        </CardContent>
-      </Card>
-
-      {/* 危険な操作 */}
-      <Card className="border-destructive">
-        <CardHeader>
-          <CardTitle className="text-destructive">危険な操作</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Button
-            variant="destructive"
-            disabled={isPending}
-            onClick={() => setIsDeleteDialogOpen(true)}
-          >
-            スペースを削除
-          </Button>
-          <DeleteConfirmDialog
-            open={isDeleteDialogOpen}
-            onOpenChange={setIsDeleteDialogOpen}
-            itemName={space.name}
-            description="この操作により、スペースは非アクティブ状態になります。有効な予約がある場合は削除できません。"
-            onConfirm={handleDelete}
-            isPending={isPending}
-          />
         </CardContent>
       </Card>
     </div>
