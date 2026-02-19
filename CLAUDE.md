@@ -14,21 +14,21 @@
 
 ### 検証（完了報告前に必須）
 
-| タイミング | コマンド |
-|-----------|---------|
-| 作業中 | `bun run type-check` |
-| 完了報告前 | `bun run validate` |
+| タイミング    | コマンド                            |
+| ------------- | ----------------------------------- |
+| 作業中        | `bun run type-check`                |
+| 完了報告前    | `bun run validate`                  |
 | コミット/PR前 | `bun run validate && bun run build` |
 
 ### 詳細ルール
 
 ルールは `.claude/rules/` ディレクトリで管理。Claude Code が自動ロード（再帰的）:
 
-| ディレクトリ | ロード条件 | 内容 |
-|------------|-----------|------|
-| `.claude/rules/*.md` | **常時** | 型安全・実装品質・Server Actions 等（全作業共通） |
-| `.claude/rules/frontend/*.md` | **`src/app/**` 作業時** | UI・アニメーション・アクセシビリティ・SEO 等 |
-| `.claude/rules/ops/*.md` | **`Dockerfile` 等作業時** | Docker / Cloud Run / Cloud Build |
+| ディレクトリ                  | ロード条件                | 内容                                              |
+| ----------------------------- | ------------------------- | ------------------------------------------------- |
+| `.claude/rules/*.md`          | **常時**                  | 型安全・実装品質・Server Actions 等（全作業共通） |
+| `.claude/rules/frontend/*.md` | **`src/app/**` 作業時\*\* | UI・アニメーション・アクセシビリティ・SEO 等      |
+| `.claude/rules/ops/*.md`      | **`Dockerfile` 等作業時** | Docker / Cloud Run / Cloud Build                  |
 
 > 詳細リファレンス: `docs/reference/claude-rules/` に配置（必要時に参照）
 
@@ -47,13 +47,13 @@
 
 ### 自動発動スキル（主要）
 
-| スキル | 発動タイミング |
-|--------|----------------|
-| `brainstorming` | 機能追加・設計時 |
-| `frontend-design` | フロントエンドUI実装時 |
-| `test-driven-development` | 実装時 |
+| スキル                           | 発動タイミング             |
+| -------------------------------- | -------------------------- |
+| `brainstorming`                  | 機能追加・設計時           |
+| `frontend-design`                | フロントエンドUI実装時     |
+| `test-driven-development`        | 実装時                     |
 | `verification-before-completion` | 完了報告前（**常に必須**） |
-| `finishing-a-development-branch` | ブランチ完了時 |
+| `finishing-a-development-branch` | ブランチ完了時             |
 
 > 他: `writing-plans`, `executing-plans`, `systematic-debugging`, `requesting-code-review`, `receiving-code-review` も自動発動
 
@@ -65,7 +65,7 @@
   - `project-reviewer` — 実装完了後の総合品質チェック（型安全・カラートークン・規約）
   - `verification` — type-check / lint / build の検証（Haiku 使用で高速）
   - `design-memory` — ブランドデザイン決定の記憶（UI実装時）
-- **MCP**: `serena`, `context7`, `playwright` 推奨。`WebSearch`, `WebFetch` 必要時
+- **MCP**: `serena`, `context7`, `playwright`, `github`（`.mcp.json`設定済、要`gh extension install github/gh-mcp`）推奨。`WebSearch`, `WebFetch` 必要時
 - **ui-ux-pro-max**: `py .claude/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --domain <domain> --stack nextjs`
   - ドメイン: `product`, `style`, `typography`, `color`, `landing`, `chart`, `ux`
 - **ドキュメント更新**: `docs/plans/NNN-title.md` → `docs/plans/README.md` → `docs/requirements/`（必要時） → `docs/architecture/`（設計変更時）
@@ -80,23 +80,23 @@
 
 ### 技術スタック
 
-| 技術 | バージョン | 備考 |
-|------|-----------|------|
-| Next.js | 16.1.6 | `'use cache'`, `updateTag`, PPR対応 |
-| React | 19.2.4 | React Compiler 1.0, `<Activity>`, `useEffectEvent` |
-| TypeScript | 6.0-beta | TS 7.0 準備用 `--stableTypeOrdering` 利用可 |
-| Bun | 1.3.x | Bun.SQL, HTML直接実行 |
-| Prisma | 7.4.0 | 型生成98%削減, mapped enums |
-| PostgreSQL | - | Supabase経由 |
-| Better Auth | 1.4.18 | RBAC, Auth.js統合 |
-| Tailwind CSS | 4.1.18 | CSS-first設定, @theme |
-| Zod | 4.3.6 | `{ error: }` パラメータ, z.fromJSONSchema() |
-| nuqs | 2.8.8 | createSearchParamsCache, Zod 4統合 |
-| Lexical | 0.40.0 | React 19対応, Node transforms, mergeRegister本体移動 |
-| GSAP | 3.14.2 | ScrollTrigger, @gsap/react 2.1 |
-| Three.js | 0.182.0 | @react-three/fiber 9.5, @react-three/drei 10.7 |
-| PixiJS | 8.16.0 | 2D WebGLレンダラー |
-| Lenis | 1.3.17 | スムーススクロール |
+| 技術         | バージョン | 備考                                                 |
+| ------------ | ---------- | ---------------------------------------------------- |
+| Next.js      | 16.1.6     | `'use cache'`, `updateTag`, PPR対応                  |
+| React        | 19.2.4     | React Compiler 1.0, `<Activity>`, `useEffectEvent`   |
+| TypeScript   | 6.0-beta   | TS 7.0 準備用 `--stableTypeOrdering` 利用可          |
+| Bun          | 1.3.x      | Bun.SQL, HTML直接実行                                |
+| Prisma       | 7.4.0      | 型生成98%削減, mapped enums                          |
+| PostgreSQL   | -          | Supabase経由                                         |
+| Better Auth  | 1.4.18     | RBAC, Auth.js統合                                    |
+| Tailwind CSS | 4.1.18     | CSS-first設定, @theme                                |
+| Zod          | 4.3.6      | `{ error: }` パラメータ, z.fromJSONSchema()          |
+| nuqs         | 2.8.8      | createSearchParamsCache, Zod 4統合                   |
+| Lexical      | 0.40.0     | React 19対応, Node transforms, mergeRegister本体移動 |
+| GSAP         | 3.14.2     | ScrollTrigger, @gsap/react 2.1                       |
+| Three.js     | 0.182.0    | @react-three/fiber 9.5, @react-three/drei 10.7       |
+| PixiJS       | 8.16.0     | 2D WebGLレンダラー                                   |
+| Lenis        | 1.3.17     | スムーススクロール                                   |
 
 ### 構造
 
@@ -126,18 +126,19 @@ src/
 └── shared/                               # 両方で共有（CSS変数非依存）
 ```
 
-| パス | 用途 |
-|------|------|
-| `src/app/(admin)/_styles/admin.css` | 管理画面専用テーマ |
-| `src/app/(public)/_styles/public.css` | 公開ページテーマ |
-| `src/app/(admin)/admin/(dashboard)/_shared/` | 管理画面専用コンポーネント |
-| `src/app/(public)/_shared/` | 公開ページ専用コンポーネント |
-| `src/app/(public)/[slug]/` | カスタムページルート（管理画面で作成） |
-| `src/app/(public-*)/` | 追加の公開ページルートグループ |
-| `src/shared/` | 共有（CSS変数に依存しないコード） |
-| `docs/{requirements,architecture,plans}/` | ドキュメント |
+| パス                                         | 用途                                   |
+| -------------------------------------------- | -------------------------------------- |
+| `src/app/(admin)/_styles/admin.css`          | 管理画面専用テーマ                     |
+| `src/app/(public)/_styles/public.css`        | 公開ページテーマ                       |
+| `src/app/(admin)/admin/(dashboard)/_shared/` | 管理画面専用コンポーネント             |
+| `src/app/(public)/_shared/`                  | 公開ページ専用コンポーネント           |
+| `src/app/(public)/[slug]/`                   | カスタムページルート（管理画面で作成） |
+| `src/app/(public-*)/`                        | 追加の公開ページルートグループ         |
+| `src/shared/`                                | 共有（CSS変数に依存しないコード）      |
+| `docs/{requirements,architecture,plans}/`    | ドキュメント                           |
 
 **公開ページURL構造**:
+
 - `/` - ホームページ
 - `/faq`, `/about`, `/contact`, `/spaces`, `/reservation`, `/privacy`, `/terms` - 専用ページ
 - `/news`, `/news/[slug]` - ニュース
@@ -148,6 +149,7 @@ src/
 **注意**: 公開ページ ↔ 管理画面の遷移はフルページリロード（異なるRoot Layout間の仕様）
 
 **管理画面パスの二重構造**: `src/app/(admin)/admin/(dashboard)/...` → URL は `/admin/...`
+
 - `(admin)` = ルートグループ（URL不変）、`admin` = URLセグメント、`(dashboard)` = ルートグループ（URL不変）
 
 **API Routes**: `src/app/api/` 配下（`admin/`, `auth/`, `cron/`, `health/`, `ical/`, `instagram/`, `webhooks/`）
@@ -170,6 +172,8 @@ bun run db:generate        # Prismaスキーマ再生成
 bun run db:studio          # Prisma Studio（DB GUI）
 bun run e2e                # E2Eテスト（Playwright）
 bun run format             # Prettier フォーマット（Edit/Write 後は hook で自動実行）
+# 自動実行フック（設定済）: Prettier + ESLint --fix（.ts/.tsx編集後）/ schema-change-guard（schema.prisma編集後）
+# ブロック保護: .env*, bun.lockb, prisma/migrations/*.sql（直接編集不可）
 gcloud builds submit --config=cloudbuild.yaml  # Cloud Run デプロイ（Cloud Build経由）
 ```
 
