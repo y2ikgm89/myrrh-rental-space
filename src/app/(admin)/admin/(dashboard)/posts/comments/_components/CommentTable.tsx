@@ -11,7 +11,7 @@ import Link from 'next/link'
 import { useConfirm } from '@/admin/contexts/confirm-context'
 import { formatDistanceToNow } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { Trash2, RotateCcw, ExternalLink, User } from 'lucide-react'
+import { Trash2, ExternalLink, User } from 'lucide-react'
 import {
   Table,
   TableBody,
@@ -23,6 +23,7 @@ import {
   Checkbox,
 } from '@/admin/components/ui'
 import { EmptyState } from '@/admin/components/EmptyState'
+import { ActionDropdown, ActionDropdownItem } from '@/admin/components/ActionDropdown'
 import {
   deleteCommentAdmin,
   deleteCommentsAdmin,
@@ -249,30 +250,17 @@ export function CommentTable({ comments }: Props) {
                 )}
               </TableCell>
               <TableCell>
-                <div className="flex items-center gap-1">
+                <ActionDropdown disabled={isPending}>
                   {comment.isDeleted ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRestore(comment.id)}
-                      disabled={isPending}
-                      title="復元"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                    </Button>
+                    <ActionDropdownItem onClick={() => handleRestore(comment.id)}>
+                      復元
+                    </ActionDropdownItem>
                   ) : (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete(comment.id)}
-                      disabled={isPending}
-                      title="削除"
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <ActionDropdownItem destructive onClick={() => handleDelete(comment.id)}>
+                      削除
+                    </ActionDropdownItem>
                   )}
-                </div>
+                </ActionDropdown>
               </TableCell>
             </TableRow>
           ))}
