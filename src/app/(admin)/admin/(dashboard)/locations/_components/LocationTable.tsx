@@ -1,7 +1,5 @@
 import Image from 'next/image'
-import Link from 'next/link'
 import {
-  Button,
   Badge,
   Table,
   TableBody,
@@ -14,6 +12,7 @@ import {
 import { toggleLocationPublish } from '@/admin/actions/location'
 import type { LocationWithStats } from '@/admin/lib/validations/location'
 import { EmptyState } from '@/admin/components/EmptyState'
+import { LocationActionCell } from './LocationActionCell'
 
 // =============================================================================
 // Types
@@ -89,14 +88,7 @@ export function LocationTable({ locations }: LocationTableProps) {
                 <Badge variant="secondary">{location._count.spaces}件</Badge>
               </TableCell>
               <TableCell className="text-right">
-                <div className="flex items-center justify-end gap-2">
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href={`/admin/locations/${location.id}`}>詳細</Link>
-                  </Button>
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href={`/admin/locations/${location.id}/edit`}>編集</Link>
-                  </Button>
-                </div>
+                <LocationActionCell locationId={location.id} />
               </TableCell>
             </TableRow>
           ))}
