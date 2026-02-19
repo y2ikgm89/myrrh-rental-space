@@ -8,8 +8,7 @@ import {
   TableRow,
 } from '@/admin/components/ui'
 import { EmptyState } from '@/admin/components/EmptyState'
-import { EditCategoryDialog } from './EditCategoryDialog'
-import { DeleteCategoryButton } from './DeleteCategoryButton'
+import { CategoryActionCell } from './CategoryActionCell'
 import type { SpaceCategoryWithStats } from '@/admin/lib/validations/space-category'
 
 type CategoryTableProps = {
@@ -83,10 +82,7 @@ export function CategoryTable({ categories }: CategoryTableProps) {
                 )}
               </TableCell>
               <TableCell className="text-right">
-                <div className="flex items-center justify-end gap-2">
-                  <EditCategoryDialog category={category} />
-                  <DeleteCategoryButton category={category} />
-                </div>
+                <CategoryActionCell category={category} />
               </TableCell>
             </TableRow>
           ))}
