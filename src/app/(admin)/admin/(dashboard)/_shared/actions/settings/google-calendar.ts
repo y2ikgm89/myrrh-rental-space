@@ -26,6 +26,7 @@ import { getSession, getRoleFromSession } from '@/shared/lib/auth'
 import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'
 import { logPermissionDenied } from '@/admin/lib/audit'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
+import { serverEnv } from '@/shared/lib/env/server'
 
 import {
   googleCalendarSettingsSchema,
@@ -324,7 +325,7 @@ export async function setupCalendarWebhook(): Promise<{
     }
 
     // ベースURLを取得（環境変数から）
-    const baseUrl = process.env["NEXT_PUBLIC_APP_URL"] || process.env["VERCEL_URL"]
+    const baseUrl = process.env["NEXT_PUBLIC_APP_URL"] || serverEnv.VERCEL_URL
     if (!baseUrl) {
       return { success: false, error: 'APP_URLが設定されていません' }
     }

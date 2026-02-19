@@ -376,6 +376,7 @@ export function AnnouncementBarCarousel({ bars, settings }: AnnouncementBarCarou
           needsDefaultText && defaultStyle.text,
           // outlined/glass/minimalではテキスト色をタイプカラーに
           !hasCustomText && (designStyle === AnnouncementBarDesignStyle.outlined || designStyle === AnnouncementBarDesignStyle.minimal) && 'text-foreground',
+          // design-exception: frosted-glass overlay requires white text regardless of theme
           !hasCustomText && designStyle === AnnouncementBarDesignStyle.glass && 'text-white'
         )}
         style={customStyles}
