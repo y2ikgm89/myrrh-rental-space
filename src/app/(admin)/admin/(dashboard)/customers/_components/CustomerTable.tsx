@@ -1,6 +1,4 @@
-import Link from 'next/link'
 import {
-  Button,
   Table,
   TableBody,
   TableCell,
@@ -12,6 +10,7 @@ import { EmptyState } from '@/admin/components/EmptyState'
 import { CustomerStatusBadge } from '@/admin/components/status-badges'
 import { formatDateShort } from '@/shared/lib/utils'
 import type { CustomerData } from '@/admin/actions/customer'
+import { CustomerActionCell } from './CustomerActionCell'
 
 // =============================================================================
 // Types
@@ -78,9 +77,7 @@ export function CustomerTable({ customers }: CustomerTableProps) {
                   : '-'}
               </TableCell>
               <TableCell>
-                <Button asChild variant="outline" size="sm">
-                  <Link href={`/admin/customers/${customer.id}`}>詳細</Link>
-                </Button>
+                <CustomerActionCell customerId={customer.id} />
               </TableCell>
             </TableRow>
           ))}
