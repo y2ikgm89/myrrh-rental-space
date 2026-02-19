@@ -4,25 +4,27 @@
  * 招待メールのリンクからアクセスし、パスワードを設定
  */
 
-import type { Metadata } from 'next'
-import type { ReactElement } from 'react'
-import { validateInvitationToken } from '@/admin/actions/staff-invitation'
-import { isActionFailure } from '@/shared/types/server-actions'
-import { SetupForm } from './_components/SetupForm'
+import type { Metadata } from "next";
+import type { ReactElement } from "react";
+import { validateInvitationToken } from "@/admin/actions/staff-invitation";
+import { isActionFailure } from "@/admin/types/server-actions";
+import { SetupForm } from "./_components/SetupForm";
 
 export const metadata: Metadata = {
-  title: 'パスワード設定',
-}
+  title: "パスワード設定",
+};
 
 type Props = {
-  params: Promise<{ token: string }>
-}
+  params: Promise<{ token: string }>;
+};
 
-export default async function SetupPage({ params }: Props): Promise<ReactElement> {
-  const { token } = await params
+export default async function SetupPage({
+  params,
+}: Props): Promise<ReactElement> {
+  const { token } = await params;
 
   // トークン検証
-  const result = await validateInvitationToken(token)
+  const result = await validateInvitationToken(token);
 
   if (isActionFailure(result)) {
     return (
@@ -56,7 +58,7 @@ export default async function SetupPage({ params }: Props): Promise<ReactElement
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -64,7 +66,9 @@ export default async function SetupPage({ params }: Props): Promise<ReactElement
       <div className="w-full max-w-md">
         <div className="bg-card rounded-lg shadow-lg p-8">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-foreground">パスワード設定</h1>
+            <h1 className="text-2xl font-bold text-foreground">
+              パスワード設定
+            </h1>
             <p className="text-muted-foreground mt-2">
               アカウントのパスワードを設定してください
             </p>
@@ -73,5 +77,5 @@ export default async function SetupPage({ params }: Props): Promise<ReactElement
         </div>
       </div>
     </div>
-  )
+  );
 }

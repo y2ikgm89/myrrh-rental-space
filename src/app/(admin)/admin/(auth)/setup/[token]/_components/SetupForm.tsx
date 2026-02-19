@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * パスワード設定フォーム
@@ -6,73 +6,75 @@
  * スタッフ招待メールからアクセスし、パスワードを設定
  */
 
-import { useState, type FormEvent, type ReactElement } from 'react'
-import { useRouter } from 'next/navigation'
-import { setupPassword } from '@/admin/actions/staff-invitation'
-import { signIn } from '@/shared/lib/auth-client'
-import { isActionFailure } from '@/shared/types/server-actions'
-import type { InvitationData } from '@/admin/lib/validations/staff-invitation'
+import { useState, type FormEvent, type ReactElement } from "react";
+import { useRouter } from "next/navigation";
+import { setupPassword } from "@/admin/actions/staff-invitation";
+import { signIn } from "@/shared/lib/auth-client";
+import { isActionFailure } from "@/admin/types/server-actions";
+import type { InvitationData } from "@/admin/lib/validations/staff-invitation";
 
 type Props = {
-  invitation: InvitationData
-  token: string
-}
+  invitation: InvitationData;
+  token: string;
+};
 
 export function SetupForm({ invitation, token }: Props): ReactElement {
-  const router = useRouter()
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [error, setError] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter();
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault()
-    setError('')
+  const handleSubmit = async (
+    event: FormEvent<HTMLFormElement>,
+  ): Promise<void> => {
+    event.preventDefault();
+    setError("");
 
     if (password.length < 8) {
-      setError('パスワードは8文字以上で入力してください')
-      return
+      setError("パスワードは8文字以上で入力してください");
+      return;
     }
 
     if (password !== confirmPassword) {
-      setError('パスワードが一致しません')
-      return
+      setError("パスワードが一致しません");
+      return;
     }
 
-    setIsLoading(true)
+    setIsLoading(true);
 
     try {
       const result = await setupPassword({
         token,
         password,
         confirmPassword,
-      })
+      });
 
       if (isActionFailure(result)) {
-        setError(result.error)
-        setIsLoading(false)
-        return
+        setError(result.error);
+        setIsLoading(false);
+        return;
       }
 
       // ユーザー作成成功 → 自動ログイン
       const signInResult = await signIn.email({
         email: invitation.email,
         password,
-      })
+      });
 
       if (signInResult.error) {
         // ログイン失敗でもユーザーは作成済み → ログインページへ
-        router.push('/admin/login')
+        router.push("/admin/login");
       } else {
         // ログイン成功 → ダッシュボードへ
-        router.push('/admin')
-        router.refresh()
+        router.push("/admin");
+        router.refresh();
       }
     } catch {
-      setError('エラーが発生しました。再度お試しください。')
-      setIsLoading(false)
+      setError("エラーが発生しました。再度お試しください。");
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -97,11 +99,11 @@ export function SetupForm({ invitation, token }: Props): ReactElement {
           <div className="flex justify-between">
             <dt className="text-muted-foreground">権限</dt>
             <dd className="text-foreground font-medium">
-              {invitation.role === 'SUPER_ADMIN' && 'スーパー管理者'}
-              {invitation.role === 'ADMIN' && '管理者'}
-              {invitation.role === 'EDITOR' && '編集者'}
-              {invitation.role === 'VIEWER' && '閲覧者'}
-              {invitation.role === 'USER' && 'ユーザー'}
+              {invitation.role === "SUPER_ADMIN" && "スーパー管理者"}
+              {invitation.role === "ADMIN" && "管理者"}
+              {invitation.role === "EDITOR" && "編集者"}
+              {invitation.role === "VIEWER" && "閲覧者"}
+              {invitation.role === "USER" && "ユーザー"}
             </dd>
           </div>
         </dl>
@@ -125,7 +127,9 @@ export function SetupForm({ invitation, token }: Props): ReactElement {
           className="w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
           placeholder="8文字以上"
         />
-        <p className="mt-1 text-xs text-muted-foreground">8文字以上で設定してください</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          8文字以上で設定してください
+        </p>
       </div>
 
       <div>
@@ -153,8 +157,8 @@ export function SetupForm({ invitation, token }: Props): ReactElement {
         disabled={isLoading}
         className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {isLoading ? '設定中...' : 'パスワードを設定してログイン'}
+        {isLoading ? "設定中..." : "パスワードを設定してログイン"}
       </button>
     </form>
-  )
+  );
 }
