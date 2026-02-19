@@ -10,83 +10,83 @@ paths:
 
 ## テスト分類
 
-| 種類 | フレームワーク | 場所 | 用途 |
-|------|---------------|------|------|
-| Unit | Bun Test | `__tests__/unit/` | 関数・ユーティリティ |
-| Integration | Bun Test | `__tests__/integration/` | Server Actions・API |
-| E2E | Playwright | `e2e/` | ユーザーフロー |
+| 種類        | フレームワーク | 場所                     | 用途                 |
+| ----------- | -------------- | ------------------------ | -------------------- |
+| Unit        | Bun Test       | `__tests__/unit/`        | 関数・ユーティリティ |
+| Integration | Bun Test       | `__tests__/integration/` | Server Actions・API  |
+| E2E         | Playwright     | `e2e/`                   | ユーザーフロー       |
 
 ## Bunテスト（Unit/Integration）
 
 ### 基本構造
 
 ```typescript
-import { describe, test, expect, beforeAll, afterAll } from 'bun:test'
+import { describe, test, expect, beforeAll, afterAll } from "bun:test";
 
-describe('機能名', () => {
+describe("機能名", () => {
   beforeAll(() => {
     // セットアップ
-  })
+  });
 
   afterAll(() => {
     // クリーンアップ
-  })
+  });
 
-  test('期待する動作を説明', () => {
-    const result = someFunction()
-    expect(result).toBe(expected)
-  })
-})
+  test("期待する動作を説明", () => {
+    const result = someFunction();
+    expect(result).toBe(expected);
+  });
+});
 ```
 
 ### 環境変数のモック
 
 ```typescript
-describe('crypto', () => {
-  const originalKey = process.env.ENCRYPTION_KEY
+describe("crypto", () => {
+  const originalKey = process.env.ENCRYPTION_KEY;
 
   beforeAll(() => {
-    process.env.ENCRYPTION_KEY = 'test-key'
-  })
+    process.env.ENCRYPTION_KEY = "test-key";
+  });
 
   afterAll(() => {
     if (originalKey) {
-      process.env.ENCRYPTION_KEY = originalKey
+      process.env.ENCRYPTION_KEY = originalKey;
     } else {
-      delete process.env.ENCRYPTION_KEY
+      delete process.env.ENCRYPTION_KEY;
     }
-  })
-})
+  });
+});
 ```
 
 ### Server Actionsテスト
 
 ```typescript
-import { describe, test, expect, beforeEach, mock } from 'bun:test'
+import { describe, test, expect, beforeEach, mock } from "bun:test";
 
-const mockGetSession = mock(() => null)
-mock.module('@/shared/lib/auth', () => ({ getSession: mockGetSession }))
+const mockGetSession = mock(() => null);
+mock.module("@/shared/lib/auth", () => ({ getSession: mockGetSession }));
 
-const { createNews } = await import('@/admin/actions/news')
+const { createNews } = await import("@/admin/actions/news");
 
-describe('createNews', () => {
+describe("createNews", () => {
   beforeEach(() => {
     // Bun は mock.mockReset() を使用（vi.restoreAllMocks() は Vitest API で Bun では不可）
-    mockGetSession.mockReset()
-    mockGetSession.mockResolvedValue({ user: ADMIN_USER })
-  })
+    mockGetSession.mockReset();
+    mockGetSession.mockResolvedValue({ user: ADMIN_USER });
+  });
 
-  test('管理者は作成できる', async () => {
-    const result = await createNews(validData)
-    expect(result.success).toBe(true)
-  })
+  test("管理者は作成できる", async () => {
+    const result = await createNews(validData);
+    expect(result.success).toBe(true);
+  });
 
-  test('未認証はエラー', async () => {
-    mockGetSession.mockResolvedValue(null)
-    const result = await createNews(validData)
-    expect(result.success).toBe(false)
-  })
-})
+  test("未認証はエラー", async () => {
+    mockGetSession.mockResolvedValue(null);
+    const result = await createNews(validData);
+    expect(result.success).toBe(false);
+  });
+});
 ```
 
 ## Bun Test 型安全パターン
@@ -99,10 +99,12 @@ Bun の `mock()` は引数から戻り値型を推論する。空配列 `[]` は
 
 ```typescript
 // NG: never[] 推論 → mockResolvedValue([{ pageId: 'x' }]) がエラー
-const mockFindMany = mock(() => Promise.resolve([]))
+const mockFindMany = mock(() => Promise.resolve([]));
 
 // OK: 型引数で明示
-const mockFindMany = mock<() => Promise<{ pageId: string }[]>>(() => Promise.resolve([]))
+const mockFindMany = mock<() => Promise<{ pageId: string }[]>>(() =>
+  Promise.resolve([]),
+);
 ```
 
 ### 2. `toContain` の要素型制約
@@ -112,11 +114,11 @@ const mockFindMany = mock<() => Promise<{ pageId: string }[]>>(() => Promise.res
 
 ```typescript
 // NG: SectionType[] に string を toContain → TS2345
-expect(Object.values(SectionType)).toContain('HERO')
+expect(Object.values(SectionType)).toContain("HERO");
 
 // OK: string[] に変換してから
-const sectionTypeValues: string[] = Object.values(SectionType)
-expect(sectionTypeValues).toContain('HERO')
+const sectionTypeValues: string[] = Object.values(SectionType);
+expect(sectionTypeValues).toContain("HERO");
 ```
 
 ### 3. `toEqual` の型一致要件
@@ -125,11 +127,19 @@ expect(sectionTypeValues).toContain('HERO')
 
 ```typescript
 // NG: string[] と CustomerStatus[] の比較 → TS2769
-expect(CUSTOMER_STATUSES.sort()).toEqual(['NEW', 'REGULAR', 'VIP', 'INACTIVE', 'BLACKLIST'].sort())
+expect(CUSTOMER_STATUSES.sort()).toEqual(
+  ["NEW", "REGULAR", "VIP", "INACTIVE", "BLACKLIST"].sort(),
+);
 
 // OK: 明示的な型注釈
-const expectedStatuses: CustomerStatus[] = ['NEW', 'REGULAR', 'VIP', 'INACTIVE', 'BLACKLIST']
-expect(CUSTOMER_STATUSES.sort()).toEqual(expectedStatuses.sort())
+const expectedStatuses: CustomerStatus[] = [
+  "NEW",
+  "REGULAR",
+  "VIP",
+  "INACTIVE",
+  "BLACKLIST",
+];
+expect(CUSTOMER_STATUSES.sort()).toEqual(expectedStatuses.sort());
 ```
 
 ### 4. `toPlainObject<T>: T` の型 vs ランタイム不一致
@@ -138,17 +148,21 @@ expect(CUSTOMER_STATUSES.sort()).toEqual(expectedStatuses.sort())
 
 ```typescript
 // NG: result.createdAt の型は Date だが実行時は string → toBe('2024-...') で型エラー
-const result = toPlainObject({ createdAt: new Date('2024-01-15T10:30:00.000Z') })
-expect(result.createdAt).toBe('2024-01-15T10:30:00.000Z')
+const result = toPlainObject({
+  createdAt: new Date("2024-01-15T10:30:00.000Z"),
+});
+expect(result.createdAt).toBe("2024-01-15T10:30:00.000Z");
 
 // OK: unknown 経由でアクセス
-const result = toPlainObject({ createdAt: new Date('2024-01-15T10:30:00.000Z') })
-const createdAt: unknown = result.createdAt
-expect(createdAt).toBe('2024-01-15T10:30:00.000Z')
+const result = toPlainObject({
+  createdAt: new Date("2024-01-15T10:30:00.000Z"),
+});
+const createdAt: unknown = result.createdAt;
+expect(createdAt).toBe("2024-01-15T10:30:00.000Z");
 
 // OK: Symbol プロパティ除去の検証
-const plain: unknown = result
-expect(plain).toEqual({ id: 1 })
+const plain: unknown = result;
+expect(plain).toEqual({ id: 1 });
 ```
 
 ### 5. カリー化 HOF の型引数明示
@@ -157,16 +171,20 @@ expect(plain).toEqual({ id: 1 })
 
 ```typescript
 // NG: TArgs = unknown[] に推論され、ハンドラ引数の型が衝突
-const action = withPermission('space', 'create')(async (user, name: string) => {
-  return createSuccess({ name })  // TS2345
-})
+const action = withPermission(
+  "space",
+  "create",
+)(async (user, name: string) => {
+  return createSuccess({ name }); // TS2345
+});
 
 // OK: 外側の呼び出しで TArgs を明示
-const action = withPermission<[string], { name: string }>('space', 'create')(
-  async (user, name: string) => {
-    return createSuccess({ name })
-  }
-)
+const action = withPermission<[string], { name: string }>(
+  "space",
+  "create",
+)(async (user, name: string) => {
+  return createSuccess({ name });
+});
 ```
 
 ### 6. 条件型を含む型ガードの型引数
@@ -175,12 +193,12 @@ const action = withPermission<[string], { name: string }>('space', 'create')(
 
 ```typescript
 // NG: T = unknown と推論され、data プロパティの型が合わない
-const success = createSuccess()  // ActionSuccess<void>
-expect(isActionSuccess(success)).toBe(true)  // TS2345
+const success = createSuccess(); // ActionSuccess<void>
+expect(isActionSuccess(success)).toBe(true); // TS2345
 
 // OK: 明示的な型引数
-expect(isActionSuccess<void>(success)).toBe(true)
-expect(isActionFailure<void>(failure)).toBe(true)
+expect(isActionSuccess<void>(success)).toBe(true);
+expect(isActionFailure<void>(failure)).toBe(true);
 ```
 
 ### 7. `unknown` な戻り値の検証には `toMatchObject`
@@ -189,12 +207,15 @@ expect(isActionFailure<void>(failure)).toBe(true)
 
 ```typescript
 // NG: result が unknown 型でプロパティアクセスできない
-const result = await action('arg')
-expect(result.success).toBe(false)  // TS18046
+const result = await action("arg");
+expect(result.success).toBe(false); // TS18046
 
 // OK: toMatchObject は unknown を受け入れる
-expect(result).toMatchObject({ success: false })
-expect(result).toMatchObject({ success: false, error: expect.stringContaining('権限') })
+expect(result).toMatchObject({ success: false });
+expect(result).toMatchObject({
+  success: false,
+  error: expect.stringContaining("権限"),
+});
 ```
 
 ### 8. `import type` と `mock.module()` の共存
@@ -203,11 +224,11 @@ expect(result).toMatchObject({ success: false, error: expect.stringContaining('�
 
 ```typescript
 // OK: 型のみのインポートはモックと共存可能
-import type { ActionResult } from '@/shared/types/server-actions'
-mock.module('@/shared/lib/auth', () => ({ getSession: mockGetSession }))
+import type { ActionResult } from "@/shared/types/server-actions";
+mock.module("@/shared/lib/auth", () => ({ getSession: mockGetSession }));
 
 // 型注釈に使用
-const result: ActionResult<void> = await createPost(data)
+const result: ActionResult<void> = await createPost(data);
 ```
 
 ## Playwrightテスト（E2E）
@@ -215,79 +236,93 @@ const result: ActionResult<void> = await createPost(data)
 ### 基本構造
 
 ```typescript
-import { test, expect, type Page } from '@playwright/test'
-import { urls, testUsers } from '../fixtures'
+import { test, expect, type Page } from "@playwright/test";
+import { urls, testUsers } from "../fixtures";
 
-test.describe('機能名', () => {
+test.describe("機能名", () => {
   test.beforeEach(async ({ page }) => {
-    await loginAsAdmin(page)
-  })
+    await loginAsAdmin(page);
+  });
 
-  test('ユーザーストーリーを説明', async ({ page }) => {
-    await page.goto(urls.adminNews)
-    await page.waitForLoadState('networkidle')
+  test("ユーザーストーリーを説明", async ({ page }) => {
+    await page.goto(urls.adminNews);
+    await page.waitForLoadState("networkidle");
 
-    await expect(page.locator('h1')).toContainText('ニュース')
-  })
-})
+    await expect(page.locator("h1")).toContainText("ニュース");
+  });
+});
 ```
 
 ### 認証ヘルパー
 
 ```typescript
 async function loginAsAdmin(page: Page) {
-  await page.goto(urls.login)
-  await page.fill('input[type="email"]', testUsers.admin.email)
-  await page.fill('input[type="password"]', 'admin123')
-  await page.click('button[type="submit"]')
-  await page.waitForURL(urls.adminDashboard, { timeout: 10000 })
+  await page.goto(urls.login);
+  await page.fill('input[type="email"]', testUsers.admin.email);
+  await page.fill('input[type="password"]', "admin123");
+  await page.click('button[type="submit"]');
+  await page.waitForURL(urls.adminDashboard, { timeout: 10000 });
 }
 ```
 
 ### 条件付きスキップ
 
 ```typescript
-test('編集ページが表示される', async ({ page }) => {
-  const editButton = page.locator('a:has-text("編集")').first()
+test("編集ページが表示される", async ({ page }) => {
+  const editButton = page.locator('a:has-text("編集")').first();
 
   if ((await editButton.count()) === 0) {
-    test.skip(true, 'データが存在しません')
-    return
+    test.skip(true, "データが存在しません");
+    return;
   }
 
-  await editButton.click()
+  await editButton.click();
   // ...
-})
+});
 ```
 
 ### 待機パターン
 
 ```typescript
 // ネットワーク完了を待機
-await page.waitForLoadState('networkidle')
+await page.waitForLoadState("networkidle");
 
 // 特定要素の表示を待機
-await expect(page.locator('text=保存しました')).toBeVisible({
+await expect(page.locator("text=保存しました")).toBeVisible({
   timeout: 10000,
-})
+});
 
 // アニメーション待機
-await page.waitForTimeout(300)
+await page.waitForTimeout(300);
 
 // URL変更を待機
-await page.waitForURL(urls.adminNews, { timeout: 10000 })
+await page.waitForURL(urls.adminNews, { timeout: 10000 });
 ```
 
 ### レスポンシブテスト
 
 ```typescript
-test('モバイルでも表示される', async ({ page }) => {
-  await page.setViewportSize({ width: 375, height: 667 })
-  await page.goto(urls.adminNews)
+test("モバイルでも表示される", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 667 });
+  await page.goto(urls.adminNews);
 
-  await expect(page.locator('h1')).toContainText('ニュース')
-})
+  await expect(page.locator("h1")).toContainText("ニュース");
+});
 ```
+
+### UI モード（デバッグ）
+
+E2E テスト失敗時はまず UI モードで原因を特定する:
+
+```bash
+bun run e2e:ui                        # 対話的実行（ステップ実行・スクリーンショット確認）
+PWDEBUG=1 bun run e2e                 # ブレークポイントで一時停止
+```
+
+- **ステップ実行**: 各アクションを1操作ずつ確認
+- **スクリーンショット**: 失敗時の画面状態とDOM確認
+- **ネットワーク**: リクエスト/レスポンスの内容確認
+- **Trace Viewer**: `playwright show-trace trace.zip` でオフライン再生可
 
 ## 禁止事項
 
@@ -352,13 +387,13 @@ bun run e2e:headless
 
 ## ファイル配置
 
-| パス | 内容 |
-|------|------|
-| `__tests__/unit/` | 単体テスト |
-| `__tests__/integration/` | 統合テスト |
-| `__tests__/mocks/` | モック関数（auth, prisma, next, resend, stripe） |
-| `__tests__/fixtures/` | テストデータ（users, reservations） |
-| `__tests__/helpers/` | テストヘルパー（session-mock, assertions） |
-| `__tests__/setup.ts` | グローバルセットアップ（env 設定） |
-| `e2e/` | E2Eテスト |
-| `playwright.config.ts` | Playwright 設定（workers: 1, chromium のみ） |
+| パス                     | 内容                                             |
+| ------------------------ | ------------------------------------------------ |
+| `__tests__/unit/`        | 単体テスト                                       |
+| `__tests__/integration/` | 統合テスト                                       |
+| `__tests__/mocks/`       | モック関数（auth, prisma, next, resend, stripe） |
+| `__tests__/fixtures/`    | テストデータ（users, reservations）              |
+| `__tests__/helpers/`     | テストヘルパー（session-mock, assertions）       |
+| `__tests__/setup.ts`     | グローバルセットアップ（env 設定）               |
+| `e2e/`                   | E2Eテスト                                        |
+| `playwright.config.ts`   | Playwright 設定（workers: 1, chromium のみ）     |

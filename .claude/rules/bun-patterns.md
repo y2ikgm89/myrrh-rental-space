@@ -17,7 +17,17 @@ Bun Test は `bun:test` からインポートする。
 **Bun は Vitest 互換エイリアス（`vi.fn()` / `vi.spyOn()` / `vi.mock()` 等）を提供しているが、プロジェクトではネイティブ API を使用する**。理由: ネイティブ API を使うことで Bun 固有の機能（`mock.restore()` / `Symbol.dispose` 等）を明示的に利用でき、コードベースの一貫性が保たれるため。
 
 ```typescript
-import { describe, test, expect, mock, spyOn, beforeAll, afterAll, beforeEach, afterEach } from 'bun:test'
+import {
+  describe,
+  test,
+  expect,
+  mock,
+  spyOn,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  afterEach,
+} from "bun:test";
 ```
 
 **注意**: `import { vi } from 'vitest'` や `import { vi } from 'bun:test'` は存在しない。`vi` は Vitest 専用 API。
@@ -25,43 +35,51 @@ import { describe, test, expect, mock, spyOn, beforeAll, afterAll, beforeEach, a
 ### 基本テスト構造
 
 ```typescript
-import { describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from 'bun:test'
+import {
+  describe,
+  test,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  afterEach,
+} from "bun:test";
 
-describe('モジュール名 or 機能名', () => {
+describe("モジュール名 or 機能名", () => {
   beforeAll(() => {
     // テストファイル全体で1回だけ実行（DB接続、環境変数設定）
-  })
+  });
 
   afterAll(() => {
     // テストファイル全体で1回だけ実行（クリーンアップ）
-  })
+  });
 
   beforeEach(() => {
     // 各テスト前に実行（モックリセット、状態初期化）
-  })
+  });
 
   afterEach(() => {
     // 各テスト後に実行（副作用クリーンアップ）
-  })
+  });
 
-  describe('正常系', () => {
-    test('期待する動作を日本語で記述', () => {
-      const result = someFunction()
-      expect(result).toBe(expected)
-    })
+  describe("正常系", () => {
+    test("期待する動作を日本語で記述", () => {
+      const result = someFunction();
+      expect(result).toBe(expected);
+    });
 
-    test('非同期処理', async () => {
-      const result = await asyncFunction()
-      expect(result).toEqual({ id: '1', name: 'test' })
-    })
-  })
+    test("非同期処理", async () => {
+      const result = await asyncFunction();
+      expect(result).toEqual({ id: "1", name: "test" });
+    });
+  });
 
-  describe('異常系', () => {
-    test('エラーをスローする', () => {
-      expect(() => invalidFunction()).toThrow('エラーメッセージ')
-    })
-  })
-})
+  describe("異常系", () => {
+    test("エラーをスローする", () => {
+      expect(() => invalidFunction()).toThrow("エラーメッセージ");
+    });
+  });
+});
 ```
 
 ## モック
@@ -69,24 +87,24 @@ describe('モジュール名 or 機能名', () => {
 ### 関数モック（mock()）
 
 ```typescript
-import { mock } from 'bun:test'
+import { mock } from "bun:test";
 
 // NG: Vitest
-const fn = vi.fn()
-const fn = vi.fn(() => 'value')
+const fn = vi.fn();
+const fn = vi.fn(() => "value");
 
 // OK: Bun — 型パラメータで引数・戻り値を明示
-const fn = mock<() => string>()
-const fn = mock<(id: string) => Promise<User | null>>()
-const fn = mock(() => 'value')
-const fn = mock(() => Promise.resolve({ id: '1' }))
+const fn = mock<() => string>();
+const fn = mock<(id: string) => Promise<User | null>>();
+const fn = mock(() => "value");
+const fn = mock(() => Promise.resolve({ id: "1" }));
 
 // モック呼び出し後のアサーション
-expect(fn).toHaveBeenCalled()
-expect(fn).toHaveBeenCalledTimes(2)
-expect(fn).toHaveBeenCalledWith('arg1', 'arg2')
-expect(fn.mock.calls).toEqual([['arg1'], ['arg2']])
-expect(fn.mock.results[0]).toEqual({ type: 'return', value: 'result' })
+expect(fn).toHaveBeenCalled();
+expect(fn).toHaveBeenCalledTimes(2);
+expect(fn).toHaveBeenCalledWith("arg1", "arg2");
+expect(fn.mock.calls).toEqual([["arg1"], ["arg2"]]);
+expect(fn.mock.results[0]).toEqual({ type: "return", value: "result" });
 ```
 
 ### モジュールモック（mock.module()）
@@ -119,101 +137,101 @@ import { getUser } from '@/admin/actions/user'
 ### スパイ（spyOn）
 
 ```typescript
-import { spyOn } from 'bun:test'
+import { spyOn } from "bun:test";
 
 // NG: Vitest
-vi.spyOn(obj, 'method')
+vi.spyOn(obj, "method");
 
 // OK: Bun
-const spy = spyOn(console, 'error')
-const spy = spyOn(obj, 'method')
+const spy = spyOn(console, "error");
+const spy = spyOn(obj, "method");
 
 // spy はオリジナルの動作を保持しつつ呼び出しを記録
-expect(spy).toHaveBeenCalled()
-expect(spy).toHaveBeenCalledWith('error message')
+expect(spy).toHaveBeenCalled();
+expect(spy).toHaveBeenCalledWith("error message");
 ```
 
 ### モックリセット
 
 ```typescript
-import { mock, beforeEach, afterEach } from 'bun:test'
+import { mock, beforeEach, afterEach } from "bun:test";
 
 // NG: Vitest
-vi.restoreAllMocks()
-vi.clearAllMocks()
-vi.resetModules()
+vi.restoreAllMocks();
+vi.clearAllMocks();
+vi.resetModules();
 
 // OK: Bun
 
 // 呼び出し記録をクリア（実装は保持）
-fn.mockClear()
+fn.mockClear();
 
 // 呼び出し記録 + 実装を完全リセット
-fn.mockReset()
+fn.mockReset();
 
 // mock.module() のモジュールキャッシュを復元
-mock.restore()
+mock.restore();
 
 // --- パターン例 ---
 
 // mock.module() 使用時: afterEach で mock.restore()
 afterEach(() => {
-  mock.restore()
-})
+  mock.restore();
+});
 
 // モック関数の呼び出し記録だけ消したい場合: mockClear()
 beforeEach(() => {
-  mockFindUnique.mockClear()
-})
+  mockFindUnique.mockClear();
+});
 
 // 前のテストの戻り値設定も含めてリセット: mockReset() + デフォルト値再設定
 beforeEach(() => {
-  mockGetSession.mockReset()
-  mockGetSession.mockResolvedValue(null)  // デフォルト値を再設定
-})
+  mockGetSession.mockReset();
+  mockGetSession.mockResolvedValue(null); // デフォルト値を再設定
+});
 ```
 
 ## Vitest API 禁止一覧
 
-| 禁止（Vitest） | 代替（Bun） | 備考 |
-|---------------|------------|------|
-| `vi.fn()` | `mock()` | `bun:test` からインポート |
-| `vi.fn(() => value)` | `mock(() => value)` | |
-| `vi.mock('module', factory)` | `mock.module('module', factory)` | import より前に呼ぶ |
-| `vi.spyOn(obj, 'method')` | `spyOn(obj, 'method')` | `bun:test` からインポート |
-| `vi.restoreAllMocks()` | `mock.restore()` | モジュールモック復元 |
-| `vi.clearAllMocks()` | `mock.clearAllMocks()` | 全モック状態をリセット（実装は保持） |
-| `vi.resetAllMocks()` | `mockFn.mockReset()` | 個別に呼ぶ |
-| `vi.resetModules()` | 不要（`mock.restore()` で対応） | |
-| `vi.mocked(fn)` | 型は `mock<T>()` で付与 | |
-| `vi.importMock('module')` | 未サポート | `mock.module()` を使う |
+| 禁止（Vitest）               | 代替（Bun）                      | 備考                                 |
+| ---------------------------- | -------------------------------- | ------------------------------------ |
+| `vi.fn()`                    | `mock()`                         | `bun:test` からインポート            |
+| `vi.fn(() => value)`         | `mock(() => value)`              |                                      |
+| `vi.mock('module', factory)` | `mock.module('module', factory)` | import より前に呼ぶ                  |
+| `vi.spyOn(obj, 'method')`    | `spyOn(obj, 'method')`           | `bun:test` からインポート            |
+| `vi.restoreAllMocks()`       | `mock.restore()`                 | モジュールモック復元                 |
+| `vi.clearAllMocks()`         | `mock.clearAllMocks()`           | 全モック状態をリセット（実装は保持） |
+| `vi.resetAllMocks()`         | `mockFn.mockReset()`             | 個別に呼ぶ                           |
+| `vi.resetModules()`          | 不要（`mock.restore()` で対応）  |                                      |
+| `vi.mocked(fn)`              | 型は `mock<T>()` で付与          |                                      |
+| `vi.importMock('module')`    | 未サポート                       | `mock.module()` を使う               |
 
 ### Symbol.dispose（`using` キーワードによる自動クリーンアップ）
 
 Bun の `mock()` と `spyOn()` は `Symbol.dispose` を実装しており、`using` キーワードで自動的に `mockRestore()` が呼ばれる。`afterEach` でのクリーンアップが不要になる:
 
 ```typescript
-import { test, expect, spyOn } from 'bun:test'
+import { test, expect, spyOn } from "bun:test";
 
 // OK: using キーワードでスコープ終了時に自動クリーンアップ
-test('console.error をスパイ（自動復元）', () => {
-  using spy = spyOn(console, 'error')  // スコープ終了時に mockRestore() が自動呼び出し
-  doSomething()
-  expect(spy).toHaveBeenCalledWith('expected error')
+test("console.error をスパイ（自動復元）", () => {
+  using spy = spyOn(console, "error"); // スコープ終了時に mockRestore() が自動呼び出し
+  doSomething();
+  expect(spy).toHaveBeenCalledWith("expected error");
   // ← ここで spy.mockRestore() が自動実行
-})
+});
 
 // OK: mock() でも同様
-test('関数を一時的にモック', () => {
-  using fn = mock(() => 'mocked')
-  expect(fn()).toBe('mocked')
-})
+test("関数を一時的にモック", () => {
+  using fn = mock(() => "mocked");
+  expect(fn()).toBe("mocked");
+});
 
 // 従来パターン（afterEach が必要 — 複数テストで共有するモックに使用）
-const spy = spyOn(console, 'error')
+const spy = spyOn(console, "error");
 afterEach(() => {
-  spy.mockRestore()
-})
+  spy.mockRestore();
+});
 ```
 
 **使い分け**: テストスコープに閉じるモックは `using` キーワード推奨。複数テストで共有・設定が必要なモックは従来パターン。
@@ -223,29 +241,29 @@ afterEach(() => {
 テストごとに環境変数を変更する場合は `beforeAll` / `afterAll` でオリジナルを保存・復元する。
 
 ```typescript
-import { describe, test, expect, beforeAll, afterAll } from 'bun:test'
+import { describe, test, expect, beforeAll, afterAll } from "bun:test";
 
-describe('crypto', () => {
-  const originalKey = process.env['ENCRYPTION_KEY']
-  const testKey = 'a'.repeat(64)  // 64文字の16進数
+describe("crypto", () => {
+  const originalKey = process.env["ENCRYPTION_KEY"];
+  const testKey = "a".repeat(64); // 64文字の16進数
 
   beforeAll(() => {
-    process.env['ENCRYPTION_KEY'] = testKey
-  })
+    process.env["ENCRYPTION_KEY"] = testKey;
+  });
 
   afterAll(() => {
     if (originalKey) {
-      process.env['ENCRYPTION_KEY'] = originalKey
+      process.env["ENCRYPTION_KEY"] = originalKey;
     } else {
-      delete process.env['ENCRYPTION_KEY']
+      delete process.env["ENCRYPTION_KEY"];
     }
-  })
+  });
 
-  test('暗号化できる', () => {
-    const encrypted = encrypt('secret')
-    expect(encrypted).toContain(':')
-  })
-})
+  test("暗号化できる", () => {
+    const encrypted = encrypt("secret");
+    expect(encrypted).toContain(":");
+  });
+});
 ```
 
 **注意**: `process.env['KEY']` でアクセス（ブラケット記法）。`__tests__/setup.ts` でグローバルに `NODE_ENV` 等を設定済み。
@@ -256,64 +274,68 @@ Server Actions の直接テスト（認証・Prisma・Next.js API 依存）は�
 `mock.module()` で依存モジュールを差し替え、アクション関数を直接呼び出す。
 
 ```typescript
-import { describe, test, expect, mock, beforeEach } from 'bun:test'
+import { describe, test, expect, mock, beforeEach } from "bun:test";
 
 // 1. モック関数を先に定義
-const mockGetSession = mock<() => Promise<MockSession | null>>()
-const mockFindUnique = mock<() => Promise<Record<string, unknown> | null>>(() => Promise.resolve(null))
-const mockCreate = mock<() => Promise<Record<string, unknown>>>()
+const mockGetSession = mock<() => Promise<MockSession | null>>();
+const mockFindUnique = mock<() => Promise<Record<string, unknown> | null>>(() =>
+  Promise.resolve(null),
+);
+const mockCreate = mock<() => Promise<Record<string, unknown>>>();
 
 // 2. 依存モジュールを差し替え（import より前）
-mock.module('@/shared/lib/auth', () => ({
+mock.module("@/shared/lib/auth", () => ({
   getSession: () => mockGetSession(),
-}))
-mock.module('@/shared/lib/prisma', () => ({
+}));
+mock.module("@/shared/lib/prisma", () => ({
   prisma: {
     post: {
       findUnique: mockFindUnique,
       create: mockCreate,
     },
   },
-}))
-mock.module('next/cache', () => ({
+}));
+mock.module("next/cache", () => ({
   revalidateTag: mock(() => {}),
   updateTag: mock(() => {}),
-}))
-mock.module('next/headers', () => ({
+}));
+mock.module("next/headers", () => ({
   headers: mock(() => new Headers()),
-}))
+}));
 
 // 3. テスト対象をインポート
-import { createPost } from '@/admin/actions/post'
-import { createMockSession } from '../../mocks/auth'
+import { createPost } from "@/admin/actions/post";
+import { createMockSession } from "../../mocks/auth";
 
-describe('createPost', () => {
+describe("createPost", () => {
   beforeEach(() => {
-    mockGetSession.mockReset()
-    mockCreate.mockReset()
-  })
+    mockGetSession.mockReset();
+    mockCreate.mockReset();
+  });
 
-  test('ADMIN は作成できる', async () => {
+  test("ADMIN は作成できる", async () => {
     // Arrange
-    mockGetSession.mockResolvedValueOnce(createMockSession({ role: Role.ADMIN }))
-    mockCreate.mockResolvedValueOnce({ id: 'new-post-id', title: 'テスト' })
+    mockGetSession.mockResolvedValueOnce(
+      createMockSession({ role: Role.ADMIN }),
+    );
+    mockCreate.mockResolvedValueOnce({ id: "new-post-id", title: "テスト" });
 
     // Act
-    const result = await createPost(VALID_INPUT)
+    const result = await createPost(VALID_INPUT);
 
     // Assert
-    expect(result.success).toBe(true)
-    expect(mockCreate).toHaveBeenCalledTimes(1)
-  })
+    expect(result.success).toBe(true);
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+  });
 
-  test('未認証はエラーを返す', async () => {
-    mockGetSession.mockResolvedValueOnce(null)
+  test("未認証はエラーを返す", async () => {
+    mockGetSession.mockResolvedValueOnce(null);
 
-    const result = await createPost(VALID_INPUT)
+    const result = await createPost(VALID_INPUT);
 
-    expect(result.success).toBe(false)
-  })
-})
+    expect(result.success).toBe(false);
+  });
+});
 ```
 
 > **詳細リファレンス（モック詳細実装・Bun ランタイム API）**: `docs/reference/claude-rules/bun-test-reference.md`
@@ -322,22 +344,22 @@ describe('createPost', () => {
 
 ## ファイル配置と命名規則
 
-| パス | 内容 | ファイル形式 |
-|------|------|------------|
-| `__tests__/unit/` | 単体テスト（純粋関数・ユーティリティ） | `*.test.ts` |
-| `__tests__/unit/lib/` | ライブラリ関数のテスト | `*.test.ts` |
-| `__tests__/unit/components/` | コンポーネントのテスト | `*.test.ts` |
-| `__tests__/unit/lib/validations/` | Zodスキーマバリデーションのテスト | `*.test.ts` |
-| `__tests__/integration/` | 統合テスト（Server Actions・API） | `*.test.ts` |
-| `__tests__/integration/actions/admin/` | 管理画面アクションの統合テスト | `*.test.ts` |
-| `__tests__/integration/api/` | API Route Handler の統合テスト | `*.test.ts` |
-| `__tests__/mocks/` | モック定義（共有） | `*.ts` |
-| `__tests__/mocks/index.ts` | バレルエクスポート | |
-| `__tests__/mocks/prisma.ts` | Prisma Client モック | |
-| `__tests__/mocks/auth.ts` | Better Auth モック | |
-| `__tests__/mocks/next.ts` | Next.js API モック | |
-| `__tests__/mocks/resend.ts` | Resend メールモック | |
-| `__tests__/setup.ts` | グローバルセットアップ（環境変数） | |
+| パス                                   | 内容                                   | ファイル形式 |
+| -------------------------------------- | -------------------------------------- | ------------ |
+| `__tests__/unit/`                      | 単体テスト（純粋関数・ユーティリティ） | `*.test.ts`  |
+| `__tests__/unit/lib/`                  | ライブラリ関数のテスト                 | `*.test.ts`  |
+| `__tests__/unit/components/`           | コンポーネントのテスト                 | `*.test.ts`  |
+| `__tests__/unit/lib/validations/`      | Zodスキーマバリデーションのテスト      | `*.test.ts`  |
+| `__tests__/integration/`               | 統合テスト（Server Actions・API）      | `*.test.ts`  |
+| `__tests__/integration/actions/admin/` | 管理画面アクションの統合テスト         | `*.test.ts`  |
+| `__tests__/integration/api/`           | API Route Handler の統合テスト         | `*.test.ts`  |
+| `__tests__/mocks/`                     | モック定義（共有）                     | `*.ts`       |
+| `__tests__/mocks/index.ts`             | バレルエクスポート                     |              |
+| `__tests__/mocks/prisma.ts`            | Prisma Client モック                   |              |
+| `__tests__/mocks/auth.ts`              | Better Auth モック                     |              |
+| `__tests__/mocks/next.ts`              | Next.js API モック                     |              |
+| `__tests__/mocks/resend.ts`            | Resend メールモック                    |              |
+| `__tests__/setup.ts`                   | グローバルセットアップ（環境変数）     |              |
 
 ### テストファイル命名
 
@@ -372,6 +394,29 @@ bun test __tests__/unit/lib/crypto.test.ts
 # パターンマッチ
 bun test --test-name-pattern "暗号化"
 ```
+
+## カバレッジ設定
+
+### bunfig.toml での閾値設定
+
+```toml
+[test]
+coverageThreshold = { line = 80, function = 80, statement = 80 }
+coverageReporter = ["lcov", "text"]
+```
+
+- `coverage/` ディレクトリは `.gitignore` に追加推奨（自動生成ファイル）
+- `text` レポーターはターミナルに直接出力（開発中の即時確認用）
+- `lcov.info` を CI で Codecov / Coveralls に送信可能
+
+### 実行例
+
+```bash
+bun run test:coverage                  # coverage/ に lcov.info + ターミナル出力
+bun run test:coverage __tests__/unit   # 特定ディレクトリのみ計測
+```
+
+---
 
 ## 禁止事項
 

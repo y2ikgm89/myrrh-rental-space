@@ -66,7 +66,7 @@
   - `verification` — type-check / lint / build の検証（Haiku 使用で高速）
   - `design-memory` — ブランドデザイン決定の記憶（UI実装時）
 - **MCP**: `serena`, `context7`, `playwright`, `github`（`.mcp.json`設定済、`github-mcp-server`バイナリ要`GITHUB_PERSONAL_ACCESS_TOKEN`環境変数）推奨。`WebSearch`, `WebFetch` 必要時
-- **ui-ux-pro-max**: `py .claude/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --domain <domain> --stack nextjs`
+- **ui-ux-pro-max**: `python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --domain <domain> --stack nextjs`
   - ドメイン: `product`, `style`, `typography`, `color`, `landing`, `chart`, `ux`
 - **ドキュメント更新**: `docs/plans/NNN-title.md` → `docs/plans/README.md` → `docs/requirements/`（必要時） → `docs/architecture/`（設計変更時）
 
