@@ -30,71 +30,92 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
 ### Always check (every review)
 
 **Type safety** (`.claude/rules/type-safety.md`):
+
 - **No `as` type assertions** (except DOM event targets, Prisma generated code, SectionConfig union widening with comment)
 - **`noUncheckedIndexedAccess` is enabled**: Array/Record index access returns `T | undefined`. Direct `.property` access without a guard (`if (!item) return`, `?.`, `?? default`) is a compile error.
 - **`keysOf(obj)`** instead of `Object.keys(obj) as T[]`
 
 **React patterns** (`.claude/rules/react-patterns.md`):
+
 - **No `forwardRef`** (React 19 — `ref` is a regular prop now)
 - **No `watch()` from React Hook Form** — must use `useWatch()` for React Compiler compatibility
 - **No manual `useCallback`/`useMemo`** unless external library requires reference identity
 - **No `useCallback` with `ref.current`** — causes React Compiler `react-hooks/preserve-manual-memoization` error; use plain function
 
 **Zod 4** (`.claude/rules/zod-patterns.md`):
+
 - **`{ error: 'msg' }` format** — not `{ message: 'msg' }` or bare string
 - **`z.enum(PrismaEnum)`** not `z.nativeEnum()` (deprecated in Zod 4)
 - **Enum defaults use constants** — `.default(DiscountType.none)` not `.default('none')`
 
 **Server Actions / Cache** (`.claude/rules/server-actions.md`):
+
 - **Auth check required** (`checkAdminAuth()` / `checkPermission()`) on every admin action
 - **Cache tags**: Always `CACHE_TAGS.*` constants, never magic strings
 - **`updateTag`** (Server Actions only, immediate invalidation) vs **`revalidateTag`** (Route Handlers / delayed) — do not confuse
 - **`safeFetch`** required for public data fetching — direct Prisma calls without error handling are banned in public actions
 
 **Prisma** (`.claude/rules/prisma-patterns.md`):
+
 - Use `select` to limit fields; no N+1 queries
 - `toPlainObject()` / `toPlainArray()` for React 19 serialization (strips Symbol properties)
 - Prisma enum constants not string literals (`DiscountType.none` not `'none'`)
 - Type guards from `enums.ts` only — no local `isValid*` definitions
 
 **Tailwind / colors** (`.claude/rules/tailwind-patterns.md`):
+
 - **No hardcoded color classes** (`gray-*`, `blue-*`, `red-*` etc.) — use semantic tokens (`text-foreground`, `bg-muted`, `border-border`, etc.)
 - OKLCH format only in CSS (`@theme` blocks)
 
 **nuqs** (`.claude/rules/nuqs-patterns.md`):
+
 - **`void setParams(...)`** — TypeScript no-floating-promises; nuqs setters return a Promise
 - **`NuqsAdapter`** must be present in the public layout (`(public)/layout.tsx`) for nuqs to work
 
 **Testing** (`.claude/rules/test-quality.md`):
+
 - **Bun tests only** — `import { describe, test, expect, mock } from 'bun:test'`
 - **No Vitest API** (`vi.fn()`, `vi.mock()`, `vi.spyOn()`, `vi.restoreAllMocks()`) — these do not exist in Bun Test
 
 ### Conditional checks (based on file path)
 
-**`src/app/(public*)/**`**:
+**`src/app/(public\*)/**`\*\*:
+
 - Anti-AI design rules: avoid generic gradients, floating blobs, glass cards
 - GSAP patterns: ScrollTrigger, Lenis, easing via `--ease-*` CSS variables
 - OKLCH colors only in `public.css`
 - `prefers-reduced-motion` fallbacks required for any animation
 - Section-based rendering via `SectionRenderer`
 
+**`src/app/(admin)/**`\*\* (管理画面全般):
+
+- ページヘッダー標準構造: `flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between`
+- サイドバーオーバーレイ: `bg-overlay` (not `bg-black/60`)
+- サイドバーナビホバー: `hover:bg-sidebar-nav-hover` (not `hover:bg-white/5`)
+- ページネーション: `<nav aria-label="...">` not bare `<div>`, `void setPage()` for Promise
+- 型 re-export 禁止: `@/admin/types/server-actions` から直接使用
+
 **`src/app/(admin)/**/lexical/**`**:
+
 - Lexical 0.40 patterns
 - Node properties must be JSON-serializable
 - `mergeRegister` imported from `lexical` (moved from `@lexical/utils` in 0.40)
 - No top-level Lexical imports in Server Actions — use `lazy-renderer.ts` dynamic import
 
-**`src/app/(public*)/**/seo/**` or `**/layouts/**`**:
+**`src/app/(public\*)/**/seo/**`or`**/layouts/**`**:
+
 - SEO/NAP consistency (no hardcoded business info — always from DB)
 - JSON-LD `@graph` pattern in `layout.tsx` only (no duplication in individual pages)
 - `LocalBusiness` + `WebSite` in single `<script>` tag via `GraphJsonLd`
 
-**`__tests__/**`**:
+**`**tests**/**`\*\*:
+
 - Bun Test API only (`import from 'bun:test'`)
 - No Vitest (`vi.*` is banned)
 - `mock()` not `vi.fn()`, `mock.module()` not `vi.mock()`, `spyOn()` not `vi.spyOn()`
 
 **`Dockerfile`, `cloudbuild.yaml`, `.dockerignore`, `.gcloudignore`**:
+
 - See deployment checks below
 
 ### Accessibility checks
@@ -139,6 +160,7 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
 ## Memory management
 
 Update your agent memory when you discover:
+
 - Recurring violation patterns specific to this project
 - Files or modules that frequently have issues
 - Edge cases in rule interpretation

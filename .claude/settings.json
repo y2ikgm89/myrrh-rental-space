@@ -22,6 +22,11 @@
             "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/prettier-format.sh",
             "statusMessage": "Formatting...",
             "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/schema-change-guard.sh",
+            "statusMessage": "Checking schema changes..."
           }
         ]
       }

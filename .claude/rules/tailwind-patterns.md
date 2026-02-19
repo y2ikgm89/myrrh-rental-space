@@ -56,7 +56,7 @@ Tailwind CSS 4 は `tailwind.config.js` を使わず、CSS ファイル内の `@
 
 @theme {
   /* カラー（OKLCH形式必須） */
-  --color-primary: oklch(0.55 0.20 260);
+  --color-primary: oklch(0.55 0.2 260);
   --color-primary-foreground: oklch(1 0 0);
 
   /* フォント */
@@ -78,7 +78,7 @@ Tailwind CSS 4 は `tailwind.config.js` を使わず、CSS ファイル内の `@
 
 ```css
 /* OK: OKLCH */
---color-primary: oklch(0.55 0.20 260);
+--color-primary: oklch(0.55 0.2 260);
 --color-background: oklch(0.995 0.002 250);
 
 /* NG: HSL */
@@ -89,6 +89,7 @@ Tailwind CSS 4 は `tailwind.config.js` を使わず、CSS ファイル内の `@
 ```
 
 OKLCH の利点:
+
 - 知覚的に均一な色空間（同じ chroma 値で明度変化が自然）
 - 色相回転が数値的に予測可能
 - P3 広色域対応
@@ -102,8 +103,12 @@ OKLCH の利点:
   --animate-fade-in: fade-in 0.3s ease-out;
 
   @keyframes fade-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
 }
 ```
@@ -120,98 +125,100 @@ OKLCH の利点:
 
 実際に定義されているトークン一覧:
 
-| カテゴリ | トークン | 値 | Tailwind クラス |
-|---------|---------|-----|----------------|
-| Core | `--color-background` | `oklch(0.98 0.005 250)` | `bg-background` |
-| Core | `--color-foreground` | `oklch(0.20 0.02 260)` | `text-foreground` |
-| Card | `--color-card` | `oklch(1 0 0)` | `bg-card` |
-| Card | `--color-card-foreground` | `oklch(0.20 0.02 260)` | `text-card-foreground` |
-| Popover | `--color-popover` | `oklch(1 0 0)` | `bg-popover` |
-| Popover | `--color-popover-foreground` | `oklch(0.20 0.02 260)` | `text-popover-foreground` |
-| Primary | `--color-primary` | `oklch(0.55 0.20 260)` Trust Blue | `bg-primary` / `text-primary` |
-| Primary | `--color-primary-foreground` | `oklch(1 0 0)` | `text-primary-foreground` |
-| Secondary | `--color-secondary` | `oklch(0.95 0.01 250)` | `bg-secondary` |
-| Secondary | `--color-secondary-foreground` | `oklch(0.25 0.02 260)` | `text-secondary-foreground` |
-| Muted | `--color-muted` | `oklch(0.95 0.01 250)` | `bg-muted` |
-| Muted | `--color-muted-foreground` | `oklch(0.55 0.02 250)` | `text-muted-foreground` |
-| Accent | `--color-accent` | `oklch(0.95 0.05 260)` | `bg-accent` |
-| Accent | `--color-accent-foreground` | `oklch(0.45 0.15 260)` | `text-accent-foreground` |
-| Semantic | `--color-destructive` | `oklch(0.55 0.22 25)` | `bg-destructive` / `text-destructive` |
-| Semantic | `--color-destructive-foreground` | `oklch(1 0 0)` | `text-destructive-foreground` |
-| Semantic | `--color-success` | `oklch(0.60 0.18 145)` | `bg-success` / `text-success` |
-| Semantic | `--color-success-foreground` | `oklch(1 0 0)` | `text-success-foreground` |
-| Semantic | `--color-warning` | `oklch(0.75 0.18 85)` | `bg-warning` / `text-warning` |
-| Semantic | `--color-warning-foreground` | `oklch(0.20 0.02 85)` | `text-warning-foreground` |
-| Semantic | `--color-info` | `oklch(0.55 0.20 260)` | `bg-info` / `text-info` |
-| Semantic | `--color-info-foreground` | `oklch(1 0 0)` | `text-info-foreground` |
-| Sidebar | `--color-sidebar-bg` | `oklch(0.18 0.03 260)` ダーク | `bg-sidebar-bg` |
-| Sidebar | `--color-sidebar-border` | `oklch(0.25 0.02 260)` | `border-sidebar-border` |
-| Sidebar | `--color-sidebar-text` | `oklch(0.92 0.01 260)` | `text-sidebar-text` |
-| Sidebar | `--color-sidebar-text-muted` | `oklch(0.70 0.02 260)` | `text-sidebar-text-muted` |
-| Sidebar | `--color-sidebar-accent` | `oklch(0.55 0.20 260)` | `bg-sidebar-accent` |
-| Border | `--color-border` | `oklch(0.90 0.01 250)` | `border-border` |
-| Border | `--color-input` | `oklch(0.90 0.01 250)` | `border-input` |
-| Border | `--color-ring` | `oklch(0.55 0.20 260)` | `ring-ring` |
+| カテゴリ  | トークン                         | 値                                | Tailwind クラス                       |
+| --------- | -------------------------------- | --------------------------------- | ------------------------------------- |
+| Core      | `--color-background`             | `oklch(0.98 0.005 250)`           | `bg-background`                       |
+| Core      | `--color-foreground`             | `oklch(0.20 0.02 260)`            | `text-foreground`                     |
+| Card      | `--color-card`                   | `oklch(1 0 0)`                    | `bg-card`                             |
+| Card      | `--color-card-foreground`        | `oklch(0.20 0.02 260)`            | `text-card-foreground`                |
+| Popover   | `--color-popover`                | `oklch(1 0 0)`                    | `bg-popover`                          |
+| Popover   | `--color-popover-foreground`     | `oklch(0.20 0.02 260)`            | `text-popover-foreground`             |
+| Primary   | `--color-primary`                | `oklch(0.55 0.20 260)` Trust Blue | `bg-primary` / `text-primary`         |
+| Primary   | `--color-primary-foreground`     | `oklch(1 0 0)`                    | `text-primary-foreground`             |
+| Secondary | `--color-secondary`              | `oklch(0.95 0.01 250)`            | `bg-secondary`                        |
+| Secondary | `--color-secondary-foreground`   | `oklch(0.25 0.02 260)`            | `text-secondary-foreground`           |
+| Muted     | `--color-muted`                  | `oklch(0.95 0.01 250)`            | `bg-muted`                            |
+| Muted     | `--color-muted-foreground`       | `oklch(0.55 0.02 250)`            | `text-muted-foreground`               |
+| Accent    | `--color-accent`                 | `oklch(0.95 0.05 260)`            | `bg-accent`                           |
+| Accent    | `--color-accent-foreground`      | `oklch(0.45 0.15 260)`            | `text-accent-foreground`              |
+| Semantic  | `--color-destructive`            | `oklch(0.55 0.22 25)`             | `bg-destructive` / `text-destructive` |
+| Semantic  | `--color-destructive-foreground` | `oklch(1 0 0)`                    | `text-destructive-foreground`         |
+| Semantic  | `--color-success`                | `oklch(0.60 0.18 145)`            | `bg-success` / `text-success`         |
+| Semantic  | `--color-success-foreground`     | `oklch(1 0 0)`                    | `text-success-foreground`             |
+| Semantic  | `--color-warning`                | `oklch(0.75 0.18 85)`             | `bg-warning` / `text-warning`         |
+| Semantic  | `--color-warning-foreground`     | `oklch(0.20 0.02 85)`             | `text-warning-foreground`             |
+| Semantic  | `--color-info`                   | `oklch(0.55 0.20 260)`            | `bg-info` / `text-info`               |
+| Semantic  | `--color-info-foreground`        | `oklch(1 0 0)`                    | `text-info-foreground`                |
+| Sidebar   | `--color-sidebar-bg`             | `oklch(0.18 0.03 260)` ダーク     | `bg-sidebar-bg`                       |
+| Sidebar   | `--color-sidebar-border`         | `oklch(0.25 0.02 260)`            | `border-sidebar-border`               |
+| Sidebar   | `--color-sidebar-text`           | `oklch(0.92 0.01 260)`            | `text-sidebar-text`                   |
+| Sidebar   | `--color-sidebar-text-muted`     | `oklch(0.70 0.02 260)`            | `text-sidebar-text-muted`             |
+| Sidebar   | `--color-sidebar-accent`         | `oklch(0.55 0.20 260)`            | `bg-sidebar-accent`                   |
+| Sidebar   | `--color-sidebar-nav-hover`      | `oklch(1 0 0 / 0.05)` ホバー背景  | `hover:bg-sidebar-nav-hover`          |
+| Overlay   | `--color-overlay`                | `oklch(0 0 0 / 0.6)` モーダル背景 | `bg-overlay`                          |
+| Border    | `--color-border`                 | `oklch(0.90 0.01 250)`            | `border-border`                       |
+| Border    | `--color-input`                  | `oklch(0.90 0.01 250)`            | `border-input`                        |
+| Border    | `--color-ring`                   | `oklch(0.55 0.20 260)`            | `ring-ring`                           |
 
 **ハードコードカラー vs セマンティックトークン（管理画面）**:
 
-| 禁止 | 代替 |
-|------|------|
-| `text-gray-900` | `text-foreground` |
-| `text-gray-600` | `text-muted-foreground` |
-| `bg-gray-100` | `bg-muted` |
-| `bg-gray-50` | `bg-muted/50` |
-| `bg-white` | `bg-card` または `bg-background` |
-| `border-gray-200` | `border-border` |
-| `hover:bg-gray-100` | `hover:bg-accent` |
-| `ring-blue-500` | `ring-ring` |
-| `text-green-600` | `text-success` |
-| `bg-green-500` | `bg-success` |
-| `text-red-600` | `text-destructive` |
-| `bg-red-500` | `bg-destructive` |
-| `text-yellow-600` | `text-warning` |
-| `bg-blue-600` | `bg-primary` |
-| `text-blue-600` | `text-primary` |
+| 禁止                | 代替                             |
+| ------------------- | -------------------------------- |
+| `text-gray-900`     | `text-foreground`                |
+| `text-gray-600`     | `text-muted-foreground`          |
+| `bg-gray-100`       | `bg-muted`                       |
+| `bg-gray-50`        | `bg-muted/50`                    |
+| `bg-white`          | `bg-card` または `bg-background` |
+| `border-gray-200`   | `border-border`                  |
+| `hover:bg-gray-100` | `hover:bg-accent`                |
+| `ring-blue-500`     | `ring-ring`                      |
+| `text-green-600`    | `text-success`                   |
+| `bg-green-500`      | `bg-success`                     |
+| `text-red-600`      | `text-destructive`               |
+| `bg-red-500`        | `bg-destructive`                 |
+| `text-yellow-600`   | `text-warning`                   |
+| `bg-blue-600`       | `bg-primary`                     |
+| `text-blue-600`     | `text-primary`                   |
 
 ### 公開ページ（public.css） — Champagne Gold + White テーマ
 
 実際に定義されているトークン一覧:
 
-| カテゴリ | トークン | 値 | Tailwind クラス |
-|---------|---------|-----|----------------|
-| Brand | `--color-brand-primary` | `oklch(0.75 0.06 65)` Champagne Gold | `bg-brand-primary` / `text-brand-primary` |
-| Brand | `--color-brand-secondary` | `oklch(0.55 0.08 65)` Darker Gold | `text-brand-secondary` |
-| Core | `--color-background` | `oklch(0.995 0.002 250)` Pure White | `bg-background` |
-| Core | `--color-foreground` | `oklch(0.15 0.01 250)` | `text-foreground` |
-| Card | `--color-card` | `oklch(1 0 0)` | `bg-card` |
-| Card | `--color-card-foreground` | `oklch(0.15 0.01 250)` | `text-card-foreground` |
-| Surface | `--color-surface` | `oklch(0.97 0.003 250)` | `bg-surface` |
-| Primary | `--color-primary` | `var(--color-brand-primary)` | `bg-primary` / `text-primary` |
-| Primary | `--color-primary-dark` | `oklch(0.55 0.08 65)` | `text-primary-dark` |
-| Primary | `--color-primary-foreground` | `oklch(0.15 0.01 250)` | `text-primary-foreground` |
-| Secondary | `--color-secondary` | `oklch(0.96 0.005 250)` | `bg-secondary` |
-| Secondary | `--color-secondary-foreground` | `oklch(0.25 0.02 250)` | `text-secondary-foreground` |
-| Muted | `--color-muted` | `oklch(0.96 0.005 250)` | `bg-muted` |
-| Muted | `--color-muted-foreground` | `oklch(0.45 0.01 250)` | `text-muted-foreground` |
-| Accent | `--color-accent` | `oklch(0.96 0.01 65)` | `bg-accent` |
-| Accent | `--color-accent-foreground` | `oklch(0.35 0.05 65)` | `text-accent-foreground` |
-| Semantic | `--color-destructive` | `oklch(0.55 0.22 25)` | `bg-destructive` / `text-destructive` |
-| Semantic | `--color-success` | `oklch(0.60 0.18 145)` | `bg-success` / `text-success` |
-| Semantic | `--color-warning` | `oklch(0.75 0.18 85)` | `bg-warning` / `text-warning` |
-| Semantic | `--color-info` | `oklch(0.55 0.18 260)` | `bg-info` / `text-info` |
-| Semantic | `--color-rating` | `oklch(0.82 0.17 90)` | `text-rating` — 星評価用 |
-| Border | `--color-border` | `oklch(0.90 0.005 250)` | `border-border` |
-| Border | `--color-input` | `oklch(0.90 0.005 250)` | `border-input` |
-| Border | `--color-ring` | `var(--color-primary-dark)` | `ring-ring` |
-| Font | `--font-sans` | Noto Sans JP | `font-sans` |
-| Font | `--font-serif` | Noto Serif JP | `font-serif` / `font-heading`（後述） |
+| カテゴリ  | トークン                       | 値                                   | Tailwind クラス                           |
+| --------- | ------------------------------ | ------------------------------------ | ----------------------------------------- |
+| Brand     | `--color-brand-primary`        | `oklch(0.75 0.06 65)` Champagne Gold | `bg-brand-primary` / `text-brand-primary` |
+| Brand     | `--color-brand-secondary`      | `oklch(0.55 0.08 65)` Darker Gold    | `text-brand-secondary`                    |
+| Core      | `--color-background`           | `oklch(0.995 0.002 250)` Pure White  | `bg-background`                           |
+| Core      | `--color-foreground`           | `oklch(0.15 0.01 250)`               | `text-foreground`                         |
+| Card      | `--color-card`                 | `oklch(1 0 0)`                       | `bg-card`                                 |
+| Card      | `--color-card-foreground`      | `oklch(0.15 0.01 250)`               | `text-card-foreground`                    |
+| Surface   | `--color-surface`              | `oklch(0.97 0.003 250)`              | `bg-surface`                              |
+| Primary   | `--color-primary`              | `var(--color-brand-primary)`         | `bg-primary` / `text-primary`             |
+| Primary   | `--color-primary-dark`         | `oklch(0.55 0.08 65)`                | `text-primary-dark`                       |
+| Primary   | `--color-primary-foreground`   | `oklch(0.15 0.01 250)`               | `text-primary-foreground`                 |
+| Secondary | `--color-secondary`            | `oklch(0.96 0.005 250)`              | `bg-secondary`                            |
+| Secondary | `--color-secondary-foreground` | `oklch(0.25 0.02 250)`               | `text-secondary-foreground`               |
+| Muted     | `--color-muted`                | `oklch(0.96 0.005 250)`              | `bg-muted`                                |
+| Muted     | `--color-muted-foreground`     | `oklch(0.45 0.01 250)`               | `text-muted-foreground`                   |
+| Accent    | `--color-accent`               | `oklch(0.96 0.01 65)`                | `bg-accent`                               |
+| Accent    | `--color-accent-foreground`    | `oklch(0.35 0.05 65)`                | `text-accent-foreground`                  |
+| Semantic  | `--color-destructive`          | `oklch(0.55 0.22 25)`                | `bg-destructive` / `text-destructive`     |
+| Semantic  | `--color-success`              | `oklch(0.60 0.18 145)`               | `bg-success` / `text-success`             |
+| Semantic  | `--color-warning`              | `oklch(0.75 0.18 85)`                | `bg-warning` / `text-warning`             |
+| Semantic  | `--color-info`                 | `oklch(0.55 0.18 260)`               | `bg-info` / `text-info`                   |
+| Semantic  | `--color-rating`               | `oklch(0.82 0.17 90)`                | `text-rating` — 星評価用                  |
+| Border    | `--color-border`               | `oklch(0.90 0.005 250)`              | `border-border`                           |
+| Border    | `--color-input`                | `oklch(0.90 0.005 250)`              | `border-input`                            |
+| Border    | `--color-ring`                 | `var(--color-primary-dark)`          | `ring-ring`                               |
+| Font      | `--font-sans`                  | Noto Sans JP                         | `font-sans`                               |
+| Font      | `--font-serif`                 | Noto Serif JP                        | `font-serif` / `font-heading`（後述）     |
 
 **公開ページ固有のユーティリティクラス**（`@layer utilities` に定義）:
 
-| クラス | 用途 |
-|-------|------|
+| クラス          | 用途                                             |
+| --------------- | ------------------------------------------------ |
 | `.font-heading` | `font-family: var(--font-serif)` — Noto Serif JP |
-| `.gold-line` | セクションラベル装飾（ゴールドライン付き）|
+| `.gold-line`    | セクションラベル装飾（ゴールドライン付き）       |
 
 ---
 
@@ -222,7 +229,9 @@ OKLCH の利点:
 ```css
 @layer base {
   /* リセット、基本スタイル、CSS 変数のランタイム設定 */
-  * { border-color: var(--color-border); }
+  * {
+    border-color: var(--color-border);
+  }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
@@ -237,8 +246,12 @@ OKLCH の利点:
 
 @layer utilities {
   /* ユーティリティクラスの拡張（@theme で表現できない CSS のみ） */
-  .font-heading { font-family: var(--font-serif); }
-  .gold-line { /* ... */ }
+  .font-heading {
+    font-family: var(--font-serif);
+  }
+  .gold-line {
+    /* ... */
+  }
 }
 ```
 
@@ -252,13 +265,23 @@ OKLCH の利点:
   --animate-slide-up: slide-up 0.4s var(--ease-out-expo);
 
   @keyframes fade-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
 
   @keyframes slide-up {
-    from { opacity: 0; transform: translateY(1rem); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(1rem);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }
 ```
@@ -269,14 +292,15 @@ OKLCH の利点:
 
 admin.css / public.css の両方で統一:
 
-| トークン | 値 | Tailwind クラス |
-|---------|-----|----------------|
-| `--radius-sm` | `0.25rem` | `rounded-sm` |
-| `--radius-md` | `0.375rem` | `rounded-md` |
-| `--radius-lg` | `0.5rem` | `rounded-lg` |
-| `--radius-xl` | `0.75rem` | `rounded-xl` |
+| トークン      | 値         | Tailwind クラス |
+| ------------- | ---------- | --------------- |
+| `--radius-sm` | `0.25rem`  | `rounded-sm`    |
+| `--radius-md` | `0.375rem` | `rounded-md`    |
+| `--radius-lg` | `0.5rem`   | `rounded-lg`    |
+| `--radius-xl` | `0.75rem`  | `rounded-xl`    |
 
 コンポーネント別 border-radius 方針（→ `project-design-config.md` §セクション設計）:
+
 - コンテナ / 画像: `rounded-lg`
 - CTA ボタン: `rounded-full`
 - セクション境界: sharp（rounded なし）
