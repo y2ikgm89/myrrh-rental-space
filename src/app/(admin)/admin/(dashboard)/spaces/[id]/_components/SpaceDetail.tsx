@@ -1,9 +1,9 @@
-'use client'
+"use client";
 
-import Image from 'next/image'
-import { useRouter } from 'next/navigation'
-import { useState, useTransition, useEffect } from 'react'
-import { toast } from 'sonner'
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useState, useTransition, useEffect } from "react";
+import { toast } from "sonner";
 import {
   Card,
   CardContent,
@@ -12,76 +12,80 @@ import {
   Button,
   Badge,
   Switch,
-} from '@/admin/components/ui'
-import { DeleteConfirmDialog } from '@/admin/components/DeleteConfirmDialog'
-import { updateSpacePublish, deleteSpace } from '@/admin/actions/space'
-import type { SpaceWithStats } from '@/admin/lib/validations/space'
-import { formatDateTimeShort, formatCurrency } from '@/shared/lib/utils'
+} from "@/admin/components/ui";
+import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
+import { updateSpacePublish, deleteSpace } from "@/admin/actions/space";
+import type { SpaceWithStats } from "@/admin/lib/validations/space";
+import { formatDateTimeShort, formatCurrency } from "@/shared/lib/utils";
 
 type SpaceDetailProps = {
-  space: SpaceWithStats
-}
+  space: SpaceWithStats;
+};
 
 export function SpaceDetail({ space }: SpaceDetailProps) {
-  const router = useRouter()
-  const [isPending, startTransition] = useTransition()
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   // 画像モーダル用のstate
-  const allImages = [space.mainImageUrl, ...space.imageUrls]
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [selectedIndex, setSelectedIndex] = useState(0)
+  const allImages = [space.mainImageUrl, ...space.imageUrls];
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(0);
 
   const openModal = (index: number) => {
-    setSelectedIndex(index)
-    setIsModalOpen(true)
-  }
+    setSelectedIndex(index);
+    setIsModalOpen(true);
+  };
 
   const handlePrev = () => {
-    setSelectedIndex((prev) => (prev === 0 ? allImages.length - 1 : prev - 1))
-  }
+    setSelectedIndex((prev) => (prev === 0 ? allImages.length - 1 : prev - 1));
+  };
 
   const handleNext = () => {
-    setSelectedIndex((prev) => (prev === allImages.length - 1 ? 0 : prev + 1))
-  }
+    setSelectedIndex((prev) => (prev === allImages.length - 1 ? 0 : prev + 1));
+  };
 
   useEffect(() => {
-    if (!isModalOpen) return
+    if (!isModalOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsModalOpen(false)
-      else if (e.key === 'ArrowLeft') {
-        setSelectedIndex((prev) => (prev === 0 ? allImages.length - 1 : prev - 1))
-      } else if (e.key === 'ArrowRight') {
-        setSelectedIndex((prev) => (prev === allImages.length - 1 ? 0 : prev + 1))
+      if (e.key === "Escape") setIsModalOpen(false);
+      else if (e.key === "ArrowLeft") {
+        setSelectedIndex((prev) =>
+          prev === 0 ? allImages.length - 1 : prev - 1,
+        );
+      } else if (e.key === "ArrowRight") {
+        setSelectedIndex((prev) =>
+          prev === allImages.length - 1 ? 0 : prev + 1,
+        );
       }
-    }
+    };
 
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isModalOpen, allImages.length])
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isModalOpen, allImages.length]);
 
   const handlePublishChange = async (checked: boolean) => {
     startTransition(async () => {
-      const result = await updateSpacePublish(space.id, checked)
+      const result = await updateSpacePublish(space.id, checked);
       if (result.success) {
-        router.refresh()
+        router.refresh();
       } else {
-        toast.error(result.error || 'エラーが発生しました')
+        toast.error(result.error || "エラーが発生しました");
       }
-    })
-  }
+    });
+  };
 
   const handleDelete = async () => {
     startTransition(async () => {
-      const result = await deleteSpace(space.id)
+      const result = await deleteSpace(space.id);
       if (result.success) {
-        router.push('/admin/spaces')
+        router.push("/admin/spaces");
       } else {
-        toast.error(result.error || 'エラーが発生しました')
+        toast.error(result.error || "エラーが発生しました");
       }
-    })
-  }
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -99,12 +103,12 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
             />
             <div>
               <p className="font-medium">
-                {space.isPublished ? '公開中' : '非公開'}
+                {space.isPublished ? "公開中" : "非公開"}
               </p>
               <p className="text-sm text-muted-foreground">
                 {space.isPublished
-                  ? 'このスペースは公開ページに表示されています'
-                  : 'このスペースは公開ページに表示されていません'}
+                  ? "このスペースは公開ページに表示されています"
+                  : "このスペースは公開ページに表示されていません"}
               </p>
             </div>
           </div>
@@ -214,7 +218,9 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
             {/* 追加画像 */}
             {space.imageUrls.map((url: string, index: number) => (
               <div key={index} className="flex flex-col gap-1">
-                <span className="text-xs text-muted-foreground">追加{index + 1}</span>
+                <span className="text-xs text-muted-foreground">
+                  追加{index + 1}
+                </span>
                 <button
                   type="button"
                   onClick={() => openModal(index + 1)}
@@ -237,7 +243,7 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
       {/* 画像モーダル */}
       {isModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4"
           onClick={() => setIsModalOpen(false)}
         >
           {/* 閉じるボタン */}
@@ -246,8 +252,18 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
             className="absolute top-4 right-4 text-primary-foreground hover:text-primary-foreground/70 transition-colors"
             onClick={() => setIsModalOpen(false)}
           >
-            <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+            <svg
+              className="h-8 w-8"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M6 18 18 6M6 6l12 12"
+              />
             </svg>
           </button>
 
@@ -256,10 +272,23 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
             <button
               type="button"
               className="absolute left-4 top-1/2 -translate-y-1/2 text-primary-foreground hover:text-primary-foreground/70 transition-colors p-2"
-              onClick={(e) => { e.stopPropagation(); handlePrev() }}
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePrev();
+              }}
             >
-              <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+              <svg
+                className="h-8 w-8"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M15.75 19.5 8.25 12l7.5-7.5"
+                />
               </svg>
             </button>
           )}
@@ -281,10 +310,23 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
             <button
               type="button"
               className="absolute right-4 top-1/2 -translate-y-1/2 text-primary-foreground hover:text-primary-foreground/70 transition-colors p-2"
-              onClick={(e) => { e.stopPropagation(); handleNext() }}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleNext();
+              }}
             >
-              <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+              <svg
+                className="h-8 w-8"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="m8.25 4.5 7.5 7.5-7.5 7.5"
+                />
               </svg>
             </button>
           )}
@@ -369,5 +411,5 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

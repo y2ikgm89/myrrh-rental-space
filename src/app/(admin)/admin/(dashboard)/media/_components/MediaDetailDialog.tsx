@@ -1,85 +1,95 @@
-'use client'
+"use client";
 
 /**
  * メディア詳細ダイアログ
  */
 
-import { useState, useTransition, useRef } from 'react'
-import { X, Copy, ExternalLink, Trash2, Save, Loader2, FileText, Film, File } from 'lucide-react'
-import { toast } from 'sonner'
-import { useRouter } from 'next/navigation'
-import { useConfirm } from '@/admin/contexts/confirm-context'
-import { updateMedia, deleteMedia } from '@/admin/actions/media'
-import type { MediaData } from '@/admin/types/media-picker'
-import { formatDate } from '@/shared/lib/utils'
-import { formatBytes } from '@/admin/lib/utils'
-import { Button } from '@/admin/components/ui'
-import { USAGE_OPTIONS } from './constants'
-import { isValidMediaUsage } from '@/admin/lib/validations/media'
+import { useState, useTransition, useRef } from "react";
+import {
+  X,
+  Copy,
+  ExternalLink,
+  Trash2,
+  Save,
+  Loader2,
+  FileText,
+  Film,
+  File,
+} from "lucide-react";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { useConfirm } from "@/admin/contexts/confirm-context";
+import { updateMedia, deleteMedia } from "@/admin/actions/media";
+import type { MediaData } from "@/admin/types/media-picker";
+import { formatDate } from "@/shared/lib/utils";
+import { formatBytes } from "@/admin/lib/utils";
+import { Button } from "@/admin/components/ui";
+import { USAGE_OPTIONS } from "./constants";
+import { isValidMediaUsage } from "@/admin/lib/validations/media";
 
 type Props = {
-  item: MediaData | null
-  onClose: () => void
-}
+  item: MediaData | null;
+  onClose: () => void;
+};
 
 type FormState = {
-  alt: string
-  title: string
-  description: string
-  usage: string
-}
+  alt: string;
+  title: string;
+  description: string;
+  usage: string;
+};
 
 function getInitialFormState(item: MediaData | null): FormState {
   return {
-    alt: item?.alt || '',
-    title: item?.title || '',
-    description: item?.description || '',
-    usage: item?.usage || 'GENERAL',
-  }
+    alt: item?.alt || "",
+    title: item?.title || "",
+    description: item?.description || "",
+    usage: item?.usage || "GENERAL",
+  };
 }
 
 export function MediaDetailDialog({ item, onClose }: Props) {
-  const router = useRouter()
-  const confirmDialog = useConfirm()
-  const [isPending, startTransition] = useTransition()
-  const [hasChanges, setHasChanges] = useState(false)
+  const router = useRouter();
+  const confirmDialog = useConfirm();
+  const [isPending, startTransition] = useTransition();
+  const [hasChanges, setHasChanges] = useState(false);
 
   // Track which item the form state is for
-  const lastItemIdRef = useRef<string | null>(null)
-  const currentItemId = item?.id ?? null
+  const lastItemIdRef = useRef<string | null>(null);
+  const currentItemId = item?.id ?? null;
 
   // Reset form state when item changes
-  const initialFormState = getInitialFormState(item)
+  const initialFormState = getInitialFormState(item);
 
-  const [formData, setFormData] = useState<FormState>(initialFormState)
+  const [formData, setFormData] = useState<FormState>(initialFormState);
 
   // Sync form state when item changes (without useEffect)
   if (currentItemId !== lastItemIdRef.current) {
-    lastItemIdRef.current = currentItemId
+    lastItemIdRef.current = currentItemId;
     // This will be batched with the render, not cause a cascading render
     if (formData !== initialFormState) {
-      setFormData(initialFormState)
-      setHasChanges(false)
+      setFormData(initialFormState);
+      setHasChanges(false);
     }
   }
 
-  if (!item) return null
+  if (!item) return null;
 
   const handleChange = (field: keyof FormState, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-    setHasChanges(true)
-  }
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    setHasChanges(true);
+  };
 
   const handleCopyUrl = async () => {
-    await navigator.clipboard.writeText(item.url)
-    toast.success('URLをコピーしました')
-  }
+    await navigator.clipboard.writeText(item.url);
+    toast.success("URLをコピーしました");
+  };
 
   const handleSave = () => {
-    const usage = formData.usage
+    const usage = formData.usage;
     if (!isValidMediaUsage(usage)) {
-      toast.error('無効な用途が選択されています')
-      return
+      toast.error("無効な用途が選択されています");
+      return;
     }
 
     startTransition(async () => {
@@ -88,41 +98,41 @@ export function MediaDetailDialog({ item, onClose }: Props) {
         title: formData.title || undefined,
         description: formData.description || undefined,
         usage,
-      })
+      });
 
       if (result.success) {
-        toast.success(result.message)
-        setHasChanges(false)
-        router.refresh()
+        toast.success(result.message);
+        setHasChanges(false);
+        router.refresh();
       } else {
-        toast.error(result.error)
+        toast.error(result.error);
       }
-    })
-  }
+    });
+  };
 
   const handleDelete = async () => {
     const confirmed = await confirmDialog({
-      title: 'メディアを削除しますか？',
+      title: "メディアを削除しますか？",
       description: `「${item.filename}」を削除します。この操作は元に戻せません。`,
-      confirmLabel: '削除',
-      variant: 'destructive',
-    })
-    if (!confirmed) return
+      confirmLabel: "削除",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
 
     startTransition(async () => {
-      const result = await deleteMedia(item.id)
+      const result = await deleteMedia(item.id);
       if (result.success) {
-        toast.success(result.message)
-        onClose()
-        router.refresh()
+        toast.success(result.message);
+        onClose();
+        router.refresh();
       } else {
-        toast.error(result.error)
+        toast.error(result.error);
       }
-    })
-  }
+    });
+  };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4">
       <div
         className="bg-background rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
@@ -170,12 +180,21 @@ export function MediaDetailDialog({ item, onClose }: Props) {
             <div className="space-y-4">
               {/* File Info */}
               <div className="space-y-2 text-sm">
-                <InfoRow label="ファイルサイズ" value={formatBytes(item.size)} />
+                <InfoRow
+                  label="ファイルサイズ"
+                  value={formatBytes(item.size)}
+                />
                 <InfoRow label="種別" value={item.mimeType} />
                 {item.width && item.height && (
-                  <InfoRow label="サイズ" value={`${item.width} x ${item.height} px`} />
+                  <InfoRow
+                    label="サイズ"
+                    value={`${item.width} x ${item.height} px`}
+                  />
                 )}
-                <InfoRow label="アップロード" value={formatDate(item.createdAt)} />
+                <InfoRow
+                  label="アップロード"
+                  value={formatDate(item.createdAt)}
+                />
                 <InfoRow label="アップロード者" value={item.uploader.name} />
               </div>
 
@@ -188,7 +207,7 @@ export function MediaDetailDialog({ item, onClose }: Props) {
                   <label className="text-sm font-medium block mb-1">用途</label>
                   <select
                     value={formData.usage}
-                    onChange={(e) => handleChange('usage', e.target.value)}
+                    onChange={(e) => handleChange("usage", e.target.value)}
                     className="w-full h-9 rounded-md border bg-background px-3 text-sm"
                   >
                     {USAGE_OPTIONS.map((opt) => (
@@ -200,7 +219,7 @@ export function MediaDetailDialog({ item, onClose }: Props) {
                 </div>
 
                 {/* Alt */}
-                {item.type === 'IMAGE' && (
+                {item.type === "IMAGE" && (
                   <div>
                     <label className="text-sm font-medium block mb-1">
                       代替テキスト（alt）
@@ -208,7 +227,7 @@ export function MediaDetailDialog({ item, onClose }: Props) {
                     <input
                       type="text"
                       value={formData.alt}
-                      onChange={(e) => handleChange('alt', e.target.value)}
+                      onChange={(e) => handleChange("alt", e.target.value)}
                       className="w-full h-9 rounded-md border bg-background px-3 text-sm"
                       placeholder="画像の説明"
                     />
@@ -217,11 +236,13 @@ export function MediaDetailDialog({ item, onClose }: Props) {
 
                 {/* Title */}
                 <div>
-                  <label className="text-sm font-medium block mb-1">タイトル</label>
+                  <label className="text-sm font-medium block mb-1">
+                    タイトル
+                  </label>
                   <input
                     type="text"
                     value={formData.title}
-                    onChange={(e) => handleChange('title', e.target.value)}
+                    onChange={(e) => handleChange("title", e.target.value)}
                     className="w-full h-9 rounded-md border bg-background px-3 text-sm"
                     placeholder="管理用タイトル"
                   />
@@ -232,7 +253,9 @@ export function MediaDetailDialog({ item, onClose }: Props) {
                   <label className="text-sm font-medium block mb-1">説明</label>
                   <textarea
                     value={formData.description}
-                    onChange={(e) => handleChange('description', e.target.value)}
+                    onChange={(e) =>
+                      handleChange("description", e.target.value)
+                    }
                     className="w-full rounded-md border bg-background px-3 py-2 text-sm resize-none"
                     rows={3}
                     placeholder="メモ・説明"
@@ -266,7 +289,7 @@ export function MediaDetailDialog({ item, onClose }: Props) {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 function InfoRow({ label, value }: { label: string; value: string }) {
@@ -275,26 +298,25 @@ function InfoRow({ label, value }: { label: string; value: string }) {
       <span className="text-muted-foreground">{label}</span>
       <span>{value}</span>
     </div>
-  )
+  );
 }
 
 function MediaPreview({ item }: { item: MediaData }) {
   return (
     <div className="rounded-lg overflow-hidden bg-muted aspect-square flex items-center justify-center">
-      {item.type === 'IMAGE' ? (
-        
+      {item.type === "IMAGE" ? (
         <img
           src={item.url}
           alt={item.alt || item.filename}
           className="w-full h-full object-contain"
         />
-      ) : item.type === 'VIDEO' ? (
+      ) : item.type === "VIDEO" ? (
         <Film className="h-24 w-24 text-muted-foreground" />
-      ) : item.type === 'DOCUMENT' ? (
+      ) : item.type === "DOCUMENT" ? (
         <FileText className="h-24 w-24 text-muted-foreground" />
       ) : (
         <File className="h-24 w-24 text-muted-foreground" />
       )}
     </div>
-  )
+  );
 }

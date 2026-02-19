@@ -1,133 +1,133 @@
-'use client'
+"use client";
 
 /**
  * メディアアップロードダイアログ
  */
 
-import { useState, useTransition } from 'react'
-import { X, Upload, File, Loader2 } from 'lucide-react'
-import { toast } from 'sonner'
-import { useRouter } from 'next/navigation'
-import { uploadMedia } from '@/admin/actions/media'
-import { formatBytes } from '@/admin/lib/utils'
-import { Button } from '@/admin/components/ui'
-import { USAGE_OPTIONS } from './constants'
+import { useState, useTransition } from "react";
+import { X, Upload, File, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { uploadMedia } from "@/admin/actions/media";
+import { formatBytes } from "@/admin/lib/utils";
+import { Button } from "@/admin/components/ui";
+import { USAGE_OPTIONS } from "./constants";
 import {
   validateFile,
   inferMediaType,
   isValidMediaUsage,
   MediaUsage,
-} from '@/admin/lib/validations/media'
+} from "@/admin/lib/validations/media";
 
 type Props = {
-  isOpen: boolean
-  onClose: () => void
-  defaultUsage?: MediaUsage
-  onUploadSuccess?: (data: { id: string; url: string }) => void
-}
+  isOpen: boolean;
+  onClose: () => void;
+  defaultUsage?: MediaUsage;
+  onUploadSuccess?: (data: { id: string; url: string }) => void;
+};
 
 type FormState = {
-  usage: MediaUsage
-  alt: string
-  title: string
-}
+  usage: MediaUsage;
+  alt: string;
+  title: string;
+};
 
 export function MediaUploadDialog({
   isOpen,
   onClose,
-  defaultUsage = 'GENERAL',
+  defaultUsage = "GENERAL",
   onUploadSuccess,
 }: Props) {
-  const router = useRouter()
-  const [isPending, startTransition] = useTransition()
-  const [isDragging, setIsDragging] = useState(false)
-  const [file, setFile] = useState<File | null>(null)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [isDragging, setIsDragging] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormState>({
     usage: defaultUsage,
-    alt: '',
-    title: '',
-  })
+    alt: "",
+    title: "",
+  });
 
   const handleFileSelect = (selectedFile: File) => {
-    const type = inferMediaType(selectedFile.type)
-    const validation = validateFile(selectedFile, type)
+    const type = inferMediaType(selectedFile.type);
+    const validation = validateFile(selectedFile, type);
 
     if (!validation.valid) {
-      toast.error(validation.error)
-      return
+      toast.error(validation.error);
+      return;
     }
 
-    setFile(selectedFile)
+    setFile(selectedFile);
 
-    if (selectedFile.type.startsWith('image/')) {
-      const reader = new FileReader()
+    if (selectedFile.type.startsWith("image/")) {
+      const reader = new FileReader();
       reader.onload = (e) => {
-        const result = e.target?.result
-        if (typeof result === 'string') setPreviewUrl(result)
-      }
-      reader.readAsDataURL(selectedFile)
+        const result = e.target?.result;
+        if (typeof result === "string") setPreviewUrl(result);
+      };
+      reader.readAsDataURL(selectedFile);
     } else {
-      setPreviewUrl(null)
+      setPreviewUrl(null);
     }
-  }
+  };
 
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
+    e.preventDefault();
+    setIsDragging(false);
 
-    const droppedFile = e.dataTransfer.files[0]
+    const droppedFile = e.dataTransfer.files[0];
     if (droppedFile) {
-      handleFileSelect(droppedFile)
+      handleFileSelect(droppedFile);
     }
-  }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0]
+    const selectedFile = e.target.files?.[0];
     if (selectedFile) {
-      handleFileSelect(selectedFile)
+      handleFileSelect(selectedFile);
     }
-  }
+  };
 
   const handleSubmit = () => {
-    if (!file) return
+    if (!file) return;
 
-    const data = new FormData()
-    data.append('file', file)
-    data.append('usage', formData.usage)
-    if (formData.alt) data.append('alt', formData.alt)
-    if (formData.title) data.append('title', formData.title)
+    const data = new FormData();
+    data.append("file", file);
+    data.append("usage", formData.usage);
+    if (formData.alt) data.append("alt", formData.alt);
+    if (formData.title) data.append("title", formData.title);
 
     startTransition(async () => {
-      const result = await uploadMedia(data)
+      const result = await uploadMedia(data);
 
       if (result.success) {
-        toast.success(result.message)
-        onUploadSuccess?.(result.data)
-        handleClose()
-        router.refresh()
+        toast.success(result.message);
+        onUploadSuccess?.(result.data);
+        handleClose();
+        router.refresh();
       } else {
-        toast.error(result.error)
+        toast.error(result.error);
       }
-    })
-  }
+    });
+  };
 
   const handleClose = () => {
-    setFile(null)
-    setPreviewUrl(null)
-    setFormData({ usage: defaultUsage, alt: '', title: '' })
-    onClose()
-  }
+    setFile(null);
+    setPreviewUrl(null);
+    setFormData({ usage: defaultUsage, alt: "", title: "" });
+    onClose();
+  };
 
   const clearFile = () => {
-    setFile(null)
-    setPreviewUrl(null)
-  }
+    setFile(null);
+    setPreviewUrl(null);
+  };
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4">
       <div
         className="bg-background rounded-lg shadow-lg w-full max-w-lg"
         onClick={(e) => e.stopPropagation()}
@@ -153,15 +153,15 @@ export function MediaUploadDialog({
                 border-2 border-dashed rounded-lg p-8
                 flex flex-col items-center justify-center gap-2
                 cursor-pointer transition-colors
-                ${isDragging ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-primary'}
+                ${isDragging ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-primary"}
               `}
               onDragOver={(e) => {
-                e.preventDefault()
-                setIsDragging(true)
+                e.preventDefault();
+                setIsDragging(true);
               }}
               onDragLeave={() => setIsDragging(false)}
               onDrop={handleDrop}
-              onClick={() => document.getElementById('file-input')?.click()}
+              onClick={() => document.getElementById("file-input")?.click()}
             >
               <Upload className="h-10 w-10 text-muted-foreground" />
               <p className="text-sm text-muted-foreground text-center">
@@ -183,7 +183,6 @@ export function MediaUploadDialog({
               {/* Preview */}
               {previewUrl ? (
                 <div className="mb-4 rounded-lg overflow-hidden bg-muted">
-                  
                   <img
                     src={previewUrl}
                     alt="プレビュー"
@@ -224,9 +223,9 @@ export function MediaUploadDialog({
                 <select
                   value={formData.usage}
                   onChange={(e) => {
-                    const value = e.target.value
+                    const value = e.target.value;
                     if (isValidMediaUsage(value)) {
-                      setFormData({ ...formData, usage: value })
+                      setFormData({ ...formData, usage: value });
                     }
                   }}
                   className="w-full h-9 rounded-md border bg-background px-3 text-sm"
@@ -240,7 +239,7 @@ export function MediaUploadDialog({
               </div>
 
               {/* Alt Text (for images) */}
-              {file.type.startsWith('image/') && (
+              {file.type.startsWith("image/") && (
                 <div>
                   <label className="text-sm font-medium block mb-1">
                     代替テキスト（alt）
@@ -259,7 +258,9 @@ export function MediaUploadDialog({
 
               {/* Title */}
               <div>
-                <label className="text-sm font-medium block mb-1">タイトル</label>
+                <label className="text-sm font-medium block mb-1">
+                  タイトル
+                </label>
                 <input
                   type="text"
                   value={formData.title}
@@ -286,5 +287,5 @@ export function MediaUploadDialog({
         </div>
       </div>
     </div>
-  )
+  );
 }
