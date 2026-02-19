@@ -12,17 +12,6 @@ tools:
   - Glob
 model: haiku
 memory: local
-hooks:
-  PreToolUse:
-    - matcher: "Bash"
-      hooks:
-        - type: prompt
-          prompt: >
-            Only allow verification commands: bun run type-check, bun run lint,
-            bun run validate, bun run build, bun run test, bun run test:all,
-            git diff, git status, git log.
-            Block any destructive or modifying commands (rm, write, install, push, etc.).
-            If the command is not a verification/read-only command, exit with code 2.
 ---
 
 You are a build verification specialist for the Myrrh Rental Space project.

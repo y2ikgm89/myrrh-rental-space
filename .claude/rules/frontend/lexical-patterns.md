@@ -361,6 +361,91 @@ updateDOM(prevNode: StepsContainerNode, dom: HTMLElement): boolean {
 [data-steps-style="timeline"] { /* timeline 固有スタイル */ }
 ```
 
+### AccentColor システム
+
+各ブロック（Collapsible / PullQuote / Steps / Tabs）が共有する10色アクセントカラーシステム。
+CSS変数 `--accent` / `--accent-fg` でブロック内の強調色を統一制御する。
+
+**ファイル構成**:
+
+| ファイル | 役割 |
+|---------|------|
+| `config/accent-colors.ts` | 型・定数・スウォッチ値・ラベル（Single Source of Truth） |
+| `shared/styles/lexical-content.css` | `[data-color="X"]` セレクタで CSS トークン定義（canonical） |
+| `inspector/ColorSwatchPicker.tsx` | 10色スウォッチ選択 UI コンポーネント |
+
+#### `[data-color]` CSS 変数伝播の仕組み
+
+コンテナノードの `exportDOM` が `data-color` 属性を出力 → CSS セレクタが `--accent` / `--accent-fg` を伝播:
+
+```css
+/* lexical-content.css: data-color="blue" の場合 */
+[data-color="blue"] {
+  --accent:    oklch(0.55 0.20 260);
+  --accent-fg: oklch(1 0 0);
+}
+
+/* 子要素で --accent を参照（フォールバック必須） */
+[data-steps-style="numbered"] .step-number {
+  background-color: var(--accent, var(--color-primary));
+  color: var(--accent-fg, var(--color-primary-foreground));
+}
+```
+
+`data-color="default"` または属性なし → フォールバック `var(--color-primary)` / `var(--color-primary-foreground)` が適用される。
+
+#### 新しいブロックに AccentColor を追加する手順
+
+1. **ノードクラスに `colorState` を追加**（`defaultColorState` から `default` フォールバック）
+
+```typescript
+import { createState } from 'lexical'
+import { type AccentColor, isAccentColor } from '../config/accent-colors'
+
+export const colorState = createState('color', {
+  parse: (v): AccentColor => (isAccentColor(v) ? v : 'default'),
+})
+```
+
+2. **`exportDOM` で `data-color` 属性を出力**（`default` は属性なしで省略可）
+
+```typescript
+exportDOM(): DOMExportOutput {
+  const element = document.createElement('div')
+  const color = $getState(this, colorState)
+  element.setAttribute('data-my-block', 'true')
+  if (color !== 'default') element.setAttribute('data-color', color)
+  return { element }
+}
+```
+
+3. **`lexical-content.css`** — `[data-color]` トークンはグローバル定義済み。子要素セレクタに `var(--accent, var(--color-primary))` を参照するだけでよい
+
+4. **InspectorPanel に `ColorSwatchPicker` を追加**
+
+```typescript
+import { ColorSwatchPicker } from '../ColorSwatchPicker'
+import { type AccentColor } from '../../config/accent-colors'
+
+<ColorSwatchPicker
+  value={currentColor}
+  onChange={(color: AccentColor) =>
+    updateNode((n) => { $setState(n, colorState, color) })
+  }
+/>
+```
+
+#### タブスタイル別 AccentColor CSS パターン
+
+スタイル別に適した手法でアクセントを表現（いずれもレイアウト変更なし）:
+
+| スタイル | 手法 | 適用プロパティ |
+|---------|------|--------------|
+| `underline` | 下線色 | `border-bottom-color: var(--accent)` |
+| `pills` | 背景色＋テキスト色 | `background-color: var(--accent)` / `color: var(--accent-fg)` |
+| `boxed` | inset top-stripe | `box-shadow: inset 0 2px 0 var(--accent)`（box-shadow = レイアウト変更なし） |
+| `minimal` | 下線色 | `border-bottom-color: var(--accent)` |
+
 ### 型ガードユーティリティ（createEnumGuard）
 
 ノード固有のリテラル型に対する型ガードは `config/type-guards.ts` の `createEnumGuard` を使用:
@@ -556,6 +641,7 @@ const initialConfig = {
 16. **コンテナ/コンテンツノードの isShadowRoot 省略禁止**: 複合ノードのコンテナ・コンテンツ・パネルノードには必ず `isShadowRoot() { return true }` を実装する
 17. **exportDOM での CSS クラス使用禁止**: `config.theme.*` や `className` は `createDOM` のみ（エディタ内表示）。`exportDOM` は data-attributes のみで HTML を構築する
 18. **updateDOM で `return true` の乱用禁止**: 属性変更は `$getStateChange` + `dom.setAttribute()` で差分更新し `return false`。`return true` は DOM 要素タグの変更等、DOM 再構築が必要な場合のみ
+19. **AccentColor スウォッチ値と CSS トークン値の不一致禁止**: `lexical-content.css` の `[data-color]` `--accent` 値が **canonical**。`ACCENT_COLOR_SWATCHES`（`accent-colors.ts`）はその値をミラーするため、CSS 変更時は TS 側も必ず更新すること。Preview（ColorSwatchPicker）と実際の適用色が乖離するためユーザー混乱の原因になる
 
 ## ファイル命名規則
 

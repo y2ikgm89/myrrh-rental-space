@@ -98,6 +98,8 @@ cacheLife(CACHE_LIFE.METADATA)         // 'hours'
 細かい制御が必要な場合のみ `{ stale, revalidate, expire }` オブジェクトを使用:
 
 ```typescript
+import { toPlainArray } from '@/shared/lib/serialize'
+
 async function getPopularPosts() {
   'use cache'
   cacheLife({
@@ -106,7 +108,8 @@ async function getPopularPosts() {
     expire: 3600,    // 1時間で完全失効
   })
   cacheTag(CACHE_TAGS.POSTS)
-  return await prisma.post.findMany({ take: 10, orderBy: { viewCount: 'desc' } })
+  const result = await prisma.post.findMany({ take: 10, orderBy: { viewCount: 'desc' } })
+  return toPlainArray(result)  // React 19: Prisma Symbol プロパティを除去（§禁止事項 item 7）
 }
 ```
 
@@ -353,6 +356,23 @@ export async function getPublicBusinessSettings() {
 
 **なぜ `safeFetch` を使うか**: エラー時に `fallback` を返し、ページ全体のクラッシュを防ぐ。`logger.error` で記録しつつユーザーへのエラー表示を最小化。
 
+**`safeFetch` の結果は必ず `toPlainObject()` でラップしてから返す**。`return safeFetch({...})` と直接返すと `Promise<Prisma結果>` がそのまま漏れ出す（サイレントバグ）:
+
+```typescript
+// NG: await せず直接 return（Prisma Symbol プロパティが残り React 19 シリアライゼーションエラー）
+async function getSettings() {
+  'use cache'
+  return safeFetch({ fetch: () => prisma.settings.findUnique({ ... }), fallback: null, ... })
+}
+
+// OK: await + toPlainObject でプレーンオブジェクト化
+async function getSettings() {
+  'use cache'
+  const result = await safeFetch({ fetch: () => prisma.settings.findUnique({ ... }), fallback: null, ... })
+  return toPlainObject(result)
+}
+```
+
 ---
 
 ## キャッシュタグ命名規則
@@ -470,6 +490,31 @@ updateTag(CACHE_TAGS.POSTS)
 
 6. **Prisma オブジェクトを Client Component に直接渡すことを禁止**
    - `toPlainObject()` / `toPlainArray()` でシリアライズ（React 19 Symbol プロパティ除去）
+
+7. **`'use cache'` 関数内で `safeFetch()` を `await` なし・`toPlainObject()` なしで return 禁止**
+   - `return safeFetch({...})` はサイレントバグ（`Promise<PrismaResult>` がシリアライゼーション境界を越える）
+   - 必ず `const result = await safeFetch({...}); return toPlainObject(result)` の形式で記述
+
+   ```typescript
+   // NG: safeFetch を直接 return（await なし）
+   async function getData() {
+     'use cache'
+     return safeFetch({ fetch: () => prisma.xxx.findUnique({ ... }), fallback: null, ... })
+   }
+
+   // NG: await したが toPlainObject なし（Prisma オブジェクトそのままが cached value になる）
+   async function getData() {
+     'use cache'
+     return await safeFetch({ fetch: () => prisma.xxx.findUnique({ ... }), fallback: null, ... })
+   }
+
+   // OK: await + toPlainObject（React 19 シリアライゼーション安全）
+   async function getData() {
+     'use cache'
+     const result = await safeFetch({ fetch: () => prisma.xxx.findUnique({ ... }), fallback: null, ... })
+     return toPlainObject(result)
+   }
+   ```
 
 ---
 

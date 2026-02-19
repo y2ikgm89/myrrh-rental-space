@@ -372,6 +372,11 @@ await prisma.$transaction(async (tx) => {
 6. **`renderEditorStateToHtml` のトップレベル import 禁止**
    - `renderEditorStateToHtmlLazy()` を使用（ビルドエラー回避）
 
+7. **`'use cache'` 関数で `safeFetch()` を `await` なし・`toPlainObject()` なしで return 禁止**
+   - `return safeFetch({...})` → `const result = await safeFetch({...}); return toPlainObject(result)`
+   - Prisma モデルの narrow `select` でも Symbol プロパティは残る → `toPlainObject` 必須
+   - 詳細と例 → `server-actions.md` §公開データ取得パターン
+
 ---
 
 ## ファイル配置

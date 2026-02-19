@@ -60,14 +60,19 @@
 ### ツール使い分け
 
 - **コードベース調査**: `serena`（LSPベース深い分析）, `codebase-explorer`（広範な探索）
+- **専門エージェント**:
+  - `security-reviewer` — auth/Stripe/OAuth/暗号化コードのセキュリティレビュー
+  - `project-reviewer` — 実装完了後の総合品質チェック（型安全・カラートークン・規約）
+  - `verification` — type-check / lint / build の検証（Haiku 使用で高速）
+  - `design-memory` — ブランドデザイン決定の記憶（UI実装時）
 - **MCP**: `serena`, `context7`, `playwright` 推奨。`WebSearch`, `WebFetch` 必要時
-- **ui-ux-pro-max**: `python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --domain <domain> --stack nextjs`
+- **ui-ux-pro-max**: `py .claude/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --domain <domain> --stack nextjs`
   - ドメイン: `product`, `style`, `typography`, `color`, `landing`, `chart`, `ux`
 - **ドキュメント更新**: `docs/plans/NNN-title.md` → `docs/plans/README.md` → `docs/requirements/`（必要時） → `docs/architecture/`（設計変更時）
 
 ### 手動コマンド（必要時のみ）
 
-`/superpowers:brainstorm`, `/superpowers:write-plan`, `/superpowers:execute-plan`, `/superpowers:using-git-worktrees`, `/ui-ux-pro-max`, `/frontend-design`, `/parallax-section`, `codebase-explorer`
+`/superpowers:brainstorm`, `/superpowers:write-plan`, `/superpowers:execute-plan`, `/superpowers:using-git-worktrees`, `/ui-ux-pro-max`, `/frontend-design`, `/parallax-section`, `codebase-explorer`, `/prisma-migration`
 
 ---
 
@@ -98,8 +103,15 @@
 **Multiple Root Layouts アーキテクチャ（Next.js 16 推奨パターン）**
 
 ```
+prisma/
+├── schema.prisma                         # DB スキーマ定義
+├── better-auth-schema.prisma             # Better Auth テーブル定義
+├── migrations/                           # マイグレーション履歴
+└── seed.ts                               # 初期データ投入
+
 src/
 ├── app/
+│   ├── api/                              # API Routes（admin/auth/cron/ical/instagram/webhooks）
 │   ├── (admin)/                          # 管理画面ルートグループ
 │   │   ├── layout.tsx                    # Admin Root Layout (html/body)
 │   │   ├── _styles/admin.css             # 管理画面専用テーマ（固定）
@@ -135,6 +147,11 @@ src/
 
 **注意**: 公開ページ ↔ 管理画面の遷移はフルページリロード（異なるRoot Layout間の仕様）
 
+**管理画面パスの二重構造**: `src/app/(admin)/admin/(dashboard)/...` → URL は `/admin/...`
+- `(admin)` = ルートグループ（URL不変）、`admin` = URLセグメント、`(dashboard)` = ルートグループ（URL不変）
+
+**API Routes**: `src/app/api/` 配下（`admin/`, `auth/`, `cron/`, `health/`, `ical/`, `instagram/`, `webhooks/`）
+
 ### エイリアス
 
 `@/admin/*`, `@/public/*`, `@/shared/*`
@@ -147,8 +164,12 @@ bun run test               # テスト
 bun run test:all           # Unit + Integration 並列テスト
 bun run validate           # type-check + lint 並列検証
 bun run validate && bun run build  # 完全検証
+bun run build:strict               # 環境変数チェック有りビルド（本番確認用）
 bunx --bun prisma migrate dev --name <name>  # マイグレーション
 bun run db:generate        # Prismaスキーマ再生成
+bun run db:studio          # Prisma Studio（DB GUI）
+bun run e2e                # E2Eテスト（Playwright）
+bun run format             # Prettier フォーマット（Edit/Write 後は hook で自動実行）
 ```
 
 ### コーディング規約
@@ -157,3 +178,13 @@ bun run db:generate        # Prismaスキーマ再生成
 - Zodバリデーション必須
 - 命名: コンポーネント`PascalCase.tsx`、その他`kebab-case.ts`
 - コミット: `<type>(<scope>): <subject>`
+
+### ⚠️ Gotchas
+
+- **`enum`・`namespace`・parameter properties 禁止（コンパイラレベル）** — `erasableSyntaxOnly: true`（tsconfig）。`const enum` か union型を使う
+- **型インポートは `import type` 必須** — `verbatimModuleSyntax: true`。値と型を同一インポートで混在させるとビルドエラー
+- **`bun run build` は env チェックなし** — `SKIP_ENV_VALIDATION=true` が付く。本番デプロイ前は `bun run build:strict`
+- **`__tests__/` は type-check 対象外** — tsconfig の exclude 指定。テスト内型エラーは `bun run type-check` では検出されず `bun test` 時のみ発覚
+- **インデックスシグネチャはブラケット記法強制** — `noPropertyAccessFromIndexSignature: true`。`obj.key` ではなく `obj['key']`
+- **`rm -rf` は deny ルール** — 追跡ファイルは `git rm -r <path>`、未追跡ファイル/ディレクトリは `py -c "import shutil; shutil.rmtree('path')"` で削除
+- **gitignore 追加後の既存追跡ファイル** — `git rm --cached -r <path>` でインデックスから除外（ファイルはディスクに残る）
