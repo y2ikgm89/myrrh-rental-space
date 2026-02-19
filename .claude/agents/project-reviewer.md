@@ -62,6 +62,12 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
 - `toPlainObject()` / `toPlainArray()` for React 19 serialization (strips Symbol properties)
 - Prisma enum constants not string literals (`DiscountType.none` not `'none'`)
 - Type guards from `enums.ts` only — no local `isValid*` definitions
+- **Server→Client Date serialization**: Types crossing Server→Client boundary must declare date fields as `string`, not `Date` ([React 19 docs](https://react.dev/reference/rsc/use-client#serializable-types)). Flag:
+  - `'use client'` コンポーネント向け型で `startTime: Date` / `endTime: Date` / `createdAt: Date` 等が `Date` 型で宣言されている（`string` に変更が必要）
+  - `'use client'` ファイルで `format(field, ...)` / `isSameDay(field, ...)` / `isToday(field)` 等を `new Date()` ラップなしで呼び出している（`format(new Date(field), ...)` が正しい）
+  - `'use client'` ファイルで `.getTime()` / `.getFullYear()` / `.getMonth()` 等を日付フィールドに直接呼び出している（ランタイムで `string` になる）
+  - `.sort((a, b) => a.dateField.getTime() - b.dateField.getTime())` → `localeCompare()` への置き換えが必要（ISO 8601 文字列はアルファベット順 = 時系列順）
+  - Server Action で `toPlainArray(items)` / `toPlainObject(item)` に依存して `string` 型フィールドへ代入している（明示的な `.toISOString()` が必要）
 
 **Tailwind / colors** (`.claude/rules/tailwind-patterns.md`):
 

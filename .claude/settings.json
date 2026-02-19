@@ -1,6 +1,17 @@
 {
   "enableAllProjectMcpServers": true,
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '=== 進行中の計画 ===' && grep -rl '実装中\\|設計承認済み' \"$CLAUDE_PROJECT_DIR/docs/plans\" 2>/dev/null | grep -v README | grep -v CLAUDE | head -5 || echo '(なし)' && echo '' && echo '=== プロジェクト状況 (docs/plans/README.md 上位100行) ===' && head -100 \"$CLAUDE_PROJECT_DIR/docs/plans/README.md\" 2>/dev/null",
+            "statusMessage": "進行中タスクを確認中..."
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Edit|Write",
