@@ -54,7 +54,7 @@ export function Pagination({ currentPage, totalPages, total }: PaginationProps) 
   })
 
   const goToPage = (page: number) => {
-    setPage(page === 1 ? null : page)
+    void setPage(page === 1 ? null : page)
   }
 
   if (totalPages <= 1) {
@@ -68,7 +68,7 @@ export function Pagination({ currentPage, totalPages, total }: PaginationProps) 
   const pageNumbers = getPageNumbers(currentPage, totalPages)
 
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <nav aria-label="ページネーション" className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="text-sm text-muted-foreground">
         全 {total} 件（{currentPage} / {totalPages} ページ）
       </div>
@@ -114,6 +114,6 @@ export function Pagination({ currentPage, totalPages, total }: PaginationProps) 
           次へ
         </Button>
       </div>
-    </div>
+    </nav>
   )
 }

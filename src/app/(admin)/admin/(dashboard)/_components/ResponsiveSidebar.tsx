@@ -8,7 +8,8 @@
  * - モバイル: ドロワー (スライドイン)
  */
 
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect } from 'react'
+import type { ReactNode } from 'react'
 import { tv } from 'tailwind-variants'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -21,7 +22,7 @@ import { Z_INDEX } from '@/admin/lib/styles/z-index'
 const styles = tv({
   slots: {
     overlay: [
-      'fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300',
+      'fixed inset-0 bg-overlay backdrop-blur-sm transition-opacity duration-300',
       'lg:hidden',
     ],
     sidebar: [
@@ -40,7 +41,7 @@ const styles = tv({
     navItem: [
       'flex items-center gap-3 rounded-md px-3 py-2.5 text-sidebar-text-muted cursor-pointer',
       'transition-all duration-200 ease-out',
-      'hover:bg-white/5 hover:text-sidebar-text',
+      'hover:bg-sidebar-nav-hover hover:text-sidebar-text',
     ],
     navItemActive: [
       // アクティブ状態: プライマリカラーのアクセント
@@ -74,8 +75,6 @@ type ResponsiveSidebarProps = {
 export function ResponsiveSidebar({ userInfo }: ResponsiveSidebarProps) {
   const { sidebarState, closeSidebar, isMobile, isFullscreen, hasMounted } = useAdminLayout()
   const pathname = usePathname()
-  const sidebarRef = useRef<HTMLElement>(null)
-
   // Hydration対策: マウント前はSSR時と同じ値を使用
   // SSR時: sidebarState='expanded', isMobile=false → isOpen=true
   const isOpen = hasMounted ? sidebarState === 'expanded' : true
@@ -121,7 +120,6 @@ export function ResponsiveSidebar({ userInfo }: ResponsiveSidebarProps) {
 
       {/* サイドバー */}
       <aside
-        ref={sidebarRef}
         className={classes.sidebar()}
         style={{ zIndex: Z_INDEX.sidebar }}
         aria-label="メインナビゲーション"
