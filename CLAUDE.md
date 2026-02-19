@@ -196,5 +196,5 @@ gcloud builds submit --config=cloudbuild.yaml  # Cloud Run デプロイ（Cloud 
 - **`rm -rf` は deny ルール** — 追跡ファイルは `git rm -r <path>`、未追跡ファイル/ディレクトリは `python3 -c "import shutil; shutil.rmtree('path')"` で削除
 - **gitignore 追加後の既存追跡ファイル** — `git rm --cached -r <path>` でインデックスから除外（ファイルはディスクに残る）
 - **`()` を含むパスは Bash コマンドで渡せない** — `src/app/(admin)/` など Next.js ルートグループパスを Bash に渡すと MINGW64 が `(` をサブシェル記法として解釈しエラー。Glob/Grep/Read ツールを使うか、クォートで回避（例: `ls 'src/app/(admin)/'`）
-- **Prettier がマークダウン表の `**`を`\*\*`にエスケープする** — テーブルセル内の`**bold**`は Prettier フォーマット後に`\*\*bold\*\*` へ自動変換される。設定で抑制不可。解決策はボールド書式を削除すること。
+- **Prettier がグロブ含み bold をエスケープする** — テーブルセルで ``**`path/**` テキスト**`` のように bold 内にグロブ `**` を含む code span があると、閉じ `**` が `\*\*` にエスケープされる。解決策: bold を削除するか code span をセルの外へ出す。
 - **PostToolUse フック後は再 Read が必要** — Edit/Write 後に Prettier/ESLint フックが走るとファイルが変更される。続けて同ファイルを Edit する場合は事前に再 Read しないと "file modified since read" エラーが発生する。
