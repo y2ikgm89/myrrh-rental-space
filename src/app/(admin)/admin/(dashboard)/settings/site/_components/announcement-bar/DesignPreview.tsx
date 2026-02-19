@@ -72,7 +72,7 @@ export function DesignPreview({
       case AnnouncementBarDesignStyle.gradient:
       case AnnouncementBarDesignStyle.glass:
       case AnnouncementBarDesignStyle.striped:
-        return 'text-white'
+        return 'text-primary-foreground'
       case AnnouncementBarDesignStyle.outlined:
       case AnnouncementBarDesignStyle.minimal:
         return 'text-foreground'

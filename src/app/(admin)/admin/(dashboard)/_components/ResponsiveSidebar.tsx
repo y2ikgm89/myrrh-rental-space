@@ -44,11 +44,11 @@ const styles = tv({
     ],
     navItemActive: [
       // アクティブ状態: プライマリカラーのアクセント
-      'bg-sidebar-accent text-white',
+      'bg-sidebar-accent text-primary-foreground',
       'hover:bg-sidebar-accent/90',
       // 左端にアクセントバー
       'relative before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2',
-      'before:w-0.5 before:h-4 before:bg-white before:rounded-full',
+      'before:w-0.5 before:h-4 before:bg-primary-foreground before:rounded-full',
     ],
     closeButton: 'absolute right-3 top-3 lg:hidden text-sidebar-text-muted hover:text-sidebar-text',
     userSection: 'border-t border-sidebar-border p-4',

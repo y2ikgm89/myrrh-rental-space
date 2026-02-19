@@ -53,7 +53,7 @@ export function MediaGrid({ items }: Props) {
                   className="p-1.5 rounded bg-white/20 hover:bg-white/40 transition-colors"
                   title="URLをコピー"
                 >
-                  <Copy className="h-4 w-4 text-white" />
+                  <Copy className="h-4 w-4 text-primary-foreground" />
                 </button>
                 <button
                   type="button"
@@ -64,7 +64,7 @@ export function MediaGrid({ items }: Props) {
                   className="p-1.5 rounded bg-white/20 hover:bg-white/40 transition-colors"
                   title="詳細"
                 >
-                  <Eye className="h-4 w-4 text-white" />
+                  <Eye className="h-4 w-4 text-primary-foreground" />
                 </button>
                 <button
                   type="button"
@@ -76,14 +76,14 @@ export function MediaGrid({ items }: Props) {
                   className="p-1.5 rounded bg-destructive/80 hover:bg-destructive transition-colors disabled:opacity-50"
                   title="削除"
                 >
-                  <Trash2 className="h-4 w-4 text-white" />
+                  <Trash2 className="h-4 w-4 text-primary-foreground" />
                 </button>
               </div>
 
               {/* Bottom: Info */}
-              <div className="text-white text-xs">
+              <div className="text-primary-foreground text-xs">
                 <p className="truncate font-medium">{item.filename}</p>
-                <p className="text-white/70">{formatBytes(item.size)}</p>
+                <p className="text-primary-foreground/70">{formatBytes(item.size)}</p>
               </div>
             </div>
 
@@ -147,7 +147,7 @@ function TypeBadge({ type }: { type: string }) {
 
   return (
     <span
-      className={`absolute bottom-2 right-2 px-1.5 py-0.5 text-[10px] font-medium text-white rounded ${config.color}`}
+      className={`absolute bottom-2 right-2 px-1.5 py-0.5 text-[10px] font-medium text-primary-foreground rounded ${config.color}`}
     >
       {config.label}
     </span>
