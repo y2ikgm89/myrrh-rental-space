@@ -5,7 +5,7 @@
  */
 
 import { useState } from 'react'
-import { Copy, Trash2, Eye, ExternalLink, FileText, Film, File, Image } from 'lucide-react'
+import { FileText, Film, File, Image } from 'lucide-react'
 import type { MediaData } from '@/admin/types/media-picker'
 import { MediaDetailDialog } from './MediaDetailDialog'
 import { formatDate } from '@/shared/lib/utils'
@@ -21,6 +21,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/admin/components/ui'
+import {
+  ActionDropdown,
+  ActionDropdownItem,
+  ActionDropdownSeparator,
+} from '@/admin/components/ActionDropdown'
 
 type Props = {
   items: MediaData[]
@@ -97,42 +102,21 @@ export function MediaTable({ items }: Props) {
                     {formatDate(item.createdAt)}
                   </TableCell>
                   <TableCell>
-                    <div className="flex gap-1">
-                      <button
-                        type="button"
-                        onClick={() => handleCopyUrl(item.url)}
-                        className="p-1.5 rounded hover:bg-muted transition-colors"
-                        title="URLをコピー"
-                      >
-                        <Copy className="h-4 w-4" />
-                      </button>
-                      <a
-                        href={item.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-1.5 rounded hover:bg-muted transition-colors"
-                        title="新しいタブで開く"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                      <button
-                        type="button"
-                        onClick={() => setDetailItem(item)}
-                        className="p-1.5 rounded hover:bg-muted transition-colors"
-                        title="詳細"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(item)}
-                        disabled={isPending}
-                        className="p-1.5 rounded hover:bg-destructive/10 text-destructive transition-colors disabled:opacity-50"
-                        title="削除"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
+                    <ActionDropdown disabled={isPending}>
+                      <ActionDropdownItem onClick={() => handleCopyUrl(item.url)}>
+                        URLをコピー
+                      </ActionDropdownItem>
+                      <ActionDropdownItem onClick={() => window.open(item.url, '_blank', 'noopener,noreferrer')}>
+                        新しいタブで開く
+                      </ActionDropdownItem>
+                      <ActionDropdownItem onClick={() => setDetailItem(item)}>
+                        詳細
+                      </ActionDropdownItem>
+                      <ActionDropdownSeparator />
+                      <ActionDropdownItem destructive onClick={() => handleDelete(item)} disabled={isPending}>
+                        削除
+                      </ActionDropdownItem>
+                    </ActionDropdown>
                   </TableCell>
                 </TableRow>
               )

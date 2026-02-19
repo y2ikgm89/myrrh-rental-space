@@ -9,7 +9,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Eye, EyeOff, Trash2, ExternalLink } from 'lucide-react'
+import { Eye, EyeOff, Trash2, ExternalLink, Pencil } from 'lucide-react'
 import {
   ActionDropdown,
   ActionDropdownItem,
@@ -24,9 +24,10 @@ type PageActionsProps = {
   isPublished: boolean
   isSystemPage?: boolean
   isHomepage?: boolean
+  editHref?: string
 }
 
-export function PageActions({ slug, title, isPublished, isSystemPage = false, isHomepage = false }: PageActionsProps) {
+export function PageActions({ slug, title, isPublished, isSystemPage = false, isHomepage = false, editHref }: PageActionsProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -63,6 +64,16 @@ export function PageActions({ slug, title, isPublished, isSystemPage = false, is
   return (
     <>
       <ActionDropdown disabled={isPending}>
+        {editHref && (
+          <>
+            <ActionDropdownItem href={editHref}>
+              <Pencil className="h-4 w-4 mr-2" />
+              編集
+            </ActionDropdownItem>
+            <ActionDropdownSeparator />
+          </>
+        )}
+
         <ActionDropdownItem onClick={handlePreview}>
           <ExternalLink className="h-4 w-4 mr-2" />
           プレビュー

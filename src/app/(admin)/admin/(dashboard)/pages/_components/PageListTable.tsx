@@ -8,9 +8,7 @@
  */
 
 import { useState } from "react";
-import Link from "next/link";
-import { Edit, Home } from "lucide-react";
-import { Button } from "@/admin/components/ui";
+import { Home } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -114,20 +112,13 @@ export function PageListTable({
                   : "-"}
               </TableCell>
               <TableCell className="text-right">
-                <div className="flex items-center justify-end gap-1">
-                  <Button asChild size="sm" variant="ghost">
-                    <Link href="/admin/pages/homepage/edit">
-                      <Edit className="h-4 w-4 mr-1" />
-                      編集
-                    </Link>
-                  </Button>
-                  <PageActions
-                    slug=""
-                    title="ホームページ"
-                    isPublished
-                    isHomepage
-                  />
-                </div>
+                <PageActions
+                  slug=""
+                  title="ホームページ"
+                  isPublished
+                  isHomepage
+                  editHref="/admin/pages/homepage/edit"
+                />
               </TableCell>
             </TableRow>
 
@@ -174,20 +165,13 @@ export function PageListTable({
                   {formatDateTimeShort(page.updatedAt)}
                 </TableCell>
                 <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <Button asChild size="sm" variant="ghost">
-                      <Link href={`/admin/pages/${page.slug}/edit`}>
-                        <Edit className="h-4 w-4 mr-1" />
-                        編集
-                      </Link>
-                    </Button>
-                    <PageActions
-                      slug={page.slug}
-                      title={page.title}
-                      isPublished={page.isPublished}
-                      isSystemPage={page.isSystemPage}
-                    />
-                  </div>
+                  <PageActions
+                    slug={page.slug}
+                    title={page.title}
+                    isPublished={page.isPublished}
+                    isSystemPage={page.isSystemPage}
+                    editHref={page.isSystemPage ? undefined : `/admin/pages/${page.slug}/edit`}
+                  />
                 </TableCell>
               </TableRow>
             ))}
