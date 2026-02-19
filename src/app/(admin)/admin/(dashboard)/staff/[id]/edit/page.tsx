@@ -1,44 +1,40 @@
-import { notFound } from 'next/navigation'
-import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
-import { getUser } from '@/admin/actions/user'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/admin/components/ui/card'
-import { Button } from '@/admin/components/ui/button'
-import { UserForm } from '../../_components/UserForm'
+import { notFound } from "next/navigation";
+import { getUser } from "@/admin/actions/user";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/admin/components/ui/card";
+import { UserForm } from "../../_components/UserForm";
+import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { connection } from "next/server";
 
 export const metadata = {
-  title: 'スタッフ編集 | 管理画面',
-}
+  title: "スタッフ編集 | 管理画面",
+};
 
 type Props = {
-  params: Promise<{ id: string }>
-}
+  params: Promise<{ id: string }>;
+};
 
 export default async function EditStaffPage({ params }: Props) {
   await connection();
-  const { id } = await params
-  const user = await getUser(id)
+  const { id } = await params;
+  const user = await getUser(id);
 
   if (!user) {
-    notFound()
+    notFound();
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">スタッフ編集</h1>
-          <p className="text-muted-foreground">{user.name || user.email}</p>
-        </div>
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/admin/staff/${user.id}`}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            戻る
-          </Link>
-        </Button>
-      </div>
-
+    <AdminDetailLayout
+      backHref={`/admin/staff/${user.id}`}
+      backLabel="詳細に戻る"
+      title="スタッフ情報を編集"
+      subtitle={user.email}
+    >
       <Card>
         <CardHeader>
           <CardTitle>スタッフ情報</CardTitle>
@@ -50,6 +46,6 @@ export default async function EditStaffPage({ params }: Props) {
           <UserForm mode="edit" user={user} />
         </CardContent>
       </Card>
-    </div>
-  )
+    </AdminDetailLayout>
+  );
 }
