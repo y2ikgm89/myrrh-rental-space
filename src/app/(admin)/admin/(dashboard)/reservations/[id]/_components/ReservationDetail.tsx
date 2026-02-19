@@ -1,10 +1,8 @@
-'use client'
+"use client";
 
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { useState, useTransition } from 'react'
-import { Pencil } from 'lucide-react'
-import { toast } from 'sonner'
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import {
   Card,
   CardContent,
@@ -17,80 +15,61 @@ import {
   SelectTrigger,
   SelectValue,
   Input,
-} from '@/admin/components/ui'
-import { DeleteConfirmDialog } from '@/admin/components/DeleteConfirmDialog'
-import { ReservationStatusBadge } from '@/admin/components/status-badges'
+} from "@/admin/components/ui";
+import { ReservationStatusBadge } from "@/admin/components/status-badges";
 import {
   updateReservationStatus,
   updateReservationNotes,
-  deleteReservation,
-} from '@/admin/actions/reservation'
-import type { ReservationWithRelations } from '@/admin/actions/reservation'
+} from "@/admin/actions/reservation";
+import type { ReservationWithRelations } from "@/admin/actions/reservation";
 import {
   isValidReservationStatus,
   type ReservationStatus,
-} from '@/shared/lib/validations/enums'
-import { formatDateTimeFull, formatPrice } from '@/shared/lib/utils'
+} from "@/shared/lib/validations/enums";
+import { formatDateTimeFull, formatPrice } from "@/shared/lib/utils";
 
 type ReservationDetailProps = {
-  reservation: ReservationWithRelations
-}
+  reservation: ReservationWithRelations;
+};
 
 export function ReservationDetail({ reservation }: ReservationDetailProps) {
-  const router = useRouter()
-  const [isPending, startTransition] = useTransition()
-  const [notes, setNotes] = useState(reservation.notes || '')
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [notes, setNotes] = useState(reservation.notes || "");
 
   const handleStatusChange = async (newStatus: ReservationStatus) => {
-    if (newStatus === reservation.status) return
+    if (newStatus === reservation.status) return;
 
     startTransition(async () => {
-      const result = await updateReservationStatus(reservation.id, newStatus)
+      const result = await updateReservationStatus(reservation.id, newStatus);
       if (result.success) {
-        router.refresh()
+        router.refresh();
       } else {
-        toast.error(result.error || 'エラーが発生しました')
+        toast.error(result.error || "エラーが発生しました");
       }
-    })
-  }
+    });
+  };
 
   const handleNotesUpdate = async () => {
     startTransition(async () => {
-      const result = await updateReservationNotes(reservation.id, notes || null)
+      const result = await updateReservationNotes(
+        reservation.id,
+        notes || null,
+      );
       if (result.success) {
-        router.refresh()
+        router.refresh();
       } else {
-        toast.error(result.error || 'エラーが発生しました')
+        toast.error(result.error || "エラーが発生しました");
       }
-    })
-  }
-
-  const handleDelete = async () => {
-    startTransition(async () => {
-      const result = await deleteReservation(reservation.id)
-      if (result.success) {
-        router.push('/admin/reservations')
-      } else {
-        toast.error(result.error || 'エラーが発生しました')
-      }
-    })
-  }
+    });
+  };
 
   return (
     <div className="space-y-6">
-      {/* ステータス・操作 */}
+      {/* ステータス */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>ステータス</CardTitle>
-            <Button variant="outline" size="sm" asChild>
-              <Link href={`/admin/reservations/${reservation.id}/edit`}>
-                <Pencil className="mr-2 h-4 w-4" />
-                編集
-              </Link>
-            </Button>
-          </div>
+          <CardTitle>ステータス</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-4">
@@ -98,7 +77,7 @@ export function ReservationDetail({ reservation }: ReservationDetailProps) {
             <Select
               value={reservation.status}
               onValueChange={(value) => {
-                if (isValidReservationStatus(value)) handleStatusChange(value)
+                if (isValidReservationStatus(value)) handleStatusChange(value);
               }}
               disabled={isPending}
             >
@@ -174,13 +153,15 @@ export function ReservationDetail({ reservation }: ReservationDetailProps) {
               </div>
             </div>
             <div>
-              <div className="text-sm text-muted-foreground">メールアドレス</div>
+              <div className="text-sm text-muted-foreground">
+                メールアドレス
+              </div>
               <div className="font-medium">{reservation.customer.email}</div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground">電話番号</div>
               <div className="font-medium">
-                {reservation.customer.phoneNumber || '-'}
+                {reservation.customer.phoneNumber || "-"}
               </div>
             </div>
           </div>
@@ -201,35 +182,12 @@ export function ReservationDetail({ reservation }: ReservationDetailProps) {
           />
           <Button
             onClick={handleNotesUpdate}
-            disabled={isPending || notes === (reservation.notes || '')}
+            disabled={isPending || notes === (reservation.notes || "")}
           >
             メモを保存
           </Button>
         </CardContent>
       </Card>
-
-      {/* 危険な操作 */}
-      <Card className="border-destructive">
-        <CardHeader>
-          <CardTitle className="text-destructive">危険な操作</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Button
-            variant="destructive"
-            disabled={isPending}
-            onClick={() => setIsDeleteDialogOpen(true)}
-          >
-            予約を削除
-          </Button>
-          <DeleteConfirmDialog
-            open={isDeleteDialogOpen}
-            onOpenChange={setIsDeleteDialogOpen}
-            description="予約データは完全に削除されます。この操作は取り消せません。"
-            onConfirm={handleDelete}
-            isPending={isPending}
-          />
-        </CardContent>
-      </Card>
     </div>
-  )
+  );
 }
