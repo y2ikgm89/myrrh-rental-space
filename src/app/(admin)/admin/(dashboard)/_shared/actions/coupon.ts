@@ -11,6 +11,7 @@
  */
 
 import { prisma, Prisma, type Coupon } from '@/shared/lib/prisma'
+import { toPlainObject } from '@/shared/lib/serialize'
 import { updateTag } from 'next/cache'
 import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
 import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
@@ -79,7 +80,7 @@ const checkReadPermission = checkReadPermissionFor('coupon')
  * Prisma Couponをフロントエンド用に変換
  */
 function formatCoupon(coupon: Coupon): CouponData {
-  return { ...coupon }
+  return toPlainObject(coupon)
 }
 
 // =============================================================================

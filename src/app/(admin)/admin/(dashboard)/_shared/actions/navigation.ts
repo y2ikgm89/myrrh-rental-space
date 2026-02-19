@@ -14,6 +14,7 @@ import { logPermissionDenied } from '@/admin/lib/audit'
 import { purgeHomeCache } from '@/shared/lib/cloudflare'
 import { fireAndForget } from '@/shared/lib/async-utils'
 import { ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
+import { toPlainArray } from '@/shared/lib/serialize'
 
 // =============================================================================
 // Types
@@ -300,14 +301,14 @@ export async function getSocialLinks(options: GetSocialLinksOptions = {}): Promi
 
   const { showOnDesktop, showOnMobile, activeOnly = false } = options
 
-  return prisma.socialLink.findMany({
+  return toPlainArray(await prisma.socialLink.findMany({
     where: {
       ...(activeOnly && { isActive: true }),
       ...(showOnDesktop !== undefined && { showOnDesktop }),
       ...(showOnMobile !== undefined && { showOnMobile }),
     },
     orderBy: { order: 'asc' },
-  })
+  }))
 }
 
 /**

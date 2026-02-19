@@ -11,6 +11,7 @@ import { checkReadPermissionFor } from '@/admin/lib/permissions'
 import { parseBusinessHours, type BusinessHours } from '@/shared/lib/json-validators'
 import { parseStringArray } from '@/shared/lib/json-validators'
 import { createValidationError } from '@/shared/lib/action-helpers'
+import { toPlainArray } from '@/shared/lib/serialize'
 
 // =============================================================================
 // Prisma JSON Helpers (server-only)
@@ -172,7 +173,7 @@ export async function getPublishedLocations(): Promise<ActionResult<{ id: string
     },
   })
 
-  return createSuccess('取得しました', locations)
+  return createSuccess('取得しました', toPlainArray(locations))
 }
 
 // =============================================================================

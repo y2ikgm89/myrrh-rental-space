@@ -7,8 +7,8 @@
 
 import { cacheLife, cacheTag } from 'next/cache'
 import { prisma } from '@/shared/lib/prisma'
-import { CACHE_TAGS } from '@/shared/lib/constants'
-import { toPlainArray } from '@/shared/lib/serialize'
+import { CACHE_TAGS, CACHE_LIFE } from '@/shared/lib/constants'
+import { toPlainArray, toPlainObject } from '@/shared/lib/serialize'
 import { SectionType, PostStatus } from '@/shared/generated/prisma/enums'
 import { slugParamSchema, idParamSchema } from '@/shared/lib/validations/params'
 import { DEFAULT_PAGE_SECTIONS } from '@/shared/lib/constants/default-page-sections'
@@ -29,7 +29,7 @@ export type PublicSection = {
  */
 export async function getHomepageSections(): Promise<readonly PublicSection[]> {
   'use cache'
-  cacheLife('hours')
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT)
   cacheTag(CACHE_TAGS.SECTIONS, CACHE_TAGS.HOMEPAGE_SECTIONS)
 
   const sections = await prisma.section.findMany({
@@ -50,7 +50,7 @@ export async function getHomepageSections(): Promise<readonly PublicSection[]> {
     orderBy: { order: 'asc' },
   })
 
-  return sections
+  return toPlainArray(sections)
 }
 
 /**
@@ -58,7 +58,7 @@ export async function getHomepageSections(): Promise<readonly PublicSection[]> {
  */
 export async function getShowcaseSpaces(maxItems: number, showOnlyPublished: boolean) {
   'use cache'
-  cacheLife('hours')
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT)
   cacheTag(CACHE_TAGS.SPACES)
 
   const spaces = await prisma.space.findMany({
@@ -88,7 +88,7 @@ export async function getShowcaseSpaces(maxItems: number, showOnlyPublished: boo
  */
 export async function getPageSections(pageId: string): Promise<readonly PublicSection[]> {
   'use cache'
-  cacheLife('hours')
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT)
   cacheTag(CACHE_TAGS.SECTIONS, CACHE_TAGS.PAGE_SECTIONS)
 
   if (!idParamSchema.safeParse(pageId).success) return []
@@ -111,7 +111,7 @@ export async function getPageSections(pageId: string): Promise<readonly PublicSe
     orderBy: { order: 'asc' },
   })
 
-  return sections
+  return toPlainArray(sections)
 }
 
 /**
@@ -156,7 +156,7 @@ export async function getPageSectionsWithFallback(
  */
 export async function getPublishedNews(maxItems: number) {
   'use cache'
-  cacheLife('hours')
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT)
   cacheTag(CACHE_TAGS.NEWS)
 
   const news = await prisma.news.findMany({
@@ -173,7 +173,7 @@ export async function getPublishedNews(maxItems: number) {
     take: maxItems,
   })
 
-  return news
+  return toPlainArray(news)
 }
 
 /**
@@ -181,7 +181,7 @@ export async function getPublishedNews(maxItems: number) {
  */
 export async function getPublishedPosts(maxItems: number, categoryId?: string) {
   'use cache'
-  cacheLife('hours')
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT)
   cacheTag(CACHE_TAGS.POSTS)
 
   const posts = await prisma.post.findMany({
@@ -206,7 +206,7 @@ export async function getPublishedPosts(maxItems: number, categoryId?: string) {
     take: maxItems,
   })
 
-  return posts
+  return toPlainArray(posts)
 }
 
 /**
@@ -214,7 +214,7 @@ export async function getPublishedPosts(maxItems: number, categoryId?: string) {
  */
 export async function getPublishedFaqItems(maxItems: number, categoryId?: string) {
   'use cache'
-  cacheLife('hours')
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT)
   cacheTag(CACHE_TAGS.FAQ)
 
   const items = await prisma.faqItem.findMany({
@@ -232,7 +232,7 @@ export async function getPublishedFaqItems(maxItems: number, categoryId?: string
     take: maxItems,
   })
 
-  return items
+  return toPlainArray(items)
 }
 
 /**
@@ -240,7 +240,7 @@ export async function getPublishedFaqItems(maxItems: number, categoryId?: string
  */
 export async function getPublicPage(slug: string) {
   'use cache'
-  cacheLife('hours')
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT)
   cacheTag(CACHE_TAGS.PAGES, `${CACHE_TAGS.PAGES}-${slug}`)
 
   if (!slugParamSchema.safeParse(slug).success) return null
@@ -259,6 +259,6 @@ export async function getPublicPage(slug: string) {
     },
   })
 
-  return page
+  return toPlainObject(page)
 }
 

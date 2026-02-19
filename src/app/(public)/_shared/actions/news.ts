@@ -7,8 +7,9 @@
 import { cacheLife, cacheTag } from 'next/cache'
 import { prisma } from '@/shared/lib/prisma'
 import { safeFetch, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
-import { CACHE_TAGS, getCacheTag, PAGINATION_DEFAULTS } from '@/shared/lib/constants'
+import { CACHE_TAGS, CACHE_LIFE, getCacheTag, PAGINATION_DEFAULTS } from '@/shared/lib/constants'
 import { slugParamSchema } from '@/shared/lib/validations/params'
+import { toPlainArray, toPlainObject } from '@/shared/lib/serialize'
 
 // =============================================================================
 // Types
@@ -48,7 +49,7 @@ export async function getPublishedNewsList(
   perPage: number = PAGINATION_DEFAULTS.public.default
 ) {
   'use cache'
-  cacheLife('hours')
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT)
   cacheTag(CACHE_TAGS.NEWS)
 
   const skip = (page - 1) * perPage
@@ -81,7 +82,7 @@ export async function getPublishedNewsList(
   ])
 
   return {
-    items,
+    items: toPlainArray(items),
     totalCount,
     totalPages: Math.ceil(totalCount / perPage),
     currentPage: page,
@@ -93,12 +94,12 @@ export async function getPublishedNewsList(
  */
 export async function getPublishedNewsItem(slug: string) {
   'use cache'
-  cacheLife('hours')
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT)
   cacheTag(CACHE_TAGS.NEWS, getCacheTag.news.detail(slug))
 
   if (!slugParamSchema.safeParse(slug).success) return null
 
-  return safeFetch({
+  const result = await safeFetch({
     fetch: () =>
       prisma.news.findFirst({
         where: {
@@ -112,5 +113,6 @@ export async function getPublishedNewsItem(slug: string) {
     severity: ErrorSeverity.LOW,
     operationName: 'getPublishedNewsItem',
   })
+  return toPlainObject(result)
 }
 

@@ -9,6 +9,7 @@ import { createSuccess, createFailure, type ActionResult } from '@/admin/types/s
 import { withPermission } from '@/admin/lib/server-action-helpers'
 import type { InquiryWhereInput } from '@/shared/types/prisma'
 import { checkReadPermissionFor } from '@/admin/lib/permissions'
+import { toPlainArray, toPlainObject } from '@/shared/lib/serialize'
 
 // =============================================================================
 // Types
@@ -115,7 +116,7 @@ export async function getInquiries(
   ])
 
   return {
-    inquiries,
+    inquiries: toPlainArray(inquiries),
     total,
     page,
     limit,
@@ -132,9 +133,9 @@ export async function getInquiryById(id: string): Promise<InquiryData | null> {
     return null
   }
 
-  return prisma.inquiry.findUnique({
+  return toPlainObject(await prisma.inquiry.findUnique({
     where: { id },
-  })
+  }))
 }
 
 /**

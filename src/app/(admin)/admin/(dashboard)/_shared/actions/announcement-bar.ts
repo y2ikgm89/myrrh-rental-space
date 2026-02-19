@@ -14,6 +14,7 @@ import { purgeHomeCache } from '@/shared/lib/cloudflare'
 import { fireAndForget } from '@/shared/lib/async-utils'
 import { ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
 import { AnnouncementBarType } from '@/shared/generated/prisma/enums'
+import { toPlainObject, toPlainArray } from '@/shared/lib/serialize'
 
 // =============================================================================
 // Types
@@ -100,7 +101,7 @@ export async function getAnnouncementBars(): Promise<GetAnnouncementBarsResult> 
   })
 
   return {
-    items,
+    items: toPlainArray(items),
     total: items.length,
   }
 }
@@ -125,7 +126,7 @@ export async function getActiveAnnouncementBars(): Promise<AnnouncementBarData[]
     ],
   })
 
-  return bars
+  return toPlainArray(bars)
 }
 
 /**
@@ -136,9 +137,9 @@ export async function getAnnouncementBarById(id: string): Promise<AnnouncementBa
     return null
   }
 
-  return prisma.announcementBar.findUnique({
+  return toPlainObject(await prisma.announcementBar.findUnique({
     where: { id },
-  })
+  }))
 }
 
 // =============================================================================

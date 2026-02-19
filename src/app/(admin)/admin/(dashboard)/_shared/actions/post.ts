@@ -14,6 +14,7 @@ import { fireAndForget } from '@/shared/lib/async-utils'
 import { ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
 import { checkSlugAvailability, getSlugErrorMessage } from '@/shared/lib/slug-validation'
 import { renderEditorStateToHtmlLazy } from '@/admin/lib/lazy-renderer'
+import { toPlainArray } from '@/shared/lib/serialize'
 
 import {
   createPostSchema,
@@ -468,7 +469,7 @@ export async function getPostVersions(postId: string): Promise<PostVersionData[]
     orderBy: { version: 'desc' },
   })
 
-  return versions
+  return toPlainArray(versions)
 }
 
 /**
@@ -759,12 +760,18 @@ export async function getPublishedPosts(
     take,
   })
 
-  return posts
-    .filter((post) => post.publishedAt && post.publishedAt <= new Date())
-    .map((post) => ({
-      ...post,
-      publishedAt: post.publishedAt!,
-    }))
+  return toPlainArray(
+    posts
+      .filter((post) => post.publishedAt && post.publishedAt <= new Date())
+      .map((post) => ({
+        id: post.id,
+        title: post.title,
+        slug: post.slug,
+        excerpt: post.excerpt,
+        thumbnailUrl: post.thumbnailUrl,
+        publishedAt: post.publishedAt!,
+      }))
+  )
 }
 
 // =============================================================================

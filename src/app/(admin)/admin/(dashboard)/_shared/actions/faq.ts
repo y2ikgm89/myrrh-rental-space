@@ -19,6 +19,7 @@ import {
   type FaqCategoryWithItems,
   type FaqItemWithCategory,
 } from '@/admin/lib/validations/faq'
+import { toPlainObject, toPlainArray } from '@/shared/lib/serialize'
 
 // =============================================================================
 // Types
@@ -77,7 +78,7 @@ export async function getFaqCategories(): Promise<FaqCategoryListResult> {
   })
 
   return {
-    categories,
+    categories: toPlainArray(categories),
     total: categories.length,
   }
 }
@@ -90,14 +91,14 @@ export async function getFaqCategoryById(id: string): Promise<FaqCategoryWithIte
     return null
   }
 
-  return prisma.faqCategory.findUnique({
+  return toPlainObject(await prisma.faqCategory.findUnique({
     where: { id },
     include: {
       items: {
         orderBy: { order: 'asc' },
       },
     },
-  })
+  }))
 }
 
 // =============================================================================
@@ -314,7 +315,7 @@ export async function getFaqItems(
   ])
 
   return {
-    items,
+    items: toPlainArray(items),
     total,
     page,
     limit,
@@ -330,7 +331,7 @@ export async function getFaqItemById(id: string): Promise<FaqItemWithCategory | 
     return null
   }
 
-  return prisma.faqItem.findUnique({
+  return toPlainObject(await prisma.faqItem.findUnique({
     where: { id },
     include: {
       category: {
@@ -341,7 +342,7 @@ export async function getFaqItemById(id: string): Promise<FaqItemWithCategory | 
         },
       },
     },
-  })
+  }))
 }
 
 // =============================================================================

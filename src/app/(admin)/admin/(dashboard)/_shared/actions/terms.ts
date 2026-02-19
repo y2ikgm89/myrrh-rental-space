@@ -28,6 +28,7 @@ import { renderEditorStateToHtmlLazy } from '@/admin/lib/lazy-renderer'
 import { purgeTermsCache } from '@/shared/lib/cloudflare'
 import { fireAndForget } from '@/shared/lib/async-utils'
 import { ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
+import { toPlainArray, toPlainObject } from '@/shared/lib/serialize'
 
 // =============================================================================
 // Terms CRUD
@@ -106,7 +107,7 @@ export async function getActiveTermsForSelect(): Promise<
     orderBy: { title: 'asc' },
   })
 
-  return terms
+  return toPlainArray(terms)
 }
 
 /**
@@ -189,7 +190,7 @@ export const getTermsById = withPermission<[string], TermsDetail | null>('terms'
       return createSuccess('規約が見つかりませんでした', null)
     }
 
-    return createSuccess('規約詳細を取得しました', terms)
+    return createSuccess('規約詳細を取得しました', toPlainObject(terms))
   }
 )
 
@@ -396,7 +397,7 @@ export const getTermsVersionById = withPermission<[string], TermsVersionDetail |
     where: { id: versionId },
   })
 
-  return createSuccess('バージョン詳細を取得しました', version)
+  return createSuccess('バージョン詳細を取得しました', toPlainObject(version))
 })
 
 /**
@@ -623,7 +624,7 @@ export const getSiteWideTermsSeo = withPermission<[], SiteWideTermsSeo | null>('
       },
     })
 
-    return createSuccess('SEO情報を取得しました', terms)
+    return createSuccess('SEO情報を取得しました', toPlainObject(terms))
   }
 )
 

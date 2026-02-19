@@ -18,6 +18,7 @@ import { logPermissionDenied } from '@/admin/lib/audit'
 import { purgeHomeCache } from '@/shared/lib/cloudflare'
 import { fireAndForget } from '@/shared/lib/async-utils'
 import { ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
+import { toPlainObject, toPlainArray } from '@/shared/lib/serialize'
 import { renderEditorStateToHtmlLazy } from '@/admin/lib/lazy-renderer'
 import {
   SectionType,
@@ -105,10 +106,10 @@ export async function getHomepageSections(): Promise<HomepageSectionData[] | nul
     orderBy: { order: 'asc' },
   })
 
-  return sections.map((section) => ({
+  return toPlainArray(sections.map((section) => ({
     ...section,
     config: parseSectionConfig(section.type, section.config),
-  }))
+  })))
 }
 
 /**
@@ -120,10 +121,10 @@ export async function getPublicHomepageSections(): Promise<HomepageSectionData[]
     orderBy: { order: 'asc' },
   })
 
-  return sections.map((section) => ({
+  return toPlainArray(sections.map((section) => ({
     ...section,
     config: parseSectionConfig(section.type, section.config),
-  }))
+  })))
 }
 
 /**
@@ -139,10 +140,10 @@ export async function getHomepageSection(id: string): Promise<HomepageSectionDat
 
   if (!section || section.pageId !== null) return null
 
-  return {
+  return toPlainObject({
     ...section,
     config: parseSectionConfig(section.type, section.config),
-  }
+  })
 }
 
 /**
@@ -158,10 +159,10 @@ export async function getHomepageSectionByType(
 
   if (!section) return null
 
-  return {
+  return toPlainObject({
     ...section,
     config: parseSectionConfig(section.type, section.config),
-  }
+  })
 }
 
 // =============================================================================

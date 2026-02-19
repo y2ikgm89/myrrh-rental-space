@@ -13,6 +13,7 @@ import { fireAndForget } from '@/shared/lib/async-utils'
 import { ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
 import { checkSlugAvailability, getSlugErrorMessage } from '@/shared/lib/slug-validation'
 import { renderEditorStateToHtmlLazy } from '@/admin/lib/lazy-renderer'
+import { toPlainArray, toPlainObject } from '@/shared/lib/serialize'
 
 // Types and schemas from centralized validation file
 import {
@@ -99,7 +100,7 @@ export async function getNewsList(
   ])
 
   return {
-    news,
+    news: toPlainArray(news),
     total,
     page,
     limit,
@@ -122,7 +123,7 @@ export async function getNewsById(id: string): Promise<NewsData | null> {
 
   if (!news) return null
 
-  return news
+  return toPlainObject(news)
 }
 
 /**
@@ -406,7 +407,7 @@ export async function getNewsVersions(newsId: string): Promise<NewsVersionData[]
     orderBy: { version: 'desc' },
   })
 
-  return versions
+  return toPlainArray(versions)
 }
 
 /**
@@ -486,10 +487,14 @@ export async function getPublishedNewsList(
     take,
   })
 
-  return newsItems
-    .filter((item) => item.publishedAt && item.publishedAt <= new Date())
-    .map((item) => ({
-      ...item,
-      publishedAt: item.publishedAt!,
-    }))
+  return toPlainArray(
+    newsItems
+      .filter((item) => item.publishedAt && item.publishedAt <= new Date())
+      .map((item) => ({
+        id: item.id,
+        slug: item.slug,
+        title: item.title,
+        publishedAt: item.publishedAt!,
+      }))
+  )
 }
