@@ -75,3 +75,6 @@ docs/api/
 .claude/agent-memory-local/
 tmpclaude-*-cwd
 nul
+
+# Serena MCP tool files
+.serena/
