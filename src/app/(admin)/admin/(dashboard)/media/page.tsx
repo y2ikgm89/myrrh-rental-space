@@ -2,40 +2,48 @@
  * メディア管理ページ
  */
 
-import { Suspense } from 'react'
-import type { Metadata } from 'next'
-import { loadAdminMediaSearchParams } from '@/shared/lib/nuqs'
-import { MediaFilters } from './_components/MediaFilters'
-import { MediaListWrapper } from './_components/MediaListWrapper'
+import { Suspense } from "react";
+import type { Metadata } from "next";
+import { loadAdminMediaSearchParams } from "@/shared/lib/nuqs";
+import { MediaFilters } from "./_components/MediaFilters";
+import { MediaListWrapper } from "./_components/MediaListWrapper";
 
 export const metadata: Metadata = {
-  title: 'メディア管理',
-}
+  title: "メディア管理",
+};
 
-type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
 type PageProps = {
-  searchParams: SearchParams
-}
+  searchParams: SearchParams;
+};
 
-async function MediaListWithLoader({ searchParams }: { searchParams: SearchParams }) {
-  const params = await loadAdminMediaSearchParams(searchParams)
-  return <MediaListWrapper searchParams={params} />
+async function MediaListWithLoader({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
+  const params = await loadAdminMediaSearchParams(searchParams);
+  return <MediaListWrapper searchParams={params} />;
 }
 
 export default async function MediaPage({ searchParams }: PageProps) {
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold">メディア管理</h1>
-        <p className="text-muted-foreground">
-          画像・動画・ドキュメントの一元管理
-        </p>
+      {/* ヘッダー */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">メディア管理</h1>
+          <p className="text-sm text-muted-foreground sm:text-base">
+            画像・動画・ドキュメントの一元管理
+          </p>
+        </div>
       </div>
 
       {/* Filters */}
-      <Suspense fallback={<div className="h-10 bg-muted animate-pulse rounded" />}>
+      <Suspense
+        fallback={<div className="h-10 bg-muted animate-pulse rounded" />}
+      >
         <MediaFilters />
       </Suspense>
 
@@ -44,7 +52,7 @@ export default async function MediaPage({ searchParams }: PageProps) {
         <MediaListWithLoader searchParams={searchParams} />
       </Suspense>
     </div>
-  )
+  );
 }
 
 function MediaGridSkeleton() {
@@ -57,5 +65,5 @@ function MediaGridSkeleton() {
         />
       ))}
     </div>
-  )
+  );
 }

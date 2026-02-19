@@ -6,58 +6,58 @@
  * - メタ情報: サイト全体の利用規約ページ（/terms）のメタ情報
  */
 
-import { Suspense } from 'react'
-import Link from 'next/link'
-import { getTermsList, getSiteWideTermsSeo } from '@/admin/actions/terms'
-import { TermsList } from './_components/TermsList'
-import { TermsSeoForm } from './_components/TermsSeoForm'
+import { Suspense } from "react";
+import Link from "next/link";
+import { getTermsList, getSiteWideTermsSeo } from "@/admin/actions/terms";
+import { TermsList } from "./_components/TermsList";
+import { TermsSeoForm } from "./_components/TermsSeoForm";
 import {
   Button,
   Tabs,
   TabsList,
   TabsTrigger,
   TabsContent,
-} from '@/admin/components/ui'
-import { LoadingState } from '@/admin/components/LoadingState'
-import type { Metadata } from 'next'
+} from "@/admin/components/ui";
+import { LoadingState } from "@/admin/components/LoadingState";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: '利用規約管理 | Myrrh Rental Space',
-}
+  title: "利用規約管理 | Myrrh Rental Space",
+};
 
 // タブの型定義
-const TERMS_TABS = ['list', 'meta'] as const
-type TermsTab = (typeof TERMS_TABS)[number]
+const TERMS_TABS = ["list", "meta"] as const;
+type TermsTab = (typeof TERMS_TABS)[number];
 
-const TERMS_TABS_SET = new Set<string>(TERMS_TABS)
+const TERMS_TABS_SET = new Set<string>(TERMS_TABS);
 function isValidTab(tab: string | undefined): tab is TermsTab {
-  return typeof tab === 'string' && TERMS_TABS_SET.has(tab)
+  return typeof tab === "string" && TERMS_TABS_SET.has(tab);
 }
 
 type SearchParams = Promise<{
-  tab?: string
-}>
+  tab?: string;
+}>;
 
 type PageProps = {
-  searchParams: SearchParams
-}
+  searchParams: SearchParams;
+};
 
 // ==============================================================================
 // 規約一覧タブのコンポーネント
 // ==============================================================================
 
 async function TermsListContent() {
-  const result = await getTermsList()
+  const result = await getTermsList();
 
   if (!result.success) {
     return (
       <div className="rounded-lg border bg-card p-12 text-center">
         <p className="text-destructive">{result.error}</p>
       </div>
-    )
+    );
   }
 
-  return <TermsList terms={result.data ?? []} />
+  return <TermsList terms={result.data ?? []} />;
 }
 
 // ==============================================================================
@@ -65,14 +65,12 @@ async function TermsListContent() {
 // ==============================================================================
 
 async function SeoContent() {
-  const result = await getSiteWideTermsSeo()
+  const result = await getSiteWideTermsSeo();
 
   if (!result.success) {
     return (
-      <div className="text-center py-8 text-destructive">
-        {result.error}
-      </div>
-    )
+      <div className="text-center py-8 text-destructive">{result.error}</div>
+    );
   }
 
   if (!result.data) {
@@ -82,10 +80,10 @@ async function SeoContent() {
         <br />
         「規約一覧」タブから利用規約を作成し、「サイト全体」に設定してください。
       </div>
-    )
+    );
   }
 
-  return <TermsSeoForm seoData={result.data} />
+  return <TermsSeoForm seoData={result.data} />;
 }
 
 // ==============================================================================
@@ -93,21 +91,21 @@ async function SeoContent() {
 // ==============================================================================
 
 export default async function TermsPage({ searchParams }: PageProps) {
-  const params = await searchParams
-  const currentTab = isValidTab(params.tab) ? params.tab : 'list'
+  const params = await searchParams;
+  const currentTab = isValidTab(params.tab) ? params.tab : "list";
 
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">利用規約管理</h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground sm:text-base">
             スペースに紐づける利用規約を管理します。バージョン管理により変更履歴を追跡できます。
           </p>
         </div>
-        {currentTab === 'list' && (
-          <Button asChild>
+        {currentTab === "list" && (
+          <Button asChild className="min-h-10 sm:min-h-9">
             <Link href="/admin/terms/new">規約を追加</Link>
           </Button>
         )}
@@ -139,5 +137,5 @@ export default async function TermsPage({ searchParams }: PageProps) {
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }
