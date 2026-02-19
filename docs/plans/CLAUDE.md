@@ -69,3 +69,10 @@ ls -t docs/plans/*.md | head -10
 - **進行中・保留** — あれば上部付近
 
 計画完了時は README.md の該当エントリに `✅` を付けて更新する。
+
+## 実行
+
+計画実行時のスキルチェーン（新規セッションで計画ファイルを参照）:
+
+1. `superpowers:using-git-worktrees` — 隔離 worktree を作成（実装開始前に必須）
+2. `superpowers:executing-plans` — タスクをバッチ実行・チェックポイントでレビュー
