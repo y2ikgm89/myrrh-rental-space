@@ -6,44 +6,49 @@
  * 検索・フィルター・ページネーション・一括操作・ゴミ箱復元対応
  */
 
-import { getPagesList, getHomepageLastUpdated } from '@/admin/actions/page'
-import { loadAdminPageSearchParams } from '@/shared/lib/nuqs'
-import { CreatePageDialog, PageFilters, DeletedPagesDialog, PageListTable } from './_components'
-import type { Metadata } from 'next'
-import type { ReactElement } from 'react'
+import { getPagesList, getHomepageLastUpdated } from "@/admin/actions/page";
+import { loadAdminPageSearchParams } from "@/shared/lib/nuqs";
+import {
+  CreatePageDialog,
+  PageFilters,
+  DeletedPagesDialog,
+  PageListTable,
+} from "./_components";
+import type { Metadata } from "next";
+import type { ReactElement } from "react";
 
 export const metadata: Metadata = {
-  title: 'ページ管理',
-}
+  title: "ページ管理",
+};
 
 type PageProps = {
-  searchParams: Promise<Record<string, string | string[] | undefined>>
-}
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
 
 export default async function PagesManagementPage({
   searchParams,
 }: PageProps): Promise<ReactElement> {
-  const params = await loadAdminPageSearchParams(searchParams)
+  const params = await loadAdminPageSearchParams(searchParams);
 
   const [result, homepageLastUpdated] = await Promise.all([
     getPagesList({
       query: params.q || undefined,
-      status: params.status === 'all' ? undefined : params.status,
-      type: params.type === 'all' ? undefined : params.type,
+      status: params.status === "all" ? undefined : params.status,
+      type: params.type === "all" ? undefined : params.type,
       page: params.page,
       perPage: params.perPage,
       sortOrder: params.sort,
     }),
     getHomepageLastUpdated(),
-  ])
+  ]);
 
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">ページ管理</h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground sm:text-base">
             公開ページのコンテンツ・SEO設定
           </p>
         </div>
@@ -65,5 +70,5 @@ export default async function PagesManagementPage({
         homepageLastUpdated={homepageLastUpdated}
       />
     </div>
-  )
+  );
 }
