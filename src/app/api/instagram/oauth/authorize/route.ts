@@ -70,8 +70,6 @@ function getBaseUrl(): string {
   if (serverEnv.BETTER_AUTH_URL) {
     return serverEnv.BETTER_AUTH_URL
   }
-  // フォールバック
-  return serverEnv.VERCEL_URL
-    ? `https://${serverEnv.VERCEL_URL}`
-    : 'http://localhost:3000'
+  // フォールバック（Cloud Run では NEXT_PUBLIC_APP_URL を明示設定すること）
+  return process.env["NEXT_PUBLIC_APP_URL"] ?? 'http://localhost:3000'
 }

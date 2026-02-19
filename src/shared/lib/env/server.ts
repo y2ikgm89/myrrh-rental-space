@@ -82,9 +82,6 @@ export const serverEnv = createEnv({
       .min(32, { error: 'ADMIN_LOGIN_TOKEN must be at least 32 characters' })
       .optional(),
 
-    // Vercel（自動注入 — デプロイ環境のURL）
-    VERCEL_URL: z.string().optional(),
-
     // Database connection pool tuning
     DATABASE_POOL_MAX: z.coerce.number().int().positive().optional(),
 
@@ -113,7 +110,6 @@ export const serverEnv = createEnv({
     ENCRYPTION_KEY: process.env["ENCRYPTION_KEY"],
     CRON_SECRET: process.env["CRON_SECRET"],
     ADMIN_LOGIN_TOKEN: process.env["ADMIN_LOGIN_TOKEN"],
-    VERCEL_URL: process.env["VERCEL_URL"],
     DATABASE_POOL_MAX: process.env["DATABASE_POOL_MAX"],
     GOOGLE_APPLICATION_CREDENTIALS_JSON: process.env["GOOGLE_APPLICATION_CREDENTIALS_JSON"],
     NODE_ENV: process.env["NODE_ENV"],

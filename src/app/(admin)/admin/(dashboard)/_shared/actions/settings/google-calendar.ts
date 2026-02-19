@@ -325,7 +325,7 @@ export async function setupCalendarWebhook(): Promise<{
     }
 
     // ベースURLを取得（環境変数から）
-    const baseUrl = process.env["NEXT_PUBLIC_APP_URL"] || serverEnv.VERCEL_URL
+    const baseUrl = process.env["NEXT_PUBLIC_APP_URL"] ?? serverEnv.BETTER_AUTH_URL
     if (!baseUrl) {
       return { success: false, error: 'APP_URLが設定されていません' }
     }
