@@ -10,6 +10,7 @@ import { z } from 'zod'
 import { prisma } from './prisma'
 import { safeDecrypt } from './crypto'
 import { logger } from './logger'
+import { getBaseUrl } from '@/shared/lib/constants'
 
 interface PurgeResult {
   success: boolean
@@ -273,7 +274,7 @@ export async function purgeCloudflareByPaths(
 }
 
 function getSiteUrl(): string {
-  return process.env["NEXT_PUBLIC_BASE_URL"] || 'https://localhost:3000'
+  return getBaseUrl()
 }
 
 function purgeContentCache(
