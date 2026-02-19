@@ -141,12 +141,23 @@ type DangerZoneProps = {
 
 ### 除外ページ（特殊エディタのため現状維持）
 
-| ページ                                  | 理由                                |
-| --------------------------------------- | ----------------------------------- |
-| `news/[id]/page.tsx` + `edit/page.tsx`  | Lexical エディタ                    |
-| `posts/[id]/page.tsx` + `edit/page.tsx` | Lexical エディタ                    |
-| `spaces/[id]/edit/page.tsx`             | SpaceInlineEditor（多タブエディタ） |
-| `pages/[slug]/edit/page.tsx`            | SectionMasterDetail エディタ        |
+| ページ                                  | 理由                                       |
+| --------------------------------------- | ------------------------------------------ |
+| `news/[id]/page.tsx` + `edit/page.tsx`  | Lexical エディタ                           |
+| `posts/[id]/page.tsx` + `edit/page.tsx` | Lexical エディタ                           |
+| `spaces/[id]/edit/page.tsx`             | SpaceInlineEditor（多タブエディタ）        |
+| `pages/[slug]/edit/page.tsx`            | SectionMasterDetail エディタ               |
+| `faq/items/[id]/edit/page.tsx`          | FaqItemInlineEditor（Lexical + SidePanel） |
+
+### 存在しないページ（設計書の誤認）
+
+調査の結果、以下のページは実際には存在しない:
+
+| ページ（設計書記載）                    | 実際の状況                                                       |
+| --------------------------------------- | ---------------------------------------------------------------- |
+| `faq/[id]/page.tsx`                     | FAQ詳細ページなし。アイテムは `faq/items/[id]/edit` へ直接遷移   |
+| `media/[id]/page.tsx` + `edit/page.tsx` | メディアは `MediaDetailDialog`（モーダル）で管理、個別ページなし |
+| `coupons/[id]/edit/page.tsx`            | 詳細ページ（`coupons/[id]/page.tsx`）が編集フォームも兼ねている  |
 
 ---
 
