@@ -18,11 +18,31 @@
 | 🟢 低  | keysOf/entriesOf の許可例外を type-safety.md に追記   | `.claude/rules/type-safety.md` |
 | 🟢 低  | CSP ヘッダー設定（next.config.ts の securityHeaders） | `next.config.ts`               |
 
-**最終更新**: 2026-02-19（コード品質リファクタリング完了）
+**最終更新**: 2026-02-19（管理画面詳細・編集ページ刷新完了）
 
 ---
 
 ## 完了した計画
+
+### 2026-02-19 - 管理画面 詳細・編集ページ 完全刷新 ✅
+
+Server + Client Islands アーキテクチャ、4つの新規共有コンポーネントを導入し、管理画面の詳細・編集ページ（約15ページ）を統一刷新。
+
+**実装内容**:
+
+- [x] Phase 1: 共有コンポーネント作成（`AdminDetailLayout`, `DetailSection`, `DetailField`, `DangerZone`）
+- [x] Phase 2: 詳細ページ統一（7ページ）— `reservations`, `customers`, `inquiries`, `locations`, `spaces`, `coupons`, `staff`
+  - AdminDetailLayout + DangerZone 適用
+  - `connection()` 重複呼び出しバグ修正
+  - `deleteCustomer` アクション新規追加
+- [x] Phase 3: 編集ページ統一（4ページ）— `reservations/edit`, `customers/edit`, `locations/edit`, `staff/edit`
+  - AdminDetailLayout 適用
+  - `connection()` 重複削除
+  - staff/edit のバックボタン位置修正（右→左）
+- [x] Task 15: `admin-ui-patterns.md` に詳細・編集ページ標準パターン追加 + 禁止事項7〜9追加
+- [x] `bun run validate && bun run build` 全通過
+
+**除外ページ（特殊エディタのため現状維持）**: `news/[id]`, `posts/[id]`, `spaces/[id]/edit`, `pages/[slug]/edit`
 
 ### 2026-02-19 - コード品質リファクタリング（破壊的変更） ✅
 

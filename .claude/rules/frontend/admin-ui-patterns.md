@@ -165,6 +165,230 @@ export const getCommentThreads = withPermission<[Query], Thread[]>(
 });
 ```
 
+## テーブル操作列 ActionDropdown パターン
+
+管理画面の全テーブル操作列は `ActionDropdown`（`[⋮]`アイコン）に統一する。
+
+### 基本パターン（`*ActionCell` コンポーネント）
+
+各テーブルに専用の `*ActionCell` コンポーネントを作成する:
+
+```tsx
+// 配置例: reservations/_components/ReservationActionCell.tsx
+import {
+  ActionDropdown,
+  ActionDropdownItem,
+} from "@/admin/components/ActionDropdown";
+
+export function ReservationActionCell({ id }: { id: string }) {
+  return (
+    <ActionDropdown>
+      <ActionDropdownItem href={`/admin/reservations/${id}/edit`}>
+        編集
+      </ActionDropdownItem>
+      <ActionDropdownItem href={`/admin/reservations/${id}`}>
+        詳細
+      </ActionDropdownItem>
+    </ActionDropdown>
+  );
+}
+```
+
+### 外部リンク（`target="_blank"`）
+
+`ActionDropdownItem` は Next.js `<Link>` を使うため `target="_blank"` が使えない。`window.open()` で対処:
+
+```tsx
+// NG: href に外部URL（target="_blank" 不可）
+<ActionDropdownItem href={externalUrl}>外部リンク</ActionDropdownItem>
+
+// OK: window.open() で新タブ
+<ActionDropdownItem onClick={() => window.open(url, '_blank', 'noopener,noreferrer')}>
+  外部リンク
+</ActionDropdownItem>
+```
+
+### Dialog 起動型アクションセル
+
+ダイアログを開くアクションは `*ActionCell` コンポーネント内で `useState` を管理する:
+
+```tsx
+"use client";
+import { useState } from "react";
+import {
+  ActionDropdown,
+  ActionDropdownItem,
+  ActionDropdownSeparator,
+} from "@/admin/components/ActionDropdown";
+import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
+
+export function CategoryActionCell({ id, name }: { id: string; name: string }) {
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  return (
+    <>
+      <ActionDropdown>
+        <ActionDropdownItem onClick={() => setEditOpen(true)}>
+          編集
+        </ActionDropdownItem>
+        <ActionDropdownSeparator />
+        <ActionDropdownItem destructive onClick={() => setDeleteOpen(true)}>
+          削除
+        </ActionDropdownItem>
+      </ActionDropdown>
+      <EditDialog open={editOpen} onOpenChange={setEditOpen} id={id} />
+      <DeleteConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        itemName={name}
+        onConfirm={async () => {
+          await deleteItem(id);
+        }}
+      />
+    </>
+  );
+}
+```
+
+### インライン制御との共存
+
+`PublishSwitch`・`StatusSelect` 等のインラインコントロールは ActionDropdown と**共存**させる（吸収しない）:
+
+```tsx
+// OK: インライン制御 + ActionDropdown 共存
+<div className="flex items-center gap-2">
+  <PublishSwitch id={id} isPublished={isPublished} />
+  <SpaceActionCell id={id} />
+</div>
+```
+
+### 禁止パターン
+
+```tsx
+// NG: テーブル操作列への Button+Link 直書き
+<Button asChild size="sm" variant="outline">
+  <Link href={`/admin/items/${id}/edit`}>編集</Link>
+</Button>
+
+// OK: ActionDropdown 統一（*ActionCell 経由）
+<ItemActionCell id={id} />
+```
+
+## 詳細・編集ページ標準構造
+
+### 詳細ページ（Server Component + AdminDetailLayout）
+
+詳細ページは `AdminDetailLayout` を使ってヘッダーを統一する:
+
+```tsx
+// reservations/[id]/page.tsx (Server Component)
+import { connection } from "next/server";
+import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
+import { DetailSection } from "@/admin/components/DetailSection";
+import { DetailField } from "@/admin/components/DetailField";
+import { DangerZone } from "@/admin/components/DangerZone";
+
+export default async function ReservationDetailPage({ params }) {
+  await connection(); // PPR opt-in — ページ関数で1回のみ
+  const { id } = await params;
+  const reservation = await getReservationById(id);
+  if (!reservation) notFound();
+
+  return (
+    <AdminDetailLayout
+      backHref="/admin/reservations"
+      title={`予約 #${reservation.id.slice(0, 8)}`}
+      subtitle={`${reservation.space.name} — ${reservation.customer.name}`}
+      actions={
+        <Button asChild>
+          <Link href={`/admin/reservations/${id}/edit`}>編集</Link>
+        </Button>
+      }
+    >
+      <DetailSection title="予約情報">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <DetailField label="スペース" value={reservation.space.name} />
+        </div>
+      </DetailSection>
+      <DangerZone
+        deleteLabel="予約を削除"
+        itemName={`予約 #${reservation.id.slice(0, 8)}`}
+        onDelete={() => deleteReservation(id)}
+        redirectTo="/admin/reservations"
+      />
+    </AdminDetailLayout>
+  );
+}
+```
+
+**配置ルール**:
+
+| 要素         | 配置場所                                            | 禁止場所                |
+| ------------ | --------------------------------------------------- | ----------------------- |
+| バックボタン | `AdminDetailLayout backHref` — 左上                 | 詳細コンポーネント内    |
+| 編集ボタン   | `AdminDetailLayout actions` — 右                    | 詳細コンポーネント内    |
+| 削除ボタン   | `DangerZone` — **ページ最下部のみ**                 | ヘッダー・CardHeader 内 |
+| タイトル CSS | `text-2xl font-bold tracking-tight text-foreground` | `tracking-tight` 省略   |
+
+### 編集ページ（Server Component + AdminDetailLayout）
+
+編集ページも `AdminDetailLayout` でヘッダーを統一する:
+
+```tsx
+// customers/[id]/edit/page.tsx (Server Component)
+export default async function CustomerEditPage({ params }) {
+  await connection(); // PPR opt-in — ページ関数で1回のみ
+  const { id } = await params;
+  const customer = await getCustomerById(id);
+  if (!customer) notFound();
+
+  return (
+    <AdminDetailLayout
+      backHref={`/admin/customers/${id}`}
+      backLabel="詳細に戻る"
+      title="顧客情報を編集"
+      subtitle={`${customer.lastName} ${customer.firstName}`}
+    >
+      <CustomerEditForm customer={customer} />
+    </AdminDetailLayout>
+  );
+}
+```
+
+**`connection()` の使い方**:
+
+`connection()` は PPR 動的 opt-in のため、export されるコンポーネント関数（`page.tsx` / `generateMetadata`）で各1回のみ呼ぶ。同一関数内での複数呼び出しは禁止:
+
+```tsx
+// NG: 同一関数内で2回以上
+export default async function Page({ params }) {
+  await connection();
+  const { id } = await params;
+  await connection(); // NG: 重複
+  ...
+}
+
+// OK: generateMetadata + page 関数でそれぞれ1回（別の RSC エントリーポイント）
+export async function generateMetadata({ params }) {
+  await connection();
+  ...
+}
+export default async function Page({ params }) {
+  await connection(); // OK: 別の async 関数
+  ...
+}
+```
+
+### 共有コンポーネント一覧
+
+| コンポーネント      | パス                                   | 用途                              |
+| ------------------- | -------------------------------------- | --------------------------------- |
+| `AdminDetailLayout` | `@/admin/components/AdminDetailLayout` | 詳細・編集ページ統一ヘッダー      |
+| `DetailSection`     | `@/admin/components/DetailSection`     | Card ラッパー（セクション区切り） |
+| `DetailField`       | `@/admin/components/DetailField`       | ラベル + 値の行（dt/dd）          |
+| `DangerZone`        | `@/admin/components/DangerZone`        | 削除確認 + 実行（ページ最下部）   |
+
 ## 禁止事項
 
 1. **型 re-export の追加禁止** — 共有型のローカル aliases は不要（`export type Foo = SharedFoo`）
@@ -172,3 +396,7 @@ export const getCommentThreads = withPermission<[Query], Thread[]>(
 3. **bare div ページネーション禁止** — `<nav aria-label="...">` を使用
 4. **setPage/setParams の void なし呼び出し禁止** — `void setPage(n)`
 5. **`@/shared/types/server-actions` を管理画面で直接使用禁止** — `@/admin/types/server-actions` 経由
+6. **テーブル操作列インライン Button+Link 禁止** — `ActionDropdown` の `*ActionCell` コンポーネントを使用（`@/admin/components/ActionDropdown`）
+7. **削除ボタンをヘッダー・CardHeader 内に配置禁止** — `DangerZone` コンポーネントをページ最下部に配置
+8. **詳細・編集ページのバックボタンを詳細コンポーネント内に配置禁止** — `AdminDetailLayout backHref` で左上固定
+9. **`connection()` を同一 async 関数内で複数回呼び出し禁止** — PPR opt-in は各 RSC エントリーポイントで1回のみ
