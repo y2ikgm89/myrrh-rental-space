@@ -193,7 +193,7 @@ gcloud builds submit --config=cloudbuild.yaml  # Cloud Run デプロイ（Cloud 
 - **`bun run build` は env チェックなし** — `SKIP_ENV_VALIDATION=true` が付く。本番デプロイ前は `bun run build:strict`
 - **`__tests__/` は type-check 対象外** — tsconfig の exclude 指定。テスト内型エラーは `bun run type-check` では検出されず `bun test` 時のみ発覚
 - **インデックスシグネチャはブラケット記法強制** — `noPropertyAccessFromIndexSignature: true`。`obj.key` ではなく `obj['key']`
-- **`rm -rf` は deny ルール** — 追跡ファイルは `git rm -r <path>`、未追跡ファイル/ディレクトリは `py -c "import shutil; shutil.rmtree('path')"` で削除
+- **`rm -rf` は deny ルール** — 追跡ファイルは `git rm -r <path>`、未追跡ファイル/ディレクトリは `python3 -c "import shutil; shutil.rmtree('path')"` で削除
 - **gitignore 追加後の既存追跡ファイル** — `git rm --cached -r <path>` でインデックスから除外（ファイルはディスクに残る）
 - **`()` を含むパスは Bash コマンドで渡せない** — `src/app/(admin)/` など Next.js ルートグループパスを Bash に渡すと MINGW64 が `(` をサブシェル記法として解釈しエラー。Glob/Grep/Read ツールを使うか、クォートで回避（例: `ls 'src/app/(admin)/'`）
 - **Prettier がマークダウン表の `**`を`\*\*`にエスケープする** — テーブルセル内の`**bold**`は Prettier フォーマット後に`\*\*bold\*\*` へ自動変換される。設定で抑制不可。解決策はボールド書式を削除すること。
