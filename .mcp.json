@@ -1,9 +1,11 @@
 {
   "mcpServers": {
     "github": {
-      "command": "gh",
-      "args": ["mcp", "serve"],
-      "type": "stdio"
+      "command": "github-mcp-server",
+      "args": ["stdio"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      }
     }
   }
 }
