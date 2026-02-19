@@ -1,188 +1,92 @@
-import { Suspense } from 'react'
-import { loadAdminAuditLogSearchParams } from '@/shared/lib/nuqs'
-import { Card, CardContent, CardHeader, CardTitle } from '@/admin/components/ui/card'
-import { Badge } from '@/admin/components/ui/badge'
-import { LoadingState } from '@/admin/components/LoadingState'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/admin/components/ui/table'
-import { Pagination } from '@/admin/components/ui'
-import { getAuditLogs, getAuditLogStats } from '@/admin/actions/audit-log'
-import { formatDateTimeShort } from '@/shared/lib/utils'
-import { AuditAction, getAuditActionFilterOrAll } from '@/shared/lib/validations/enums'
-import { AuditLogFilters } from './_components/AuditLogFilters'
+import { Suspense } from "react";
+import { getAuditLogs } from "@/admin/actions/audit-log";
+import { loadAdminAuditLogSearchParams } from "@/shared/lib/nuqs";
+import { getAuditActionFilterOrAll } from "@/shared/lib/validations/enums";
+import { Pagination } from "@/admin/components/ui";
+import { LoadingState } from "@/admin/components/LoadingState";
+import { AuditLogStats } from "./_components/AuditLogStats";
+import { AuditLogTable } from "./_components/AuditLogTable";
+import { AuditLogFilters } from "./_components/AuditLogFilters";
+import type { Metadata } from "next";
 
-export const metadata = {
-  title: '監査ログ | 管理画面',
-}
+export const metadata: Metadata = {
+  title: "監査ログ | Myrrh Rental Space",
+};
 
-type Props = {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
-}
+type PageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
 
-export default async function AuditLogsPage({ searchParams }: Props) {
-  const params = await loadAdminAuditLogSearchParams(searchParams)
+async function AuditLogList({ searchParams }: PageProps) {
+  const params = await loadAdminAuditLogSearchParams(searchParams);
+  const logsResult = await getAuditLogs({
+    page: params.page,
+    perPage: params.perPage,
+    action: getAuditActionFilterOrAll(params.action),
+    resource: params.resource || undefined,
+    userId: params.userId || undefined,
+    dateFrom: params.dateFrom || undefined,
+    dateTo: params.dateTo || undefined,
+  });
 
-  const [logsResult, statsResult] = await Promise.all([
-    getAuditLogs({
-      page: params.page,
-      perPage: params.perPage,
-      action: getAuditActionFilterOrAll(params.action),
-      resource: params.resource || undefined,
-      userId: params.userId || undefined,
-      dateFrom: params.dateFrom || undefined,
-      dateTo: params.dateTo || undefined,
-    }),
-    getAuditLogStats(),
-  ])
-
-  const logs = logsResult.success && 'data' in logsResult ? logsResult.data : { logs: [], total: 0, page: 1, totalPages: 1 }
-  const stats = statsResult.success && 'data' in statsResult ? statsResult.data : { total: 0, today: 0, securityEvents: 0, byAction: {} }
+  const logs =
+    logsResult.success && "data" in logsResult
+      ? logsResult.data
+      : { logs: [], total: 0, page: 1, totalPages: 1 };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">監査ログ</h1>
-        <p className="text-muted-foreground">システム操作の履歴を確認</p>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">総ログ数</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total.toLocaleString()}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">本日</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.today.toLocaleString()}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">セキュリティイベント</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.securityEvents.toLocaleString()}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">作成操作</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {(stats.byAction['CREATE'] ?? 0).toLocaleString()}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>ログ一覧</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Suspense fallback={<LoadingState variant="inline" />}>
-            <AuditLogFilters />
-          </Suspense>
-
-          <div className="mt-4 rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>日時</TableHead>
-                  <TableHead>ユーザー</TableHead>
-                  <TableHead>アクション</TableHead>
-                  <TableHead>リソース</TableHead>
-                  <TableHead>リソースID</TableHead>
-                  <TableHead>IPアドレス</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {logs.logs.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                      ログが見つかりません
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  logs.logs.map((log: (typeof logs.logs)[number]) => (
-                    <TableRow key={log.id}>
-                      <TableCell className="whitespace-nowrap">
-                        {formatDateTimeShort(log.createdAt)}
-                      </TableCell>
-                      <TableCell>
-                        {log.user?.name || log.user?.email || '(システム)'}
-                      </TableCell>
-                      <TableCell>
-                        <ActionBadge action={log.action} />
-                      </TableCell>
-                      <TableCell>{log.resource}</TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {log.resourceId?.slice(0, 8) || '-'}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {log.metadata?.ipAddress || '-'}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-
-          {logs.totalPages > 1 && (
-            <div className="mt-4">
-              <Pagination
-                currentPage={logs.page}
-                totalPages={logs.totalPages}
-                total={logs.total}
-              />
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  )
+    <>
+      <AuditLogTable logs={logs.logs} />
+      <Pagination
+        currentPage={logs.page}
+        totalPages={logs.totalPages}
+        total={logs.total}
+      />
+    </>
+  );
 }
 
-function ActionBadge({ action }: { action: AuditAction }) {
-  const variants: Record<AuditAction, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-    CREATE: 'default',
-    UPDATE: 'secondary',
-    DELETE: 'destructive',
-    PUBLISH: 'default',
-    UNPUBLISH: 'outline',
-    LOGIN_SUCCESS: 'default',
-    LOGIN_FAILED: 'destructive',
-    PERMISSION_DENIED: 'destructive',
-    PASSWORD_CHANGE: 'secondary',
-    ROLE_CHANGE: 'secondary',
-  }
+export default async function AuditLogsPage({ searchParams }: PageProps) {
+  return (
+    <div className="space-y-6">
+      {/* ヘッダー */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">監査ログ</h1>
+          <p className="text-sm text-muted-foreground sm:text-base">
+            システム操作の履歴を確認します
+          </p>
+        </div>
+      </div>
 
-  const labels: Record<AuditAction, string> = {
-    CREATE: '作成',
-    UPDATE: '更新',
-    DELETE: '削除',
-    PUBLISH: '公開',
-    UNPUBLISH: '非公開',
-    LOGIN_SUCCESS: 'ログイン成功',
-    LOGIN_FAILED: 'ログイン失敗',
-    PERMISSION_DENIED: '権限拒否',
-    PASSWORD_CHANGE: 'パスワード変更',
-    ROLE_CHANGE: 'ロール変更',
-  }
+      {/* スタッツカード */}
+      <Suspense
+        fallback={
+          <div className="grid gap-4 md:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div
+                key={i}
+                className="rounded-lg border bg-card p-6 animate-pulse"
+              >
+                <div className="h-4 bg-muted rounded w-20 mb-3" />
+                <div className="h-8 bg-muted rounded w-12" />
+              </div>
+            ))}
+          </div>
+        }
+      >
+        <AuditLogStats />
+      </Suspense>
 
-  return <Badge variant={variants[action]}>{labels[action]}</Badge>
+      {/* フィルター */}
+      <Suspense fallback={<LoadingState variant="inline" />}>
+        <AuditLogFilters />
+      </Suspense>
+
+      {/* テーブル + ページネーション */}
+      <Suspense fallback={<LoadingState />}>
+        <AuditLogList searchParams={searchParams} />
+      </Suspense>
+    </div>
+  );
 }
