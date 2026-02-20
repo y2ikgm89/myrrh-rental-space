@@ -37,7 +37,7 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
     startTransition(async () => {
       const result = await updateInquiryStatus(inquiry.id, status);
       if (!result.success) {
-        toast.error(result.error);
+        toast.error(result.error || "エラーが発生しました");
       }
     });
   };
