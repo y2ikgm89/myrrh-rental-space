@@ -9,7 +9,12 @@ import {
   useEffectEvent,
 } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, useWatch, useFieldArray } from "react-hook-form";
+import {
+  useForm,
+  useWatch,
+  useFieldArray,
+  type FieldErrors,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -43,6 +48,10 @@ import {
   useSortable,
   verticalListSortingStrategy,
   CSS,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
   type DragEndEvent,
 } from "@/admin/components/ui";
 import { createSpace, updateSpace } from "@/admin/actions/space";
@@ -75,11 +84,75 @@ import {
   OGPFields,
   UnifiedPublishFields,
 } from "@/admin/components/editor/inline/side-panel";
+import { useQueryState, parseAsStringLiteral } from "nuqs";
 
 // =============================================================================
 // Constants
 // =============================================================================
 const SELECT_NONE_VALUE = "__none__";
+
+// =============================================================================
+// Tab constants
+// =============================================================================
+const TAB_VALUES = [
+  "basic",
+  "pricing",
+  "media",
+  "details",
+  "publish",
+] satisfies [string, ...string[]];
+type TabValue = (typeof TAB_VALUES)[number];
+
+const TAB_LABELS: Record<TabValue, string> = {
+  basic: "基本情報",
+  pricing: "料金設定",
+  media: "メディア",
+  details: "詳細設定",
+  publish: "公開・SEO",
+};
+
+const TAB_FIELDS: Record<string, string[]> = {
+  basic: [
+    "name",
+    "slug",
+    "description",
+    "address",
+    "access",
+    "capacity",
+    "area",
+  ],
+  pricing: [
+    "hourlyPrice",
+    "dailyPrice",
+    "discountType",
+    "discountValue",
+    "durationDiscountOverride",
+    "taxRateType",
+  ],
+  media: ["mainImageUrl", "imageUrls"],
+  details: ["locationId", "categoryId", "facilities", "termsId"],
+  publish: [
+    "isPublished",
+    "publishedAt",
+    "metaDescription",
+    "metaKeywords",
+    "ogpTitle",
+    "ogpDescription",
+    "ogpImageUrl",
+  ],
+};
+
+function getTabErrorCount(
+  errors: FieldErrors<FormData>,
+  tab: TabValue,
+): number {
+  const fields = TAB_FIELDS[tab];
+  if (!fields) return 0;
+  return fields.filter((field) => {
+    const key = field as keyof FormData;
+    return !!errors[key];
+  }).length;
+}
 
 // =============================================================================
 // Schema（RHF フォーム用 — imageUrls/facilities は object[] で useFieldArray 対応）
@@ -273,6 +346,10 @@ export function SpaceEditForm({
   taxSettings = DEFAULT_TAX_SETTINGS,
 }: SpaceEditFormProps) {
   const router = useRouter();
+  const [activeTab, setActiveTab] = useQueryState(
+    "tab",
+    parseAsStringLiteral(TAB_VALUES).withDefault("basic"),
+  );
   const [isPending, startTransition] = useTransition();
   const [newFacility, setNewFacility] = useState("");
   const dndContextId = useId();
@@ -549,131 +626,156 @@ export function SpaceEditForm({
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      {/* ── 2カラムグリッド ── */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* ══ 左カラム: 基本情報 ══ */}
-        <Card>
-          <CardHeader>
-            <CardTitle>基本情報</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* スペース名 */}
-            <div className="space-y-2">
-              <Label htmlFor="name">スペース名 *</Label>
-              <Input
-                id="name"
-                {...register("name")}
-                placeholder="例: 会議室A"
-                disabled={isPending}
-              />
-              {errors.name && (
-                <p className="text-sm text-destructive">
-                  {errors.name.message}
-                </p>
-              )}
-            </div>
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => void setActiveTab(v)}
+        className="space-y-4"
+      >
+        {/* ── タブナビゲーション ── */}
+        <TabsList className="flex-wrap h-auto gap-1">
+          {TAB_VALUES.map((tab) => {
+            const errorCount = getTabErrorCount(errors, tab);
+            return (
+              <TabsTrigger
+                key={tab}
+                value={tab}
+                className="flex items-center gap-1.5"
+              >
+                {TAB_LABELS[tab]}
+                {errorCount > 0 && (
+                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
+                    {errorCount}
+                  </span>
+                )}
+              </TabsTrigger>
+            );
+          })}
+        </TabsList>
 
-            {/* スラッグ */}
-            <div className="space-y-2">
-              <Label htmlFor="slug">スラッグ *</Label>
-              <Input
-                id="slug"
-                {...register("slug")}
-                placeholder="例: meeting-room-a"
-                disabled={isPending}
-              />
-              <p className="text-xs text-muted-foreground">
-                URLに使用されます（小文字英数字とハイフンのみ）
-              </p>
-              {errors.slug && (
-                <p className="text-sm text-destructive">
-                  {errors.slug.message}
-                </p>
-              )}
-            </div>
-
-            {/* 説明 */}
-            <div className="space-y-2">
-              <Label htmlFor="description">説明 *</Label>
-              <Textarea
-                id="description"
-                {...register("description")}
-                placeholder="スペースの説明を入力..."
-                rows={6}
-                disabled={isPending}
-              />
-              {errors.description && (
-                <p className="text-sm text-destructive">
-                  {errors.description.message}
-                </p>
-              )}
-            </div>
-
-            {/* 住所・アクセス */}
-            <div className="grid gap-4 sm:grid-cols-2">
+        {/* ══ Tab: 基本情報 ══ */}
+        <TabsContent value="basic" forceMount={true}>
+          <Card>
+            <CardHeader>
+              <CardTitle>基本情報</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* スペース名 */}
               <div className="space-y-2">
-                <Label htmlFor="address">住所 *</Label>
+                <Label htmlFor="name">スペース名 *</Label>
                 <Input
-                  id="address"
-                  {...register("address")}
-                  placeholder="例: 東京都渋谷区..."
+                  id="name"
+                  {...register("name")}
+                  placeholder="例: 会議室A"
                   disabled={isPending}
                 />
-                {errors.address && (
+                {errors.name && (
                   <p className="text-sm text-destructive">
-                    {errors.address.message}
+                    {errors.name.message}
                   </p>
                 )}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="access">アクセス</Label>
-                <Input
-                  id="access"
-                  {...register("access")}
-                  placeholder="例: 渋谷駅から徒歩5分"
-                  disabled={isPending}
-                />
-              </div>
-            </div>
 
-            {/* 定員・面積 */}
-            <div className="grid gap-4 sm:grid-cols-2">
+              {/* スラッグ */}
               <div className="space-y-2">
-                <Label htmlFor="capacity">定員（人数）*</Label>
+                <Label htmlFor="slug">スラッグ *</Label>
                 <Input
-                  id="capacity"
-                  type="number"
-                  {...register("capacity", { valueAsNumber: true })}
-                  placeholder="10"
+                  id="slug"
+                  {...register("slug")}
+                  placeholder="例: meeting-room-a"
                   disabled={isPending}
                 />
-                {errors.capacity && (
+                <p className="text-xs text-muted-foreground">
+                  URLに使用されます（小文字英数字とハイフンのみ）
+                </p>
+                {errors.slug && (
                   <p className="text-sm text-destructive">
-                    {errors.capacity.message}
+                    {errors.slug.message}
                   </p>
                 )}
               </div>
+
+              {/* 説明 */}
               <div className="space-y-2">
-                <Label htmlFor="area">面積（m²）</Label>
-                <Input
-                  id="area"
-                  type="number"
-                  step="0.01"
-                  {...register("area", {
-                    setValueAs: (v: string) => (v === "" ? null : Number(v)),
-                  })}
-                  placeholder="50"
+                <Label htmlFor="description">説明 *</Label>
+                <Textarea
+                  id="description"
+                  {...register("description")}
+                  placeholder="スペースの説明を入力..."
+                  rows={6}
                   disabled={isPending}
                 />
+                {errors.description && (
+                  <p className="text-sm text-destructive">
+                    {errors.description.message}
+                  </p>
+                )}
               </div>
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* ══ 右カラム: 設定カード群 ══ */}
-        <div className="space-y-6">
-          {/* ── 料金設定 ── */}
+              {/* 住所・アクセス */}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="address">住所 *</Label>
+                  <Input
+                    id="address"
+                    {...register("address")}
+                    placeholder="例: 東京都渋谷区..."
+                    disabled={isPending}
+                  />
+                  {errors.address && (
+                    <p className="text-sm text-destructive">
+                      {errors.address.message}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="access">アクセス</Label>
+                  <Input
+                    id="access"
+                    {...register("access")}
+                    placeholder="例: 渋谷駅から徒歩5分"
+                    disabled={isPending}
+                  />
+                </div>
+              </div>
+
+              {/* 定員・面積 */}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="capacity">定員（人数）*</Label>
+                  <Input
+                    id="capacity"
+                    type="number"
+                    {...register("capacity", { valueAsNumber: true })}
+                    placeholder="10"
+                    disabled={isPending}
+                  />
+                  {errors.capacity && (
+                    <p className="text-sm text-destructive">
+                      {errors.capacity.message}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="area">面積（m²）</Label>
+                  <Input
+                    id="area"
+                    type="number"
+                    step="0.01"
+                    {...register("area", {
+                      setValueAs: (v: string) => (v === "" ? null : Number(v)),
+                    })}
+                    placeholder="50"
+                    disabled={isPending}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ══ Tab: 料金設定 ══ */}
+        <TabsContent value="pricing" forceMount={true}>
           <Card>
             <CardHeader>
               <CardTitle>料金設定</CardTitle>
@@ -943,353 +1045,374 @@ export function SpaceEditForm({
               )}
             </CardContent>
           </Card>
+        </TabsContent>
 
-          {/* ── 場所・カテゴリー ── */}
-          {(availableLocations.length > 0 ||
-            availableCategories.length > 0) && (
-            <Card>
-              <CardHeader>
-                <CardTitle>場所・カテゴリー</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {availableLocations.length > 0 && (
-                  <div className="space-y-2">
-                    <Label htmlFor="locationId">場所（建物・施設）</Label>
-                    <Select
-                      value={locationId ?? SELECT_NONE_VALUE}
-                      onValueChange={(value) =>
-                        setValue(
-                          "locationId",
-                          value === SELECT_NONE_VALUE ? undefined : value,
-                          { shouldDirty: true },
-                        )
-                      }
-                      disabled={isPending}
-                    >
-                      <SelectTrigger id="locationId">
-                        <SelectValue placeholder="場所を選択（任意）" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={SELECT_NONE_VALUE}>なし</SelectItem>
-                        {availableLocations.map((loc) => (
-                          <SelectItem key={loc.id} value={loc.id}>
-                            {loc.name}（{loc.address}）
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-                {availableCategories.length > 0 && (
-                  <div className="space-y-2">
-                    <Label htmlFor="categoryId">カテゴリー（用途）</Label>
-                    <Select
-                      value={categoryId ?? SELECT_NONE_VALUE}
-                      onValueChange={(value) =>
-                        setValue(
-                          "categoryId",
-                          value === SELECT_NONE_VALUE ? undefined : value,
-                          { shouldDirty: true },
-                        )
-                      }
-                      disabled={isPending}
-                    >
-                      <SelectTrigger id="categoryId">
-                        <SelectValue placeholder="カテゴリーを選択（任意）" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={SELECT_NONE_VALUE}>なし</SelectItem>
-                        {availableCategories.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id}>
-                            {cat.icon && (
-                              <span className="mr-1">{cat.icon}</span>
-                            )}
-                            {cat.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* ── 公開設定 ── */}
+        {/* ══ Tab: メディア ══ */}
+        <TabsContent value="media" forceMount={true}>
           <Card>
             <CardHeader>
-              <CardTitle>公開設定</CardTitle>
+              <CardTitle>画像設定</CardTitle>
             </CardHeader>
-            <CardContent>
-              <UnifiedPublishFields
-                register={register}
-                control={control}
-                errors={errors}
-                setValue={setValue}
-                getValues={getValues}
-                disabled={isPending}
-                controlType="isPublished"
-                fields={{ publishedAt: "publishedAt" }}
-                isPublishedValue={isPublished}
-                onIsPublishedChange={(value: boolean) =>
-                  setValue("isPublished", value, { shouldDirty: true })
-                }
-              />
-            </CardContent>
-          </Card>
-
-          {/* ── 利用規約 ── */}
-          {availableTerms.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>利用規約</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Label htmlFor="termsId">適用する利用規約</Label>
-                <Select
-                  value={termsId ?? SELECT_NONE_VALUE}
-                  onValueChange={(value) =>
-                    setValue(
-                      "termsId",
-                      value === SELECT_NONE_VALUE ? undefined : value,
-                      { shouldDirty: true },
-                    )
-                  }
-                  disabled={isPending}
-                >
-                  <SelectTrigger id="termsId">
-                    <SelectValue placeholder="規約を選択（任意）" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={SELECT_NONE_VALUE}>
-                      なし（規約同意不要）
-                    </SelectItem>
-                    {availableTerms.map((term) => (
-                      <SelectItem key={term.id} value={term.id}>
-                        {term.title}（{term.type}）
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-sm text-muted-foreground">
-                  規約を設定すると、予約時に顧客が同意する必要があります
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-        {/* ── 右カラム end ── */}
-      </div>
-      {/* ── 2カラムグリッド end ── */}
-
-      {/* ── 画像設定（full-width）── */}
-      <Card>
-        <CardHeader>
-          <CardTitle>画像設定</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* メイン画像 */}
-          <div className="space-y-2">
-            <Label>メイン画像 *</Label>
-            <div className="flex items-start gap-4">
-              {mainImageUrl ? (
-                <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg border">
-                  <Image
-                    src={mainImageUrl}
-                    alt="メイン画像"
-                    fill
-                    sizes="96px"
-                    className="object-cover"
-                  />
+            <CardContent className="space-y-6">
+              {/* メイン画像 */}
+              <div className="space-y-2">
+                <Label>メイン画像 *</Label>
+                <div className="flex items-start gap-4">
+                  {mainImageUrl ? (
+                    <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg border">
+                      <Image
+                        src={mainImageUrl}
+                        alt="メイン画像"
+                        fill
+                        sizes="96px"
+                        className="object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-lg border border-dashed bg-muted">
+                      <ImagePlus className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="flex-1 space-y-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => mainImagePicker.openPicker()}
+                      disabled={isPending}
+                    >
+                      <ImagePlus className="mr-2 h-4 w-4" />
+                      画像を選択
+                    </Button>
+                    {mainImageUrl && (
+                      <p className="truncate text-xs text-muted-foreground">
+                        {mainImageUrl}
+                      </p>
+                    )}
+                  </div>
                 </div>
-              ) : (
-                <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-lg border border-dashed bg-muted">
-                  <ImagePlus className="h-8 w-8 text-muted-foreground" />
-                </div>
-              )}
-              <div className="flex-1 space-y-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => mainImagePicker.openPicker()}
-                  disabled={isPending}
-                >
-                  <ImagePlus className="mr-2 h-4 w-4" />
-                  画像を選択
-                </Button>
-                {mainImageUrl && (
-                  <p className="truncate text-xs text-muted-foreground">
-                    {mainImageUrl}
+                {errors.mainImageUrl && (
+                  <p className="text-sm text-destructive">
+                    {errors.mainImageUrl.message}
                   </p>
                 )}
               </div>
-            </div>
-            {errors.mainImageUrl && (
-              <p className="text-sm text-destructive">
-                {errors.mainImageUrl.message}
-              </p>
-            )}
-          </div>
 
-          {/* 追加画像（useFieldArray + dnd-kit）*/}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label>追加画像（最大10枚）</Label>
-              <span className="text-sm text-muted-foreground">
-                {imageFields.length} / 10 枚
-              </span>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => additionalImagesPicker.openPicker()}
-              disabled={isPending || imageFields.length >= 10}
-            >
-              <ImagePlus className="mr-2 h-4 w-4" />
-              画像を追加
-            </Button>
-            {imageFields.length > 0 && (
-              <>
-                <p className="text-xs text-muted-foreground">
-                  ドラッグ&ドロップで順序を変更できます
-                </p>
-                <DndContext
-                  id={dndContextId}
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={handleImageDragEnd}
+              {/* 追加画像（useFieldArray + dnd-kit）*/}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>追加画像（最大10枚）</Label>
+                  <span className="text-sm text-muted-foreground">
+                    {imageFields.length} / 10 枚
+                  </span>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => additionalImagesPicker.openPicker()}
+                  disabled={isPending || imageFields.length >= 10}
                 >
-                  <SortableContext
-                    items={imageFields.map((f) => f.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
+                  <ImagePlus className="mr-2 h-4 w-4" />
+                  画像を追加
+                </Button>
+                {imageFields.length > 0 && (
+                  <>
+                    <p className="text-xs text-muted-foreground">
+                      ドラッグ&ドロップで順序を変更できます
+                    </p>
+                    <DndContext
+                      id={dndContextId}
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={handleImageDragEnd}
+                    >
+                      <SortableContext
+                        items={imageFields.map((f) => f.id)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        <div className="space-y-2">
+                          {imageFields.map((field, index) => (
+                            <SortableImageItem
+                              key={field.id}
+                              id={field.id}
+                              url={field.url}
+                              index={index}
+                              onRemove={removeImage}
+                              disabled={isPending}
+                            />
+                          ))}
+                        </div>
+                      </SortableContext>
+                    </DndContext>
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ══ Tab: 詳細設定 ══ */}
+        <TabsContent value="details" forceMount={true}>
+          <div className="space-y-6">
+            {/* ── 場所・カテゴリー ── */}
+            {(availableLocations.length > 0 ||
+              availableCategories.length > 0) && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>場所・カテゴリー</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {availableLocations.length > 0 && (
                     <div className="space-y-2">
-                      {imageFields.map((field, index) => (
-                        <SortableImageItem
-                          key={field.id}
-                          id={field.id}
-                          url={field.url}
-                          index={index}
-                          onRemove={removeImage}
-                          disabled={isPending}
-                        />
-                      ))}
+                      <Label htmlFor="locationId">場所（建物・施設）</Label>
+                      <Select
+                        value={locationId ?? SELECT_NONE_VALUE}
+                        onValueChange={(value) =>
+                          setValue(
+                            "locationId",
+                            value === SELECT_NONE_VALUE ? undefined : value,
+                            { shouldDirty: true },
+                          )
+                        }
+                        disabled={isPending}
+                      >
+                        <SelectTrigger id="locationId">
+                          <SelectValue placeholder="場所を選択（任意）" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={SELECT_NONE_VALUE}>
+                            なし
+                          </SelectItem>
+                          {availableLocations.map((loc) => (
+                            <SelectItem key={loc.id} value={loc.id}>
+                              {loc.name}（{loc.address}）
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                  </SortableContext>
-                </DndContext>
-              </>
+                  )}
+                  {availableCategories.length > 0 && (
+                    <div className="space-y-2">
+                      <Label htmlFor="categoryId">カテゴリー（用途）</Label>
+                      <Select
+                        value={categoryId ?? SELECT_NONE_VALUE}
+                        onValueChange={(value) =>
+                          setValue(
+                            "categoryId",
+                            value === SELECT_NONE_VALUE ? undefined : value,
+                            { shouldDirty: true },
+                          )
+                        }
+                        disabled={isPending}
+                      >
+                        <SelectTrigger id="categoryId">
+                          <SelectValue placeholder="カテゴリーを選択（任意）" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={SELECT_NONE_VALUE}>
+                            なし
+                          </SelectItem>
+                          {availableCategories.map((cat) => (
+                            <SelectItem key={cat.id} value={cat.id}>
+                              {cat.icon && (
+                                <span className="mr-1">{cat.icon}</span>
+                              )}
+                              {cat.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ── 設備・アメニティ ── */}
+            <Card>
+              <CardHeader>
+                <CardTitle>設備・アメニティ</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex gap-2">
+                  <Input
+                    value={newFacility}
+                    onChange={(e) => setNewFacility(e.target.value)}
+                    placeholder="例: WiFi、プロジェクター"
+                    disabled={isPending}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addFacility();
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={addFacility}
+                    disabled={isPending}
+                  >
+                    追加
+                  </Button>
+                </div>
+                {facilityFields.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {facilityFields.map((field, index) => (
+                      <span
+                        key={field.id}
+                        className="inline-flex items-center gap-1 rounded-full bg-secondary px-3 py-1 text-sm"
+                      >
+                        {field.value}
+                        <button
+                          type="button"
+                          onClick={() => removeFacility(index)}
+                          disabled={isPending}
+                          className="ml-1 text-muted-foreground hover:text-foreground"
+                          aria-label={`${field.value}を削除`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* ── 利用規約 ── */}
+            {availableTerms.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>利用規約</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <Label htmlFor="termsId">適用する利用規約</Label>
+                  <Select
+                    value={termsId ?? SELECT_NONE_VALUE}
+                    onValueChange={(value) =>
+                      setValue(
+                        "termsId",
+                        value === SELECT_NONE_VALUE ? undefined : value,
+                        { shouldDirty: true },
+                      )
+                    }
+                    disabled={isPending}
+                  >
+                    <SelectTrigger id="termsId">
+                      <SelectValue placeholder="規約を選択（任意）" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={SELECT_NONE_VALUE}>
+                        なし（規約同意不要）
+                      </SelectItem>
+                      {availableTerms.map((term) => (
+                        <SelectItem key={term.id} value={term.id}>
+                          {term.title}（{term.type}）
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-sm text-muted-foreground">
+                    規約を設定すると、予約時に顧客が同意する必要があります
+                  </p>
+                </CardContent>
+              </Card>
             )}
           </div>
-        </CardContent>
-      </Card>
+        </TabsContent>
 
-      {/* ── 設備・アメニティ（full-width）── */}
-      <Card>
-        <CardHeader>
-          <CardTitle>設備・アメニティ</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-2">
-            <Input
-              value={newFacility}
-              onChange={(e) => setNewFacility(e.target.value)}
-              placeholder="例: WiFi、プロジェクター"
-              disabled={isPending}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  addFacility();
-                }
-              }}
-            />
+        {/* ══ Tab: 公開・SEO ══ */}
+        <TabsContent value="publish" forceMount={true}>
+          <div className="space-y-6">
+            {/* ── 公開設定 ── */}
+            <Card>
+              <CardHeader>
+                <CardTitle>公開設定</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <UnifiedPublishFields
+                  register={register}
+                  control={control}
+                  errors={errors}
+                  setValue={setValue}
+                  getValues={getValues}
+                  disabled={isPending}
+                  controlType="isPublished"
+                  fields={{ publishedAt: "publishedAt" }}
+                  isPublishedValue={isPublished}
+                  onIsPublishedChange={(value: boolean) =>
+                    setValue("isPublished", value, { shouldDirty: true })
+                  }
+                />
+              </CardContent>
+            </Card>
+
+            {/* ── SEO・OGP ── */}
+            <Card>
+              <CardHeader>
+                <CardTitle>SEO・OGP 設定</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <SEOFields
+                  register={register}
+                  errors={errors}
+                  disabled={isPending}
+                  fields={{
+                    metaDescription: "metaDescription",
+                    metaKeywords: "metaKeywords",
+                  }}
+                />
+                <div className="border-t pt-4">
+                  <OGPFields
+                    register={register}
+                    control={control}
+                    errors={errors}
+                    setValue={setValue}
+                    disabled={isPending}
+                    fields={{
+                      ogpTitle: "ogpTitle",
+                      ogpDescription: "ogpDescription",
+                      ogpImageUrl: "ogpImageUrl",
+                    }}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* ── スティッキー保存バー ── */}
+      <div className="sticky bottom-0 z-10 mt-6 -mx-4 border-t bg-background px-4 py-4 md:-mx-6 md:px-6">
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            {isDirty ? "未保存の変更があります" : ""}
+          </p>
+          <div className="flex gap-3">
             <Button
               type="button"
               variant="outline"
-              onClick={addFacility}
+              onClick={() =>
+                router.push(
+                  mode === "edit" && space
+                    ? `/admin/spaces/${space.id}`
+                    : "/admin/spaces",
+                )
+              }
               disabled={isPending}
             >
-              追加
+              キャンセル
+            </Button>
+            <Button type="submit" disabled={isPending}>
+              {isPending
+                ? "保存中..."
+                : mode === "create"
+                  ? "スペースを作成"
+                  : "変更を保存"}
             </Button>
           </div>
-          {facilityFields.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {facilityFields.map((field, index) => (
-                <span
-                  key={field.id}
-                  className="inline-flex items-center gap-1 rounded-full bg-secondary px-3 py-1 text-sm"
-                >
-                  {field.value}
-                  <button
-                    type="button"
-                    onClick={() => removeFacility(index)}
-                    disabled={isPending}
-                    className="ml-1 text-muted-foreground hover:text-foreground"
-                    aria-label={`${field.value}を削除`}
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* ── SEO・OGP（full-width）── */}
-      <Card>
-        <CardHeader>
-          <CardTitle>SEO・OGP 設定</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <SEOFields
-            register={register}
-            errors={errors}
-            disabled={isPending}
-            fields={{
-              metaDescription: "metaDescription",
-              metaKeywords: "metaKeywords",
-            }}
-          />
-          <div className="border-t pt-4">
-            <OGPFields
-              register={register}
-              control={control}
-              errors={errors}
-              setValue={setValue}
-              disabled={isPending}
-              fields={{
-                ogpTitle: "ogpTitle",
-                ogpDescription: "ogpDescription",
-                ogpImageUrl: "ogpImageUrl",
-              }}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ── フォームフッターボタン ── */}
-      <div className="flex justify-end gap-4">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() =>
-            router.push(
-              mode === "edit" && space
-                ? `/admin/spaces/${space.id}`
-                : "/admin/spaces",
-            )
-          }
-          disabled={isPending}
-        >
-          キャンセル
-        </Button>
-        <Button type="submit" disabled={isPending}>
-          {isPending
-            ? "保存中..."
-            : mode === "create"
-              ? "スペースを作成"
-              : "変更を保存"}
-        </Button>
+        </div>
       </div>
 
       {/* メディアピッカーダイアログ */}
