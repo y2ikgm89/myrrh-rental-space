@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * ARIAライブリージョンContext
@@ -9,11 +9,11 @@
 
 import {
   createContext,
-  useContext,
+  use,
   useState,
   type ReactNode,
   type ReactElement,
-} from 'react'
+} from "react";
 
 /**
  * ARIAライブリージョンの優先度
@@ -21,21 +21,21 @@ import {
  * - 'polite': ユーザーがアイドル状態のときに通知
  * - 'assertive': 即座に通知（緊急性の高い情報のみ）
  */
-export type AriaLivePoliteness = 'off' | 'polite' | 'assertive'
+export type AriaLivePoliteness = "off" | "polite" | "assertive";
 
 interface AriaLiveContextValue {
-  message: string
-  politeness: AriaLivePoliteness
-  announce: (message: string, politeness?: AriaLivePoliteness) => void
-  clear: () => void
+  message: string;
+  politeness: AriaLivePoliteness;
+  announce: (message: string, politeness?: AriaLivePoliteness) => void;
+  clear: () => void;
 }
 
 const AriaLiveContext = createContext<AriaLiveContextValue | undefined>(
-  undefined
-)
+  undefined,
+);
 
 interface AriaLiveProviderProps {
-  children: ReactNode
+  children: ReactNode;
 }
 
 /**
@@ -43,32 +43,34 @@ interface AriaLiveProviderProps {
  *
  * React 19: FC型は非推奨。通常の関数コンポーネントを使用
  */
-export function AriaLiveProvider({ children }: AriaLiveProviderProps): ReactElement {
-  const [message, setMessage] = useState('')
-  const [politeness, setPoliteness] = useState<AriaLivePoliteness>('polite')
+export function AriaLiveProvider({
+  children,
+}: AriaLiveProviderProps): ReactElement {
+  const [message, setMessage] = useState("");
+  const [politeness, setPoliteness] = useState<AriaLivePoliteness>("polite");
 
   const announce = (
     newMessage: string,
-    newPoliteness: AriaLivePoliteness = 'polite'
+    newPoliteness: AriaLivePoliteness = "polite",
   ) => {
     // 一度クリアしてから設定することで、同じメッセージでも再読み上げされる
-    setMessage('')
+    setMessage("");
     // 次のフレームで設定（スクリーンリーダーに確実に通知するため）
     requestAnimationFrame(() => {
-      setMessage(newMessage)
-      setPoliteness(newPoliteness)
-    })
-  }
+      setMessage(newMessage);
+      setPoliteness(newPoliteness);
+    });
+  };
 
   const clear = () => {
-    setMessage('')
-  }
+    setMessage("");
+  };
 
   return (
     <AriaLiveContext.Provider value={{ message, politeness, announce, clear }}>
       {children}
     </AriaLiveContext.Provider>
-  )
+  );
 }
 
 /**
@@ -76,11 +78,11 @@ export function AriaLiveProvider({ children }: AriaLiveProviderProps): ReactElem
  * @throws AriaLiveProvider外で使用した場合にエラー
  */
 export function useAriaLive(): AriaLiveContextValue {
-  const context = useContext(AriaLiveContext)
-  if (!context) {
-    throw new Error('useAriaLive must be used within AriaLiveProvider')
+  const context = use(AriaLiveContext);
+  if (context === undefined) {
+    throw new Error("useAriaLive must be used within AriaLiveProvider");
   }
-  return context
+  return context;
 }
 
 /**
@@ -88,5 +90,5 @@ export function useAriaLive(): AriaLiveContextValue {
  * Provider外で使用してもエラーにならない
  */
 export function useAriaLiveOptional(): AriaLiveContextValue | null {
-  return useContext(AriaLiveContext) ?? null
+  return use(AriaLiveContext) ?? null;
 }

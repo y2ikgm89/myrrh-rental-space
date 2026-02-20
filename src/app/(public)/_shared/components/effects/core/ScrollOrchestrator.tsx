@@ -1,9 +1,9 @@
-'use client'
+"use client";
 
-import { createContext, useContext, useState } from 'react'
-import type { ReactNode } from 'react'
-import { useLenis } from 'lenis/react'
-import type { ScrollState } from './types'
+import { createContext, use, useState } from "react";
+import type { ReactNode } from "react";
+import { useLenis } from "lenis/react";
+import type { ScrollState } from "./types";
 
 const INITIAL_STATE: ScrollState = {
   scroll: 0,
@@ -12,20 +12,22 @@ const INITIAL_STATE: ScrollState = {
   progress: 0,
   direction: 0,
   isScrolling: false,
-}
+};
 
-const ScrollStateContext = createContext<ScrollState | undefined>(undefined)
+const ScrollStateContext = createContext<ScrollState | undefined>(undefined);
 
 /**
  * ScrollState を取得する hook。
  * ScrollOrchestratorProvider 内で使用必須。
  */
 export function useScrollState(): ScrollState {
-  const state = useContext(ScrollStateContext)
+  const state = use(ScrollStateContext);
   if (state === undefined) {
-    throw new Error('useScrollState must be used within ScrollOrchestratorProvider')
+    throw new Error(
+      "useScrollState must be used within ScrollOrchestratorProvider",
+    );
   }
-  return state
+  return state;
 }
 
 /**
@@ -33,11 +35,15 @@ export function useScrollState(): ScrollState {
  * エフェクトコンポーネントでオプショナルに使用。
  */
 export function useScrollStateOptional(): ScrollState | null {
-  return useContext(ScrollStateContext) ?? null
+  return use(ScrollStateContext) ?? null;
 }
 
-export function ScrollOrchestratorProvider({ children }: { children: ReactNode }) {
-  const [scrollState, setScrollState] = useState<ScrollState>(INITIAL_STATE)
+export function ScrollOrchestratorProvider({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const [scrollState, setScrollState] = useState<ScrollState>(INITIAL_STATE);
 
   useLenis((lenis) => {
     setScrollState({
@@ -47,12 +53,12 @@ export function ScrollOrchestratorProvider({ children }: { children: ReactNode }
       progress: lenis.progress,
       direction: lenis.direction,
       isScrolling: lenis.isScrolling === true,
-    })
-  })
+    });
+  });
 
   return (
     <ScrollStateContext.Provider value={scrollState}>
       {children}
     </ScrollStateContext.Provider>
-  )
+  );
 }
