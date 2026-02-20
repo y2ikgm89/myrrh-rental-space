@@ -23,6 +23,8 @@ import {
   isValidInquiryStatus,
   type InquiryStatus,
 } from "@/shared/lib/validations/enums";
+import { DetailSection } from "@/admin/components/DetailSection";
+import { DetailField } from "@/admin/components/DetailField";
 
 type InquiryDetailProps = {
   inquiry: InquiryData;
@@ -52,7 +54,7 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
         {/* 件名 */}
         <Card>
           <CardHeader>
-            <CardTitle>件名</CardTitle>
+            <CardTitle className="text-base font-semibold">件名</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-lg font-medium">{inquiry.subject}</p>
@@ -62,7 +64,9 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
         {/* 本文 */}
         <Card>
           <CardHeader>
-            <CardTitle>お問い合わせ内容</CardTitle>
+            <CardTitle className="text-base font-semibold">
+              お問い合わせ内容
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="whitespace-pre-wrap">{inquiry.message}</p>
@@ -103,26 +107,22 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
         </Card>
 
         {/* 送信者情報 */}
-        <Card>
-          <CardHeader>
-            <CardTitle>送信者情報</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <p className="text-sm text-muted-foreground">お名前</p>
-              <p className="font-medium">{inquiry.name}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">メールアドレス</p>
-              <a
-                href={`mailto:${inquiry.email}`}
-                className="text-primary hover:underline"
-              >
-                {inquiry.email}
-              </a>
-            </div>
-          </CardContent>
-        </Card>
+        <DetailSection title="送信者情報">
+          <div className="space-y-4">
+            <DetailField label="お名前" value={inquiry.name} />
+            <DetailField
+              label="メールアドレス"
+              value={
+                <a
+                  href={`mailto:${inquiry.email}`}
+                  className="text-primary hover:underline"
+                >
+                  {inquiry.email}
+                </a>
+              }
+            />
+          </div>
+        </DetailSection>
 
         {/* 返信アクション */}
         <Card>
