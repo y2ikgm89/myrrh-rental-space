@@ -43,7 +43,7 @@ export default async function EditCouponPage({ params }: PageProps) {
   return (
     <AdminDetailLayout
       backHref="/admin/coupons"
-      backLabel="クーポン一覧に戻る"
+      backLabel="一覧に戻る"
       title={`${coupon.code} の編集`}
       subtitle={coupon.name}
     >
@@ -57,7 +57,8 @@ export default async function EditCouponPage({ params }: PageProps) {
                 {coupon.usageCount}
                 {coupon.usageLimit && (
                   <span className="text-sm font-normal text-muted-foreground">
-                    {" "}/ {coupon.usageLimit}
+                    {" "}
+                    / {coupon.usageLimit}
                   </span>
                 )}
               </span>
@@ -75,13 +76,19 @@ export default async function EditCouponPage({ params }: PageProps) {
           />
           <DetailField
             label="開始日"
-            value={<span className="text-lg">{formatDateShort(coupon.validFrom)}</span>}
+            value={
+              <span className="text-lg">
+                {formatDateShort(coupon.validFrom)}
+              </span>
+            }
           />
           <DetailField
             label="終了日"
             value={
               <span className="text-lg">
-                {coupon.validUntil ? formatDateShort(coupon.validUntil) : "無期限"}
+                {coupon.validUntil
+                  ? formatDateShort(coupon.validUntil)
+                  : "無期限"}
               </span>
             }
           />
