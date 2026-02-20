@@ -109,13 +109,9 @@ export class YouTubeNode extends DecoratorNode<ReactElement> {
     return { element: div }
   }
 
-  override createDOM(config: EditorConfig): HTMLElement {
+  override createDOM(_config: EditorConfig): HTMLElement {
     const div = document.createElement('div')
-    const theme = config.theme
-    const className = theme['youtube']
-    if (className) {
-      div.className = className
-    }
+    div.setAttribute('data-youtube', 'true')
     return div
   }
 

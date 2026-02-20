@@ -234,13 +234,9 @@ export class ImageNode extends DecoratorNode<ReactElement> {
     return { element: container }
   }
 
-  override createDOM(config: EditorConfig): HTMLElement {
+  override createDOM(_config: EditorConfig): HTMLElement {
     const div = document.createElement('div')
-    const theme = config.theme
-    const className = theme.image
-    if (className) {
-      div.className = className
-    }
+    div.setAttribute('data-image', 'true')
     return div
   }
 
