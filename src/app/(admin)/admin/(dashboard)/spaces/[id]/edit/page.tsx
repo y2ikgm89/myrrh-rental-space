@@ -32,7 +32,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function EditSpacePage({ params }: PageProps) {
-  await connection();
   await connection()
   const { id } = await params
   const [space, availableTerms, locationsResult, categoriesResult, taxSettings] = await Promise.all([

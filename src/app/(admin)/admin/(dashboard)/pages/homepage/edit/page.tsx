@@ -21,7 +21,6 @@ export const metadata: Metadata = {
 }
 
 export default async function HomepageEditPage(): Promise<ReactElement> {
-  await connection();
   // ensureHomepageSections/ensureSystemPage は uncached DB 呼び出しのため connection() でオプトイン
   await connection()
 

@@ -31,7 +31,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function EditPostPage({ params }: PageProps) {
-  await connection();
   await connection()
   const { id } = await params
 

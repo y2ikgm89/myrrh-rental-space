@@ -39,7 +39,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function EditPagePage({ params }: PageProps): Promise<ReactElement> {
-  await connection();
   await connection()
   const { slug } = await params
 
