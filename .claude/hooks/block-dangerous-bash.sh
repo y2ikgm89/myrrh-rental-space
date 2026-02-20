@@ -9,9 +9,28 @@ COMMAND=$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/nul
 
 [ -z "$COMMAND" ] && exit 0
 
-# 1. rm with -r flag (rm -rf, rm -r, rm -fr, etc.) or --recursive long form
-if printf '%s' "$COMMAND" | grep -qE '(^|[;&|])rm\s+[^;|&]*(-[a-zA-Z]*r[a-zA-Z]*|--recursive\b)'; then
-  printf 'Blocked: 再帰的削除 (rm -r/-rf/--recursive) は禁止されています。ファイル削除が必要な場合は python3 -c "import shutil; shutil.rmtree('\''path'\'')" を使用してください。\nターミナルで直接実行してください（Claude Code の Bash ツールからは実行不可）。\n' >&2
+# 1. rm targeting system/home directories (always blocked regardless of -r flag)
+# Protects: /, /*, ~, ~/..., /c/Windows, /c/Users, /c/Program Files,
+#           /home/..., /usr/, /bin/, /lib/, /etc/, /root/
+# Allows:   rm -rf node_modules, rm -rf ./dist, rm -rf /g/workspace/..., rm -rf /tmp/...
+if printf '%s' "$COMMAND" | grep -qE '(^|[;&|])rm\s+[^;|&]*(~(\/|[[:space:]]|$)|\/\s*$|\/\*(\s|$)|\/[cC]\/(Windows|Users|Program)|\/home\/|\/usr\/|\/bin(\/|[[:space:]]|$)|\/lib(\/|[[:space:]]|$)|\/etc\/|\/root(\/|[[:space:]]|$))'; then
+  printf 'Blocked: システム・ホームディレクトリへの rm は禁止されています。\nPCのシステムファイルを保護するためブロックしました。ターミナルで直接実行してください。\n' >&2
+  exit 2
+fi
+
+# 2. rm -r . (recursive deletion of current working directory — wipes entire project)
+# Block: rm -rf .  → deletes CWD
+# Allow: rm -rf ./node_modules  → ./ is safe (specific subdir)
+if printf '%s' "$COMMAND" | grep -qE '(^|[;&|])rm\s+[^;|&]*(-[a-zA-Z]*r[a-zA-Z]*|--recursive\b)[^;|&]*[[:space:]]\.([[:space:]]|;|&|\||$)'; then
+  printf 'Blocked: rm -r . はカレントディレクトリ全体を削除します。\n特定のサブディレクトリを指定してください（例: rm -rf ./node_modules）。\n' >&2
+  exit 2
+fi
+
+# 3. rm with bare * argument (deletes all files in CWD — too destructive)
+# Block: rm -rf *  or  rm *
+# Allow: rm -rf *.log  or  rm -rf src/*.ts  (glob with extension is specific enough)
+if printf '%s' "$COMMAND" | grep -qE '(^|[;&|])rm\s+[^;|&]*[[:space:]]\*([[:space:]]|;|&|\||$)'; then
+  printf 'Blocked: rm * はカレントディレクトリの全ファイルを削除します。\nファイルを個別に指定するか、ターミナルで直接実行してください。\n' >&2
   exit 2
 fi
 
