@@ -20,60 +20,44 @@
 | 完了報告前    | `bun run validate`                  |
 | コミット/PR前 | `bun run validate && bun run build` |
 
-### 詳細ルール
+### ルール
 
-ルールは `.claude/rules/` ディレクトリで管理。Claude Code が自動ロード（再帰的）:
-
-| ディレクトリ                  | ロード条件                | 内容                                              |
-| ----------------------------- | ------------------------- | ------------------------------------------------- |
-| `.claude/rules/*.md`          | **常時**                  | 型安全・実装品質・Server Actions 等（全作業共通） |
-| `.claude/rules/frontend/*.md` | `src/app/**` 作業時       | UI・アニメーション・アクセシビリティ・SEO 等      |
-| `.claude/rules/ops/*.md`      | **`Dockerfile` 等作業時** | Docker / Cloud Run / Cloud Build                  |
-
-> 詳細リファレンス: `docs/reference/claude-rules/` に配置（必要時に参照）
+`.claude/rules/` の全 `.md` ファイルは自動ロード。`paths:` フロントマターで条件適用（対象ファイル編集時のみ）。
 
 ---
 
 ## 🟡 ワークフロー
 
-**superpowersが自動発動** — 特別な操作不要
-
 > **セッション継続時**: `docs/plans/README.md` を確認して進行中タスクを把握
 
 ```
 要件確認 → 調査 → 設計 → 計画 → 実装(TDD) → 検証 → レビュー → 完了
-                  ↑ 全工程でsuperpowersが自動介入
 ```
 
-### 自動発動スキル（主要）
+### スキル（自動発動）
 
 | スキル                           | 発動タイミング             |
 | -------------------------------- | -------------------------- |
 | `brainstorming`                  | 機能追加・設計時           |
-| `frontend-design`                | フロントエンドUI実装時     |
+| `frontend-design`                | フロントエンド UI 実装時   |
 | `test-driven-development`        | 実装時                     |
 | `verification-before-completion` | 完了報告前（**常に必須**） |
 | `finishing-a-development-branch` | ブランチ完了時             |
 
-> 他: `writing-plans`, `executing-plans`, `systematic-debugging`, `requesting-code-review`, `receiving-code-review` も自動発動
+その他: `writing-plans`, `executing-plans`, `systematic-debugging`, `requesting-code-review`, `receiving-code-review`
 
-### ツール使い分け
+### ツール
 
-- **コードベース調査**: `serena`（LSPベース深い分析）, `codebase-explorer`（広範な探索）
-- **専門エージェント**:
-  - `security-reviewer` — auth/Stripe/OAuth/暗号化コードのセキュリティレビュー
-  - `project-reviewer` — 実装完了後の総合品質チェック（型安全・カラートークン・規約）
-  - `react-compiler-reviewer` — GSAP/Three.js/Lenis/Lexical 含むファイル編集後の React Compiler 互換性チェック
-  - `verification` — type-check / lint / build の検証（Haiku 使用で高速）
-  - `design-memory` — ブランドデザイン決定の記憶（UI実装時）
-- **MCP**: `serena`, `context7`, `playwright`, `github`（`.mcp.json`設定済、`github-mcp-server`バイナリ要`GITHUB_PERSONAL_ACCESS_TOKEN`環境変数）推奨。`WebSearch`, `WebFetch` 必要時
+- **コードベース調査**: `serena`（LSP ベース深い分析）、`codebase-explorer`（広範な探索）
+- **専門エージェント**: `security-reviewer`、`project-reviewer`、`react-compiler-reviewer`、`animation-cleanup-reviewer`、`verification`、`design-memory`、`cache-strategy-reviewer`、`db-migration-reviewer`
+- **MCP**: `serena`, `context7`, `playwright`, `github`（`.mcp.json` 設定済）
 - **ui-ux-pro-max**: `python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --domain <domain> --stack nextjs`
   - ドメイン: `product`, `style`, `typography`, `color`, `landing`, `chart`, `ux`
-- **ドキュメント更新**: `docs/plans/NNN-title.md` → `docs/plans/README.md` → `docs/requirements/`（必要時） → `docs/architecture/`（設計変更時）
+- **ドキュメント更新**: `docs/plans/YYYY-MM-DD-title.md` → `docs/plans/README.md` → `docs/requirements/`（必要時）→ `docs/architecture/`（設計変更時）
 
-### 手動コマンド（必要時のみ）
+### 手動スキル
 
-`/superpowers:brainstorm`, `/superpowers:write-plan`, `/superpowers:execute-plan`, `/superpowers:using-git-worktrees`, `/ui-ux-pro-max`, `/frontend-design`, `/parallax-section`, `codebase-explorer`, `/prisma-migration`
+`/superpowers:brainstorm`, `/superpowers:write-plan`, `/superpowers:execute-plan`, `/superpowers:using-git-worktrees`, `/frontend-design`, `/parallax-section`, `/prisma-migration`, `/create-admin-page`, `/create-server-action`, `/commit-commands:commit`, `/commit-commands:commit-push-pr`
 
 ---
 
@@ -81,50 +65,32 @@
 
 ### 技術スタック
 
-| 技術         | バージョン | 備考                                                   |
-| ------------ | ---------- | ------------------------------------------------------ |
-| Next.js      | 16.1.6     | `'use cache'`, `updateTag`, PPR対応                    |
-| React        | 19.2.4     | React Compiler 1.0, `use()`, `useEffectEvent` (stable) |
-| TypeScript   | 6.0-beta   | TS 7.0 準備用 `--stableTypeOrdering` 利用可            |
-| Bun          | 1.3.x      | Bun.SQL, HTML直接実行                                  |
-| Prisma       | 7.4.0      | 型生成98%削減, mapped enums                            |
-| PostgreSQL   | -          | Supabase経由                                           |
-| Better Auth  | 1.4.18     | RBAC, Auth.js統合                                      |
-| Tailwind CSS | 4.1.18     | CSS-first設定, @theme                                  |
-| Zod          | 4.3.6      | `{ error: }` パラメータ, z.fromJSONSchema()            |
-| nuqs         | 2.8.8      | createSearchParamsCache, Zod 4統合                     |
-| Lexical      | 0.40.0     | React 19対応, Node transforms, mergeRegister本体移動   |
-| GSAP         | 3.14.2     | ScrollTrigger, @gsap/react 2.1                         |
-| Three.js     | 0.182.0    | @react-three/fiber 9.5, @react-three/drei 10.7         |
-| PixiJS       | 8.16.0     | 2D WebGLレンダラー                                     |
-| Lenis        | 1.3.17     | スムーススクロール                                     |
+| 技術         | バージョン | 重要な注意点                                                  |
+| ------------ | ---------- | ------------------------------------------------------------- |
+| Next.js      | 16.1.6     | `'use cache'`, `updateTag`, PPR (`cacheComponents: true`)     |
+| React        | 19.2.4     | React Compiler 1.0, `use()`, `useEffectEvent` (stable)        |
+| TypeScript   | 6.0-beta   | `erasableSyntaxOnly`, `verbatimModuleSyntax` → type-safety.md |
+| Prisma       | 7.4.0      | WASM エンジン, mapped enums（`as const` オブジェクト）        |
+| Tailwind CSS | 4.1.18     | CSS-first, `@theme`, セマンティックカラートークン必須         |
+| Zod          | 4.3.6      | `{ error: }` パラメータ（`message:` は非推奨）                |
+| Better Auth  | 1.4.18     | RBAC, `withPermission` HOF 必須                               |
+| Bun          | 1.3.x      | テストランナー (`bun:test`), `bunx --bun` でネイティブ実行    |
 
 ### 構造
 
 **Multiple Root Layouts アーキテクチャ（Next.js 16 推奨パターン）**
 
 ```
-prisma/
-├── schema.prisma                         # DB スキーマ定義
-├── better-auth-schema.prisma             # Better Auth テーブル定義
-├── migrations/                           # マイグレーション履歴
-└── seed.ts                               # 初期データ投入
+src/app/
+├── (admin)/admin/(dashboard)/   # 管理画面（URL: /admin/...）
+│   ├── layout.tsx               # Admin Root Layout (html/body)
+│   └── _shared/                 # 共有コンポーネント・アクション・lib
+└── (public)/                    # 公開ページ
+    ├── layout.tsx               # Public Root Layout (html/body)
+    └── _shared/                 # 共有コンポーネント
 
-src/
-├── app/
-│   ├── api/                              # API Routes（admin/auth/cron/ical/instagram/webhooks）
-│   ├── (admin)/                          # 管理画面ルートグループ
-│   │   ├── layout.tsx                    # Admin Root Layout (html/body)
-│   │   ├── _styles/admin.css             # 管理画面専用テーマ（固定）
-│   │   └── admin/(dashboard)/_shared/    # 管理画面共有コンポーネント
-│   │
-│   └── (public)/                         # 公開ページルートグループ
-│       ├── layout.tsx                    # Public Root Layout (html/body)
-│       ├── _styles/public.css            # 公開ページテーマ（AI生成対象）
-│       ├── [slug]/page.tsx               # セクションベースページ（統一ルート）
-│       └── _shared/                      # 公開ページ共有コンポーネント
-│
-└── shared/                               # 両方で共有（CSS変数非依存）
+src/shared/                      # 両方で共有（CSS変数非依存）
+prisma/                          # schema.prisma, migrations/, seed.ts
 ```
 
 | パス                                         | 用途                                   |
@@ -134,82 +100,51 @@ src/
 | `src/app/(admin)/admin/(dashboard)/_shared/` | 管理画面専用コンポーネント             |
 | `src/app/(public)/_shared/`                  | 公開ページ専用コンポーネント           |
 | `src/app/(public)/[slug]/`                   | カスタムページルート（管理画面で作成） |
-| `src/app/(public-*)/`                        | 追加の公開ページルートグループ         |
 | `src/shared/`                                | 共有（CSS変数に依存しないコード）      |
-| `docs/{requirements,architecture,plans}/`    | ドキュメント                           |
 
-**公開ページURL構造**:
-
-- `/` - ホームページ
-- `/faq`, `/about`, `/contact`, `/spaces`, `/reservation`, `/privacy`, `/terms` - 専用ページ
-- `/news`, `/news/[slug]` - ニュース
-- `/posts`, `/posts/[slug]` - ブログ
-- `/spaces/[slug]` - スペース詳細
-- `/[slug]` - カスタムページ（DBで管理）
-
-**注意**: 公開ページ ↔ 管理画面の遷移はフルページリロード（異なるRoot Layout間の仕様）
+**インポートエイリアス**: `@/admin/*`, `@/public/*`, `@/shared/*`
 
 **管理画面パスの二重構造**: `src/app/(admin)/admin/(dashboard)/...` → URL は `/admin/...`
 
-- `(admin)` = ルートグループ（URL不変）、`admin` = URLセグメント、`(dashboard)` = ルートグループ（URL不変）
-
-**API Routes**: `src/app/api/` 配下（`admin/`, `auth/`, `cron/`, `health/`, `ical/`, `instagram/`, `webhooks/`）
-
-### エイリアス
-
-`@/admin/*`, `@/public/*`, `@/shared/*`
+**公開ページ ↔ 管理画面の遷移はフルページリロード**（異なる Root Layout 間の仕様）
 
 ### コマンド
 
 ```bash
-bun dev                    # 開発サーバー
-bun run test               # テスト
-bun run test:all           # Unit + Integration 並列テスト
-bun run validate           # type-check + lint 並列検証
-bun run validate && bun run build  # 完全検証
-bun run build:strict               # 環境変数チェック有りビルド（本番確認用）
-bunx --bun prisma migrate dev --name <name>  # マイグレーション
-bun run db:generate        # Prismaスキーマ再生成
-bun run db:studio          # Prisma Studio（DB GUI）
-bun run e2e                # E2Eテスト（Playwright）
-bun run format             # Prettier フォーマット（Edit/Write 後は hook で自動実行）
-gcloud builds submit --config=cloudbuild.yaml  # Cloud Run デプロイ（Cloud Build経由）
+bun dev                                         # 開発サーバー
+bun run test                                    # テスト
+bun run test:all                                # Unit + Integration 並列テスト
+bun run validate                                # type-check + lint 並列検証
+bun run validate && bun run build               # 完全検証
+bun run build:strict                            # 環境変数チェック有りビルド（本番確認用）
+bunx --bun prisma migrate dev --name <name>     # マイグレーション
+bun run db:generate                             # Prisma スキーマ再生成
+bun run db:studio                               # Prisma Studio（DB GUI）
+bun run e2e                                     # E2E テスト（Playwright）
+gcloud builds submit --config=cloudbuild.yaml   # Cloud Run デプロイ（Cloud Build 経由）
 ```
 
-> **自動フック**: Prettier + ESLint --fix（.ts/.tsx）/ schema-change-guard（schema.prisma）
+> **自動フック**: Prettier + ESLint --fix（.ts/.tsx）/ schema-change-guard（schema.prisma）/ type-check-on-stop（TS 変更時の型チェック）
 > **保護**: `.env*`, `bun.lockb`, `prisma/migrations/*.sql` は直接編集不可（PreToolUse フック）
 
 ### コーディング規約
 
-- Server Components優先、Server Actions
-- Zodバリデーション必須
-- 命名: コンポーネント`PascalCase.tsx`、その他`kebab-case.ts`
+- Server Components 優先、Server Actions
+- Zod バリデーション必須
+- 命名: コンポーネント `PascalCase.tsx`、その他 `kebab-case.ts`
 - コミット: `<type>(<scope>): <subject>`
 
 ### ⚠️ Gotchas
 
-- **デプロイ先は Google Cloud Run**（Vercel ではない）— `Dockerfile` + `cloudbuild.yaml` が設定ファイル。URL 環境変数は `NEXT_PUBLIC_APP_URL` / `BETTER_AUTH_URL` を Cloud Run サービスに明示設定する（`VERCEL_URL` は存在しない）
-- **`enum`・`namespace`・parameter properties 禁止（コンパイラレベル）** — `erasableSyntaxOnly: true`（tsconfig）。`const enum` か union型を使う
-- **型インポートは `import type` 必須** — `verbatimModuleSyntax: true`。値と型を同一インポートで混在させるとビルドエラー
-- **`bun run build` は env チェックなし** — `SKIP_ENV_VALIDATION=true` が付く。本番デプロイ前は `bun run build:strict`
-- **`__tests__/` は type-check 対象外** — tsconfig の exclude 指定。テスト内型エラーは `bun run type-check` では検出されず `bun test` 時のみ発覚
-- **インデックスシグネチャはブラケット記法強制** — `noPropertyAccessFromIndexSignature: true`。`obj.key` ではなく `obj['key']`
-- **`rm -rf` は deny ルール** — 追跡ファイルは `git rm -r <path>`、未追跡ファイル/ディレクトリは `python3 -c "import shutil; shutil.rmtree('path')"` で削除
-- **gitignore 追加後の既存追跡ファイル** — `git rm --cached -r <path>` でインデックスから除外（ファイルはディスクに残る）
-- **`()` を含むパスは Bash コマンドで渡せない** — `src/app/(admin)/` など Next.js ルートグループパスを Bash に渡すと MINGW64 が `(` をサブシェル記法として解釈しエラー。Glob/Grep/Read ツールを使うか、クォートで回避（例: `ls 'src/app/(admin)/'`）
-- **Prettier がグロブ含み bold をエスケープする** — テーブルセルで ``**`path/**` テキスト**`` のように bold 内にグロブ `**` を含む code span があると、閉じ `**` が `\*\*` にエスケープされる。解決策: bold を削除するか code span をセルの外へ出す。
-- **PostToolUse フック後は再 Read が必要** — Edit/Write 後に Prettier/ESLint フックが走るとファイルが変更される。続けて同ファイルを Edit する場合は事前に再 Read しないと "file modified since read" エラーが発生する。
-- **管理画面ファイルのインポートパス** — `'use client'` コンポーネントを含む管理画面内**全ファイル**が `@/admin/types/server-actions` を使う（`@/shared/types/server-actions` の直接 import 禁止）。例外は `_shared/types/server-actions.ts` バレルファイルのみ
-- **管理画面 Server Component の searchParams** — `await searchParams` + `parseInt(params.page, 10)` は禁止。`@/shared/lib/nuqs/parsers.ts` の `loadAdmin*SearchParams` ローダーを使う。未存在の場合は `createSearchParamsCache` で追加してから使う
-- **Server→Client 境界での `Date` → `string` 変換** — React 19 は Server Component → Client Component へ props を渡す際に `Date` を ISO 8601 文字列にシリアライズする（[公式ドキュメント](https://react.dev/reference/rsc/use-client#serializable-types)）。`toPlainObject()` も同様（`JSON.parse(JSON.stringify())` による変換）。**Client Component に渡す型の日付フィールドは `Date` でなく `string` で宣言**し、Server Action 側で `.toISOString()` を明示する。Client Component では date-fns へ `new Date(field)` でラップして渡す（例: `format(new Date(field), 'HH:mm')`、`isSameDay(new Date(field), day)`）。ISO 8601 UTC 文字列のソートは `localeCompare()` で代替可（辞書順 = 時系列順）。Server Component 内のみで完結する `Date` フィールドは影響なし
-- **`{ ...prismaObj }` はネスト Prisma Symbol を除去しない** — スプレッドはシャローコピーのためトップレベルのみ。`include` で取得したネスト relations（`space`, `customer`, `coupon` 等）は依然 `nodejs.util.inspect.custom` 等を保持 → React 19 シリアライゼーションエラー。`return prismaObj` / `return prismaArray` も同様に NG。**必ず `toPlainObject({ ...obj, createdAt: obj.createdAt.toISOString(), updatedAt: obj.updatedAt.toISOString() })` または `toPlainArray(array.map(item => ({ ...item, createdAt: item.createdAt.toISOString(), ... })))` を使用する**（詳細: `prisma-patterns.md` §禁止事項5）
-- **Next.js 16 PPR + `new Date()` ビルドエラー** — PPR（`cacheComponents: true`）環境で Server Component が動的データアクセス前に `new Date()` を呼ぶと `Route "..." used new Date() before accessing uncached data` エラー。`import { connection } from 'next/server'` して `await connection()` を `new Date()` の前に呼ぶのが[公式推奨](https://nextjs.org/docs/app/api-reference/functions/connection)（`headers()` でも動くが意味的に誤り）。`audit.ts` など実際にヘッダー値を読む箇所は `headers()` のまま
-- **React 19 Context パターン** — `createContext<T | undefined>(undefined)` + `use(Context)` フック（`useContext` の代替、条件分岐後でも呼べる。`null` デフォルト値は非推奨）
-- **React 19 `useEffectEvent`** — `const onXxx = useEffectEvent(() => { callback() })` でコールバックを deps から除外。`import { useEffectEvent } from 'react'`（stable）
-- **React 19 `<Activity>` は EXPERIMENTAL 採用禁止** — `display: none` 実装のため CSS transform アニメーションと非互換。context7/WebFetch で確認済み
-- **`verification` サブエージェントはコードを自動修正する** — `bun run validate && bun run build` 実行時に型エラーを検出するとコードを自動変更する場合がある（スキーマの巻き戻し等）。検証のみ行いたい場合は Bash で直接実行: `bun run validate` / `bun run build`
-- **管理テーブル操作列は ActionDropdown 統一** — テーブル行の操作ボタンを直接書かず `*ActionCell` コンポーネント（`@/admin/components/ActionDropdown`）を作成。`ActionDropdownItem` は Next.js `<Link>` のため外部リンクに `target="_blank"` 不可 → `onClick={() => window.open(url, '_blank', 'noopener,noreferrer')}`
-- **`server-only` は Bun テストで throw する** — `mock.module('server-only', () => ({}))` を `__tests__/setup.ts` でプリロード設定済み（既に適用済）。`--conditions=react-server` は React を server build に解決して `createContext`・`useRef` が消えるため**禁止**
-- **`@t3-oss/env-nextjs` は `process.env` のスナップショット** — `SKIP_ENV_VALIDATION=true` 時、`createEnv()` は `{ ...process.env }` の浅いコピーを返す。テストで `process.env["KEY"] = ...` しても `serverEnv.KEY` に反映されない。テスト可能にしたいコードは `process.env["KEY"]` を直接参照する（`crypto.ts`, `logger.ts` 参照）
-- **`bunfig.toml [test]` の `conditions` キーは機能しない** — Bun はこのキーを無視する。`bun test --conditions=react-server` は機能するが React の解決も変えるため `server-only` 対策には使わないこと
-- **複数ファイルを `git add` 後はコミット前に `git status` 再確認** — Prettier PostToolUse フックが `git add` で他のステージング済みファイルも変更することがある（` M` に変わる）。漏れがあれば再 `git add` してからコミット
+- **デプロイ先は Google Cloud Run**（Vercel 不使用）— `Dockerfile` + `cloudbuild.yaml`。URL 環境変数は `NEXT_PUBLIC_APP_URL` / `BETTER_AUTH_URL` を Cloud Run に明示設定（`VERCEL_URL` は存在しない）
+- **`enum`・`namespace`・parameter properties 禁止**（`erasableSyntaxOnly: true`）— `const` + as const か union 型を使う → `.claude/rules/type-safety.md`
+- **`import type` 必須**（`verbatimModuleSyntax: true`）— 値と型を同一インポートで混在させるとビルドエラー
+- **`bun run build` は env チェックなし**（`SKIP_ENV_VALIDATION=true`）— 本番デプロイ前は `bun run build:strict`
+- **`__tests__/` は type-check 対象外**（tsconfig exclude）— テスト内型エラーは `bun run type-check` では検出されず `bun test` 時のみ発覚
+- **`rm -rf` は deny ルール** — 追跡ファイルは `git rm -r <path>`、未追跡ファイルは `python3 -c "import shutil; shutil.rmtree('path')"` で削除
+- **`()` を含むパスは Bash コマンドで渡せない** — `src/app/(admin)/` 等は MINGW64 がサブシェル記法として解釈しエラー。Glob/Grep/Read ツールを使うかクォートで回避（例: `ls 'src/app/(admin)/'`）
+- **PostToolUse フック後は再 Read が必要** — Edit/Write 後に Prettier/ESLint フックがファイルを変更する。続けて同ファイルを Edit する場合は事前に再 Read しないと "file modified since read" エラー
+- **`verification` エージェントはコードを自動修正する** — `bun run validate && bun run build` 実行時に型エラーを検出するとコードを自動変更することがある。検証のみなら Bash で `bun run validate` を直接実行
+- **`@t3-oss/env-nextjs` は `process.env` のスナップショット** — `SKIP_ENV_VALIDATION=true` 時、`createEnv()` は `{ ...process.env }` の浅いコピーを返す。テストで `process.env["KEY"] = ...` しても `serverEnv.KEY` に反映されない。テスト可能にしたいコードは `process.env["KEY"]` を直接参照する
+- **新規 hook スクリプトは `bash` 明示呼び出し** — MINGW64 で `chmod` が Bash deny されるため、`settings.json` の `command` は `bash "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/script.sh"` 形式で記述する
+- **`git add` 後はコミット前に `git status` 再確認** — Prettier PostToolUse フックが `git add` で他のステージング済みファイルも変更することがある（` M` に変わる）
