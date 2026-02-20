@@ -34,17 +34,21 @@
 要件確認 → 調査 → 設計 → 計画 → 実装(TDD) → 検証 → レビュー → 完了
 ```
 
-### スキル（自動発動）
+### スキル（呼び出しタイミング）
 
-| スキル                           | 発動タイミング                   |
-| -------------------------------- | -------------------------------- |
-| `brainstorming`                  | 機能追加・設計時                 |
-| `frontend-design`                | フロントエンド UI 実装時         |
-| `create-admin-page`              | 管理画面に新リソースを追加する時 |
-| `create-server-action`           | Server Action を新規作成する時   |
-| `test-driven-development`        | 実装時                           |
-| `verification-before-completion` | 完了報告前（**常に必須**）       |
-| `finishing-a-development-branch` | ブランチ完了時                   |
+Skill ツールで明示的に呼び出す。1% でも該当する可能性があれば必ず呼び出すこと。
+
+| スキル                                    | 呼び出しタイミング                                 |
+| ----------------------------------------- | -------------------------------------------------- |
+| `brainstorming`                           | 機能追加・設計時                                   |
+| `frontend-design`                         | フロントエンド UI 実装時                           |
+| `create-admin-page`                       | 管理画面に新リソースを追加する時                   |
+| `create-server-action`                    | Server Action を新規作成する時                     |
+| `test-driven-development`                 | 実装時                                             |
+| `subagent-driven-development`             | 計画を同一セッション内でサブエージェント実行する時 |
+| `verification-before-completion`          | 完了報告前（**常に必須**）                         |
+| `finishing-a-development-branch`          | ブランチ完了時                                     |
+| `claude-md-management:claude-md-improver` | CLAUDE.md・rules・agents の定期メンテ時            |
 
 その他: `writing-plans`, `executing-plans`, `systematic-debugging`, `requesting-code-review`, `receiving-code-review`
 
@@ -59,7 +63,7 @@
 
 ### 手動スキル
 
-`/superpowers:brainstorm`, `/superpowers:write-plan`, `/superpowers:execute-plan`, `/superpowers:using-git-worktrees`, `/frontend-design`, `/parallax-section`, `/prisma-migration`, `/create-admin-page`, `/create-server-action`, `/commit-commands:commit`, `/commit-commands:commit-push-pr`
+`/superpowers:brainstorm`, `/superpowers:write-plan`, `/superpowers:execute-plan`, `/superpowers:subagent-driven-development`, `/superpowers:using-git-worktrees`, `/frontend-design`, `/parallax-section`, `/prisma-migration`, `/create-admin-page`, `/create-server-action`, `/commit-commands:commit`, `/commit-commands:commit-push-pr`, `/claude-md-management:claude-md-improver`
 
 ---
 
@@ -127,7 +131,7 @@ gcloud builds submit --config=cloudbuild.yaml   # Cloud Run デプロイ（Cloud
 ```
 
 > **自動フック**: Prettier + ESLint --fix（.ts/.tsx）/ schema-change-guard（schema.prisma）/ type-check-on-stop（TS 変更時の型チェック）
-> **保護**: `.env*`, `bun.lockb`, `prisma/migrations/*.sql` は直接編集不可（PreToolUse フック）
+> **保護**: `.env*`, `bun.lock`, `prisma/migrations/*.sql` は直接編集不可（PreToolUse フック）
 
 ### コーディング規約
 

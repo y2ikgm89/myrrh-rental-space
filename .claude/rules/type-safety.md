@@ -1,3 +1,8 @@
+---
+paths:
+  - src/**
+---
+
 # 型安全ルール
 
 > TypeScript 6.0-beta / noUncheckedIndexedAccess 有効
@@ -12,12 +17,12 @@
 
 TypeScript 6.0 から以下のデフォルト値が変更された。Next.js が tsconfig を自動管理するため実害は少ないが把握しておく:
 
-| オプション | 旧デフォルト | 新デフォルト | 影響 |
-|-----------|------------|------------|------|
-| `strict` | `false` | **`true`** | Next.js が注入するため明示設定が重要（MEMORY.md 参照） |
-| `module` | `commonjs` | `esnext` | Next.js が `bundler` を注入 |
-| `target` | `es2020` | `es2025` | Next.js が管理 |
-| `types` | 自動（`@types/*`）| `[]` | Next.js が管理 |
+| オプション | 旧デフォルト       | 新デフォルト | 影響                                                   |
+| ---------- | ------------------ | ------------ | ------------------------------------------------------ |
+| `strict`   | `false`            | **`true`**   | Next.js が注入するため明示設定が重要（MEMORY.md 参照） |
+| `module`   | `commonjs`         | `esnext`     | Next.js が `bundler` を注入                            |
+| `target`   | `es2020`           | `es2025`     | Next.js が管理                                         |
+| `types`    | 自動（`@types/*`） | `[]`         | Next.js が管理                                         |
 
 ### 禁止オプション（TS 6.0 で使用不可）
 
@@ -35,35 +40,35 @@ TypeScript 6.0 から以下のデフォルト値が変更された。Next.js が
 
 ```typescript
 // Temporal API（日時操作）— 組み込み型として利用可
-const now = Temporal.Now.instant()
-const yesterday = now.subtract({ hours: 24 })
+const now = Temporal.Now.instant();
+const yesterday = now.subtract({ hours: 24 });
 
 // RegExp.escape（動的正規表現の文字エスケープ）
-const pattern = new RegExp(RegExp.escape(userInput))  // 特殊文字を自動エスケープ
+const pattern = new RegExp(RegExp.escape(userInput)); // 特殊文字を自動エスケープ
 
 // Map/WeakMap の upsert メソッド
-const map = new Map<string, number>()
-map.getOrInsert('count', 0)             // キーがなければ挿入
-map.getOrInsertComputed('total', () => heavyCompute())
+const map = new Map<string, number>();
+map.getOrInsert("count", 0); // キーがなければ挿入
+map.getOrInsertComputed("total", () => heavyCompute());
 ```
 
 ### 配列アクセス
 
 ```typescript
 // NG: そのままアクセス（コンパイルエラー）
-const first = items[0]
-first.name  // Error: Object is possibly 'undefined'
+const first = items[0];
+first.name; // Error: Object is possibly 'undefined'
 
 // OK: ガード句でナローイング
-const first = items[0]
-if (!first) return
-first.name  // T（narrowed）
+const first = items[0];
+if (!first) return;
+first.name; // T（narrowed）
 
 // OK: optional chain + nullish coalescing
-const name = items[0]?.name ?? 'default'
+const name = items[0]?.name ?? "default";
 
 // OK: 分割代入デフォルト値
-const [localPart = '', domain = ''] = email.split('@')
+const [localPart = "", domain = ""] = email.split("@");
 ```
 
 ### ループパターン
@@ -73,23 +78,23 @@ const [localPart = '', domain = ''] = email.split('@')
 ```typescript
 // NG: インデックスループ（strs[i] が string | undefined）
 for (let i = 0; i < strs.length; i++) {
-  console.log(strs[i].toUpperCase())  // Error: Object is possibly 'undefined'
+  console.log(strs[i].toUpperCase()); // Error: Object is possibly 'undefined'
 }
 
 // OK: for...of（各要素は string 型）
 for (const str of strs) {
-  console.log(str.toUpperCase())
+  console.log(str.toUpperCase());
 }
 
 // OK: forEach
 strs.forEach((str) => {
-  console.log(str.toUpperCase())
-})
+  console.log(str.toUpperCase());
+});
 
 // OK: インデックスが必要な場合はガード句
 for (let i = 0; i < arr.length; i++) {
-  const item = arr[i]
-  if (!item) continue
+  const item = arr[i];
+  if (!item) continue;
   // item は T 型
 }
 ```
@@ -100,16 +105,16 @@ for (let i = 0; i < arr.length; i++) {
 
 ```typescript
 // NG: Record アクセスをそのまま使用
-const style = TYPE_STYLES[type]  // V | undefined
-style.bg  // Error: Object is possibly 'undefined'
+const style = TYPE_STYLES[type]; // V | undefined
+style.bg; // Error: Object is possibly 'undefined'
 
 // OK: デフォルト定数をエクスポートして nullish coalescing
-export const DEFAULT_TYPE_STYLE = { bg: 'bg-muted', text: 'text-foreground' }
-const style = TYPE_STYLES[type] ?? DEFAULT_TYPE_STYLE
+export const DEFAULT_TYPE_STYLE = { bg: "bg-muted", text: "text-foreground" };
+const style = TYPE_STYLES[type] ?? DEFAULT_TYPE_STYLE;
 
 // OK: ガード句
-const style = TYPE_STYLES[type]
-if (!style) return
+const style = TYPE_STYLES[type];
+if (!style) return;
 ```
 
 ## 型アサーション（`as`）禁止
@@ -122,8 +127,8 @@ if (!style) return
 
 ```typescript
 // OK: ブラウザ DOM API の型制約
-const input = event.target as HTMLInputElement
-const value = input.value
+const input = event.target as HTMLInputElement;
+const value = input.value;
 ```
 
 **2. Prisma JSON 型（`Prisma.InputJsonObject`）**
@@ -132,7 +137,7 @@ const value = input.value
 // OK: Prisma API の型制約（InputJsonObject はオブジェクト型を要求）
 await prisma.settings.update({
   data: { config: {} as Prisma.InputJsonObject },
-})
+});
 ```
 
 **3. SectionConfig union widening（`validateSectionConfig` 内部のみ）**
@@ -141,27 +146,30 @@ await prisma.settings.update({
 
 ```typescript
 // section.ts 内部（唯一の許可場所）
-export function validateSectionConfig(type: SectionType, config: unknown): z.ZodSafeParseResult<SectionConfig> {
-  const schema = sectionConfigSchemas[type]
+export function validateSectionConfig(
+  type: SectionType,
+  config: unknown,
+): z.ZodSafeParseResult<SectionConfig> {
+  const schema = sectionConfigSchemas[type];
   // 各スキーマの safeParse 結果は個別型だが、戻り値型注釈により SectionConfig に widening される
-  return schema.safeParse(config)
+  return schema.safeParse(config);
 }
 
 // 呼び出し側（as 不要）
-const result = validateSectionConfig(type, config)
+const result = validateSectionConfig(type, config);
 if (result.success) {
-  const config = result.data  // SectionConfig 型（as 不要）
+  const config = result.data; // SectionConfig 型（as 不要）
 }
 ```
 
 ```typescript
 // NG: 呼び出し側で as を書く（不要・禁止）
-const config = result.data as SectionConfig
+const config = result.data as SectionConfig;
 
 // OK: validateSectionConfig を使う（as 不要）
-const result = validateSectionConfig(type, rawConfig)
+const result = validateSectionConfig(type, rawConfig);
 if (result.success) {
-  doSomething(result.data)  // SectionConfig 型
+  doSomething(result.data); // SectionConfig 型
 }
 ```
 
@@ -170,18 +178,18 @@ if (result.success) {
 ```typescript
 // OK: 条件型を含む型への代入（TS 6.0 で厳格化）
 // ActionSuccess<T> は条件型のため直接 as では不可、二段階キャストが必要
-return result as unknown as ActionSuccess<T>
+return result as unknown as ActionSuccess<T>;
 ```
 
 ### 禁止パターンと代替手段
 
-| 禁止パターン | 代替 |
-|-------------|------|
-| `Object.keys(obj) as ConfigKey[]` | `keysOf(obj)`（`@/shared/lib/serialize`） |
-| `value as DiscountType` | `isValidDiscountType(value)` 型ガード |
-| `value as 'asc' \| 'desc'` | Set-based 型ガード + if 文 |
-| `{ ... } as Record<K, V>` | `satisfies` キーワード |
-| `value as SomeType`（Zod parse 後） | `safeParse` + `result.data` を直接使用 |
+| 禁止パターン                        | 代替                                      |
+| ----------------------------------- | ----------------------------------------- |
+| `Object.keys(obj) as ConfigKey[]`   | `keysOf(obj)`（`@/shared/lib/serialize`） |
+| `value as DiscountType`             | `isValidDiscountType(value)` 型ガード     |
+| `value as 'asc' \| 'desc'`          | Set-based 型ガード + if 文                |
+| `{ ... } as Record<K, V>`           | `satisfies` キーワード                    |
+| `value as SomeType`（Zod parse 後） | `safeParse` + `result.data` を直接使用    |
 
 ```typescript
 // NG: 型アサーション
@@ -202,23 +210,23 @@ onValueChange={(value) => { if (isValidDiscountType(value)) setType(value) }}
 ```typescript
 // NG: as キャスト（個別プロパティの型情報が失われる）
 const STATUS_CONFIG = {
-  active: { label: '有効', variant: 'success' },
-  inactive: { label: '無効', variant: 'destructive' },
-} as Record<string, StatusConfig>
+  active: { label: "有効", variant: "success" },
+  inactive: { label: "無効", variant: "destructive" },
+} as Record<string, StatusConfig>;
 
 // OK: satisfies（型チェック + プロパティ型保持）
 const STATUS_CONFIG = {
-  active: { label: '有効', variant: 'success' },
-  inactive: { label: '無効', variant: 'destructive' },
-} satisfies Record<string, StatusConfig>
+  active: { label: "有効", variant: "success" },
+  inactive: { label: "無効", variant: "destructive" },
+} satisfies Record<string, StatusConfig>;
 
 // satisfies の利点: palette.red は string でなく [number, number, number] として推論される
-type RGB = [number, number, number]
+type RGB = [number, number, number];
 const palette = {
   red: [255, 0, 0],
-  green: '#00ff00',
-} satisfies Record<string, string | RGB>
-const red = palette.red  // [number, number, number]（string | RGB ではなく）
+  green: "#00ff00",
+} satisfies Record<string, string | RGB>;
+const red = palette.red; // [number, number, number]（string | RGB ではなく）
 ```
 
 ## 型ガードパターン
@@ -228,11 +236,11 @@ const red = palette.red  // [number, number, number]（string | RGB ではなく
 ```typescript
 // 型述語で戻り値型をナローイング
 function isString(value: unknown): value is string {
-  return typeof value === 'string'
+  return typeof value === "string";
 }
 
 // filter と組み合わせ（型安全）
-const strings = mixedArray.filter((v): v is string => typeof v === 'string')
+const strings = mixedArray.filter((v): v is string => typeof v === "string");
 ```
 
 ### Set-based 型ガード
@@ -240,21 +248,21 @@ const strings = mixedArray.filter((v): v is string => typeof v === 'string')
 Prisma enum にない値（ローカルの union 型）のみで使用:
 
 ```typescript
-const CONNECTION_METHODS = ['oauth', 'manual'] as const
-type ConnectionMethod = (typeof CONNECTION_METHODS)[number]
-const CONNECTION_METHOD_SET = new Set<string>(CONNECTION_METHODS)
+const CONNECTION_METHODS = ["oauth", "manual"] as const;
+type ConnectionMethod = (typeof CONNECTION_METHODS)[number];
+const CONNECTION_METHOD_SET = new Set<string>(CONNECTION_METHODS);
 
 function isConnectionMethod(value: string): value is ConnectionMethod {
-  return CONNECTION_METHOD_SET.has(value)
+  return CONNECTION_METHOD_SET.has(value);
 }
 ```
 
 ### Zod safeParse 型ガード（推奨）
 
 ```typescript
-const result = schema.safeParse(unknownValue)
+const result = schema.safeParse(unknownValue);
 if (!result.success) {
-  return { success: false, error: z.flattenError(result.error) }
+  return { success: false, error: z.flattenError(result.error) };
 }
 // result.data は型安全
 ```
@@ -276,14 +284,48 @@ onValueChange={(value) => { if (isValidDiscountType(value)) setType(value) }}
 const taxRate = getValidTaxRateType(settings.taxRateType)  // デフォルト: standard
 ```
 
+## tsconfig 必須オプション
+
+| オプション                           | 値     | 影響                                                                                                                 |
+| ------------------------------------ | ------ | -------------------------------------------------------------------------------------------------------------------- |
+| `erasableSyntaxOnly`                 | `true` | `enum`・`namespace`・parameter properties 禁止（コンパイラレベル）。`const` + as const オブジェクトか union 型を使う |
+| `verbatimModuleSyntax`               | `true` | `import type` 必須。値と型を同一インポートで混在させるとビルドエラー                                                 |
+| `noPropertyAccessFromIndexSignature` | `true` | インデックスシグネチャへのドット記法禁止。`obj['key']` を使う（`obj.key` はエラー）                                  |
+| `noUncheckedIndexedAccess`           | `true` | 配列・Record アクセスが `T \| undefined` を返す（上記 §noUncheckedIndexedAccess 参照）                               |
+
+```typescript
+// NG: enum（erasableSyntaxOnly: true でエラー）
+enum Direction {
+  Up = "up",
+  Down = "down",
+}
+
+// OK: const as const + union
+const Direction = { Up: "up", Down: "down" } as const;
+type Direction = (typeof Direction)[keyof typeof Direction];
+
+// NG: ドット記法（noPropertyAccessFromIndexSignature）
+obj.dynamicKey; // Error
+
+// OK: ブラケット記法
+obj["dynamicKey"];
+
+// NG: 型と値の混在インポート（verbatimModuleSyntax）
+import { User, createUser } from "./user";
+
+// OK: 型は import type で分離
+import type { User } from "./user";
+import { createUser } from "./user";
+```
+
 ## ユーティリティ
 
-| 関数 | シグネチャ | ファイル | 用途 |
-|------|-----------|---------|------|
-| `keysOf()` | `<T extends object>(obj: T) => (keyof T)[]` | `src/shared/lib/serialize.ts` | 型安全な Object.keys（`as` なし） |
-| `entriesOf()` | `<T extends object>(obj: T) => [keyof T, T[keyof T]][]` | `src/shared/lib/serialize.ts` | 型安全な Object.entries |
-| `filterTruthy()` | `<T>(arr: readonly (T \| false \| null \| undefined)[]) => T[]` | `src/shared/lib/serialize.ts` | `arr.filter(Boolean) as T[]` の型安全代替 |
-| `createTypeGuard()` | `<T extends string>(allowedValues: readonly T[]) => (value: unknown) => value is T` | `src/shared/lib/serialize.ts` | const 配列から Set-based 型ガード関数を生成 |
-| `isRecord()` | `(value: unknown) => value is Record<string, unknown>` | `src/shared/lib/serialize.ts` | オブジェクト型ガード（`as Record<...>` の代替） |
-| `isValid*()` | — | `src/shared/lib/validations/enums.ts` | Prisma enum 型ガード |
-| `getValid*()` | — | `src/shared/lib/validations/enums.ts` | デフォルト値付き enum 取得 |
+| 関数                | シグネチャ                                                                          | ファイル                              | 用途                                            |
+| ------------------- | ----------------------------------------------------------------------------------- | ------------------------------------- | ----------------------------------------------- |
+| `keysOf()`          | `<T extends object>(obj: T) => (keyof T)[]`                                         | `src/shared/lib/serialize.ts`         | 型安全な Object.keys（`as` なし）               |
+| `entriesOf()`       | `<T extends object>(obj: T) => [keyof T, T[keyof T]][]`                             | `src/shared/lib/serialize.ts`         | 型安全な Object.entries                         |
+| `filterTruthy()`    | `<T>(arr: readonly (T \| false \| null \| undefined)[]) => T[]`                     | `src/shared/lib/serialize.ts`         | `arr.filter(Boolean) as T[]` の型安全代替       |
+| `createTypeGuard()` | `<T extends string>(allowedValues: readonly T[]) => (value: unknown) => value is T` | `src/shared/lib/serialize.ts`         | const 配列から Set-based 型ガード関数を生成     |
+| `isRecord()`        | `(value: unknown) => value is Record<string, unknown>`                              | `src/shared/lib/serialize.ts`         | オブジェクト型ガード（`as Record<...>` の代替） |
+| `isValid*()`        | —                                                                                   | `src/shared/lib/validations/enums.ts` | Prisma enum 型ガード                            |
+| `getValid*()`       | —                                                                                   | `src/shared/lib/validations/enums.ts` | デフォルト値付き enum 取得                      |

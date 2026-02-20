@@ -9,10 +9,6 @@ tools:
   - Grep
   - Glob
   - Bash
-disallowedTools:
-  - Write
-  - Edit
-  - NotebookEdit
 model: sonnet
 memory: project
 ---
