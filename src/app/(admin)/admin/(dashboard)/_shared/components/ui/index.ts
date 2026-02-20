@@ -156,3 +156,15 @@ export { Breadcrumb } from './breadcrumb'
 
 // CharCount
 export { CharCount } from './CharCount'
+
+// Form
+export {
+  useFormField,
+  Form,
+  FormItem,
+  FormLabel,
+  FormField,
+  FormControl,
+  FormDescription,
+  FormMessage,
+} from './form'
