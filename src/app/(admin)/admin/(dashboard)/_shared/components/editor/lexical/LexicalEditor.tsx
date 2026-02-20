@@ -9,7 +9,7 @@
 
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { LexicalComposer } from '@lexical/react/LexicalComposer'
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin'
 import { ContentEditable } from '@lexical/react/LexicalContentEditable'
@@ -86,6 +86,17 @@ function EditorInner({
   const editorRef = useRef<LexicalEditorType | null>(null)
   const [contentWrapperRef, setContentWrapperRef] = useState<HTMLDivElement | null>(null)
   const [contentWidthRef, setContentWidthRef] = useState<HTMLDivElement | null>(null)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+
+  const handleEsc = useEffectEvent(() => setIsFullscreen(false))
+  useEffect(() => {
+    if (!isFullscreen) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleEsc()
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [isFullscreen])
 
   // ダイアログ管理（13個の個別フック → 単一マネージャー）
   const dialogManager = useDialogManager()
@@ -115,16 +126,19 @@ function EditorInner({
   }
 
   return (
-    <div className="flex h-full">
+    <div className={cn("flex h-full", isFullscreen && "fixed inset-0 z-[100]")}>
       {/* メインエディタ部分 */}
       <div
-        className="flex flex-col flex-1 bg-background min-w-0"
-        style={{ height }}
+        className={cn(
+          'flex flex-col flex-1 bg-background border rounded-lg overflow-hidden min-w-0',
+          isFullscreen && 'rounded-none border-0',
+        )}
+        style={isFullscreen ? undefined : { height }}
       >
         {/* ツールバー */}
         {showToolbar && (
           <div className="shrink-0">
-            <ToolbarPlugin openDialog={dialogManager.openDialog} />
+            <ToolbarPlugin openDialog={dialogManager.openDialog} isFullscreen={isFullscreen} onFullscreenToggle={() => setIsFullscreen((prev) => !prev)} />
           </div>
         )}
 

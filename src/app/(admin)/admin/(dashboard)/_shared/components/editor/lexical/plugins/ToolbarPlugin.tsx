@@ -48,6 +48,8 @@ import {
   Link,
   List,
   ListOrdered,
+  Maximize,
+  Minimize,
   Pilcrow,
   Plus,
   Redo,
@@ -82,6 +84,8 @@ import type { DialogId } from '../dialogs/dialog-types'
 
 type ToolbarPluginProps = {
   openDialog?: (id: DialogId) => void
+  isFullscreen: boolean
+  onFullscreenToggle: () => void
 }
 
 type BlockType = 'paragraph' | 'h1' | 'h2' | 'h3' | 'h4' | 'quote' | 'ul' | 'ol'
@@ -145,6 +149,8 @@ const ALIGNMENT_CONFIG: Record<AlignmentType, AlignmentConfig> = {
 
 export function ToolbarPlugin({
   openDialog,
+  isFullscreen,
+  onFullscreenToggle,
 }: ToolbarPluginProps) {
   const [editor] = useLexicalComposerContext()
 
@@ -332,8 +338,8 @@ export function ToolbarPlugin({
   const insertItems = getToolbarInsertItems(!!openDialog)
 
   return (
-    <div className="flex justify-center border-b bg-background p-1">
-      <div className="flex flex-wrap items-center gap-0.5">
+    <div className="flex items-center border-b bg-background p-1">
+      <div className="flex flex-wrap items-center gap-0.5 flex-1">
       {/* Undo/Redo */}
       <Button
         type="button"
@@ -572,6 +578,22 @@ export function ToolbarPlugin({
           </DropdownMenuContent>
         </DropdownMenu>
       )}
+      </div>
+      <div className="ml-auto shrink-0">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-10 w-10 md:h-8 md:w-8"
+          onClick={onFullscreenToggle}
+          title={isFullscreen ? '全画面終了' : '全画面表示'}
+        >
+          {isFullscreen ? (
+            <Minimize className="h-5 w-5 md:h-4 md:w-4" />
+          ) : (
+            <Maximize className="h-5 w-5 md:h-4 md:w-4" />
+          )}
+        </Button>
       </div>
     </div>
   )
