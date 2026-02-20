@@ -29,6 +29,8 @@ import {
   Switch,
   Label,
 } from "@/admin/components/ui";
+import { DetailSection } from "@/admin/components/DetailSection";
+import { DetailField } from "@/admin/components/DetailField";
 import {
   CustomerStatusBadge,
   ReservationStatusBadge,
@@ -83,60 +85,56 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
     <div className="grid gap-6 md:grid-cols-3">
       {/* 顧客情報 */}
       <div className="md:col-span-2 space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>基本情報</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <p className="text-sm text-muted-foreground">お名前</p>
-              <p className="font-medium">
-                {customer.lastName} {customer.firstName}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">メールアドレス</p>
-              <a
-                href={`mailto:${customer.email}`}
-                className="text-primary hover:underline"
-              >
-                {customer.email}
-              </a>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">電話番号</p>
-              <p>{customer.phoneNumber || "-"}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">住所</p>
-              <p>{customer.address || "-"}</p>
-            </div>
-          </CardContent>
-        </Card>
+        <DetailSection title="基本情報">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <DetailField
+              label="お名前"
+              value={`${customer.lastName} ${customer.firstName}`}
+            />
+            <DetailField
+              label="メールアドレス"
+              value={
+                <a
+                  href={`mailto:${customer.email}`}
+                  className="text-primary hover:underline"
+                >
+                  {customer.email}
+                </a>
+              }
+            />
+            <DetailField label="電話番号" value={customer.phoneNumber} />
+            <DetailField label="住所" value={customer.address} />
+          </div>
+        </DetailSection>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>統計情報</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-3">
-            <div>
-              <p className="text-sm text-muted-foreground">予約回数</p>
-              <p className="text-2xl font-bold">{customer.totalReservations}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">累計利用金額</p>
-              <p className="text-2xl font-bold">
-                {formatPrice(customer.totalSpent, "-")}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">最終予約日</p>
-              <p className="text-lg">
-                {formatDateShort(customer.lastReservationAt)}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <DetailSection title="統計情報">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <DetailField
+              label="予約回数"
+              value={
+                <span className="text-2xl font-bold">
+                  {customer.totalReservations}
+                </span>
+              }
+            />
+            <DetailField
+              label="累計利用金額"
+              value={
+                <span className="text-2xl font-bold">
+                  {formatPrice(customer.totalSpent, "-")}
+                </span>
+              }
+            />
+            <DetailField
+              label="最終予約日"
+              value={
+                <span className="text-lg">
+                  {formatDateShort(customer.lastReservationAt)}
+                </span>
+              }
+            />
+          </div>
+        </DetailSection>
 
         {/* 予約履歴 */}
         <Card>
