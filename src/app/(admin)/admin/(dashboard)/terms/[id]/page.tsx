@@ -34,27 +34,16 @@ export default async function TermsDetailPage({ params }: PageProps) {
 
   const terms = result.data
 
-  const businessInfo: BusinessInfo = settings
-    ? {
-        businessName: settings.businessName,
-        email: settings.email,
-        phoneNumber: settings.phoneNumber,
-        postalCode: settings.postalCode,
-        prefecture: settings.prefecture,
-        city: settings.city,
-        streetAddress: settings.streetAddress,
-        buildingName: settings.buildingName,
-      }
-    : {
-        businessName: null,
-        email: null,
-        phoneNumber: null,
-        postalCode: null,
-        prefecture: null,
-        city: null,
-        streetAddress: null,
-        buildingName: null,
-      }
+  const businessInfo: BusinessInfo = {
+    businessName: settings?.businessName ?? null,
+    email: settings?.email ?? null,
+    phoneNumber: settings?.phoneNumber ?? null,
+    postalCode: settings?.postalCode ?? null,
+    prefecture: settings?.prefecture ?? null,
+    city: settings?.city ?? null,
+    streetAddress: settings?.streetAddress ?? null,
+    buildingName: settings?.buildingName ?? null,
+  }
 
   return (
     <AdminDetailLayout
