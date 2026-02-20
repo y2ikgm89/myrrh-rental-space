@@ -18,11 +18,25 @@
 | 🟢 低  | keysOf/entriesOf の許可例外を type-safety.md に追記   | `.claude/rules/type-safety.md` |
 | 🟢 低  | CSP ヘッダー設定（next.config.ts の securityHeaders） | `next.config.ts`               |
 
-**最終更新**: 2026-02-20（管理画面 詳細・編集ページ UI 統一 第2弾）
+**最終更新**: 2026-02-20（Claude Code 自動化改善）
 
 ---
 
 ## 完了した計画
+
+### 2026-02-20 - Claude Code 自動化改善 ✅
+
+自動化スコア 94/100 → 100/100。PreToolUse 危険コマンドブロック・Notification 通知・パフォーマンス解析エージェント・commit スキル追記を追加。
+
+**実装内容**:
+
+- [x] Task 1: `block-dangerous-bash.sh` — rm -rf/--recursive, git reset --hard, git push --force, git clean -f, git checkout/restore ., git branch -D, diskpart/format をハードブロック（exit 2）
+- [x] Task 2: `notification.sh` — Windows バルーン通知（PowerShell 組み込み、非ブロッキング）
+- [x] Task 3: `settings.json` — Bash PreToolUse matcher + Notification フック追加、`\|` → `\\|` JSON 修正
+- [x] Task 4: `performance-analyzer.md` — Next.js 16 バンドルサイズ・First Load JS 解析エージェント（haiku）
+- [x] Task 5: `CLAUDE.md` — 手動スキルに `/commit-commands:commit`, `/commit-commands:commit-push-pr` 追記
+
+---
 
 ### 2026-02-20 - 管理画面 詳細・編集ページ UI 統一（第2弾） ✅
 
@@ -47,6 +61,18 @@
 - [x] Task 15: `bun run validate && bun run build` 全通過（96ルート静的生成）
 
 **追加修正（レビュー指摘）**: `CustomerWithReservations` 型の `startTime/endTime: Date → string` + `toISOString()` 変換追加
+
+---
+
+### 2026-02-19 - Claude Code 自動化追加 ✅
+
+SessionStart hook・cache-strategy-reviewer・create-server-action の3つを追加。
+
+**実装内容**:
+
+- [x] Step 1: SessionStart hook — `settings.json` に追加（進行中計画の自動確認）
+- [x] Step 2: `cache-strategy-reviewer` — `.claude/agents/` に追加
+- [x] Step 3: `create-server-action` — `.claude/skills/` に追加
 
 ---
 
