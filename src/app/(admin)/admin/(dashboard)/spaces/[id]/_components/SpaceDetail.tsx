@@ -187,7 +187,7 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
             </div>
             {/* 追加画像 */}
             {space.imageUrls.map((url: string, index: number) => (
-              <div key={index} className="flex flex-col gap-1">
+              <div key={url} className="flex flex-col gap-1">
                 <span className="text-xs text-muted-foreground">
                   追加{index + 1}
                 </span>
@@ -316,8 +316,8 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
-              {space.facilities.map((facility: string, index: number) => (
-                <Badge key={index} variant="secondary">
+              {space.facilities.map((facility: string) => (
+                <Badge key={facility} variant="secondary">
                   {facility}
                 </Badge>
               ))}

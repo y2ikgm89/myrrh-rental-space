@@ -206,8 +206,8 @@ export async function getCustomerById(
     ...customer,
     reservations: customer.reservations.map((r) => ({
       id: r.id,
-      startTime: r.startTime,
-      endTime: r.endTime,
+      startTime: r.startTime.toISOString(),
+      endTime: r.endTime.toISOString(),
       status: r.status,
       totalPrice: r.totalPrice,
       space: r.space,

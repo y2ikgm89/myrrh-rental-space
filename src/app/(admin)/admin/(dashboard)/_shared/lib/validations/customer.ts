@@ -83,8 +83,8 @@ export type CustomerData = {
 export type CustomerWithReservations = CustomerData & {
   reservations: {
     id: string
-    startTime: Date
-    endTime: Date
+    startTime: string
+    endTime: string
     status: ReservationStatus
     totalPrice: number | null
     space: {
