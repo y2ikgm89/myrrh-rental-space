@@ -1111,3 +1111,15 @@ details[data-collapsible-item] > summary[data-collapsible-title]::-webkit-detail
     grid-template-columns: 1fr !important;
   }
 }
+
+/* --------------------------------------------------------------------------
+ * Tooltip (abbr[data-tooltip])
+ *
+ * data-tooltip: ツールチップ付きテキスト
+ * title 属性にツールチップの説明文を格納
+ * -------------------------------------------------------------------------- */
+
+[data-tooltip] {
+  text-decoration: underline dotted;
+  cursor: help;
+}

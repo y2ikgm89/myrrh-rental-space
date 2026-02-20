@@ -179,6 +179,7 @@ function EditorInner({
             }}
             onAddComment={onAddComment ? handleAddComment : undefined}
             onOpenRuby={() => dialogManager.openDialog('ruby')}
+            onOpenTooltip={() => dialogManager.openDialog('tooltip')}
           />
         )}
         <CommentPlugin onMarkClick={onMarkClick} />

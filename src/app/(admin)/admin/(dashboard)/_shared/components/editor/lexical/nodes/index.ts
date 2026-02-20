@@ -259,3 +259,12 @@ export {
   rubyBaseTextState,
   rubyTextState,
 } from './RubyNode'
+
+// Tooltip
+export {
+  TooltipNode,
+  $createTooltipNode,
+  $isTooltipNode,
+  tooltipBaseTextState,
+  tooltipTextState,
+} from './TooltipNode'

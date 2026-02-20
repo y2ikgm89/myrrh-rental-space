@@ -201,6 +201,7 @@ type FloatingToolbarProps = {
   setIsLinkEditMode: (isLinkEditMode: boolean) => void
   onAddComment?: () => void
   onOpenRuby?: () => void
+  onOpenTooltip?: () => void
 }
 
 function FloatingToolbar({
@@ -222,6 +223,7 @@ function FloatingToolbar({
   setIsLinkEditMode,
   onAddComment,
   onOpenRuby,
+  onOpenTooltip,
 }: FloatingToolbarProps) {
   const popupRef = useRef<HTMLDivElement>(null)
 
@@ -497,6 +499,19 @@ function FloatingToolbar({
           ルビ
         </Button>
       )}
+      {onOpenTooltip && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-xs font-bold"
+          onClick={onOpenTooltip}
+          aria-label="ツールチップを挿入"
+          title="ツールチップを挿入"
+        >
+          TIP
+        </Button>
+      )}
       <Separator orientation="vertical" className="mx-0.5 h-5" />
       <div className="flex items-center gap-0.5">
         <Button
@@ -557,7 +572,8 @@ function useFloatingToolbar(
   anchorElem: HTMLElement,
   setIsLinkEditMode: (isLinkEditMode: boolean) => void,
   onAddComment?: () => void,
-  onOpenRuby?: () => void
+  onOpenRuby?: () => void,
+  onOpenTooltip?: () => void
 ) {
   // 公式パターン: 個別のuseStateで各フォーマット状態を管理
   const [isText, setIsText] = useState(false)
@@ -721,6 +737,7 @@ function useFloatingToolbar(
       setIsLinkEditMode={setIsLinkEditMode}
       onAddComment={onAddComment}
       onOpenRuby={onOpenRuby}
+      onOpenTooltip={onOpenTooltip}
     />,
     anchorElem
   )
@@ -735,14 +752,16 @@ function FloatingToolbarInner({
   setIsLinkEditMode,
   onAddComment,
   onOpenRuby,
+  onOpenTooltip,
 }: {
   anchorElem: HTMLElement
   setIsLinkEditMode: (isLinkEditMode: boolean) => void
   onAddComment?: () => void
   onOpenRuby?: () => void
+  onOpenTooltip?: () => void
 }) {
   const [editor] = useLexicalComposerContext()
-  return useFloatingToolbar(editor, anchorElem, setIsLinkEditMode, onAddComment, onOpenRuby)
+  return useFloatingToolbar(editor, anchorElem, setIsLinkEditMode, onAddComment, onOpenRuby, onOpenTooltip)
 }
 
 // =============================================================================
@@ -756,6 +775,8 @@ export type FloatingToolbarPluginProps = {
   onAddComment?: () => void
   /** ルビ挿入ダイアログを開くコールバック */
   onOpenRuby?: () => void
+  /** ツールチップ挿入ダイアログを開くコールバック */
+  onOpenTooltip?: () => void
 }
 
 export function FloatingToolbarPlugin({
@@ -763,6 +784,7 @@ export function FloatingToolbarPlugin({
   setIsLinkEditMode,
   onAddComment,
   onOpenRuby,
+  onOpenTooltip,
 }: FloatingToolbarPluginProps) {
   const handleSetIsLinkEditMode = (isLinkEditMode: boolean) => {
     setIsLinkEditMode?.(isLinkEditMode)
@@ -774,6 +796,7 @@ export function FloatingToolbarPlugin({
       setIsLinkEditMode={handleSetIsLinkEditMode}
       onAddComment={onAddComment}
       onOpenRuby={onOpenRuby}
+      onOpenTooltip={onOpenTooltip}
     />
   )
 }
