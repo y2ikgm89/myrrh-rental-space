@@ -4,7 +4,8 @@ import { getCouponById, deleteCoupon } from "@/admin/actions/coupon";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { DangerZone } from "@/admin/components/DangerZone";
 import { CouponForm } from "../_components/CouponForm";
-import { Card } from "@/admin/components/ui";
+import { DetailSection } from "@/admin/components/DetailSection";
+import { DetailField } from "@/admin/components/DetailField";
 import { formatDateShort, formatPrice } from "@/shared/lib/utils";
 import type { Metadata } from "next";
 
@@ -47,43 +48,45 @@ export default async function EditCouponPage({ params }: PageProps) {
       subtitle={coupon.name}
     >
       {/* 利用統計 */}
-      <Card className="p-4">
-        <h3 className="mb-3 font-medium">利用統計</h3>
+      <DetailSection title="利用統計">
         <div className="grid gap-4 sm:grid-cols-4">
-          <div>
-            <p className="text-sm text-muted-foreground">利用回数</p>
-            <p className="text-2xl font-bold">
-              {coupon.usageCount}
-              {coupon.usageLimit && (
-                <span className="text-sm font-normal text-muted-foreground">
-                  {" "}
-                  / {coupon.usageLimit}
-                </span>
-              )}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">割引タイプ</p>
-            <p className="text-lg font-medium">
-              {coupon.type === "PERCENTAGE"
-                ? `${coupon.discountValue}%`
-                : formatPrice(coupon.discountValue)}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">開始日</p>
-            <p className="text-lg">{formatDateShort(coupon.validFrom)}</p>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">終了日</p>
-            <p className="text-lg">
-              {coupon.validUntil
-                ? formatDateShort(coupon.validUntil)
-                : "無期限"}
-            </p>
-          </div>
+          <DetailField
+            label="利用回数"
+            value={
+              <span className="text-2xl font-bold">
+                {coupon.usageCount}
+                {coupon.usageLimit && (
+                  <span className="text-sm font-normal text-muted-foreground">
+                    {" "}/ {coupon.usageLimit}
+                  </span>
+                )}
+              </span>
+            }
+          />
+          <DetailField
+            label="割引タイプ"
+            value={
+              <span className="text-lg font-medium">
+                {coupon.type === "PERCENTAGE"
+                  ? `${coupon.discountValue}%`
+                  : formatPrice(coupon.discountValue)}
+              </span>
+            }
+          />
+          <DetailField
+            label="開始日"
+            value={<span className="text-lg">{formatDateShort(coupon.validFrom)}</span>}
+          />
+          <DetailField
+            label="終了日"
+            value={
+              <span className="text-lg">
+                {coupon.validUntil ? formatDateShort(coupon.validUntil) : "無期限"}
+              </span>
+            }
+          />
         </div>
-      </Card>
+      </DetailSection>
 
       {/* フォーム */}
       <CouponForm coupon={coupon} />
@@ -91,7 +94,7 @@ export default async function EditCouponPage({ params }: PageProps) {
       <DangerZone
         deleteLabel="クーポンを削除"
         itemName={coupon.code}
-        onDelete={() => deleteCoupon(coupon.id)}
+        onDelete={deleteCoupon.bind(null, coupon.id)}
         redirectTo="/admin/coupons"
       />
     </AdminDetailLayout>
