@@ -18,6 +18,7 @@ import {
   TabsInspectorPanel,
   LayoutInspectorPanel,
   YouTubeInspectorPanel,
+  VimeoInspectorPanel,
   XInspectorPanel,
   InstagramInspectorPanel,
   PageBreakInspectorPanel,
@@ -55,6 +56,8 @@ function renderPanel(info: SelectedNodeInfo) {
       return <LayoutInspectorPanel nodeKey={info.nodeKey} node={info.node} />
     case 'youtube':
       return <YouTubeInspectorPanel nodeKey={info.nodeKey} node={info.node} />
+    case 'vimeo':
+      return <VimeoInspectorPanel nodeKey={info.nodeKey} node={info.node} />
     case 'x':
       return <XInspectorPanel nodeKey={info.nodeKey} node={info.node} />
     case 'instagram':

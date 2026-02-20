@@ -16,6 +16,7 @@ import type { ComponentType } from 'react'
 import {
   ImagePlugin,
   YouTubePlugin,
+  VimeoPlugin,
   XPlugin,
   InstagramPlugin,
   LinkDialogPlugin,
@@ -46,6 +47,7 @@ export type DialogPluginProps = {
 export const REGISTRY_DIALOG_IDS = [
   'image',
   'youtube',
+  'vimeo',
   'x',
   'instagram',
   'link',
@@ -73,6 +75,7 @@ type DialogRegistryEntry = {
 export const DIALOG_REGISTRY: readonly DialogRegistryEntry[] = [
   { dialogId: 'image', component: ImagePlugin },
   { dialogId: 'youtube', component: YouTubePlugin },
+  { dialogId: 'vimeo', component: VimeoPlugin },
   { dialogId: 'x', component: XPlugin },
   { dialogId: 'instagram', component: InstagramPlugin },
   { dialogId: 'link', component: LinkDialogPlugin },

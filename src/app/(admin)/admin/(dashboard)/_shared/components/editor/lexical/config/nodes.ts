@@ -15,6 +15,7 @@ import type { Klass, LexicalNode } from 'lexical'
 
 import { ImageNode } from '../nodes/ImageNode'
 import { YouTubeNode } from '../nodes/YouTubeNode'
+import { VimeoNode } from '../nodes/VimeoNode'
 import { XNode } from '../nodes/XNode'
 import { InstagramNode } from '../nodes/InstagramNode'
 import { LayoutContainerNode } from '../nodes/LayoutContainerNode'
@@ -61,6 +62,7 @@ export const EDITOR_NODES: ReadonlyArray<Klass<LexicalNode>> = [
   // カスタムノード
   ImageNode,
   YouTubeNode,
+  VimeoNode,
   XNode,
   InstagramNode,
   LayoutContainerNode,

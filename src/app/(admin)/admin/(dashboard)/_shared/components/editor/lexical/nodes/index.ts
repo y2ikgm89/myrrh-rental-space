@@ -23,6 +23,13 @@ export {
 } from './YouTubeNode'
 
 export {
+  VimeoNode,
+  $createVimeoNode,
+  $isVimeoNode,
+  vimeoVideoIdState,
+} from './VimeoNode'
+
+export {
   LayoutContainerNode,
   $createLayoutContainerNode,
   $isLayoutContainerNode,

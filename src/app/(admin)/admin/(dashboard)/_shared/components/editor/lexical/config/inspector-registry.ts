@@ -24,6 +24,7 @@ import { $isStepsContainerNode } from '../nodes/StepsContainerNode'
 import { $isTabsContainerNode } from '../nodes/TabsContainerNode'
 import { $isLayoutContainerNode } from '../nodes/LayoutContainerNode'
 import { $isYouTubeNode } from '../nodes/YouTubeNode'
+import { $isVimeoNode } from '../nodes/VimeoNode'
 import { $isXNode } from '../nodes/XNode'
 import { $isInstagramNode } from '../nodes/InstagramNode'
 import { $isPageBreakNode } from '../nodes/PageBreakNode'
@@ -51,6 +52,7 @@ export function getInspectableInfoFromRegistry(node: LexicalNode): InspectableRe
   if ($isTabsContainerNode(node)) return { nodeType: 'tabs', node, nodeKey }
   if ($isLayoutContainerNode(node)) return { nodeType: 'layout', node, nodeKey }
   if ($isYouTubeNode(node)) return { nodeType: 'youtube', node, nodeKey }
+  if ($isVimeoNode(node)) return { nodeType: 'vimeo', node, nodeKey }
   if ($isXNode(node)) return { nodeType: 'x', node, nodeKey }
   if ($isInstagramNode(node)) return { nodeType: 'instagram', node, nodeKey }
   if ($isPageBreakNode(node)) return { nodeType: 'pageBreak', node, nodeKey }
@@ -63,5 +65,5 @@ export function getInspectableInfoFromRegistry(node: LexicalNode): InspectableRe
 export const INSPECTABLE_NODE_TYPES_FROM_REGISTRY: readonly InspectableNodeType[] = [
   'button', 'image', 'callout', 'bookmark', 'pullQuote',
   'collapsible', 'steps', 'tabs', 'layout',
-  'youtube', 'x', 'instagram', 'pageBreak',
+  'youtube', 'vimeo', 'x', 'instagram', 'pageBreak',
 ]

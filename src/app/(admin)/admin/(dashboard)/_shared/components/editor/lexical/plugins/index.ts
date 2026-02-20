@@ -23,6 +23,7 @@ export {
   type PresetTextColor,
 } from './TextColorPlugin'
 export { YouTubePlugin } from './YouTubePlugin'
+export { VimeoPlugin } from './VimeoPlugin'
 export { XPlugin } from './XPlugin'
 export { InstagramPlugin } from './InstagramPlugin'
 export { LinkDialogPlugin } from './LinkDialogPlugin'
