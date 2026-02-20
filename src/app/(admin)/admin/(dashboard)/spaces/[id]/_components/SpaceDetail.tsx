@@ -12,6 +12,8 @@ import {
   Badge,
   Switch,
 } from "@/admin/components/ui";
+import { DetailSection } from "@/admin/components/DetailSection";
+import { DetailField } from "@/admin/components/DetailField";
 import { updateSpacePublish } from "@/admin/actions/space";
 import type { SpaceWithStats } from "@/admin/lib/validations/space";
 import { formatDateTimeShort, formatCurrency } from "@/shared/lib/utils";
@@ -102,80 +104,62 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
       </Card>
 
       {/* 基本情報 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>基本情報</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <div className="text-sm text-muted-foreground">スペース名</div>
-              <div className="font-medium">{space.name}</div>
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground">予約数</div>
-              <div className="font-medium">
-                <Badge variant="secondary">{space._count.reservations}件</Badge>
-              </div>
-            </div>
-            <div className="sm:col-span-2">
-              <div className="text-sm text-muted-foreground">説明</div>
-              <div className="whitespace-pre-wrap">{space.description}</div>
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground">住所</div>
-              <div className="font-medium">{space.address}</div>
-            </div>
-            {space.access && (
-              <div>
-                <div className="text-sm text-muted-foreground">アクセス</div>
-                <div className="font-medium">{space.access}</div>
-              </div>
-            )}
-            <div>
-              <div className="text-sm text-muted-foreground">定員</div>
-              <div className="font-medium">{space.capacity}名</div>
-            </div>
-            {space.area && (
-              <div>
-                <div className="text-sm text-muted-foreground">面積</div>
-                <div className="font-medium">{space.area}m²</div>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <DetailSection title="基本情報">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <DetailField label="スペース名" value={space.name} />
+          <DetailField
+            label="予約数"
+            value={
+              <Badge variant="secondary">{space._count.reservations}件</Badge>
+            }
+          />
+          <DetailField
+            className="sm:col-span-2"
+            label="説明"
+            value={
+              <span className="whitespace-pre-wrap">{space.description}</span>
+            }
+          />
+          <DetailField label="住所" value={space.address} />
+          {space.access && (
+            <DetailField label="アクセス" value={space.access} />
+          )}
+          <DetailField label="定員" value={`${space.capacity}名`} />
+          {space.area && (
+            <DetailField label="面積" value={`${space.area}m²`} />
+          )}
+        </div>
+      </DetailSection>
 
       {/* 料金 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>料金</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <div className="text-sm text-muted-foreground">時間料金</div>
-              <div className="text-xl font-bold">
+      <DetailSection title="料金">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <DetailField
+            label="時間料金"
+            value={
+              <span className="text-xl font-bold">
                 {formatCurrency(space.hourlyPrice)}
                 <span className="text-sm font-normal text-muted-foreground">
                   /時間
                 </span>
-              </div>
-            </div>
-            {space.dailyPrice && (
-              <div>
-                <div className="text-sm text-muted-foreground">日額料金</div>
-                <div className="text-xl font-bold">
+              </span>
+            }
+          />
+          {space.dailyPrice && (
+            <DetailField
+              label="日額料金"
+              value={
+                <span className="text-xl font-bold">
                   {formatCurrency(space.dailyPrice)}
                   <span className="text-sm font-normal text-muted-foreground">
                     /日
                   </span>
-                </div>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+                </span>
+              }
+            />
+          )}
+        </div>
+      </DetailSection>
 
       {/* 画像 */}
       <Card>
@@ -343,35 +327,24 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
       )}
 
       {/* メタ情報 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>メタ情報</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <div className="text-sm text-muted-foreground">作成日時</div>
-              <div className="font-medium">
-                {formatDateTimeShort(space.createdAt)}
-              </div>
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground">更新日時</div>
-              <div className="font-medium">
-                {formatDateTimeShort(space.updatedAt)}
-              </div>
-            </div>
-            {space.publishedAt && (
-              <div>
-                <div className="text-sm text-muted-foreground">公開日時</div>
-                <div className="font-medium">
-                  {formatDateTimeShort(space.publishedAt)}
-                </div>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <DetailSection title="メタ情報">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <DetailField
+            label="作成日時"
+            value={formatDateTimeShort(space.createdAt)}
+          />
+          <DetailField
+            label="更新日時"
+            value={formatDateTimeShort(space.updatedAt)}
+          />
+          {space.publishedAt && (
+            <DetailField
+              label="公開日時"
+              value={formatDateTimeShort(space.publishedAt)}
+            />
+          )}
+        </div>
+      </DetailSection>
     </div>
   );
 }
