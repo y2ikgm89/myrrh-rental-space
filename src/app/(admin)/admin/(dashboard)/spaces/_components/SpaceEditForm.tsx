@@ -14,11 +14,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { ImagePlus, GripVertical, HelpCircle, X } from "lucide-react";
-import dynamic from "next/dynamic";
 import {
   Button,
   Input,
   Label,
+  Textarea,
   Card,
   CardContent,
   CardHeader,
@@ -75,26 +75,6 @@ import {
   OGPFields,
   UnifiedPublishFields,
 } from "@/admin/components/editor/inline/side-panel";
-
-// =============================================================================
-// Dynamic import (Lexical SSR 回避)
-// =============================================================================
-const RichTextEditor = dynamic(
-  () =>
-    import("@/admin/components/editor").then((mod) => ({
-      default: mod.RichTextEditor,
-    })),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="h-[200px] flex items-center justify-center border rounded-lg bg-muted/50">
-        <div className="animate-pulse text-muted-foreground">
-          エディタを読み込み中...
-        </div>
-      </div>
-    ),
-  },
-);
 
 // =============================================================================
 // Constants
@@ -393,7 +373,6 @@ export function SpaceEditForm({
   const locationId = useWatch({ control, name: "locationId" });
   const categoryId = useWatch({ control, name: "categoryId" });
   const mainImageUrl = useWatch({ control, name: "mainImageUrl" });
-  const description = useWatch({ control, name: "description" });
   const discountType = useWatch({ control, name: "discountType" });
   const discountValue = useWatch({ control, name: "discountValue" });
   const durationDiscountOverride = useWatch({
@@ -614,17 +593,14 @@ export function SpaceEditForm({
               )}
             </div>
 
-            {/* 説明 (Lexical RichTextEditor) */}
+            {/* 説明 */}
             <div className="space-y-2">
-              <Label id="description-label">説明 *</Label>
-              {/* NOTE: RichTextEditor uses contenteditable (Lexical) — htmlFor is not applicable */}
-              <RichTextEditor
-                contentHtml={description || ""}
-                onChange={(json) =>
-                  setValue("description", json, { shouldDirty: true })
-                }
+              <Label htmlFor="description">説明 *</Label>
+              <Textarea
+                id="description"
+                {...register("description")}
                 placeholder="スペースの説明を入力..."
-                height="200px"
+                rows={6}
                 disabled={isPending}
               />
               {errors.description && (
