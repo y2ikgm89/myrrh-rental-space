@@ -48,7 +48,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
       title={`${customer.lastName} ${customer.firstName}`}
       subtitle={customer.email}
       actions={
-        <Button variant="outline" size="sm" asChild>
+        <Button size="sm" asChild>
           <Link href={`/admin/customers/${customer.id}/edit`}>
             <Pencil className="mr-2 h-4 w-4" />
             編集
@@ -60,7 +60,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
       <DangerZone
         deleteLabel="顧客を削除"
         itemName={`${customer.lastName} ${customer.firstName}`}
-        onDelete={() => deleteCustomer(customer.id)}
+        onDelete={deleteCustomer.bind(null, customer.id)}
         redirectTo="/admin/customers"
       />
     </AdminDetailLayout>

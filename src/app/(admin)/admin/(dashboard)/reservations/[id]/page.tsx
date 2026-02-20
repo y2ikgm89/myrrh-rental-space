@@ -49,7 +49,7 @@ export default async function ReservationDetailPage({ params }: PageProps) {
       title={`${reservation.customer.lastName}${reservation.customer.firstName} 様の予約`}
       subtitle={reservation.space.name}
       actions={
-        <Button variant="outline" size="sm" asChild>
+        <Button size="sm" asChild>
           <Link href={`/admin/reservations/${id}/edit`}>
             <Pencil className="mr-2 h-4 w-4" />
             編集
@@ -60,7 +60,8 @@ export default async function ReservationDetailPage({ params }: PageProps) {
       <ReservationDetail reservation={reservation} />
       <DangerZone
         deleteLabel="予約を削除"
-        onDelete={() => deleteReservation(reservation.id)}
+        itemName={`${reservation.customer.lastName}${reservation.customer.firstName} 様の予約`}
+        onDelete={deleteReservation.bind(null, reservation.id)}
         redirectTo="/admin/reservations"
       />
     </AdminDetailLayout>
