@@ -12,6 +12,8 @@ import {
   Badge,
   Switch,
 } from "@/admin/components/ui";
+import { DetailSection } from "@/admin/components/DetailSection";
+import { DetailField } from "@/admin/components/DetailField";
 import { toggleLocationPublish } from "@/admin/actions/location";
 import type { LocationWithStats } from "@/admin/lib/validations/location";
 import { formatDateTimeShort } from "@/shared/lib/utils";
@@ -64,47 +66,43 @@ export function LocationDetail({ location }: LocationDetailProps) {
       </Card>
 
       {/* 基本情報 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>基本情報</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <div className="text-sm text-muted-foreground">場所名</div>
-              <div className="font-medium">{location.name}</div>
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground">スペース数</div>
-              <div className="font-medium">
-                <Badge variant="secondary">{location._count.spaces}件</Badge>
-              </div>
-            </div>
-            {location.description && (
-              <div className="sm:col-span-2">
-                <div className="text-sm text-muted-foreground">説明</div>
-                <div className="whitespace-pre-wrap">
+      <DetailSection title="基本情報">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <DetailField label="場所名" value={location.name} />
+          <DetailField
+            label="スペース数"
+            value={
+              <Badge variant="secondary">{location._count.spaces}件</Badge>
+            }
+          />
+          {location.description && (
+            <DetailField
+              label="説明"
+              value={
+                <span className="whitespace-pre-wrap">
                   {location.description}
-                </div>
-              </div>
-            )}
-            <div className="sm:col-span-2">
-              <div className="text-sm text-muted-foreground">住所</div>
-              <div className="font-medium">{location.address}</div>
-            </div>
-            {location.access && (
-              <div className="sm:col-span-2">
-                <div className="text-sm text-muted-foreground">アクセス</div>
-                <div className="whitespace-pre-wrap">{location.access}</div>
-              </div>
-            )}
-            <div>
-              <div className="text-sm text-muted-foreground">並び順</div>
-              <div className="font-medium">{location.sortOrder}</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+                </span>
+              }
+              className="sm:col-span-2"
+            />
+          )}
+          <DetailField
+            label="住所"
+            value={location.address}
+            className="sm:col-span-2"
+          />
+          {location.access && (
+            <DetailField
+              label="アクセス"
+              value={
+                <span className="whitespace-pre-wrap">{location.access}</span>
+              }
+              className="sm:col-span-2"
+            />
+          )}
+          <DetailField label="並び順" value={String(location.sortOrder)} />
+        </div>
+      </DetailSection>
 
       {/* 画像 */}
       <Card>
@@ -165,37 +163,26 @@ export function LocationDetail({ location }: LocationDetailProps) {
         )}
 
       {/* メタ情報 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>メタ情報</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <div className="text-sm text-muted-foreground">作成日時</div>
-              <div className="font-medium">
-                {formatDateTimeShort(location.createdAt)}
-              </div>
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground">更新日時</div>
-              <div className="font-medium">
-                {formatDateTimeShort(location.updatedAt)}
-              </div>
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground">状態</div>
-              <div className="font-medium">
-                <Badge
-                  variant={location.isActive ? "secondary" : "destructive"}
-                >
-                  {location.isActive ? "アクティブ" : "削除済み"}
-                </Badge>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <DetailSection title="メタ情報">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <DetailField
+            label="作成日時"
+            value={formatDateTimeShort(location.createdAt)}
+          />
+          <DetailField
+            label="更新日時"
+            value={formatDateTimeShort(location.updatedAt)}
+          />
+          <DetailField
+            label="状態"
+            value={
+              <Badge variant={location.isActive ? "secondary" : "destructive"}>
+                {location.isActive ? "アクティブ" : "削除済み"}
+              </Badge>
+            }
+          />
+        </div>
+      </DetailSection>
     </div>
   );
 }
