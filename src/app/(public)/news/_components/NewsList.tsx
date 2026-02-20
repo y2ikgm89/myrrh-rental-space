@@ -1,19 +1,19 @@
-'use client'
+"use client";
 
-import type { ReactElement } from 'react'
-import Link from 'next/link'
-import { ScrollReveal } from '@/public/components/animations/ScrollReveal'
-import { formatSerializedDate } from '@/shared/lib/serialize'
+import type { ReactElement } from "react";
+import Link from "next/link";
+import { ScrollReveal } from "@/public/components/animations/ScrollReveal";
+import { formatSerializedDate } from "@/shared/lib/serialize";
 
 interface NewsItemData {
-  id: string
-  slug: string
-  title: string
-  publishedAt: Date | string | null
+  id: string;
+  slug: string;
+  title: string;
+  publishedAt: string | null;
 }
 
 interface NewsListProps {
-  items: readonly NewsItemData[]
+  items: readonly NewsItemData[];
 }
 
 export function NewsList({ items }: NewsListProps): ReactElement {
@@ -22,7 +22,7 @@ export function NewsList({ items }: NewsListProps): ReactElement {
       <div className="py-24 text-center">
         <p className="text-muted-foreground">お知らせはまだありません。</p>
       </div>
-    )
+    );
   }
 
   return (
@@ -35,7 +35,7 @@ export function NewsList({ items }: NewsListProps): ReactElement {
               className="group flex items-baseline gap-4 py-5 transition-colors hover:bg-accent/30 md:gap-6 md:py-6"
             >
               <time
-                dateTime={item.publishedAt ? String(item.publishedAt) : undefined}
+                dateTime={item.publishedAt ?? undefined}
                 className="shrink-0 text-xs text-muted-foreground md:text-sm"
               >
                 {formatSerializedDate(item.publishedAt)}
@@ -49,5 +49,5 @@ export function NewsList({ items }: NewsListProps): ReactElement {
         </li>
       ))}
     </ul>
-  )
+  );
 }

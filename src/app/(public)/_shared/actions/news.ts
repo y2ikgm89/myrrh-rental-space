@@ -4,12 +4,17 @@
  * 'use cache' + cacheTag で Next.js 16 キャッシュ管理
  */
 
-import { cacheLife, cacheTag } from 'next/cache'
-import { prisma } from '@/shared/lib/prisma'
-import { safeFetch, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
-import { CACHE_TAGS, CACHE_LIFE, getCacheTag, PAGINATION_DEFAULTS } from '@/shared/lib/constants'
-import { slugParamSchema } from '@/shared/lib/validations/params'
-import { toPlainArray, toPlainObject } from '@/shared/lib/serialize'
+import { cacheLife, cacheTag } from "next/cache";
+import { prisma } from "@/shared/lib/prisma";
+import { safeFetch, ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
+import {
+  CACHE_TAGS,
+  CACHE_LIFE,
+  getCacheTag,
+  PAGINATION_DEFAULTS,
+} from "@/shared/lib/constants";
+import { slugParamSchema } from "@/shared/lib/validations/params";
+import { toPlainObject } from "@/shared/lib/serialize";
 
 // =============================================================================
 // Types
@@ -20,7 +25,7 @@ const newsListSelect = {
   slug: true,
   title: true,
   publishedAt: true,
-} as const
+} as const;
 
 const newsDetailSelect = {
   id: true,
@@ -35,7 +40,7 @@ const newsDetailSelect = {
   ogpTitle: true,
   ogpDescription: true,
   ogpImageUrl: true,
-} as const
+} as const;
 
 // =============================================================================
 // Data Fetching
@@ -46,13 +51,13 @@ const newsDetailSelect = {
  */
 export async function getPublishedNewsList(
   page: number = 1,
-  perPage: number = PAGINATION_DEFAULTS.public.default
+  perPage: number = PAGINATION_DEFAULTS.public.default,
 ) {
-  'use cache'
-  cacheLife(CACHE_LIFE.PUBLIC_CONTENT)
-  cacheTag(CACHE_TAGS.NEWS)
+  "use cache";
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
+  cacheTag(CACHE_TAGS.NEWS);
 
-  const skip = (page - 1) * perPage
+  const skip = (page - 1) * perPage;
 
   const [items, totalCount] = await Promise.all([
     safeFetch({
@@ -60,14 +65,14 @@ export async function getPublishedNewsList(
         prisma.news.findMany({
           where: { isPublished: true },
           select: newsListSelect,
-          orderBy: { publishedAt: 'desc' },
+          orderBy: { publishedAt: "desc" },
           skip,
           take: perPage,
         }),
       fallback: [],
       category: ErrorCategory.DATABASE,
       severity: ErrorSeverity.LOW,
-      operationName: 'getPublishedNewsList',
+      operationName: "getPublishedNewsList",
     }),
     safeFetch({
       fetch: () =>
@@ -77,27 +82,30 @@ export async function getPublishedNewsList(
       fallback: 0,
       category: ErrorCategory.DATABASE,
       severity: ErrorSeverity.LOW,
-      operationName: 'getPublishedNewsCount',
+      operationName: "getPublishedNewsCount",
     }),
-  ])
+  ]);
 
   return {
-    items: toPlainArray(items),
+    items: items.map((item) => ({
+      ...item,
+      publishedAt: item.publishedAt?.toISOString() ?? null,
+    })),
     totalCount,
     totalPages: Math.ceil(totalCount / perPage),
     currentPage: page,
-  }
+  };
 }
 
 /**
  * 公開済みニュース詳細を取得
  */
 export async function getPublishedNewsItem(slug: string) {
-  'use cache'
-  cacheLife(CACHE_LIFE.PUBLIC_CONTENT)
-  cacheTag(CACHE_TAGS.NEWS, getCacheTag.news.detail(slug))
+  "use cache";
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
+  cacheTag(CACHE_TAGS.NEWS, getCacheTag.news.detail(slug));
 
-  if (!slugParamSchema.safeParse(slug).success) return null
+  if (!slugParamSchema.safeParse(slug).success) return null;
 
   const result = await safeFetch({
     fetch: () =>
@@ -111,8 +119,11 @@ export async function getPublishedNewsItem(slug: string) {
     fallback: null,
     category: ErrorCategory.DATABASE,
     severity: ErrorSeverity.LOW,
-    operationName: 'getPublishedNewsItem',
-  })
-  return toPlainObject(result)
+    operationName: "getPublishedNewsItem",
+  });
+  if (!result) return null;
+  return toPlainObject({
+    ...result,
+    publishedAt: result.publishedAt?.toISOString() ?? null,
+  });
 }
-

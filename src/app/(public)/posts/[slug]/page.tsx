@@ -5,45 +5,43 @@
  * コンテンツ幅: DB設定に従う（getPostLayoutSettings → resolveWidthStyles）
  */
 
-import type { Metadata } from 'next'
-import type { ReactElement } from 'react'
-import { connection } from 'next/server'
-import { notFound } from 'next/navigation'
+import type { Metadata } from "next";
+import type { ReactElement } from "react";
+import { connection } from "next/server";
+import { notFound } from "next/navigation";
 import {
   ArticleJsonLd,
   BreadcrumbJsonLd,
-} from '@/public/components/seo/JsonLd'
+} from "@/public/components/seo/JsonLd";
 import {
   generateArticleMetadata,
   getSeoSettings,
-} from '@/public/lib/seo/metadata-factory'
-import { getPostLayoutSettings } from '@/public/lib/layout-settings'
-import { resolveWidthStyles } from '@/shared/lib/styles/layout-mapper'
-import { getBaseUrl } from '@/shared/lib/constants'
-import { toISOString } from '@/shared/lib/serialize'
-import { SanitizedHtml } from '@/shared/components/SanitizedHtml'
-import {
-  getPublishedPost,
-} from '@/public/actions/post'
-import { ArticleDetailHero } from '@/public/components/ArticleDetailHero'
+} from "@/public/lib/seo/metadata-factory";
+import { getPostLayoutSettings } from "@/public/lib/layout-settings";
+import { resolveWidthStyles } from "@/shared/lib/styles/layout-mapper";
+import { getBaseUrl } from "@/shared/lib/constants";
+import { toISOString } from "@/shared/lib/serialize";
+import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
+import { getPublishedPost } from "@/public/actions/post";
+import { ArticleDetailHero } from "@/public/components/ArticleDetailHero";
 
 interface PageProps {
-  params: Promise<{ slug: string }>
+  params: Promise<{ slug: string }>;
 }
 
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
-  await connection()
+  await connection();
 
-  const { slug } = await params
+  const { slug } = await params;
   const [post, settings] = await Promise.all([
     getPublishedPost(slug),
     getSeoSettings(),
-  ])
+  ]);
 
   if (!post) {
-    return { title: '記事が見つかりません' }
+    return { title: "記事が見つかりません" };
   }
 
   return generateArticleMetadata(
@@ -58,38 +56,38 @@ export async function generateMetadata({
     {
       canonicalUrl: `${getBaseUrl()}/posts/${slug}`,
       siteName: settings?.siteName ?? undefined,
-    }
-  )
+    },
+  );
 }
 
 export default async function PostDetailPage({
   params,
 }: PageProps): Promise<ReactElement> {
-  await connection()
+  await connection();
 
-  const { slug } = await params
-  const post = await getPublishedPost(slug)
+  const { slug } = await params;
+  const post = await getPublishedPost(slug);
 
   if (!post) {
-    notFound()
+    notFound();
   }
 
-  const layoutConfig = await getPostLayoutSettings(post.id)
+  const layoutConfig = await getPostLayoutSettings(post.id);
   const { className: contentClassName, style: contentStyle } =
     resolveWidthStyles({
       width: layoutConfig.contentWidth,
       customPx: layoutConfig.contentWidthCustom,
-    })
+    });
 
-  const baseUrl = getBaseUrl()
-  const datePublished = toISOString(post.publishedAt) ?? ''
+  const baseUrl = getBaseUrl();
+  const datePublished = toISOString(post.publishedAt) ?? "";
 
   return (
     <>
       <BreadcrumbJsonLd
         items={[
-          { name: 'ホーム', url: '/' },
-          { name: 'ブログ', url: '/posts' },
+          { name: "ホーム", url: "/" },
+          { name: "ブログ", url: "/posts" },
           { name: post.title, url: `/posts/${slug}` },
         ]}
       />
@@ -100,15 +98,13 @@ export default async function PostDetailPage({
         image={post.thumbnailUrl}
         url={`${baseUrl}/posts/${slug}`}
         datePublished={datePublished}
-        author={
-          post.author ? { name: post.author.name } : undefined
-        }
+        author={post.author ? { name: post.author.name } : undefined}
       />
 
       <ArticleDetailHero
         title={post.title}
         categoryName={post.category.name}
-        publishedAt={post.publishedAt}
+        publishedAt={toISOString(post.publishedAt) ?? null}
         authorName={post.author?.name ?? null}
       />
 
@@ -136,5 +132,5 @@ export default async function PostDetailPage({
         )}
       </article>
     </>
-  )
+  );
 }

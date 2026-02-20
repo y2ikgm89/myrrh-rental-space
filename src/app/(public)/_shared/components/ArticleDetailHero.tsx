@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * ArticleDetailHero — 記事詳細ページ共通ヒーロー
@@ -7,17 +7,17 @@
  * SplitText + ScrollReveal パターンでアニメーション。
  */
 
-import type { ReactElement } from 'react'
-import { SplitText } from '@/public/components/animations/SplitText'
-import { ScrollReveal } from '@/public/components/animations/ScrollReveal'
-import { SectionLabel } from '@/public/components/ui/SectionLabel'
-import { formatSerializedDate } from '@/shared/lib/serialize'
+import type { ReactElement } from "react";
+import { SplitText } from "@/public/components/animations/SplitText";
+import { ScrollReveal } from "@/public/components/animations/ScrollReveal";
+import { SectionLabel } from "@/public/components/ui/SectionLabel";
+import { formatSerializedDate } from "@/shared/lib/serialize";
 
 interface ArticleDetailHeroProps {
-  title: string
-  publishedAt: Date | string | null
-  categoryName?: string | null
-  authorName?: string | null
+  title: string;
+  publishedAt: string | null;
+  categoryName?: string | null;
+  authorName?: string | null;
 }
 
 export function ArticleDetailHero({
@@ -39,7 +39,9 @@ export function ArticleDetailHero({
       <div className="relative mx-auto w-full max-w-6xl px-5 md:px-8">
         {categoryName && <SectionLabel>{categoryName}</SectionLabel>}
 
-        <h1 className={`${categoryName ? 'mt-4 ' : ''}font-heading text-2xl font-bold tracking-tight md:text-3xl lg:text-4xl`}>
+        <h1
+          className={`${categoryName ? "mt-4 " : ""}font-heading text-2xl font-bold tracking-tight md:text-3xl lg:text-4xl`}
+        >
           <SplitText variant="words" trigger={false} delay={0.3}>
             {title}
           </SplitText>
@@ -47,7 +49,7 @@ export function ArticleDetailHero({
 
         <ScrollReveal delay={0.5}>
           <div className="mt-4 flex items-center gap-3 text-sm text-muted-foreground">
-            <time dateTime={publishedAt ? String(publishedAt) : undefined}>
+            <time dateTime={publishedAt ?? undefined}>
               {formatSerializedDate(publishedAt)}
             </time>
             {authorName && (
@@ -60,5 +62,5 @@ export function ArticleDetailHero({
         </ScrollReveal>
       </div>
     </section>
-  )
+  );
 }
