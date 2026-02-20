@@ -616,7 +616,8 @@ export function SpaceEditForm({
 
             {/* 説明 (Lexical RichTextEditor) */}
             <div className="space-y-2">
-              <Label>説明 *</Label>
+              <Label id="description-label">説明 *</Label>
+              {/* NOTE: RichTextEditor uses contenteditable (Lexical) — htmlFor is not applicable */}
               <RichTextEditor
                 contentHtml={description || ""}
                 onChange={(json) =>
@@ -741,7 +742,9 @@ export function SpaceEditForm({
 
                 {/* 固定割引 */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">固定割引</Label>
+                  <Label htmlFor="discountType" className="text-sm font-medium">
+                    固定割引
+                  </Label>
                   <div className="flex flex-wrap items-center gap-3">
                     <Select
                       value={discountType}
@@ -756,7 +759,7 @@ export function SpaceEditForm({
                       }}
                       disabled={isPending}
                     >
-                      <SelectTrigger className="w-40">
+                      <SelectTrigger id="discountType" className="w-40">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -807,7 +810,12 @@ export function SpaceEditForm({
                 {/* 長時間割引 */}
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <Label className="text-sm font-medium">長時間割引</Label>
+                    <Label
+                      htmlFor="durationDiscountOverride"
+                      className="text-sm font-medium"
+                    >
+                      長時間割引
+                    </Label>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -834,7 +842,7 @@ export function SpaceEditForm({
                     }}
                     disabled={isPending}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger id="durationDiscountOverride">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
