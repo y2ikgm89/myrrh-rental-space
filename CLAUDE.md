@@ -36,13 +36,15 @@
 
 ### スキル（自動発動）
 
-| スキル                           | 発動タイミング             |
-| -------------------------------- | -------------------------- |
-| `brainstorming`                  | 機能追加・設計時           |
-| `frontend-design`                | フロントエンド UI 実装時   |
-| `test-driven-development`        | 実装時                     |
-| `verification-before-completion` | 完了報告前（**常に必須**） |
-| `finishing-a-development-branch` | ブランチ完了時             |
+| スキル                           | 発動タイミング                   |
+| -------------------------------- | -------------------------------- |
+| `brainstorming`                  | 機能追加・設計時                 |
+| `frontend-design`                | フロントエンド UI 実装時         |
+| `create-admin-page`              | 管理画面に新リソースを追加する時 |
+| `create-server-action`           | Server Action を新規作成する時   |
+| `test-driven-development`        | 実装時                           |
+| `verification-before-completion` | 完了報告前（**常に必須**）       |
+| `finishing-a-development-branch` | ブランチ完了時                   |
 
 その他: `writing-plans`, `executing-plans`, `systematic-debugging`, `requesting-code-review`, `receiving-code-review`
 

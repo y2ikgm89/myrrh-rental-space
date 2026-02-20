@@ -1,7 +1,6 @@
 ---
 name: turbopack-hmr
 description: Turbopack HMR "module factory is not available" エラーの対処法。Next.js 16 開発中に 'use server' ↔ 'use client' のモジュール境界でHMRが失敗した場合の診断と回復手順を提供する
-user-invocable: false
 ---
 
 # Turbopack HMR エラー対処
@@ -23,6 +22,7 @@ It might have been deleted in an HMR update.
 Turbopack の HMR がモジュール境界（`'use server'` ↔ `'use client'`）の再読み込みに失敗する既知の制限。
 
 **発生条件**:
+
 1. Client Component（`'use client'`）が Server Action ファイル（`'use server'`）を import
 2. 開発中にその Server Action ファイルまたは依存ファイルを編集
 3. HMR がモジュールファクトリを再構築できず、参照が消失
@@ -58,8 +58,8 @@ rm -rf .next && bun dev
 
 ## 本プロジェクトの既知の発生箇所
 
-| Client Component | Server Action | トリガー |
-|-----------------|---------------|---------|
+| Client Component                 | Server Action               | トリガー                 |
+| -------------------------------- | --------------------------- | ------------------------ |
 | `comment-panel/CommentPanel.tsx` | `actions/editor-comment.ts` | editor-comment.ts 編集時 |
 
 > Server Action を import する Client Component は他にも多数存在する（`useFormAction` フック経由等）。
