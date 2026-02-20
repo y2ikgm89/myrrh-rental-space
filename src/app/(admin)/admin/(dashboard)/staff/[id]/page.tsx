@@ -152,6 +152,8 @@ export default async function StaffDetailPage({ params }: Props) {
 
 function RoleBadge({ role }: { role: Role }) {
   switch (role) {
+    case Role.SUPER_ADMIN:
+      return <Badge variant="default">スーパー管理者</Badge>;
     case Role.ADMIN:
       return <Badge variant="default">管理者</Badge>;
     case Role.USER:
