@@ -1106,8 +1106,215 @@ export function SpaceEditForm({
       </div>
       {/* ── 2カラムグリッド end ── */}
 
-      {/* TODO: 画像・設備・SEO (Task 3) */}
-      {/* TODO: ボタン (Task 3) */}
+      {/* ── 画像設定（full-width）── */}
+      <Card>
+        <CardHeader>
+          <CardTitle>画像設定</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* メイン画像 */}
+          <div className="space-y-2">
+            <Label>メイン画像 *</Label>
+            <div className="flex items-start gap-4">
+              {mainImageUrl ? (
+                <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg border">
+                  <Image
+                    src={mainImageUrl}
+                    alt="メイン画像"
+                    fill
+                    sizes="96px"
+                    className="object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-lg border border-dashed bg-muted">
+                  <ImagePlus className="h-8 w-8 text-muted-foreground" />
+                </div>
+              )}
+              <div className="flex-1 space-y-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => mainImagePicker.openPicker()}
+                  disabled={isPending}
+                >
+                  <ImagePlus className="mr-2 h-4 w-4" />
+                  画像を選択
+                </Button>
+                {mainImageUrl && (
+                  <p className="truncate text-xs text-muted-foreground">
+                    {mainImageUrl}
+                  </p>
+                )}
+              </div>
+            </div>
+            {errors.mainImageUrl && (
+              <p className="text-sm text-destructive">
+                {errors.mainImageUrl.message}
+              </p>
+            )}
+          </div>
+
+          {/* 追加画像（useFieldArray + dnd-kit）*/}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label>追加画像（最大10枚）</Label>
+              <span className="text-sm text-muted-foreground">
+                {imageFields.length} / 10 枚
+              </span>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => additionalImagesPicker.openPicker()}
+              disabled={isPending || imageFields.length >= 10}
+            >
+              <ImagePlus className="mr-2 h-4 w-4" />
+              画像を追加
+            </Button>
+            {imageFields.length > 0 && (
+              <>
+                <p className="text-xs text-muted-foreground">
+                  ドラッグ&ドロップで順序を変更できます
+                </p>
+                <DndContext
+                  id={dndContextId}
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleImageDragEnd}
+                >
+                  <SortableContext
+                    items={imageFields.map((f) => f.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="space-y-2">
+                      {imageFields.map((field, index) => (
+                        <SortableImageItem
+                          key={field.id}
+                          id={field.id}
+                          url={field.url}
+                          index={index}
+                          onRemove={removeImage}
+                          disabled={isPending}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              </>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── 設備・アメニティ（full-width）── */}
+      <Card>
+        <CardHeader>
+          <CardTitle>設備・アメニティ</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <Input
+              value={newFacility}
+              onChange={(e) => setNewFacility(e.target.value)}
+              placeholder="例: WiFi、プロジェクター"
+              disabled={isPending}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addFacility();
+                }
+              }}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={addFacility}
+              disabled={isPending}
+            >
+              追加
+            </Button>
+          </div>
+          {facilityFields.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {facilityFields.map((field, index) => (
+                <span
+                  key={field.id}
+                  className="inline-flex items-center gap-1 rounded-full bg-secondary px-3 py-1 text-sm"
+                >
+                  {field.value}
+                  <button
+                    type="button"
+                    onClick={() => removeFacility(index)}
+                    disabled={isPending}
+                    className="ml-1 text-muted-foreground hover:text-foreground"
+                    aria-label={`${field.value}を削除`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── SEO・OGP（full-width）── */}
+      <Card>
+        <CardHeader>
+          <CardTitle>SEO・OGP 設定</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <SEOFields
+            register={register}
+            errors={errors}
+            disabled={isPending}
+            fields={{
+              metaDescription: "metaDescription",
+              metaKeywords: "metaKeywords",
+            }}
+          />
+          <div className="border-t pt-4">
+            <OGPFields
+              register={register}
+              control={control}
+              errors={errors}
+              setValue={setValue}
+              disabled={isPending}
+              fields={{
+                ogpTitle: "ogpTitle",
+                ogpDescription: "ogpDescription",
+                ogpImageUrl: "ogpImageUrl",
+              }}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── フォームフッターボタン ── */}
+      <div className="flex justify-end gap-4">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() =>
+            router.push(
+              mode === "edit" && space
+                ? `/admin/spaces/${space.id}`
+                : "/admin/spaces",
+            )
+          }
+          disabled={isPending}
+        >
+          キャンセル
+        </Button>
+        <Button type="submit" disabled={isPending}>
+          {isPending
+            ? "保存中..."
+            : mode === "create"
+              ? "スペースを作成"
+              : "変更を保存"}
+        </Button>
+      </div>
 
       {/* メディアピッカーダイアログ */}
       <mainImagePicker.MediaPicker />
