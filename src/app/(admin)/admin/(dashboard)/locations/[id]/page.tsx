@@ -62,7 +62,7 @@ export default async function LocationDetailPage({ params }: PageProps) {
       <DangerZone
         deleteLabel="場所を削除"
         itemName={location.name}
-        onDelete={() => deleteLocation(location.id)}
+        onDelete={deleteLocation.bind(null, location.id)}
         redirectTo="/admin/locations"
       />
     </AdminDetailLayout>

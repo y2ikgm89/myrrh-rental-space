@@ -68,7 +68,7 @@ export default async function SpaceDetailPage({ params }: PageProps) {
       <DangerZone
         deleteLabel="スペースを削除"
         itemName={space.name}
-        onDelete={() => deleteSpace(space.id)}
+        onDelete={deleteSpace.bind(null, space.id)}
         redirectTo="/admin/spaces"
       />
     </AdminDetailLayout>

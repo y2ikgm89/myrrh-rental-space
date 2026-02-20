@@ -336,6 +336,64 @@ const isValid = useWatch({
 - `useWatch` はサブコンポーネントレベルで再レンダリングを分離し、パフォーマンスを向上させる
 - React Compiler は `watch` の戻り値をメモ化できない
 
+### React Hook Form — useFieldArray + dnd-kit パターン
+
+配列フィールドは `useFieldArray` を使用する。`useState` や `form.setValue` + 手動配列操作は禁止:
+
+```typescript
+// NG: useState で配列を二重管理（RHF と同期がずれる）
+const [items, setItems] = useState<string[]>([]);
+
+// NG: useFieldArray に primitive 配列（動作しない）
+// useFieldArray は object[] 必須。string[] は受け付けない
+// schema: z.array(z.string()) → useFieldArray で NG
+
+// OK: object[] スキーマ + useFieldArray
+// schema: z.array(z.object({ url: z.string().url() }))
+const { fields, append, remove, move } = useFieldArray({
+  control: form.control,
+  name: "imageUrls", // 型: { url: string }[]
+});
+```
+
+**dnd-kit との統合（安定 ID パターン）**:
+
+```typescript
+// fields[].id は RHF が生成する安定した一意 ID — dnd-kit の SortableContext items に使用
+// NG: URL や index を dnd ID に使う（重複・不安定リスク）
+items={imageUrls.map((_, i) => `image-${i}`)}  // index → 並び替え後に壊れる
+items={imageUrls}                                // URL → 重複リスク
+
+// OK: fields[].id（RHF 管理、安定）
+items={fields.map((f) => f.id)}
+
+// OK: move() で並び替え（arrayMove 不要）
+const handleDragEnd = (event: DragEndEvent) => {
+  const { active, over } = event
+  if (!over || active.id === over.id) return
+  const oldIndex = fields.findIndex((f) => f.id === String(active.id))
+  const newIndex = fields.findIndex((f) => f.id === String(over.id))
+  if (oldIndex !== -1 && newIndex !== -1) move(oldIndex, newIndex)
+}
+
+// OK: fields.length はリアクティブ（form.getValues() は非リアクティブなので禁止）
+maxSelections: 10 - fields.length                          // ✓ リアクティブ
+maxSelections: 10 - form.getValues('imageUrls').length     // ✗ 非リアクティブ
+```
+
+**スキーマ・フォーム・Server Action 間の変換**:
+
+```typescript
+// Zod スキーマ: useFieldArray のため object[]
+imageUrls: z.array(z.object({ url: z.string().url({ error: "..." }) }));
+
+// 編集時の初期値: DB の string[] → フォームの { url: string }[]
+imageUrls: location.imageUrls.map((url) => ({ url }));
+
+// Server Action: フォームの { url: string }[] → Prisma の string[]
+imageUrls: data.imageUrls.map((i) => i.url);
+```
+
 ---
 
 > **詳細リファレンス（React 19.2 新API / Compiler 制限事項）**: `docs/reference/claude-rules/react-api-reference.md`

@@ -49,7 +49,7 @@ export default async function InquiryDetailPage({ params }: PageProps) {
       <DangerZone
         deleteLabel="お問い合わせを削除"
         itemName={inquiry.subject}
-        onDelete={() => deleteInquiry(inquiry.id)}
+        onDelete={deleteInquiry.bind(null, inquiry.id)}
         redirectTo="/admin/inquiries"
       />
     </AdminDetailLayout>

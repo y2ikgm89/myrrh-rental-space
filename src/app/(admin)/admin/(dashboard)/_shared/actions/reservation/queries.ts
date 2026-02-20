@@ -143,7 +143,21 @@ export async function getReservations(
     prisma.reservation.count({ where }),
     prisma.reservation.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        spaceId: true,
+        customerId: true,
+        startTime: true,
+        endTime: true,
+        status: true,
+        totalPrice: true,
+        basePrice: true,
+        couponId: true,
+        couponDiscountAmount: true,
+        durationDiscountAmount: true,
+        notes: true,
+        createdAt: true,
+        updatedAt: true,
         space: {
           select: {
             id: true,
@@ -200,7 +214,21 @@ export async function getReservationById(
 
   const reservation = await prisma.reservation.findUnique({
     where: { id },
-    include: {
+    select: {
+      id: true,
+      spaceId: true,
+      customerId: true,
+      startTime: true,
+      endTime: true,
+      status: true,
+      totalPrice: true,
+      basePrice: true,
+      couponId: true,
+      couponDiscountAmount: true,
+      durationDiscountAmount: true,
+      notes: true,
+      createdAt: true,
+      updatedAt: true,
       space: {
         select: {
           id: true,
@@ -230,13 +258,13 @@ export async function getReservationById(
     return null;
   }
 
-  return {
+  return toPlainObject({
     ...reservation,
     startTime: reservation.startTime.toISOString(),
     endTime: reservation.endTime.toISOString(),
     createdAt: reservation.createdAt.toISOString(),
     updatedAt: reservation.updatedAt.toISOString(),
-  };
+  });
 }
 
 /**

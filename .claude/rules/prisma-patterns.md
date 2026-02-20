@@ -227,7 +227,7 @@ const formatted: ReservationWithRelations[] = reservations.map((r) => ({
 }));
 ```
 
-> **注**: `{ ...prismaObj }` は JavaScript のスプレッド構文が Symbol キーを除外するため、Symbol プロパティ（`$Enums` 等）も同時に除去される。`toPlainObject()` と同等の Symbol 除去効果がある。
+> **注（重要）**: `{ ...prismaObj }` の JavaScript スプレッドは**トップレベルの** Symbol キーのみ除外する（シャローコピー）。`include` で取得したネストされた Prisma オブジェクト（`space`、`customer`、`coupon` 等）は依然 Symbol プロパティ（`nodejs.util.inspect.custom` 等）を保持する → React 19 シリアライゼーションエラー。**ネストされたリレーションを含む場合は `toPlainObject()` が必須。**
 
 #### Client Component では `new Date()` でラップして date-fns に渡す
 
@@ -438,8 +438,12 @@ await prisma.$transaction(async (tx) => {
 4. **手動 `Number()` 変換禁止（集計以外）**
    - `$extends` が自動変換済み。手動の `Number(space.pricePerHour)` は不要
 
-5. **Prisma オブジェクトの直接 props 渡し禁止**
-   - `toPlainObject()` / `toPlainArray()` でシリアライズしてから渡す
+5. **Prisma オブジェクトの直接 return 禁止（読み取り系 Actions）**
+   - `return prismaObj` → NG（React 19 シリアライゼーションエラー）
+   - `return prismaArray` → NG
+   - `toPlainArray(prismaArray)` のみ（日付マッピングなし）→ NG（戻り値型に `date: string` がある場合、TypeScript 型エラー）
+   - **OK**: `return toPlainObject({ ...obj, createdAt: obj.createdAt.toISOString(), updatedAt: obj.updatedAt.toISOString() })`
+   - **OK**: `return toPlainArray(array.map(item => ({ ...item, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() })))`
 
 6. **`renderEditorStateToHtml` のトップレベル import 禁止**
    - `renderEditorStateToHtmlLazy()` を使用（ビルドエラー回避）

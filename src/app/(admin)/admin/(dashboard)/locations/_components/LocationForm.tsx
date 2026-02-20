@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState, useTransition, useId } from "react";
-import { useForm } from "react-hook-form";
+import { useTransition, useId } from "react";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { ImagePlus } from "lucide-react";
@@ -26,7 +26,6 @@ import {
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
-  arrayMove,
   CSS,
   Form,
   FormField,
@@ -161,10 +160,7 @@ function SortableImageItem({
 export function LocationForm({ location, mode }: LocationFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [imageUrls, setImageUrls] = useState<string[]>(
-    location?.imageUrls || [],
-  );
-  // SSR対応のDndContext ID（hydration mismatch防止）
+  // DndContext の id は SSR hydration mismatch 防止に必要
   const dndContextId = useId();
 
   const form = useForm<LocationFormInput>({
@@ -172,11 +168,12 @@ export function LocationForm({ location, mode }: LocationFormProps) {
     defaultValues: location
       ? {
           name: location.name,
-          description: location.description || "",
+          description: location.description ?? "",
           address: location.address,
-          access: location.access || "",
+          access: location.access ?? "",
           imageUrl: location.imageUrl,
-          imageUrls: location.imageUrls,
+          // LocationWithStats.imageUrls は string[] のため { url: string }[] へ変換
+          imageUrls: location.imageUrls.map((url) => ({ url })),
           businessHours: location.businessHours,
           sortOrder: location.sortOrder,
           isPublished: location.isPublished,
@@ -184,7 +181,59 @@ export function LocationForm({ location, mode }: LocationFormProps) {
       : defaultLocationFormValues,
   });
 
-  // メイン画像用メディアピッカー（単一選択）
+  // useFieldArray で imageUrls を管理
+  // fields[].id は RHF が生成する安定した一意 ID — dnd-kit の SortableContext items に使用する
+  const { fields, append, remove, move } = useFieldArray({
+    control: form.control,
+    name: "imageUrls",
+  });
+
+  // D&D Sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  const onSubmit = async (data: LocationFormInput) => {
+    startTransition(async () => {
+      // data.imageUrls は { url: string }[] — Server Action 側で string[] に変換する
+      if (mode === "create") {
+        const result = await createLocation(data);
+        if (result.success) {
+          router.push(`/admin/locations/${result.data.id}`);
+        } else {
+          toast.error(result.error);
+        }
+      } else if (location) {
+        const result = await updateLocation(location.id, data);
+        if (result.success) {
+          router.push("/admin/locations");
+        } else {
+          toast.error(result.error);
+        }
+      }
+    });
+  };
+
+  const handleImageDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    // fields[].id（RHF 安定 ID）で oldIndex / newIndex を特定
+    const oldIndex = fields.findIndex((f) => f.id === String(active.id));
+    const newIndex = fields.findIndex((f) => f.id === String(over.id));
+
+    if (oldIndex !== -1 && newIndex !== -1) {
+      // useFieldArray の move() で並び替え（arrayMove 不要）
+      move(oldIndex, newIndex);
+    }
+  };
+
+  // Media pickers
   const mainImagePicker = useSingleMediaPicker({
     defaultUsage: "SPACE",
     onSelect: (media) => {
@@ -195,77 +244,17 @@ export function LocationForm({ location, mode }: LocationFormProps) {
     },
   });
 
-  // 追加画像用メディアピッカー（複数選択）
   const additionalImagesPicker = useMultipleMediaPicker({
     defaultUsage: "SPACE",
-    maxSelections: 10 - imageUrls.length,
+    // fields.length はリアクティブ（useFieldArray が管理）
+    maxSelections: 10 - fields.length,
     onSelect: (media) => {
       if (media.length > 0) {
-        const newUrls = media.map((m) => m.url);
-        setImageUrls((prev) => [...prev, ...newUrls].slice(0, 10));
+        const remaining = 10 - fields.length;
+        append(media.slice(0, remaining).map((m) => ({ url: m.url })));
       }
     },
   });
-
-  // D&D Sensors
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
-  );
-
-  const onSubmit = async (data: LocationFormInput) => {
-    startTransition(async () => {
-      const submitData = {
-        name: data.name,
-        description: data.description || "",
-        address: data.address,
-        access: data.access || "",
-        imageUrl: data.imageUrl,
-        imageUrls,
-        businessHours: data.businessHours,
-        sortOrder: data.sortOrder,
-        isPublished: data.isPublished ?? false,
-      };
-
-      if (mode === "create") {
-        const result = await createLocation(submitData);
-        if (result.success) {
-          router.push(`/admin/locations/${result.data.id}`);
-        } else {
-          toast.error(result.error);
-        }
-      } else if (location) {
-        const result = await updateLocation(location.id, submitData);
-        if (result.success) {
-          router.push("/admin/locations");
-        } else {
-          toast.error(result.error);
-        }
-      }
-    });
-  };
-
-  const removeImageUrl = (index: number) => {
-    setImageUrls(imageUrls.filter((_, i) => i !== index));
-  };
-
-  const handleImageDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-
-    const oldIndex = imageUrls.findIndex((_, i) => `image-${i}` === active.id);
-    const newIndex = imageUrls.findIndex((_, i) => `image-${i}` === over.id);
-
-    if (oldIndex === -1 || newIndex === -1) return;
-
-    setImageUrls(arrayMove(imageUrls, oldIndex, newIndex));
-  };
 
   return (
     <Form {...form}>
@@ -434,7 +423,7 @@ export function LocationForm({ location, mode }: LocationFormProps) {
               )}
             />
 
-            {/* 追加画像（imageUrls は useState 管理、RHF 外） */}
+            {/* 追加画像（useFieldArray で管理） */}
             <div className="space-y-2">
               <p className="text-sm font-medium leading-none">
                 追加画像（最大10枚）
@@ -443,15 +432,15 @@ export function LocationForm({ location, mode }: LocationFormProps) {
                 type="button"
                 variant="outline"
                 onClick={() => additionalImagesPicker.openPicker()}
-                disabled={isPending || imageUrls.length >= 10}
+                disabled={isPending || fields.length >= 10}
               >
                 <ImagePlus className="mr-2 h-4 w-4" />
                 画像を追加
               </Button>
-              {imageUrls.length > 0 && (
+              {fields.length > 0 && (
                 <>
                   <p className="text-sm text-muted-foreground">
-                    {imageUrls.length} / 10 枚選択中 ・
+                    {fields.length} / 10 枚選択中 ・
                     ドラッグ&ドロップで順序を変更できます
                   </p>
                   <DndContext
@@ -461,17 +450,18 @@ export function LocationForm({ location, mode }: LocationFormProps) {
                     onDragEnd={handleImageDragEnd}
                   >
                     <SortableContext
-                      items={imageUrls.map((_, i) => `image-${i}`)}
+                      // fields[].id（RHF 安定 ID）を使用 — URL ではなく RHF 管理 ID
+                      items={fields.map((f) => f.id)}
                       strategy={verticalListSortingStrategy}
                     >
                       <div className="mt-2 space-y-2">
-                        {imageUrls.map((url, index) => (
+                        {fields.map((field, index) => (
                           <SortableImageItem
-                            key={`image-${index}`}
-                            id={`image-${index}`}
-                            url={url}
+                            key={field.id}
+                            id={field.id}
+                            url={field.url}
                             index={index}
-                            onRemove={removeImageUrl}
+                            onRemove={remove}
                             disabled={isPending}
                           />
                         ))}

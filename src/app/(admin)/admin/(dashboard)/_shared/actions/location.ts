@@ -1,17 +1,28 @@
-'use server'
+"use server";
 
-import { prisma, Prisma } from '@/shared/lib/prisma'
-import { updateTag } from 'next/cache'
-import { CACHE_TAGS } from '@/shared/lib/constants'
-import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
-import { withPermission } from '@/admin/lib/server-action-helpers'
-import { locationFormSchema } from '@/admin/lib/validations/location'
-import type { LocationFormInput, LocationWithStats, GetLocationsResult } from '@/admin/lib/validations/location'
-import { checkReadPermissionFor } from '@/admin/lib/permissions'
-import { parseBusinessHours, type BusinessHours } from '@/shared/lib/json-validators'
-import { parseStringArray } from '@/shared/lib/json-validators'
-import { createValidationError } from '@/shared/lib/action-helpers'
-import { toPlainArray } from '@/shared/lib/serialize'
+import { prisma, Prisma } from "@/shared/lib/prisma";
+import { updateTag } from "next/cache";
+import { CACHE_TAGS } from "@/shared/lib/constants";
+import {
+  createSuccess,
+  createFailure,
+  type ActionResult,
+} from "@/admin/types/server-actions";
+import { withPermission } from "@/admin/lib/server-action-helpers";
+import { locationFormSchema } from "@/admin/lib/validations/location";
+import type {
+  LocationFormInput,
+  LocationWithStats,
+  GetLocationsResult,
+} from "@/admin/lib/validations/location";
+import { checkReadPermissionFor } from "@/admin/lib/permissions";
+import {
+  parseBusinessHours,
+  type BusinessHours,
+} from "@/shared/lib/json-validators";
+import { parseStringArray } from "@/shared/lib/json-validators";
+import { createValidationError } from "@/shared/lib/action-helpers";
+import { toPlainArray } from "@/shared/lib/serialize";
 
 // =============================================================================
 // Prisma JSON Helpers (server-only)
@@ -24,27 +35,41 @@ import { toPlainArray } from '@/shared/lib/serialize'
  * 型の構造的非互換性（曜日キー vs インデックスシグネチャ）を解消する。
  */
 function businessHoursToJson(
-  value: BusinessHours | null | undefined
+  value: BusinessHours | null | undefined,
 ): Prisma.InputJsonValue | typeof Prisma.JsonNull {
-  if (value === null || value === undefined) return Prisma.JsonNull
+  if (value === null || value === undefined) return Prisma.JsonNull;
 
-  const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const
-  const result: Record<string, { isOpen: boolean; slots: Array<{ openTime: string; closeTime: string }> }> = {}
+  const days = [
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+  ] as const;
+  const result: Record<
+    string,
+    { isOpen: boolean; slots: Array<{ openTime: string; closeTime: string }> }
+  > = {};
   for (const day of days) {
-    const dayData = value[day]
+    const dayData = value[day];
     result[day] = {
       isOpen: dayData.isOpen,
-      slots: dayData.slots.map((slot) => ({ openTime: slot.openTime, closeTime: slot.closeTime })),
-    }
+      slots: dayData.slots.map((slot) => ({
+        openTime: slot.openTime,
+        closeTime: slot.closeTime,
+      })),
+    };
   }
-  return result
+  return result;
 }
 
 // =============================================================================
 // Helper Functions
 // =============================================================================
 
-const checkReadPermission = checkReadPermissionFor('location')
+const checkReadPermission = checkReadPermissionFor("location");
 
 // =============================================================================
 // Read Operations
@@ -54,32 +79,32 @@ const checkReadPermission = checkReadPermissionFor('location')
  * 場所一覧を取得
  */
 export async function getLocations(options?: {
-  includeInactive?: boolean
-  search?: string
+  includeInactive?: boolean;
+  search?: string;
 }): Promise<GetLocationsResult> {
-  const hasPermissionResult = await checkReadPermission()
+  const hasPermissionResult = await checkReadPermission();
   if (!hasPermissionResult) {
-    return { locations: [], total: 0 }
+    return { locations: [], total: 0 };
   }
 
-  const { includeInactive = false, search } = options ?? {}
+  const { includeInactive = false, search } = options ?? {};
 
   const where = {
     ...(includeInactive ? {} : { isActive: true }),
     ...(search
       ? {
           OR: [
-            { name: { contains: search, mode: 'insensitive' as const } },
-            { address: { contains: search, mode: 'insensitive' as const } },
+            { name: { contains: search, mode: "insensitive" as const } },
+            { address: { contains: search, mode: "insensitive" as const } },
           ],
         }
       : {}),
-  }
+  };
 
   const [locations, total] = await Promise.all([
     prisma.location.findMany({
       where,
-      orderBy: { sortOrder: 'asc' },
+      orderBy: { sortOrder: "asc" },
       include: {
         _count: {
           select: { spaces: true },
@@ -87,7 +112,7 @@ export async function getLocations(options?: {
       },
     }),
     prisma.location.count({ where }),
-  ])
+  ]);
 
   const formattedLocations: LocationWithStats[] = locations.map((loc) => ({
     id: loc.id,
@@ -104,21 +129,23 @@ export async function getLocations(options?: {
     createdAt: loc.createdAt,
     updatedAt: loc.updatedAt,
     _count: loc._count,
-  }))
+  }));
 
   return {
     locations: formattedLocations,
     total,
-  }
+  };
 }
 
 /**
  * 場所を1件取得
  */
-export async function getLocationById(id: string): Promise<ActionResult<LocationWithStats>> {
-  const hasPermissionResult = await checkReadPermission()
+export async function getLocationById(
+  id: string,
+): Promise<ActionResult<LocationWithStats>> {
+  const hasPermissionResult = await checkReadPermission();
   if (!hasPermissionResult) {
-    return createFailure('権限がありません')
+    return createFailure("権限がありません");
   }
 
   const location = await prisma.location.findUnique({
@@ -128,10 +155,10 @@ export async function getLocationById(id: string): Promise<ActionResult<Location
         select: { spaces: true },
       },
     },
-  })
+  });
 
   if (!location) {
-    return createFailure('場所が見つかりません')
+    return createFailure("場所が見つかりません");
   }
 
   const formatted: LocationWithStats = {
@@ -149,31 +176,33 @@ export async function getLocationById(id: string): Promise<ActionResult<Location
     createdAt: location.createdAt,
     updatedAt: location.updatedAt,
     _count: location._count,
-  }
+  };
 
-  return createSuccess('取得しました', formatted)
+  return createSuccess("取得しました", formatted);
 }
 
 /**
  * 公開されている場所一覧を取得（セレクトボックス用）
  */
-export async function getPublishedLocations(): Promise<ActionResult<{ id: string; name: string; address: string }[]>> {
-  const hasPermissionResult = await checkReadPermission()
+export async function getPublishedLocations(): Promise<
+  ActionResult<{ id: string; name: string; address: string }[]>
+> {
+  const hasPermissionResult = await checkReadPermission();
   if (!hasPermissionResult) {
-    return createFailure('権限がありません')
+    return createFailure("権限がありません");
   }
 
   const locations = await prisma.location.findMany({
     where: { isPublished: true, isActive: true },
-    orderBy: { sortOrder: 'asc' },
+    orderBy: { sortOrder: "asc" },
     select: {
       id: true,
       name: true,
       address: true,
     },
-  })
+  });
 
-  return createSuccess('取得しました', toPlainArray(locations))
+  return createSuccess("取得しました", toPlainArray(locations));
 }
 
 // =============================================================================
@@ -183,17 +212,20 @@ export async function getPublishedLocations(): Promise<ActionResult<{ id: string
 /**
  * 場所を作成
  */
-export const createLocation = withPermission<[input: LocationFormInput], { id: string }>(
-  'location',
-  'create'
+export const createLocation = withPermission<
+  [input: LocationFormInput],
+  { id: string }
+>(
+  "location",
+  "create",
 )(async (_user, input): Promise<ActionResult<{ id: string }>> => {
-  const parsed = locationFormSchema.safeParse(input)
+  const parsed = locationFormSchema.safeParse(input);
 
   if (!parsed.success) {
-    return createValidationError(parsed.error)
+    return createValidationError(parsed.error);
   }
 
-  const data = parsed.data
+  const data = parsed.data;
 
   const location = await prisma.location.create({
     data: {
@@ -202,17 +234,17 @@ export const createLocation = withPermission<[input: LocationFormInput], { id: s
       address: data.address,
       access: data.access || null,
       imageUrl: data.imageUrl,
-      imageUrls: data.imageUrls,
+      imageUrls: data.imageUrls.map((i) => i.url),
       businessHours: businessHoursToJson(data.businessHours ?? null),
       sortOrder: data.sortOrder,
       isPublished: data.isPublished,
     },
-  })
+  });
 
-  updateTag(CACHE_TAGS.LOCATIONS)
+  updateTag(CACHE_TAGS.LOCATIONS);
 
-  return createSuccess('場所を作成しました', { id: location.id })
-})
+  return createSuccess("場所を作成しました", { id: location.id });
+});
 
 // =============================================================================
 // Update Operations
@@ -221,25 +253,28 @@ export const createLocation = withPermission<[input: LocationFormInput], { id: s
 /**
  * 場所を更新
  */
-export const updateLocation = withPermission<[id: string, input: LocationFormInput], { id: string }>(
-  'location',
-  'update'
+export const updateLocation = withPermission<
+  [id: string, input: LocationFormInput],
+  { id: string }
+>(
+  "location",
+  "update",
 )(async (_user, id, input): Promise<ActionResult<{ id: string }>> => {
-  const parsed = locationFormSchema.safeParse(input)
+  const parsed = locationFormSchema.safeParse(input);
 
   if (!parsed.success) {
-    return createValidationError(parsed.error)
+    return createValidationError(parsed.error);
   }
 
   const existing = await prisma.location.findUnique({
     where: { id },
     select: { id: true },
-  })
+  });
   if (!existing) {
-    return createFailure('場所が見つかりません')
+    return createFailure("場所が見つかりません");
   }
 
-  const data = parsed.data
+  const data = parsed.data;
 
   await prisma.location.update({
     where: { id },
@@ -249,63 +284,73 @@ export const updateLocation = withPermission<[id: string, input: LocationFormInp
       address: data.address,
       access: data.access || null,
       imageUrl: data.imageUrl,
-      imageUrls: data.imageUrls,
+      imageUrls: data.imageUrls.map((i) => i.url),
       businessHours: businessHoursToJson(data.businessHours ?? null),
       sortOrder: data.sortOrder,
       isPublished: data.isPublished,
     },
-  })
+  });
 
-  updateTag(CACHE_TAGS.LOCATIONS)
+  updateTag(CACHE_TAGS.LOCATIONS);
 
-  return createSuccess('場所を更新しました', { id })
-})
+  return createSuccess("場所を更新しました", { id });
+});
 
 /**
  * 場所の公開状態を切り替え
  */
-export const toggleLocationPublish = withPermission<[id: string, isPublished: boolean], { id: string; isPublished: boolean }>(
-  'location',
-  'publish'
-)(async (_user, id, isPublished): Promise<ActionResult<{ id: string; isPublished: boolean }>> => {
+export const toggleLocationPublish = withPermission<
+  [id: string, isPublished: boolean],
+  { id: string; isPublished: boolean }
+>(
+  "location",
+  "publish",
+)(async (
+  _user,
+  id,
+  isPublished,
+): Promise<ActionResult<{ id: string; isPublished: boolean }>> => {
   const existing = await prisma.location.findUnique({
     where: { id },
     select: { id: true },
-  })
+  });
   if (!existing) {
-    return createFailure('場所が見つかりません')
+    return createFailure("場所が見つかりません");
   }
 
   await prisma.location.update({
     where: { id },
     data: { isPublished },
-  })
+  });
 
-  updateTag(CACHE_TAGS.LOCATIONS)
+  updateTag(CACHE_TAGS.LOCATIONS);
 
-  return createSuccess('公開状態を更新しました', { id, isPublished })
-})
+  return createSuccess("公開状態を更新しました", { id, isPublished });
+});
 
 /**
  * 場所の並び順を更新
  */
-export const updateLocationOrder = withPermission<[items: { id: string; sortOrder: number }[]], { updated: number }>(
-  'location',
-  'update'
+export const updateLocationOrder = withPermission<
+  [items: { id: string; sortOrder: number }[]],
+  { updated: number }
+>(
+  "location",
+  "update",
 )(async (_user, items): Promise<ActionResult<{ updated: number }>> => {
   await prisma.$transaction(
     items.map((item) =>
       prisma.location.update({
         where: { id: item.id },
         data: { sortOrder: item.sortOrder },
-      })
-    )
-  )
+      }),
+    ),
+  );
 
-  updateTag(CACHE_TAGS.LOCATIONS)
+  updateTag(CACHE_TAGS.LOCATIONS);
 
-  return createSuccess('並び順を更新しました', { updated: items.length })
-})
+  return createSuccess("並び順を更新しました", { updated: items.length });
+});
 
 // =============================================================================
 // Delete Operations
@@ -315,59 +360,59 @@ export const updateLocationOrder = withPermission<[items: { id: string; sortOrde
  * 場所を削除（論理削除）
  */
 export const deleteLocation = withPermission<[id: string], { id: string }>(
-  'location',
-  'delete'
+  "location",
+  "delete",
 )(async (_user, id): Promise<ActionResult<{ id: string }>> => {
   const existing = await prisma.location.findUnique({
     where: { id },
     include: { _count: { select: { spaces: true } } },
-  })
+  });
 
   if (!existing) {
-    return createFailure('場所が見つかりません')
+    return createFailure("場所が見つかりません");
   }
 
   if (existing._count.spaces > 0) {
     return createFailure(
-      `この場所には${existing._count.spaces}件のスペースが紐づいています。先にスペースの場所を変更してください。`
-    )
+      `この場所には${existing._count.spaces}件のスペースが紐づいています。先にスペースの場所を変更してください。`,
+    );
   }
 
   await prisma.location.update({
     where: { id },
     data: { isActive: false },
-  })
+  });
 
-  updateTag(CACHE_TAGS.LOCATIONS)
+  updateTag(CACHE_TAGS.LOCATIONS);
 
-  return createSuccess('場所を削除しました', { id })
-})
+  return createSuccess("場所を削除しました", { id });
+});
 
 /**
  * 場所を物理削除
  */
 export const hardDeleteLocation = withPermission<[id: string], { id: string }>(
-  'location',
-  'delete'
+  "location",
+  "delete",
 )(async (_user, id): Promise<ActionResult<{ id: string }>> => {
   const existing = await prisma.location.findUnique({
     where: { id },
     include: { _count: { select: { spaces: true } } },
-  })
+  });
 
   if (!existing) {
-    return createFailure('場所が見つかりません')
+    return createFailure("場所が見つかりません");
   }
 
   if (existing._count.spaces > 0) {
     return createFailure(
-      `この場所には${existing._count.spaces}件のスペースが紐づいています。`
-    )
+      `この場所には${existing._count.spaces}件のスペースが紐づいています。`,
+    );
   }
 
-  await prisma.location.delete({ where: { id } })
+  await prisma.location.delete({ where: { id } });
 
-  updateTag(CACHE_TAGS.LOCATIONS)
+  updateTag(CACHE_TAGS.LOCATIONS);
 
-  return createSuccess('場所を完全に削除しました', { id })
-})
+  return createSuccess("場所を完全に削除しました", { id });
+});

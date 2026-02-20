@@ -193,7 +193,7 @@ export function DetailSection({
 // src/app/(admin)/admin/(dashboard)/_shared/components/DetailField.tsx
 // Server Component — 'use client' なし
 import type { ReactNode } from "react";
-import { cn } from "@/admin/lib/utils";
+import { cn } from "@/shared/lib/utils"; // NOTE: @/admin/lib/utils has no cn; use @/shared/lib/utils
 
 type DetailFieldProps = {
   label: string;

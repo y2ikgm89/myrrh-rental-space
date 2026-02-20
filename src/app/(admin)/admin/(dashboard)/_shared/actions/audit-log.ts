@@ -14,7 +14,7 @@ import {
 import { getSession, getRoleFromSession } from "@/shared/lib/auth";
 import { hasPermission, canAccessAdmin } from "@/admin/lib/permissions";
 import { logPermissionDenied } from "@/admin/lib/audit";
-import { isRecord } from "@/shared/lib/serialize";
+import { isRecord, toPlainObject } from "@/shared/lib/serialize";
 import { z } from "zod";
 
 // =============================================================================
@@ -34,7 +34,8 @@ export type AuditLogItem = {
     userAgent?: string;
     [key: string]: unknown;
   } | null;
-  createdAt: Date;
+  /** toISOString() 済み ISO 8601 文字列 */
+  createdAt: string;
   user: {
     id: string;
     name: string | null;
@@ -220,15 +221,19 @@ export async function getAuditLogs(
     prisma.auditLog.count({ where }),
   ]);
 
-  return createSuccess("監査ログを取得しました", {
-    logs: logs.map((log) => ({
-      ...log,
-      metadata: parseAuditLogMetadata(log.metadata),
-    })),
-    total,
-    page,
-    totalPages: Math.ceil(total / perPage),
-  });
+  return createSuccess(
+    "監査ログを取得しました",
+    toPlainObject({
+      logs: logs.map((log) => ({
+        ...log,
+        createdAt: log.createdAt.toISOString(),
+        metadata: parseAuditLogMetadata(log.metadata),
+      })),
+      total,
+      page,
+      totalPages: Math.ceil(total / perPage),
+    }),
+  );
 }
 
 /**

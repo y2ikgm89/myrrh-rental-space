@@ -314,12 +314,26 @@ export default async function ReservationDetailPage({ params }) {
       <DangerZone
         deleteLabel="予約を削除"
         itemName={`予約 #${reservation.id.slice(0, 8)}`}
-        onDelete={() => deleteReservation(id)}
+        onDelete={deleteReservation.bind(null, id)}
         redirectTo="/admin/reservations"
       />
     </AdminDetailLayout>
   );
 }
+```
+
+**`DangerZone` の `onDelete` は `.bind(null, id)` で渡す**:
+
+Server Component から `'use client'` の `DangerZone` へ `onDelete` を渡す際、
+通常のアロー関数クロージャ `() => deleteAction(id)` は RSC 境界を越えられない（シリアライズ不可）。
+Server Action を `.bind()` することで RSC 境界を越えられるバインド済み Server Action を生成する:
+
+```tsx
+// NG: 通常クロージャは RSC 境界を越えられない
+onDelete={() => deleteReservation(id)}
+
+// OK: .bind(null, id) でバインド済み Server Action を生成
+onDelete={deleteReservation.bind(null, id)}
 ```
 
 **配置ルール**:
