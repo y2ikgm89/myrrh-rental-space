@@ -4,6 +4,8 @@ import { Pencil } from "lucide-react";
 import Link from "next/link";
 import { getUser, deleteUser } from "@/admin/actions/user";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
+import { DetailSection } from "@/admin/components/DetailSection";
+import { DetailField } from "@/admin/components/DetailField";
 import { DangerZone } from "@/admin/components/DangerZone";
 import {
   Card,
@@ -17,14 +19,23 @@ import { Badge } from "@/admin/components/ui/badge";
 import { formatDate } from "@/shared/lib/utils";
 import { Role } from "@/shared/generated/prisma/enums";
 import { UserActions } from "../_components/UserActions";
-
-export const metadata = {
-  title: "スタッフ詳細 | 管理画面",
-};
+import type { Metadata } from "next";
 
 type Props = {
   params: Promise<{ id: string }>;
 };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  await connection();
+  const { id } = await params;
+  const user = await getUser(id);
+  if (!user) {
+    return { title: "スタッフ詳細 | 管理画面" };
+  }
+  return {
+    title: `${user.name ?? user.email} | スタッフ管理 | Myrrh Rental Space`,
+  };
+}
 
 export default async function StaffDetailPage({ params }: Props) {
   await connection();
@@ -53,83 +64,50 @@ export default async function StaffDetailPage({ params }: Props) {
       }
     >
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>基本情報</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-3 gap-4">
-              <dt className="text-sm font-medium text-muted-foreground">
-                名前
-              </dt>
-              <dd className="col-span-2">{user.name || "(未設定)"}</dd>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <dt className="text-sm font-medium text-muted-foreground">
-                メールアドレス
-              </dt>
-              <dd className="col-span-2">{user.email}</dd>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <dt className="text-sm font-medium text-muted-foreground">
-                ロール
-              </dt>
-              <dd className="col-span-2">
-                <RoleBadge role={user.role} />
-              </dd>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <dt className="text-sm font-medium text-muted-foreground">
-                メール認証
-              </dt>
-              <dd className="col-span-2">
-                {user.emailVerified ? (
+        <DetailSection title="基本情報">
+          <div className="space-y-4">
+            <DetailField label="名前" value={user.name ?? "(未設定)"} />
+            <DetailField label="メールアドレス" value={user.email} />
+            <DetailField
+              label="ロール"
+              value={<RoleBadge role={user.role} />}
+            />
+            <DetailField
+              label="メール認証"
+              value={
+                user.emailVerified ? (
                   <Badge variant="default">認証済み</Badge>
                 ) : (
                   <Badge variant="secondary">未認証</Badge>
-                )}
-              </dd>
-            </div>
-          </CardContent>
-        </Card>
+                )
+              }
+            />
+          </div>
+        </DetailSection>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>統計情報</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-3 gap-4">
-              <dt className="text-sm font-medium text-muted-foreground">
-                予約数
-              </dt>
-              <dd className="col-span-2">{user._count.reservations}件</dd>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <dt className="text-sm font-medium text-muted-foreground">
-                投稿数
-              </dt>
-              <dd className="col-span-2">{user._count.posts}件</dd>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <dt className="text-sm font-medium text-muted-foreground">
-                登録日
-              </dt>
-              <dd className="col-span-2">{formatDate(user.createdAt, true)}</dd>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <dt className="text-sm font-medium text-muted-foreground">
-                最終更新
-              </dt>
-              <dd className="col-span-2">{formatDate(user.updatedAt, true)}</dd>
-            </div>
-          </CardContent>
-        </Card>
+        <DetailSection title="統計情報">
+          <div className="space-y-4">
+            <DetailField
+              label="予約数"
+              value={`${user._count.reservations}件`}
+            />
+            <DetailField label="投稿数" value={`${user._count.posts}件`} />
+            <DetailField
+              label="登録日"
+              value={formatDate(user.createdAt, true)}
+            />
+            <DetailField
+              label="最終更新"
+              value={formatDate(user.updatedAt, true)}
+            />
+          </div>
+        </DetailSection>
       </div>
 
       {user._count.reservations > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>関連予約</CardTitle>
+            <CardTitle className="text-base font-semibold">関連予約</CardTitle>
             <CardDescription>
               このスタッフに関連付けられた予約があります
             </CardDescription>
@@ -147,7 +125,7 @@ export default async function StaffDetailPage({ params }: Props) {
       {user._count.posts > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>投稿</CardTitle>
+            <CardTitle className="text-base font-semibold">投稿</CardTitle>
             <CardDescription>
               このスタッフが作成した投稿があります
             </CardDescription>
@@ -165,7 +143,7 @@ export default async function StaffDetailPage({ params }: Props) {
       <DangerZone
         deleteLabel="スタッフを削除"
         itemName={user.name ?? user.email}
-        onDelete={() => deleteUser(user.id)}
+        onDelete={deleteUser.bind(null, user.id)}
         redirectTo="/admin/staff"
       />
     </AdminDetailLayout>
@@ -174,9 +152,9 @@ export default async function StaffDetailPage({ params }: Props) {
 
 function RoleBadge({ role }: { role: Role }) {
   switch (role) {
-    case "ADMIN":
+    case Role.ADMIN:
       return <Badge variant="default">管理者</Badge>;
-    case "USER":
+    case Role.USER:
       return <Badge variant="secondary">スタッフ</Badge>;
     default:
       return <Badge variant="outline">{role}</Badge>;
