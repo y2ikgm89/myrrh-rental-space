@@ -1,27 +1,27 @@
-'use client'
+"use client";
 
 /**
  * メディアグリッド表示
  */
 
-import { useState } from 'react'
-import { Check, Copy, Trash2, Eye, FileText, Film, File } from 'lucide-react'
-import type { MediaData } from '@/admin/types/media-picker'
-import { MediaDetailDialog } from './MediaDetailDialog'
-import { formatBytes } from '@/admin/lib/utils'
-import { TYPE_CONFIG } from './constants'
-import { useCopyUrl, useDeleteMedia } from './hooks'
-import { isValidMediaType, MediaType } from '@/admin/lib/validations/media'
+import { useState } from "react";
+import { Check, Copy, Trash2, Eye, FileText, Film, File } from "lucide-react";
+import type { MediaData } from "@/admin/types/media-picker";
+import { MediaDetailDialog } from "./MediaDetailDialog";
+import { formatBytes } from "@/admin/lib/utils";
+import { TYPE_CONFIG } from "./constants";
+import { useCopyUrl, useDeleteMedia } from "./hooks";
+import { isValidMediaType, MediaType } from "@/admin/lib/validations/media";
 
 type Props = {
-  items: MediaData[]
-}
+  items: MediaData[];
+};
 
 export function MediaGrid({ items }: Props) {
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [detailItem, setDetailItem] = useState<MediaData | null>(null)
-  const handleCopyUrl = useCopyUrl()
-  const { handleDelete, isPending } = useDeleteMedia()
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [detailItem, setDetailItem] = useState<MediaData | null>(null);
+  const handleCopyUrl = useCopyUrl();
+  const { handleDelete, isPending } = useDeleteMedia();
 
   return (
     <>
@@ -33,22 +33,24 @@ export function MediaGrid({ items }: Props) {
               group relative aspect-square rounded-lg border overflow-hidden
               transition-all duration-200 cursor-pointer
               hover:ring-2 hover:ring-primary hover:shadow-lg
-              ${selectedId === item.id ? 'ring-2 ring-primary' : ''}
+              ${selectedId === item.id ? "ring-2 ring-primary" : ""}
             `}
-            onClick={() => setSelectedId(selectedId === item.id ? null : item.id)}
+            onClick={() =>
+              setSelectedId(selectedId === item.id ? null : item.id)
+            }
           >
             {/* Thumbnail */}
             <MediaThumbnail item={item} />
 
             {/* Overlay on hover */}
-            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2">
+            <div className="absolute inset-0 bg-overlay opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2">
               {/* Top: Actions */}
               <div className="flex justify-end gap-1">
                 <button
                   type="button"
                   onClick={(e) => {
-                    e.stopPropagation()
-                    handleCopyUrl(item.url)
+                    e.stopPropagation();
+                    handleCopyUrl(item.url);
                   }}
                   className="p-1.5 rounded bg-white/20 hover:bg-white/40 transition-colors"
                   title="URLをコピー"
@@ -58,8 +60,8 @@ export function MediaGrid({ items }: Props) {
                 <button
                   type="button"
                   onClick={(e) => {
-                    e.stopPropagation()
-                    setDetailItem(item)
+                    e.stopPropagation();
+                    setDetailItem(item);
                   }}
                   className="p-1.5 rounded bg-white/20 hover:bg-white/40 transition-colors"
                   title="詳細"
@@ -69,8 +71,8 @@ export function MediaGrid({ items }: Props) {
                 <button
                   type="button"
                   onClick={(e) => {
-                    e.stopPropagation()
-                    handleDelete(item)
+                    e.stopPropagation();
+                    handleDelete(item);
                   }}
                   disabled={isPending}
                   className="p-1.5 rounded bg-destructive/80 hover:bg-destructive transition-colors disabled:opacity-50"
@@ -83,7 +85,9 @@ export function MediaGrid({ items }: Props) {
               {/* Bottom: Info */}
               <div className="text-primary-foreground text-xs">
                 <p className="truncate font-medium">{item.filename}</p>
-                <p className="text-primary-foreground/70">{formatBytes(item.size)}</p>
+                <p className="text-primary-foreground/70">
+                  {formatBytes(item.size)}
+                </p>
               </div>
             </div>
 
@@ -105,45 +109,44 @@ export function MediaGrid({ items }: Props) {
         onClose={() => setDetailItem(null)}
       />
     </>
-  )
+  );
 }
 
 function MediaThumbnail({ item }: { item: MediaData }) {
   switch (item.type) {
-    case 'IMAGE':
+    case "IMAGE":
       return (
-        
         <img
           src={item.url}
           alt={item.alt || item.filename}
           className="w-full h-full object-cover"
           loading="lazy"
         />
-      )
-    case 'VIDEO':
+      );
+    case "VIDEO":
       return (
         <div className="w-full h-full bg-muted flex items-center justify-center">
           <Film className="h-12 w-12 text-muted-foreground" />
         </div>
-      )
-    case 'DOCUMENT':
+      );
+    case "DOCUMENT":
       return (
         <div className="w-full h-full bg-muted flex items-center justify-center">
           <FileText className="h-12 w-12 text-muted-foreground" />
         </div>
-      )
+      );
     default:
       return (
         <div className="w-full h-full bg-muted flex items-center justify-center">
           <File className="h-12 w-12 text-muted-foreground" />
         </div>
-      )
+      );
   }
 }
 
 function TypeBadge({ type }: { type: string }) {
-  const mediaType = isValidMediaType(type) ? type : MediaType.OTHER
-  const config = TYPE_CONFIG[mediaType]
+  const mediaType = isValidMediaType(type) ? type : MediaType.OTHER;
+  const config = TYPE_CONFIG[mediaType];
 
   return (
     <span
@@ -151,5 +154,5 @@ function TypeBadge({ type }: { type: string }) {
     >
       {config.label}
     </span>
-  )
+  );
 }
