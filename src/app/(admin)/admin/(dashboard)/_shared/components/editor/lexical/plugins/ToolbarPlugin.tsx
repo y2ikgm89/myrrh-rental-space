@@ -52,6 +52,8 @@ import {
   Plus,
   Redo,
   Strikethrough,
+  Subscript,
+  Superscript,
   TextQuote,
   Underline,
   Undo,
@@ -153,6 +155,8 @@ export function ToolbarPlugin({
   const [isItalic, setIsItalic] = useState(false)
   const [isUnderline, setIsUnderline] = useState(false)
   const [isStrikethrough, setIsStrikethrough] = useState(false)
+  const [isSubscript, setIsSubscript] = useState(false)
+  const [isSuperscript, setIsSuperscript] = useState(false)
   const [isLink, setIsLink] = useState(false)
   const [blockType, setBlockType] = useState<BlockType>('paragraph')
   const [elementFormat, setElementFormat] = useState<AlignmentType>('left')
@@ -167,6 +171,8 @@ export function ToolbarPlugin({
     setIsItalic(selection.hasFormat('italic'))
     setIsUnderline(selection.hasFormat('underline'))
     setIsStrikethrough(selection.hasFormat('strikethrough'))
+    setIsSubscript(selection.hasFormat('subscript'))
+    setIsSuperscript(selection.hasFormat('superscript'))
 
     // リンク
     const node = selection.anchor.getNode()
@@ -262,6 +268,14 @@ export function ToolbarPlugin({
 
   const handleFormatStrikethrough = () => {
     editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'strikethrough')
+  }
+
+  const handleFormatSubscript = () => {
+    editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'subscript')
+  }
+
+  const handleFormatSuperscript = () => {
+    editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'superscript')
   }
 
   const handleInsertLink = () => {
@@ -386,6 +400,26 @@ export function ToolbarPlugin({
         title="取り消し線"
       >
         <Strikethrough className="h-5 w-5 md:h-4 md:w-4" />
+      </Button>
+      <Button
+        type="button"
+        variant={isSubscript ? 'secondary' : 'ghost'}
+        size="icon"
+        className="h-10 w-10 md:h-8 md:w-8"
+        onClick={handleFormatSubscript}
+        title="下付き文字"
+      >
+        <Subscript className="h-5 w-5 md:h-4 md:w-4" />
+      </Button>
+      <Button
+        type="button"
+        variant={isSuperscript ? 'secondary' : 'ghost'}
+        size="icon"
+        className="h-10 w-10 md:h-8 md:w-8"
+        onClick={handleFormatSuperscript}
+        title="上付き文字"
+      >
+        <Superscript className="h-5 w-5 md:h-4 md:w-4" />
       </Button>
 
       {/* Highlight */}
