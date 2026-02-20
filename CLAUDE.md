@@ -55,7 +55,7 @@ Skill ツールで明示的に呼び出す。1% でも該当する可能性が�
 ### ツール
 
 - **コードベース調査**: `serena`（LSP ベース深い分析）、`codebase-explorer`（広範な探索）
-- **専門エージェント**: `security-reviewer`、`project-reviewer`、`react-compiler-reviewer`、`animation-cleanup-reviewer`、`verification`、`design-memory`、`cache-strategy-reviewer`、`db-migration-reviewer`
+- **専門エージェント**: `security-reviewer`、`project-reviewer`、`react-compiler-reviewer`、`animation-cleanup-reviewer`、`verification`、`design-memory`、`cache-strategy-reviewer`、`db-migration-reviewer`、`test-writer`、`accessibility-reviewer`
 - **MCP**: `serena`, `context7`, `playwright`, `github`（`.mcp.json` 設定済）
 - **ui-ux-pro-max**: `python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --domain <domain> --stack nextjs`
   - ドメイン: `product`, `style`, `typography`, `color`, `landing`, `chart`, `ux`
