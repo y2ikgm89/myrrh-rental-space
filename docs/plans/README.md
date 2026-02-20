@@ -22,35 +22,33 @@
 
 ---
 
-## 進行中の計画
+## 完了した計画
 
-### 2026-02-20 - 管理画面 詳細・編集ページ UI 統一（第2弾）🚧
+### 2026-02-20 - 管理画面 詳細・編集ページ UI 統一（第2弾） ✅
 
-前回刷新で除外されたページ・未対応の細部を包括的に修正。破壊的変更可、最新推奨パターンで統一。
+前回刷新で除外されたページ・未対応の細部を包括的に修正。破壊的変更、最新推奨パターンで全統一。
 
-**計画ファイル**: `docs/plans/2026-02-20-admin-detail-pages-ui-unification.md`
+**実装内容**:
 
-**実装予定**:
+- [x] Task 1: `connection()` 重複バグ修正（5ファイル: posts, news, spaces/edit, pages/[slug]/edit, pages/homepage/edit）
+- [x] Task 2: `customers/[id]/edit` `generateMetadata` に `connection()` 追加
+- [x] Task 3: `terms/[id]/page.tsx` — `generateMetadata` + `AdminDetailLayout` + BusinessInfo null-fill 簡略化
+- [x] Task 4: `terms/[id]/versions/[versionId]/page.tsx` — `generateMetadata` + `AdminDetailLayout` + Breadcrumb 維持
+- [x] Task 5: `staff/[id]/page.tsx` — `generateMetadata` + `Role` enum定数 + `DetailSection/DetailField` + `SUPER_ADMIN` ケース追加
+- [x] Task 6: `staff/[id]/edit/page.tsx` — `generateMetadata` + `DetailSection`
+- [x] Task 7: `faq/categories/[id]/edit/page.tsx` — `generateMetadata` 動的化
+- [x] Task 8: `variant="outline"` 除去 + `DangerZone itemName` 追加
+- [x] Task 9: `ReservationDetail.tsx` — `DetailSection/DetailField` 標準化
+- [x] Task 10: `LocationDetail.tsx` — `DetailSection/DetailField` 標準化
+- [x] Task 11: `InquiryDetail.tsx` — `DetailSection/DetailField` 標準化 + toast エラーフォールバック追加
+- [x] Task 12: `SpaceDetail.tsx` — `DetailSection/DetailField` 標準化 + `key={index}` → 一意な値に修正
+- [x] Task 13: `coupons/[id]/page.tsx` — 非標準 Card パターン → `DetailSection/DetailField`
+- [x] Task 14: `CustomerDetail.tsx` — `DetailSection/DetailField` 標準化 + `Date` → `string` 型変換修正
+- [x] Task 15: `bun run validate && bun run build` 全通過（96ルート静的生成）
 
-- [ ] Task 1: `connection()` 重複バグ修正（5ファイル: posts, news, spaces/edit, pages/[slug]/edit, pages/homepage/edit）
-- [ ] Task 2: `customers/[id]/edit` `generateMetadata` に `connection()` 追加
-- [ ] Task 3: `terms/[id]/page.tsx` — `generateMetadata` + `AdminDetailLayout`
-- [ ] Task 4: `terms/[id]/versions/[versionId]/page.tsx` — `generateMetadata` + `AdminDetailLayout`
-- [ ] Task 5: `staff/[id]/page.tsx` — `generateMetadata` + `Role` enum定数 + `DetailSection/DetailField`
-- [ ] Task 6: `staff/[id]/edit/page.tsx` — `generateMetadata` + `DetailSection`
-- [ ] Task 7: `faq/categories/[id]/edit/page.tsx` — `generateMetadata` 動的化
-- [ ] Task 8: `variant="outline"` 除去 + `DangerZone itemName` 追加
-- [ ] Task 9: `ReservationDetail.tsx` — `DetailSection/DetailField` 標準化
-- [ ] Task 10: `LocationDetail.tsx` — `DetailSection/DetailField` 標準化
-- [ ] Task 11: `InquiryDetail.tsx` — `DetailSection/DetailField` 標準化
-- [ ] Task 12: `SpaceDetail.tsx` — `DetailSection/DetailField` 標準化
-- [ ] Task 13: `coupons/[id]/page.tsx` — 非標準 Card パターン → `DetailSection/DetailField`
-- [ ] Task 14: `CustomerDetail.tsx` — `DetailSection/DetailField` 標準化
-- [ ] Task 15: `bun run validate && bun run build` 全通過
+**追加修正（レビュー指摘）**: `CustomerWithReservations` 型の `startTime/endTime: Date → string` + `toISOString()` 変換追加
 
 ---
-
-## 完了した計画
 
 ### 2026-02-19 - 管理画面 詳細・編集ページ 完全刷新 ✅
 
