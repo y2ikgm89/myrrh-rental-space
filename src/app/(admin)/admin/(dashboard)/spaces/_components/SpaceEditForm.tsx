@@ -387,7 +387,7 @@ export function SpaceEditForm({
   } = useFieldArray({ control, name: "facilities" });
 
   // useWatch（リアクティブな値参照）
-  const name = useWatch({ control, name: "name" });
+  const _name = useWatch({ control, name: "name" });
   const isPublished = useWatch({ control, name: "isPublished" });
   const termsId = useWatch({ control, name: "termsId" });
   const locationId = useWatch({ control, name: "locationId" });
