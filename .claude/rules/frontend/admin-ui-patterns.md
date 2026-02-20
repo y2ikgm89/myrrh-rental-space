@@ -275,7 +275,7 @@ export function CategoryActionCell({ id, name }: { id: string; name: string }) {
 <ItemActionCell id={id} />
 ```
 
-## 詳細・編集ページ標準構造
+## 詳細・編集・新規作成ページ標準構造
 
 ### 詳細ページ（Server Component + AdminDetailLayout）
 
@@ -344,6 +344,34 @@ onDelete={deleteReservation.bind(null, id)}
 | 編集ボタン   | `AdminDetailLayout actions` — 右                    | 詳細コンポーネント内    |
 | 削除ボタン   | `DangerZone` — **ページ最下部のみ**                 | ヘッダー・CardHeader 内 |
 | タイトル CSS | `text-2xl font-bold tracking-tight text-foreground` | `tracking-tight` 省略   |
+
+### 新規作成ページ（Server Component + AdminDetailLayout）
+
+新規作成ページも `AdminDetailLayout` でヘッダーを統一する（`locations/new` がテンプレート）:
+
+```tsx
+// locations/new/page.tsx (Server Component)
+export default async function NewLocationPage() {
+  await connection(); // PPR opt-in — ページ関数で1回のみ
+
+  return (
+    <AdminDetailLayout
+      backHref="/admin/locations"
+      title="新規ロケーション作成"
+      subtitle="新しいロケーションを登録します"
+    >
+      <LocationForm />
+    </AdminDetailLayout>
+  );
+}
+```
+
+**`backLabel` ルール**（ページ種別ごとに固定）:
+
+| ページ種別     | `backHref`             | `backLabel`（省略可否） | 表示テキスト   |
+| -------------- | ---------------------- | ----------------------- | -------------- |
+| 詳細・新規作成 | `/admin/<resource>`    | 省略可（デフォルト）    | 「一覧に戻る」 |
+| 編集           | `/admin/<resource>/id` | `"詳細に戻る"` 必須     | 「詳細に戻る」 |
 
 ### 編集ページ（Server Component + AdminDetailLayout）
 
@@ -467,3 +495,6 @@ export default async function Page({ params }) {
 7. **削除ボタンをヘッダー・CardHeader 内に配置禁止** — `DangerZone` コンポーネントをページ最下部に配置
 8. **詳細・編集ページのバックボタンを詳細コンポーネント内に配置禁止** — `AdminDetailLayout backHref` で左上固定
 9. **`connection()` を同一 async 関数内で複数回呼び出し禁止** — PPR opt-in は各 RSC エントリーポイントで1回のみ
+10. **新規作成ページで手動ヘッダー実装禁止** — `new/page.tsx` も `AdminDetailLayout` を使用（`locations/new` がテンプレート。`Link`+`ArrowLeft`+`Button` の手動実装禁止）
+11. **`backLabel` にエンティティ名を含めること禁止** — `"クーポン一覧に戻る"` NG → `"一覧に戻る"`（デフォルト）/ `"詳細に戻る"` のみ使用
+12. **バックナビゲーションに `ChevronLeft` 禁止** — `ArrowLeft` は `AdminDetailLayout` 内部で自動提供。手動実装が必要な場合も `ArrowLeft` のみ
