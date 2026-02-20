@@ -18,11 +18,25 @@
 | 🟢 低  | keysOf/entriesOf の許可例外を type-safety.md に追記   | `.claude/rules/type-safety.md` |
 | 🟢 低  | CSP ヘッダー設定（next.config.ts の securityHeaders） | `next.config.ts`               |
 
-**最終更新**: 2026-02-20（Claude Code 自動化改善）
+**最終更新**: 2026-02-20（コード品質修正）
 
 ---
 
 ## 完了した計画
+
+### 2026-02-20 - コード品質修正（Context API / エラーハンドリング / Date 型 / Tailwind） ✅
+
+React 19 best practices 準拠 + エラーハンドリング強化。
+
+**実装内容**:
+
+- [x] Task 1: `coupon.ts` — `ActionResult` 移行 + try/catch + logError
+- [x] Task 2: Context API 5ファイル — `useContext` → `use()` 移行
+- [x] Task 3: Date 型 3ファイル — `string | null` に統一（server 側 `.toISOString()` 変換追加）
+- [x] Task 4: `MediaGrid.tsx` — `bg-overlay` セマンティックトークンに修正
+- [x] Task 5: `bun run validate && bun run build` 全通過
+
+---
 
 ### 2026-02-20 - Claude Code 自動化改善 ✅
 
