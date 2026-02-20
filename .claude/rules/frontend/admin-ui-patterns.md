@@ -403,6 +403,59 @@ export default async function Page({ params }) {
 | `DetailField`       | `@/admin/components/DetailField`       | ラベル + 値の行（dt/dd）          |
 | `DangerZone`        | `@/admin/components/DangerZone`        | 削除確認 + 実行（ページ最下部）   |
 
+## フォームページ（新規作成・編集） 2カラムレイアウト
+
+管理画面フォームは **左1枚（主要情報まとめ）+ 右複数カード** の2カラム構成に統一する:
+
+```tsx
+<form className="space-y-6">
+  <div className="grid gap-6 lg:grid-cols-2">
+    {/* 左: スペース・日時・料金等を1枚のカードにまとめる */}
+    <Card>
+      <CardHeader>
+        <CardTitle>予約情報</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">{/* ... */}</CardContent>
+    </Card>
+    {/* 右: 複数カードに分割してよい */}
+    <div className="space-y-6">
+      <Card>{/* 顧客情報 */}</Card>
+      <Card>{/* 追加設定 */}</Card>
+    </div>
+  </div>
+  <div className="flex justify-end gap-4">{/* キャンセル・送信ボタン */}</div>
+</form>
+```
+
+**禁止**: 左カラムに小さなカードを複数並べること（「スペース選択」「日時選択」「料金」に分割等）→ 余白が目立ちUX低下
+
+### 編集フォームでの参照エンティティ表示（読み取り専用）
+
+変更不可な外部エンティティ（例: 予約の顧客）は `CustomerSelector` 等のインタラクティブUIではなく、hidden input + アイコン表示を使う:
+
+```tsx
+{/* RHF の値を保持しつつ表示は読み取り専用 */}
+<input type="hidden" {...register("customerId")} />
+<div className="space-y-3">
+  <div className="flex items-center gap-2">
+    <User className="h-4 w-4 shrink-0 text-muted-foreground" />
+    <Link href={`/admin/customers/${entity.id}`} className="font-medium hover:underline">
+      {entity.lastName} {entity.firstName}
+    </Link>
+  </div>
+  <div className="flex items-center gap-2">
+    <Mail className="h-4 w-4 shrink-0 text-muted-foreground" />
+    <span className="text-sm text-muted-foreground">{entity.email}</span>
+  </div>
+  {entity.phoneNumber && (
+    <div className="flex items-center gap-2">
+      <Phone className="h-4 w-4 shrink-0 text-muted-foreground" />
+      <span className="text-sm text-muted-foreground">{entity.phoneNumber}</span>
+    </div>
+  )}
+</div>
+```
+
 ## 禁止事項
 
 1. **型 re-export の追加禁止** — 共有型のローカル aliases は不要（`export type Foo = SharedFoo`）

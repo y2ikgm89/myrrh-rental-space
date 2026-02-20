@@ -212,3 +212,4 @@ gcloud builds submit --config=cloudbuild.yaml  # Cloud Run デプロイ（Cloud 
 - **`server-only` は Bun テストで throw する** — `mock.module('server-only', () => ({}))` を `__tests__/setup.ts` でプリロード設定済み（既に適用済）。`--conditions=react-server` は React を server build に解決して `createContext`・`useRef` が消えるため**禁止**
 - **`@t3-oss/env-nextjs` は `process.env` のスナップショット** — `SKIP_ENV_VALIDATION=true` 時、`createEnv()` は `{ ...process.env }` の浅いコピーを返す。テストで `process.env["KEY"] = ...` しても `serverEnv.KEY` に反映されない。テスト可能にしたいコードは `process.env["KEY"]` を直接参照する（`crypto.ts`, `logger.ts` 参照）
 - **`bunfig.toml [test]` の `conditions` キーは機能しない** — Bun はこのキーを無視する。`bun test --conditions=react-server` は機能するが React の解決も変えるため `server-only` 対策には使わないこと
+- **複数ファイルを `git add` 後はコミット前に `git status` 再確認** — Prettier PostToolUse フックが `git add` で他のステージング済みファイルも変更することがある（` M` に変わる）。漏れがあれば再 `git add` してからコミット
