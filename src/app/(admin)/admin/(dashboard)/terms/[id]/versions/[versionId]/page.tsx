@@ -1,6 +1,5 @@
 import { notFound } from 'next/navigation'
-import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { connection } from 'next/server'
 import { formatDistanceToNow } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { getTermsById, getTermsVersionById } from '@/admin/actions/terms'
@@ -17,21 +16,38 @@ import {
   Badge,
   Breadcrumb,
 } from '@/admin/components/ui'
+import Link from 'next/link'
+import { AdminDetailLayout } from '@/admin/components/AdminDetailLayout'
 import type { Metadata } from 'next'
-import { connection } from "next/server";
 
-export const metadata: Metadata = {
-  title: 'バージョンプレビュー | Myrrh Rental Space',
-}
-
-interface VersionPreviewPageProps {
+type PageProps = {
   params: Promise<{ id: string; versionId: string }>
 }
 
-export default async function VersionPreviewPage({
-  params,
-}: VersionPreviewPageProps) {
-  await connection();
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  await connection()
+  const { id, versionId } = await params
+  const [termsResult, versionResult] = await Promise.all([
+    getTermsById(id),
+    getTermsVersionById(versionId),
+  ])
+
+  if (
+    !termsResult.success ||
+    !termsResult.data ||
+    !versionResult.success ||
+    !versionResult.data
+  ) {
+    return { title: 'バージョンプレビュー | Myrrh Rental Space' }
+  }
+
+  return {
+    title: `${termsResult.data.title} v${versionResult.data.version} | 規約管理 | Myrrh Rental Space`,
+  }
+}
+
+export default async function VersionPreviewPage({ params }: PageProps) {
+  await connection()
   const { id, versionId } = await params
 
   const [termsResult, versionResult] = await Promise.all([
@@ -72,7 +88,19 @@ export default async function VersionPreviewPage({
   }
 
   return (
-    <div className="space-y-6">
+    <AdminDetailLayout
+      backHref={`/admin/terms/${id}`}
+      backLabel="詳細に戻る"
+      title={`バージョン ${version.version} プレビュー`}
+      subtitle={terms.title}
+      actions={
+        version.status === 'DRAFT' ? (
+          <Button variant="outline" asChild>
+            <Link href={`/admin/terms/${id}/versions/${versionId}/edit`}>編集</Link>
+          </Button>
+        ) : undefined
+      }
+    >
       <Breadcrumb
         items={[
           { label: '利用規約', href: '/admin/terms' },
@@ -81,57 +109,29 @@ export default async function VersionPreviewPage({
         ]}
       />
 
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">
-            バージョン {version.version} プレビュー
-          </h1>
-          <p className="text-muted-foreground">{terms.title}</p>
-        </div>
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/admin/terms/${id}`}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            戻る
-          </Link>
-        </Button>
-      </div>
-
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                バージョン {version.version}
-                {getStatusBadge()}
-              </CardTitle>
-              <CardDescription>
-                作成:{' '}
-                {formatDistanceToNow(new Date(version.createdAt), {
+          <CardTitle className="flex items-center gap-2">
+            バージョン {version.version}
+            {getStatusBadge()}
+          </CardTitle>
+          <CardDescription>
+            作成:{' '}
+            {formatDistanceToNow(new Date(version.createdAt), {
+              addSuffix: true,
+              locale: ja,
+            })}
+            {version.publishedAt && (
+              <>
+                {' '}
+                · 公開:{' '}
+                {formatDistanceToNow(new Date(version.publishedAt), {
                   addSuffix: true,
                   locale: ja,
                 })}
-                {version.publishedAt && (
-                  <>
-                    {' '}
-                    · 公開:{' '}
-                    {formatDistanceToNow(new Date(version.publishedAt), {
-                      addSuffix: true,
-                      locale: ja,
-                    })}
-                  </>
-                )}
-              </CardDescription>
-            </div>
-            {version.status === 'DRAFT' && (
-              <Button variant="outline" asChild>
-                <Link
-                  href={`/admin/terms/${id}/versions/${versionId}/edit`}
-                >
-                  編集
-                </Link>
-              </Button>
+              </>
             )}
-          </div>
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="border rounded-lg p-6 bg-card">
@@ -142,6 +142,6 @@ export default async function VersionPreviewPage({
           </div>
         </CardContent>
       </Card>
-    </div>
+    </AdminDetailLayout>
   )
 }
