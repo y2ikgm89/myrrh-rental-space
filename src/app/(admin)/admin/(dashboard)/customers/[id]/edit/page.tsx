@@ -12,6 +12,7 @@ type PageProps = {
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
+  await connection();
   const { id } = await params;
   const customer = await getCustomerById(id);
   if (!customer) return {};
