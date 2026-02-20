@@ -17,6 +17,8 @@ import {
   Input,
 } from "@/admin/components/ui";
 import { ReservationStatusBadge } from "@/admin/components/status-badges";
+import { DetailSection } from "@/admin/components/DetailSection";
+import { DetailField } from "@/admin/components/DetailField";
 import {
   updateReservationStatus,
   updateReservationNotes,
@@ -95,78 +97,49 @@ export function ReservationDetail({ reservation }: ReservationDetailProps) {
       </Card>
 
       {/* 予約情報 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>予約情報</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <div className="text-sm text-muted-foreground">スペース</div>
-              <div className="font-medium">{reservation.space.name}</div>
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground">料金</div>
-              <div className="font-medium">
-                {formatPrice(reservation.totalPrice)}
-              </div>
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground">開始日時</div>
-              <div className="font-medium">
-                {formatDateTimeFull(reservation.startTime)}
-              </div>
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground">終了日時</div>
-              <div className="font-medium">
-                {formatDateTimeFull(reservation.endTime)}
-              </div>
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground">作成日時</div>
-              <div className="font-medium">
-                {formatDateTimeFull(reservation.createdAt)}
-              </div>
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground">更新日時</div>
-              <div className="font-medium">
-                {formatDateTimeFull(reservation.updatedAt)}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <DetailSection title="予約情報">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <DetailField label="スペース" value={reservation.space.name} />
+          <DetailField
+            label="料金"
+            value={formatPrice(reservation.totalPrice)}
+          />
+          <DetailField
+            label="開始日時"
+            value={formatDateTimeFull(reservation.startTime)}
+          />
+          <DetailField
+            label="終了日時"
+            value={formatDateTimeFull(reservation.endTime)}
+          />
+          <DetailField
+            label="作成日時"
+            value={formatDateTimeFull(reservation.createdAt)}
+          />
+          <DetailField
+            label="更新日時"
+            value={formatDateTimeFull(reservation.updatedAt)}
+          />
+        </div>
+      </DetailSection>
 
       {/* 顧客情報 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>顧客情報</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <div className="text-sm text-muted-foreground">氏名</div>
-              <div className="font-medium">
-                {reservation.customer.lastName} {reservation.customer.firstName}
-              </div>
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground">
-                メールアドレス
-              </div>
-              <div className="font-medium">{reservation.customer.email}</div>
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground">電話番号</div>
-              <div className="font-medium">
-                {reservation.customer.phoneNumber || "-"}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <DetailSection title="顧客情報">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <DetailField
+            label="氏名"
+            value={`${reservation.customer.lastName} ${reservation.customer.firstName}`}
+          />
+          <DetailField
+            label="メールアドレス"
+            value={reservation.customer.email}
+          />
+          <DetailField
+            label="電話番号"
+            value={reservation.customer.phoneNumber || "-"}
+          />
+        </div>
+      </DetailSection>
 
       {/* メモ */}
       <Card>
