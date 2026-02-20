@@ -40,6 +40,7 @@ import { TabListNode } from '../nodes/TabListNode'
 import { TabTitleNode } from '../nodes/TabTitleNode'
 import { TabPanelNode } from '../nodes/TabPanelNode'
 import { TableOfContentsNode } from '../nodes/TableOfContentsNode'
+import { MapEmbedNode } from '../nodes/MapEmbedNode'
 
 /**
  * エディタに登録する全ノード一覧
@@ -87,4 +88,5 @@ export const EDITOR_NODES: ReadonlyArray<Klass<LexicalNode>> = [
   TabTitleNode,
   TabPanelNode,
   TableOfContentsNode,
+  MapEmbedNode,
 ]

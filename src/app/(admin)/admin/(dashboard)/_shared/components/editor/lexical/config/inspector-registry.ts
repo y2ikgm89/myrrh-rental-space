@@ -25,6 +25,7 @@ import { $isTabsContainerNode } from '../nodes/TabsContainerNode'
 import { $isLayoutContainerNode } from '../nodes/LayoutContainerNode'
 import { $isYouTubeNode } from '../nodes/YouTubeNode'
 import { $isVimeoNode } from '../nodes/VimeoNode'
+import { $isMapEmbedNode } from '../nodes/MapEmbedNode'
 import { $isXNode } from '../nodes/XNode'
 import { $isInstagramNode } from '../nodes/InstagramNode'
 import { $isPageBreakNode } from '../nodes/PageBreakNode'
@@ -56,6 +57,7 @@ export function getInspectableInfoFromRegistry(node: LexicalNode): InspectableRe
   if ($isXNode(node)) return { nodeType: 'x', node, nodeKey }
   if ($isInstagramNode(node)) return { nodeType: 'instagram', node, nodeKey }
   if ($isPageBreakNode(node)) return { nodeType: 'pageBreak', node, nodeKey }
+  if ($isMapEmbedNode(node)) return { nodeType: 'mapEmbed', node, nodeKey }
   return null
 }
 
@@ -66,4 +68,5 @@ export const INSPECTABLE_NODE_TYPES_FROM_REGISTRY: readonly InspectableNodeType[
   'button', 'image', 'callout', 'bookmark', 'pullQuote',
   'collapsible', 'steps', 'tabs', 'layout',
   'youtube', 'vimeo', 'x', 'instagram', 'pageBreak',
+  'mapEmbed',
 ]

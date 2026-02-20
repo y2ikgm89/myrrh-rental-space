@@ -26,6 +26,7 @@ import type { VimeoNode } from '../../nodes/VimeoNode'
 import type { XNode } from '../../nodes/XNode'
 import type { InstagramNode } from '../../nodes/InstagramNode'
 import type { PageBreakNode } from '../../nodes/PageBreakNode'
+import type { MapEmbedNode } from '../../nodes/MapEmbedNode'
 
 // =============================================================================
 // Types
@@ -46,6 +47,7 @@ export type InspectableNodeType =
   | 'x'
   | 'instagram'
   | 'pageBreak'
+  | 'mapEmbed'
 
 /**
  * 選択中ノード情報のDiscriminated Union型
@@ -68,6 +70,7 @@ export type SelectedNodeInfo =
   | { nodeType: 'x'; node: XNode; nodeKey: NodeKey }
   | { nodeType: 'instagram'; node: InstagramNode; nodeKey: NodeKey }
   | { nodeType: 'pageBreak'; node: PageBreakNode; nodeKey: NodeKey }
+  | { nodeType: 'mapEmbed'; node: MapEmbedNode; nodeKey: NodeKey }
   | null
 
 /**

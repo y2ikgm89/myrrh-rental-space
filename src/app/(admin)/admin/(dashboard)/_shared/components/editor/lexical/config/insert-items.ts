@@ -57,6 +57,7 @@ import {
   ListTree,
   Blocks,
   Save,
+  Map,
 } from 'lucide-react'
 import { applyTextCaseToSelection } from '../plugins/TextCasePlugin'
 import { INSERT_PAGE_BREAK_COMMAND } from '../plugins/PageBreakPlugin'
@@ -317,6 +318,17 @@ const INSERT_ITEMS: readonly InsertItem[] = [
     showInToolbar: true,
     showInPicker: true,
     dialogId: 'instagram',
+  },
+  {
+    id: 'mapEmbed',
+    type: 'dialog',
+    label: 'Google マップ',
+    icon: Map,
+    keywords: ['map', 'google', 'maps', 'chizu', 'embed', 'location', 'access'],
+    category: 'media',
+    showInToolbar: true,
+    showInPicker: true,
+    dialogId: 'mapEmbed',
   },
   {
     id: 'table',

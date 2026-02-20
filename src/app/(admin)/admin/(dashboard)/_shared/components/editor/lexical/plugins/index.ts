@@ -92,3 +92,4 @@ export {
   SAVE_BLOCK_TEMPLATE_COMMAND,
   INSERT_BLOCK_TEMPLATE_COMMAND,
 } from './BlockTemplatePlugin'
+export { MapEmbedPlugin } from './MapEmbedPlugin'

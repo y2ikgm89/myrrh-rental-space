@@ -240,3 +240,13 @@ export {
   $createTableOfContentsNode,
   $isTableOfContentsNode,
 } from './TableOfContentsNode'
+
+// MapEmbed
+export {
+  MapEmbedNode,
+  $createMapEmbedNode,
+  $isMapEmbedNode,
+  embedUrlState,
+  mapLabelState,
+  toEmbedUrl,
+} from './MapEmbedNode'
