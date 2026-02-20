@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * NewsListSection — News article listing with list/card layout
@@ -7,55 +7,64 @@
  * useGSAP stagger for entrance animation.
  */
 
-import { useRef, type ReactElement } from 'react'
-import Link from 'next/link'
-import { useGSAP } from '@gsap/react'
-import { gsap } from '@/public/lib/gsap-config'
-import { ScrollReveal } from '@/public/components/animations/ScrollReveal'
-import { SplitText } from '@/public/components/animations/SplitText'
-import { SectionLabel } from '@/public/components/ui/SectionLabel'
-import { SectionWrapper, getTitleClasses, getTitleStyle, getTextStyle } from '@/public/components/sections/SectionWrapper'
-import { DURATION, EASE, STAGGER } from '@/public/lib/animations'
-import { getGridColsClass } from '@/public/lib/section-style-maps'
-import type { NewsListConfig } from '@/shared/lib/validations/section'
-import type { SectionDesign } from '@/shared/lib/validations/section-design'
+import { useRef, type ReactElement } from "react";
+import Link from "next/link";
+import { useGSAP } from "@gsap/react";
+import { gsap } from "@/public/lib/gsap-config";
+import { ScrollReveal } from "@/public/components/animations/ScrollReveal";
+import { SplitText } from "@/public/components/animations/SplitText";
+import { SectionLabel } from "@/public/components/ui/SectionLabel";
+import {
+  SectionWrapper,
+  getTitleClasses,
+  getTitleStyle,
+  getTextStyle,
+} from "@/public/components/sections/SectionWrapper";
+import { DURATION, EASE, STAGGER } from "@/public/lib/animations";
+import { getGridColsClass } from "@/public/lib/section-style-maps";
+import type { NewsListConfig } from "@/shared/lib/validations/section";
+import type { SectionDesign } from "@/shared/lib/validations/section-design";
 
 export interface NewsData {
-  readonly id: string
-  readonly slug: string
-  readonly title: string
-  readonly publishedAt: Date | null
+  readonly id: string;
+  readonly slug: string;
+  readonly title: string;
+  readonly publishedAt: string | null;
 }
 
 interface NewsListSectionProps {
-  readonly config: NewsListConfig
-  readonly news: readonly NewsData[]
-  readonly design: SectionDesign
+  readonly config: NewsListConfig;
+  readonly news: readonly NewsData[];
+  readonly design: SectionDesign;
 }
 
-function formatDate(date: Date | null): string {
-  if (!date) return ''
-  return new Intl.DateTimeFormat('ja-JP', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
+function formatDate(date: string | null): string {
+  if (!date) return "";
+  return new Intl.DateTimeFormat("ja-JP", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
   })
     .format(new Date(date))
-    .replaceAll('/', '.')
+    .replaceAll("/", ".");
 }
 
-export function NewsListSection({ config, news, design }: NewsListSectionProps): ReactElement {
-  const listRef = useRef<HTMLDivElement>(null)
+export function NewsListSection({
+  config,
+  news,
+  design,
+}: NewsListSectionProps): ReactElement {
+  const listRef = useRef<HTMLDivElement>(null);
 
   useGSAP(
     () => {
-      const list = listRef.current
-      if (!list) return
+      const list = listRef.current;
+      if (!list) return;
 
-      const mm = gsap.matchMedia()
-      mm.add('(prefers-reduced-motion: no-preference)', () => {
-        const items = list.querySelectorAll('[data-news-item]')
-        if (items.length === 0) return
+      const mm = gsap.matchMedia();
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        const items = list.querySelectorAll("[data-news-item]");
+        if (items.length === 0) return;
 
         gsap.fromTo(
           items,
@@ -68,83 +77,96 @@ export function NewsListSection({ config, news, design }: NewsListSectionProps):
             stagger: STAGGER.element,
             scrollTrigger: {
               trigger: list,
-              start: 'top 80%',
-              toggleActions: 'play none none none',
+              start: "top 80%",
+              toggleActions: "play none none none",
             },
           },
-        )
-      })
+        );
+      });
     },
     { scope: listRef },
-  )
+  );
 
-  if (news.length === 0) return <></>
+  if (news.length === 0) return <></>;
 
-  const isCard = config.layout === 'card'
+  const isCard = config.layout === "card";
 
   return (
     <SectionWrapper design={design}>
-        <div className="mb-10 text-center md:mb-14">
-          <ScrollReveal>
-            {config.sectionLabel && <SectionLabel>{config.sectionLabel}</SectionLabel>}
-          </ScrollReveal>
-          <h2 className={`mt-4 font-heading ${getTitleClasses(design)} font-bold tracking-tight`} style={getTitleStyle(design)}>
-            <SplitText variant="words">
-              {config.title}
-            </SplitText>
-          </h2>
-        </div>
-
-        <div
-          ref={listRef}
-          className={isCard ? `grid gap-6 ${getGridColsClass(config.columns)}` : 'divide-y divide-border'}
-        >
-          {news.map((item) =>
-            isCard ? (
-              <Link
-                key={item.id}
-                href={`/news/${item.slug}`}
-                data-news-item=""
-                className="group rounded-lg border border-border bg-card p-5 transition-shadow duration-300 hover:shadow-lg"
-              >
-                <time className="text-[11px] uppercase tracking-[0.15em] text-muted-foreground" style={getTextStyle(design)}>
-                  {formatDate(item.publishedAt)}
-                </time>
-                <h3 className="mt-2 font-heading text-base font-medium tracking-tight transition-colors group-hover:text-primary-dark md:text-lg">
-                  {item.title}
-                </h3>
-              </Link>
-            ) : (
-              <Link
-                key={item.id}
-                href={`/news/${item.slug}`}
-                data-news-item=""
-                className="group flex items-baseline gap-4 py-4 transition-colors first:pt-0 last:pb-0"
-              >
-                <time className="shrink-0 text-[11px] tabular-nums uppercase tracking-[0.1em] text-muted-foreground" style={getTextStyle(design)}>
-                  {formatDate(item.publishedAt)}
-                </time>
-                <h3 className="text-sm font-medium transition-colors group-hover:text-primary-dark md:text-base">
-                  {item.title}
-                </h3>
-              </Link>
-            ),
+      <div className="mb-10 text-center md:mb-14">
+        <ScrollReveal>
+          {config.sectionLabel && (
+            <SectionLabel>{config.sectionLabel}</SectionLabel>
           )}
-        </div>
+        </ScrollReveal>
+        <h2
+          className={`mt-4 font-heading ${getTitleClasses(design)} font-bold tracking-tight`}
+          style={getTitleStyle(design)}
+        >
+          <SplitText variant="words">{config.title}</SplitText>
+        </h2>
+      </div>
 
-        {config.showViewAllLink && (
-          <ScrollReveal delay={0.2}>
-            <div className="mt-8 text-center">
-              <Link
-                href={config.viewAllUrl}
-                className="group relative inline-block text-xs uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-primary-dark"
+      <div
+        ref={listRef}
+        className={
+          isCard
+            ? `grid gap-6 ${getGridColsClass(config.columns)}`
+            : "divide-y divide-border"
+        }
+      >
+        {news.map((item) =>
+          isCard ? (
+            <Link
+              key={item.id}
+              href={`/news/${item.slug}`}
+              data-news-item=""
+              className="group rounded-lg border border-border bg-card p-5 transition-shadow duration-300 hover:shadow-lg"
+            >
+              <time
+                className="text-[11px] uppercase tracking-[0.15em] text-muted-foreground"
+                style={getTextStyle(design)}
               >
-                {config.viewAllText} &rarr;
-                <span className="absolute bottom-0 left-0 h-px w-0 bg-primary-dark/60 transition-all duration-300 group-hover:w-full" />
-              </Link>
-            </div>
-          </ScrollReveal>
+                {formatDate(item.publishedAt)}
+              </time>
+              <h3 className="mt-2 font-heading text-base font-medium tracking-tight transition-colors group-hover:text-primary-dark md:text-lg">
+                {item.title}
+              </h3>
+            </Link>
+          ) : (
+            <Link
+              key={item.id}
+              href={`/news/${item.slug}`}
+              data-news-item=""
+              className="group flex items-baseline gap-4 py-4 transition-colors first:pt-0 last:pb-0"
+            >
+              <time
+                className="shrink-0 text-[11px] tabular-nums uppercase tracking-[0.1em] text-muted-foreground"
+                style={getTextStyle(design)}
+              >
+                {formatDate(item.publishedAt)}
+              </time>
+              <h3 className="text-sm font-medium transition-colors group-hover:text-primary-dark md:text-base">
+                {item.title}
+              </h3>
+            </Link>
+          ),
         )}
+      </div>
+
+      {config.showViewAllLink && (
+        <ScrollReveal delay={0.2}>
+          <div className="mt-8 text-center">
+            <Link
+              href={config.viewAllUrl}
+              className="group relative inline-block text-xs uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-primary-dark"
+            >
+              {config.viewAllText} &rarr;
+              <span className="absolute bottom-0 left-0 h-px w-0 bg-primary-dark/60 transition-all duration-300 group-hover:w-full" />
+            </Link>
+          </div>
+        </ScrollReveal>
+      )}
     </SectionWrapper>
-  )
+  );
 }

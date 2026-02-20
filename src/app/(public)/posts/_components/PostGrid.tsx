@@ -1,27 +1,27 @@
-'use client'
+"use client";
 
-import type { ReactElement } from 'react'
-import Image from 'next/image'
-import Link from 'next/link'
-import { ScrollReveal } from '@/public/components/animations/ScrollReveal'
-import { SectionLabel } from '@/public/components/ui/SectionLabel'
-import { formatSerializedDate } from '@/shared/lib/serialize'
+import type { ReactElement } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { ScrollReveal } from "@/public/components/animations/ScrollReveal";
+import { SectionLabel } from "@/public/components/ui/SectionLabel";
+import { formatSerializedDate } from "@/shared/lib/serialize";
 
 interface PostCardData {
-  id: string
-  slug: string
-  title: string
-  excerpt: string
-  thumbnailUrl: string
-  publishedAt: Date | string | null
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  thumbnailUrl: string;
+  publishedAt: string | null;
   category: {
-    name: string
-    slug: string
-  }
+    name: string;
+    slug: string;
+  };
 }
 
 interface PostGridProps {
-  posts: readonly PostCardData[]
+  posts: readonly PostCardData[];
 }
 
 export function PostGrid({ posts }: PostGridProps): ReactElement {
@@ -30,7 +30,7 @@ export function PostGrid({ posts }: PostGridProps): ReactElement {
       <div className="py-24 text-center">
         <p className="text-muted-foreground">記事がまだありません。</p>
       </div>
-    )
+    );
   }
 
   return (
@@ -64,7 +64,9 @@ export function PostGrid({ posts }: PostGridProps): ReactElement {
 
               <div className="mt-4 border-t border-border pt-3">
                 <time
-                  dateTime={post.publishedAt ? String(post.publishedAt) : undefined}
+                  dateTime={
+                    post.publishedAt ? String(post.publishedAt) : undefined
+                  }
                   className="text-xs text-muted-foreground"
                 >
                   {formatSerializedDate(post.publishedAt)}
@@ -75,5 +77,5 @@ export function PostGrid({ posts }: PostGridProps): ReactElement {
         </ScrollReveal>
       ))}
     </div>
-  )
+  );
 }
