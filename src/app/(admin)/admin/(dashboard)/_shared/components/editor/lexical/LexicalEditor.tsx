@@ -169,7 +169,7 @@ function EditorInner({
         <HistoryPlugin />
         <ListPlugin />
         <CheckListPlugin />
-        <TablePlugin />
+        <TablePlugin hasCellMerge={true} hasCellBackgroundColor={true} />
         <LinkPlugin validateUrl={validateUrl} />
         <AutoLinkPlugin matchers={MATCHERS} />
         <ClickableLinkPlugin />
