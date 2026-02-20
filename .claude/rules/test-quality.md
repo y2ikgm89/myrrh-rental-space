@@ -39,6 +39,39 @@ describe("機能名", () => {
 });
 ```
 
+### server-only のモック（テスト環境必須）
+
+`import 'server-only'` を含むモジュール（`crypto.ts`, `logger.ts`, `prisma.ts` 等）をテストで直接 import する場合、
+`__tests__/setup.ts` の `mock.module('server-only', () => ({}))` が必須（プリロード設定済み）。
+
+```typescript
+// __tests__/setup.ts（設定済み — 編集不要）
+import { mock } from "bun:test";
+mock.module("server-only", () => ({})); // server-only を no-op にする
+```
+
+**禁止**: `bun test --conditions=react-server` — React を `react.react-server.js`（`createContext`・`useRef` 未定義）に解決してしまう
+
+### @t3-oss/env-nextjs のスナップショット問題
+
+`serverEnv`（`@/shared/lib/env/server` の `createEnv()` 結果）はモジュールロード時点の `process.env` のスナップショット。
+テストで `process.env["KEY"]` を変更しても `serverEnv.KEY` には反映されない。
+
+```typescript
+// NG: serverEnv を使ったコードはテストで env 変更が効かない
+function getMasterKey() {
+  const key = serverEnv.ENCRYPTION_KEY; // スナップショット — delete process.env["KEY"] が効かない
+}
+
+// OK: process.env を直接参照（遅延評価 — テストで変更が反映される）
+function getMasterKey() {
+  const key = process.env["ENCRYPTION_KEY"]; // 毎回評価
+}
+```
+
+テストで変更を必要とする env 変数は `process.env` 直接参照で実装し、
+デフォルト値は `__tests__/setup.ts` のプリロードで設定する（`ENCRYPTION_KEY` 参照）。
+
 ### 環境変数のモック
 
 ```typescript

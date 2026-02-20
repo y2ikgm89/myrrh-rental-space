@@ -209,3 +209,6 @@ gcloud builds submit --config=cloudbuild.yaml  # Cloud Run デプロイ（Cloud 
 - **React 19 `<Activity>` は EXPERIMENTAL 採用禁止** — `display: none` 実装のため CSS transform アニメーションと非互換。context7/WebFetch で確認済み
 - **`verification` サブエージェントはコードを自動修正する** — `bun run validate && bun run build` 実行時に型エラーを検出するとコードを自動変更する場合がある（スキーマの巻き戻し等）。検証のみ行いたい場合は Bash で直接実行: `bun run validate` / `bun run build`
 - **管理テーブル操作列は ActionDropdown 統一** — テーブル行の操作ボタンを直接書かず `*ActionCell` コンポーネント（`@/admin/components/ActionDropdown`）を作成。`ActionDropdownItem` は Next.js `<Link>` のため外部リンクに `target="_blank"` 不可 → `onClick={() => window.open(url, '_blank', 'noopener,noreferrer')}`
+- **`server-only` は Bun テストで throw する** — `mock.module('server-only', () => ({}))` を `__tests__/setup.ts` でプリロード設定済み（既に適用済）。`--conditions=react-server` は React を server build に解決して `createContext`・`useRef` が消えるため**禁止**
+- **`@t3-oss/env-nextjs` は `process.env` のスナップショット** — `SKIP_ENV_VALIDATION=true` 時、`createEnv()` は `{ ...process.env }` の浅いコピーを返す。テストで `process.env["KEY"] = ...` しても `serverEnv.KEY` に反映されない。テスト可能にしたいコードは `process.env["KEY"]` を直接参照する（`crypto.ts`, `logger.ts` 参照）
+- **`bunfig.toml [test]` の `conditions` キーは機能しない** — Bun はこのキーを無視する。`bun test --conditions=react-server` は機能するが React の解決も変えるため `server-only` 対策には使わないこと
