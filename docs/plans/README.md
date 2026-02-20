@@ -143,6 +143,23 @@ Server + Client Islands アーキテクチャ、4つの新規共有コンポー�
 - [x] Task 9: audit-logs/page.tsx 完全書き換え（Suspense アーキテクチャ）
 - [x] Task 10: type-check / lint 全通過
 
+### 2026-02-18 - Lexical AccentColor システム ✅
+
+Lexical エディタの Block Insert コンポーネント（Steps・PullQuote・Tabs・Collapsible）に統一アクセントカラー選択機能を追加。
+
+**実装内容**:
+
+- [x] Task 1: `AccentColor` 型定義・定数・型ガード（`accent-color.ts`）
+- [x] Task 2: `ColorSwatchPicker` 共通 UI コンポーネント
+- [x] Task 3: Steps・PullQuote・Tabs・Collapsible ノードへの `color` フィールド追加
+- [x] Task 4: Collapsible 旧 3-state 色システム削除（破壊的変更）
+- [x] Task 5: CSS `data-color` 属性 → `--accent` / `--accent-fg` 変数チェーン
+- [x] Task 6: `bun run validate && bun run build` 全通過
+
+**計画書**: `docs/plans/2026-02-18-lexical-accent-color-system.md`
+
+---
+
 ### 080 - プロジェクト最適化スコア改善 (2026-02-07) ✅
 
 PWA対応、Web Vitals計測、アクセシビリティ改善を実施。
