@@ -5,32 +5,33 @@
  * 将来的にSentry等の監視サービスと統合可能
  */
 
-import 'server-only'
+import "server-only";
 
-import type { ErrorLogContext } from './types'
-import { serverEnv } from '@/shared/lib/env/server'
+import type { ErrorLogContext } from "./types";
 
 interface ErrorDetails {
-  message: string
-  stack: string | undefined
-  category: string
-  severity: string
-  context: Record<string, unknown> | undefined
-  userId: string | undefined
-  timestamp: Date
-  environment: string | undefined
+  message: string;
+  stack: string | undefined;
+  category: string;
+  severity: string;
+  context: Record<string, unknown> | undefined;
+  userId: string | undefined;
+  timestamp: Date;
+  environment: string | undefined;
 }
 
 /** Extract a useful message from any thrown value */
 function extractMessage(error: unknown): string {
-  if (error instanceof Error) return error.message
-  if (typeof error === 'string') return error
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
   // Non-Error objects (e.g. Next.js cache serialization errors): stringify for visibility
   try {
-    const json = JSON.stringify(error)
-    return json === '{}' ? `[non-Error object: ${Object.getPrototypeOf(error)?.constructor?.name ?? typeof error}]` : json
+    const json = JSON.stringify(error);
+    return json === "{}"
+      ? `[non-Error object: ${Object.getPrototypeOf(error)?.constructor?.name ?? typeof error}]`
+      : json;
   } catch {
-    return String(error)
+    return String(error);
   }
 }
 
@@ -48,13 +49,13 @@ export function logError(error: unknown, logContext: ErrorLogContext): void {
     context: logContext.context,
     userId: logContext.userId,
     timestamp: logContext.timestamp ?? new Date(),
-    environment: serverEnv.NODE_ENV,
-  }
+    environment: process.env["NODE_ENV"],
+  };
 
-  if (serverEnv.NODE_ENV === 'production') {
-    console.error(JSON.stringify(errorDetails))
+  if (process.env["NODE_ENV"] === "production") {
+    console.error(JSON.stringify(errorDetails));
   } else {
-    console.error('[Error]', errorDetails)
+    console.error("[Error]", errorDetails);
   }
 }
 
@@ -69,9 +70,10 @@ export function logError(error: unknown, logContext: ErrorLogContext): void {
  * logDbError(error, { context: { table: 'users' } })
  */
 export function createErrorLogger(
-  defaultContext: Pick<ErrorLogContext, 'category' | 'severity'> & Partial<ErrorLogContext>
+  defaultContext: Pick<ErrorLogContext, "category" | "severity"> &
+    Partial<ErrorLogContext>,
 ) {
   return (error: unknown, context?: Partial<ErrorLogContext>) => {
-    logError(error, { ...defaultContext, ...context })
-  }
+    logError(error, { ...defaultContext, ...context });
+  };
 }
