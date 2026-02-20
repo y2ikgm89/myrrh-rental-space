@@ -250,3 +250,12 @@ export {
   mapLabelState,
   toEmbedUrl,
 } from './MapEmbedNode'
+
+// Ruby
+export {
+  RubyNode,
+  $createRubyNode,
+  $isRubyNode,
+  rubyBaseTextState,
+  rubyTextState,
+} from './RubyNode'

@@ -29,6 +29,7 @@ import {
   StepsPlugin,
   TabsPlugin,
   MapEmbedPlugin,
+  RubyPlugin,
 } from '../plugins'
 
 // =============================================================================
@@ -61,6 +62,7 @@ export const REGISTRY_DIALOG_IDS = [
   'steps',
   'tabs',
   'mapEmbed',
+  'ruby',
 ] as const
 
 export type RegistryDialogId = (typeof REGISTRY_DIALOG_IDS)[number]
@@ -90,4 +92,5 @@ export const DIALOG_REGISTRY: readonly DialogRegistryEntry[] = [
   { dialogId: 'steps', component: StepsPlugin },
   { dialogId: 'tabs', component: TabsPlugin },
   { dialogId: 'mapEmbed', component: MapEmbedPlugin },
+  { dialogId: 'ruby', component: RubyPlugin },
 ]

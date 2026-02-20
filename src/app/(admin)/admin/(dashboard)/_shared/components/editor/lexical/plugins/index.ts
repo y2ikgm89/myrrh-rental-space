@@ -93,3 +93,5 @@ export {
   INSERT_BLOCK_TEMPLATE_COMMAND,
 } from './BlockTemplatePlugin'
 export { MapEmbedPlugin } from './MapEmbedPlugin'
+
+export { RubyPlugin } from './RubyPlugin'

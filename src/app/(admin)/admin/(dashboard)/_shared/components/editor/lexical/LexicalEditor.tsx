@@ -178,6 +178,7 @@ function EditorInner({
               if (isEditMode) dialogManager.openDialog('link')
             }}
             onAddComment={onAddComment ? handleAddComment : undefined}
+            onOpenRuby={() => dialogManager.openDialog('ruby')}
           />
         )}
         <CommentPlugin onMarkClick={onMarkClick} />
