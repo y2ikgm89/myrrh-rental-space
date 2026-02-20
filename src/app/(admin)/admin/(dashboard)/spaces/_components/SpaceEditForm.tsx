@@ -111,49 +111,6 @@ const TAB_LABELS: Record<TabValue, string> = {
   publish: "公開・SEO",
 };
 
-const TAB_FIELDS: Record<string, string[]> = {
-  basic: [
-    "name",
-    "slug",
-    "description",
-    "address",
-    "access",
-    "capacity",
-    "area",
-  ],
-  pricing: [
-    "hourlyPrice",
-    "dailyPrice",
-    "discountType",
-    "discountValue",
-    "durationDiscountOverride",
-    "taxRateType",
-  ],
-  media: ["mainImageUrl", "imageUrls"],
-  details: ["locationId", "categoryId", "facilities", "termsId"],
-  publish: [
-    "isPublished",
-    "publishedAt",
-    "metaDescription",
-    "metaKeywords",
-    "ogpTitle",
-    "ogpDescription",
-    "ogpImageUrl",
-  ],
-};
-
-function getTabErrorCount(
-  errors: FieldErrors<FormData>,
-  tab: TabValue,
-): number {
-  const fields = TAB_FIELDS[tab];
-  if (!fields) return 0;
-  return fields.filter((field) => {
-    const key = field as keyof FormData;
-    return !!errors[key];
-  }).length;
-}
-
 // =============================================================================
 // Schema（RHF フォーム用 — imageUrls/facilities は object[] で useFieldArray 対応）
 // =============================================================================
@@ -246,6 +203,46 @@ const formSchema = z.object({
 });
 
 type FormData = z.infer<typeof formSchema>;
+
+const TAB_FIELDS: Record<TabValue, (keyof FormData)[]> = {
+  basic: [
+    "name",
+    "slug",
+    "description",
+    "address",
+    "access",
+    "capacity",
+    "area",
+  ],
+  pricing: [
+    "hourlyPrice",
+    "dailyPrice",
+    "discountType",
+    "discountValue",
+    "durationDiscountOverride",
+    "taxRateType",
+  ],
+  media: ["mainImageUrl", "imageUrls"],
+  details: ["locationId", "categoryId", "facilities", "termsId"],
+  publish: [
+    "isPublished",
+    "publishedAt",
+    "metaDescription",
+    "metaKeywords",
+    "ogpTitle",
+    "ogpDescription",
+    "ogpImageUrl",
+  ],
+};
+
+function getTabErrorCount(
+  errors: FieldErrors<FormData>,
+  tab: TabValue,
+): number {
+  const fields = TAB_FIELDS[tab];
+  if (!fields) return 0;
+  return fields.filter((field) => !!errors[field]).length;
+}
 
 // =============================================================================
 // Types（page.tsx から受け取る props）
@@ -444,7 +441,6 @@ export function SpaceEditForm({
   } = useFieldArray({ control, name: "facilities" });
 
   // useWatch（リアクティブな値参照）
-  const _name = useWatch({ control, name: "name" });
   const isPublished = useWatch({ control, name: "isPublished" });
   const termsId = useWatch({ control, name: "termsId" });
   const locationId = useWatch({ control, name: "locationId" });
