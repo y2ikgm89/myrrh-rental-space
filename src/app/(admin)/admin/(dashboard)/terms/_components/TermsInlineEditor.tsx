@@ -14,12 +14,12 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import dynamic from "next/dynamic";
 import {
   EditorHeader,
   SidePanelShell,
   InlineEditorShell,
 } from "@/admin/components/editor/inline";
+import { LazyLexicalEditor } from "@/admin/components/editor/lexical";
 import {
   createTermsWithVersion,
   updateTerms,
@@ -55,23 +55,6 @@ import {
 import type { TermsType } from "@/shared/generated/prisma/client";
 import { TermsStatus } from "@/shared/generated/prisma/enums";
 import type { TermsVersionDetail } from "@/shared/lib/validations/terms";
-
-const LexicalEditor = dynamic(
-  () =>
-    import("@/admin/components/editor/lexical").then((mod) => ({
-      default: mod.LexicalEditor,
-    })),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="h-[500px] flex items-center justify-center bg-muted/50">
-        <div className="animate-pulse text-muted-foreground">
-          エディタを読み込み中...
-        </div>
-      </div>
-    ),
-  },
-);
 
 // =============================================================================
 // Schema
@@ -899,7 +882,7 @@ export function TermsInlineEditor({
     >
       <div className="flex h-full flex-col">
         <div className="min-h-0 flex-1">
-          <LexicalEditor
+          <LazyLexicalEditor
             key={editorKey}
             contentJson={contentJson || undefined}
             contentHtml={
