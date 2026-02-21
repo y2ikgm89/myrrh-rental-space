@@ -6,12 +6,8 @@ set -euo pipefail
 
 cd "$CLAUDE_PROJECT_DIR" || exit 0
 
-# TypeScript ファイルの変更を確認（HEAD との差分）
-# `|| true` で grep 不一致（exit 1）による set -e + pipefail の誤終了を防ぐ
-changed=$(git diff --name-only HEAD 2>/dev/null | grep -E '\.(ts|tsx)$' | head -1 || true)
-
-if [ -z "$changed" ]; then
-  # 変更なし → スキップ
+# `if` 条件式内は set -e の対象外（Bash 仕様）なので grep -q が安全に使える
+if ! git diff --name-only HEAD 2>/dev/null | grep -qE '\.(ts|tsx)$'; then
   exit 0
 fi
 
