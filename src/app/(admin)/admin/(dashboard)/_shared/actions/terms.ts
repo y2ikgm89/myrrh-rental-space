@@ -459,6 +459,21 @@ export const createTermsVersion = withPermission<
     return createValidationError(validation.error);
   }
 
+  // DRAFT バージョンが既に存在する場合はエラー（1規約につき DRAFT は1つまで）
+  const existingDraft = await prisma.termsVersion.findFirst({
+    where: {
+      termsId: validation.data.termsId,
+      status: TermsStatus.DRAFT,
+    },
+    select: { id: true },
+  });
+
+  if (existingDraft) {
+    return createFailure(
+      "下書きが既に存在します。先に公開または削除してください。",
+    );
+  }
+
   // 最新バージョン番号とHTML変換を並列取得
   const [latestVersion, contentHtml] = await Promise.all([
     prisma.termsVersion.findFirst({
