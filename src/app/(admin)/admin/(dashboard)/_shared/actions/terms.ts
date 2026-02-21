@@ -9,17 +9,14 @@ import {
   updateTermsSchema,
   createTermsVersionSchema,
   updateTermsVersionSchema,
-  updateTermsSeoSchema,
   getTermsTypeDefaults,
   type CreateTermsInput,
   type UpdateTermsInput,
   type CreateTermsVersionInput,
   type UpdateTermsVersionInput,
-  type UpdateTermsSeoInput,
   type TermsWithVersion,
   type TermsDetail,
   type TermsVersionDetail,
-  type SiteWideTermsSeo,
 } from "@/shared/lib/validations/terms";
 import {
   createSuccess,
@@ -672,79 +669,3 @@ export const deleteTermsVersion = withPermission<[string]>(
   return createSuccess("バージョンを削除しました");
 });
 
-// =============================================================================
-// Site-Wide Terms SEO Management
-// =============================================================================
-
-/**
- * サイト全体規約のSEO情報を取得（利用規約ページ用）
- */
-export const getSiteWideTermsSeo = withPermission<[], SiteWideTermsSeo | null>(
-  "terms",
-  "read",
-)(async (_user): Promise<ActionResult<SiteWideTermsSeo | null>> => {
-  const terms = await prisma.terms.findFirst({
-    where: {
-      type: TermsType.TERMS_OF_USE,
-      isSiteWide: true,
-    },
-    select: {
-      id: true,
-      title: true,
-      metaDescription: true,
-      metaKeywords: true,
-      ogpTitle: true,
-      ogpDescription: true,
-      ogpImageUrl: true,
-    },
-  });
-
-  return createSuccess("SEO情報を取得しました", toPlainObject(terms));
-});
-
-/**
- * サイト全体規約のSEO情報を更新
- */
-export const updateSiteWideTermsSeo = withPermission<[UpdateTermsSeoInput]>(
-  "terms",
-  "update",
-)(async (_user, input): Promise<ActionResult<void>> => {
-  const validation = updateTermsSeoSchema.safeParse(input);
-  if (!validation.success) {
-    return createValidationError(validation.error);
-  }
-
-  const terms = await prisma.terms.findFirst({
-    where: {
-      type: TermsType.TERMS_OF_USE,
-      isSiteWide: true,
-    },
-    select: { id: true },
-  });
-
-  if (!terms) {
-    return createFailure("サイト全体の利用規約が見つかりません");
-  }
-
-  await prisma.terms.update({
-    where: { id: terms.id },
-    data: {
-      metaDescription: validation.data.metaDescription || null,
-      metaKeywords: validation.data.metaKeywords || null,
-      ogpTitle: validation.data.ogpTitle || null,
-      ogpDescription: validation.data.ogpDescription || null,
-      ogpImageUrl: validation.data.ogpImageUrl || null,
-    },
-  });
-
-  updateTag(CACHE_TAGS.TERMS);
-
-  // Cloudflare CDN キャッシュパージ
-  fireAndForget(purgeTermsCache(), {
-    operation: "purgeTermsCache",
-    category: ErrorCategory.EXTERNAL_API,
-    severity: ErrorSeverity.LOW,
-  });
-
-  return createSuccess("SEO設定を更新しました");
-});

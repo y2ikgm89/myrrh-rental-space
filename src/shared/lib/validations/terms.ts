@@ -94,36 +94,6 @@ export type PublishTermsVersionInput = z.input<typeof publishTermsVersionSchema>
 export type UpdateTermsVersionInput = z.input<typeof updateTermsVersionSchema>
 
 // ==============================================
-// Site-Wide Terms SEO Schemas
-// ==============================================
-
-/**
- * サイト全体規約のSEO更新スキーマ
- */
-export const updateTermsSeoSchema = z.object({
-  metaDescription: z.string().max(160, { error: 'メタディスクリプションは160文字以内です' }).optional(),
-  metaKeywords: z.string().max(200, { error: 'メタキーワードは200文字以内です' }).optional(),
-  ogpTitle: z.string().max(100, { error: 'OGPタイトルは100文字以内です' }).optional(),
-  ogpDescription: z.string().max(200, { error: 'OGP説明は200文字以内です' }).optional(),
-  ogpImageUrl: z.string().url({ error: '有効なURLを入力してください' }).optional().or(z.literal('')),
-})
-
-export type UpdateTermsSeoInput = z.input<typeof updateTermsSeoSchema>
-
-/**
- * サイト全体規約のSEO情報
- */
-export interface SiteWideTermsSeo {
-  id: string
-  title: string
-  metaDescription: string | null
-  metaKeywords: string | null
-  ogpTitle: string | null
-  ogpDescription: string | null
-  ogpImageUrl: string | null
-}
-
-// ==============================================
 // Terms Agreement Schemas
 // ==============================================
 
