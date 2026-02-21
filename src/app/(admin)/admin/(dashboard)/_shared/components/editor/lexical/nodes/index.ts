@@ -311,3 +311,19 @@ export {
   toSpotifyEmbedUrl,
 } from './SpotifyNode'
 export type { SpotifyContentType } from './SpotifyNode'
+
+// Gallery
+export {
+  GalleryContainerNode,
+  $createGalleryContainerNode,
+  $isGalleryContainerNode,
+  galleryColumnsState,
+  galleryStyleState,
+  GalleryItemNode,
+  $createGalleryItemNode,
+  $isGalleryItemNode,
+  galleryItemSrcState,
+  galleryItemAltState,
+  galleryItemCaptionState,
+} from './GalleryNode'
+export type { GalleryColumns, GalleryStyle } from './GalleryNode'

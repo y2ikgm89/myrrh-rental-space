@@ -34,6 +34,7 @@ import { $isAudioNode } from '../nodes/AudioNode'
 import { $isFileNode } from '../nodes/FileNode'
 import { $isFigmaNode } from '../nodes/FigmaNode'
 import { $isSpotifyNode } from '../nodes/SpotifyNode'
+import { $isGalleryContainerNode, $isGalleryItemNode } from '../nodes/GalleryNode'
 import type { InspectableNodeType, InspectableResult } from '../inspector/hooks/inspectable-nodes'
 
 // =============================================================================
@@ -68,6 +69,8 @@ export function getInspectableInfoFromRegistry(node: LexicalNode): InspectableRe
   if ($isFileNode(node)) return { nodeType: 'file', node, nodeKey }
   if ($isFigmaNode(node)) return { nodeType: 'figma', node, nodeKey }
   if ($isSpotifyNode(node)) return { nodeType: 'spotify', node, nodeKey }
+  if ($isGalleryContainerNode(node)) return { nodeType: 'galleryContainer', node, nodeKey }
+  if ($isGalleryItemNode(node)) return { nodeType: 'galleryItem', node, nodeKey }
   return null
 }
 
@@ -79,4 +82,5 @@ export const INSPECTABLE_NODE_TYPES_FROM_REGISTRY: readonly InspectableNodeType[
   'collapsible', 'steps', 'tabs', 'layout',
   'youtube', 'vimeo', 'x', 'instagram', 'pageBreak',
   'mapEmbed', 'code', 'audio', 'file', 'figma', 'spotify',
+  'galleryContainer', 'galleryItem',
 ]

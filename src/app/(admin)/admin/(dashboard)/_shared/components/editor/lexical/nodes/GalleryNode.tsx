@@ -1,0 +1,192 @@
+/**
+ * Gallery Node
+ *
+ * @description 画像ギャラリーを表示するコンポジットノード
+ * GalleryContainerNode + GalleryItemNode の2ノード構成
+ */
+
+'use client'
+
+import type { EditorConfig } from 'lexical'
+import { $create, $getState, $getStateChange, $setState, createState, ElementNode } from 'lexical'
+
+// =============================================================================
+// Types
+// =============================================================================
+
+export type GalleryColumns = 2 | 3 | 4
+export type GalleryStyle = 'grid' | 'masonry'
+
+// =============================================================================
+// GalleryContainerNode States
+// =============================================================================
+
+export const galleryColumnsState = createState('columns', {
+  parse: (v: unknown): GalleryColumns =>
+    v === 2 || v === 3 || v === 4 ? v : 3,
+})
+
+export const galleryStyleState = createState('style', {
+  parse: (v: unknown): GalleryStyle =>
+    v === 'grid' || v === 'masonry' ? v : 'grid',
+})
+
+// =============================================================================
+// GalleryContainerNode
+// =============================================================================
+
+export class GalleryContainerNode extends ElementNode {
+  override $config() {
+    return this.config('gallery-container', {
+      extends: ElementNode,
+      stateConfigs: [
+        { flat: true, stateConfig: galleryColumnsState },
+        { flat: true, stateConfig: galleryStyleState },
+      ],
+    })
+  }
+
+  override isShadowRoot(): boolean {
+    return true
+  }
+
+  override createDOM(_config: EditorConfig): HTMLElement {
+    const div = document.createElement('div')
+    div.setAttribute('data-gallery', 'true')
+    div.setAttribute('data-gallery-columns', String($getState(this, galleryColumnsState)))
+    div.setAttribute('data-gallery-style', $getState(this, galleryStyleState))
+    return div
+  }
+
+  override updateDOM(prevNode: GalleryContainerNode, dom: HTMLElement): boolean {
+    const colsChange = $getStateChange(this, prevNode, galleryColumnsState)
+    const styleChange = $getStateChange(this, prevNode, galleryStyleState)
+    if (colsChange) {
+      const [newCols] = colsChange
+      dom.setAttribute('data-gallery-columns', String(newCols))
+    }
+    if (styleChange) {
+      const [newStyle] = styleChange
+      dom.setAttribute('data-gallery-style', newStyle)
+    }
+    return false
+  }
+
+  override exportDOM() {
+    const div = document.createElement('div')
+    div.setAttribute('data-gallery', 'true')
+    div.setAttribute('data-gallery-columns', String($getState(this, galleryColumnsState)))
+    div.setAttribute('data-gallery-style', $getState(this, galleryStyleState))
+    return { element: div }
+  }
+
+  override canInsertTextBefore(): boolean {
+    return false
+  }
+
+  override canInsertTextAfter(): boolean {
+    return false
+  }
+}
+
+// =============================================================================
+// GalleryItemNode States
+// =============================================================================
+
+export const galleryItemSrcState = createState('src', {
+  parse: (v: unknown): string => (typeof v === 'string' ? v : ''),
+})
+
+export const galleryItemAltState = createState('alt', {
+  parse: (v: unknown): string => (typeof v === 'string' ? v : ''),
+})
+
+export const galleryItemCaptionState = createState('caption', {
+  parse: (v: unknown): string => (typeof v === 'string' ? v : ''),
+})
+
+// =============================================================================
+// GalleryItemNode
+// =============================================================================
+
+export class GalleryItemNode extends ElementNode {
+  override $config() {
+    return this.config('gallery-item', {
+      extends: ElementNode,
+      stateConfigs: [
+        { flat: true, stateConfig: galleryItemSrcState },
+        { flat: true, stateConfig: galleryItemAltState },
+        { flat: true, stateConfig: galleryItemCaptionState },
+      ],
+    })
+  }
+
+  override isShadowRoot(): boolean {
+    return true
+  }
+
+  override createDOM(_config: EditorConfig): HTMLElement {
+    const figure = document.createElement('figure')
+    figure.setAttribute('data-gallery-item', 'true')
+    return figure
+  }
+
+  override updateDOM(): boolean {
+    return false
+  }
+
+  override exportDOM() {
+    const figure = document.createElement('figure')
+    figure.setAttribute('data-gallery-item', 'true')
+    const img = document.createElement('img')
+    img.setAttribute('src', $getState(this, galleryItemSrcState))
+    img.setAttribute('alt', $getState(this, galleryItemAltState))
+    figure.appendChild(img)
+    const caption = $getState(this, galleryItemCaptionState)
+    if (caption) {
+      const figcaption = document.createElement('figcaption')
+      figcaption.textContent = caption
+      figure.appendChild(figcaption)
+    }
+    return { element: figure }
+  }
+
+  override canInsertTextBefore(): boolean {
+    return false
+  }
+
+  override canInsertTextAfter(): boolean {
+    return false
+  }
+}
+
+// =============================================================================
+// Factory Functions
+// =============================================================================
+
+export function $createGalleryContainerNode(columns: GalleryColumns = 3): GalleryContainerNode {
+  const node = $create(GalleryContainerNode)
+  $setState(node, galleryColumnsState, columns)
+  $setState(node, galleryStyleState, 'grid')
+  return node
+}
+
+export function $createGalleryItemNode(params: {
+  src?: string
+  alt?: string
+  caption?: string
+} = {}): GalleryItemNode {
+  const node = $create(GalleryItemNode)
+  $setState(node, galleryItemSrcState, params.src ?? '')
+  $setState(node, galleryItemAltState, params.alt ?? '')
+  $setState(node, galleryItemCaptionState, params.caption ?? '')
+  return node
+}
+
+export function $isGalleryContainerNode(node: unknown): node is GalleryContainerNode {
+  return node instanceof GalleryContainerNode
+}
+
+export function $isGalleryItemNode(node: unknown): node is GalleryItemNode {
+  return node instanceof GalleryItemNode
+}

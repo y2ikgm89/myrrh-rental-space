@@ -32,6 +32,7 @@ import type { AudioNode } from '../../nodes/AudioNode'
 import type { FileNode } from '../../nodes/FileNode'
 import type { FigmaNode } from '../../nodes/FigmaNode'
 import type { SpotifyNode } from '../../nodes/SpotifyNode'
+import type { GalleryContainerNode, GalleryItemNode } from '../../nodes/GalleryNode'
 
 // =============================================================================
 // Types
@@ -58,6 +59,8 @@ export type InspectableNodeType =
   | 'file'
   | 'figma'
   | 'spotify'
+  | 'galleryContainer'
+  | 'galleryItem'
 
 /**
  * 選択中ノード情報のDiscriminated Union型
@@ -86,6 +89,8 @@ export type SelectedNodeInfo =
   | { nodeType: 'file'; node: FileNode; nodeKey: NodeKey }
   | { nodeType: 'figma'; node: FigmaNode; nodeKey: NodeKey }
   | { nodeType: 'spotify'; node: SpotifyNode; nodeKey: NodeKey }
+  | { nodeType: 'galleryContainer'; node: GalleryContainerNode; nodeKey: NodeKey }
+  | { nodeType: 'galleryItem'; node: GalleryItemNode; nodeKey: NodeKey }
   | null
 
 /**

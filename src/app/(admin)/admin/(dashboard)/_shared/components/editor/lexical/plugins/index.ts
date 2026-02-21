@@ -105,3 +105,5 @@ export { FilePlugin } from './FilePlugin'
 export { FigmaPlugin } from './FigmaPlugin'
 
 export { SpotifyPlugin } from './SpotifyPlugin'
+
+export { GalleryPlugin } from './GalleryPlugin'

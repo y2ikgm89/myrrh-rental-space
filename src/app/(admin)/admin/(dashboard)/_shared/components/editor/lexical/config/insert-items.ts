@@ -62,6 +62,7 @@ import {
   Paperclip,
   Figma,
   Music,
+  LayoutGrid,
 } from 'lucide-react'
 import { applyTextCaseToSelection } from '../plugins/TextCasePlugin'
 import { INSERT_PAGE_BREAK_COMMAND } from '../plugins/PageBreakPlugin'
@@ -377,6 +378,17 @@ const INSERT_ITEMS: readonly InsertItem[] = [
     showInToolbar: false,
     showInPicker: true,
     dialogId: 'spotify',
+  },
+  {
+    id: 'gallery',
+    type: 'dialog',
+    label: '画像ギャラリー',
+    icon: LayoutGrid,
+    keywords: ['gallery', 'ギャラリー', 'images', '画像', 'photos', '写真'],
+    category: 'media',
+    showInToolbar: false,
+    showInPicker: true,
+    dialogId: 'gallery',
   },
   {
     id: 'table',
