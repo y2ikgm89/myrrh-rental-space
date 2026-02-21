@@ -1,19 +1,22 @@
-'use server'
+"use server";
 
-import { prisma } from '@/shared/lib/prisma'
-import { updateTag } from 'next/cache'
-import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
-import { createSuccess, createFailure } from '@/admin/types/server-actions'
-import { createValidationError } from '@/shared/lib/action-helpers'
-import { withPermission } from '@/admin/lib/server-action-helpers'
-import type { NewsWhereInput } from '@/shared/types/prisma'
-import { checkReadPermissionFor } from '@/admin/lib/permissions'
-import { purgeNewsCache } from '@/shared/lib/cloudflare'
-import { fireAndForget } from '@/shared/lib/async-utils'
-import { ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
-import { checkSlugAvailability, getSlugErrorMessage } from '@/shared/lib/slug-validation'
-import { renderEditorStateToHtmlLazy } from '@/admin/lib/lazy-renderer'
-import { toPlainArray, toPlainObject } from '@/shared/lib/serialize'
+import { prisma } from "@/shared/lib/prisma";
+import { updateTag } from "next/cache";
+import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { createSuccess, createFailure } from "@/admin/types/server-actions";
+import { createValidationError } from "@/shared/lib/action-helpers";
+import { withPermission } from "@/admin/lib/server-action-helpers";
+import type { NewsWhereInput } from "@/shared/types/prisma";
+import { checkReadPermissionFor } from "@/admin/lib/permissions";
+import { purgeNewsCache } from "@/shared/lib/cloudflare";
+import { fireAndForget } from "@/shared/lib/async-utils";
+import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
+import {
+  checkSlugAvailability,
+  getSlugErrorMessage,
+} from "@/shared/lib/slug-validation";
+import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
+import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 
 // Types and schemas from centralized validation file
 import {
@@ -26,7 +29,7 @@ import {
   type NewsPagination,
   type CreateNewsInput,
   type UpdateNewsInput,
-} from '@/admin/lib/validations/news'
+} from "@/admin/lib/validations/news";
 
 // Re-export types for consumers
 export type {
@@ -37,13 +40,13 @@ export type {
   NewsPagination,
   CreateNewsInput,
   UpdateNewsInput,
-} from '@/admin/lib/validations/news'
+} from "@/admin/lib/validations/news";
 
 // =============================================================================
 // Helper Functions
 // =============================================================================
 
-const checkReadPermission = checkReadPermissionFor('news')
+const checkReadPermission = checkReadPermissionFor("news");
 
 // =============================================================================
 // Actions
@@ -54,36 +57,36 @@ const checkReadPermission = checkReadPermissionFor('news')
  */
 export async function getNewsList(
   filters: NewsFilters = {},
-  pagination: NewsPagination = {}
+  pagination: NewsPagination = {},
 ): Promise<GetNewsListResult> {
-  const hasPermission = await checkReadPermission()
+  const hasPermission = await checkReadPermission();
   if (!hasPermission) {
-    return { news: [], total: 0, page: 1, limit: 10, totalPages: 0 }
+    return { news: [], total: 0, page: 1, limit: 10, totalPages: 0 };
   }
 
-  const { status, search } = filters
+  const { status, search } = filters;
 
   const {
     page = 1,
     limit = 10,
-    sortBy = 'createdAt',
-    sortOrder = 'desc',
-  } = pagination
+    sortBy = "createdAt",
+    sortOrder = "desc",
+  } = pagination;
 
   // Where条件を構築
-  const where: NewsWhereInput = {}
+  const where: NewsWhereInput = {};
 
-  if (status === 'PUBLISHED') {
-    where.isPublished = true
-  } else if (status === 'DRAFT') {
-    where.isPublished = false
+  if (status === "PUBLISHED") {
+    where.isPublished = true;
+  } else if (status === "DRAFT") {
+    where.isPublished = false;
   }
 
   if (search) {
     where.OR = [
-      { title: { contains: search, mode: 'insensitive' } },
-      { contentHtml: { contains: search, mode: 'insensitive' } },
-    ]
+      { title: { contains: search, mode: "insensitive" } },
+      { contentHtml: { contains: search, mode: "insensitive" } },
+    ];
   }
 
   // 総件数とお知らせ一覧を並列取得（N+1解消）
@@ -97,7 +100,7 @@ export async function getNewsList(
       skip: (page - 1) * limit,
       take: limit,
     }),
-  ])
+  ]);
 
   return {
     news: toPlainArray(news),
@@ -105,51 +108,53 @@ export async function getNewsList(
     page,
     limit,
     totalPages: Math.ceil(total / limit),
-  }
+  };
 }
 
 /**
  * お知らせ詳細を取得
  */
 export async function getNewsById(id: string): Promise<NewsData | null> {
-  const hasPermission = await checkReadPermission()
+  const hasPermission = await checkReadPermission();
   if (!hasPermission) {
-    return null
+    return null;
   }
 
   const news = await prisma.news.findUnique({
     where: { id },
-  })
+  });
 
-  if (!news) return null
+  if (!news) return null;
 
-  return toPlainObject(news)
+  return toPlainObject(news);
 }
 
 /**
  * お知らせを作成
  */
 export const createNews = withPermission<[CreateNewsInput], { id: string }>(
-  'news',
-  'create'
+  "news",
+  "create",
 )(async (_user, data) => {
-  const parsed = createNewsSchema.safeParse(data)
+  const parsed = createNewsSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error)
+    return createValidationError(parsed.error);
   }
 
-  const { slug, title, contentJson } = parsed.data
+  const { slug, title, contentJson } = parsed.data;
 
   // スラッグの使用可能チェック（予約パス＋全コンテンツタイプ横断）
   const slugCheck = await checkSlugAvailability(slug, {
-    currentType: 'news',
-  })
+    currentType: "news",
+  });
   if (!slugCheck.available) {
-    return createFailure(getSlugErrorMessage(slugCheck.reason))
+    return createFailure(getSlugErrorMessage(slugCheck.reason));
   }
 
   // JSON → HTML 変換（空コンテンツの場合はスキップ）
-  const contentHtml = contentJson ? await renderEditorStateToHtmlLazy(contentJson) : ''
+  const contentHtml = contentJson
+    ? await renderEditorStateToHtmlLazy(contentJson)
+    : "";
 
   const news = await prisma.news.create({
     data: {
@@ -159,35 +164,39 @@ export const createNews = withPermission<[CreateNewsInput], { id: string }>(
       contentHtml,
       isPublished: false,
     },
-  })
+  });
 
-  updateTag(CACHE_TAGS.NEWS)
+  updateTag(CACHE_TAGS.NEWS);
 
   // Cloudflare CDN キャッシュパージ
-  fireAndForget(purgeNewsCache(news.id), { operation: 'purgeNewsCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
+  fireAndForget(purgeNewsCache(news.id), {
+    operation: "purgeNewsCache",
+    category: ErrorCategory.EXTERNAL_API,
+    severity: ErrorSeverity.LOW,
+  });
 
-  return createSuccess('お知らせを作成しました', { id: news.id })
-})
+  return createSuccess("お知らせを作成しました", { id: news.id });
+});
 
 /**
  * お知らせを更新
  */
 export const updateNews = withPermission<[string, UpdateNewsInput], void>(
-  'news',
-  'update'
+  "news",
+  "update",
 )(async (_user, id, data) => {
-  const parsed = updateNewsSchema.safeParse(data)
+  const parsed = updateNewsSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error)
+    return createValidationError(parsed.error);
   }
 
   const existingNews = await prisma.news.findUnique({
     where: { id },
     select: { id: true },
-  })
+  });
 
   if (!existingNews) {
-    return createFailure('お知らせが見つかりません')
+    return createFailure("お知らせが見つかりません");
   }
 
   const {
@@ -201,19 +210,19 @@ export const updateNews = withPermission<[string, UpdateNewsInput], void>(
     ogpTitle,
     ogpDescription,
     ogpImageUrl,
-  } = parsed.data
+  } = parsed.data;
 
   // スラッグの使用可能チェック（予約パス＋全コンテンツタイプ横断、自分自身は除外）
   const slugCheck = await checkSlugAvailability(slug, {
-    currentType: 'news',
+    currentType: "news",
     currentId: id,
-  })
+  });
   if (!slugCheck.available) {
-    return createFailure(getSlugErrorMessage(slugCheck.reason))
+    return createFailure(getSlugErrorMessage(slugCheck.reason));
   }
 
   // JSON → HTML 変換
-  const contentHtml = await renderEditorStateToHtmlLazy(contentJson)
+  const contentHtml = await renderEditorStateToHtmlLazy(contentJson);
 
   await prisma.news.update({
     where: { id },
@@ -232,68 +241,83 @@ export const updateNews = withPermission<[string, UpdateNewsInput], void>(
       ogpDescription: ogpDescription ?? null,
       ogpImageUrl: ogpImageUrl ?? null,
     },
-  })
+  });
 
-  updateTag(CACHE_TAGS.NEWS)
-  updateTag(getCacheTag.news.detail(id))
+  updateTag(CACHE_TAGS.NEWS);
+  updateTag(getCacheTag.news.detail(id));
 
   // Cloudflare CDN キャッシュパージ
-  fireAndForget(purgeNewsCache(id), { operation: 'purgeNewsCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
+  fireAndForget(purgeNewsCache(id), {
+    operation: "purgeNewsCache",
+    category: ErrorCategory.EXTERNAL_API,
+    severity: ErrorSeverity.LOW,
+  });
 
-  return createSuccess('お知らせを保存しました')
-})
+  return createSuccess("お知らせを保存しました");
+});
 
 /**
  * お知らせを削除
  */
 export const deleteNews = withPermission<[string], void>(
-  'news',
-  'delete'
+  "news",
+  "delete",
 )(async (_user, id) => {
   const news = await prisma.news.findUnique({
     where: { id },
     select: { id: true },
-  })
+  });
 
   if (!news) {
-    return createFailure('お知らせが見つかりません')
+    return createFailure("お知らせが見つかりません");
   }
 
   await prisma.news.delete({
     where: { id },
-  })
+  });
 
-  updateTag(CACHE_TAGS.NEWS)
+  updateTag(CACHE_TAGS.NEWS);
 
   // Cloudflare CDN キャッシュパージ
-  fireAndForget(purgeNewsCache(id), { operation: 'purgeNewsCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
+  fireAndForget(purgeNewsCache(id), {
+    operation: "purgeNewsCache",
+    category: ErrorCategory.EXTERNAL_API,
+    severity: ErrorSeverity.LOW,
+  });
 
-  return createSuccess('お知らせを削除しました')
-})
+  return createSuccess("お知らせを削除しました");
+});
 
 /**
  * お知らせを公開（バージョン自動作成）
  */
 export const publishNews = withPermission<[string], void>(
-  'news',
-  'publish'
+  "news",
+  "publish",
 )(async (user, id) => {
-  const news = await prisma.news.findUnique({
-    where: { id },
-    select: { id: true, publishedAt: true, contentHtml: true, contentJson: true },
-  })
+  // お知らせデータと最新バージョン番号を並列取得
+  const [news, latestVersion] = await Promise.all([
+    prisma.news.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        publishedAt: true,
+        contentHtml: true,
+        contentJson: true,
+      },
+    }),
+    prisma.newsVersion.findFirst({
+      where: { newsId: id },
+      orderBy: { version: "desc" },
+      select: { version: true },
+    }),
+  ]);
 
   if (!news) {
-    return createFailure('お知らせが見つかりません')
+    return createFailure("お知らせが見つかりません");
   }
 
-  // 次のバージョン番号を取得
-  const latestVersion = await prisma.newsVersion.findFirst({
-    where: { newsId: id },
-    orderBy: { version: 'desc' },
-    select: { version: true },
-  })
-  const nextVersion = (latestVersion?.version ?? 0) + 1
+  const nextVersion = (latestVersion?.version ?? 0) + 1;
 
   // トランザクションで公開 + バージョン作成
   await prisma.$transaction([
@@ -313,31 +337,35 @@ export const publishNews = withPermission<[string], void>(
         createdBy: user.id,
       },
     }),
-  ])
+  ]);
 
-  updateTag(CACHE_TAGS.NEWS)
-  updateTag(getCacheTag.news.detail(id))
+  updateTag(CACHE_TAGS.NEWS);
+  updateTag(getCacheTag.news.detail(id));
 
   // Cloudflare CDN キャッシュパージ
-  fireAndForget(purgeNewsCache(id), { operation: 'purgeNewsCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
+  fireAndForget(purgeNewsCache(id), {
+    operation: "purgeNewsCache",
+    category: ErrorCategory.EXTERNAL_API,
+    severity: ErrorSeverity.LOW,
+  });
 
-  return createSuccess(`公開しました（バージョン ${nextVersion}）`)
-})
+  return createSuccess(`公開しました（バージョン ${nextVersion}）`);
+});
 
 /**
  * お知らせを非公開（下書きに戻す）
  */
 export const unpublishNews = withPermission<[string], void>(
-  'news',
-  'publish'
+  "news",
+  "publish",
 )(async (_user, id) => {
   const news = await prisma.news.findUnique({
     where: { id },
     select: { id: true },
-  })
+  });
 
   if (!news) {
-    return createFailure('お知らせが見つかりません')
+    return createFailure("お知らせが見つかりません");
   }
 
   await prisma.news.update({
@@ -345,40 +373,46 @@ export const unpublishNews = withPermission<[string], void>(
     data: {
       isPublished: false,
     },
-  })
+  });
 
-  updateTag(CACHE_TAGS.NEWS)
-  updateTag(getCacheTag.news.detail(id))
+  updateTag(CACHE_TAGS.NEWS);
+  updateTag(getCacheTag.news.detail(id));
 
   // Cloudflare CDN キャッシュパージ
-  fireAndForget(purgeNewsCache(id), { operation: 'purgeNewsCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
+  fireAndForget(purgeNewsCache(id), {
+    operation: "purgeNewsCache",
+    category: ErrorCategory.EXTERNAL_API,
+    severity: ErrorSeverity.LOW,
+  });
 
-  return createSuccess('下書きに戻しました')
-})
+  return createSuccess("下書きに戻しました");
+});
 
 /**
  * バックアップを作成（バージョン手動作成）
  */
 export const createNewsBackup = withPermission<[string], { version: number }>(
-  'news',
-  'update'
+  "news",
+  "update",
 )(async (user, id) => {
-  const news = await prisma.news.findUnique({
-    where: { id },
-    select: { id: true, contentHtml: true, contentJson: true },
-  })
+  // お知らせデータと最新バージョン番号を並列取得
+  const [news, latestVersion] = await Promise.all([
+    prisma.news.findUnique({
+      where: { id },
+      select: { id: true, contentHtml: true, contentJson: true },
+    }),
+    prisma.newsVersion.findFirst({
+      where: { newsId: id },
+      orderBy: { version: "desc" },
+      select: { version: true },
+    }),
+  ]);
 
   if (!news) {
-    return createFailure('お知らせが見つかりません')
+    return createFailure("お知らせが見つかりません");
   }
 
-  // 次のバージョン番号を取得
-  const latestVersion = await prisma.newsVersion.findFirst({
-    where: { newsId: id },
-    orderBy: { version: 'desc' },
-    select: { version: true },
-  })
-  const nextVersion = (latestVersion?.version ?? 0) + 1
+  const nextVersion = (latestVersion?.version ?? 0) + 1;
 
   await prisma.newsVersion.create({
     data: {
@@ -388,44 +422,49 @@ export const createNewsBackup = withPermission<[string], { version: number }>(
       contentJson: news.contentJson ?? undefined,
       createdBy: user.id,
     },
-  })
+  });
 
-  return createSuccess(`バックアップを作成しました（バージョン ${nextVersion}）`, { version: nextVersion })
-})
+  return createSuccess(
+    `バックアップを作成しました（バージョン ${nextVersion}）`,
+    { version: nextVersion },
+  );
+});
 
 /**
  * バージョン履歴を取得
  */
-export async function getNewsVersions(newsId: string): Promise<NewsVersionData[]> {
-  const hasPermission = await checkReadPermission()
+export async function getNewsVersions(
+  newsId: string,
+): Promise<NewsVersionData[]> {
+  const hasPermission = await checkReadPermission();
   if (!hasPermission) {
-    return []
+    return [];
   }
 
   const versions = await prisma.newsVersion.findMany({
     where: { newsId },
-    orderBy: { version: 'desc' },
-  })
+    orderBy: { version: "desc" },
+  });
 
-  return toPlainArray(versions)
+  return toPlainArray(versions);
 }
 
 /**
  * バージョンを復元
  */
 export const restoreNewsVersion = withPermission<[string, number], void>(
-  'news',
-  'update'
+  "news",
+  "update",
 )(async (_user, newsId, version) => {
   const versionData = await prisma.newsVersion.findUnique({
     where: {
       newsId_version: { newsId, version },
     },
     select: { contentHtml: true, contentJson: true },
-  })
+  });
 
   if (!versionData) {
-    return createFailure('バージョンが見つかりません')
+    return createFailure("バージョンが見つかりません");
   }
 
   await prisma.news.update({
@@ -435,40 +474,44 @@ export const restoreNewsVersion = withPermission<[string, number], void>(
       contentJson: versionData.contentJson ?? undefined,
       isPublished: false,
     },
-  })
+  });
 
-  updateTag(CACHE_TAGS.NEWS)
-  updateTag(getCacheTag.news.detail(newsId))
+  updateTag(CACHE_TAGS.NEWS);
+  updateTag(getCacheTag.news.detail(newsId));
 
   // Cloudflare CDN キャッシュパージ
-  fireAndForget(purgeNewsCache(newsId), { operation: 'purgeNewsCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
+  fireAndForget(purgeNewsCache(newsId), {
+    operation: "purgeNewsCache",
+    category: ErrorCategory.EXTERNAL_API,
+    severity: ErrorSeverity.LOW,
+  });
 
-  return createSuccess(`バージョン ${version} を復元しました（下書き状態）`)
-})
+  return createSuccess(`バージョン ${version} を復元しました（下書き状態）`);
+});
 
 // =============================================================================
 // Public Functions (認証不要)
 // =============================================================================
 
 export type PublicNews = {
-  id: string
-  slug: string
-  title: string
-  publishedAt: Date
-}
+  id: string;
+  slug: string;
+  title: string;
+  publishedAt: Date;
+};
 
 export type GetPublishedNewsListOptions = {
-  take?: number
-}
+  take?: number;
+};
 
 /**
  * 公開済みお知らせ一覧を取得（認証不要）
  * ホームページや公開一覧ページで使用
  */
 export async function getPublishedNewsList(
-  options: GetPublishedNewsListOptions = {}
+  options: GetPublishedNewsListOptions = {},
 ): Promise<PublicNews[]> {
-  const { take = 5 } = options
+  const { take = 5 } = options;
 
   const newsItems = await prisma.news.findMany({
     where: {
@@ -482,10 +525,10 @@ export async function getPublishedNewsList(
       publishedAt: true,
     },
     orderBy: {
-      publishedAt: 'desc',
+      publishedAt: "desc",
     },
     take,
-  })
+  });
 
   return toPlainArray(
     newsItems
@@ -495,6 +538,6 @@ export async function getPublishedNewsList(
         slug: item.slug,
         title: item.title,
         publishedAt: item.publishedAt!,
-      }))
-  )
+      })),
+  );
 }

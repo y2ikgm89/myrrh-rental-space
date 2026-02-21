@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { SearchParams } from "nuqs/server";
 import { SpaceManagementTabs } from "./_components/SpaceManagementTabs";
 import { SpaceTabContent } from "./_components/SpaceTabContent";
 import { LocationTabContent } from "./_components/LocationTabContent";
@@ -9,24 +10,23 @@ export const metadata: Metadata = {
   title: "スペース管理 | Myrrh Rental Space",
 };
 
-type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
-
 type PageProps = {
-  searchParams: SearchParams;
+  searchParams: Promise<SearchParams>;
 };
 
 export default async function SpacesPage({ searchParams }: PageProps) {
   await connection();
+
   return (
     <div className="space-y-6">
       {/* ページヘッダー */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">スペース管理</h1>
-          <p className="text-sm text-muted-foreground sm:text-base">
-            スペース・場所・カテゴリーを一元管理します
-          </p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">
+          スペース管理
+        </h1>
+        <p className="text-sm text-muted-foreground sm:text-base">
+          スペース・場所・カテゴリーを一元管理します
+        </p>
       </div>
 
       {/* タブコンテンツ */}

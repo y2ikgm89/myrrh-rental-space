@@ -1,6 +1,6 @@
-'use client'
+"use client";
 
-import type { UseFormReturn } from 'react-hook-form'
+import type { UseFormReturn } from "react-hook-form";
 import {
   Button,
   Input,
@@ -16,27 +16,32 @@ import {
   SelectTrigger,
   SelectValue,
   Switch,
-} from '@/admin/components/ui'
-import { isValidSocialPlatform } from '@/shared/lib/validations/enums'
-import type { NavFormData, SocialFormData, NavigationItemData, SocialLinkData } from './types'
-import { platformLabels } from './types'
+} from "@/admin/components/ui";
+import { isValidSocialPlatform } from "@/shared/lib/validations/enums";
+import type {
+  NavFormData,
+  SocialFormData,
+  NavigationItemData,
+  SocialLinkData,
+} from "./types";
+import { platformLabels } from "./types";
 
 // =============================================================================
 // Navigation Dialog Component
 // =============================================================================
 
 type NavigationDialogProps = {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  form: UseFormReturn<NavFormData>
-  editingItem: NavigationItemData | null
-  isPending: boolean
-  navIsExternal: boolean
-  navIsActive: boolean
-  navParentId: string | null
-  parentOptions: NavigationItemData[]
-  onSubmit: (data: NavFormData) => void
-}
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  form: UseFormReturn<NavFormData>;
+  editingItem: NavigationItemData | null;
+  isPending: boolean;
+  navIsExternal: boolean;
+  navIsActive: boolean;
+  navParentId: string | null;
+  parentOptions: NavigationItemData[];
+  onSubmit: (data: NavFormData) => void;
+};
 
 export function NavigationDialog({
   open,
@@ -56,7 +61,7 @@ export function NavigationDialog({
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogHeader>
             <DialogTitle>
-              {editingItem ? 'メニュー編集' : 'メニュー追加'}
+              {editingItem ? "メニュー編集" : "メニュー追加"}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -64,7 +69,7 @@ export function NavigationDialog({
               <Label htmlFor="nav-label">ラベル</Label>
               <Input
                 id="nav-label"
-                {...form.register('label')}
+                {...form.register("label")}
                 placeholder="メニューラベル"
                 disabled={isPending}
               />
@@ -79,7 +84,7 @@ export function NavigationDialog({
               <Label htmlFor="nav-url">URL</Label>
               <Input
                 id="nav-url"
-                {...form.register('url')}
+                {...form.register("url")}
                 placeholder="/about"
                 disabled={isPending}
               />
@@ -91,11 +96,13 @@ export function NavigationDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="nav-parentId">親メニュー（サブメニューの場合）</Label>
+              <Label htmlFor="nav-parentId">
+                親メニュー（サブメニューの場合）
+              </Label>
               <Select
-                value={navParentId || 'none'}
+                value={navParentId || "none"}
                 onValueChange={(value) =>
-                  form.setValue('parentId', value === 'none' ? null : value)
+                  form.setValue("parentId", value === "none" ? null : value)
                 }
                 disabled={isPending}
               >
@@ -121,7 +128,9 @@ export function NavigationDialog({
               <Switch
                 id="nav-isExternal"
                 checked={navIsExternal}
-                onCheckedChange={(checked) => form.setValue('isExternal', checked)}
+                onCheckedChange={(checked) =>
+                  form.setValue("isExternal", checked)
+                }
                 disabled={isPending}
               />
             </div>
@@ -131,7 +140,9 @@ export function NavigationDialog({
               <Switch
                 id="nav-isActive"
                 checked={navIsActive}
-                onCheckedChange={(checked) => form.setValue('isActive', checked)}
+                onCheckedChange={(checked) =>
+                  form.setValue("isActive", checked)
+                }
                 disabled={isPending}
               />
             </div>
@@ -146,13 +157,19 @@ export function NavigationDialog({
               キャンセル
             </Button>
             <Button type="submit" disabled={isPending}>
-              {isPending ? (editingItem ? '更新中...' : '作成中...') : editingItem ? '更新' : '作成'}
+              {isPending && editingItem
+                ? "更新中..."
+                : isPending
+                  ? "作成中..."
+                  : editingItem
+                    ? "更新"
+                    : "作成"}
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
 
 // =============================================================================
@@ -160,17 +177,17 @@ export function NavigationDialog({
 // =============================================================================
 
 type SocialLinkDialogProps = {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  form: UseFormReturn<SocialFormData>
-  editingLink: SocialLinkData | null
-  isPending: boolean
-  socialPlatform: SocialFormData['platform']
-  socialIsActive: boolean
-  socialShowOnDesktop: boolean
-  socialShowOnMobile: boolean
-  onSubmit: (data: SocialFormData) => void
-}
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  form: UseFormReturn<SocialFormData>;
+  editingLink: SocialLinkData | null;
+  isPending: boolean;
+  socialPlatform: SocialFormData["platform"];
+  socialIsActive: boolean;
+  socialShowOnDesktop: boolean;
+  socialShowOnMobile: boolean;
+  onSubmit: (data: SocialFormData) => void;
+};
 
 export function SocialLinkDialog({
   open,
@@ -190,7 +207,7 @@ export function SocialLinkDialog({
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogHeader>
             <DialogTitle>
-              {editingLink ? 'SNSリンク編集' : 'SNSリンク追加'}
+              {editingLink ? "SNSリンク編集" : "SNSリンク追加"}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -200,7 +217,7 @@ export function SocialLinkDialog({
                 value={socialPlatform}
                 onValueChange={(value) => {
                   if (isValidSocialPlatform(value)) {
-                    form.setValue('platform', value)
+                    form.setValue("platform", value);
                   }
                 }}
                 disabled={isPending}
@@ -222,7 +239,7 @@ export function SocialLinkDialog({
               <Label htmlFor="social-url">URL</Label>
               <Input
                 id="social-url"
-                {...form.register('url')}
+                {...form.register("url")}
                 placeholder="https://twitter.com/..."
                 disabled={isPending}
               />
@@ -238,7 +255,9 @@ export function SocialLinkDialog({
               <Switch
                 id="social-isActive"
                 checked={socialIsActive}
-                onCheckedChange={(checked) => form.setValue('isActive', checked)}
+                onCheckedChange={(checked) =>
+                  form.setValue("isActive", checked)
+                }
                 disabled={isPending}
               />
             </div>
@@ -250,7 +269,9 @@ export function SocialLinkDialog({
                 <Switch
                   id="social-showOnDesktop"
                   checked={socialShowOnDesktop}
-                  onCheckedChange={(checked) => form.setValue('showOnDesktop', checked)}
+                  onCheckedChange={(checked) =>
+                    form.setValue("showOnDesktop", checked)
+                  }
                   disabled={isPending}
                 />
               </div>
@@ -259,7 +280,9 @@ export function SocialLinkDialog({
                 <Switch
                   id="social-showOnMobile"
                   checked={socialShowOnMobile}
-                  onCheckedChange={(checked) => form.setValue('showOnMobile', checked)}
+                  onCheckedChange={(checked) =>
+                    form.setValue("showOnMobile", checked)
+                  }
                   disabled={isPending}
                 />
               </div>
@@ -275,11 +298,17 @@ export function SocialLinkDialog({
               キャンセル
             </Button>
             <Button type="submit" disabled={isPending}>
-              {isPending ? (editingLink ? '更新中...' : '作成中...') : editingLink ? '更新' : '作成'}
+              {isPending && editingLink
+                ? "更新中..."
+                : isPending
+                  ? "作成中..."
+                  : editingLink
+                    ? "更新"
+                    : "作成"}
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

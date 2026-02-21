@@ -359,27 +359,29 @@ export const publishPost = withPermission<[string], void>(
   "post",
   "publish",
 )(async (user, id) => {
-  const post = await prisma.post.findUnique({
-    where: { id },
-    select: {
-      id: true,
-      slug: true,
-      publishedAt: true,
-      contentHtml: true,
-      contentJson: true,
-    },
-  });
+  // 投稿データと最新バージョン番号を並列取得
+  const [post, latestVersion] = await Promise.all([
+    prisma.post.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        slug: true,
+        publishedAt: true,
+        contentHtml: true,
+        contentJson: true,
+      },
+    }),
+    prisma.postVersion.findFirst({
+      where: { postId: id },
+      orderBy: { version: "desc" },
+      select: { version: true },
+    }),
+  ]);
 
   if (!post) {
     return createFailure("投稿記事が見つかりません");
   }
 
-  // 次のバージョン番号を取得
-  const latestVersion = await prisma.postVersion.findFirst({
-    where: { postId: id },
-    orderBy: { version: "desc" },
-    select: { version: true },
-  });
   const nextVersion = (latestVersion?.version ?? 0) + 1;
 
   // トランザクションで公開 + バージョン作成
@@ -458,21 +460,23 @@ export const createPostBackup = withPermission<[string], { version: number }>(
   "post",
   "update",
 )(async (user, id) => {
-  const post = await prisma.post.findUnique({
-    where: { id },
-    select: { id: true, contentHtml: true, contentJson: true },
-  });
+  // 投稿データと最新バージョン番号を並列取得
+  const [post, latestVersion] = await Promise.all([
+    prisma.post.findUnique({
+      where: { id },
+      select: { id: true, contentHtml: true, contentJson: true },
+    }),
+    prisma.postVersion.findFirst({
+      where: { postId: id },
+      orderBy: { version: "desc" },
+      select: { version: true },
+    }),
+  ]);
 
   if (!post) {
     return createFailure("投稿記事が見つかりません");
   }
 
-  // 次のバージョン番号を取得
-  const latestVersion = await prisma.postVersion.findFirst({
-    where: { postId: id },
-    orderBy: { version: "desc" },
-    select: { version: true },
-  });
   const nextVersion = (latestVersion?.version ?? 0) + 1;
 
   await prisma.postVersion.create({
@@ -680,23 +684,24 @@ export const updatePostCategory = withPermission<
     return createValidationError(parsed.error);
   }
 
-  const existingCategory = await prisma.postCategory.findUnique({
-    where: { id },
-    select: { id: true },
-  });
+  // 既存確認とスラッグ重複チェックを並列実行
+  const [existingCategory, duplicateSlug] = await Promise.all([
+    prisma.postCategory.findUnique({
+      where: { id },
+      select: { id: true },
+    }),
+    prisma.postCategory.findFirst({
+      where: {
+        slug: parsed.data.slug,
+        id: { not: id },
+      },
+      select: { id: true },
+    }),
+  ]);
 
   if (!existingCategory) {
     return createFailure("カテゴリが見つかりません");
   }
-
-  // スラッグの重複チェック（自分以外）
-  const duplicateSlug = await prisma.postCategory.findFirst({
-    where: {
-      slug: parsed.data.slug,
-      id: { not: id },
-    },
-    select: { id: true },
-  });
   if (duplicateSlug) {
     return createFailure("このスラッグは既に使用されています");
   }
@@ -926,18 +931,20 @@ export const createPostTag = withPermission<[PostTagInput], { id: string }>(
     return createValidationError(parsed.error);
   }
 
-  // 名前の重複チェック
-  const existingName = await prisma.postTag.findUnique({
-    where: { name: parsed.data.name },
-  });
+  // 名前とスラッグの重複チェック（並列実行）
+  const [existingName, existingSlug] = await Promise.all([
+    prisma.postTag.findUnique({
+      where: { name: parsed.data.name },
+      select: { id: true },
+    }),
+    prisma.postTag.findUnique({
+      where: { slug: parsed.data.slug },
+      select: { id: true },
+    }),
+  ]);
   if (existingName) {
     return createFailure("このタグ名は既に使用されています");
   }
-
-  // スラッグの重複チェック
-  const existingSlug = await prisma.postTag.findUnique({
-    where: { slug: parsed.data.slug },
-  });
   if (existingSlug) {
     return createFailure("このスラッグは既に使用されています");
   }

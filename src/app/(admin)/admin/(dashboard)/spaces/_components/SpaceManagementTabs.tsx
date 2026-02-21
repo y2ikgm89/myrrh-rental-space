@@ -1,39 +1,38 @@
-'use client'
+"use client";
 
-/**
- * スペース管理タブコンポーネント
- *
- * スペース・場所・カテゴリーを1ページに統合
- * nuqs でURL状態管理（?tab=spaces|locations|categories）
- */
-
-import { useQueryState } from 'nuqs'
-import { parseAsStringLiteral } from 'nuqs'
+import { useQueryState, parseAsStringLiteral } from "nuqs";
 import {
   Tabs,
   TabsList,
   TabsTrigger,
   TabsContent,
-} from '@/admin/components/ui/tabs'
-import type { ReactNode } from 'react'
+} from "@/admin/components/ui/tabs";
+import type { ReactNode } from "react";
+import Link from "next/link";
+import { Button } from "@/admin/components/ui";
+import { CreateCategoryDialog } from "../../space-categories/_components/CreateCategoryDialog";
 
 // =============================================================================
 // 型定義
 // =============================================================================
 
-type TabValue = 'spaces' | 'locations' | 'categories'
+type TabValue = "spaces" | "locations" | "categories";
 
-const TAB_VALUES: [TabValue, ...TabValue[]] = ['spaces', 'locations', 'categories']
-const TAB_VALUES_SET = new Set<string>(TAB_VALUES)
+const TAB_VALUES: [TabValue, ...TabValue[]] = [
+  "spaces",
+  "locations",
+  "categories",
+];
+const TAB_VALUES_SET = new Set<string>(TAB_VALUES);
 
 function isValidTabValue(value: string): value is TabValue {
-  return TAB_VALUES_SET.has(value)
+  return TAB_VALUES_SET.has(value);
 }
 
 interface SpaceManagementTabsProps {
-  spacesContent: ReactNode
-  locationsContent: ReactNode
-  categoriesContent: ReactNode
+  spacesContent: ReactNode;
+  locationsContent: ReactNode;
+  categoriesContent: ReactNode;
 }
 
 // =============================================================================
@@ -46,27 +45,46 @@ export function SpaceManagementTabs({
   categoriesContent,
 }: SpaceManagementTabsProps) {
   const [activeTab, setActiveTab] = useQueryState(
-    'tab',
-    parseAsStringLiteral(TAB_VALUES).withDefault('spaces')
-  )
+    "tab",
+    parseAsStringLiteral(TAB_VALUES)
+      .withDefault("spaces")
+      .withOptions({ history: "push", shallow: true }),
+  );
 
   const handleTabChange = (value: string) => {
-    if (isValidTabValue(value)) {
-      setActiveTab(value)
-    }
-  }
+    if (isValidTabValue(value)) void setActiveTab(value);
+  };
 
   return (
     <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-      <TabsList className="mb-2">
-        <TabsTrigger value="spaces">スペース</TabsTrigger>
-        <TabsTrigger value="locations">場所</TabsTrigger>
-        <TabsTrigger value="categories">カテゴリー</TabsTrigger>
-      </TabsList>
+      <div className="mb-2 flex items-center justify-between">
+        <TabsList>
+          <TabsTrigger value="spaces">スペース</TabsTrigger>
+          <TabsTrigger value="locations">場所</TabsTrigger>
+          <TabsTrigger value="categories">カテゴリー</TabsTrigger>
+        </TabsList>
+        {activeTab === "spaces" && (
+          <Button asChild>
+            <Link href="/admin/spaces/new">新規作成</Link>
+          </Button>
+        )}
+        {activeTab === "locations" && (
+          <Button asChild>
+            <Link href="/admin/locations/new">新規作成</Link>
+          </Button>
+        )}
+        {activeTab === "categories" && <CreateCategoryDialog />}
+      </div>
 
-      <TabsContent value="spaces">{spacesContent}</TabsContent>
-      <TabsContent value="locations">{locationsContent}</TabsContent>
-      <TabsContent value="categories">{categoriesContent}</TabsContent>
+      <TabsContent value="spaces" forceMount>
+        {spacesContent}
+      </TabsContent>
+      <TabsContent value="locations" forceMount>
+        {locationsContent}
+      </TabsContent>
+      <TabsContent value="categories" forceMount>
+        {categoriesContent}
+      </TabsContent>
     </Tabs>
-  )
+  );
 }

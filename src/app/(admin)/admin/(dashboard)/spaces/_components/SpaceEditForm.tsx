@@ -61,6 +61,7 @@ import {
   useMultipleMediaPicker,
 } from "@/admin/hooks/use-media-picker";
 import { logger } from "@/shared/lib/logger";
+import { getErrorMessage } from "@/shared/lib/errors";
 import {
   calculateTaxIncludedPrice,
   getTaxRate,
@@ -572,7 +573,7 @@ export function SpaceEditForm({
         }
       } catch (error) {
         logger.error("保存中にエラーが発生しました", {
-          error: error instanceof Error ? error.message : String(error),
+          error: getErrorMessage(error),
         });
         toast.error("保存中にエラーが発生しました");
       }

@@ -140,8 +140,8 @@ export type CouponStatusType =
 
 export function getCouponStatus(coupon: {
   isActive: boolean;
-  validFrom: Date;
-  validUntil: Date | null;
+  validFrom: string;
+  validUntil: string | null;
   usageLimit: number | null;
   usageCount: number;
 }): CouponStatusType {
@@ -153,12 +153,12 @@ export function getCouponStatus(coupon: {
   const now = new Date();
 
   // 期間前
-  if (coupon.validFrom > now) {
+  if (new Date(coupon.validFrom) > now) {
     return "notStarted";
   }
 
   // 期限切れ
-  if (coupon.validUntil && coupon.validUntil < now) {
+  if (coupon.validUntil && new Date(coupon.validUntil) < now) {
     return "expired";
   }
 
@@ -175,8 +175,8 @@ export function CouponStatusBadge({
 }: {
   coupon: {
     isActive: boolean;
-    validFrom: Date;
-    validUntil: Date | null;
+    validFrom: string;
+    validUntil: string | null;
     usageLimit: number | null;
     usageCount: number;
   };

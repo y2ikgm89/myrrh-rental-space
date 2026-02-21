@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * ホームページセクション管理タブ
@@ -9,9 +9,9 @@
  * - ON/OFF切り替え
  */
 
-import { useState, useTransition, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
+import { useState, useTransition, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   DndContext,
   closestCenter,
@@ -20,15 +20,15 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
-} from '@dnd-kit/core'
+} from "@dnd-kit/core";
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,7 +40,7 @@ import {
   AlertDialogTitle,
   Button,
   Switch,
-} from '@/admin/components/ui'
+} from "@/admin/components/ui";
 import {
   GripVertical,
   Plus,
@@ -65,7 +65,7 @@ import {
   Code,
   Wand2,
   Instagram,
-} from 'lucide-react'
+} from "lucide-react";
 import {
   getHomepageSections,
   updateSectionOrder,
@@ -74,13 +74,14 @@ import {
   createHomepageSection,
   initializeDefaultSections,
   type HomepageSectionData,
-} from '@/admin/actions/homepage-settings'
+} from "@/admin/actions/homepage-settings";
 import {
   SectionType,
   sectionTypeLabels,
   defaultSectionConfigs,
-} from '@/admin/lib/validations/homepage-section'
-import { logger } from '@/shared/lib/logger'
+} from "@/admin/lib/validations/homepage-section";
+import { logger } from "@/shared/lib/logger";
+import { getErrorMessage } from "@/shared/lib/errors";
 
 // =============================================================================
 // Icons Mapping
@@ -104,18 +105,18 @@ const sectionTypeIcons: Record<SectionType, typeof Sparkles> = {
   [SectionType.MAP]: MapPin,
   [SectionType.EMBED]: Code,
   [SectionType.INSTAGRAM]: Instagram,
-}
+};
 
 // =============================================================================
 // Sortable Section Item
 // =============================================================================
 
 interface SortableSectionItemProps {
-  section: HomepageSectionData
-  onEdit: (section: HomepageSectionData) => void
-  onToggle: (id: string, isActive: boolean) => void
-  onDelete: (id: string) => void
-  disabled: boolean
+  section: HomepageSectionData;
+  onEdit: (section: HomepageSectionData) => void;
+  onToggle: (id: string, isActive: boolean) => void;
+  onDelete: (id: string) => void;
+  disabled: boolean;
 }
 
 function SortableSectionItem({
@@ -132,24 +133,24 @@ function SortableSectionItem({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: section.id })
+  } = useSortable({ id: section.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
-  }
+  };
 
-  const Icon = sectionTypeIcons[section.type]
-  const label = sectionTypeLabels[section.type]
+  const Icon = sectionTypeIcons[section.type];
+  const label = sectionTypeLabels[section.type];
 
   return (
     <div
       ref={setNodeRef}
       style={style}
       className={`flex items-center gap-3 rounded-lg border bg-card p-4 ${
-        !section.isActive ? 'opacity-60 bg-muted/30' : ''
-      } ${isDragging ? 'shadow-lg' : ''}`}
+        !section.isActive ? "opacity-60 bg-muted/30" : ""
+      } ${isDragging ? "shadow-lg" : ""}`}
     >
       {/* Drag Handle */}
       <button
@@ -215,7 +216,7 @@ function SortableSectionItem({
         </Button>
       </div>
     </div>
-  )
+  );
 }
 
 // =============================================================================
@@ -223,12 +224,12 @@ function SortableSectionItem({
 // =============================================================================
 
 interface AddSectionDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onAdd: (type: SectionType) => void
-  disabled: boolean
-  existingTypes: SectionType[]
-  isInstagramConnected: boolean
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onAdd: (type: SectionType) => void;
+  disabled: boolean;
+  existingTypes: SectionType[];
+  isInstagramConnected: boolean;
 }
 
 function AddSectionDialog({
@@ -239,16 +240,14 @@ function AddSectionDialog({
   existingTypes,
   isInstagramConnected,
 }: AddSectionDialogProps) {
-  const availableTypes = Object.values(SectionType).filter(
-    (type) => {
-      // CUSTOMは複数追加可能
-      if (type === SectionType.CUSTOM) return true
-      // InstagramはAPI設定済みの場合のみ表示
-      if (type === SectionType.INSTAGRAM && !isInstagramConnected) return false
-      // それ以外は既存タイプでなければ表示
-      return !existingTypes.includes(type)
-    }
-  )
+  const availableTypes = Object.values(SectionType).filter((type) => {
+    // CUSTOMは複数追加可能
+    if (type === SectionType.CUSTOM) return true;
+    // InstagramはAPI設定済みの場合のみ表示
+    if (type === SectionType.INSTAGRAM && !isInstagramConnected) return false;
+    // それ以外は既存タイプでなければ表示
+    return !existingTypes.includes(type);
+  });
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -261,18 +260,18 @@ function AddSectionDialog({
         </AlertDialogHeader>
         <div className="grid gap-2 py-4">
           {availableTypes.map((type) => {
-            const Icon = sectionTypeIcons[type]
-            const label = sectionTypeLabels[type]
-            const isCustom = type === SectionType.CUSTOM
-            const alreadyExists = existingTypes.includes(type)
+            const Icon = sectionTypeIcons[type];
+            const label = sectionTypeLabels[type];
+            const isCustom = type === SectionType.CUSTOM;
+            const alreadyExists = existingTypes.includes(type);
 
             return (
               <button
                 key={type}
                 type="button"
                 onClick={() => {
-                  onAdd(type)
-                  onOpenChange(false)
+                  onAdd(type);
+                  onOpenChange(false);
                 }}
                 disabled={disabled}
                 className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors text-left disabled:opacity-50"
@@ -294,7 +293,7 @@ function AddSectionDialog({
                   )}
                 </div>
               </button>
-            )
+            );
           })}
         </div>
         <AlertDialogFooter>
@@ -302,7 +301,7 @@ function AddSectionDialog({
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-  )
+  );
 }
 
 // =============================================================================
@@ -311,136 +310,165 @@ function AddSectionDialog({
 
 interface HomepageTabProps {
   /** Instagram APIが設定済みかどうか */
-  isInstagramConnected?: boolean
+  isInstagramConnected?: boolean;
 }
 
-export function HomepageTab({ isInstagramConnected = false }: HomepageTabProps) {
-  const router = useRouter()
-  const [isPending, startTransition] = useTransition()
-  const [sections, setSections] = useState<HomepageSectionData[] | null>(null)
-  const [deletingSectionId, setDeletingSectionId] = useState<string | null>(null)
-  const [showAddDialog, setShowAddDialog] = useState(false)
+export function HomepageTab({
+  isInstagramConnected = false,
+}: HomepageTabProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [sections, setSections] = useState<HomepageSectionData[] | null>(null);
+  const [deletingSectionId, setDeletingSectionId] = useState<string | null>(
+    null,
+  );
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
   // DnD sensors
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
-  )
+    }),
+  );
 
   // Load sections
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
 
     async function load() {
       try {
-        const data = await getHomepageSections()
-        if (!cancelled) setSections(data)
+        const data = await getHomepageSections();
+        if (!cancelled) setSections(data);
       } catch (error) {
-        logger.error('Failed to load sections', {
-          error: error instanceof Error ? error.message : String(error),
-        })
-        if (!cancelled) toast.error('セクションの読み込みに失敗しました')
+        logger.error("Failed to load sections", {
+          error: getErrorMessage(error),
+        });
+        if (!cancelled) toast.error("セクションの読み込みに失敗しました");
       }
     }
 
-    load()
-    return () => { cancelled = true }
-  }, [])
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Reload sections from server (used to revert optimistic updates on error)
   function reloadSections() {
-    getHomepageSections().then(setSections).catch(() => { /* best-effort reload after optimistic revert */ })
+    getHomepageSections()
+      .then(setSections)
+      .catch(() => {
+        /* best-effort reload after optimistic revert */
+      });
   }
 
   // Shared action handler: execute action, toast result, reload on success
   // React 19: nested startTransition is required for state updates after await
-  function runActionAndReload(action: () => Promise<{ success: boolean; message?: string; error?: string }>) {
+  function runActionAndReload(
+    action: () => Promise<{
+      success: boolean;
+      message?: string;
+      error?: string;
+    }>,
+  ) {
     startTransition(async () => {
-      const result = await action()
+      const result = await action();
       if (result.success) {
-        toast.success(result.message)
-        const data = await getHomepageSections()
+        toast.success(result.message);
+        const data = await getHomepageSections();
         startTransition(() => {
-          setSections(data)
-        })
+          setSections(data);
+        });
       } else {
-        toast.error(result.error)
+        toast.error(result.error);
       }
-    })
+    });
   }
 
   // Shared optimistic handler: apply optimistic update, execute action, revert on error
   function runOptimisticAction(
     optimisticUpdate: () => void,
-    action: () => Promise<{ success: boolean; message?: string; error?: string }>,
+    action: () => Promise<{
+      success: boolean;
+      message?: string;
+      error?: string;
+    }>,
   ) {
-    optimisticUpdate()
+    optimisticUpdate();
     startTransition(async () => {
-      const result = await action()
+      const result = await action();
       if (result.success) {
-        toast.success(result.message)
+        toast.success(result.message);
       } else {
-        toast.error(result.error)
-        reloadSections()
+        toast.error(result.error);
+        reloadSections();
       }
-    })
+    });
   }
 
   // Handlers
   const handleToggle = (id: string, isActive: boolean) => {
     runOptimisticAction(
-      () => setSections((prev) => prev?.map((s) => (s.id === id ? { ...s, isActive } : s)) ?? null),
+      () =>
+        setSections(
+          (prev) =>
+            prev?.map((s) => (s.id === id ? { ...s, isActive } : s)) ?? null,
+        ),
       () => toggleHomepageSection(id, isActive),
-    )
-  }
+    );
+  };
 
   const handleDeleteConfirm = () => {
-    if (!deletingSectionId) return
-    const id = deletingSectionId
-    setDeletingSectionId(null)
+    if (!deletingSectionId) return;
+    const id = deletingSectionId;
+    setDeletingSectionId(null);
 
     runOptimisticAction(
       () => setSections((prev) => prev?.filter((s) => s.id !== id) ?? null),
       () => deleteHomepageSection(id),
-    )
-  }
+    );
+  };
 
   const handleAddSection = (type: SectionType) => {
     runActionAndReload(() =>
-      createHomepageSection({ type, config: defaultSectionConfigs[type], design: {}, isActive: true })
-    )
-  }
+      createHomepageSection({
+        type,
+        config: defaultSectionConfigs[type],
+        design: {},
+        isActive: true,
+      }),
+    );
+  };
 
   const handleInitializeDefaults = () => {
-    runActionAndReload(() => initializeDefaultSections())
-  }
+    runActionAndReload(() => initializeDefaultSections());
+  };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-    if (!over || active.id === over.id || !sections) return
+    const { active, over } = event;
+    if (!over || active.id === over.id || !sections) return;
 
-    const oldIndex = sections.findIndex((s) => s.id === active.id)
-    const newIndex = sections.findIndex((s) => s.id === over.id)
+    const oldIndex = sections.findIndex((s) => s.id === active.id);
+    const newIndex = sections.findIndex((s) => s.id === over.id);
 
-    const newSections = arrayMove(sections, oldIndex, newIndex)
+    const newSections = arrayMove(sections, oldIndex, newIndex);
     const orderUpdates = newSections.map((s, index) => ({
       id: s.id,
       order: index,
-    }))
+    }));
 
     // Optimistic update
-    setSections(newSections)
+    setSections(newSections);
 
     startTransition(async () => {
-      const result = await updateSectionOrder({ sections: orderUpdates })
+      const result = await updateSectionOrder({ sections: orderUpdates });
       if (!result.success) {
-        toast.error(result.error)
-        reloadSections()
+        toast.error(result.error);
+        reloadSections();
       }
-    })
-  }
+    });
+  };
 
   // Loading state
   if (sections === null) {
@@ -450,7 +478,7 @@ export function HomepageTab({ isInstagramConnected = false }: HomepageTabProps) 
           <div key={i} className="h-20 animate-pulse rounded-lg bg-muted" />
         ))}
       </div>
-    )
+    );
   }
 
   // No sections - show initialize button
@@ -479,7 +507,7 @@ export function HomepageTab({ isInstagramConnected = false }: HomepageTabProps) 
           </Button>
         </div>
       </div>
-    )
+    );
   }
 
   // Main list view
@@ -514,7 +542,11 @@ export function HomepageTab({ isInstagramConnected = false }: HomepageTabProps) 
               <SortableSectionItem
                 key={section.id}
                 section={section}
-                onEdit={(section) => router.push(`/admin/pages/homepage/edit/sections/${section.id}`)}
+                onEdit={(section) =>
+                  router.push(
+                    `/admin/pages/homepage/edit/sections/${section.id}`,
+                  )
+                }
                 onToggle={handleToggle}
                 onDelete={setDeletingSectionId}
                 disabled={isPending}
@@ -558,5 +590,5 @@ export function HomepageTab({ isInstagramConnected = false }: HomepageTabProps) 
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  )
+  );
 }

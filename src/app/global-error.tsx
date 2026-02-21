@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * グローバルエラーページ
@@ -9,38 +9,34 @@
  * @see https://nextjs.org/docs/app/api-reference/file-conventions/error
  */
 
-import { useEffect, startTransition } from 'react'
-import { Noto_Sans_JP } from 'next/font/google'
-import { logger } from '@/shared/lib/logger'
-
-const notoSansJP = Noto_Sans_JP({
-  variable: '--font-noto-sans-jp',
-  subsets: ['latin'],
-  weight: ['400', '500', '700'],
-})
+import { useEffect, startTransition } from "react";
+import { logger } from "@/shared/lib/logger";
 
 interface GlobalErrorProps {
-  error: Error & { digest?: string }
-  reset: () => void
+  error: Error & { digest?: string };
+  reset: () => void;
 }
 
 export default function GlobalError({ error, reset }: GlobalErrorProps) {
   useEffect(() => {
-    logger.error('Global error boundary triggered', {
+    logger.error("Global error boundary triggered", {
       error: error.message,
       digest: error.digest,
-    })
-  }, [error])
+    });
+  }, [error]);
 
   const handleReset = () => {
     startTransition(() => {
-      reset()
-    })
-  }
+      reset();
+    });
+  };
 
   return (
     <html lang="ja">
-      <body className={`${notoSansJP.variable} font-sans antialiased`}>
+      <body
+        className="antialiased"
+        style={{ fontFamily: '"Helvetica Neue", Arial, sans-serif' }}
+      >
         <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
           <div className="w-full max-w-md text-center">
             <div className="mb-8">
@@ -95,5 +91,5 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
         </div>
       </body>
     </html>
-  )
+  );
 }

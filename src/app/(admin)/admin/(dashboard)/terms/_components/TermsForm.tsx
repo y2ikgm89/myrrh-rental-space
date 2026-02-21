@@ -1,12 +1,12 @@
-'use client'
+"use client";
 
 /**
  * 規約作成・編集フォーム
  */
 
-import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   Card,
   CardContent,
@@ -21,40 +21,40 @@ import {
   SelectTrigger,
   SelectValue,
   Checkbox,
-} from '@/admin/components/ui'
-import { createTerms, updateTerms } from '@/admin/actions/terms'
-import { TERMS_TYPES, type TermsDetail } from '@/shared/lib/validations/terms'
-import { TermsType, isValidTermsType } from '@/shared/lib/validations/enums'
+} from "@/admin/components/ui";
+import { createTerms, updateTerms } from "@/admin/actions/terms";
+import { TERMS_TYPES, type TermsDetail } from "@/shared/lib/validations/terms";
+import { TermsType, isValidTermsType } from "@/shared/lib/validations/enums";
 
 interface TermsFormProps {
-  terms?: TermsDetail
+  terms?: TermsDetail;
 }
 
 export function TermsForm({ terms }: TermsFormProps) {
-  const router = useRouter()
-  const [isPending, startTransition] = useTransition()
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [formData, setFormData] = useState<{
-    title: string
-    slug: string
-    type: TermsType
-    isActive: boolean
+    title: string;
+    slug: string;
+    type: TermsType;
+    isActive: boolean;
   }>({
-    title: terms?.title ?? '',
-    slug: terms?.slug ?? '',
+    title: terms?.title ?? "",
+    slug: terms?.slug ?? "",
     type: terms?.type ?? TermsType.TERMS_OF_USE,
     isActive: terms?.isActive ?? true,
-  })
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const isEditing = !!terms
+  const isEditing = !!terms;
 
   // slugを自動生成
   const generateSlug = (title: string) => {
     return title
       .toLowerCase()
-      .replace(/\s+/g, '-')
-      .replace(/[^a-z0-9-]/g, '')
-  }
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "");
+  };
 
   const handleTitleChange = (value: string) => {
     setFormData((prev) => ({
@@ -62,12 +62,12 @@ export function TermsForm({ terms }: TermsFormProps) {
       title: value,
       // 編集時はslugを自動更新しない
       ...(isEditing ? {} : { slug: generateSlug(value) }),
-    }))
-  }
+    }));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setErrors({})
+    e.preventDefault();
+    setErrors({});
 
     startTransition(async () => {
       if (isEditing) {
@@ -77,13 +77,13 @@ export function TermsForm({ terms }: TermsFormProps) {
           slug: formData.slug,
           type: formData.type,
           isActive: formData.isActive,
-        })
+        });
 
         if (result.success) {
-          toast.success(result.message)
-          router.refresh()
+          toast.success(result.message);
+          router.refresh();
         } else {
-          toast.error(result.error)
+          toast.error(result.error);
         }
       } else {
         // 新規作成
@@ -92,23 +92,23 @@ export function TermsForm({ terms }: TermsFormProps) {
           slug: formData.slug,
           type: formData.type,
           isActive: formData.isActive,
-        })
+        });
 
         if (result.success) {
-          toast.success(result.message)
-          router.push(`/admin/terms/${result.data.id}`)
+          toast.success(result.message);
+          router.push(`/admin/terms/${result.data.id}`);
         } else {
-          toast.error(result.error)
+          toast.error(result.error);
         }
       }
-    })
-  }
+    });
+  };
 
   return (
     <form onSubmit={handleSubmit}>
       <Card>
         <CardHeader>
-          <CardTitle>{isEditing ? '規約情報を編集' : '規約情報'}</CardTitle>
+          <CardTitle>{isEditing ? "規約情報を編集" : "規約情報"}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -121,8 +121,8 @@ export function TermsForm({ terms }: TermsFormProps) {
               required
               disabled={isPending}
             />
-            {errors['title'] && (
-              <p className="text-sm text-destructive">{errors['title']}</p>
+            {errors["title"] && (
+              <p className="text-sm text-destructive">{errors["title"]}</p>
             )}
           </div>
 
@@ -141,8 +141,8 @@ export function TermsForm({ terms }: TermsFormProps) {
             <p className="text-xs text-muted-foreground">
               URLやシステム内部で使用される識別子です。半角英数字とハイフンのみ使用可能。
             </p>
-            {errors['slug'] && (
-              <p className="text-sm text-destructive">{errors['slug']}</p>
+            {errors["slug"] && (
+              <p className="text-sm text-destructive">{errors["slug"]}</p>
             )}
           </div>
 
@@ -152,7 +152,7 @@ export function TermsForm({ terms }: TermsFormProps) {
               value={formData.type}
               onValueChange={(value) => {
                 if (isValidTermsType(value)) {
-                  setFormData((prev) => ({ ...prev, type: value }))
+                  setFormData((prev) => ({ ...prev, type: value }));
                 }
               }}
               disabled={isPending}
@@ -192,7 +192,13 @@ export function TermsForm({ terms }: TermsFormProps) {
 
           <div className="flex gap-2 pt-4">
             <Button type="submit" disabled={isPending}>
-              {isPending ? (isEditing ? '更新中...' : '作成中...') : isEditing ? '更新' : '作成'}
+              {isPending && isEditing
+                ? "更新中..."
+                : isPending
+                  ? "作成中..."
+                  : isEditing
+                    ? "更新"
+                    : "作成"}
             </Button>
             <Button
               type="button"
@@ -206,5 +212,5 @@ export function TermsForm({ terms }: TermsFormProps) {
         </CardContent>
       </Card>
     </form>
-  )
+  );
 }

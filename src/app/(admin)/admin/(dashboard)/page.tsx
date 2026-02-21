@@ -44,7 +44,6 @@ function DashboardHeaderSkeleton() {
 
 export default async function AdminDashboard(): Promise<ReactElement> {
   await connection();
-  await connection();
 
   return (
     <div className="space-y-6">

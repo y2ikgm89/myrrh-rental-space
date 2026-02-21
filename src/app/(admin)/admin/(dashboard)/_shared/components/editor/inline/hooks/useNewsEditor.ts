@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * お知らせエディター専用フック
@@ -7,21 +7,26 @@
  * 型アサーション完全排除
  */
 
-import { useRouter } from 'next/navigation'
-import { useForm, useWatch } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { toast } from 'sonner'
-import { newsFormSchema, type NewsFormData, type NewsData } from '@/admin/lib/validations/news'
+import { useRouter } from "next/navigation";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
+import {
+  newsFormSchema,
+  type NewsFormData,
+  type NewsData,
+} from "@/admin/lib/validations/news";
 import {
   createNews,
   updateNews,
   deleteNews,
   publishNews,
   unpublishNews,
-} from '@/admin/actions/news'
-import { usePreview } from '@/admin/hooks'
-import { logger } from '@/shared/lib/logger'
-import type { NewsPreviewData } from '@/shared/types'
+} from "@/admin/actions/news";
+import { usePreview } from "@/admin/hooks";
+import { logger } from "@/shared/lib/logger";
+import { getErrorMessage } from "@/shared/lib/errors";
+import type { NewsPreviewData } from "@/shared/types";
 
 // 共有ユーティリティ
 import {
@@ -33,16 +38,16 @@ import {
   toNullableString,
   toSubmitContentWidth,
   toSubmitNumber,
-} from './shared'
+} from "./shared";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type UseNewsEditorOptions = {
-  news?: NewsData
-  mode: 'create' | 'edit'
-}
+  news?: NewsData;
+  mode: "create" | "edit";
+};
 
 // =============================================================================
 // Transforms (Type-safe)
@@ -51,25 +56,25 @@ type UseNewsEditorOptions = {
 function toFormData(data?: NewsData): NewsFormData {
   if (!data) {
     return {
-      slug: '',
-      title: '',
-      contentJson: '',
+      slug: "",
+      title: "",
+      contentJson: "",
       isPublished: false,
-      publishedAt: '',
-      contentWidth: '',
-      contentWidthCustom: '',
-      metaDescription: '',
-      metaKeywords: '',
-      ogpTitle: '',
-      ogpDescription: '',
-      ogpImageUrl: '',
-    }
+      publishedAt: "",
+      contentWidth: "",
+      contentWidthCustom: "",
+      metaDescription: "",
+      metaKeywords: "",
+      ogpTitle: "",
+      ogpDescription: "",
+      ogpImageUrl: "",
+    };
   }
 
   return {
     slug: data.slug,
     title: data.title,
-    contentJson: data.contentJson ? JSON.stringify(data.contentJson) : '',
+    contentJson: data.contentJson ? JSON.stringify(data.contentJson) : "",
     isPublished: data.isPublished,
     publishedAt: toFormDateString(data.publishedAt),
     contentWidth: toFormContentWidth(data.contentWidth),
@@ -79,7 +84,7 @@ function toFormData(data?: NewsData): NewsFormData {
     ogpTitle: toFormString(data.ogpTitle),
     ogpDescription: toFormString(data.ogpDescription),
     ogpImageUrl: toFormString(data.ogpImageUrl),
-  }
+  };
 }
 
 function toSubmitPayload(formData: NewsFormData) {
@@ -94,16 +99,16 @@ function toSubmitPayload(formData: NewsFormData) {
     ogpTitle: toNullableString(formData.ogpTitle),
     ogpDescription: toNullableString(formData.ogpDescription),
     ogpImageUrl: toNullableString(formData.ogpImageUrl),
-  }
+  };
 }
 
 function toPreviewData(formData: NewsFormData): NewsPreviewData {
   return {
-    title: formData.title || '無題',
-    slug: formData.slug || 'preview-new',
-    content: formData.contentJson || '',
+    title: formData.title || "無題",
+    slug: formData.slug || "preview-new",
+    content: formData.contentJson || "",
     publishedAt: formData.publishedAt || null,
-  }
+  };
 }
 
 // =============================================================================
@@ -111,135 +116,136 @@ function toPreviewData(formData: NewsFormData): NewsPreviewData {
 // =============================================================================
 
 export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
-  const router = useRouter()
+  const router = useRouter();
 
   // プレビュー
-  const { saveAndOpenPreview } = usePreview('news')
+  const { saveAndOpenPreview } = usePreview("news");
 
   // フォーム（型アサーション不要）
   const form = useForm<NewsFormData>({
     resolver: zodResolver(newsFormSchema),
     defaultValues: toFormData(news),
-  })
+  });
 
   // コアフック
   const core = useEditorCore({
     form,
-    listPath: '/admin/news',
-  })
+    listPath: "/admin/news",
+  });
 
-  const { handleSubmit, setValue, getValues, reset, formState, control } = form
+  const { handleSubmit, setValue, getValues, reset, formState, control } = form;
 
   // 監視値（型アサーション不要 - 具体的な型が推論される）
-  const title = useWatch({ control, name: 'title' }) ?? ''
-  const slug = useWatch({ control, name: 'slug' }) ?? ''
-  const contentJson = useWatch({ control, name: 'contentJson' }) ?? ''
-  const isPublished = useWatch({ control, name: 'isPublished' }) ?? false
+  const title = useWatch({ control, name: "title" }) ?? "";
+  const slug = useWatch({ control, name: "slug" }) ?? "";
+  const contentJson = useWatch({ control, name: "contentJson" }) ?? "";
+  const isPublished = useWatch({ control, name: "isPublished" }) ?? false;
 
   // isDirty計算
-  const isDirty = formState.isDirty || core.hasEditorChanges
+  const isDirty = formState.isDirty || core.hasEditorChanges;
 
   // ==========================================================================
   // Handlers (React Compiler auto-memoizes - no useCallback needed)
   // ==========================================================================
 
   const handleContentChange = (json: string) => {
-    setValue('contentJson', json, { shouldDirty: true })
-    core.setHasEditorChanges(true)
-  }
+    setValue("contentJson", json, { shouldDirty: true });
+    core.setHasEditorChanges(true);
+  };
 
   const onSubmit = (formData: NewsFormData) => {
     core.startTransition(async () => {
       try {
-        const payload = toSubmitPayload(formData)
+        const payload = toSubmitPayload(formData);
 
-        if (mode === 'create') {
-          const result = await createNews(payload)
-          if (result.success && 'data' in result) {
-            toast.success(result.message)
-            router.push(`/admin/news/${result.data.id}`)
+        if (mode === "create") {
+          const result = await createNews(payload);
+          if (result.success && "data" in result) {
+            toast.success(result.message);
+            router.push(`/admin/news/${result.data.id}`);
           } else {
-            toast.error(result.error)
+            toast.error(result.error);
           }
         } else if (news) {
-          const result = await updateNews(news.id, payload)
+          const result = await updateNews(news.id, payload);
           if (result.success) {
-            reset(formData)
-            core.setHasEditorChanges(false)
-            router.refresh()
-            toast.success(result.message)
+            reset(formData);
+            core.setHasEditorChanges(false);
+            router.refresh();
+            toast.success(result.message);
           } else {
-            toast.error(result.error)
+            toast.error(result.error);
           }
         }
       } catch (error) {
-        logger.error('保存中にエラーが発生しました', {
-          error: error instanceof Error ? error.message : String(error),
-        })
-        toast.error('保存中にエラーが発生しました')
+        logger.error("保存中にエラーが発生しました", {
+          error: getErrorMessage(error),
+        });
+        toast.error("保存中にエラーが発生しました");
       }
-    })
-  }
+    });
+  };
 
   const handleSave = () => {
-    if (core.isPending) return
-    handleSubmit(onSubmit)()
-  }
+    if (core.isPending) return;
+    handleSubmit(onSubmit)();
+  };
 
   const handlePublish = () => {
-    if (!news || core.isPending) return
+    if (!news || core.isPending) return;
     core.startTransition(async () => {
-      const result = await publishNews(news.id)
+      const result = await publishNews(news.id);
       if (result.success) {
-        toast.success(result.message)
-        setValue('isPublished', true)
-        router.refresh()
+        toast.success(result.message);
+        setValue("isPublished", true);
+        router.refresh();
       } else {
-        toast.error(result.error)
+        toast.error(result.error);
       }
-    })
-  }
+    });
+  };
 
   const handleUnpublish = () => {
-    if (!news || core.isPending) return
+    if (!news || core.isPending) return;
     core.startTransition(async () => {
-      const result = await unpublishNews(news.id)
+      const result = await unpublishNews(news.id);
       if (result.success) {
-        toast.success(result.message)
-        setValue('isPublished', false)
-        router.refresh()
+        toast.success(result.message);
+        setValue("isPublished", false);
+        router.refresh();
       } else {
-        toast.error(result.error)
+        toast.error(result.error);
       }
-    })
-  }
+    });
+  };
 
   const handleDelete = () => {
-    if (!news) return
+    if (!news) return;
     core.startTransition(async () => {
       try {
-        const result = await deleteNews(news.id)
+        const result = await deleteNews(news.id);
         if (result.success) {
-          toast.success(result.message)
-          router.push('/admin/news')
+          toast.success(result.message);
+          router.push("/admin/news");
         } else {
-          toast.error(result.error)
+          toast.error(result.error);
         }
       } catch (error) {
-        logger.error('削除中にエラーが発生しました', {
-          error: error instanceof Error ? error.message : String(error),
-        })
-        toast.error('削除中にエラーが発生しました')
+        logger.error("削除中にエラーが発生しました", {
+          error: getErrorMessage(error),
+        });
+        toast.error("削除中にエラーが発生しました");
       }
-    })
-  }
+    });
+  };
 
   const handlePreview = () => {
-    const values = getValues()
-    const identifier = mode === 'create' ? 'preview-new' : (slug || 'preview-new')
-    const previewData = toPreviewData(values)
-    saveAndOpenPreview(identifier, previewData, '/news')
-  }
+    const values = getValues();
+    const identifier =
+      mode === "create" ? "preview-new" : slug || "preview-new";
+    const previewData = toPreviewData(values);
+    saveAndOpenPreview(identifier, previewData, "/news");
+  };
 
   // ==========================================================================
   // Return
@@ -256,13 +262,14 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
     title,
     slug,
     contentJson,
-    contentHtml: news?.contentHtml ?? '',
+    contentHtml: news?.contentHtml ?? "",
     isPublished,
 
     // パネル管理
     isSettingsPanelOpen: core.panels.isSettingsPanelOpen,
     isCommentsPanelOpen: core.panels.isCommentsPanelOpen,
-    isPanelOpen: core.panels.isSettingsPanelOpen || core.panels.isCommentsPanelOpen,
+    isPanelOpen:
+      core.panels.isSettingsPanelOpen || core.panels.isCommentsPanelOpen,
     toggleSettings: core.panels.toggleSettings,
     toggleComments: core.panels.toggleComments,
     closePanel: core.panels.closePanel,
@@ -285,5 +292,5 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
     // 削除ダイアログ
     isDeleteDialogOpen: core.isDeleteDialogOpen,
     setIsDeleteDialogOpen: core.setIsDeleteDialogOpen,
-  }
+  };
 }

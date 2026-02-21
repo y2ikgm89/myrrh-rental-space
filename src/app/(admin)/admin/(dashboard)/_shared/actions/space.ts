@@ -42,6 +42,7 @@ import {
   DurationDiscountOverride,
   TaxRateType,
 } from "@/shared/generated/prisma/enums";
+import type { Prisma } from "@/shared/generated/prisma/client";
 
 // =============================================================================
 // Helper Functions
@@ -72,6 +73,82 @@ async function renderDescriptionHtml(
  * 読み取り権限チェック（共通ヘルパー使用）
  */
 const checkReadPermission = checkReadPermissionFor("space");
+
+/**
+ * Prisma Space オブジェクトを SpaceWithStats プレーンオブジェクトに変換
+ * Symbol プロパティを除去して Client Components に渡せるようにする
+ */
+function formatSpaceToPlain(s: {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  address: string;
+  access: string | null;
+  capacity: number;
+  area: number | null;
+  hourlyPrice: number;
+  dailyPrice: number | null;
+  mainImageUrl: string;
+  imageUrls: unknown;
+  facilities: unknown;
+  businessHours: Prisma.JsonValue | null;
+  isPublished: boolean;
+  publishedAt: Date | null;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  termsId: string | null;
+  locationId: string | null;
+  categoryId: string | null;
+  discountType: string | null;
+  discountValue: number | null;
+  durationDiscountOverride: string | null;
+  taxRateType: string | null;
+  metaDescription: string | null;
+  metaKeywords: string | null;
+  ogpTitle: string | null;
+  ogpDescription: string | null;
+  ogpImageUrl: string | null;
+  _count: { reservations: number };
+}): SpaceWithStats {
+  return {
+    id: s.id,
+    slug: s.slug,
+    name: s.name,
+    description: s.description,
+    address: s.address,
+    access: s.access,
+    capacity: s.capacity,
+    area: s.area,
+    hourlyPrice: s.hourlyPrice,
+    dailyPrice: s.dailyPrice,
+    mainImageUrl: s.mainImageUrl,
+    imageUrls: parseStringArray(s.imageUrls),
+    facilities: parseStringArray(s.facilities),
+    businessHours: parseBusinessHours(s.businessHours),
+    isPublished: s.isPublished,
+    publishedAt: s.publishedAt ? s.publishedAt.toISOString() : null,
+    isActive: s.isActive,
+    createdAt: s.createdAt.toISOString(),
+    updatedAt: s.updatedAt.toISOString(),
+    termsId: s.termsId,
+    locationId: s.locationId,
+    categoryId: s.categoryId,
+    discountType: getValidDiscountType(s.discountType),
+    discountValue: s.discountValue,
+    durationDiscountOverride: getValidDurationDiscountOverride(
+      s.durationDiscountOverride,
+    ),
+    taxRateType: getValidTaxRateType(s.taxRateType),
+    metaDescription: s.metaDescription,
+    metaKeywords: s.metaKeywords,
+    ogpTitle: s.ogpTitle,
+    ogpDescription: s.ogpDescription,
+    ogpImageUrl: s.ogpImageUrl,
+    _count: { reservations: s._count.reservations },
+  };
+}
 
 // =============================================================================
 // Read Actions
@@ -134,50 +211,8 @@ export async function getSpaces(
     }),
   ]);
 
-  // Prisma オブジェクトをプレーンオブジェクトに変換
-  // Symbol プロパティを除去して Client Components に渡せるようにする
-  const formattedSpaces: SpaceWithStats[] = spaces.map((s) => ({
-    id: s.id,
-    slug: s.slug,
-    name: s.name,
-    description: s.description,
-    address: s.address,
-    access: s.access,
-    capacity: s.capacity,
-    area: s.area,
-    hourlyPrice: s.hourlyPrice,
-    dailyPrice: s.dailyPrice,
-    mainImageUrl: s.mainImageUrl,
-    imageUrls: parseStringArray(s.imageUrls),
-    facilities: parseStringArray(s.facilities),
-    businessHours: parseBusinessHours(s.businessHours),
-    isPublished: s.isPublished,
-    publishedAt: s.publishedAt ? s.publishedAt.toISOString() : null,
-    isActive: s.isActive,
-    createdAt: s.createdAt.toISOString(),
-    updatedAt: s.updatedAt.toISOString(),
-    termsId: s.termsId,
-    locationId: s.locationId,
-    categoryId: s.categoryId,
-    // 割引設定
-    discountType: getValidDiscountType(s.discountType),
-    discountValue: s.discountValue,
-    durationDiscountOverride: getValidDurationDiscountOverride(
-      s.durationDiscountOverride,
-    ),
-    // 税率設定
-    taxRateType: getValidTaxRateType(s.taxRateType),
-    // SEO/OGP
-    metaDescription: s.metaDescription,
-    metaKeywords: s.metaKeywords,
-    ogpTitle: s.ogpTitle,
-    ogpDescription: s.ogpDescription,
-    ogpImageUrl: s.ogpImageUrl,
-    _count: { reservations: s._count.reservations },
-  }));
-
   return {
-    spaces: formattedSpaces,
+    spaces: spaces.map(formatSpaceToPlain),
     total,
     page,
     limit,
@@ -209,47 +244,7 @@ export async function getSpaceById(id: string): Promise<SpaceWithStats | null> {
     return null;
   }
 
-  // Prisma オブジェクトをプレーンオブジェクトに変換
-  // Symbol プロパティを除去して Client Components に渡せるようにする
-  return {
-    id: space.id,
-    slug: space.slug,
-    name: space.name,
-    description: space.description,
-    address: space.address,
-    access: space.access,
-    capacity: space.capacity,
-    area: space.area,
-    hourlyPrice: space.hourlyPrice,
-    dailyPrice: space.dailyPrice,
-    mainImageUrl: space.mainImageUrl,
-    imageUrls: parseStringArray(space.imageUrls),
-    facilities: parseStringArray(space.facilities),
-    businessHours: parseBusinessHours(space.businessHours),
-    isPublished: space.isPublished,
-    publishedAt: space.publishedAt ? space.publishedAt.toISOString() : null,
-    isActive: space.isActive,
-    createdAt: space.createdAt.toISOString(),
-    updatedAt: space.updatedAt.toISOString(),
-    termsId: space.termsId,
-    locationId: space.locationId,
-    categoryId: space.categoryId,
-    // 割引設定
-    discountType: getValidDiscountType(space.discountType),
-    discountValue: space.discountValue,
-    durationDiscountOverride: getValidDurationDiscountOverride(
-      space.durationDiscountOverride,
-    ),
-    // 税率設定
-    taxRateType: getValidTaxRateType(space.taxRateType),
-    // SEO/OGP
-    metaDescription: space.metaDescription,
-    metaKeywords: space.metaKeywords,
-    ogpTitle: space.ogpTitle,
-    ogpDescription: space.ogpDescription,
-    ogpImageUrl: space.ogpImageUrl,
-    _count: { reservations: space._count.reservations },
-  };
+  return formatSpaceToPlain(space);
 }
 
 /**

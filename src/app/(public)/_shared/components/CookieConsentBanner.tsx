@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * Cookie同意バナーコンポーネント
@@ -9,50 +9,53 @@
  * - useSyncExternalStoreでlocalStorageと同期（React 18推奨パターン）
  */
 
-import { useSyncExternalStore } from 'react'
-import Link from 'next/link'
-import { logger } from '@/shared/lib/logger'
+import { useSyncExternalStore } from "react";
+import Link from "next/link";
+import { logger } from "@/shared/lib/logger";
+import { getErrorMessage } from "@/shared/lib/errors";
 
 // デフォルト値
 const DEFAULT_MESSAGE =
-  '当サイトでは、サービス向上のためにCookieを使用しています。Cookieの使用に同意いただける場合は「同意する」をクリックしてください。'
-const DEFAULT_ACCEPT_TEXT = '同意する'
-const DEFAULT_REJECT_TEXT = '拒否する'
-const DEFAULT_POLICY_URL = '/privacy'
+  "当サイトでは、サービス向上のためにCookieを使用しています。Cookieの使用に同意いただける場合は「同意する」をクリックしてください。";
+const DEFAULT_ACCEPT_TEXT = "同意する";
+const DEFAULT_REJECT_TEXT = "拒否する";
+const DEFAULT_POLICY_URL = "/privacy";
 
-const STORAGE_KEY = 'cookie-consent'
+const STORAGE_KEY = "cookie-consent";
 
-export type CookieConsentStatus = 'accepted' | 'rejected' | null
+export type CookieConsentStatus = "accepted" | "rejected" | null;
 
 // 型ガード: localStorageの値がCookieConsentStatusかどうか
-function isValidConsentStatus(value: string | null): value is 'accepted' | 'rejected' {
-  return value === 'accepted' || value === 'rejected'
+function isValidConsentStatus(
+  value: string | null,
+): value is "accepted" | "rejected" {
+  return value === "accepted" || value === "rejected";
 }
 
 // localStorageからCookie同意状態を取得
 function getSnapshot(): CookieConsentStatus {
   try {
-    const value = localStorage.getItem(STORAGE_KEY)
-    return isValidConsentStatus(value) ? value : null
+    const value = localStorage.getItem(STORAGE_KEY);
+    return isValidConsentStatus(value) ? value : null;
   } catch {
     // プライベートブラウジングモードなどでlocalStorageが使用不可の場合
-    return null
+    return null;
   }
 }
 
 // SSR用のスナップショット（常にnull）
 function getServerSnapshot(): CookieConsentStatus {
-  return null
+  return null;
 }
 
 // storageイベントを購読
 function subscribe(callback: () => void): () => void {
-  window.addEventListener('storage', callback)
-  window.addEventListener('cookie-consent-changed', callback)
+  window.addEventListener("storage", callback);
+  window.addEventListener("cookie-consent-changed", callback);
   return () => {
-    window.removeEventListener('storage', callback)
-    window.removeEventListener('cookie-consent-changed', callback)
-  }
+    window.removeEventListener("storage", callback);
+    window.removeEventListener("cookie-consent-changed", callback);
+  };
 }
 
 /**
@@ -60,14 +63,14 @@ function subscribe(callback: () => void): () => void {
  * useSyncExternalStoreでlocalStorageと同期
  */
 export function useCookieConsent(): CookieConsentStatus {
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
 
 interface CookieConsentBannerProps {
-  message?: string | null
-  acceptText?: string | null
-  rejectText?: string | null
-  policyUrl?: string | null
+  message?: string | null;
+  acceptText?: string | null;
+  rejectText?: string | null;
+  policyUrl?: string | null;
 }
 
 export function CookieConsentBanner({
@@ -77,35 +80,39 @@ export function CookieConsentBanner({
   policyUrl,
 }: CookieConsentBannerProps) {
   // useSyncExternalStoreでlocalStorageと同期
-  const consentStatus = useCookieConsent()
+  const consentStatus = useCookieConsent();
 
   const handleAccept = () => {
     try {
-      localStorage.setItem(STORAGE_KEY, 'accepted')
+      localStorage.setItem(STORAGE_KEY, "accepted");
       // カスタムイベントを発火してuseSyncExternalStoreに通知
       window.dispatchEvent(
-        new CustomEvent('cookie-consent-changed', { detail: 'accepted' })
-      )
+        new CustomEvent("cookie-consent-changed", { detail: "accepted" }),
+      );
     } catch (error) {
-      logger.error('Failed to save cookie consent', { error: error instanceof Error ? error.message : String(error) })
+      logger.error("Failed to save cookie consent", {
+        error: getErrorMessage(error),
+      });
     }
-  }
+  };
 
   const handleReject = () => {
     try {
-      localStorage.setItem(STORAGE_KEY, 'rejected')
+      localStorage.setItem(STORAGE_KEY, "rejected");
       // カスタムイベントを発火してuseSyncExternalStoreに通知
       window.dispatchEvent(
-        new CustomEvent('cookie-consent-changed', { detail: 'rejected' })
-      )
+        new CustomEvent("cookie-consent-changed", { detail: "rejected" }),
+      );
     } catch (error) {
-      logger.error('Failed to save cookie consent', { error: error instanceof Error ? error.message : String(error) })
+      logger.error("Failed to save cookie consent", {
+        error: getErrorMessage(error),
+      });
     }
-  }
+  };
 
   // 同意済みの場合は何も表示しない
   if (consentStatus) {
-    return null
+    return null;
   }
 
   return (
@@ -125,7 +132,7 @@ export function CookieConsentBanner({
               id="cookie-consent-description"
               className="text-sm text-muted-foreground"
             >
-              {message || DEFAULT_MESSAGE}{' '}
+              {message || DEFAULT_MESSAGE}{" "}
               <Link
                 href={policyUrl || DEFAULT_POLICY_URL}
                 className="text-primary-dark underline underline-offset-4 hover:text-primary-dark/80"
@@ -153,7 +160,7 @@ export function CookieConsentBanner({
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 /**
@@ -161,12 +168,12 @@ export function CookieConsentBanner({
  * クライアントサイドでのみ使用可能
  */
 export function getCookieConsentStatus(): CookieConsentStatus {
-  if (typeof window === 'undefined') return null
+  if (typeof window === "undefined") return null;
   try {
-    const value = localStorage.getItem(STORAGE_KEY)
-    return isValidConsentStatus(value) ? value : null
+    const value = localStorage.getItem(STORAGE_KEY);
+    return isValidConsentStatus(value) ? value : null;
   } catch {
-    return null
+    return null;
   }
 }
 
@@ -175,13 +182,15 @@ export function getCookieConsentStatus(): CookieConsentStatus {
  * 設定ページからの再選択用
  */
 export function resetCookieConsent(): void {
-  if (typeof window === 'undefined') return
+  if (typeof window === "undefined") return;
   try {
-    localStorage.removeItem(STORAGE_KEY)
+    localStorage.removeItem(STORAGE_KEY);
     window.dispatchEvent(
-      new CustomEvent('cookie-consent-changed', { detail: null })
-    )
+      new CustomEvent("cookie-consent-changed", { detail: null }),
+    );
   } catch (error) {
-    logger.error('Failed to reset cookie consent', { error: error instanceof Error ? error.message : String(error) })
+    logger.error("Failed to reset cookie consent", {
+      error: getErrorMessage(error),
+    });
   }
 }

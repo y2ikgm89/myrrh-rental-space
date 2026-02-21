@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * 予約設定セクション
@@ -7,8 +7,8 @@
  * キャンセルポリシーは利用規約管理（Terms）から選択
  */
 
-import { useState, useTransition, useEffect } from 'react'
-import Link from 'next/link'
+import { useState, useTransition, useEffect } from "react";
+import Link from "next/link";
 import {
   Button,
   Card,
@@ -23,52 +23,58 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/admin/components/ui'
-import { updateReservationSettings, getCancellationPolicies } from '@/admin/actions/settings'
-import type { SettingsData } from '@/admin/actions/settings'
-import { useRefreshOnSuccess } from '../hooks'
-import { ExternalLink, AlertCircle } from 'lucide-react'
-import { logger } from '@/shared/lib/logger'
+} from "@/admin/components/ui";
+import {
+  updateReservationSettings,
+  getCancellationPolicies,
+} from "@/admin/actions/settings";
+import type { SettingsData } from "@/admin/actions/settings";
+import { useRefreshOnSuccess } from "../hooks";
+import { ExternalLink, AlertCircle } from "lucide-react";
+import { logger } from "@/shared/lib/logger";
+import { getErrorMessage } from "@/shared/lib/errors";
 
 interface ReservationSectionProps {
-  settings: SettingsData
+  settings: SettingsData;
 }
 
 interface CancellationPolicy {
-  id: string
-  title: string
-  updatedAt: Date
+  id: string;
+  title: string;
+  updatedAt: Date;
 }
 
 export function ReservationSection({ settings }: ReservationSectionProps) {
-  const { handleResult } = useRefreshOnSuccess()
-  const [isPending, startTransition] = useTransition()
-  const [cancellationPolicies, setCancellationPolicies] = useState<CancellationPolicy[]>([])
-  const [isLoadingPolicies, setIsLoadingPolicies] = useState(true)
+  const { handleResult } = useRefreshOnSuccess();
+  const [isPending, startTransition] = useTransition();
+  const [cancellationPolicies, setCancellationPolicies] = useState<
+    CancellationPolicy[]
+  >([]);
+  const [isLoadingPolicies, setIsLoadingPolicies] = useState(true);
 
   const [formData, setFormData] = useState({
     defaultTimeSlot: settings.defaultTimeSlot || 60,
     minReservationDuration: settings.minReservationDuration || 60,
     maxReservationDuration: settings.maxReservationDuration || 480,
-    cancellationTermsId: settings.cancellationTermsId || '',
-  })
+    cancellationTermsId: settings.cancellationTermsId || "",
+  });
 
   // キャンセルポリシー一覧を取得
   useEffect(() => {
     async function fetchPolicies() {
       try {
-        const policies = await getCancellationPolicies()
-        setCancellationPolicies(policies)
+        const policies = await getCancellationPolicies();
+        setCancellationPolicies(policies);
       } catch (error) {
-        logger.error('Failed to fetch cancellation policies', {
-          error: error instanceof Error ? error.message : String(error),
-        })
+        logger.error("Failed to fetch cancellation policies", {
+          error: getErrorMessage(error),
+        });
       } finally {
-        setIsLoadingPolicies(false)
+        setIsLoadingPolicies(false);
       }
     }
-    fetchPolicies()
-  }, [])
+    fetchPolicies();
+  }, []);
 
   const handleSave = () => {
     startTransition(async () => {
@@ -77,10 +83,10 @@ export function ReservationSection({ settings }: ReservationSectionProps) {
         minReservationDuration: formData.minReservationDuration || null,
         maxReservationDuration: formData.maxReservationDuration || null,
         cancellationTermsId: formData.cancellationTermsId || null,
-      })
-      handleResult(result)
-    })
-  }
+      });
+      handleResult(result);
+    });
+  };
 
   return (
     <Card>
@@ -145,7 +151,9 @@ export function ReservationSection({ settings }: ReservationSectionProps) {
               step={30}
               disabled={isPending}
             />
-            <p className="text-xs text-muted-foreground">予約可能な最長時間（最大24時間）</p>
+            <p className="text-xs text-muted-foreground">
+              予約可能な最長時間（最大24時間）
+            </p>
           </div>
         </div>
 
@@ -156,11 +164,22 @@ export function ReservationSection({ settings }: ReservationSectionProps) {
           <div className="space-y-2">
             <Select
               value={formData.cancellationTermsId}
-              onValueChange={(v) => setFormData({ ...formData, cancellationTermsId: v === 'none' ? '' : v })}
+              onValueChange={(v) =>
+                setFormData({
+                  ...formData,
+                  cancellationTermsId: v === "none" ? "" : v,
+                })
+              }
               disabled={isPending || isLoadingPolicies}
             >
               <SelectTrigger className="w-full max-w-md">
-                <SelectValue placeholder={isLoadingPolicies ? '読み込み中...' : 'キャンセルポリシーを選択'} />
+                <SelectValue
+                  placeholder={
+                    isLoadingPolicies
+                      ? "読み込み中..."
+                      : "キャンセルポリシーを選択"
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">
@@ -198,9 +217,9 @@ export function ReservationSection({ settings }: ReservationSectionProps) {
         </div>
 
         <Button onClick={handleSave} disabled={isPending}>
-          {isPending ? '保存中...' : '予約設定を保存'}
+          {isPending ? "保存中..." : "予約設定を保存"}
         </Button>
       </CardContent>
     </Card>
-  )
+  );
 }

@@ -1,10 +1,13 @@
-'use server'
+"use server";
 
-import { connection } from 'next/server'
-import { prisma } from '@/shared/lib/prisma'
-import { verifyAdminSession } from '@/shared/lib/auth'
-import type { ReservationStatus, InquiryStatus } from '@/shared/generated/prisma/enums'
-import { toDateString } from '@/shared/lib/serialize'
+import { connection } from "next/server";
+import { prisma } from "@/shared/lib/prisma";
+import { verifyAdminSession } from "@/shared/lib/auth";
+import type {
+  ReservationStatus,
+  InquiryStatus,
+} from "@/shared/generated/prisma/enums";
+import { toDateString } from "@/shared/lib/serialize";
 
 // =============================================================================
 // Types
@@ -12,42 +15,59 @@ import { toDateString } from '@/shared/lib/serialize'
 
 export type DashboardStats = {
   reservations: {
-    thisMonth: number
-    lastMonth: number
-    changePercent: number
-  }
+    thisMonth: number;
+    lastMonth: number;
+    changePercent: number;
+  };
   revenue: {
-    thisMonth: number
-    lastMonth: number
-    changePercent: number
-  }
+    thisMonth: number;
+    lastMonth: number;
+    changePercent: number;
+  };
   inquiries: {
-    new: number
-    thisMonth: number
-  }
+    new: number;
+    thisMonth: number;
+  };
   spaces: {
-    active: number
-    total: number
-  }
-}
+    active: number;
+    total: number;
+  };
+};
 
 export type RecentReservation = {
-  id: string
-  spaceName: string
-  customerName: string
-  startTime: Date
-  endTime: Date
-  status: ReservationStatus
-  totalPrice: number | null
-}
+  id: string;
+  spaceName: string;
+  customerName: string;
+  startTime: Date;
+  endTime: Date;
+  status: ReservationStatus;
+  totalPrice: number | null;
+};
 
 export type RecentInquiry = {
-  id: string
-  name: string
-  email: string
-  subject: string
-  status: InquiryStatus
-  createdAt: Date
+  id: string;
+  name: string;
+  email: string;
+  subject: string;
+  status: InquiryStatus;
+  createdAt: Date;
+};
+
+// =============================================================================
+// Helper Functions
+// =============================================================================
+
+/**
+ * 前月比の変化率を計算（%）
+ */
+function calcChangePercent(current: number, previous: number): number {
+  if (previous > 0) {
+    return Math.round(((current - previous) / previous) * 100);
+  }
+  if (current > 0) {
+    return 100;
+  }
+  return 0;
 }
 
 // =============================================================================
@@ -58,13 +78,21 @@ export type RecentInquiry = {
  * ダッシュボード統計を取得
  */
 export async function getDashboardStats(): Promise<DashboardStats> {
-  await verifyAdminSession()
-  await connection()
+  await verifyAdminSession();
+  await connection();
 
-  const now = new Date()
-  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-  const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999)
+  const now = new Date();
+  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const lastMonthEnd = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    0,
+    23,
+    59,
+    59,
+    999,
+  );
 
   const [
     thisMonthReservations,
@@ -80,21 +108,21 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     prisma.reservation.count({
       where: {
         createdAt: { gte: thisMonthStart },
-        status: { not: 'CANCELLED' },
+        status: { not: "CANCELLED" },
       },
     }),
     // 先月の予約数
     prisma.reservation.count({
       where: {
         createdAt: { gte: lastMonthStart, lte: lastMonthEnd },
-        status: { not: 'CANCELLED' },
+        status: { not: "CANCELLED" },
       },
     }),
     // 今月の売上
     prisma.reservation.aggregate({
       where: {
         createdAt: { gte: thisMonthStart },
-        status: 'CONFIRMED',
+        status: "CONFIRMED",
       },
       _sum: { totalPrice: true },
     }),
@@ -102,13 +130,13 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     prisma.reservation.aggregate({
       where: {
         createdAt: { gte: lastMonthStart, lte: lastMonthEnd },
-        status: 'CONFIRMED',
+        status: "CONFIRMED",
       },
       _sum: { totalPrice: true },
     }),
     // 新規お問い合わせ（未対応）
     prisma.inquiry.count({
-      where: { status: 'NEW' },
+      where: { status: "NEW" },
     }),
     // 今月のお問い合わせ
     prisma.inquiry.count({
@@ -120,18 +148,20 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     }),
     // 全スペース
     prisma.space.count(),
-  ])
+  ]);
 
   // 変化率の計算
-  const reservationChange = lastMonthReservations > 0
-    ? Math.round(((thisMonthReservations - lastMonthReservations) / lastMonthReservations) * 100)
-    : thisMonthReservations > 0 ? 100 : 0
+  const reservationChange = calcChangePercent(
+    thisMonthReservations,
+    lastMonthReservations,
+  );
 
-  const thisMonthRevenueValue = Number(thisMonthRevenue._sum.totalPrice || 0)
-  const lastMonthRevenueValue = Number(lastMonthRevenue._sum.totalPrice || 0)
-  const revenueChange = lastMonthRevenueValue > 0
-    ? Math.round(((thisMonthRevenueValue - lastMonthRevenueValue) / lastMonthRevenueValue) * 100)
-    : thisMonthRevenueValue > 0 ? 100 : 0
+  const thisMonthRevenueValue = Number(thisMonthRevenue._sum.totalPrice || 0);
+  const lastMonthRevenueValue = Number(lastMonthRevenue._sum.totalPrice || 0);
+  const revenueChange = calcChangePercent(
+    thisMonthRevenueValue,
+    lastMonthRevenueValue,
+  );
 
   return {
     reservations: {
@@ -152,18 +182,20 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       active: activeSpaces,
       total: totalSpaces,
     },
-  }
+  };
 }
 
 /**
  * 最近の予約を取得
  */
-export async function getRecentReservations(limit = 5): Promise<RecentReservation[]> {
-  await verifyAdminSession()
+export async function getRecentReservations(
+  limit = 5,
+): Promise<RecentReservation[]> {
+  await verifyAdminSession();
 
   const reservations = await prisma.reservation.findMany({
     take: limit,
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: "desc" },
     select: {
       id: true,
       startTime: true,
@@ -173,7 +205,7 @@ export async function getRecentReservations(limit = 5): Promise<RecentReservatio
       space: { select: { name: true } },
       customer: { select: { lastName: true, firstName: true } },
     },
-  })
+  });
 
   return reservations.map((r) => ({
     id: r.id,
@@ -183,18 +215,18 @@ export async function getRecentReservations(limit = 5): Promise<RecentReservatio
     endTime: r.endTime,
     status: r.status,
     totalPrice: r.totalPrice,
-  }))
+  }));
 }
 
 /**
  * 最近のお問い合わせを取得
  */
 export async function getRecentInquiries(limit = 5): Promise<RecentInquiry[]> {
-  await verifyAdminSession()
+  await verifyAdminSession();
 
   const inquiries = await prisma.inquiry.findMany({
     take: limit,
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: "desc" },
     select: {
       id: true,
       name: true,
@@ -203,7 +235,7 @@ export async function getRecentInquiries(limit = 5): Promise<RecentInquiry[]> {
       status: true,
       createdAt: true,
     },
-  })
+  });
 
   return inquiries.map((i) => ({
     id: i.id,
@@ -212,26 +244,38 @@ export async function getRecentInquiries(limit = 5): Promise<RecentInquiry[]> {
     subject: i.subject,
     status: i.status,
     createdAt: i.createdAt,
-  }))
+  }));
 }
 
 /**
  * 今日の予約を取得
  */
 export async function getTodayReservations(): Promise<RecentReservation[]> {
-  await verifyAdminSession()
-  await connection()
+  await verifyAdminSession();
+  await connection();
 
-  const today = new Date()
-  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate())
-  const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999)
+  const today = new Date();
+  const todayStart = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+  );
+  const todayEnd = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+    23,
+    59,
+    59,
+    999,
+  );
 
   const reservations = await prisma.reservation.findMany({
     where: {
       startTime: { gte: todayStart, lte: todayEnd },
-      status: { not: 'CANCELLED' },
+      status: { not: "CANCELLED" },
     },
-    orderBy: { startTime: 'asc' },
+    orderBy: { startTime: "asc" },
     select: {
       id: true,
       startTime: true,
@@ -241,7 +285,7 @@ export async function getTodayReservations(): Promise<RecentReservation[]> {
       space: { select: { name: true } },
       customer: { select: { lastName: true, firstName: true } },
     },
-  })
+  });
 
   return reservations.map((r) => ({
     id: r.id,
@@ -251,7 +295,7 @@ export async function getTodayReservations(): Promise<RecentReservation[]> {
     endTime: r.endTime,
     status: r.status,
     totalPrice: r.totalPrice,
-  }))
+  }));
 }
 
 // =============================================================================
@@ -259,30 +303,30 @@ export async function getTodayReservations(): Promise<RecentReservation[]> {
 // =============================================================================
 
 export type ChartDataPoint = {
-  date: string
-  reservations: number
-  revenue: number
-}
+  date: string;
+  reservations: number;
+  revenue: number;
+};
 
 /**
  * 直近30日の予約・売上推移データを取得
  */
 export async function getReservationChartData(): Promise<ChartDataPoint[]> {
-  await verifyAdminSession()
-  await connection()
+  await verifyAdminSession();
+  await connection();
 
-  const now = new Date()
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+  const now = new Date();
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
   // DB側で日付ごとに集計
   // NOTE: Prisma の tagged template literal ($queryRaw`...`) は
   // 補間された値を自動的にパラメータ化するため、SQL Injection に対して安全
   // @see https://www.prisma.io/docs/orm/prisma-client/using-raw-sql/raw-queries#queryraw
   type DailyStats = {
-    date: Date
-    reservations: bigint
-    revenue: number | null
-  }
+    date: Date;
+    reservations: bigint;
+    revenue: number | null;
+  };
 
   const dailyStats = await prisma.$queryRaw<DailyStats[]>`
     SELECT
@@ -294,24 +338,24 @@ export async function getReservationChartData(): Promise<ChartDataPoint[]> {
       AND status != 'CANCELLED'
     GROUP BY DATE("createdAt")
     ORDER BY date ASC
-  `
+  `;
 
   // 30日分の日付マップを初期化
-  const dataMap = new Map<string, { reservations: number; revenue: number }>()
+  const dataMap = new Map<string, { reservations: number; revenue: number }>();
   for (let i = 29; i >= 0; i--) {
-    const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000)
-    const dateStr = toDateString(date)
-    dataMap.set(dateStr, { reservations: 0, revenue: 0 })
+    const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+    const dateStr = toDateString(date);
+    dataMap.set(dateStr, { reservations: 0, revenue: 0 });
   }
 
   // DB集計結果をマージ
   for (const stat of dailyStats) {
-    const dateStr = toDateString(stat.date)
+    const dateStr = toDateString(stat.date);
     if (dataMap.has(dateStr)) {
       dataMap.set(dateStr, {
         reservations: Number(stat.reservations),
         revenue: Number(stat.revenue || 0),
-      })
+      });
     }
   }
 
@@ -320,5 +364,5 @@ export async function getReservationChartData(): Promise<ChartDataPoint[]> {
     date: date.slice(5), // MM-DD形式
     reservations: data.reservations,
     revenue: data.revenue,
-  }))
+  }));
 }

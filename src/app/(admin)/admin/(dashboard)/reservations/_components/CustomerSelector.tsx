@@ -1,30 +1,32 @@
-'use client'
+"use client";
 
-import { useState, useEffect, useRef } from 'react'
-import { Search, User, Mail, Phone, Plus, X } from 'lucide-react'
-import { searchCustomers, type CustomerSearchResult } from '@/admin/actions/customer'
+import { useState, useEffect, useRef } from "react";
+import { Search, User, Mail, Phone, Plus, X } from "lucide-react";
 import {
-  Input,
-  Button,
-  Label,
-  Card,
-  CardContent,
-} from '@/admin/components/ui'
-import { logger } from '@/shared/lib/logger'
+  searchCustomers,
+  type CustomerSearchResult,
+} from "@/admin/actions/customer";
+import { Input, Button, Label, Card, CardContent } from "@/admin/components/ui";
+import { logger } from "@/shared/lib/logger";
+import { getErrorMessage } from "@/shared/lib/errors";
 
 interface CustomerSelectorProps {
-  selectedCustomer: { id: string; name: string; email: string } | null
-  onSelectCustomer: (customer: { id: string; name: string; email: string } | null) => void
-  onNewCustomerData: (data: {
-    lastName: string
-    firstName: string
-    email: string
-    phoneNumber?: string
-  } | null) => void
-  isNewCustomer: boolean
-  onToggleNewCustomer: (isNew: boolean) => void
-  errors?: Record<string, string[] | undefined>
-  allowNewCustomer?: boolean
+  selectedCustomer: { id: string; name: string; email: string } | null;
+  onSelectCustomer: (
+    customer: { id: string; name: string; email: string } | null,
+  ) => void;
+  onNewCustomerData: (
+    data: {
+      lastName: string;
+      firstName: string;
+      email: string;
+      phoneNumber?: string;
+    } | null,
+  ) => void;
+  isNewCustomer: boolean;
+  onToggleNewCustomer: (isNew: boolean) => void;
+  errors?: Record<string, string[] | undefined>;
+  allowNewCustomer?: boolean;
 }
 
 export function CustomerSelector({
@@ -36,62 +38,66 @@ export function CustomerSelector({
   errors,
   allowNewCustomer = true,
 }: CustomerSelectorProps) {
-  const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<CustomerSearchResult[]>([])
-  const [isSearching, setIsSearching] = useState(false)
-  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<CustomerSearchResult[]>(
+    [],
+  );
+  const [isSearching, setIsSearching] = useState(false);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 新規顧客入力フォームの状態
   const [newCustomerForm, setNewCustomerForm] = useState({
-    lastName: '',
-    firstName: '',
-    email: '',
-    phoneNumber: '',
-  })
+    lastName: "",
+    firstName: "",
+    email: "",
+    phoneNumber: "",
+  });
 
   // アンマウント時にタイムアウトをクリーンアップ
   useEffect(() => {
     return () => {
       if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current)
+        clearTimeout(searchTimeoutRef.current);
       }
-    }
-  }, [])
+    };
+  }, []);
 
   // 検索処理（デバウンス付き）
   useEffect(() => {
     // 既存のタイムアウトをクリア
     if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current)
+      clearTimeout(searchTimeoutRef.current);
     }
 
     // 検索クエリが2文字未満の場合は検索しない
     if (!searchQuery || searchQuery.trim().length < 2) {
-      setSearchResults([])
-      return
+      setSearchResults([]);
+      return;
     }
 
     // デバウンス処理（300ms）
     searchTimeoutRef.current = setTimeout(async () => {
-      setIsSearching(true)
+      setIsSearching(true);
       try {
-        const results = await searchCustomers(searchQuery)
-        setSearchResults(results)
+        const results = await searchCustomers(searchQuery);
+        setSearchResults(results);
       } catch (error) {
-        logger.error('顧客検索エラー', { error: error instanceof Error ? error.message : String(error) })
-        setSearchResults([])
+        logger.error("顧客検索エラー", {
+          error: getErrorMessage(error),
+        });
+        setSearchResults([]);
       } finally {
-        setIsSearching(false)
+        setIsSearching(false);
       }
-    }, 300)
-  }, [searchQuery])
+    }, 300);
+  }, [searchQuery]);
 
   // 新規顧客フォームの変更を親に伝える
   useEffect(() => {
     if (isNewCustomer) {
-      onNewCustomerData(newCustomerForm)
+      onNewCustomerData(newCustomerForm);
     }
-  }, [newCustomerForm, isNewCustomer, onNewCustomerData])
+  }, [newCustomerForm, isNewCustomer, onNewCustomerData]);
 
   // 顧客を選択
   const handleSelectCustomer = (customer: CustomerSearchResult) => {
@@ -99,39 +105,42 @@ export function CustomerSelector({
       id: customer.id,
       name: `${customer.lastName} ${customer.firstName}`,
       email: customer.email,
-    })
-    setSearchQuery('')
-    setSearchResults([])
-  }
+    });
+    setSearchQuery("");
+    setSearchResults([]);
+  };
 
   // 選択を解除
   const handleClearSelection = () => {
-    onSelectCustomer(null)
-    setSearchQuery('')
-    setSearchResults([])
-  }
+    onSelectCustomer(null);
+    setSearchQuery("");
+    setSearchResults([]);
+  };
 
   // 新規顧客入力モードに切り替え
   const handleToggleNewCustomer = () => {
-    const newValue = !isNewCustomer
-    onToggleNewCustomer(newValue)
+    const newValue = !isNewCustomer;
+    onToggleNewCustomer(newValue);
     if (newValue) {
       // 新規顧客モードに切り替えるときは既存顧客の選択をクリア
-      onSelectCustomer(null)
-      onNewCustomerData(newCustomerForm)
+      onSelectCustomer(null);
+      onNewCustomerData(newCustomerForm);
     } else {
       // 既存顧客モードに切り替えるときは新規顧客データをクリア
-      onNewCustomerData(null)
+      onNewCustomerData(null);
     }
-  }
+  };
 
   // 新規顧客フォームの入力処理
-  const handleNewCustomerInputChange = (field: keyof typeof newCustomerForm, value: string) => {
+  const handleNewCustomerInputChange = (
+    field: keyof typeof newCustomerForm,
+    value: string,
+  ) => {
     setNewCustomerForm((prev) => ({
       ...prev,
       [field]: value,
-    }))
-  }
+    }));
+  };
 
   // 選択済み顧客の表示
   if (selectedCustomer && !isNewCustomer) {
@@ -166,7 +175,7 @@ export function CustomerSelector({
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   return (
@@ -252,11 +261,13 @@ export function CustomerSelector({
           )}
 
           {/* 検索結果なし */}
-          {searchQuery.length >= 2 && !isSearching && searchResults.length === 0 && (
-            <div className="text-sm text-muted-foreground">
-              該当する顧客が見つかりませんでした
-            </div>
-          )}
+          {searchQuery.length >= 2 &&
+            !isSearching &&
+            searchResults.length === 0 && (
+              <div className="text-sm text-muted-foreground">
+                該当する顧客が見つかりませんでした
+              </div>
+            )}
 
           {/* ヒント */}
           {!searchQuery && (
@@ -282,11 +293,13 @@ export function CustomerSelector({
                 placeholder="山田"
                 value={newCustomerForm.lastName}
                 onChange={(e) =>
-                  handleNewCustomerInputChange('lastName', e.target.value)
+                  handleNewCustomerInputChange("lastName", e.target.value)
                 }
               />
-              {errors?.['lastName'] && (
-                <p className="text-sm text-destructive">{errors['lastName']?.[0]}</p>
+              {errors?.["lastName"] && (
+                <p className="text-sm text-destructive">
+                  {errors["lastName"]?.[0]}
+                </p>
               )}
             </div>
 
@@ -301,11 +314,13 @@ export function CustomerSelector({
                 placeholder="太郎"
                 value={newCustomerForm.firstName}
                 onChange={(e) =>
-                  handleNewCustomerInputChange('firstName', e.target.value)
+                  handleNewCustomerInputChange("firstName", e.target.value)
                 }
               />
-              {errors?.['firstName'] && (
-                <p className="text-sm text-destructive">{errors['firstName']?.[0]}</p>
+              {errors?.["firstName"] && (
+                <p className="text-sm text-destructive">
+                  {errors["firstName"]?.[0]}
+                </p>
               )}
             </div>
           </div>
@@ -321,11 +336,11 @@ export function CustomerSelector({
               placeholder="example@example.com"
               value={newCustomerForm.email}
               onChange={(e) =>
-                handleNewCustomerInputChange('email', e.target.value)
+                handleNewCustomerInputChange("email", e.target.value)
               }
             />
-            {errors?.['email'] && (
-              <p className="text-sm text-destructive">{errors['email']?.[0]}</p>
+            {errors?.["email"] && (
+              <p className="text-sm text-destructive">{errors["email"]?.[0]}</p>
             )}
           </div>
 
@@ -338,15 +353,17 @@ export function CustomerSelector({
               placeholder="090-1234-5678"
               value={newCustomerForm.phoneNumber}
               onChange={(e) =>
-                handleNewCustomerInputChange('phoneNumber', e.target.value)
+                handleNewCustomerInputChange("phoneNumber", e.target.value)
               }
             />
-            {errors?.['phoneNumber'] && (
-              <p className="text-sm text-destructive">{errors['phoneNumber']?.[0]}</p>
+            {errors?.["phoneNumber"] && (
+              <p className="text-sm text-destructive">
+                {errors["phoneNumber"]?.[0]}
+              </p>
             )}
           </div>
         </div>
       )}
     </div>
-  )
+  );
 }

@@ -1,43 +1,43 @@
-'use client'
+"use client";
 
-import { useRouter } from 'next/navigation'
-import { useWatch } from 'react-hook-form'
-import { Button } from '@/admin/components/ui/button'
-import { Input } from '@/admin/components/ui/input'
-import { Label } from '@/admin/components/ui/label'
+import { useRouter } from "next/navigation";
+import { useWatch } from "react-hook-form";
+import { Button } from "@/admin/components/ui/button";
+import { Input } from "@/admin/components/ui/input";
+import { Label } from "@/admin/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/admin/components/ui/select'
-import { useFormAction } from '@/admin/hooks'
-import { createUser, updateUser } from '@/admin/actions/user'
+} from "@/admin/components/ui/select";
+import { useFormAction } from "@/admin/hooks";
+import { createUser, updateUser } from "@/admin/actions/user";
 import {
   createUserSchema,
   updateUserSchema,
   type UserData,
-} from '@/admin/lib/validations/user'
-import { Role } from '@/shared/generated/prisma/enums'
-import { keysOf } from '@/shared/lib/serialize'
+} from "@/admin/lib/validations/user";
+import { Role } from "@/shared/generated/prisma/enums";
+import { keysOf } from "@/shared/lib/serialize";
 
 // ロールラベル（クライアント用ローカル定義）
 const ROLE_LABELS: Record<Role, string> = {
-  SUPER_ADMIN: 'スーパー管理者',
-  ADMIN: '管理者',
-  EDITOR: '編集者',
-  VIEWER: '閲覧者',
-  USER: 'ユーザー',
-}
+  SUPER_ADMIN: "スーパー管理者",
+  ADMIN: "管理者",
+  EDITOR: "編集者",
+  VIEWER: "閲覧者",
+  USER: "ユーザー",
+};
 
 type Props =
-  | { mode: 'create'; user?: never }
-  | { mode: 'edit'; user: UserData }
+  | { mode: "create"; user?: never }
+  | { mode: "edit"; user: UserData };
 
 export function UserForm({ mode, user }: Props) {
-  const router = useRouter()
-  const isEdit = mode === 'edit'
+  const router = useRouter();
+  const isEdit = mode === "edit";
 
   const { form, isPending, onSubmit } = useFormAction(
     isEdit ? updateUserSchema : createUserSchema,
@@ -48,59 +48,60 @@ export function UserForm({ mode, user }: Props) {
           name: data.name,
           role: data.role,
           password: data.password || undefined,
-        })
+        });
       }
       // createUser パスでは createUserSchema で検証済み
       return createUser({
         email: data.email,
         name: data.name,
         role: data.role,
-        password: data.password ?? '',
-      })
+        password: data.password ?? "",
+      });
     },
     {
-      redirectTo: isEdit ? `/admin/staff/${user.id}` : '/admin/staff',
+      redirectTo: isEdit ? `/admin/staff/${user.id}` : "/admin/staff",
       refresh: true,
       defaultValues: isEdit
         ? {
             email: user.email,
-            password: '',
-            name: user.name || '',
+            password: "",
+            name: user.name || "",
             role: user.role,
           }
         : {
-            email: '',
-            password: '',
-            name: '',
-            role: 'USER',
+            email: "",
+            password: "",
+            name: "",
+            role: "USER",
           },
-    }
-  )
+    },
+  );
 
   const {
     register,
     setValue,
     control,
     formState: { errors },
-  } = form
+  } = form;
 
-  const currentRole = useWatch({ control, name: 'role' })
+  const currentRole = useWatch({ control, name: "role" });
 
   return (
     <form onSubmit={onSubmit} className="space-y-6">
-
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="name">名前 *</Label>
           <Input
             id="name"
-            {...register('name')}
+            {...register("name")}
             placeholder="山田 太郎"
             aria-invalid={!!errors.name}
-            aria-describedby={errors.name ? 'name-error' : undefined}
+            aria-describedby={errors.name ? "name-error" : undefined}
           />
           {errors.name && (
-            <p id="name-error" className="text-xs text-destructive">{errors.name.message}</p>
+            <p id="name-error" className="text-xs text-destructive">
+              {errors.name.message}
+            </p>
           )}
         </div>
 
@@ -109,13 +110,15 @@ export function UserForm({ mode, user }: Props) {
           <Input
             id="email"
             type="email"
-            {...register('email')}
+            {...register("email")}
             placeholder="example@example.com"
             aria-invalid={!!errors.email}
-            aria-describedby={errors.email ? 'email-error' : undefined}
+            aria-describedby={errors.email ? "email-error" : undefined}
           />
           {errors.email && (
-            <p id="email-error" className="text-xs text-destructive">{errors.email.message}</p>
+            <p id="email-error" className="text-xs text-destructive">
+              {errors.email.message}
+            </p>
           )}
         </div>
       </div>
@@ -123,18 +126,20 @@ export function UserForm({ mode, user }: Props) {
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="password">
-            パスワード {isEdit ? '(変更する場合のみ入力)' : '*'}
+            パスワード {isEdit ? "(変更する場合のみ入力)" : "*"}
           </Label>
           <Input
             id="password"
             type="password"
-            {...register('password')}
-            placeholder={isEdit ? '変更しない場合は空欄' : '8文字以上'}
+            {...register("password")}
+            placeholder={isEdit ? "変更しない場合は空欄" : "8文字以上"}
             aria-invalid={!!errors.password}
-            aria-describedby={errors.password ? 'password-error' : undefined}
+            aria-describedby={errors.password ? "password-error" : undefined}
           />
           {errors.password && (
-            <p id="password-error" className="text-xs text-destructive">{errors.password.message}</p>
+            <p id="password-error" className="text-xs text-destructive">
+              {errors.password.message}
+            </p>
           )}
         </div>
 
@@ -142,7 +147,7 @@ export function UserForm({ mode, user }: Props) {
           <Label htmlFor="role">ロール *</Label>
           <Select
             value={currentRole}
-            onValueChange={(value: Role) => setValue('role', value)}
+            onValueChange={(value: Role) => setValue("role", value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="ロールを選択" />
@@ -156,11 +161,13 @@ export function UserForm({ mode, user }: Props) {
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">
-            {currentRole === 'SUPER_ADMIN' && 'システム全体の管理権限（ユーザー管理、監査ログ含む）'}
-            {currentRole === 'ADMIN' && 'コンテンツ管理全般（ユーザー管理除く）'}
-            {currentRole === 'EDITOR' && '割り当てられたページのみ編集可能'}
-            {currentRole === 'VIEWER' && '閲覧のみ（編集不可）'}
-            {currentRole === 'USER' && '公開ユーザー（管理画面アクセス不可）'}
+            {currentRole === "SUPER_ADMIN" &&
+              "システム全体の管理権限（ユーザー管理、監査ログ含む）"}
+            {currentRole === "ADMIN" &&
+              "コンテンツ管理全般（ユーザー管理除く）"}
+            {currentRole === "EDITOR" && "割り当てられたページのみ編集可能"}
+            {currentRole === "VIEWER" && "閲覧のみ（編集不可）"}
+            {currentRole === "USER" && "公開ユーザー（管理画面アクセス不可）"}
           </p>
           {errors.role && (
             <p className="text-xs text-destructive">{errors.role.message}</p>
@@ -170,7 +177,13 @@ export function UserForm({ mode, user }: Props) {
 
       <div className="flex gap-4">
         <Button type="submit" disabled={isPending}>
-          {isPending ? (isEdit ? '更新中...' : '作成中...') : isEdit ? '更新' : '作成'}
+          {isPending && isEdit
+            ? "更新中..."
+            : isPending
+              ? "作成中..."
+              : isEdit
+                ? "更新"
+                : "作成"}
         </Button>
         <Button
           type="button"
@@ -182,5 +195,5 @@ export function UserForm({ mode, user }: Props) {
         </Button>
       </div>
     </form>
-  )
+  );
 }

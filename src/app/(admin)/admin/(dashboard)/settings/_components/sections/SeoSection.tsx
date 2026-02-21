@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * SEO設定セクション
@@ -6,7 +6,7 @@
  * メタ情報、Analytics設定、検索エンジン検証の3カード構成
  */
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition } from "react";
 import {
   Button,
   Card,
@@ -18,41 +18,52 @@ import {
   Label,
   Textarea,
   SelectionBox,
-} from '@/admin/components/ui'
-import { updateSeoSettings } from '@/admin/actions/settings'
-import type { SettingsData } from '@/admin/actions/settings'
-import { useRefreshOnSuccess } from '../hooks'
-import { AnalyticsType } from '@/shared/generated/prisma/enums'
-import { isValidAnalyticsType, getValidAnalyticsType } from '@/shared/lib/validations/enums'
+} from "@/admin/components/ui";
+import { updateSeoSettings } from "@/admin/actions/settings";
+import type { SettingsData } from "@/admin/actions/settings";
+import { useRefreshOnSuccess } from "../hooks";
+import { AnalyticsType } from "@/shared/generated/prisma/enums";
+import {
+  isValidAnalyticsType,
+  getValidAnalyticsType,
+} from "@/shared/lib/validations/enums";
 
 interface SeoSectionProps {
-  settings: SettingsData
+  settings: SettingsData;
 }
 
 const ANALYTICS_TYPE_OPTIONS = [
-  { value: 'ga4', label: 'Google Analytics 4 (GA4)', description: 'Googleアナリティクス4を使用' },
-  { value: 'gtm', label: 'Google Tag Manager (GTM)', description: 'タグマネージャー経由で管理' },
-  { value: 'none', label: '無効', description: 'トラッキングを無効化' },
-]
+  {
+    value: "ga4",
+    label: "Google Analytics 4 (GA4)",
+    description: "Googleアナリティクス4を使用",
+  },
+  {
+    value: "gtm",
+    label: "Google Tag Manager (GTM)",
+    description: "タグマネージャー経由で管理",
+  },
+  { value: "none", label: "無効", description: "トラッキングを無効化" },
+];
 
 export function SeoSection({ settings }: SeoSectionProps) {
-  const { handleResult } = useRefreshOnSuccess()
-  const [isPending, startTransition] = useTransition()
+  const { handleResult } = useRefreshOnSuccess();
+  const [isPending, startTransition] = useTransition();
   const [formData, setFormData] = useState({
     // Meta settings
-    defaultMetaDescription: settings.defaultMetaDescription || '',
-    defaultMetaKeywords: settings.defaultMetaKeywords || '',
-    defaultOgpTitle: settings.defaultOgpTitle || '',
-    defaultOgpDescription: settings.defaultOgpDescription || '',
+    defaultMetaDescription: settings.defaultMetaDescription || "",
+    defaultMetaKeywords: settings.defaultMetaKeywords || "",
+    defaultOgpTitle: settings.defaultOgpTitle || "",
+    defaultOgpDescription: settings.defaultOgpDescription || "",
     // Analytics settings
     analyticsType: getValidAnalyticsType(settings.analyticsType),
-    googleAnalyticsId: settings.googleAnalyticsId || '',
-    googleTagManagerId: settings.googleTagManagerId || '',
-    gaPropertyId: settings.gaPropertyId || '',
+    googleAnalyticsId: settings.googleAnalyticsId || "",
+    googleTagManagerId: settings.googleTagManagerId || "",
+    gaPropertyId: settings.gaPropertyId || "",
     // Webmaster settings
-    googleSearchConsoleId: settings.googleSearchConsoleId || '',
-    bingWebmasterToolsId: settings.bingWebmasterToolsId || '',
-  })
+    googleSearchConsoleId: settings.googleSearchConsoleId || "",
+    bingWebmasterToolsId: settings.bingWebmasterToolsId || "",
+  });
 
   const handleSave = () => {
     startTransition(async () => {
@@ -67,10 +78,10 @@ export function SeoSection({ settings }: SeoSectionProps) {
         gaPropertyId: formData.gaPropertyId || null,
         googleSearchConsoleId: formData.googleSearchConsoleId || null,
         bingWebmasterToolsId: formData.bingWebmasterToolsId || null,
-      })
-      handleResult(result)
-    })
-  }
+      });
+      handleResult(result);
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -84,28 +95,41 @@ export function SeoSection({ settings }: SeoSectionProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="defaultMetaDescription">デフォルトメタディスクリプション</Label>
+            <Label htmlFor="defaultMetaDescription">
+              デフォルトメタディスクリプション
+            </Label>
             <Textarea
               id="defaultMetaDescription"
               value={formData.defaultMetaDescription}
               onChange={(e) =>
-                setFormData({ ...formData, defaultMetaDescription: e.target.value })
+                setFormData({
+                  ...formData,
+                  defaultMetaDescription: e.target.value,
+                })
               }
               placeholder="サイトのデフォルト説明文（160文字以内推奨）"
               rows={2}
               disabled={isPending}
             />
             <p className="text-xs text-muted-foreground">
-              現在 {formData.defaultMetaDescription.length} 文字（推奨: 120〜160文字）
+              現在 {formData.defaultMetaDescription.length} 文字（推奨:
+              120〜160文字）
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="defaultMetaKeywords">デフォルトメタキーワード</Label>
+            <Label htmlFor="defaultMetaKeywords">
+              デフォルトメタキーワード
+            </Label>
             <Input
               id="defaultMetaKeywords"
               value={formData.defaultMetaKeywords}
-              onChange={(e) => setFormData({ ...formData, defaultMetaKeywords: e.target.value })}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  defaultMetaKeywords: e.target.value,
+                })
+              }
               placeholder="レンタルスペース, 会議室, イベント会場"
               disabled={isPending}
             />
@@ -118,7 +142,9 @@ export function SeoSection({ settings }: SeoSectionProps) {
               <Input
                 id="defaultOgpTitle"
                 value={formData.defaultOgpTitle}
-                onChange={(e) => setFormData({ ...formData, defaultOgpTitle: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, defaultOgpTitle: e.target.value })
+                }
                 placeholder="サイト名 | キャッチコピー"
                 disabled={isPending}
               />
@@ -129,7 +155,10 @@ export function SeoSection({ settings }: SeoSectionProps) {
                 id="defaultOgpDescription"
                 value={formData.defaultOgpDescription}
                 onChange={(e) =>
-                  setFormData({ ...formData, defaultOgpDescription: e.target.value })
+                  setFormData({
+                    ...formData,
+                    defaultOgpDescription: e.target.value,
+                  })
                 }
                 placeholder="SNSシェア時の説明文"
                 disabled={isPending}
@@ -152,8 +181,14 @@ export function SeoSection({ settings }: SeoSectionProps) {
             <Label>トラッキング方式</Label>
             <SelectionBox
               options={ANALYTICS_TYPE_OPTIONS}
-              value={formData.analyticsType ?? 'none'}
-              onChange={(value) => setFormData({ ...formData, analyticsType: value === 'none' ? null : isValidAnalyticsType(value) ? value : null })}
+              value={formData.analyticsType ?? "none"}
+              onChange={(value) => {
+                const analyticsType =
+                  value !== "none" && isValidAnalyticsType(value)
+                    ? value
+                    : null;
+                setFormData({ ...formData, analyticsType });
+              }}
               columns={3}
               disabled={isPending}
               name="トラッキング方式"
@@ -169,7 +204,12 @@ export function SeoSection({ settings }: SeoSectionProps) {
               <Input
                 id="googleAnalyticsId"
                 value={formData.googleAnalyticsId}
-                onChange={(e) => setFormData({ ...formData, googleAnalyticsId: e.target.value })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    googleAnalyticsId: e.target.value,
+                  })
+                }
                 placeholder="G-XXXXXXXXXX"
                 disabled={isPending}
               />
@@ -185,7 +225,12 @@ export function SeoSection({ settings }: SeoSectionProps) {
               <Input
                 id="googleTagManagerId"
                 value={formData.googleTagManagerId}
-                onChange={(e) => setFormData({ ...formData, googleTagManagerId: e.target.value })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    googleTagManagerId: e.target.value,
+                  })
+                }
                 placeholder="GTM-XXXXXXX"
                 disabled={isPending}
               />
@@ -196,16 +241,21 @@ export function SeoSection({ settings }: SeoSectionProps) {
           )}
 
           <div className="space-y-2 pt-2 border-t">
-            <Label htmlFor="gaPropertyId">GA4 プロパティID（ダッシュボード統計用）</Label>
+            <Label htmlFor="gaPropertyId">
+              GA4 プロパティID（ダッシュボード統計用）
+            </Label>
             <Input
               id="gaPropertyId"
               value={formData.gaPropertyId}
-              onChange={(e) => setFormData({ ...formData, gaPropertyId: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, gaPropertyId: e.target.value })
+              }
               placeholder="123456789"
               disabled={isPending}
             />
             <p className="text-xs text-muted-foreground">
-              GA4管理画面 &gt; プロパティ設定 &gt; プロパティIDから取得（数値のみ）。
+              GA4管理画面 &gt; プロパティ設定 &gt;
+              プロパティIDから取得（数値のみ）。
               ダッシュボードでのアクセス解析表示に必要です。
             </p>
           </div>
@@ -217,7 +267,8 @@ export function SeoSection({ settings }: SeoSectionProps) {
         <CardHeader>
           <CardTitle>検索エンジン検証</CardTitle>
           <CardDescription>
-            Google Search ConsoleやBing Webmaster Toolsの所有権確認用メタタグを設定します
+            Google Search ConsoleやBing Webmaster
+            Toolsの所有権確認用メタタグを設定します
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -227,14 +278,17 @@ export function SeoSection({ settings }: SeoSectionProps) {
               id="googleSearchConsoleId"
               value={formData.googleSearchConsoleId}
               onChange={(e) =>
-                setFormData({ ...formData, googleSearchConsoleId: e.target.value })
+                setFormData({
+                  ...formData,
+                  googleSearchConsoleId: e.target.value,
+                })
               }
               placeholder="verification-code-here"
               disabled={isPending}
             />
             <p className="text-xs text-muted-foreground">
-              &lt;meta name=&quot;google-site-verification&quot; content=&quot;...&quot; /&gt;
-              のcontent属性値を入力
+              &lt;meta name=&quot;google-site-verification&quot;
+              content=&quot;...&quot; /&gt; のcontent属性値を入力
             </p>
           </div>
 
@@ -244,14 +298,17 @@ export function SeoSection({ settings }: SeoSectionProps) {
               id="bingWebmasterToolsId"
               value={formData.bingWebmasterToolsId}
               onChange={(e) =>
-                setFormData({ ...formData, bingWebmasterToolsId: e.target.value })
+                setFormData({
+                  ...formData,
+                  bingWebmasterToolsId: e.target.value,
+                })
               }
               placeholder="verification-code-here"
               disabled={isPending}
             />
             <p className="text-xs text-muted-foreground">
-              &lt;meta name=&quot;msvalidate.01&quot; content=&quot;...&quot; /&gt;
-              のcontent属性値を入力
+              &lt;meta name=&quot;msvalidate.01&quot; content=&quot;...&quot;
+              /&gt; のcontent属性値を入力
             </p>
           </div>
         </CardContent>
@@ -260,9 +317,9 @@ export function SeoSection({ settings }: SeoSectionProps) {
       {/* Save Button */}
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={isPending} size="lg">
-          {isPending ? '保存中...' : 'SEO・Analytics設定を保存'}
+          {isPending ? "保存中..." : "SEO・Analytics設定を保存"}
         </Button>
       </div>
     </div>
-  )
+  );
 }

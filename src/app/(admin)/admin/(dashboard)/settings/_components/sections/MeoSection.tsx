@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * MEO対策設定セクション
@@ -7,7 +7,7 @@
  * MEO情報充実度スコアの3カード構成
  */
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition } from "react";
 import {
   Button,
   Card,
@@ -18,39 +18,51 @@ import {
   Checkbox,
   Input,
   Label,
-} from '@/admin/components/ui'
-import { updateMeoSettings } from '@/admin/actions/settings'
-import { parseBusinessAttributes } from '@/shared/lib/json-validators'
-import type { SettingsData } from '@/admin/actions/settings'
-import { useRefreshOnSuccess } from '../hooks'
+} from "@/admin/components/ui";
+import { updateMeoSettings } from "@/admin/actions/settings";
+import { parseBusinessAttributes } from "@/shared/lib/json-validators";
+import type { SettingsData } from "@/admin/actions/settings";
+import { useRefreshOnSuccess } from "../hooks";
 
 // =============================================================================
 // Constants
 // =============================================================================
 
+function getScoreColorClass(score: number): string {
+  if (score >= 70) return "text-success";
+  if (score >= 40) return "text-warning";
+  return "text-destructive";
+}
+
+function getScoreMessage(score: number): string {
+  if (score >= 70) return "MEO対策の基本設定が十分に行われています";
+  if (score >= 40) return "いくつかの項目が未設定です。改善の余地があります";
+  return "多くの項目が未設定です。MEO対策を強化してください";
+}
+
 const BUSINESS_ATTRIBUTE_OPTIONS = [
-  { key: 'wifi', label: 'Wi-Fi' },
-  { key: 'parking', label: '駐車場' },
-  { key: 'barrier_free', label: 'バリアフリー' },
-  { key: 'elevator', label: 'エレベーター' },
-  { key: 'smoking_area', label: '喫煙所' },
-  { key: 'food_allowed', label: '飲食可' },
-  { key: 'photography_allowed', label: '撮影可' },
-  { key: 'music_allowed', label: '楽器演奏可' },
-] as const
+  { key: "wifi", label: "Wi-Fi" },
+  { key: "parking", label: "駐車場" },
+  { key: "barrier_free", label: "バリアフリー" },
+  { key: "elevator", label: "エレベーター" },
+  { key: "smoking_area", label: "喫煙所" },
+  { key: "food_allowed", label: "飲食可" },
+  { key: "photography_allowed", label: "撮影可" },
+  { key: "music_allowed", label: "楽器演奏可" },
+] as const;
 
 // =============================================================================
 // Types
 // =============================================================================
 
 interface MeoSectionProps {
-  settings: SettingsData
-  socialLinkCount: number
+  settings: SettingsData;
+  socialLinkCount: number;
 }
 
 interface MeoScoreItem {
-  label: string
-  isSet: boolean
+  label: string;
+  isSet: boolean;
 }
 
 // =============================================================================
@@ -61,29 +73,35 @@ function calculateMeoScore(
   settings: SettingsData,
   socialLinkCount: number,
 ): {
-  score: number
-  items: MeoScoreItem[]
+  score: number;
+  items: MeoScoreItem[];
 } {
   const items: MeoScoreItem[] = [
-    { label: 'ビジネス名', isSet: !!settings.businessName },
-    { label: '住所', isSet: !!(settings.postalCode && settings.prefecture && settings.city) },
-    { label: '電話番号', isSet: !!settings.phoneNumber },
-    { label: 'メールアドレス', isSet: !!settings.email },
-    { label: '緯度・経度', isSet: settings.latitude !== null && settings.longitude !== null },
-    { label: '営業時間', isSet: settings.businessHours !== null },
-    { label: '価格帯', isSet: !!settings.priceRange },
-    { label: '事業説明', isSet: !!settings.businessDescription },
-    { label: 'ロゴ画像', isSet: !!settings.headerLogoUrl },
-    { label: 'Google Place ID', isSet: !!settings.googleBusinessPlaceId },
-    { label: '決済方法', isSet: !!settings.paymentAccepted },
-    { label: '設立日', isSet: settings.establishedDate !== null },
-    { label: 'ソーシャルリンク', isSet: socialLinkCount > 0 },
-  ]
+    { label: "ビジネス名", isSet: !!settings.businessName },
+    {
+      label: "住所",
+      isSet: !!(settings.postalCode && settings.prefecture && settings.city),
+    },
+    { label: "電話番号", isSet: !!settings.phoneNumber },
+    { label: "メールアドレス", isSet: !!settings.email },
+    {
+      label: "緯度・経度",
+      isSet: settings.latitude !== null && settings.longitude !== null,
+    },
+    { label: "営業時間", isSet: settings.businessHours !== null },
+    { label: "価格帯", isSet: !!settings.priceRange },
+    { label: "事業説明", isSet: !!settings.businessDescription },
+    { label: "ロゴ画像", isSet: !!settings.headerLogoUrl },
+    { label: "Google Place ID", isSet: !!settings.googleBusinessPlaceId },
+    { label: "決済方法", isSet: !!settings.paymentAccepted },
+    { label: "設立日", isSet: settings.establishedDate !== null },
+    { label: "ソーシャルリンク", isSet: socialLinkCount > 0 },
+  ];
 
-  const setCount = items.filter((item) => item.isSet).length
-  const score = Math.round((setCount / items.length) * 100)
+  const setCount = items.filter((item) => item.isSet).length;
+  const score = Math.round((setCount / items.length) * 100);
 
-  return { score, items }
+  return { score, items };
 }
 
 // =============================================================================
@@ -91,27 +109,31 @@ function calculateMeoScore(
 // =============================================================================
 
 export function MeoSection({ settings, socialLinkCount }: MeoSectionProps) {
-  const { handleResult } = useRefreshOnSuccess()
-  const [isPending, startTransition] = useTransition()
+  const { handleResult } = useRefreshOnSuccess();
+  const [isPending, startTransition] = useTransition();
 
   const [formData, setFormData] = useState({
     latitude: settings.latitude,
     longitude: settings.longitude,
-    priceRange: settings.priceRange || '',
-    googleBusinessPlaceId: settings.googleBusinessPlaceId || '',
-    googleReviewUrl: settings.googleReviewUrl || '',
-    businessAttributes: parseBusinessAttributes(settings.businessAttributes) ?? {},
-    paymentAccepted: settings.paymentAccepted || '',
-  })
+    priceRange: settings.priceRange || "",
+    googleBusinessPlaceId: settings.googleBusinessPlaceId || "",
+    googleReviewUrl: settings.googleReviewUrl || "",
+    businessAttributes:
+      parseBusinessAttributes(settings.businessAttributes) ?? {},
+    paymentAccepted: settings.paymentAccepted || "",
+  });
 
-  const { score, items } = calculateMeoScore({
-    ...settings,
-    latitude: formData.latitude,
-    longitude: formData.longitude,
-    priceRange: formData.priceRange || null,
-    googleBusinessPlaceId: formData.googleBusinessPlaceId || null,
-    paymentAccepted: formData.paymentAccepted || null,
-  }, socialLinkCount)
+  const { score, items } = calculateMeoScore(
+    {
+      ...settings,
+      latitude: formData.latitude,
+      longitude: formData.longitude,
+      priceRange: formData.priceRange || null,
+      googleBusinessPlaceId: formData.googleBusinessPlaceId || null,
+      paymentAccepted: formData.paymentAccepted || null,
+    },
+    socialLinkCount,
+  );
 
   const handleSave = () => {
     startTransition(async () => {
@@ -121,14 +143,15 @@ export function MeoSection({ settings, socialLinkCount }: MeoSectionProps) {
         priceRange: formData.priceRange || null,
         googleBusinessPlaceId: formData.googleBusinessPlaceId || null,
         googleReviewUrl: formData.googleReviewUrl || null,
-        businessAttributes: Object.keys(formData.businessAttributes).length > 0
-          ? formData.businessAttributes
-          : null,
+        businessAttributes:
+          Object.keys(formData.businessAttributes).length > 0
+            ? formData.businessAttributes
+            : null,
         paymentAccepted: formData.paymentAccepted || null,
-      })
-      handleResult(result)
-    })
-  }
+      });
+      handleResult(result);
+    });
+  };
 
   const handleAttributeChange = (key: string, checked: boolean) => {
     setFormData((prev) => ({
@@ -137,24 +160,24 @@ export function MeoSection({ settings, socialLinkCount }: MeoSectionProps) {
         ...prev.businessAttributes,
         [key]: checked,
       },
-    }))
-  }
+    }));
+  };
 
   const handleLatitudeChange = (value: string) => {
-    const num = value === '' ? null : Number(value)
+    const num = value === "" ? null : Number(value);
     setFormData((prev) => ({
       ...prev,
       latitude: num !== null && !Number.isNaN(num) ? num : null,
-    }))
-  }
+    }));
+  };
 
   const handleLongitudeChange = (value: string) => {
-    const num = value === '' ? null : Number(value)
+    const num = value === "" ? null : Number(value);
     setFormData((prev) => ({
       ...prev,
       longitude: num !== null && !Number.isNaN(num) ? num : null,
-    }))
-  }
+    }));
+  };
 
   return (
     <div className="space-y-6">
@@ -174,7 +197,7 @@ export function MeoSection({ settings, socialLinkCount }: MeoSectionProps) {
                 id="latitude"
                 type="number"
                 step="any"
-                value={formData.latitude ?? ''}
+                value={formData.latitude ?? ""}
                 onChange={(e) => handleLatitudeChange(e.target.value)}
                 placeholder="35.6812"
                 disabled={isPending}
@@ -189,7 +212,7 @@ export function MeoSection({ settings, socialLinkCount }: MeoSectionProps) {
                 id="longitude"
                 type="number"
                 step="any"
-                value={formData.longitude ?? ''}
+                value={formData.longitude ?? ""}
                 onChange={(e) => handleLongitudeChange(e.target.value)}
                 placeholder="139.7671"
                 disabled={isPending}
@@ -205,7 +228,9 @@ export function MeoSection({ settings, socialLinkCount }: MeoSectionProps) {
             <Input
               id="priceRange"
               value={formData.priceRange}
-              onChange={(e) => setFormData({ ...formData, priceRange: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, priceRange: e.target.value })
+              }
               placeholder="¥1,000〜¥5,000/時間"
               disabled={isPending}
             />
@@ -219,7 +244,9 @@ export function MeoSection({ settings, socialLinkCount }: MeoSectionProps) {
             <Input
               id="paymentAccepted"
               value={formData.paymentAccepted}
-              onChange={(e) => setFormData({ ...formData, paymentAccepted: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, paymentAccepted: e.target.value })
+              }
               placeholder="現金, クレジットカード, 電子マネー, QRコード決済"
               disabled={isPending}
             />
@@ -244,7 +271,12 @@ export function MeoSection({ settings, socialLinkCount }: MeoSectionProps) {
             <Input
               id="googleBusinessPlaceId"
               value={formData.googleBusinessPlaceId}
-              onChange={(e) => setFormData({ ...formData, googleBusinessPlaceId: e.target.value })}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  googleBusinessPlaceId: e.target.value,
+                })
+              }
               placeholder="ChIJ..."
               disabled={isPending}
             />
@@ -258,7 +290,9 @@ export function MeoSection({ settings, socialLinkCount }: MeoSectionProps) {
             <Input
               id="googleReviewUrl"
               value={formData.googleReviewUrl}
-              onChange={(e) => setFormData({ ...formData, googleReviewUrl: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, googleReviewUrl: e.target.value })
+              }
               placeholder="https://search.google.com/local/writereview?placeid=..."
               disabled={isPending}
             />
@@ -280,7 +314,10 @@ export function MeoSection({ settings, socialLinkCount }: MeoSectionProps) {
                     }
                     disabled={isPending}
                   />
-                  <Label htmlFor={`attr-${attr.key}`} className="text-sm font-normal cursor-pointer">
+                  <Label
+                    htmlFor={`attr-${attr.key}`}
+                    className="text-sm font-normal cursor-pointer"
+                  >
                     {attr.label}
                   </Label>
                 </div>
@@ -322,7 +359,7 @@ export function MeoSection({ settings, socialLinkCount }: MeoSectionProps) {
                   stroke="currentColor"
                   strokeWidth="3"
                   strokeDasharray={`${score}, 100`}
-                  className={score >= 70 ? 'text-success' : score >= 40 ? 'text-warning' : 'text-destructive'}
+                  className={getScoreColorClass(score)}
                 />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
@@ -330,27 +367,27 @@ export function MeoSection({ settings, socialLinkCount }: MeoSectionProps) {
               </div>
             </div>
             <div>
-              <p className="text-sm font-medium">
-                {score >= 70
-                  ? 'MEO対策の基本設定が十分に行われています'
-                  : score >= 40
-                    ? 'いくつかの項目が未設定です。改善の余地があります'
-                    : '多くの項目が未設定です。MEO対策を強化してください'}
-              </p>
+              <p className="text-sm font-medium">{getScoreMessage(score)}</p>
             </div>
           </div>
 
           <div className="space-y-2">
             {items.map((item) => (
               <div key={item.label} className="flex items-center gap-2 text-sm">
-                <span className={item.isSet ? 'text-success' : 'text-muted-foreground'}>
-                  {item.isSet ? '\u2713' : '\u2717'}
+                <span
+                  className={
+                    item.isSet ? "text-success" : "text-muted-foreground"
+                  }
+                >
+                  {item.isSet ? "\u2713" : "\u2717"}
                 </span>
-                <span className={item.isSet ? '' : 'text-muted-foreground'}>
+                <span className={item.isSet ? "" : "text-muted-foreground"}>
                   {item.label}
                 </span>
                 {!item.isSet && (
-                  <span className="text-xs text-muted-foreground">- 未設定</span>
+                  <span className="text-xs text-muted-foreground">
+                    - 未設定
+                  </span>
                 )}
               </div>
             ))}
@@ -359,8 +396,8 @@ export function MeoSection({ settings, socialLinkCount }: MeoSectionProps) {
       </Card>
 
       <Button onClick={handleSave} disabled={isPending}>
-        {isPending ? '保存中...' : 'MEO設定を保存'}
+        {isPending ? "保存中..." : "MEO設定を保存"}
       </Button>
     </div>
-  )
+  );
 }

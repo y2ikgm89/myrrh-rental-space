@@ -1,30 +1,37 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import { getSpaces } from "@/admin/actions/space";
 import { SpaceFilters } from "./SpaceFilters";
 import { SpaceTable } from "./SpaceTable";
-import { Button, Pagination } from "@/admin/components/ui";
+import { Pagination } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
 import { loadAdminSpaceSearchParams } from "@/shared/lib/nuqs";
+import type { SearchParams } from "nuqs/server";
 
 // =============================================================================
 // 型定義
 // =============================================================================
 
-type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
-
 interface SpaceTabContentProps {
-  searchParams: SearchParams;
+  searchParams: Promise<SearchParams>;
 }
 
 // =============================================================================
 // 内部コンポーネント
 // =============================================================================
 
-async function SpaceList({ searchParams }: { searchParams: SearchParams }) {
+async function SpaceList({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
   const params = await loadAdminSpaceSearchParams(searchParams);
-  const isPublished =
-    params.status === "true" ? true : params.status === "false" ? false : "ALL";
+
+  let isPublished: boolean | "ALL" = "ALL";
+  if (params.status === "true") {
+    isPublished = true;
+  } else if (params.status === "false") {
+    isPublished = false;
+  }
 
   const result = await getSpaces(
     { isPublished, search: params.search || undefined },
@@ -50,25 +57,9 @@ async function SpaceList({ searchParams }: { searchParams: SearchParams }) {
 export async function SpaceTabContent({ searchParams }: SpaceTabContentProps) {
   return (
     <div className="space-y-6">
-      {/* ヘッダー */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold">スペース一覧</h2>
-          <p className="text-sm text-muted-foreground">
-            スペースの追加・編集・公開管理を行います
-          </p>
-        </div>
-        <Button asChild>
-          <Link href="/admin/spaces/new">新規作成</Link>
-        </Button>
-      </div>
-
-      {/* フィルター */}
       <Suspense fallback={<LoadingState variant="inline" />}>
         <SpaceFilters />
       </Suspense>
-
-      {/* スペース一覧 */}
       <Suspense fallback={<LoadingState />}>
         <SpaceList searchParams={searchParams} />
       </Suspense>
