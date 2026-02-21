@@ -44,7 +44,8 @@ export function formatFileSize(bytes: number): string {
   if (bytes === 0) return '不明'
   const units = ['B', 'KB', 'MB', 'GB'] as const
   const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1)
-  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]!}`
+  const unit = units[i] ?? 'B'
+  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${unit}`
 }
 
 function getFileIconEmoji(mime: string): string {
@@ -87,7 +88,7 @@ function FileComponent({
         e.preventDefault()
         setSelected(true)
       }}
-      className={`flex items-center gap-3 rounded-lg border bg-card p-3 my-2 no-underline hover:bg-accent transition-colors ${
+      className={`flex items-center gap-3 rounded-lg border border-border bg-card p-3 my-2 no-underline hover:bg-accent transition-colors ${
         isSelected ? 'ring-2 ring-ring' : ''
       }`}
     >
