@@ -17,7 +17,7 @@ import { prisma } from '@/shared/lib/prisma'
 import { generateICalFeed, type CalendarEvent } from '@/shared/lib/ical'
 import { format } from 'date-fns'
 import { ACTIVE_RESERVATION_STATUSES } from '@/shared/lib/validations/enums'
-import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
+import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors/server'
 import { fireAndForget } from '@/shared/lib/async-utils'
 
 /**

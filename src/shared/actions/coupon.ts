@@ -15,7 +15,7 @@ import {
   createFailure,
   type ActionResult,
 } from "@/shared/types/server-actions";
-import { logError, ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
+import { logError, ErrorCategory, ErrorSeverity } from "@/shared/lib/errors/server";
 
 // =============================================================================
 // Types

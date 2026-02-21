@@ -17,7 +17,7 @@
  */
 
 import { prisma } from '@/shared/lib/prisma'
-import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
+import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors/server'
 import type { EditorCommentStatus } from '@/shared/generated/prisma/client'
 import type {
   EditorCommentThread,

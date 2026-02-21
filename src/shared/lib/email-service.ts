@@ -19,7 +19,7 @@
 
 import 'server-only'
 import { getResendClient, getFromAddress, isEmailEnabled } from './email'
-import { logError, ErrorCategory, ErrorSeverity, normalizeError } from './errors'
+import { logError, ErrorCategory, ErrorSeverity, normalizeError } from './errors/server'
 import { ReservationConfirmationEmail } from '@/shared/emails/reservation-confirmation'
 import { ReservationCancelledEmail } from '@/shared/emails/reservation-cancelled'
 import { ContactConfirmationEmail } from '@/shared/emails/contact-confirmation'

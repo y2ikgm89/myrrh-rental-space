@@ -37,7 +37,7 @@ import {
   type InvitationData,
 } from '@/admin/lib/validations/staff-invitation'
 import { getAppUrl } from '@/shared/lib/constants'
-import { logError, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
+import { logError, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors/server'
 import { hashPassword } from 'better-auth/crypto'
 
 // =============================================================================

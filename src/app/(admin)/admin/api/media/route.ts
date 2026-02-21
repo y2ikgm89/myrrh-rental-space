@@ -15,7 +15,7 @@ import {
   parseMediaTypeFilter,
   parseMediaUsageFilter,
 } from '@/admin/lib/validations/media'
-import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
+import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors/server'
 import { extractFieldErrors } from '@/shared/lib/action-helpers'
 
 function getErrorStatus(message: string): number {

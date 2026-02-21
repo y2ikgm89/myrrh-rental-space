@@ -5,7 +5,7 @@ import {
   ErrorCategory,
   ErrorSeverity,
   normalizeError,
-} from "@/shared/lib/errors";
+} from "@/shared/lib/errors/server";
 import { prisma } from "@/shared/lib/prisma";
 import { serverEnv } from "@/shared/lib/env/server";
 import { CalendarSyncMethod } from "@/shared/generated/prisma/enums";

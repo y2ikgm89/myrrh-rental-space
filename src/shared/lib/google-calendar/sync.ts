@@ -6,7 +6,7 @@ import {
   ErrorCategory,
   ErrorSeverity,
   normalizeError,
-} from "@/shared/lib/errors";
+} from "@/shared/lib/errors/server";
 import { prisma } from "@/shared/lib/prisma";
 import type { CalendarChange, SyncChangesResult } from "./types";
 import { formatGoogleApiError } from "./helpers";

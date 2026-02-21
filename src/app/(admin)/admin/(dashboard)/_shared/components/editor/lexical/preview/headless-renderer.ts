@@ -8,7 +8,7 @@ import { createHeadlessEditor } from '@lexical/headless'
 import { $generateHtmlFromNodes } from '@lexical/html'
 import { EDITOR_NODES } from '../config/nodes'
 import { editorTheme } from '../theme'
-import { logError, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
+import { logError, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors/server'
 
 export function renderEditorStateToHtml(editorStateJson: string): string {
   const editor = createHeadlessEditor({

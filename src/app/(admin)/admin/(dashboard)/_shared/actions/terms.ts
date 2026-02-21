@@ -3,7 +3,7 @@
 import { prisma } from "@/shared/lib/prisma";
 import { updateTag } from "next/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
-import { TermsStatus, TermsType } from "@/shared/generated/prisma/enums";
+import { TermsStatus } from "@/shared/generated/prisma/enums";
 import {
   createTermsSchema,
   updateTermsSchema,

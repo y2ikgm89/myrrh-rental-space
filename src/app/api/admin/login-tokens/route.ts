@@ -16,7 +16,7 @@ import { getSession, getRoleFromSession } from '@/shared/lib/auth'
 import { prisma } from '@/shared/lib/prisma'
 import { getAppUrl } from '@/shared/lib/constants'
 import { randomBytes } from 'crypto'
-import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
+import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors/server'
 import { isAdminRole, isSuperAdminRole } from '@/admin/lib/role-guards'
 
 /**

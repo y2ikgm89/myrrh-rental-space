@@ -10,7 +10,7 @@
 import 'server-only'
 import { prisma } from './prisma'
 import { safeDecrypt } from './crypto'
-import { logError, ErrorCategory, ErrorSeverity, normalizeError } from './errors'
+import { logError, ErrorCategory, ErrorSeverity, normalizeError } from './errors/server'
 import { serverEnv } from '@/shared/lib/env/server'
 
 export interface GoogleOAuthCredentials {

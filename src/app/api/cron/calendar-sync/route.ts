@@ -24,7 +24,7 @@ import {
   renewWebhookIfNeeded,
 } from '@/shared/lib/google-calendar'
 import { sendWebhookRenewalNotification } from '@/shared/lib/email-service'
-import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
+import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors/server'
 import { fireAndForget } from '@/shared/lib/async-utils'
 import { CalendarSyncMethod } from '@/shared/generated/prisma/enums'
 import { serverEnv } from '@/shared/lib/env/server'

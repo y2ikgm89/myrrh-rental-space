@@ -14,7 +14,7 @@ import { prisma, Role } from '@/shared/lib/prisma'
 import { getSession, getRoleFromSession, type User } from '@/shared/lib/auth'
 import { logPermissionDenied } from '@/admin/lib/audit'
 import { entriesOf } from '@/shared/lib/serialize'
-import { logError, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
+import { logError, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors/server'
 import { CACHE_TAGS, CACHE_LIFE } from '@/shared/lib/constants'
 import { isEditorRole } from './role-guards'
 

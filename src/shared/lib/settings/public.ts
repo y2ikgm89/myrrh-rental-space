@@ -12,7 +12,7 @@
 import { cacheLife, cacheTag } from 'next/cache'
 import { prisma } from '@/shared/lib/prisma'
 import { CACHE_TAGS, CACHE_LIFE } from '@/shared/lib/constants'
-import { safeFetch, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
+import { safeFetch, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors/server'
 import { toPlainObject, toPlainArray } from '@/shared/lib/serialize'
 import { AnnouncementBarAnimation, AnnouncementBarDesignStyle, LayoutWidth, PostPermalinkStructure } from '@/shared/generated/prisma/enums'
 

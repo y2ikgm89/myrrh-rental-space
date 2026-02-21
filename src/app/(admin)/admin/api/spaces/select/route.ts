@@ -9,7 +9,7 @@ import { NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { checkPermission } from '@/admin/lib/action-auth'
 import { getSpacesForSelect } from '@/admin/actions/space'
-import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
+import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors/server'
 
 function getErrorStatus(message: string): number {
   if (message.includes('ログイン') || message.includes('権限')) {

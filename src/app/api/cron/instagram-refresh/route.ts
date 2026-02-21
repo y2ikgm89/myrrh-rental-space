@@ -22,7 +22,7 @@ import {
   ErrorCategory,
   ErrorSeverity,
   normalizeError,
-} from '@/shared/lib/errors'
+} from '@/shared/lib/errors/server'
 import { serverEnv } from '@/shared/lib/env/server'
 
 /** トークン更新を開始する残り日数（10日） */

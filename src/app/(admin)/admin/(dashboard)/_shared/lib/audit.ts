@@ -13,7 +13,7 @@ import 'server-only'
 import { headers } from 'next/headers'
 import { prisma } from '@/shared/lib/prisma'
 import { AuditAction } from '@/shared/generated/prisma/enums'
-import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
+import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors/server'
 
 // =============================================================================
 // Types
