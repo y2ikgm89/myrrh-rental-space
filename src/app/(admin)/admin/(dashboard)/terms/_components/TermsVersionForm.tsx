@@ -5,6 +5,7 @@
  */
 
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import dynamic from 'next/dynamic'
 import {
@@ -20,31 +21,28 @@ import { EDITOR_PROSE_CLASSES } from '@/shared/lib/styles/prose'
 import { getTemplatesForType, applyBusinessInfo } from '@/shared/lib/terms-templates'
 import type { BusinessInfo } from '@/shared/lib/terms-templates'
 import type { TermsType } from '@/shared/generated/prisma/client'
+import { createTermsVersion, updateTermsVersion } from '@/admin/actions/terms'
+import type { TermsVersionDetail } from '@/shared/lib/validations/terms'
 
 const LexicalEditor = dynamic(
   () => import('@/admin/components/editor/lexical/LexicalEditor').then((mod) => ({ default: mod.LexicalEditor })),
   {
     ssr: false,
     loading: () => (
-      <div className="h-[400px] flex items-center justify-center border rounded-lg bg-muted/50">
+      <div className="flex items-center justify-center border rounded-lg bg-muted/50 py-12">
         <div className="animate-pulse text-muted-foreground">エディタを読み込み中...</div>
       </div>
     ),
   }
 )
-import {
-  createTermsVersion,
-  updateTermsVersion,
-} from '@/admin/actions/terms'
-import type { TermsVersionDetail } from '@/shared/lib/validations/terms'
 
 interface TermsVersionFormProps {
   termsId: string
   termsType: TermsType
   businessInfo?: BusinessInfo
   version?: TermsVersionDetail | null
-  onSuccess?: () => void
-  onCancel?: () => void
+  redirectTo: string
+  editorHeight?: string
 }
 
 export function TermsVersionForm({
@@ -52,9 +50,10 @@ export function TermsVersionForm({
   termsType,
   businessInfo,
   version,
-  onSuccess,
-  onCancel,
+  redirectTo,
+  editorHeight = '600px',
 }: TermsVersionFormProps) {
+  const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [contentJson, setContentJson] = useState(
     version?.contentJson ? JSON.stringify(version.contentJson) : ''
@@ -76,7 +75,6 @@ export function TermsVersionForm({
     }
     const template = templates.find((t) => t.id === templateId)
     if (template) {
-      // 事業者情報でプレースホルダーを置換
       const appliedContent = businessInfo
         ? applyBusinessInfo(template.content, businessInfo)
         : template.content
@@ -101,7 +99,7 @@ export function TermsVersionForm({
 
       if (result.success) {
         toast.success(result.message)
-        onSuccess?.()
+        router.push(redirectTo)
       } else {
         toast.error(result.error)
       }
@@ -137,7 +135,7 @@ export function TermsVersionForm({
 
       <div className="space-y-2">
         <Label>規約内容 *</Label>
-        <div className="min-h-[400px]">
+        <div style={{ minHeight: editorHeight }}>
           <LexicalEditor
             key={editorKey}
             contentJson={contentJson || undefined}
@@ -145,7 +143,7 @@ export function TermsVersionForm({
             onChange={setContentJson}
             placeholder="規約の内容を入力してください..."
             className={EDITOR_PROSE_CLASSES}
-            height="400px"
+            height={editorHeight}
           />
         </div>
         <p className="text-xs text-muted-foreground">
@@ -155,16 +153,6 @@ export function TermsVersionForm({
       </div>
 
       <div className="flex gap-2 justify-end pt-4">
-        {onCancel && (
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-            disabled={isPending}
-          >
-            キャンセル
-          </Button>
-        )}
         <Button type="submit" disabled={isPending}>
           {isPending
             ? isEditing

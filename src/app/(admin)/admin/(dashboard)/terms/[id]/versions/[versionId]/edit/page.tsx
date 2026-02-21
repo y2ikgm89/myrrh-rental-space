@@ -1,22 +1,20 @@
 import { notFound, redirect } from 'next/navigation'
-import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { connection } from 'next/server'
 import { getTermsById, getTermsVersionById } from '@/admin/actions/terms'
+import { AdminDetailLayout } from '@/admin/components/AdminDetailLayout'
 import { TermsVersionForm } from '../../../../_components/TermsVersionForm'
-import { Button } from '@/admin/components/ui'
 import type { Metadata } from 'next'
-import { connection } from "next/server";
 
 export const metadata: Metadata = {
   title: 'バージョン編集 | Myrrh Rental Space',
 }
 
-interface EditVersionPageProps {
+type PageProps = {
   params: Promise<{ id: string; versionId: string }>
 }
 
-export default async function EditVersionPage({ params }: EditVersionPageProps) {
-  await connection();
+export default async function EditVersionPage({ params }: PageProps) {
+  await connection()
   const { id, versionId } = await params
 
   const [termsResult, versionResult] = await Promise.all([
@@ -40,32 +38,18 @@ export default async function EditVersionPage({ params }: EditVersionPageProps) 
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">
-            バージョン {version.version} を編集
-          </h1>
-          <p className="text-muted-foreground">
-            {termsResult.data.title}
-          </p>
-        </div>
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/admin/terms/${id}`}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            戻る
-          </Link>
-        </Button>
-      </div>
-
+    <AdminDetailLayout
+      backHref={`/admin/terms/${id}/versions/${versionId}`}
+      backLabel="詳細に戻る"
+      title={`バージョン ${version.version} を編集`}
+      subtitle={termsResult.data.title}
+    >
       <TermsVersionForm
         termsId={id}
         termsType={termsResult.data.type}
         version={version}
-        onSuccess={() => {
-          // Client-side redirect will be handled by the form
-        }}
+        redirectTo={`/admin/terms/${id}/versions/${versionId}`}
       />
-    </div>
+    </AdminDetailLayout>
   )
 }

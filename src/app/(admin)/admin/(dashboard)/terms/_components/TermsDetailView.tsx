@@ -7,6 +7,7 @@
  */
 
 import { useState, useTransition } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
@@ -31,25 +32,21 @@ import {
   TabsTrigger,
 } from '@/admin/components/ui'
 import { TermsForm } from './TermsForm'
-import { TermsVersionForm } from './TermsVersionForm'
 import {
   publishTermsVersion,
   archiveTermsVersion,
   deleteTermsVersion,
 } from '@/admin/actions/terms'
 import type { TermsDetail } from '@/shared/lib/validations/terms'
-import type { BusinessInfo } from '@/shared/lib/terms-templates'
 
 interface TermsDetailViewProps {
   terms: TermsDetail
-  businessInfo: BusinessInfo
 }
 
-export function TermsDetailView({ terms, businessInfo }: TermsDetailViewProps) {
+export function TermsDetailView({ terms }: TermsDetailViewProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [activeTab, setActiveTab] = useState('versions')
-  const [showNewVersionDialog, setShowNewVersionDialog] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deletingVersionId, setDeletingVersionId] = useState<string | null>(null)
 
@@ -109,7 +106,11 @@ export function TermsDetailView({ terms, businessInfo }: TermsDetailViewProps) {
       case 'PUBLISHED':
         return <Badge variant="secondary">公開済み</Badge>
       case 'ARCHIVED':
-        return <Badge variant="secondary" className="opacity-60">アーカイブ</Badge>
+        return (
+          <Badge variant="secondary" className="opacity-60">
+            アーカイブ
+          </Badge>
+        )
       default:
         return null
     }
@@ -128,34 +129,27 @@ export function TermsDetailView({ terms, businessInfo }: TermsDetailViewProps) {
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle>バージョン一覧</CardTitle>
-                <CardDescription>
-                  {terms.versions.length}件のバージョン
-                </CardDescription>
+                <CardDescription>{terms.versions.length}件のバージョン</CardDescription>
               </div>
-              <Button onClick={() => setShowNewVersionDialog(true)}>
-                新しいバージョンを作成
+              <Button asChild>
+                <Link href={`/admin/terms/${terms.id}/versions/new`}>新しいバージョンを作成</Link>
               </Button>
             </CardHeader>
             <CardContent>
               {terms.versions.length === 0 ? (
                 <div className="py-8 text-center text-muted-foreground">
                   <p>バージョンがありません</p>
-                  <p className="text-sm mt-1">
+                  <p className="mt-1 text-sm">
                     新しいバージョンを作成して規約内容を追加してください
                   </p>
                 </div>
               ) : (
                 <div className="divide-y">
                   {terms.versions.map((version) => (
-                    <div
-                      key={version.id}
-                      className="flex items-center justify-between py-4"
-                    >
+                    <div key={version.id} className="flex items-center justify-between py-4">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <span className="font-medium">
-                            バージョン {version.version}
-                          </span>
+                          <span className="font-medium">バージョン {version.version}</span>
                           {getStatusBadge(version.status, version.isCurrentVersion)}
                         </div>
                         <p className="text-sm text-muted-foreground">
@@ -187,11 +181,7 @@ export function TermsDetailView({ terms, businessInfo }: TermsDetailViewProps) {
                             >
                               公開
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              asChild
-                            >
+                            <Button variant="ghost" size="sm" asChild>
                               <a href={`/admin/terms/${terms.id}/versions/${version.id}/edit`}>
                                 編集
                               </a>
@@ -227,11 +217,7 @@ export function TermsDetailView({ terms, businessInfo }: TermsDetailViewProps) {
                             </Button>
                           </>
                         )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          asChild
-                        >
+                        <Button variant="ghost" size="sm" asChild>
                           <a href={`/admin/terms/${terms.id}/versions/${version.id}`}>
                             プレビュー
                           </a>
@@ -251,11 +237,11 @@ export function TermsDetailView({ terms, businessInfo }: TermsDetailViewProps) {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-4 rounded-lg bg-muted">
+                <div className="rounded-lg bg-muted p-4 text-center">
                   <p className="text-2xl font-bold">{terms._count?.spaces ?? 0}</p>
                   <p className="text-sm text-muted-foreground">使用中のスペース</p>
                 </div>
-                <div className="text-center p-4 rounded-lg bg-muted">
+                <div className="rounded-lg bg-muted p-4 text-center">
                   <p className="text-2xl font-bold">{terms._count?.agreements ?? 0}</p>
                   <p className="text-sm text-muted-foreground">同意記録</p>
                 </div>
@@ -268,28 +254,6 @@ export function TermsDetailView({ terms, businessInfo }: TermsDetailViewProps) {
           <TermsForm terms={terms} />
         </TabsContent>
       </Tabs>
-
-      {/* New Version Dialog */}
-      <Dialog open={showNewVersionDialog} onOpenChange={setShowNewVersionDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>新しいバージョンを作成</DialogTitle>
-            <DialogDescription>
-              規約の新しいバージョンを作成します。作成後、公開することで有効になります。
-            </DialogDescription>
-          </DialogHeader>
-          <TermsVersionForm
-            termsId={terms.id}
-            termsType={terms.type}
-            businessInfo={businessInfo}
-            onSuccess={() => {
-              setShowNewVersionDialog(false)
-              router.refresh()
-            }}
-            onCancel={() => setShowNewVersionDialog(false)}
-          />
-        </DialogContent>
-      </Dialog>
 
       {/* Delete Version Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -308,11 +272,7 @@ export function TermsDetailView({ terms, businessInfo }: TermsDetailViewProps) {
             >
               キャンセル
             </Button>
-            <Button
-              variant="destructive"
-              onClick={confirmDeleteVersion}
-              disabled={isPending}
-            >
+            <Button variant="destructive" onClick={confirmDeleteVersion} disabled={isPending}>
               {isPending ? '削除中...' : '削除'}
             </Button>
           </DialogFooter>
