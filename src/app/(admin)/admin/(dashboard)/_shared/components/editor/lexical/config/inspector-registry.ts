@@ -35,6 +35,7 @@ import { $isFileNode } from '../nodes/FileNode'
 import { $isFigmaNode } from '../nodes/FigmaNode'
 import { $isSpotifyNode } from '../nodes/SpotifyNode'
 import { $isGalleryContainerNode, $isGalleryItemNode } from '../nodes/GalleryNode'
+import { $isTimelineContainerNode, $isTimelineItemNode } from '../nodes/TimelineNode'
 import type { InspectableNodeType, InspectableResult } from '../inspector/hooks/inspectable-nodes'
 
 // =============================================================================
@@ -71,6 +72,8 @@ export function getInspectableInfoFromRegistry(node: LexicalNode): InspectableRe
   if ($isSpotifyNode(node)) return { nodeType: 'spotify', node, nodeKey }
   if ($isGalleryContainerNode(node)) return { nodeType: 'galleryContainer', node, nodeKey }
   if ($isGalleryItemNode(node)) return { nodeType: 'galleryItem', node, nodeKey }
+  if ($isTimelineContainerNode(node)) return { nodeType: 'timelineContainer', node, nodeKey }
+  if ($isTimelineItemNode(node)) return { nodeType: 'timelineItem', node, nodeKey }
   return null
 }
 
@@ -83,4 +86,5 @@ export const INSPECTABLE_NODE_TYPES_FROM_REGISTRY: readonly InspectableNodeType[
   'youtube', 'vimeo', 'x', 'instagram', 'pageBreak',
   'mapEmbed', 'code', 'audio', 'file', 'figma', 'spotify',
   'galleryContainer', 'galleryItem',
+  'timelineContainer', 'timelineItem',
 ]

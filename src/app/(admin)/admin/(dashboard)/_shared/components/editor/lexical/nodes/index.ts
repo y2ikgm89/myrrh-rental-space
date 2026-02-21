@@ -327,3 +327,18 @@ export {
   galleryItemCaptionState,
 } from './GalleryNode'
 export type { GalleryColumns, GalleryStyle } from './GalleryNode'
+
+// Timeline
+export {
+  TimelineContainerNode,
+  $createTimelineContainerNode,
+  $isTimelineContainerNode,
+  timelineDirectionState,
+  timelineColorState,
+  TimelineItemNode,
+  $createTimelineItemNode,
+  $isTimelineItemNode,
+  timelineYearState,
+  timelineLabelState,
+} from './TimelineNode'
+export type { TimelineDirection } from './TimelineNode'

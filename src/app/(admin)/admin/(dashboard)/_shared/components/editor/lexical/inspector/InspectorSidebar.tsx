@@ -30,6 +30,8 @@ import {
   SpotifyInspectorPanel,
   GalleryContainerInspectorPanel,
   GalleryItemInspectorPanel,
+  TimelineContainerInspectorPanel,
+  TimelineItemInspectorPanel,
 } from './panels'
 import { Settings2 } from 'lucide-react'
 
@@ -88,6 +90,10 @@ function renderPanel(info: SelectedNodeInfo) {
       return <GalleryContainerInspectorPanel nodeKey={info.nodeKey} node={info.node} />
     case 'galleryItem':
       return <GalleryItemInspectorPanel nodeKey={info.nodeKey} node={info.node} />
+    case 'timelineContainer':
+      return <TimelineContainerInspectorPanel nodeKey={info.nodeKey} node={info.node} />
+    case 'timelineItem':
+      return <TimelineItemInspectorPanel nodeKey={info.nodeKey} node={info.node} />
   }
 }
 

@@ -48,6 +48,7 @@ import { FileNode } from '../nodes/FileNode'
 import { FigmaNode } from '../nodes/FigmaNode'
 import { SpotifyNode } from '../nodes/SpotifyNode'
 import { GalleryContainerNode, GalleryItemNode } from '../nodes/GalleryNode'
+import { TimelineContainerNode, TimelineItemNode } from '../nodes/TimelineNode'
 
 /**
  * エディタに登録する全ノード一覧
@@ -104,4 +105,6 @@ export const EDITOR_NODES: ReadonlyArray<Klass<LexicalNode>> = [
   SpotifyNode,
   GalleryContainerNode,
   GalleryItemNode,
+  TimelineContainerNode,
+  TimelineItemNode,
 ]

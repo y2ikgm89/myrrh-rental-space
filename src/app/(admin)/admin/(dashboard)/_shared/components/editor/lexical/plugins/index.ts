@@ -107,3 +107,5 @@ export { FigmaPlugin } from './FigmaPlugin'
 export { SpotifyPlugin } from './SpotifyPlugin'
 
 export { GalleryPlugin } from './GalleryPlugin'
+
+export { TimelinePlugin } from './TimelinePlugin'

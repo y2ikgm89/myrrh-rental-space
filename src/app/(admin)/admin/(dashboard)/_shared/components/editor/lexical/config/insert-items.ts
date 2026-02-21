@@ -63,6 +63,7 @@ import {
   Figma,
   Music,
   LayoutGrid,
+  Clock,
 } from 'lucide-react'
 import { applyTextCaseToSelection } from '../plugins/TextCasePlugin'
 import { INSERT_PAGE_BREAK_COMMAND } from '../plugins/PageBreakPlugin'
@@ -389,6 +390,17 @@ const INSERT_ITEMS: readonly InsertItem[] = [
     showInToolbar: false,
     showInPicker: true,
     dialogId: 'gallery',
+  },
+  {
+    id: 'timeline',
+    type: 'dialog',
+    label: 'タイムライン',
+    icon: Clock,
+    keywords: ['timeline', 'タイムライン', 'history', '歴史', 'chronology', '年表'],
+    category: 'layout',
+    showInToolbar: false,
+    showInPicker: true,
+    dialogId: 'timeline',
   },
   {
     id: 'table',
