@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * 規約一覧コンポーネント
@@ -6,11 +6,11 @@
  * 規約のCRUD操作を提供するクライアントコンポーネント
  */
 
-import { useState, useTransition } from 'react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
-import { tv } from 'tailwind-variants'
+import { useState, useTransition } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { tv } from "tailwind-variants";
 import {
   Card,
   CardContent,
@@ -24,64 +24,67 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/admin/components/ui'
-import { deleteTerms, toggleTermsActive } from '@/admin/actions/terms'
-import type { TermsWithVersion } from '@/shared/lib/validations/terms'
+} from "@/admin/components/ui";
+import { deleteTerms, toggleTermsActive } from "@/admin/actions/terms";
+import type { TermsWithVersion } from "@/shared/lib/validations/terms";
 
 const styles = tv({
   slots: {
-    termCard: 'overflow-hidden',
-    termHeader: 'hover:bg-muted/50 transition-colors',
-    termTitle: 'flex items-center gap-2',
-    actions: 'flex items-center gap-1',
-    emptyState: 'py-8 text-center text-muted-foreground',
-    versionInfo: 'text-sm text-muted-foreground mt-1',
+    termCard: "overflow-hidden",
+    termHeader: "hover:bg-muted/50 transition-colors",
+    termTitle: "flex items-center gap-2",
+    actions: "flex items-center gap-1",
+    emptyState: "py-8 text-center text-muted-foreground",
+    versionInfo: "text-sm text-muted-foreground mt-1",
   },
-})()
+})();
 
 type TermsListProps = {
-  terms: TermsWithVersion[]
-}
+  terms: TermsWithVersion[];
+};
 
 export function TermsList({ terms }: TermsListProps) {
-  const router = useRouter()
-  const [isPending, startTransition] = useTransition()
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [deletingTerm, setDeletingTerm] = useState<{ id: string; title: string } | null>(null)
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingTerm, setDeletingTerm] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
 
   const handleDelete = (id: string, title: string) => {
-    setDeletingTerm({ id, title })
-    setDeleteDialogOpen(true)
-  }
+    setDeletingTerm({ id, title });
+    setDeleteDialogOpen(true);
+  };
 
   const confirmDelete = () => {
-    if (!deletingTerm) return
+    if (!deletingTerm) return;
 
     startTransition(async () => {
-      const result = await deleteTerms(deletingTerm.id)
+      const result = await deleteTerms(deletingTerm.id);
 
       if (result.success) {
-        toast.success(result.message)
-        router.refresh()
+        toast.success(result.message);
+        router.refresh();
       } else {
-        toast.error(result.error)
+        toast.error(result.error);
       }
-      setDeleteDialogOpen(false)
-      setDeletingTerm(null)
-    })
-  }
+      setDeleteDialogOpen(false);
+      setDeletingTerm(null);
+    });
+  };
 
   const handleToggleActive = (id: string) => {
     startTransition(async () => {
-      const result = await toggleTermsActive(id)
+      const result = await toggleTermsActive(id);
       if (result.success) {
-        toast.success(result.message)
-        router.refresh()
+        toast.success(result.message);
+        router.refresh();
       } else {
-        toast.error(result.error)
+        toast.error(result.error);
       }
-    })
-  }
+    });
+  };
 
   if (terms.length === 0) {
     return (
@@ -93,7 +96,7 @@ export function TermsList({ terms }: TermsListProps) {
           </Button>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   return (
@@ -109,9 +112,7 @@ export function TermsList({ terms }: TermsListProps) {
                     <Badge variant="outline" className="ml-2">
                       {term.type}
                     </Badge>
-                    {!term.isActive && (
-                      <Badge variant="secondary">無効</Badge>
-                    )}
+                    {!term.isActive && <Badge variant="secondary">無効</Badge>}
                   </CardTitle>
                   <p className={styles.versionInfo()}>
                     スラッグ: {term.slug}
@@ -132,12 +133,10 @@ export function TermsList({ terms }: TermsListProps) {
                     onClick={() => handleToggleActive(term.id)}
                     disabled={isPending}
                   >
-                    {term.isActive ? '無効化' : '有効化'}
+                    {term.isActive ? "無効化" : "有効化"}
                   </Button>
                   <Button variant="ghost" size="sm" asChild>
-                    <Link href={`/admin/terms/${term.id}`}>
-                      詳細・編集
-                    </Link>
+                    <Link href={`/admin/terms/${term.id}/edit`}>編集</Link>
                   </Button>
                   <Button
                     variant="ghost"
@@ -178,11 +177,11 @@ export function TermsList({ terms }: TermsListProps) {
               onClick={confirmDelete}
               disabled={isPending}
             >
-              {isPending ? '削除中...' : '削除'}
+              {isPending ? "削除中..." : "削除"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
-  )
+  );
 }
