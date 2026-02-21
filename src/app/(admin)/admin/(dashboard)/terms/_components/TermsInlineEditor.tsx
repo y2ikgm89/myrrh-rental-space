@@ -161,6 +161,9 @@ export function TermsInlineEditor({
     terms?.versions ?? [],
   );
   const [isLoadingVersion, setIsLoadingVersion] = useState(false);
+  const hasDraftVersion = localVersions.some(
+    (v) => v.status === TermsStatus.DRAFT,
+  );
 
   const {
     register,
@@ -751,13 +754,18 @@ export function TermsInlineEditor({
                     </div>
                   )}
 
+                {selectedVersionContent?.status === TermsStatus.ARCHIVED && (
+                  <p className="text-xs text-muted-foreground">アーカイブ済み（参照のみ）</p>
+                )}
+
                 {/* 新しいバージョンを作成 */}
                 <Button
                   type="button"
                   size="sm"
                   variant="outline"
                   onClick={handleCreateNewVersion}
-                  disabled={isPending || isLoadingVersion}
+                  disabled={isPending || isLoadingVersion || hasDraftVersion}
+                  title={hasDraftVersion ? "下書きを先に公開または削除してください" : undefined}
                   className="w-full"
                 >
                   新しいバージョンを作成
