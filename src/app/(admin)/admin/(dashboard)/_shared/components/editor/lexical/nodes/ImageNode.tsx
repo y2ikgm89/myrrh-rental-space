@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Image Node
  *
  * @description 画像を表示するDecoratorNode（リサイズ＋アライメント対応）
@@ -84,6 +84,7 @@ function ImageComponent({
   width,
   height,
   alignment = 'center',
+  caption,
   nodeKey,
 }: {
   src: string
@@ -91,6 +92,7 @@ function ImageComponent({
   width?: number
   height?: number
   alignment?: ImageAlignment
+  caption?: string
   nodeKey: NodeKey
 }) {
   const [editor] = useLexicalComposerContext()
@@ -164,6 +166,11 @@ function ImageComponent({
           <div className="absolute inset-0 bg-primary/10" />
         )}
       </div>
+      {caption && (
+        <figcaption className="text-sm text-muted-foreground text-center mt-2">
+          {caption}
+        </figcaption>
+      )}
     </div>
   )
 }
@@ -257,6 +264,7 @@ export class ImageNode extends DecoratorNode<ReactElement> {
         width={$getState(this, widthState)}
         height={$getState(this, heightState)}
         alignment={$getState(this, alignmentState)}
+        caption={$getState(this, captionState)}
         nodeKey={this.__key}
       />
     )

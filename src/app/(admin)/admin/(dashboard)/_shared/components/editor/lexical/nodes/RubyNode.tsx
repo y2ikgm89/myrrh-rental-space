@@ -49,7 +49,11 @@ export class RubyNode extends DecoratorNode<ReactElement> {
         conversion: (element: HTMLElement): DOMConversionOutput => {
           const rt = element.querySelector('rt')
           const rtText = rt?.textContent ?? ''
-          const baseText = (element.textContent ?? '').replace(rtText, '').trim()
+          const baseText = Array.from(element.childNodes)
+            .filter((n) => n.nodeType === Node.TEXT_NODE)
+            .map((n) => n.textContent ?? '')
+            .join('')
+            .trim()
           const rubyNode = $createRubyNode(baseText, rtText)
           return { node: rubyNode }
         },

@@ -14,7 +14,7 @@ import { createPortal } from 'react-dom'
 import { DraggableBlockPlugin_EXPERIMENTAL } from '@lexical/react/LexicalDraggableBlockPlugin'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { $getNearestNodeFromDOMNode, $getNodeByKey, $parseSerializedNode } from 'lexical'
-import { GripVertical } from 'lucide-react'
+import { ChevronDown, ChevronUp, GripVertical } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,17 +43,43 @@ type ContextMenuState = {
 function DragHandle({
   menuRef,
   onContextMenu,
+  onMoveUp,
+  onMoveDown,
 }: {
   menuRef: RefObject<HTMLDivElement | null>
   onContextMenu: (e: React.MouseEvent) => void
+  onMoveUp: () => void
+  onMoveDown: () => void
 }) {
   return (
     <div
       ref={menuRef}
-      className="draggable-block-menu absolute left-1 top-0 cursor-grab rounded p-1 opacity-0 transition-opacity hover:bg-muted active:cursor-grabbing"
+      className="draggable-block-menu absolute left-1 top-0 flex flex-col items-center cursor-grab rounded p-0.5 opacity-0 transition-opacity hover:bg-muted active:cursor-grabbing"
       onContextMenu={onContextMenu}
     >
-      <GripVertical className="h-5 w-5 text-muted-foreground" />
+      <button
+        type="button"
+        className="p-0.5 text-muted-foreground hover:text-foreground rounded"
+        onClick={(e) => {
+          e.stopPropagation()
+          onMoveUp()
+        }}
+        aria-label="上に移動"
+      >
+        <ChevronUp className="h-3.5 w-3.5" />
+      </button>
+      <GripVertical className="h-4 w-4 text-muted-foreground" />
+      <button
+        type="button"
+        className="p-0.5 text-muted-foreground hover:text-foreground rounded"
+        onClick={(e) => {
+          e.stopPropagation()
+          onMoveDown()
+        }}
+        aria-label="下に移動"
+      >
+        <ChevronDown className="h-3.5 w-3.5" />
+      </button>
     </div>
   )
 }
@@ -103,6 +129,28 @@ export function DraggableBlockPlugin({ anchorElem }: DraggableBlockPluginProps) 
     })
   }
 
+  const handleMoveUp = () => {
+    const blockElem = currentBlockElemRef.current
+    if (!blockElem) return
+    editor.update(() => {
+      const node = $getNearestNodeFromDOMNode(blockElem)
+      if (!node) return
+      const prev = node.getPreviousSibling()
+      if (prev) prev.insertBefore(node)
+    })
+  }
+
+  const handleMoveDown = () => {
+    const blockElem = currentBlockElemRef.current
+    if (!blockElem) return
+    editor.update(() => {
+      const node = $getNearestNodeFromDOMNode(blockElem)
+      if (!node) return
+      const next = node.getNextSibling()
+      if (next) next.insertAfter(node)
+    })
+  }
+
   const handleDuplicate = () => {
     if (!contextMenu) return
     editor.update(() => {
@@ -130,7 +178,12 @@ export function DraggableBlockPlugin({ anchorElem }: DraggableBlockPluginProps) 
         menuRef={menuRef}
         targetLineRef={targetLineRef}
         menuComponent={
-          <DragHandle menuRef={menuRef} onContextMenu={handleContextMenu} />
+          <DragHandle
+            menuRef={menuRef}
+            onContextMenu={handleContextMenu}
+            onMoveUp={handleMoveUp}
+            onMoveDown={handleMoveDown}
+          />
         }
         targetLineComponent={<TargetLine targetLineRef={targetLineRef} />}
         isOnMenu={(element: HTMLElement) =>

@@ -14,6 +14,7 @@
 
 import type { LexicalNode } from 'lexical'
 
+import { $isCodeNode } from '@lexical/code'
 import { $isButtonNode } from '../nodes/ButtonNode'
 import { $isImageNode } from '../nodes/ImageNode'
 import { $isCalloutNode } from '../nodes/CalloutNode'
@@ -29,6 +30,13 @@ import { $isMapEmbedNode } from '../nodes/MapEmbedNode'
 import { $isXNode } from '../nodes/XNode'
 import { $isInstagramNode } from '../nodes/InstagramNode'
 import { $isPageBreakNode } from '../nodes/PageBreakNode'
+import { $isAudioNode } from '../nodes/AudioNode'
+import { $isFileNode } from '../nodes/FileNode'
+import { $isFigmaNode } from '../nodes/FigmaNode'
+import { $isSpotifyNode } from '../nodes/SpotifyNode'
+import { $isGalleryContainerNode, $isGalleryItemNode } from '../nodes/GalleryNode'
+import { $isTimelineContainerNode, $isTimelineItemNode } from '../nodes/TimelineNode'
+import { $isPricingPlanNode, $isPricingFeatureNode } from '../nodes/PricingTableNode'
 import type { InspectableNodeType, InspectableResult } from '../inspector/hooks/inspectable-nodes'
 
 // =============================================================================
@@ -58,6 +66,17 @@ export function getInspectableInfoFromRegistry(node: LexicalNode): InspectableRe
   if ($isInstagramNode(node)) return { nodeType: 'instagram', node, nodeKey }
   if ($isPageBreakNode(node)) return { nodeType: 'pageBreak', node, nodeKey }
   if ($isMapEmbedNode(node)) return { nodeType: 'mapEmbed', node, nodeKey }
+  if ($isCodeNode(node)) return { nodeType: 'code', node, nodeKey }
+  if ($isAudioNode(node)) return { nodeType: 'audio', node, nodeKey }
+  if ($isFileNode(node)) return { nodeType: 'file', node, nodeKey }
+  if ($isFigmaNode(node)) return { nodeType: 'figma', node, nodeKey }
+  if ($isSpotifyNode(node)) return { nodeType: 'spotify', node, nodeKey }
+  if ($isGalleryContainerNode(node)) return { nodeType: 'galleryContainer', node, nodeKey }
+  if ($isGalleryItemNode(node)) return { nodeType: 'galleryItem', node, nodeKey }
+  if ($isTimelineContainerNode(node)) return { nodeType: 'timelineContainer', node, nodeKey }
+  if ($isTimelineItemNode(node)) return { nodeType: 'timelineItem', node, nodeKey }
+  if ($isPricingPlanNode(node)) return { nodeType: 'pricingPlan', node, nodeKey }
+  if ($isPricingFeatureNode(node)) return { nodeType: 'pricingFeature', node, nodeKey }
   return null
 }
 
@@ -68,5 +87,8 @@ export const INSPECTABLE_NODE_TYPES_FROM_REGISTRY: readonly InspectableNodeType[
   'button', 'image', 'callout', 'bookmark', 'pullQuote',
   'collapsible', 'steps', 'tabs', 'layout',
   'youtube', 'vimeo', 'x', 'instagram', 'pageBreak',
-  'mapEmbed',
+  'mapEmbed', 'code', 'audio', 'file', 'figma', 'spotify',
+  'galleryContainer', 'galleryItem',
+  'timelineContainer', 'timelineItem',
+  'pricingPlan', 'pricingFeature',
 ]

@@ -43,6 +43,13 @@ import { TableOfContentsNode } from '../nodes/TableOfContentsNode'
 import { MapEmbedNode } from '../nodes/MapEmbedNode'
 import { RubyNode } from '../nodes/RubyNode'
 import { TooltipNode } from '../nodes/TooltipNode'
+import { AudioNode } from '../nodes/AudioNode'
+import { FileNode } from '../nodes/FileNode'
+import { FigmaNode } from '../nodes/FigmaNode'
+import { SpotifyNode } from '../nodes/SpotifyNode'
+import { GalleryContainerNode, GalleryItemNode } from '../nodes/GalleryNode'
+import { TimelineContainerNode, TimelineItemNode } from '../nodes/TimelineNode'
+import { PricingTableContainerNode, PricingPlanNode, PricingFeatureNode } from '../nodes/PricingTableNode'
 
 /**
  * エディタに登録する全ノード一覧
@@ -93,4 +100,15 @@ export const EDITOR_NODES: ReadonlyArray<Klass<LexicalNode>> = [
   MapEmbedNode,
   RubyNode,
   TooltipNode,
+  AudioNode,
+  FileNode,
+  FigmaNode,
+  SpotifyNode,
+  GalleryContainerNode,
+  GalleryItemNode,
+  TimelineContainerNode,
+  TimelineItemNode,
+  PricingTableContainerNode,
+  PricingPlanNode,
+  PricingFeatureNode,
 ]

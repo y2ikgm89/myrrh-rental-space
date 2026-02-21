@@ -67,7 +67,7 @@ const SHORTCUT_LIST: ShortcutEntry[] = [
 // Help Dialog
 // =============================================================================
 
-function ShortcutsHelpDialog({ onClose }: { onClose: () => void }) {
+export function ShortcutsHelpDialog({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();

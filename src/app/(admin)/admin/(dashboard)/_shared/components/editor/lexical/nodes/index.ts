@@ -268,3 +268,96 @@ export {
   tooltipBaseTextState,
   tooltipTextState,
 } from './TooltipNode'
+
+// Audio
+export {
+  AudioNode,
+  $createAudioNode,
+  $isAudioNode,
+  audioUrlState,
+  audioTitleState,
+  audioArtistState,
+} from './AudioNode'
+
+// File
+export {
+  FileNode,
+  $createFileNode,
+  $isFileNode,
+  fileUrlState,
+  fileNameState,
+  fileSizeState,
+  fileMimeState,
+  formatFileSize,
+} from './FileNode'
+
+// Figma
+export {
+  FigmaNode,
+  $createFigmaNode,
+  $isFigmaNode,
+  figmaEmbedUrlState,
+  figmaLabelState,
+  toFigmaEmbedUrl,
+} from './FigmaNode'
+
+// Spotify
+export {
+  SpotifyNode,
+  $createSpotifyNode,
+  $isSpotifyNode,
+  spotifyEmbedUrlState,
+  spotifyContentTypeState,
+  toSpotifyEmbedUrl,
+} from './SpotifyNode'
+export type { SpotifyContentType } from './SpotifyNode'
+
+// Gallery
+export {
+  GalleryContainerNode,
+  $createGalleryContainerNode,
+  $isGalleryContainerNode,
+  galleryColumnsState,
+  galleryStyleState,
+  GalleryItemNode,
+  $createGalleryItemNode,
+  $isGalleryItemNode,
+  galleryItemSrcState,
+  galleryItemAltState,
+  galleryItemCaptionState,
+} from './GalleryNode'
+export type { GalleryColumns, GalleryStyle } from './GalleryNode'
+
+// Timeline
+export {
+  TimelineContainerNode,
+  $createTimelineContainerNode,
+  $isTimelineContainerNode,
+  timelineDirectionState,
+  timelineColorState,
+  TimelineItemNode,
+  $createTimelineItemNode,
+  $isTimelineItemNode,
+  timelineYearState,
+  timelineLabelState,
+} from './TimelineNode'
+export type { TimelineDirection } from './TimelineNode'
+
+// PricingTable
+export {
+  PricingTableContainerNode,
+  $createPricingTableContainerNode,
+  $isPricingTableContainerNode,
+  PricingPlanNode,
+  $createPricingPlanNode,
+  $isPricingPlanNode,
+  planNameState,
+  planPriceState,
+  planPeriodState,
+  planFeaturedState,
+  planColorState,
+  PricingFeatureNode,
+  $createPricingFeatureNode,
+  $isPricingFeatureNode,
+  featureIncludedState,
+} from './PricingTableNode'

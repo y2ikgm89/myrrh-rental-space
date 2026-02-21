@@ -11,6 +11,7 @@
  */
 
 import type { NodeKey } from 'lexical'
+import type { CodeNode } from '@lexical/code'
 
 import type { ButtonNode } from '../../nodes/ButtonNode'
 import type { ImageNode } from '../../nodes/ImageNode'
@@ -27,6 +28,13 @@ import type { XNode } from '../../nodes/XNode'
 import type { InstagramNode } from '../../nodes/InstagramNode'
 import type { PageBreakNode } from '../../nodes/PageBreakNode'
 import type { MapEmbedNode } from '../../nodes/MapEmbedNode'
+import type { AudioNode } from '../../nodes/AudioNode'
+import type { FileNode } from '../../nodes/FileNode'
+import type { FigmaNode } from '../../nodes/FigmaNode'
+import type { SpotifyNode } from '../../nodes/SpotifyNode'
+import type { GalleryContainerNode, GalleryItemNode } from '../../nodes/GalleryNode'
+import type { TimelineContainerNode, TimelineItemNode } from '../../nodes/TimelineNode'
+import type { PricingPlanNode, PricingFeatureNode } from '../../nodes/PricingTableNode'
 
 // =============================================================================
 // Types
@@ -48,6 +56,17 @@ export type InspectableNodeType =
   | 'instagram'
   | 'pageBreak'
   | 'mapEmbed'
+  | 'code'
+  | 'audio'
+  | 'file'
+  | 'figma'
+  | 'spotify'
+  | 'galleryContainer'
+  | 'galleryItem'
+  | 'timelineContainer'
+  | 'timelineItem'
+  | 'pricingPlan'
+  | 'pricingFeature'
 
 /**
  * 選択中ノード情報のDiscriminated Union型
@@ -71,6 +90,17 @@ export type SelectedNodeInfo =
   | { nodeType: 'instagram'; node: InstagramNode; nodeKey: NodeKey }
   | { nodeType: 'pageBreak'; node: PageBreakNode; nodeKey: NodeKey }
   | { nodeType: 'mapEmbed'; node: MapEmbedNode; nodeKey: NodeKey }
+  | { nodeType: 'code'; node: CodeNode; nodeKey: NodeKey }
+  | { nodeType: 'audio'; node: AudioNode; nodeKey: NodeKey }
+  | { nodeType: 'file'; node: FileNode; nodeKey: NodeKey }
+  | { nodeType: 'figma'; node: FigmaNode; nodeKey: NodeKey }
+  | { nodeType: 'spotify'; node: SpotifyNode; nodeKey: NodeKey }
+  | { nodeType: 'galleryContainer'; node: GalleryContainerNode; nodeKey: NodeKey }
+  | { nodeType: 'galleryItem'; node: GalleryItemNode; nodeKey: NodeKey }
+  | { nodeType: 'timelineContainer'; node: TimelineContainerNode; nodeKey: NodeKey }
+  | { nodeType: 'timelineItem'; node: TimelineItemNode; nodeKey: NodeKey }
+  | { nodeType: 'pricingPlan'; node: PricingPlanNode; nodeKey: NodeKey }
+  | { nodeType: 'pricingFeature'; node: PricingFeatureNode; nodeKey: NodeKey }
   | null
 
 /**

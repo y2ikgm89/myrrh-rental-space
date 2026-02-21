@@ -32,7 +32,7 @@ export { LayoutPlugin, INSERT_LAYOUT_COMMAND } from './LayoutPlugin'
 export { ComponentPickerPlugin } from './ComponentPickerPlugin'
 export { ToolbarPlugin } from './ToolbarPlugin'
 export { DraggableBlockPlugin } from './DraggableBlockPlugin'
-export { FloatingToolbarPlugin } from './FloatingToolbarPlugin'
+export { FloatingToolbarPlugin, LinkHoverPreviewPlugin } from './FloatingToolbarPlugin'
 export { FontSizePlugin, useFontSize } from './FontSizePlugin'
 export {
   CommentPlugin,
@@ -97,3 +97,17 @@ export { MapEmbedPlugin } from './MapEmbedPlugin'
 export { RubyPlugin } from './RubyPlugin'
 
 export { TooltipPlugin } from './TooltipPlugin'
+
+export { AudioPlugin } from './AudioPlugin'
+
+export { FilePlugin } from './FilePlugin'
+
+export { FigmaPlugin } from './FigmaPlugin'
+
+export { SpotifyPlugin } from './SpotifyPlugin'
+
+export { GalleryPlugin } from './GalleryPlugin'
+
+export { TimelinePlugin } from './TimelinePlugin'
+
+export { PricingTablePlugin } from './PricingTablePlugin'
