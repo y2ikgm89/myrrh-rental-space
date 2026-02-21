@@ -32,7 +32,7 @@ export { LayoutPlugin, INSERT_LAYOUT_COMMAND } from './LayoutPlugin'
 export { ComponentPickerPlugin } from './ComponentPickerPlugin'
 export { ToolbarPlugin } from './ToolbarPlugin'
 export { DraggableBlockPlugin } from './DraggableBlockPlugin'
-export { FloatingToolbarPlugin } from './FloatingToolbarPlugin'
+export { FloatingToolbarPlugin, LinkHoverPreviewPlugin } from './FloatingToolbarPlugin'
 export { FontSizePlugin, useFontSize } from './FontSizePlugin'
 export {
   CommentPlugin,

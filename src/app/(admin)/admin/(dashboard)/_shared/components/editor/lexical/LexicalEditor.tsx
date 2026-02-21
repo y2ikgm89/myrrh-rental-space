@@ -41,6 +41,7 @@ import {
   ComponentPickerPlugin,
   DraggableBlockPlugin,
   FloatingToolbarPlugin,
+  LinkHoverPreviewPlugin,
   CommentPlugin,
   PageBreakPlugin,
   CollapsiblePlugin,
@@ -196,6 +197,7 @@ function EditorInner({
             onOpenTooltip={() => dialogManager.openDialog('tooltip')}
           />
         )}
+        <LinkHoverPreviewPlugin />
         <CommentPlugin onMarkClick={onMarkClick} />
         <PageBreakPlugin />
         <ComponentPickerPlugin openDialog={dialogManager.openDialog} />
