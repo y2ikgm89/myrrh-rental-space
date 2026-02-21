@@ -20,6 +20,7 @@ Lexicalエディタ用のカスタムノードを作成します。
 ### 1. 要件確認
 
 ユーザーに以下を確認:
+
 - ノードの目的（何を表現するか）
 - 必要なプロパティ
 - HTMLでの表現方法
@@ -27,6 +28,7 @@ Lexicalエディタ用のカスタムノードを作成します。
 ### 2. 既存実装の確認
 
 参照実装を読み込む:
+
 - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/ImageNode.tsx`
 - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/CalloutNode.tsx`
 
@@ -108,9 +110,9 @@ export class ${NodeName}Node extends DecoratorNode<ReactElement> {
     return { element }
   }
 
-  createDOM(config: EditorConfig): HTMLElement {
+  override createDOM(_config: EditorConfig): HTMLElement {
     const div = document.createElement('div')
-    div.className = config.theme.${nodename} || ''
+    div.setAttribute('data-${nodename}', 'true')
     return div
   }
 
@@ -186,11 +188,10 @@ export class ${NodeName}Node extends ElementNode {
     return {}
   }
 
-  createDOM(config: EditorConfig): HTMLElement {
+  override createDOM(_config: EditorConfig): HTMLElement {
     const element = document.createElement('div')
     const value = $getState(this, ${propName}State)
     element.setAttribute('data-${prop-name}', value)
-    element.className = config.theme.${nodename} || ''
     return element
   }
 
@@ -329,9 +330,11 @@ export class ${NodeName}ContentNode extends ElementNode {
 ```
 
 **重要ルール:**
+
 - Container ノード: `isShadowRoot` + `canBeEmpty` + `collapseAtStart` すべて実装
 - Child ノード: `isShadowRoot` のみ実装、`collapseAtStart` は禁止
-- exportDOM / createDOM: data-attributes のみ、`config.theme.*` は `createDOM` のみ
+- exportDOM / createDOM: data-attributes のみ。`config.theme.*` / CSS クラス禁止（両メソッド共通）
+- `createDOM` シグネチャ: `override createDOM(_config: EditorConfig): HTMLElement`（未使用でも `_config` 必須）
 - updateDOM: `$getStateChange` + `dom.setAttribute()` で差分更新、`return false`
 
 ### 4. エクスポート追加

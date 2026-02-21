@@ -14,12 +14,12 @@ paths:
 
 ## 技術スタック整合性
 
-| 技術 | バージョン | 互換性 |
-|------|-----------|--------|
-| Lexical | 0.40.0 | React 17+対応 |
-| React | 19.2.4 | ✅ peerDependencies対応 |
-| React Compiler | 1.0.0 | ✅ 自動メモ化（useCallback基本不要） |
-| Turbopack | Next.js 16 default | ✅ optimizePackageImports設定済み |
+| 技術           | バージョン         | 互換性                               |
+| -------------- | ------------------ | ------------------------------------ |
+| Lexical        | 0.40.0             | React 17+対応                        |
+| React          | 19.2.4             | ✅ peerDependencies対応              |
+| React Compiler | 1.0.0              | ✅ 自動メモ化（useCallback基本不要） |
+| Turbopack      | Next.js 16 default | ✅ optimizePackageImports設定済み    |
 
 ## React 19 + React Compiler対応
 
@@ -30,13 +30,13 @@ React Compiler が自動メモ化するため、手動での `useCallback` は�
 
 ```typescript
 // OK: React Compiler が自動メモ化（推奨）
-const openDialog = () => setIsOpen(true)
+const openDialog = () => setIsOpen(true);
 
 // OK: 外部ライブラリ要件で明示的に使用
 const subscribe = useCallback((callback) => {
-  window.addEventListener('storage', callback)
-  return () => window.removeEventListener('storage', callback)
-}, [])
+  window.addEventListener("storage", callback);
+  return () => window.removeEventListener("storage", callback);
+}, []);
 ```
 
 ### React 19 StrictMode対応
@@ -87,37 +87,38 @@ const [editorState, setEditorState] = useState()
 
 ## 公式プラグイン一覧
 
-| プラグイン | 用途 | 必要ノード |
-|-----------|------|-----------|
-| `RichTextPlugin` | リッチテキスト編集 | HeadingNode, QuoteNode |
-| `PlainTextPlugin` | プレーンテキスト編集 | - |
-| `HistoryPlugin` | Undo/Redo | - |
-| `OnChangePlugin` | 状態変更監視 | - |
-| `ListPlugin` | 箇条書き/番号リスト | ListNode, ListItemNode |
-| `CheckListPlugin` | チェックリスト | ListNode, ListItemNode |
-| `LinkPlugin` | リンク編集 | LinkNode |
-| `AutoLinkPlugin` | URL自動リンク化 | AutoLinkNode |
-| `TablePlugin` | テーブル編集 | TableNode, TableRowNode, TableCellNode |
-| `TabIndentationPlugin` | Tabキーインデント | - |
-| `MarkdownShortcutPlugin` | Markdown記法 | 各種ノード |
-| `TableOfContentsPlugin` | 目次生成 | HeadingNode |
-| `ClearEditorPlugin` | エディタクリア | - |
-| `EditorRefPlugin` | エディタ参照取得 | - |
+| プラグイン               | 用途                 | 必要ノード                             |
+| ------------------------ | -------------------- | -------------------------------------- |
+| `RichTextPlugin`         | リッチテキスト編集   | HeadingNode, QuoteNode                 |
+| `PlainTextPlugin`        | プレーンテキスト編集 | -                                      |
+| `HistoryPlugin`          | Undo/Redo            | -                                      |
+| `OnChangePlugin`         | 状態変更監視         | -                                      |
+| `ListPlugin`             | 箇条書き/番号リスト  | ListNode, ListItemNode                 |
+| `CheckListPlugin`        | チェックリスト       | ListNode, ListItemNode                 |
+| `LinkPlugin`             | リンク編集           | LinkNode                               |
+| `AutoLinkPlugin`         | URL自動リンク化      | AutoLinkNode                           |
+| `TablePlugin`            | テーブル編集         | TableNode, TableRowNode, TableCellNode |
+| `TabIndentationPlugin`   | Tabキーインデント    | -                                      |
+| `MarkdownShortcutPlugin` | Markdown記法         | 各種ノード                             |
+| `TableOfContentsPlugin`  | 目次生成             | HeadingNode                            |
+| `ClearEditorPlugin`      | エディタクリア       | -                                      |
+| `EditorRefPlugin`        | エディタ参照取得     | -                                      |
 
 **このプロジェクトで使用中:**
+
 - RichTextPlugin, HistoryPlugin, ListPlugin, LinkPlugin, TabIndentationPlugin, OnChangePlugin
 
 ## ノード実装パターン
 
 ### 5つの基本ノード
 
-| ノード | 拡張可能 | 用途 |
-|--------|----------|------|
-| RootNode | ❌ | contenteditable のトップコンテナ |
-| LineBreakNode | ❌ | 改行表現 |
-| ElementNode | ✅ | ブロック要素（ParagraphNode, LinkNode等） |
-| TextNode | ✅ | テキスト＋フォーマット（bold, italic等） |
-| DecoratorNode | ✅ | React/任意コンポーネント埋め込み |
+| ノード        | 拡張可能 | 用途                                      |
+| ------------- | -------- | ----------------------------------------- |
+| RootNode      | ❌       | contenteditable のトップコンテナ          |
+| LineBreakNode | ❌       | 改行表現                                  |
+| ElementNode   | ✅       | ブロック要素（ParagraphNode, LinkNode等） |
+| TextNode      | ✅       | テキスト＋フォーマット（bold, italic等）  |
+| DecoratorNode | ✅       | React/任意コンポーネント埋め込み          |
 
 ### NodeState API（標準パターン — 全ノードで採用済み）
 
@@ -127,13 +128,19 @@ const [editorState, setEditorState] = useState()
 **状態宣言:**
 
 ```typescript
-import { $create, $getState, $setState, createState, DecoratorNode } from 'lexical'
+import {
+  $create,
+  $getState,
+  $setState,
+  createState,
+  DecoratorNode,
+} from "lexical";
 
 // 各プロパティをcreateStateで宣言（ファイルトップレベル）
-export const calloutTypeState = createState('calloutType', {
+export const calloutTypeState = createState("calloutType", {
   parse: (v: unknown): CalloutType =>
-    typeof v === 'string' && isCalloutType(v) ? v : 'info',
-})
+    typeof v === "string" && isCalloutType(v) ? v : "info",
+});
 ```
 
 **ノードクラス:**
@@ -142,12 +149,10 @@ export const calloutTypeState = createState('calloutType', {
 export class CalloutNode extends ElementNode {
   // $config() が getType, clone, importJSON, exportJSON を自動生成
   $config() {
-    return this.config('callout', {
-      extends: ElementNode,     // 親クラスを指定
-      stateConfigs: [
-        { flat: true, stateConfig: calloutTypeState },
-      ],
-    })
+    return this.config("callout", {
+      extends: ElementNode, // 親クラスを指定
+      stateConfigs: [{ flat: true, stateConfig: calloutTypeState }],
+    });
   }
 
   // importDOM() — 変更なし（DOM→Node変換）
@@ -161,16 +166,16 @@ export class CalloutNode extends ElementNode {
 
 ```typescript
 // 読み取り: $getState(node, stateConfig)
-const type = $getState(this, calloutTypeState)
+const type = $getState(this, calloutTypeState);
 
 // 書き込み: $setState(node, stateConfig, value)
-$setState(this, calloutTypeState, 'warning')
+$setState(this, calloutTypeState, "warning");
 
 // DOM更新での変更検出: $getStateChange(this, prevNode, stateConfig)
-const change = $getStateChange(this, prevNode, calloutTypeState)
+const change = $getStateChange(this, prevNode, calloutTypeState);
 if (change) {
-  const [newType] = change
-  dom.setAttribute('data-callout-type', newType)
+  const [newType] = change;
+  dom.setAttribute("data-callout-type", newType);
 }
 ```
 
@@ -203,13 +208,13 @@ export function $isCalloutNode(node: LexicalNode | null | undefined): node is Ca
 ```typescript
 export class CollapsibleTitleNode extends ElementNode {
   $config() {
-    return this.config('collapsible-title', { extends: ElementNode })
+    return this.config("collapsible-title", { extends: ElementNode });
   }
   // stateConfigs 不要
 }
 
 export function $createCollapsibleTitleNode(): CollapsibleTitleNode {
-  return $create(CollapsibleTitleNode)
+  return $create(CollapsibleTitleNode);
 }
 ```
 
@@ -234,14 +239,14 @@ ContainerNode（ルート）
 
 ### メソッドガイドライン
 
-| メソッド | コンテナノード | 子ノード（Title/Content） | 目的 |
-|---------|--------------|------------------------|------|
-| `isShadowRoot()` | ✅ 必須 | ✅ 必須 | 編集境界の確立 |
-| `canBeEmpty()` | ✅ `false` | — | 空コンテナ防止 |
-| `collapseAtStart()` | ✅ 実装 | ❌ 禁止 | Backspace でノード解除 |
-| `canInsertTextBefore()` | ✅ `false` | ✅ `false` | テキスト漏れ防止 |
-| `canInsertTextAfter()` | ✅ `false` | ✅ `false` | テキスト漏れ防止 |
-| `insertNewAfter()` | — | △ TitleNodeのみ | Enter でコンテンツへ移動 |
+| メソッド                | コンテナノード | 子ノード（Title/Content） | 目的                     |
+| ----------------------- | -------------- | ------------------------- | ------------------------ |
+| `isShadowRoot()`        | ✅ 必須        | ✅ 必須                   | 編集境界の確立           |
+| `canBeEmpty()`          | ✅ `false`     | —                         | 空コンテナ防止           |
+| `collapseAtStart()`     | ✅ 実装        | ❌ 禁止                   | Backspace でノード解除   |
+| `canInsertTextBefore()` | ✅ `false`     | ✅ `false`                | テキスト漏れ防止         |
+| `canInsertTextAfter()`  | ✅ `false`     | ✅ `false`                | テキスト漏れ防止         |
+| `insertNewAfter()`      | —              | △ TitleNodeのみ           | Enter でコンテンツへ移動 |
 
 ### isShadowRoot()
 
@@ -254,6 +259,7 @@ isShadowRoot(): boolean {
 ```
 
 **現在の実装状況（全9ノード）:**
+
 - CollapsibleContainerNode, CollapsibleContentNode
 - LayoutContainerNode, LayoutItemNode
 - StepsContainerNode, StepContentNode
@@ -356,9 +362,15 @@ updateDOM(prevNode: StepsContainerNode, dom: HTMLElement): boolean {
 
 ```css
 /* 公開ページ CSS: アトリビュートセレクタ */
-[data-steps] { /* コンテナスタイル */ }
-[data-steps-style="numbered"] { /* numbered 固有スタイル */ }
-[data-steps-style="timeline"] { /* timeline 固有スタイル */ }
+[data-steps] {
+  /* コンテナスタイル */
+}
+[data-steps-style="numbered"] {
+  /* numbered 固有スタイル */
+}
+[data-steps-style="timeline"] {
+  /* timeline 固有スタイル */
+}
 ```
 
 ### AccentColor システム
@@ -368,11 +380,11 @@ CSS変数 `--accent` / `--accent-fg` でブロック内の強調色を統一制�
 
 **ファイル構成**:
 
-| ファイル | 役割 |
-|---------|------|
-| `config/accent-colors.ts` | 型・定数・スウォッチ値・ラベル（Single Source of Truth） |
+| ファイル                            | 役割                                                        |
+| ----------------------------------- | ----------------------------------------------------------- |
+| `config/accent-colors.ts`           | 型・定数・スウォッチ値・ラベル（Single Source of Truth）    |
 | `shared/styles/lexical-content.css` | `[data-color="X"]` セレクタで CSS トークン定義（canonical） |
-| `inspector/ColorSwatchPicker.tsx` | 10色スウォッチ選択 UI コンポーネント |
+| `inspector/ColorSwatchPicker.tsx`   | 10色スウォッチ選択 UI コンポーネント                        |
 
 #### `[data-color]` CSS 変数伝播の仕組み
 
@@ -381,7 +393,7 @@ CSS変数 `--accent` / `--accent-fg` でブロック内の強調色を統一制�
 ```css
 /* lexical-content.css: data-color="blue" の場合 */
 [data-color="blue"] {
-  --accent:    oklch(0.55 0.20 260);
+  --accent: oklch(0.55 0.2 260);
   --accent-fg: oklch(1 0 0);
 }
 
@@ -399,12 +411,12 @@ CSS変数 `--accent` / `--accent-fg` でブロック内の強調色を統一制�
 1. **ノードクラスに `colorState` を追加**（`defaultColorState` から `default` フォールバック）
 
 ```typescript
-import { createState } from 'lexical'
-import { type AccentColor, isAccentColor } from '../config/accent-colors'
+import { createState } from "lexical";
+import { type AccentColor, isAccentColor } from "../config/accent-colors";
 
-export const colorState = createState('color', {
-  parse: (v): AccentColor => (isAccentColor(v) ? v : 'default'),
-})
+export const colorState = createState("color", {
+  parse: (v): AccentColor => (isAccentColor(v) ? v : "default"),
+});
 ```
 
 2. **`exportDOM` で `data-color` 属性を出力**（`default` は属性なしで省略可）
@@ -439,23 +451,29 @@ import { type AccentColor } from '../../config/accent-colors'
 
 スタイル別に適した手法でアクセントを表現（いずれもレイアウト変更なし）:
 
-| スタイル | 手法 | 適用プロパティ |
-|---------|------|--------------|
-| `underline` | 下線色 | `border-bottom-color: var(--accent)` |
-| `pills` | 背景色＋テキスト色 | `background-color: var(--accent)` / `color: var(--accent-fg)` |
-| `boxed` | inset top-stripe | `box-shadow: inset 0 2px 0 var(--accent)`（box-shadow = レイアウト変更なし） |
-| `minimal` | 下線色 | `border-bottom-color: var(--accent)` |
+| スタイル    | 手法               | 適用プロパティ                                                               |
+| ----------- | ------------------ | ---------------------------------------------------------------------------- |
+| `underline` | 下線色             | `border-bottom-color: var(--accent)`                                         |
+| `pills`     | 背景色＋テキスト色 | `background-color: var(--accent)` / `color: var(--accent-fg)`                |
+| `boxed`     | inset top-stripe   | `box-shadow: inset 0 2px 0 var(--accent)`（box-shadow = レイアウト変更なし） |
+| `minimal`   | 下線色             | `border-bottom-color: var(--accent)`                                         |
 
 ### 型ガードユーティリティ（createEnumGuard）
 
 ノード固有のリテラル型に対する型ガードは `config/type-guards.ts` の `createEnumGuard` を使用:
 
 ```typescript
-import { createEnumGuard } from '../config/type-guards'
+import { createEnumGuard } from "../config/type-guards";
 
-export type StepsStyle = 'numbered' | 'big' | 'small' | 'icon' | 'timeline'
-export const STEPS_STYLES: readonly StepsStyle[] = ['numbered', 'big', 'small', 'icon', 'timeline'] as const
-export const isStepsStyle = createEnumGuard<StepsStyle>(STEPS_STYLES)
+export type StepsStyle = "numbered" | "big" | "small" | "icon" | "timeline";
+export const STEPS_STYLES: readonly StepsStyle[] = [
+  "numbered",
+  "big",
+  "small",
+  "icon",
+  "timeline",
+] as const;
+export const isStepsStyle = createEnumGuard<StepsStyle>(STEPS_STYLES);
 ```
 
 **注意:** これは Prisma enum ではないため `enums.ts` ではなくノードファイル内に定義する。
@@ -466,62 +484,62 @@ export const isStepsStyle = createEnumGuard<StepsStyle>(STEPS_STYLES)
 
 公式Playgroundパターンに準拠:
 
-| 関数 | import元 | 用途 |
-|------|---------|------|
-| `$insertNodeToNearestRoot(node)` | `@lexical/utils` | **ブロックレベルノード**（ElementNode, DecoratorNode） |
-| `$insertNodes([node])` | `lexical` | **インライン/混合ノード**（TextNode, Image, 複数ノード一括） |
+| 関数                             | import元         | 用途                                                         |
+| -------------------------------- | ---------------- | ------------------------------------------------------------ |
+| `$insertNodeToNearestRoot(node)` | `@lexical/utils` | **ブロックレベルノード**（ElementNode, DecoratorNode）       |
+| `$insertNodes([node])`           | `lexical`        | **インライン/混合ノード**（TextNode, Image, 複数ノード一括） |
 
 ```typescript
 // ブロックレベルノード（Callout, Collapsible, Layout, YouTube, Button等）
-import { $insertNodeToNearestRoot } from '@lexical/utils'
-$insertNodeToNearestRoot(blockNode)  // 単一ノード、配列不要
+import { $insertNodeToNearestRoot } from "@lexical/utils";
+$insertNodeToNearestRoot(blockNode); // 単一ノード、配列不要
 
 // インライン/混合ノード（Emoji, Image, BlockTemplate等）
-import { $insertNodes } from 'lexical'
-$insertNodes([inlineNode])  // 配列で渡す
-$insertNodes(mixedNodes)    // 複数ノード一括挿入
+import { $insertNodes } from "lexical";
+$insertNodes([inlineNode]); // 配列で渡す
+$insertNodes(mixedNodes); // 複数ノード一括挿入
 ```
 
 ### 直接更新パターン（推奨: ダイアログ付きプラグイン）
 
 ```typescript
-import { $insertNodeToNearestRoot } from '@lexical/utils'
+import { $insertNodeToNearestRoot } from "@lexical/utils";
 
 // コマンド登録不要。ダイアログから直接editor.update()を呼び出す
 // React Compiler が自動メモ化するため useCallback 不要
 const handleSubmit = () => {
   editor.update(() => {
-    const node = $createCustomNode(formData)
-    $insertNodeToNearestRoot(node)
-  })
-  onClose()
-}
+    const node = $createCustomNode(formData);
+    $insertNodeToNearestRoot(node);
+  });
+  onClose();
+};
 ```
 
 ### コマンド登録パターン（ツールバーボタン等から直接呼び出す場合）
 
 ```typescript
-import { createCommand, COMMAND_PRIORITY_EDITOR } from 'lexical'
-import { $insertNodeToNearestRoot } from '@lexical/utils'
+import { createCommand, COMMAND_PRIORITY_EDITOR } from "lexical";
+import { $insertNodeToNearestRoot } from "@lexical/utils";
 
-export const INSERT_CUSTOM_COMMAND = createCommand<Payload>('INSERT_CUSTOM')
+export const INSERT_CUSTOM_COMMAND = createCommand<Payload>("INSERT_CUSTOM");
 
 function CustomPlugin() {
-  const [editor] = useLexicalComposerContext()
+  const [editor] = useLexicalComposerContext();
 
   useEffect(() => {
     return editor.registerCommand(
       INSERT_CUSTOM_COMMAND,
       (payload) => {
         editor.update(() => {
-          const node = $createCustomNode(payload)
-          $insertNodeToNearestRoot(node)
-        })
-        return true
+          const node = $createCustomNode(payload);
+          $insertNodeToNearestRoot(node);
+        });
+        return true;
       },
-      COMMAND_PRIORITY_EDITOR
-    )
-  }, [editor])
+      COMMAND_PRIORITY_EDITOR,
+    );
+  }, [editor]);
 }
 ```
 
@@ -530,16 +548,18 @@ function CustomPlugin() {
 `mergeRegister` は v0.40.0 から `lexical` 本体に移動（`@lexical/utils` からの旧パスも互換性あり）:
 
 ```typescript
-import { mergeRegister } from 'lexical'  // v0.40.0+: lexical本体からimport
+import { mergeRegister } from "lexical"; // v0.40.0+: lexical本体からimport
 
 useEffect(() => {
   return mergeRegister(
     editor.registerUpdateListener(({ editorState }) => {
-      editorState.read(() => { /* 状態読み取り */ })
+      editorState.read(() => {
+        /* 状態読み取り */
+      });
     }),
-    editor.registerCommand(COMMAND, handler, priority)
-  )
-}, [editor])
+    editor.registerCommand(COMMAND, handler, priority),
+  );
+}, [editor]);
 ```
 
 ### Node Transforms（状態変更の推奨方法）
@@ -549,49 +569,54 @@ useEffect(() => {
 ```typescript
 // 非推奨: updateListener内で更新
 editor.registerUpdateListener(() => {
-  editor.update(() => { /* 追加のレンダリングが発生 */ })
-})
+  editor.update(() => {
+    /* 追加のレンダリングが発生 */
+  });
+});
 
 // 推奨: Node Transforms
 editor.registerNodeTransform(TextNode, (node) => {
   // 条件チェックで無限ループ防止
-  if (!node.hasFormat('bold')) {
-    node.toggleFormat('bold')
+  if (!node.hasFormat("bold")) {
+    node.toggleFormat("bold");
   }
-})
+});
 ```
 
 **実践例: 絵文字ショートコード変換**
 
 ```typescript
 function textNodeTransform(node: TextNode): void {
-  if (!node.isSimpleText() || node.hasFormat('code')) return
+  if (!node.isSimpleText() || node.hasFormat("code")) return;
 
-  const text = node.getTextContent()
-  const emojiMatch = findEmoji(text)
-  if (emojiMatch === null) return
+  const text = node.getTextContent();
+  const emojiMatch = findEmoji(text);
+  if (emojiMatch === null) return;
 
   // 最初のマッチのみ処理（残りはtransformが再実行される）
-  let targetNode
+  let targetNode;
   if (emojiMatch.position === 0) {
-    [targetNode] = node.splitText(emojiMatch.position + emojiMatch.shortcode.length)
+    [targetNode] = node.splitText(
+      emojiMatch.position + emojiMatch.shortcode.length,
+    );
   } else {
     [, targetNode] = node.splitText(
       emojiMatch.position,
-      emojiMatch.position + emojiMatch.shortcode.length
-    )
+      emojiMatch.position + emojiMatch.shortcode.length,
+    );
   }
 
-  const emojiNode = $createEmojiNode(emojiMatch.unifiedID)
-  targetNode.replace(emojiNode)
+  const emojiNode = $createEmojiNode(emojiMatch.unifiedID);
+  targetNode.replace(emojiNode);
 }
 
 export function registerEmoji(editor: LexicalEditor): () => void {
-  return editor.registerNodeTransform(TextNode, textNodeTransform)
+  return editor.registerNodeTransform(TextNode, textNodeTransform);
 }
 ```
 
 **Node Transformsの利点:**
+
 - 単一のDOM調整で複数の変換を処理
 - 不要なレンダリングサイクルを回避
 - HistoryPluginと干渉しない
@@ -601,13 +626,13 @@ export function registerEmoji(editor: LexicalEditor): () => void {
 
 ```typescript
 // JSON保存（推奨: 完全な状態保持）
-const json = editorState.toJSON()
-const jsonString = JSON.stringify(json)
+const json = editorState.toJSON();
+const jsonString = JSON.stringify(json);
 
 // HTML出力（公開ページ表示用）
 editorState.read(() => {
-  const html = $generateHtmlFromNodes(editor, null)
-})
+  const html = $generateHtmlFromNodes(editor, null);
+});
 ```
 
 ## エラーハンドリング
@@ -616,9 +641,9 @@ editorState.read(() => {
 const initialConfig = {
   onError: (error: Error) => {
     // logger.error でログ記録。例外をスローしなければLexicalは自動回復
-    logger.error('Lexical Error', { error: error.message })
+    logger.error("Lexical Error", { error: error.message });
   },
-}
+};
 ```
 
 ## 禁止事項
@@ -639,20 +664,53 @@ const initialConfig = {
 14. **ノードクラスに getter/setter ラッパー定義禁止**: `node.getText()` / `node.setText(v)` ではなく `$getState(node, textState)` / `$setState(node, textState, v)` を直接使用。ラッパーメソッドは後方互換性ハックであり CLAUDE.md §禁止事項に違反
 15. **子ノードの collapseAtStart 委譲禁止**: Title/Content/Panel 等の子ノードに `collapseAtStart()` を実装しない。`isShadowRoot()` で境界保護する。コンテナノードのみが `collapseAtStart()` を持つ
 16. **コンテナ/コンテンツノードの isShadowRoot 省略禁止**: 複合ノードのコンテナ・コンテンツ・パネルノードには必ず `isShadowRoot() { return true }` を実装する
-17. **exportDOM での CSS クラス使用禁止**: `config.theme.*` や `className` は `createDOM` のみ（エディタ内表示）。`exportDOM` は data-attributes のみで HTML を構築する
+17. **CSS クラス使用禁止（createDOM / exportDOM 共通）**: `createDOM` / `exportDOM` では `config.theme.*` も CSS クラスも一切使用しない。data-attributes のみで DOM を構築する。CSS は `lexical-content.css` のアトリビュートセレクタで対応。`createDOM` のシグネチャは `override createDOM(_config: EditorConfig): HTMLElement`（未使用でも `_config` 必須）
 18. **updateDOM で `return true` の乱用禁止**: 属性変更は `$getStateChange` + `dom.setAttribute()` で差分更新し `return false`。`return true` は DOM 要素タグの変更等、DOM 再構築が必要な場合のみ
 19. **AccentColor スウォッチ値と CSS トークン値の不一致禁止**: `lexical-content.css` の `[data-color]` `--accent` 値が **canonical**。`ACCENT_COLOR_SWATCHES`（`accent-colors.ts`）はその値をミラーするため、CSS 変更時は TS 側も必ず更新すること。Preview（ColorSwatchPicker）と実際の適用色が乖離するためユーザー混乱の原因になる
+20. **インライン DecoratorNode 挿入時の選択テキスト削除漏れ禁止**: `$insertNodes` でインラインノードを挿入する前に RangeSelection がある場合は `selection.removeText()` を呼ぶ。未呼出の場合、選択テキストが残存したまま挿入される
+
+```typescript
+// OK パターン（Ruby / Tooltip 等のインライン挿入）
+editor.update(() => {
+  const selection = $getSelection();
+  if ($isRangeSelection(selection)) {
+    selection.removeText(); // ← 必須: 選択テキストを先に削除
+  }
+  $insertNodes([$createRubyNode(baseText, rubyText)]);
+});
+```
+
+21. **`TableCellResizerPlugin` は @lexical/react 0.40.0 に存在しない**: 使用禁止。`<TablePlugin hasCellMerge={true} hasCellBackgroundColor={true} />` が現バージョンのテーブル強化の上限
+
+## 新規ノード登録チェックリスト
+
+ノード + プラグイン + インスペクターパネルをフル追加する場合の登録箇所（合計 9 箇所）:
+
+| ファイル                               | 内容                                       | 必須条件                          |
+| -------------------------------------- | ------------------------------------------ | --------------------------------- |
+| `config/nodes.ts`                      | `EDITOR_NODES` に追加                      | 全ノード                          |
+| `nodes/index.ts`                       | barrel export                              | 全ノード                          |
+| `config/dialog-registry.ts`            | `REGISTRY_DIALOG_IDS` + `DIALOG_REGISTRY`  | Dialog 使用時                     |
+| `config/insert-items.ts`               | `INSERT_ITEMS`                             | ツールバー/ピッカーに表示する場合 |
+| `plugins/index.ts`                     | Plugin export                              | Plugin あり                       |
+| `config/inspector-registry.ts`         | `getInspectableInfoFromRegistry`           | Inspector あり                    |
+| `inspector/hooks/inspectable-nodes.ts` | `InspectableNodeType` + `SelectedNodeInfo` | Inspector あり                    |
+| `inspector/InspectorSidebar.tsx`       | switch case                                | Inspector あり                    |
+| `inspector/panels/index.ts`            | Panel export                               | Inspector あり                    |
+
+**ポイント**: FloatingToolbar 経由で開くインラインノード（Ruby / Tooltip 等）は `INSERT_ITEMS` 不要だが `dialog-registry` への登録は必要。登録漏れは型エラーではなく実行時に無音で失敗するため注意。
 
 ## ファイル命名規則
 
-| 種類 | 命名 | 例 |
-|------|------|-----|
-| ノード | `XxxNode.tsx` | `CalloutNode.tsx` |
-| プラグイン | `XxxPlugin.tsx` | `CalloutPlugin.tsx` |
-| 型定義 | `types.ts` に追加 | - |
+| 種類       | 命名              | 例                  |
+| ---------- | ----------------- | ------------------- |
+| ノード     | `XxxNode.tsx`     | `CalloutNode.tsx`   |
+| プラグイン | `XxxPlugin.tsx`   | `CalloutPlugin.tsx` |
+| 型定義     | `types.ts` に追加 | -                   |
 
 ## HTML互換性
 
 exportDOM/importDOMは公開ページでのHTMLレンダリングに必須:
+
 - `exportDOM()`: エディタ状態 → HTML
 - `importDOM()`: HTML → エディタ状態（再編集時）
