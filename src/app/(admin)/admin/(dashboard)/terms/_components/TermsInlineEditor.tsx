@@ -915,21 +915,43 @@ export function TermsInlineEditor({
         </SidePanelShell>
       }
     >
-      <LexicalEditor
-        key={editorKey}
-        contentJson={contentJson || undefined}
-        contentHtml={
-          templateHtml ??
-          (initialVersion?.contentHtml && editorKey === 0
-            ? initialVersion.contentHtml
-            : "")
-        }
-        onChange={handleJsonChange}
-        disabled={isPending || isEditorReadOnly || isLoadingVersion}
-        className={EDITOR_PROSE_CLASSES}
-        showToolbar
-        height="100%"
-      />
+      <div className="flex h-full flex-col">
+        {isEditorReadOnly && (
+          <div className="flex items-center justify-between gap-4 border-b bg-muted/40 px-6 py-3">
+            <p className="text-sm text-muted-foreground">
+              {selectedVersionContent?.status === TermsStatus.PUBLISHED
+                ? "公開済みバージョンは読み取り専用です。内容を変更するには新しいバージョンを作成してください。"
+                : "このバージョンは読み取り専用です。"}
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleCreateNewVersion}
+              disabled={isPending || isLoadingVersion}
+              className="shrink-0"
+            >
+              新しいバージョンを作成して編集
+            </Button>
+          </div>
+        )}
+        <div className="min-h-0 flex-1">
+          <LexicalEditor
+            key={editorKey}
+            contentJson={contentJson || undefined}
+            contentHtml={
+              templateHtml ??
+              (initialVersion?.contentHtml && editorKey === 0
+                ? initialVersion.contentHtml
+                : "")
+            }
+            onChange={handleJsonChange}
+            disabled={isPending || isEditorReadOnly || isLoadingVersion}
+            className={EDITOR_PROSE_CLASSES}
+            showToolbar
+            height="100%"
+          />
+        </div>
+      </div>
     </InlineEditorShell>
   );
 }
