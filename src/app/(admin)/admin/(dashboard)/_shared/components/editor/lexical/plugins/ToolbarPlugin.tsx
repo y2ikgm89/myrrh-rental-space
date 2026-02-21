@@ -11,6 +11,7 @@ import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext
 import {
   $createParagraphNode,
   $findMatchingParent,
+  $getRoot,
   $getSelection,
   $isRangeSelection,
   $isRootOrShadowRoot,
@@ -32,6 +33,8 @@ import {
 import { $isLinkNode, TOGGLE_LINK_COMMAND } from '@lexical/link'
 import { $isHeadingNode, $createHeadingNode, type HeadingTagType } from '@lexical/rich-text'
 import { $setBlocksType } from '@lexical/selection'
+import { $convertFromMarkdownString, $convertToMarkdownString } from '@lexical/markdown'
+import { $generateHtmlFromNodes } from '@lexical/html'
 import {
   AlignCenter,
   AlignJustify,
@@ -40,6 +43,9 @@ import {
   Bold,
   Check,
   ChevronDown,
+  Code,
+  FileDown,
+  FileText,
   Heading1,
   Heading2,
   Heading3,
@@ -52,6 +58,7 @@ import {
   Minimize,
   Pilcrow,
   Plus,
+  Printer,
   Redo,
   Strikethrough,
   Subscript,
@@ -59,6 +66,7 @@ import {
   TextQuote,
   Underline,
   Undo,
+  Upload,
 } from 'lucide-react'
 import { Button } from '@/admin/components/ui/button'
 import { Separator } from '@/admin/components/ui/separator'
@@ -69,6 +77,15 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/admin/components/ui/dropdown-menu'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/admin/components/ui/dialog'
+import { Textarea } from '@/admin/components/ui/textarea'
 import { $createQuoteNode, $isQuoteNode } from '@lexical/rich-text'
 import { FontSizePlugin } from './FontSizePlugin'
 import { HighlightPlugin } from './HighlightPlugin'
@@ -76,6 +93,7 @@ import { TextColorPlugin } from './TextColorPlugin'
 import { TextCasePlugin } from './TextCasePlugin'
 import { entriesOf } from '@/shared/lib/serialize'
 import { getToolbarInsertItems, executeInsertItem, MERGED_CATEGORY_PAIRS } from '../config/insert-items'
+import { EDITOR_TRANSFORMERS } from '../MarkdownTransformers'
 import type { DialogId } from '../dialogs/dialog-types'
 
 // =============================================================================
@@ -144,6 +162,72 @@ const ALIGNMENT_CONFIG: Record<AlignmentType, AlignmentConfig> = {
 }
 
 // =============================================================================
+// MarkdownImportDialog
+// =============================================================================
+
+function MarkdownImportDialog({
+  open,
+  onClose,
+}: {
+  open: boolean
+  onClose: () => void
+}) {
+  const [editor] = useLexicalComposerContext()
+  const [markdown, setMarkdown] = useState('')
+  const [confirmed, setConfirmed] = useState(false)
+
+  function handleImport() {
+    if (!confirmed) {
+      setConfirmed(true)
+      return
+    }
+    editor.update(() => {
+      $convertFromMarkdownString(markdown, EDITOR_TRANSFORMERS)
+    })
+    onClose()
+    setConfirmed(false)
+    setMarkdown('')
+  }
+
+  function handleClose() {
+    onClose()
+    setConfirmed(false)
+    setMarkdown('')
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Markdown をインポート</DialogTitle>
+          <DialogDescription>
+            {confirmed
+              ? '⚠️ インポートすると現在のコンテンツは置き換えられます。この操作は取り消せません。続行しますか？'
+              : 'Markdown テキストを貼り付けてください。'}
+          </DialogDescription>
+        </DialogHeader>
+        {!confirmed && (
+          <Textarea
+            value={markdown}
+            onChange={(e) => setMarkdown(e.target.value)}
+            rows={10}
+            placeholder={'# 見出し\n\n本文...'}
+          />
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={handleClose}>
+            キャンセル
+          </Button>
+          <Button onClick={handleImport} variant={confirmed ? 'destructive' : 'default'}>
+            {confirmed ? '置き換える' : '次へ'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// =============================================================================
 // Component
 // =============================================================================
 
@@ -166,6 +250,7 @@ export function ToolbarPlugin({
   const [isLink, setIsLink] = useState(false)
   const [blockType, setBlockType] = useState<BlockType>('paragraph')
   const [elementFormat, setElementFormat] = useState<AlignmentType>('left')
+  const [showMarkdownImport, setShowMarkdownImport] = useState(false)
 
   // ツールバー状態を更新
   const updateToolbar = useEffectEvent(() => {
@@ -332,6 +417,46 @@ export function ToolbarPlugin({
 
   const handleAlignmentChange = (format: ElementFormatType) => {
     editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, format)
+  }
+
+  // 書き出しハンドラー
+  const handleCopyMarkdown = () => {
+    editor.read(() => {
+      const md = $convertToMarkdownString(EDITOR_TRANSFORMERS)
+      void navigator.clipboard.writeText(md)
+    })
+  }
+
+  const handleCopyHtml = () => {
+    editor.read(() => {
+      const html = $generateHtmlFromNodes(editor)
+      void navigator.clipboard.writeText(html)
+    })
+  }
+
+  const handleCopyPlainText = () => {
+    editor.read(() => {
+      const text = $getRoot().getTextContent()
+      void navigator.clipboard.writeText(text)
+    })
+  }
+
+  const handleOpenPrintPreview = () => {
+    editor.read(() => {
+      const html = $generateHtmlFromNodes(editor)
+      const fullHtml =
+        `<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>印刷プレビュー</title>` +
+        `<style>body{font-family:sans-serif;max-width:21cm;margin:2cm auto;padding:0 2.5cm}` +
+        `@media print{body{margin:0}}</style></head><body>${html}</body></html>`
+      const blob = new Blob([fullHtml], { type: 'text/html' })
+      const url = URL.createObjectURL(blob)
+      const printWindow = window.open(url, '_blank', 'noopener,noreferrer')
+      if (printWindow) {
+        printWindow.addEventListener('load', () => URL.revokeObjectURL(url))
+      } else {
+        URL.revokeObjectURL(url)
+      }
+    })
   }
 
   // 挿入アイテム（configベース）
@@ -578,6 +703,49 @@ export function ToolbarPlugin({
           </DropdownMenuContent>
         </DropdownMenu>
       )}
+
+      {/* Export Dropdown */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1"
+          >
+            <FileDown className="h-4 w-4" />
+            <span className="text-xs">書き出し</span>
+            <ChevronDown className="h-3 w-3" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="min-w-[200px]">
+          <DropdownMenuItem onClick={handleCopyMarkdown} className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            <span>Markdown をコピー</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleCopyHtml} className="flex items-center gap-2">
+            <Code className="h-4 w-4" />
+            <span>HTML をコピー</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleCopyPlainText} className="flex items-center gap-2">
+            <AlignLeft className="h-4 w-4" />
+            <span>プレーンテキストをコピー</span>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={() => setShowMarkdownImport(true)}
+            className="flex items-center gap-2"
+          >
+            <Upload className="h-4 w-4" />
+            <span>Markdown をインポート</span>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={handleOpenPrintPreview} className="flex items-center gap-2">
+            <Printer className="h-4 w-4" />
+            <span>印刷プレビュー</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
       </div>
       <div className="ml-auto shrink-0">
         <Button
@@ -595,6 +763,10 @@ export function ToolbarPlugin({
           )}
         </Button>
       </div>
+      <MarkdownImportDialog
+        open={showMarkdownImport}
+        onClose={() => setShowMarkdownImport(false)}
+      />
     </div>
   )
 }
