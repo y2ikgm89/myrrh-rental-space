@@ -268,3 +268,13 @@ export {
   tooltipBaseTextState,
   tooltipTextState,
 } from './TooltipNode'
+
+// Audio
+export {
+  AudioNode,
+  $createAudioNode,
+  $isAudioNode,
+  audioUrlState,
+  audioTitleState,
+  audioArtistState,
+} from './AudioNode'

@@ -97,3 +97,5 @@ export { MapEmbedPlugin } from './MapEmbedPlugin'
 export { RubyPlugin } from './RubyPlugin'
 
 export { TooltipPlugin } from './TooltipPlugin'
+
+export { AudioPlugin } from './AudioPlugin'

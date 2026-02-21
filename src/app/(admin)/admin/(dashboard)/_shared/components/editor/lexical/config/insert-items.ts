@@ -58,6 +58,7 @@ import {
   Blocks,
   Save,
   Map,
+  Volume2,
 } from 'lucide-react'
 import { applyTextCaseToSelection } from '../plugins/TextCasePlugin'
 import { INSERT_PAGE_BREAK_COMMAND } from '../plugins/PageBreakPlugin'
@@ -329,6 +330,17 @@ const INSERT_ITEMS: readonly InsertItem[] = [
     showInToolbar: true,
     showInPicker: true,
     dialogId: 'mapEmbed',
+  },
+  {
+    id: 'audio',
+    type: 'dialog',
+    label: '音声プレイヤー',
+    icon: Volume2,
+    keywords: ['audio', '音声', 'sound', 'music', '音楽', 'podcast'],
+    category: 'media',
+    showInToolbar: false,
+    showInPicker: true,
+    dialogId: 'audio',
   },
   {
     id: 'table',

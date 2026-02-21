@@ -30,6 +30,7 @@ import { $isMapEmbedNode } from '../nodes/MapEmbedNode'
 import { $isXNode } from '../nodes/XNode'
 import { $isInstagramNode } from '../nodes/InstagramNode'
 import { $isPageBreakNode } from '../nodes/PageBreakNode'
+import { $isAudioNode } from '../nodes/AudioNode'
 import type { InspectableNodeType, InspectableResult } from '../inspector/hooks/inspectable-nodes'
 
 // =============================================================================
@@ -60,6 +61,7 @@ export function getInspectableInfoFromRegistry(node: LexicalNode): InspectableRe
   if ($isPageBreakNode(node)) return { nodeType: 'pageBreak', node, nodeKey }
   if ($isMapEmbedNode(node)) return { nodeType: 'mapEmbed', node, nodeKey }
   if ($isCodeNode(node)) return { nodeType: 'code', node, nodeKey }
+  if ($isAudioNode(node)) return { nodeType: 'audio', node, nodeKey }
   return null
 }
 
@@ -70,5 +72,5 @@ export const INSPECTABLE_NODE_TYPES_FROM_REGISTRY: readonly InspectableNodeType[
   'button', 'image', 'callout', 'bookmark', 'pullQuote',
   'collapsible', 'steps', 'tabs', 'layout',
   'youtube', 'vimeo', 'x', 'instagram', 'pageBreak',
-  'mapEmbed', 'code',
+  'mapEmbed', 'code', 'audio',
 ]
