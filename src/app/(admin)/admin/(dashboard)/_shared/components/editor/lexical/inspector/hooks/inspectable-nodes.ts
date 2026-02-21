@@ -34,6 +34,7 @@ import type { FigmaNode } from '../../nodes/FigmaNode'
 import type { SpotifyNode } from '../../nodes/SpotifyNode'
 import type { GalleryContainerNode, GalleryItemNode } from '../../nodes/GalleryNode'
 import type { TimelineContainerNode, TimelineItemNode } from '../../nodes/TimelineNode'
+import type { PricingPlanNode, PricingFeatureNode } from '../../nodes/PricingTableNode'
 
 // =============================================================================
 // Types
@@ -64,6 +65,8 @@ export type InspectableNodeType =
   | 'galleryItem'
   | 'timelineContainer'
   | 'timelineItem'
+  | 'pricingPlan'
+  | 'pricingFeature'
 
 /**
  * 選択中ノード情報のDiscriminated Union型
@@ -96,6 +99,8 @@ export type SelectedNodeInfo =
   | { nodeType: 'galleryItem'; node: GalleryItemNode; nodeKey: NodeKey }
   | { nodeType: 'timelineContainer'; node: TimelineContainerNode; nodeKey: NodeKey }
   | { nodeType: 'timelineItem'; node: TimelineItemNode; nodeKey: NodeKey }
+  | { nodeType: 'pricingPlan'; node: PricingPlanNode; nodeKey: NodeKey }
+  | { nodeType: 'pricingFeature'; node: PricingFeatureNode; nodeKey: NodeKey }
   | null
 
 /**

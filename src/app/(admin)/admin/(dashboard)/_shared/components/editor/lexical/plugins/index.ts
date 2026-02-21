@@ -109,3 +109,5 @@ export { SpotifyPlugin } from './SpotifyPlugin'
 export { GalleryPlugin } from './GalleryPlugin'
 
 export { TimelinePlugin } from './TimelinePlugin'
+
+export { PricingTablePlugin } from './PricingTablePlugin'

@@ -26,3 +26,5 @@ export { GalleryContainerInspectorPanel } from './GalleryContainerInspectorPanel
 export { GalleryItemInspectorPanel } from './GalleryItemInspectorPanel'
 export { TimelineContainerInspectorPanel } from './TimelineContainerInspectorPanel'
 export { TimelineItemInspectorPanel } from './TimelineItemInspectorPanel'
+export { PricingPlanInspectorPanel } from './PricingPlanInspectorPanel'
+export { PricingFeatureInspectorPanel } from './PricingFeatureInspectorPanel'

@@ -64,6 +64,7 @@ import {
   Music,
   LayoutGrid,
   Clock,
+  Table2,
 } from 'lucide-react'
 import { applyTextCaseToSelection } from '../plugins/TextCasePlugin'
 import { INSERT_PAGE_BREAK_COMMAND } from '../plugins/PageBreakPlugin'
@@ -401,6 +402,17 @@ const INSERT_ITEMS: readonly InsertItem[] = [
     showInToolbar: false,
     showInPicker: true,
     dialogId: 'timeline',
+  },
+  {
+    id: 'pricingTable',
+    type: 'dialog',
+    label: '料金比較表',
+    icon: Table2,
+    keywords: ['pricing', 'price', 'plan', '料金', '比較', 'table', 'プラン'],
+    category: 'layout',
+    showInToolbar: false,
+    showInPicker: true,
+    dialogId: 'pricingTable',
   },
   {
     id: 'table',

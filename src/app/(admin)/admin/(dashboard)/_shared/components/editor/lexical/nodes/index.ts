@@ -342,3 +342,22 @@ export {
   timelineLabelState,
 } from './TimelineNode'
 export type { TimelineDirection } from './TimelineNode'
+
+// PricingTable
+export {
+  PricingTableContainerNode,
+  $createPricingTableContainerNode,
+  $isPricingTableContainerNode,
+  PricingPlanNode,
+  $createPricingPlanNode,
+  $isPricingPlanNode,
+  planNameState,
+  planPriceState,
+  planPeriodState,
+  planFeaturedState,
+  planColorState,
+  PricingFeatureNode,
+  $createPricingFeatureNode,
+  $isPricingFeatureNode,
+  featureIncludedState,
+} from './PricingTableNode'

@@ -37,6 +37,7 @@ import {
   SpotifyPlugin,
   GalleryPlugin,
   TimelinePlugin,
+  PricingTablePlugin,
 } from '../plugins'
 
 // =============================================================================
@@ -77,6 +78,7 @@ export const REGISTRY_DIALOG_IDS = [
   'spotify',
   'gallery',
   'timeline',
+  'pricingTable',
 ] as const
 
 export type RegistryDialogId = (typeof REGISTRY_DIALOG_IDS)[number]
@@ -114,4 +116,5 @@ export const DIALOG_REGISTRY: readonly DialogRegistryEntry[] = [
   { dialogId: 'spotify', component: SpotifyPlugin },
   { dialogId: 'gallery', component: GalleryPlugin },
   { dialogId: 'timeline', component: TimelinePlugin },
+  { dialogId: 'pricingTable', component: PricingTablePlugin },
 ]

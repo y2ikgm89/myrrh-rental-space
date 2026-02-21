@@ -36,6 +36,7 @@ import { $isFigmaNode } from '../nodes/FigmaNode'
 import { $isSpotifyNode } from '../nodes/SpotifyNode'
 import { $isGalleryContainerNode, $isGalleryItemNode } from '../nodes/GalleryNode'
 import { $isTimelineContainerNode, $isTimelineItemNode } from '../nodes/TimelineNode'
+import { $isPricingPlanNode, $isPricingFeatureNode } from '../nodes/PricingTableNode'
 import type { InspectableNodeType, InspectableResult } from '../inspector/hooks/inspectable-nodes'
 
 // =============================================================================
@@ -74,6 +75,8 @@ export function getInspectableInfoFromRegistry(node: LexicalNode): InspectableRe
   if ($isGalleryItemNode(node)) return { nodeType: 'galleryItem', node, nodeKey }
   if ($isTimelineContainerNode(node)) return { nodeType: 'timelineContainer', node, nodeKey }
   if ($isTimelineItemNode(node)) return { nodeType: 'timelineItem', node, nodeKey }
+  if ($isPricingPlanNode(node)) return { nodeType: 'pricingPlan', node, nodeKey }
+  if ($isPricingFeatureNode(node)) return { nodeType: 'pricingFeature', node, nodeKey }
   return null
 }
 
@@ -87,4 +90,5 @@ export const INSPECTABLE_NODE_TYPES_FROM_REGISTRY: readonly InspectableNodeType[
   'mapEmbed', 'code', 'audio', 'file', 'figma', 'spotify',
   'galleryContainer', 'galleryItem',
   'timelineContainer', 'timelineItem',
+  'pricingPlan', 'pricingFeature',
 ]
