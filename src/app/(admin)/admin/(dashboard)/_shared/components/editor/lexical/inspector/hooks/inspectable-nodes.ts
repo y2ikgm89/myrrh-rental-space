@@ -22,9 +22,11 @@ import type { StepsContainerNode } from '../../nodes/StepsContainerNode'
 import type { TabsContainerNode } from '../../nodes/TabsContainerNode'
 import type { LayoutContainerNode } from '../../nodes/LayoutContainerNode'
 import type { YouTubeNode } from '../../nodes/YouTubeNode'
+import type { VimeoNode } from '../../nodes/VimeoNode'
 import type { XNode } from '../../nodes/XNode'
 import type { InstagramNode } from '../../nodes/InstagramNode'
 import type { PageBreakNode } from '../../nodes/PageBreakNode'
+import type { MapEmbedNode } from '../../nodes/MapEmbedNode'
 
 // =============================================================================
 // Types
@@ -41,9 +43,11 @@ export type InspectableNodeType =
   | 'tabs'
   | 'layout'
   | 'youtube'
+  | 'vimeo'
   | 'x'
   | 'instagram'
   | 'pageBreak'
+  | 'mapEmbed'
 
 /**
  * 選択中ノード情報のDiscriminated Union型
@@ -62,9 +66,11 @@ export type SelectedNodeInfo =
   | { nodeType: 'tabs'; node: TabsContainerNode; nodeKey: NodeKey }
   | { nodeType: 'layout'; node: LayoutContainerNode; nodeKey: NodeKey }
   | { nodeType: 'youtube'; node: YouTubeNode; nodeKey: NodeKey }
+  | { nodeType: 'vimeo'; node: VimeoNode; nodeKey: NodeKey }
   | { nodeType: 'x'; node: XNode; nodeKey: NodeKey }
   | { nodeType: 'instagram'; node: InstagramNode; nodeKey: NodeKey }
   | { nodeType: 'pageBreak'; node: PageBreakNode; nodeKey: NodeKey }
+  | { nodeType: 'mapEmbed'; node: MapEmbedNode; nodeKey: NodeKey }
   | null
 
 /**

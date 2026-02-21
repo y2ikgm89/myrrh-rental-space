@@ -23,6 +23,13 @@ export {
 } from './YouTubeNode'
 
 export {
+  VimeoNode,
+  $createVimeoNode,
+  $isVimeoNode,
+  vimeoVideoIdState,
+} from './VimeoNode'
+
+export {
   LayoutContainerNode,
   $createLayoutContainerNode,
   $isLayoutContainerNode,
@@ -233,3 +240,31 @@ export {
   $createTableOfContentsNode,
   $isTableOfContentsNode,
 } from './TableOfContentsNode'
+
+// MapEmbed
+export {
+  MapEmbedNode,
+  $createMapEmbedNode,
+  $isMapEmbedNode,
+  embedUrlState,
+  mapLabelState,
+  toEmbedUrl,
+} from './MapEmbedNode'
+
+// Ruby
+export {
+  RubyNode,
+  $createRubyNode,
+  $isRubyNode,
+  rubyBaseTextState,
+  rubyTextState,
+} from './RubyNode'
+
+// Tooltip
+export {
+  TooltipNode,
+  $createTooltipNode,
+  $isTooltipNode,
+  tooltipBaseTextState,
+  tooltipTextState,
+} from './TooltipNode'

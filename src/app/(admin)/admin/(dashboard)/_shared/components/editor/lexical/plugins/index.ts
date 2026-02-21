@@ -23,6 +23,7 @@ export {
   type PresetTextColor,
 } from './TextColorPlugin'
 export { YouTubePlugin } from './YouTubePlugin'
+export { VimeoPlugin } from './VimeoPlugin'
 export { XPlugin } from './XPlugin'
 export { InstagramPlugin } from './InstagramPlugin'
 export { LinkDialogPlugin } from './LinkDialogPlugin'
@@ -91,3 +92,8 @@ export {
   SAVE_BLOCK_TEMPLATE_COMMAND,
   INSERT_BLOCK_TEMPLATE_COMMAND,
 } from './BlockTemplatePlugin'
+export { MapEmbedPlugin } from './MapEmbedPlugin'
+
+export { RubyPlugin } from './RubyPlugin'
+
+export { TooltipPlugin } from './TooltipPlugin'

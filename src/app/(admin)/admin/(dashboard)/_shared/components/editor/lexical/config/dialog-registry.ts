@@ -16,6 +16,7 @@ import type { ComponentType } from 'react'
 import {
   ImagePlugin,
   YouTubePlugin,
+  VimeoPlugin,
   XPlugin,
   InstagramPlugin,
   LinkDialogPlugin,
@@ -27,6 +28,9 @@ import {
   BookmarkPlugin,
   StepsPlugin,
   TabsPlugin,
+  MapEmbedPlugin,
+  RubyPlugin,
+  TooltipPlugin,
 } from '../plugins'
 
 // =============================================================================
@@ -46,6 +50,7 @@ export type DialogPluginProps = {
 export const REGISTRY_DIALOG_IDS = [
   'image',
   'youtube',
+  'vimeo',
   'x',
   'instagram',
   'link',
@@ -57,6 +62,9 @@ export const REGISTRY_DIALOG_IDS = [
   'bookmark',
   'steps',
   'tabs',
+  'mapEmbed',
+  'ruby',
+  'tooltip',
 ] as const
 
 export type RegistryDialogId = (typeof REGISTRY_DIALOG_IDS)[number]
@@ -73,6 +81,7 @@ type DialogRegistryEntry = {
 export const DIALOG_REGISTRY: readonly DialogRegistryEntry[] = [
   { dialogId: 'image', component: ImagePlugin },
   { dialogId: 'youtube', component: YouTubePlugin },
+  { dialogId: 'vimeo', component: VimeoPlugin },
   { dialogId: 'x', component: XPlugin },
   { dialogId: 'instagram', component: InstagramPlugin },
   { dialogId: 'link', component: LinkDialogPlugin },
@@ -84,4 +93,7 @@ export const DIALOG_REGISTRY: readonly DialogRegistryEntry[] = [
   { dialogId: 'bookmark', component: BookmarkPlugin },
   { dialogId: 'steps', component: StepsPlugin },
   { dialogId: 'tabs', component: TabsPlugin },
+  { dialogId: 'mapEmbed', component: MapEmbedPlugin },
+  { dialogId: 'ruby', component: RubyPlugin },
+  { dialogId: 'tooltip', component: TooltipPlugin },
 ]

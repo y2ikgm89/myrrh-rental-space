@@ -1,7 +1,7 @@
-﻿/**
- * YouTube Node
+/**
+ * Vimeo Node
  *
- * @description YouTube動画を埋め込むDecoratorNode
+ * @description Vimeo動画を埋め込むDecoratorNode
  */
 
 'use client'
@@ -21,15 +21,29 @@ import { $create, $getState, $setState, createState, DecoratorNode } from 'lexic
 // State
 // =============================================================================
 
-export const videoIdState = createState('videoId', {
+export const vimeoVideoIdState = createState('videoId', {
   parse: (v: unknown): string => typeof v === 'string' ? v : '',
 })
+
+// =============================================================================
+// Utilities
+// =============================================================================
+
+/**
+ * Vimeo URLからビデオIDを抽出する
+ */
+export function extractVimeoId(url: string): string | null {
+  const match = url.match(
+    /vimeo\.com(?:\/(?:channels\/\w+|groups\/[^/]+\/videos|video))?\/(\d+)/,
+  )
+  return match?.[1] ?? null
+}
 
 // =============================================================================
 // Component
 // =============================================================================
 
-function YouTubeComponent({
+function VimeoComponent({
   videoId,
   nodeKey,
 }: {
@@ -42,9 +56,9 @@ function YouTubeComponent({
       className="relative my-6 aspect-video w-full max-w-3xl mx-auto"
     >
       <iframe
-        src={`https://www.youtube.com/embed/${videoId}`}
-        title="YouTube video"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        src={`https://player.vimeo.com/video/${videoId}`}
+        title="Vimeo video"
+        allow="autoplay; fullscreen; picture-in-picture"
         allowFullScreen
         className="absolute inset-0 w-full h-full rounded-lg"
       />
@@ -56,13 +70,13 @@ function YouTubeComponent({
 // DOM Conversion
 // =============================================================================
 
-function $convertYouTubeElement(element: HTMLElement): null | DOMConversionOutput {
+function $convertVimeoElement(element: HTMLElement): null | DOMConversionOutput {
   if (element instanceof HTMLIFrameElement) {
     const src = element.getAttribute('src')
     if (src) {
-      const match = src.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]+)/)
+      const match = src.match(/player\.vimeo\.com\/video\/(\d+)/)
       if (match?.[1]) {
-        const node = $createYouTubeNode({ videoId: match[1] })
+        const node = $createVimeoNode({ videoId: match[1] })
         return { node }
       }
     }
@@ -74,35 +88,32 @@ function $convertYouTubeElement(element: HTMLElement): null | DOMConversionOutpu
 // Node Class
 // =============================================================================
 
-export class YouTubeNode extends DecoratorNode<ReactElement> {
+export class VimeoNode extends DecoratorNode<ReactElement> {
   override $config() {
-    return this.config('youtube', {
+    return this.config('vimeo', {
       extends: DecoratorNode,
-      stateConfigs: [{ flat: true, stateConfig: videoIdState }],
+      stateConfigs: [{ flat: true, stateConfig: vimeoVideoIdState }],
     })
   }
 
   static override importDOM(): DOMConversionMap | null {
     return {
       iframe: () => ({
-        conversion: $convertYouTubeElement,
+        conversion: $convertVimeoElement,
         priority: 0,
       }),
     }
   }
 
   override exportDOM(): DOMExportOutput {
-    const videoId = $getState(this, videoIdState)
+    const videoId = $getState(this, vimeoVideoIdState)
     const div = document.createElement('div')
-    div.setAttribute('data-youtube', 'true')
+    div.setAttribute('data-vimeo', 'true')
 
     const iframe = document.createElement('iframe')
-    iframe.setAttribute('src', `https://www.youtube.com/embed/${videoId}`)
-    iframe.setAttribute('title', 'YouTube video')
-    iframe.setAttribute(
-      'allow',
-      'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
-    )
+    iframe.setAttribute('src', `https://player.vimeo.com/video/${videoId}`)
+    iframe.setAttribute('title', 'Vimeo video')
+    iframe.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture')
     iframe.setAttribute('allowfullscreen', '')
 
     div.appendChild(iframe)
@@ -111,7 +122,7 @@ export class YouTubeNode extends DecoratorNode<ReactElement> {
 
   override createDOM(_config: EditorConfig): HTMLElement {
     const div = document.createElement('div')
-    div.setAttribute('data-youtube', 'true')
+    div.setAttribute('data-vimeo', 'true')
     return div
   }
 
@@ -120,7 +131,7 @@ export class YouTubeNode extends DecoratorNode<ReactElement> {
   }
 
   override decorate(): ReactElement {
-    return <YouTubeComponent videoId={$getState(this, videoIdState)} nodeKey={this.__key} />
+    return <VimeoComponent videoId={$getState(this, vimeoVideoIdState)} nodeKey={this.__key} />
   }
 }
 
@@ -129,27 +140,27 @@ export class YouTubeNode extends DecoratorNode<ReactElement> {
 // =============================================================================
 
 /**
- * YouTubeノードを作成する
+ * VimeoNodeを作成する
  *
- * @param params - YouTubeのパラメータ
- * @returns YouTubeNode インスタンス
+ * @param params - Vimeoのパラメータ
+ * @returns VimeoNode インスタンス
  */
-export function $createYouTubeNode({
+export function $createVimeoNode({
   videoId,
 }: {
   videoId: string
-}): YouTubeNode {
-  return $setState($create(YouTubeNode), videoIdState, videoId)
+}): VimeoNode {
+  return $setState($create(VimeoNode), vimeoVideoIdState, videoId)
 }
 
 /**
- * ノードがYouTubeNodeかどうかを判定する
+ * ノードがVimeoNodeかどうかを判定する
  *
  * @param node - 判定対象のノード
- * @returns YouTubeNodeの場合true
+ * @returns VimeoNodeの場合true
  */
-export function $isYouTubeNode(
+export function $isVimeoNode(
   node: LexicalNode | null | undefined
-): node is YouTubeNode {
-  return node instanceof YouTubeNode
+): node is VimeoNode {
+  return node instanceof VimeoNode
 }

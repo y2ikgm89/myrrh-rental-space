@@ -15,6 +15,7 @@ import type { Klass, LexicalNode } from 'lexical'
 
 import { ImageNode } from '../nodes/ImageNode'
 import { YouTubeNode } from '../nodes/YouTubeNode'
+import { VimeoNode } from '../nodes/VimeoNode'
 import { XNode } from '../nodes/XNode'
 import { InstagramNode } from '../nodes/InstagramNode'
 import { LayoutContainerNode } from '../nodes/LayoutContainerNode'
@@ -39,6 +40,9 @@ import { TabListNode } from '../nodes/TabListNode'
 import { TabTitleNode } from '../nodes/TabTitleNode'
 import { TabPanelNode } from '../nodes/TabPanelNode'
 import { TableOfContentsNode } from '../nodes/TableOfContentsNode'
+import { MapEmbedNode } from '../nodes/MapEmbedNode'
+import { RubyNode } from '../nodes/RubyNode'
+import { TooltipNode } from '../nodes/TooltipNode'
 
 /**
  * エディタに登録する全ノード一覧
@@ -61,6 +65,7 @@ export const EDITOR_NODES: ReadonlyArray<Klass<LexicalNode>> = [
   // カスタムノード
   ImageNode,
   YouTubeNode,
+  VimeoNode,
   XNode,
   InstagramNode,
   LayoutContainerNode,
@@ -85,4 +90,7 @@ export const EDITOR_NODES: ReadonlyArray<Klass<LexicalNode>> = [
   TabTitleNode,
   TabPanelNode,
   TableOfContentsNode,
+  MapEmbedNode,
+  RubyNode,
+  TooltipNode,
 ]

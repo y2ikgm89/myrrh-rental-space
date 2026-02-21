@@ -18,12 +18,13 @@ import {
   widthState,
   heightState,
   alignmentState,
+  captionState,
 } from '../../nodes/ImageNode'
 import { InspectorHeader } from '../InspectorHeader'
 import { InspectorFields } from '../InspectorFields'
 import { InspectorSection } from '../InspectorSection'
 import { useNodeUpdater } from '../hooks/use-node-updater'
-import { Input, Label } from '@/admin/components/ui'
+import { Input, Label, Textarea } from '@/admin/components/ui'
 import { AlignLeft, AlignCenter, AlignRight } from 'lucide-react'
 import { Button } from '@/admin/components/ui/button'
 
@@ -60,15 +61,18 @@ export function ImageInspectorPanel({ nodeKey, node }: ImageInspectorPanelProps)
   const [editor] = useLexicalComposerContext()
   const updateNode = useNodeUpdater(nodeKey, $isImageNode)
 
-  const { src, alt, width, height, alignment } = editor.getEditorState().read(() => ({
+  const { src, alt, width, height, alignment, caption } = editor.getEditorState().read(() => ({
     src: $getState(node, srcState),
     alt: $getState(node, altState),
     width: $getState(node, widthState),
     height: $getState(node, heightState),
     alignment: $getState(node, alignmentState),
+    caption: $getState(node, captionState),
   }))
 
   const handleAltChange = (value: string) => updateNode((n) => { $setState(n, altState, value) })
+
+  const handleCaptionChange = (value: string) => updateNode((n) => { $setState(n, captionState, value) })
 
   const handleWidthChange = (value: string) => {
     const numValue = value ? parseInt(value, 10) : undefined
@@ -104,6 +108,20 @@ export function ImageInspectorPanel({ nodeKey, node }: ImageInspectorPanelProps)
               onChange={(e) => handleAltChange(e.target.value)}
               placeholder="画像の説明"
               className="h-8 text-sm"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="inspector-image-caption" className="text-xs">
+              キャプション
+            </Label>
+            <Textarea
+              id="inspector-image-caption"
+              value={caption}
+              onChange={(e) => handleCaptionChange(e.target.value)}
+              placeholder="画像の説明（任意）"
+              rows={2}
+              className="resize-none text-sm"
             />
           </div>
       </InspectorFields>

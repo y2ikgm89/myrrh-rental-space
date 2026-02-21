@@ -41,15 +41,15 @@ function createTestEditor(): LexicalEditor {
 
 describe('inspectable-nodes', () => {
   describe('INSPECTABLE_NODE_TYPES', () => {
-    test('対応しているノードタイプが13つ定義されている', () => {
-      expect(INSPECTABLE_NODE_TYPES).toHaveLength(13)
+    test('対応しているノードタイプが15つ定義されている', () => {
+      expect(INSPECTABLE_NODE_TYPES).toHaveLength(15)
     })
 
     test('すべてのインスペクタブルノードタイプが含まれている', () => {
       const expectedTypes: InspectableNodeType[] = [
         'button', 'image', 'callout', 'bookmark', 'pullQuote',
         'collapsible', 'steps', 'tabs', 'layout',
-        'youtube', 'x', 'instagram', 'pageBreak',
+        'youtube', 'vimeo', 'x', 'instagram', 'pageBreak', 'mapEmbed',
       ]
       expect(INSPECTABLE_NODE_TYPES).toEqual(expectedTypes)
     })

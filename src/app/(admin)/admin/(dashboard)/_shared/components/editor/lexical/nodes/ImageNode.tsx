@@ -69,6 +69,10 @@ export const alignmentState = createState('alignment', {
   parse: (v: unknown): ImageAlignment =>
     typeof v === 'string' && isImageAlignment(v) ? v : 'center',
 })
+export const captionState = createState('caption', {
+  parse: (v: unknown): string => typeof v === 'string' ? v : '',
+})
+
 
 // =============================================================================
 // Component
@@ -196,6 +200,7 @@ export class ImageNode extends DecoratorNode<ReactElement> {
         { flat: true, stateConfig: widthState },
         { flat: true, stateConfig: heightState },
         { flat: true, stateConfig: alignmentState },
+        { flat: true, stateConfig: captionState },
       ],
     })
   }
@@ -210,37 +215,33 @@ export class ImageNode extends DecoratorNode<ReactElement> {
   }
 
   override exportDOM(): DOMExportOutput {
-    const src = $getState(this, srcState)
-    const alt = $getState(this, altState)
-    const width = $getState(this, widthState)
-    const height = $getState(this, heightState)
-    const alignment = $getState(this, alignmentState)
-
-    const container = document.createElement('div')
-    container.setAttribute('data-image', 'true')
-    container.setAttribute('data-image-alignment', alignment)
+    const figure = document.createElement('figure')
+    figure.setAttribute('data-image', 'true')
+    figure.setAttribute('data-image-alignment', $getState(this, alignmentState))
 
     const img = document.createElement('img')
-    img.setAttribute('src', src)
-    img.setAttribute('alt', alt)
-    if (width) {
-      img.setAttribute('width', String(width))
-    }
-    if (height) {
-      img.setAttribute('height', String(height))
+    img.setAttribute('src', $getState(this, srcState))
+    img.setAttribute('alt', $getState(this, altState))
+    const width = $getState(this, widthState)
+    const height = $getState(this, heightState)
+    if (width) img.setAttribute('width', String(width))
+    if (height) img.setAttribute('height', String(height))
+    figure.appendChild(img)
+
+    const caption = $getState(this, captionState)
+    if (caption) {
+      const figcaption = document.createElement('figcaption')
+      figcaption.setAttribute('data-image-caption', 'true')
+      figcaption.textContent = caption
+      figure.appendChild(figcaption)
     }
 
-    container.appendChild(img)
-    return { element: container }
+    return { element: figure }
   }
 
-  override createDOM(config: EditorConfig): HTMLElement {
+  override createDOM(_config: EditorConfig): HTMLElement {
     const div = document.createElement('div')
-    const theme = config.theme
-    const className = theme.image
-    if (className) {
-      div.className = className
-    }
+    div.setAttribute('data-image', 'true')
     return div
   }
 
@@ -272,20 +273,23 @@ export function $createImageNode({
   alt = '',
   width,
   height,
-  alignment,
+  alignment = 'center',
+  caption = '',
 }: {
   src: string
   alt?: string
   width?: number
   height?: number
   alignment?: ImageAlignment
+  caption?: string
 }): ImageNode {
   const node = $create(ImageNode)
   $setState(node, srcState, src)
   $setState(node, altState, alt)
   if (width !== undefined) $setState(node, widthState, width)
   if (height !== undefined) $setState(node, heightState, height)
-  if (alignment) $setState(node, alignmentState, alignment)
+  $setState(node, alignmentState, alignment)
+  $setState(node, captionState, caption)
   return node
 }
 

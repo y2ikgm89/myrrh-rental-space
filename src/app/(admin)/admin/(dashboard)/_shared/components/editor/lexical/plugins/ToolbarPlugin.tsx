@@ -48,10 +48,14 @@ import {
   Link,
   List,
   ListOrdered,
+  Maximize,
+  Minimize,
   Pilcrow,
   Plus,
   Redo,
   Strikethrough,
+  Subscript,
+  Superscript,
   TextQuote,
   Underline,
   Undo,
@@ -80,6 +84,8 @@ import type { DialogId } from '../dialogs/dialog-types'
 
 type ToolbarPluginProps = {
   openDialog?: (id: DialogId) => void
+  isFullscreen: boolean
+  onFullscreenToggle: () => void
 }
 
 type BlockType = 'paragraph' | 'h1' | 'h2' | 'h3' | 'h4' | 'quote' | 'ul' | 'ol'
@@ -143,6 +149,8 @@ const ALIGNMENT_CONFIG: Record<AlignmentType, AlignmentConfig> = {
 
 export function ToolbarPlugin({
   openDialog,
+  isFullscreen,
+  onFullscreenToggle,
 }: ToolbarPluginProps) {
   const [editor] = useLexicalComposerContext()
 
@@ -153,6 +161,8 @@ export function ToolbarPlugin({
   const [isItalic, setIsItalic] = useState(false)
   const [isUnderline, setIsUnderline] = useState(false)
   const [isStrikethrough, setIsStrikethrough] = useState(false)
+  const [isSubscript, setIsSubscript] = useState(false)
+  const [isSuperscript, setIsSuperscript] = useState(false)
   const [isLink, setIsLink] = useState(false)
   const [blockType, setBlockType] = useState<BlockType>('paragraph')
   const [elementFormat, setElementFormat] = useState<AlignmentType>('left')
@@ -167,6 +177,8 @@ export function ToolbarPlugin({
     setIsItalic(selection.hasFormat('italic'))
     setIsUnderline(selection.hasFormat('underline'))
     setIsStrikethrough(selection.hasFormat('strikethrough'))
+    setIsSubscript(selection.hasFormat('subscript'))
+    setIsSuperscript(selection.hasFormat('superscript'))
 
     // リンク
     const node = selection.anchor.getNode()
@@ -264,6 +276,14 @@ export function ToolbarPlugin({
     editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'strikethrough')
   }
 
+  const handleFormatSubscript = () => {
+    editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'subscript')
+  }
+
+  const handleFormatSuperscript = () => {
+    editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'superscript')
+  }
+
   const handleInsertLink = () => {
     if (openDialog) {
       openDialog('link')
@@ -318,8 +338,8 @@ export function ToolbarPlugin({
   const insertItems = getToolbarInsertItems(!!openDialog)
 
   return (
-    <div className="flex justify-center border-b bg-background p-1">
-      <div className="flex flex-wrap items-center gap-0.5">
+    <div className="flex items-center border-b bg-background p-1">
+      <div className="flex flex-wrap items-center gap-0.5 flex-1">
       {/* Undo/Redo */}
       <Button
         type="button"
@@ -386,6 +406,26 @@ export function ToolbarPlugin({
         title="取り消し線"
       >
         <Strikethrough className="h-5 w-5 md:h-4 md:w-4" />
+      </Button>
+      <Button
+        type="button"
+        variant={isSubscript ? 'secondary' : 'ghost'}
+        size="icon"
+        className="h-10 w-10 md:h-8 md:w-8"
+        onClick={handleFormatSubscript}
+        title="下付き文字"
+      >
+        <Subscript className="h-5 w-5 md:h-4 md:w-4" />
+      </Button>
+      <Button
+        type="button"
+        variant={isSuperscript ? 'secondary' : 'ghost'}
+        size="icon"
+        className="h-10 w-10 md:h-8 md:w-8"
+        onClick={handleFormatSuperscript}
+        title="上付き文字"
+      >
+        <Superscript className="h-5 w-5 md:h-4 md:w-4" />
       </Button>
 
       {/* Highlight */}
@@ -538,6 +578,22 @@ export function ToolbarPlugin({
           </DropdownMenuContent>
         </DropdownMenu>
       )}
+      </div>
+      <div className="ml-auto shrink-0">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-10 w-10 md:h-8 md:w-8"
+          onClick={onFullscreenToggle}
+          title={isFullscreen ? '全画面終了' : '全画面表示'}
+        >
+          {isFullscreen ? (
+            <Minimize className="h-5 w-5 md:h-4 md:w-4" />
+          ) : (
+            <Maximize className="h-5 w-5 md:h-4 md:w-4" />
+          )}
+        </Button>
       </div>
     </div>
   )
