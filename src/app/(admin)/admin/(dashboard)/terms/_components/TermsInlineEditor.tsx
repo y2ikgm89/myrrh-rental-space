@@ -215,12 +215,6 @@ export function TermsInlineEditor({
   const selectedType = parseTermsType(selectedTypeRaw);
   const templates = selectedType ? getTemplatesForType(selectedType) : [];
 
-  // 選択中バージョンが DRAFT 以外なら読み取り専用
-  const isEditorReadOnly =
-    mode === "edit" &&
-    !!selectedVersionContent &&
-    selectedVersionContent.status !== TermsStatus.DRAFT;
-
   // =============================================================================
   // Create mode handlers
   // =============================================================================
@@ -669,11 +663,6 @@ export function TermsInlineEditor({
           extraActions={
             mode === "edit" && terms ? (
               <div className="flex items-center gap-2">
-                {isEditorReadOnly && (
-                  <Badge variant="outline" className="text-xs">
-                    読み取り専用
-                  </Badge>
-                )}
                 <Button
                   type="button"
                   variant="ghost"
@@ -777,13 +766,6 @@ export function TermsInlineEditor({
                         アーカイブ
                       </Button>
                     </div>
-                  )}
-
-                {selectedVersionContent?.status === TermsStatus.PUBLISHED &&
-                  selectedVersionContent.isCurrentVersion && (
-                    <p className="text-xs text-muted-foreground">
-                      現行の公開バージョンは編集できません
-                    </p>
                   )}
 
                 {/* 新しいバージョンを作成 */}
@@ -916,24 +898,6 @@ export function TermsInlineEditor({
       }
     >
       <div className="flex h-full flex-col">
-        {isEditorReadOnly && (
-          <div className="flex items-center justify-between gap-4 border-b bg-muted/40 px-6 py-3">
-            <p className="text-sm text-muted-foreground">
-              {selectedVersionContent?.status === TermsStatus.PUBLISHED
-                ? "公開済みバージョンは読み取り専用です。内容を変更するには新しいバージョンを作成してください。"
-                : "このバージョンは読み取り専用です。"}
-            </p>
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleCreateNewVersion}
-              disabled={isPending || isLoadingVersion}
-              className="shrink-0"
-            >
-              新しいバージョンを作成して編集
-            </Button>
-          </div>
-        )}
         <div className="min-h-0 flex-1">
           <LexicalEditor
             key={editorKey}
@@ -945,7 +909,7 @@ export function TermsInlineEditor({
                 : "")
             }
             onChange={handleJsonChange}
-            disabled={isPending || isEditorReadOnly || isLoadingVersion}
+            disabled={isPending || isLoadingVersion}
             className={EDITOR_PROSE_CLASSES}
             showToolbar
             height="100%"
