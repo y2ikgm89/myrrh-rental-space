@@ -10,7 +10,6 @@ export const metadata: Metadata = {
 
 export default async function NewTermsPage() {
   await connection();
-  await connection()
 
   const settings = await getSettings()
 
