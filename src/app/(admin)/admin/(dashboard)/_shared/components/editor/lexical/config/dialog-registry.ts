@@ -33,6 +33,8 @@ import {
   TooltipPlugin,
   AudioPlugin,
   FilePlugin,
+  FigmaPlugin,
+  SpotifyPlugin,
 } from '../plugins'
 
 // =============================================================================
@@ -69,6 +71,8 @@ export const REGISTRY_DIALOG_IDS = [
   'tooltip',
   'audio',
   'file',
+  'figma',
+  'spotify',
 ] as const
 
 export type RegistryDialogId = (typeof REGISTRY_DIALOG_IDS)[number]
@@ -102,4 +106,6 @@ export const DIALOG_REGISTRY: readonly DialogRegistryEntry[] = [
   { dialogId: 'tooltip', component: TooltipPlugin },
   { dialogId: 'audio', component: AudioPlugin },
   { dialogId: 'file', component: FilePlugin },
+  { dialogId: 'figma', component: FigmaPlugin },
+  { dialogId: 'spotify', component: SpotifyPlugin },
 ]

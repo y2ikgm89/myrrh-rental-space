@@ -101,3 +101,7 @@ export { TooltipPlugin } from './TooltipPlugin'
 export { AudioPlugin } from './AudioPlugin'
 
 export { FilePlugin } from './FilePlugin'
+
+export { FigmaPlugin } from './FigmaPlugin'
+
+export { SpotifyPlugin } from './SpotifyPlugin'

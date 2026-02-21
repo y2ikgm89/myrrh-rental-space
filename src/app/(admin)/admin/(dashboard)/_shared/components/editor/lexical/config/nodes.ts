@@ -45,6 +45,8 @@ import { RubyNode } from '../nodes/RubyNode'
 import { TooltipNode } from '../nodes/TooltipNode'
 import { AudioNode } from '../nodes/AudioNode'
 import { FileNode } from '../nodes/FileNode'
+import { FigmaNode } from '../nodes/FigmaNode'
+import { SpotifyNode } from '../nodes/SpotifyNode'
 
 /**
  * エディタに登録する全ノード一覧
@@ -97,4 +99,6 @@ export const EDITOR_NODES: ReadonlyArray<Klass<LexicalNode>> = [
   TooltipNode,
   AudioNode,
   FileNode,
+  FigmaNode,
+  SpotifyNode,
 ]

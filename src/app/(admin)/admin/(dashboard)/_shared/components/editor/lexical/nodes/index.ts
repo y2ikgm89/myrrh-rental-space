@@ -290,3 +290,24 @@ export {
   fileMimeState,
   formatFileSize,
 } from './FileNode'
+
+// Figma
+export {
+  FigmaNode,
+  $createFigmaNode,
+  $isFigmaNode,
+  figmaEmbedUrlState,
+  figmaLabelState,
+  toFigmaEmbedUrl,
+} from './FigmaNode'
+
+// Spotify
+export {
+  SpotifyNode,
+  $createSpotifyNode,
+  $isSpotifyNode,
+  spotifyEmbedUrlState,
+  spotifyContentTypeState,
+  toSpotifyEmbedUrl,
+} from './SpotifyNode'
+export type { SpotifyContentType } from './SpotifyNode'

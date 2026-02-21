@@ -26,6 +26,8 @@ import {
   CodeInspectorPanel,
   AudioInspectorPanel,
   FileInspectorPanel,
+  FigmaInspectorPanel,
+  SpotifyInspectorPanel,
 } from './panels'
 import { Settings2 } from 'lucide-react'
 
@@ -76,6 +78,10 @@ function renderPanel(info: SelectedNodeInfo) {
       return <AudioInspectorPanel nodeKey={info.nodeKey} node={info.node} />
     case 'file':
       return <FileInspectorPanel nodeKey={info.nodeKey} node={info.node} />
+    case 'figma':
+      return <FigmaInspectorPanel nodeKey={info.nodeKey} node={info.node} />
+    case 'spotify':
+      return <SpotifyInspectorPanel nodeKey={info.nodeKey} node={info.node} />
   }
 }
 

@@ -30,6 +30,8 @@ import type { PageBreakNode } from '../../nodes/PageBreakNode'
 import type { MapEmbedNode } from '../../nodes/MapEmbedNode'
 import type { AudioNode } from '../../nodes/AudioNode'
 import type { FileNode } from '../../nodes/FileNode'
+import type { FigmaNode } from '../../nodes/FigmaNode'
+import type { SpotifyNode } from '../../nodes/SpotifyNode'
 
 // =============================================================================
 // Types
@@ -54,6 +56,8 @@ export type InspectableNodeType =
   | 'code'
   | 'audio'
   | 'file'
+  | 'figma'
+  | 'spotify'
 
 /**
  * 選択中ノード情報のDiscriminated Union型
@@ -80,6 +84,8 @@ export type SelectedNodeInfo =
   | { nodeType: 'code'; node: CodeNode; nodeKey: NodeKey }
   | { nodeType: 'audio'; node: AudioNode; nodeKey: NodeKey }
   | { nodeType: 'file'; node: FileNode; nodeKey: NodeKey }
+  | { nodeType: 'figma'; node: FigmaNode; nodeKey: NodeKey }
+  | { nodeType: 'spotify'; node: SpotifyNode; nodeKey: NodeKey }
   | null
 
 /**

@@ -60,6 +60,8 @@ import {
   Map,
   Volume2,
   Paperclip,
+  Figma,
+  Music,
 } from 'lucide-react'
 import { applyTextCaseToSelection } from '../plugins/TextCasePlugin'
 import { INSERT_PAGE_BREAK_COMMAND } from '../plugins/PageBreakPlugin'
@@ -353,6 +355,28 @@ const INSERT_ITEMS: readonly InsertItem[] = [
     showInToolbar: false,
     showInPicker: true,
     dialogId: 'file',
+  },
+  {
+    id: 'figma',
+    type: 'dialog',
+    label: 'Figma',
+    icon: Figma,
+    keywords: ['figma', 'デザイン', 'design', 'prototype', 'プロトタイプ'],
+    category: 'media',
+    showInToolbar: false,
+    showInPicker: true,
+    dialogId: 'figma',
+  },
+  {
+    id: 'spotify',
+    type: 'dialog',
+    label: 'Spotify',
+    icon: Music,
+    keywords: ['spotify', '音楽', 'music', 'podcast', 'ポッドキャスト', 'track', 'playlist'],
+    category: 'media',
+    showInToolbar: false,
+    showInPicker: true,
+    dialogId: 'spotify',
   },
   {
     id: 'table',
