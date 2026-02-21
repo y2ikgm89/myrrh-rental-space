@@ -10,11 +10,13 @@
 
 import { useEffect, useState } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
+import { $setState } from 'lexical'
 import { $insertNodeToNearestRoot } from '@lexical/utils'
 import {
   $createGalleryContainerNode,
   $createGalleryItemNode,
   GalleryContainerNode,
+  galleryStyleState,
   type GalleryColumns,
   type GalleryStyle,
 } from '../nodes/GalleryNode'
@@ -78,6 +80,7 @@ export function GalleryPlugin({ isOpen, onClose }: GalleryPluginProps) {
   const handleInsert = () => {
     editor.update(() => {
       const container = $createGalleryContainerNode(columns)
+      $setState(container, galleryStyleState, style)
       const item = $createGalleryItemNode()
       container.append(item)
       $insertNodeToNearestRoot(container)
