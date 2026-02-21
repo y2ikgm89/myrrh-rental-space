@@ -29,6 +29,7 @@ import type { InstagramNode } from '../../nodes/InstagramNode'
 import type { PageBreakNode } from '../../nodes/PageBreakNode'
 import type { MapEmbedNode } from '../../nodes/MapEmbedNode'
 import type { AudioNode } from '../../nodes/AudioNode'
+import type { FileNode } from '../../nodes/FileNode'
 
 // =============================================================================
 // Types
@@ -52,6 +53,7 @@ export type InspectableNodeType =
   | 'mapEmbed'
   | 'code'
   | 'audio'
+  | 'file'
 
 /**
  * 選択中ノード情報のDiscriminated Union型
@@ -77,6 +79,7 @@ export type SelectedNodeInfo =
   | { nodeType: 'mapEmbed'; node: MapEmbedNode; nodeKey: NodeKey }
   | { nodeType: 'code'; node: CodeNode; nodeKey: NodeKey }
   | { nodeType: 'audio'; node: AudioNode; nodeKey: NodeKey }
+  | { nodeType: 'file'; node: FileNode; nodeKey: NodeKey }
   | null
 
 /**

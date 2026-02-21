@@ -32,6 +32,7 @@ import {
   RubyPlugin,
   TooltipPlugin,
   AudioPlugin,
+  FilePlugin,
 } from '../plugins'
 
 // =============================================================================
@@ -67,6 +68,7 @@ export const REGISTRY_DIALOG_IDS = [
   'ruby',
   'tooltip',
   'audio',
+  'file',
 ] as const
 
 export type RegistryDialogId = (typeof REGISTRY_DIALOG_IDS)[number]
@@ -99,4 +101,5 @@ export const DIALOG_REGISTRY: readonly DialogRegistryEntry[] = [
   { dialogId: 'ruby', component: RubyPlugin },
   { dialogId: 'tooltip', component: TooltipPlugin },
   { dialogId: 'audio', component: AudioPlugin },
+  { dialogId: 'file', component: FilePlugin },
 ]

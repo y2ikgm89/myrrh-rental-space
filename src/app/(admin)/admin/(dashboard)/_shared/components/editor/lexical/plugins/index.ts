@@ -99,3 +99,5 @@ export { RubyPlugin } from './RubyPlugin'
 export { TooltipPlugin } from './TooltipPlugin'
 
 export { AudioPlugin } from './AudioPlugin'
+
+export { FilePlugin } from './FilePlugin'

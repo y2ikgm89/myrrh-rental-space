@@ -59,6 +59,7 @@ import {
   Save,
   Map,
   Volume2,
+  Paperclip,
 } from 'lucide-react'
 import { applyTextCaseToSelection } from '../plugins/TextCasePlugin'
 import { INSERT_PAGE_BREAK_COMMAND } from '../plugins/PageBreakPlugin'
@@ -341,6 +342,17 @@ const INSERT_ITEMS: readonly InsertItem[] = [
     showInToolbar: false,
     showInPicker: true,
     dialogId: 'audio',
+  },
+  {
+    id: 'file',
+    type: 'dialog',
+    label: 'ファイル添付',
+    icon: Paperclip,
+    keywords: ['file', 'ファイル', 'download', 'ダウンロード', 'attach', '添付'],
+    category: 'media',
+    showInToolbar: false,
+    showInPicker: true,
+    dialogId: 'file',
   },
   {
     id: 'table',

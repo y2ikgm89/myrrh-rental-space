@@ -44,6 +44,7 @@ import { MapEmbedNode } from '../nodes/MapEmbedNode'
 import { RubyNode } from '../nodes/RubyNode'
 import { TooltipNode } from '../nodes/TooltipNode'
 import { AudioNode } from '../nodes/AudioNode'
+import { FileNode } from '../nodes/FileNode'
 
 /**
  * エディタに登録する全ノード一覧
@@ -95,4 +96,5 @@ export const EDITOR_NODES: ReadonlyArray<Klass<LexicalNode>> = [
   RubyNode,
   TooltipNode,
   AudioNode,
+  FileNode,
 ]

@@ -278,3 +278,15 @@ export {
   audioTitleState,
   audioArtistState,
 } from './AudioNode'
+
+// File
+export {
+  FileNode,
+  $createFileNode,
+  $isFileNode,
+  fileUrlState,
+  fileNameState,
+  fileSizeState,
+  fileMimeState,
+  formatFileSize,
+} from './FileNode'

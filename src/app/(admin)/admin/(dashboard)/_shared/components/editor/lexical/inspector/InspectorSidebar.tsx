@@ -25,6 +25,7 @@ import {
   MapEmbedInspectorPanel,
   CodeInspectorPanel,
   AudioInspectorPanel,
+  FileInspectorPanel,
 } from './panels'
 import { Settings2 } from 'lucide-react'
 
@@ -73,6 +74,8 @@ function renderPanel(info: SelectedNodeInfo) {
       return <CodeInspectorPanel nodeKey={info.nodeKey} node={info.node} />
     case 'audio':
       return <AudioInspectorPanel nodeKey={info.nodeKey} node={info.node} />
+    case 'file':
+      return <FileInspectorPanel nodeKey={info.nodeKey} node={info.node} />
   }
 }
 
