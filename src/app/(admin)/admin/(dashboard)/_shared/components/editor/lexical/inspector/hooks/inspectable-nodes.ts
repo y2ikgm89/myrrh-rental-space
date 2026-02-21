@@ -11,6 +11,7 @@
  */
 
 import type { NodeKey } from 'lexical'
+import type { CodeNode } from '@lexical/code'
 
 import type { ButtonNode } from '../../nodes/ButtonNode'
 import type { ImageNode } from '../../nodes/ImageNode'
@@ -48,6 +49,7 @@ export type InspectableNodeType =
   | 'instagram'
   | 'pageBreak'
   | 'mapEmbed'
+  | 'code'
 
 /**
  * 選択中ノード情報のDiscriminated Union型
@@ -71,6 +73,7 @@ export type SelectedNodeInfo =
   | { nodeType: 'instagram'; node: InstagramNode; nodeKey: NodeKey }
   | { nodeType: 'pageBreak'; node: PageBreakNode; nodeKey: NodeKey }
   | { nodeType: 'mapEmbed'; node: MapEmbedNode; nodeKey: NodeKey }
+  | { nodeType: 'code'; node: CodeNode; nodeKey: NodeKey }
   | null
 
 /**

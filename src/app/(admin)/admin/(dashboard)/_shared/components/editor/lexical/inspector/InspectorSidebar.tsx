@@ -23,6 +23,7 @@ import {
   InstagramInspectorPanel,
   PageBreakInspectorPanel,
   MapEmbedInspectorPanel,
+  CodeInspectorPanel,
 } from './panels'
 import { Settings2 } from 'lucide-react'
 
@@ -67,6 +68,8 @@ function renderPanel(info: SelectedNodeInfo) {
       return <PageBreakInspectorPanel />
     case 'mapEmbed':
       return <MapEmbedInspectorPanel nodeKey={info.nodeKey} node={info.node} />
+    case 'code':
+      return <CodeInspectorPanel nodeKey={info.nodeKey} node={info.node} />
   }
 }
 

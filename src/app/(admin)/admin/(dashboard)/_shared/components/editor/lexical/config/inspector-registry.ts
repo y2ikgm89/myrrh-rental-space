@@ -14,6 +14,7 @@
 
 import type { LexicalNode } from 'lexical'
 
+import { $isCodeNode } from '@lexical/code'
 import { $isButtonNode } from '../nodes/ButtonNode'
 import { $isImageNode } from '../nodes/ImageNode'
 import { $isCalloutNode } from '../nodes/CalloutNode'
@@ -58,6 +59,7 @@ export function getInspectableInfoFromRegistry(node: LexicalNode): InspectableRe
   if ($isInstagramNode(node)) return { nodeType: 'instagram', node, nodeKey }
   if ($isPageBreakNode(node)) return { nodeType: 'pageBreak', node, nodeKey }
   if ($isMapEmbedNode(node)) return { nodeType: 'mapEmbed', node, nodeKey }
+  if ($isCodeNode(node)) return { nodeType: 'code', node, nodeKey }
   return null
 }
 
@@ -68,5 +70,5 @@ export const INSPECTABLE_NODE_TYPES_FROM_REGISTRY: readonly InspectableNodeType[
   'button', 'image', 'callout', 'bookmark', 'pullQuote',
   'collapsible', 'steps', 'tabs', 'layout',
   'youtube', 'vimeo', 'x', 'instagram', 'pageBreak',
-  'mapEmbed',
+  'mapEmbed', 'code',
 ]
