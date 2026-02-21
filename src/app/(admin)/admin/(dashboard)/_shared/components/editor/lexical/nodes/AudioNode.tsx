@@ -14,14 +14,7 @@ import type {
   NodeKey,
 } from 'lexical'
 import { $create, $getState, $setState, createState, DecoratorNode } from 'lexical'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { useLexicalNodeSelection } from '@lexical/react/useLexicalNodeSelection'
-import { mergeRegister } from 'lexical'
-import { useEffect } from 'react'
-import {
-  CLICK_COMMAND,
-  COMMAND_PRIORITY_LOW,
-} from 'lexical'
 
 // =============================================================================
 // State
@@ -54,27 +47,15 @@ function AudioComponent({
   artist: string
   nodeKey: NodeKey
 }) {
-  const [editor] = useLexicalComposerContext()
-  const [isSelected, setSelected, clearSelection] = useLexicalNodeSelection(nodeKey)
-
-  useEffect(() => {
-    return mergeRegister(
-      editor.registerCommand(
-        CLICK_COMMAND,
-        () => {
-          clearSelection()
-          setSelected(true)
-          return true
-        },
-        COMMAND_PRIORITY_LOW,
-      ),
-    )
-  }, [editor, clearSelection, setSelected])
+  const [isSelected, setSelected] = useLexicalNodeSelection(nodeKey)
 
   return (
     <div
-      className={`rounded-lg border bg-card p-4 my-2 cursor-pointer ${isSelected ? 'ring-2 ring-ring' : ''}`}
-      data-audio-component
+      className={`rounded-lg border bg-card p-4 my-2 ${isSelected ? 'ring-2 ring-ring' : ''}`}
+      onClick={(e) => {
+        if (e.target instanceof HTMLAudioElement) return
+        setSelected(true)
+      }}
     >
       {(title || artist) && (
         <div className="mb-2">

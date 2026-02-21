@@ -6,6 +6,7 @@
 
 'use client'
 
+import { useEffect, useState } from 'react'
 import { $getState, $setState } from 'lexical'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { $isAudioNode, audioUrlState, audioTitleState, audioArtistState } from '../../nodes/AudioNode'
@@ -32,11 +33,25 @@ export function AudioInspectorPanel({ nodeKey, node }: AudioInspectorPanelProps)
   const [editor] = useLexicalComposerContext()
   const updateNode = useNodeUpdater(nodeKey, $isAudioNode)
 
-  const { url, title, artist } = editor.getEditorState().read(() => ({
-    url: $getState(node, audioUrlState),
-    title: $getState(node, audioTitleState),
-    artist: $getState(node, audioArtistState),
-  }))
+  const [url, setUrl] = useState(() =>
+    editor.getEditorState().read(() => $getState(node, audioUrlState))
+  )
+  const [title, setTitle] = useState(() =>
+    editor.getEditorState().read(() => $getState(node, audioTitleState))
+  )
+  const [artist, setArtist] = useState(() =>
+    editor.getEditorState().read(() => $getState(node, audioArtistState))
+  )
+
+  useEffect(() => {
+    return editor.registerUpdateListener(({ editorState }) => {
+      editorState.read(() => {
+        setUrl($getState(node, audioUrlState))
+        setTitle($getState(node, audioTitleState))
+        setArtist($getState(node, audioArtistState))
+      })
+    })
+  }, [editor, node])
 
   const handleTitleChange = (value: string) => {
     updateNode((n) => {
