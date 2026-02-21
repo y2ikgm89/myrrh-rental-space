@@ -46,6 +46,7 @@ import {
   Code,
   FileDown,
   FileText,
+  HelpCircle,
   Heading1,
   Heading2,
   Heading3,
@@ -95,6 +96,7 @@ import { entriesOf } from '@/shared/lib/serialize'
 import { getToolbarInsertItems, executeInsertItem, MERGED_CATEGORY_PAIRS } from '../config/insert-items'
 import { EDITOR_TRANSFORMERS } from '../MarkdownTransformers'
 import type { DialogId } from '../dialogs/dialog-types'
+import { ShortcutsHelpDialog } from './KeyboardShortcutsPlugin'
 
 // =============================================================================
 // Types
@@ -251,6 +253,7 @@ export function ToolbarPlugin({
   const [blockType, setBlockType] = useState<BlockType>('paragraph')
   const [elementFormat, setElementFormat] = useState<AlignmentType>('left')
   const [showMarkdownImport, setShowMarkdownImport] = useState(false)
+  const [showShortcuts, setShowShortcuts] = useState(false)
 
   // ツールバー状態を更新
   const updateToolbar = useEffectEvent(() => {
@@ -747,7 +750,17 @@ export function ToolbarPlugin({
         </DropdownMenuContent>
       </DropdownMenu>
       </div>
-      <div className="ml-auto shrink-0">
+      <div className="ml-auto shrink-0 flex items-center">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-10 w-10 md:h-8 md:w-8"
+          onClick={() => setShowShortcuts(true)}
+          title="キーボードショートカット (Ctrl+Shift+/)"
+        >
+          <HelpCircle className="h-5 w-5 md:h-4 md:w-4" />
+        </Button>
         <Button
           type="button"
           variant="ghost"
@@ -767,6 +780,7 @@ export function ToolbarPlugin({
         open={showMarkdownImport}
         onClose={() => setShowMarkdownImport(false)}
       />
+      {showShortcuts && <ShortcutsHelpDialog onClose={() => setShowShortcuts(false)} />}
     </div>
   )
 }
