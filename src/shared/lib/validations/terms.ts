@@ -265,3 +265,18 @@ export interface TermsAgreementRecord {
     version: number
   }
 }
+
+/**
+ * 管理画面での同意記録表示用（シリアライズ済み）
+ */
+export interface TermsAgreementItem {
+  id: string
+  agreedAt: string // ISO 8601
+  version: number
+  guestName: string | null
+  guestEmail: string | null
+  userName: string | null
+  userEmail: string | null
+  reservationId: string | null
+  ipAddress: string | null // 末尾マスク済み
+}

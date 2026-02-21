@@ -17,6 +17,7 @@ import {
   type TermsWithVersion,
   type TermsDetail,
   type TermsVersionDetail,
+  type TermsAgreementItem,
 } from "@/shared/lib/validations/terms";
 import {
   createSuccess,
@@ -684,3 +685,69 @@ export const deleteTermsVersion = withPermission<[string]>(
   return createSuccess("バージョンを削除しました");
 });
 
+
+// =============================================================================
+// Terms Agreement Viewer
+// =============================================================================
+
+const AGREEMENTS_PER_PAGE = 20;
+
+// IPアドレスの末尾をマスク（例: 192.168.1.*** ）
+function maskIpAddress(ip: string | null): string | null {
+  if (!ip) return null;
+  const lastDot = ip.lastIndexOf(".");
+  if (lastDot === -1) return ip; // IPv6等は未対応→そのまま返す
+  return `${ip.slice(0, lastDot + 1)}***`;
+}
+
+/**
+ * 同意記録一覧を取得（管理画面閲覧用）
+ */
+export const getTermsAgreements = withPermission<
+  [string, number],
+  { agreements: TermsAgreementItem[]; total: number }
+>("terms", "read")(async (
+  _user,
+  termsId,
+  page,
+): Promise<ActionResult<{ agreements: TermsAgreementItem[]; total: number }>> => {
+  const skip = (page - 1) * AGREEMENTS_PER_PAGE;
+
+  const [rawAgreements, total] = await Promise.all([
+    prisma.termsAgreement.findMany({
+      where: { termsId },
+      orderBy: { agreedAt: "desc" },
+      skip,
+      take: AGREEMENTS_PER_PAGE,
+      select: {
+        id: true,
+        agreedAt: true,
+        guestName: true,
+        guestEmail: true,
+        reservationId: true,
+        ipAddress: true,
+        version: {
+          select: { version: true },
+        },
+        user: {
+          select: { name: true, email: true },
+        },
+      },
+    }),
+    prisma.termsAgreement.count({ where: { termsId } }),
+  ]);
+
+  const agreements: TermsAgreementItem[] = rawAgreements.map((a) => ({
+    id: a.id,
+    agreedAt: a.agreedAt.toISOString(),
+    version: a.version.version,
+    guestName: a.guestName,
+    guestEmail: a.guestEmail,
+    userName: a.user?.name ?? null,
+    userEmail: a.user?.email ?? null,
+    reservationId: a.reservationId,
+    ipAddress: maskIpAddress(a.ipAddress),
+  }));
+
+  return createSuccess("同意記録を取得しました", { agreements, total });
+});
