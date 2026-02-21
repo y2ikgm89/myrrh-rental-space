@@ -67,7 +67,9 @@ export function GalleryPlugin({ isOpen, onClose }: GalleryPluginProps) {
   const [columns, setColumns] = useState<GalleryColumns>(3)
   const [style, setStyle] = useState<GalleryStyle>('grid')
 
-  // ノードトランスフォーム: 空のギャラリーコンテナにアイテムを追加
+  // ノードトランスフォーム: 空のギャラリーコンテナへの安全網
+  // handleInsert では明示的に item を追加するが、外部からコンテナが空になった場合
+  // （Undo/Redo 等）に備えてフォールバックとして最低1つの item を保証する
   useEffect(() => {
     return editor.registerNodeTransform(GalleryContainerNode, (node) => {
       if (node.getChildren().length === 0) {
