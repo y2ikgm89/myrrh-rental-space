@@ -37,7 +37,7 @@ export function toSpotifyEmbedUrl(
     if (!u.hostname.includes('spotify.com')) return null
     const parts = u.pathname.split('/').filter(Boolean)
     const typeIndex = parts.findIndex((p) =>
-      SPOTIFY_CONTENT_TYPES.includes(p as SpotifyContentType),
+      SPOTIFY_CONTENT_TYPES.find((t) => t === p) !== undefined,
     )
     if (typeIndex === -1) return null
     const id = parts[typeIndex + 1]
