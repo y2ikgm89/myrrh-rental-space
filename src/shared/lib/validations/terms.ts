@@ -156,6 +156,9 @@ export interface TermsWithVersion {
     contentJson: unknown
     publishedAt: Date
   } | null
+  _count: {
+    spaces: number
+  }
 }
 
 

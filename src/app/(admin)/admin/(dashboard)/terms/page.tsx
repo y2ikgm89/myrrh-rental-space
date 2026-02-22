@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { getTermsList } from "@/admin/actions/terms";
-import { TermsList } from "./_components/TermsList";
+import { TermsTable } from "./_components/TermsTable";
 import { Button } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
 import type { Metadata } from "next";
@@ -20,7 +20,7 @@ async function TermsListContent() {
       </div>
     );
   }
-  return <TermsList terms={result.data ?? []} />;
+  return <TermsTable terms={result.data ?? []} />;
 }
 
 export default async function TermsPage() {

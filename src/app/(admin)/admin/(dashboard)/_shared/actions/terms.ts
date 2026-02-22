@@ -81,6 +81,9 @@ export const getTermsList = withPermission<[], TermsWithVersion[]>(
           publishedAt: t.versions[0].publishedAt!,
         }
       : null,
+    _count: {
+      spaces: t._count.spaces,
+    },
   }));
 
   return createSuccess("規約一覧を取得しました", result);
@@ -386,13 +389,13 @@ export const deleteTerms = withPermission<[string]>(
 /**
  * 規約の有効/無効を切り替え
  */
-export const toggleTermsActive = withPermission<[string]>(
+export const toggleTermsActive = withPermission<[string, boolean]>(
   "terms",
   "update",
-)(async (_user, id): Promise<ActionResult<void>> => {
+)(async (_user, id, isActive): Promise<ActionResult<void>> => {
   const terms = await prisma.terms.findUnique({
     where: { id },
-    select: { isActive: true },
+    select: { id: true },
   });
 
   if (!terms) {
@@ -401,7 +404,7 @@ export const toggleTermsActive = withPermission<[string]>(
 
   await prisma.terms.update({
     where: { id },
-    data: { isActive: !terms.isActive },
+    data: { isActive },
   });
 
   updateTag(CACHE_TAGS.TERMS);
@@ -414,7 +417,7 @@ export const toggleTermsActive = withPermission<[string]>(
   });
 
   return createSuccess(
-    terms.isActive ? "規約を無効にしました" : "規約を有効にしました",
+    isActive ? "規約を有効にしました" : "規約を無効にしました",
   );
 });
 

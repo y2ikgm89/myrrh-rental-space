@@ -63,6 +63,7 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     "src/shared/generated/**",
     "__tests__/**",
+    ".worktrees/**",
   ]),
 ]);
 
