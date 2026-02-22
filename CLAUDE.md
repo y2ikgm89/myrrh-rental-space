@@ -34,36 +34,52 @@
 要件確認 → 調査 → 設計 → 計画 → 実装(TDD) → 検証 → レビュー → 完了
 ```
 
-### スキル（呼び出しタイミング）
+### スキル
 
 Skill ツールで明示的に呼び出す。1% でも該当する可能性があれば必ず呼び出すこと。
 
-| スキル                                    | 呼び出しタイミング                                 |
-| ----------------------------------------- | -------------------------------------------------- |
-| `brainstorming`                           | 機能追加・設計時                                   |
-| `frontend-design`                         | フロントエンド UI 実装時                           |
-| `create-admin-page`                       | 管理画面に新リソースを追加する時                   |
-| `create-server-action`                    | Server Action を新規作成する時                     |
-| `test-driven-development`                 | 実装時                                             |
-| `subagent-driven-development`             | 計画を同一セッション内でサブエージェント実行する時 |
-| `verification-before-completion`          | 完了報告前（**常に必須**）                         |
-| `finishing-a-development-branch`          | ブランチ完了時                                     |
-| `claude-md-management:claude-md-improver` | CLAUDE.md・rules・agents の定期メンテ時            |
+**常時（ワークフロー）**
 
-その他: `writing-plans`, `executing-plans`, `systematic-debugging`, `requesting-code-review`, `receiving-code-review`
+| スキル                           | 呼び出しタイミング                                 |
+| -------------------------------- | -------------------------------------------------- |
+| `brainstorming`                  | 機能追加・設計時                                   |
+| `writing-plans`                  | 複数ステップのタスク計画時                         |
+| `subagent-driven-development`    | 計画を同一セッション内でサブエージェント実行する時 |
+| `test-driven-development`        | 実装時（**常に必須**）                             |
+| `verification-before-completion` | 完了報告前（**常に必須**）                         |
+| `finishing-a-development-branch` | ブランチ完了時                                     |
+
+**機能追加（ドメイン別）**
+
+| スキル                                                | 呼び出しタイミング                         |
+| ----------------------------------------------------- | ------------------------------------------ |
+| `frontend-design`                                     | フロントエンド UI 実装時                   |
+| `create-admin-page`                                   | 管理画面に新リソースを追加する時           |
+| `create-server-action`                                | Server Action を新規作成する時             |
+| `prisma-migration`                                    | DBスキーマ変更時                           |
+| `parallax-section`                                    | パララックスセクション実装時（公開ページ） |
+| `lexical-node` / `lexical-plugin` / `lexical-toolbar` | Lexical 拡張追加時                         |
+
+**問題対応・メンテ**
+
+| スキル                                    | 呼び出しタイミング                         |
+| ----------------------------------------- | ------------------------------------------ |
+| `systematic-debugging`                    | バグ・テスト失敗時                         |
+| `requesting-code-review`                  | 実装完了・PR 前                            |
+| `receiving-code-review`                   | レビュー受け取り時                         |
+| `stripe-debug`                            | Stripe 問題発生時                          |
+| `google-calendar-debug`                   | カレンダー同期問題時                       |
+| `turbopack-hmr`                           | Turbopack HMR エラー時                     |
+| `claude-md-management:claude-md-improver` | CLAUDE.md・rules・agents の定期メンテ時    |
+| `code-simplifier:code-simplifier`（Task） | コードリファクタリング・重複排除・最適化時 |
 
 ### ツール
 
-- **コードベース調査**: `serena`（LSP ベース深い分析）、`codebase-explorer`（広範な探索）
-- **専門エージェント**: `security-reviewer`、`project-reviewer`、`react-compiler-reviewer`、`animation-cleanup-reviewer`、`verification`、`design-memory`、`cache-strategy-reviewer`、`db-migration-reviewer`、`test-writer`、`accessibility-reviewer`
+- **コードベース調査**: `serena`（LSP ベース）、`codebase-explorer`（広範な探索）
+- **専門エージェント**: `.claude/agents/` 参照（security-reviewer, project-reviewer, test-writer 等）
 - **MCP**: `serena`, `context7`, `playwright`, `github`（`.mcp.json` 設定済）
 - **ui-ux-pro-max**: `python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --domain <domain> --stack nextjs`
-  - ドメイン: `product`, `style`, `typography`, `color`, `landing`, `chart`, `ux`
-- **ドキュメント更新**: `docs/plans/YYYY-MM-DD-title.md` → `docs/plans/README.md` → `docs/requirements/`（必要時）→ `docs/architecture/`（設計変更時）
-
-### 手動スキル
-
-`/superpowers:brainstorm`, `/superpowers:write-plan`, `/superpowers:execute-plan`, `/superpowers:subagent-driven-development`, `/superpowers:using-git-worktrees`, `/frontend-design`, `/parallax-section`, `/prisma-migration`, `/create-admin-page`, `/create-server-action`, `/commit-commands:commit`, `/commit-commands:commit-push-pr`, `/claude-md-management:claude-md-improver`
+- **ドキュメント更新**: `docs/plans/YYYY-MM-DD-title.md` → `docs/plans/README.md`
 
 ---
 
@@ -77,7 +93,7 @@ Skill ツールで明示的に呼び出す。1% でも該当する可能性が�
 | React        | 19.2.4     | React Compiler 1.0, `use()`, `useEffectEvent` (stable)        |
 | TypeScript   | 6.0-beta   | `erasableSyntaxOnly`, `verbatimModuleSyntax` → type-safety.md |
 | Prisma       | 7.4.0      | WASM エンジン, mapped enums（`as const` オブジェクト）        |
-| Tailwind CSS | 4.1.18     | CSS-first, `@theme`, セマンティックカラートークン必須         |
+| Tailwind CSS | 4.2.0      | CSS-first, `@theme`, セマンティックカラートークン必須         |
 | Zod          | 4.3.6      | `{ error: }` パラメータ（`message:` は非推奨）                |
 | Better Auth  | 1.4.18     | RBAC, `withPermission` HOF 必須                               |
 | Bun          | 1.3.x      | テストランナー (`bun:test`), `bunx --bun` でネイティブ実行    |
@@ -142,17 +158,4 @@ gcloud builds submit --config=cloudbuild.yaml   # Cloud Run デプロイ（Cloud
 
 ### ⚠️ Gotchas
 
-- **デプロイ先は Google Cloud Run**（Vercel 不使用）— `Dockerfile` + `cloudbuild.yaml`。URL 環境変数は `NEXT_PUBLIC_APP_URL` / `BETTER_AUTH_URL` を Cloud Run に明示設定（`VERCEL_URL` は存在しない）
-- **`enum`・`namespace`・parameter properties 禁止**（`erasableSyntaxOnly: true`）— `const` + as const か union 型を使う → `.claude/rules/type-safety.md`
-- **`import type` 必須**（`verbatimModuleSyntax: true`）— 値と型を同一インポートで混在させるとビルドエラー
-- **`bun run build` は env チェックなし**（`SKIP_ENV_VALIDATION=true`）— 本番デプロイ前は `bun run build:strict`
-- **`__tests__/` は type-check 対象外**（tsconfig exclude）— テスト内型エラーは `bun run type-check` では検出されず `bun test` 時のみ発覚
-- **`rm -rf` は deny ルール** — 追跡ファイルは `git rm -r <path>`、未追跡ファイルは `python3 -c "import shutil; shutil.rmtree('path')"` で削除
-- **`()` を含むパスは Bash コマンドで渡せない** — `src/app/(admin)/` 等は MINGW64 がサブシェル記法として解釈しエラー。Glob/Grep/Read ツールを使うかクォートで回避（例: `ls 'src/app/(admin)/'`）
-- **PostToolUse フック後は再 Read が必要** — Edit/Write 後に Prettier/ESLint フックがファイルを変更する。続けて同ファイルを Edit する場合は事前に再 Read しないと "file modified since read" エラー
-- **`verification` エージェントはコードを自動修正する** — `bun run validate && bun run build` 実行時に型エラーを検出するとコードを自動変更することがある。検証のみなら Bash で `bun run validate` を直接実行
-- **`@t3-oss/env-nextjs` は `process.env` のスナップショット** — `SKIP_ENV_VALIDATION=true` 時、`createEnv()` は `{ ...process.env }` の浅いコピーを返す。テストで `process.env["KEY"] = ...` しても `serverEnv.KEY` に反映されない。テスト可能にしたいコードは `process.env["KEY"]` を直接参照する
-- **新規 hook スクリプトは `bash` 明示呼び出し** — MINGW64 で `chmod` が Bash deny されるため、`settings.json` の `command` は `bash "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/script.sh"` 形式で記述する
-- **`git add` 後はコミット前に `git status` 再確認** — Prettier PostToolUse フックが `git add` で他のステージング済みファイルも変更することがある（` M` に変わる）
-- **nuqs `useQueryState` の options は `.withOptions()` でチェーン** — nuqs 2.8.8 は3引数形式 `useQueryState(key, parser, options)` 非対応。オプションはパーサーにチェーン: `parseAsStringLiteral(VALUES).withDefault("x").withOptions({ history: "push", shallow: false })`
-- **worktree で Prisma 生成ファイルが欠落** — `src/shared/generated/` は worktree に自動コピーされない。`bun run type-check` で "cannot find module" エラーが出る場合は `robocopy src/shared/generated .worktrees/<branch>/src/shared/generated /E /XF nul` で手動コピー（`/XF nul` で Windows `nul` デバイスファイルを除外）
+→ `.claude/rules/gotchas.md`（自動ロード済み）

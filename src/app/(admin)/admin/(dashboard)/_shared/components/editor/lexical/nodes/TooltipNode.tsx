@@ -4,29 +4,36 @@
  * @description ツールチップを表示するインライン DecoratorNode
  */
 
-'use client'
+"use client";
 
-import type { ReactElement } from 'react'
+import type { ReactElement } from "react";
 import type {
   DOMConversionMap,
   DOMConversionOutput,
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
-} from 'lexical'
-import { $create, $getState, $setState, createState, DecoratorNode } from 'lexical'
+} from "lexical";
+import {
+  $create,
+  $getState,
+  $setState,
+  createState,
+  DecoratorNode,
+} from "lexical";
+import { parseString } from "../config/type-guards";
 
 // =============================================================================
 // State
 // =============================================================================
 
-export const tooltipBaseTextState = createState('baseText', {
-  parse: (v: unknown): string => (typeof v === 'string' ? v : ''),
-})
+export const tooltipBaseTextState = createState("baseText", {
+  parse: parseString,
+});
 
-export const tooltipTextState = createState('tooltipText', {
-  parse: (v: unknown): string => (typeof v === 'string' ? v : ''),
-})
+export const tooltipTextState = createState("tooltipText", {
+  parse: parseString,
+});
 
 // =============================================================================
 // Node Class
@@ -34,62 +41,66 @@ export const tooltipTextState = createState('tooltipText', {
 
 export class TooltipNode extends DecoratorNode<ReactElement> {
   override $config() {
-    return this.config('tooltip', {
+    return this.config("tooltip", {
       extends: DecoratorNode,
       stateConfigs: [
         { flat: true, stateConfig: tooltipBaseTextState },
         { flat: true, stateConfig: tooltipTextState },
       ],
-    })
+    });
   }
 
   static override importDOM(): DOMConversionMap {
     return {
       abbr: () => ({
         conversion: (element: HTMLElement): DOMConversionOutput => {
-          if (element.getAttribute('data-tooltip') !== 'true') {
-            return { node: null }
+          if (element.getAttribute("data-tooltip") !== "true") {
+            return { node: null };
           }
-          const baseText = element.textContent ?? ''
-          const tooltipText = element.getAttribute('title') ?? ''
-          const tooltipNode = $createTooltipNode(baseText, tooltipText)
-          return { node: tooltipNode }
+          const baseText = element.textContent ?? "";
+          const tooltipText = element.getAttribute("title") ?? "";
+          const tooltipNode = $createTooltipNode(baseText, tooltipText);
+          return { node: tooltipNode };
         },
         priority: 1,
       }),
-    }
+    };
   }
 
   override exportDOM(): DOMExportOutput {
-    const abbr = document.createElement('abbr')
-    abbr.setAttribute('data-tooltip', 'true')
-    abbr.setAttribute('title', $getState(this, tooltipTextState))
-    abbr.textContent = $getState(this, tooltipBaseTextState)
-    return { element: abbr }
+    const abbr = document.createElement("abbr");
+    abbr.setAttribute("data-tooltip", "true");
+    abbr.setAttribute("title", $getState(this, tooltipTextState));
+    abbr.textContent = $getState(this, tooltipBaseTextState);
+    return { element: abbr };
   }
 
   override createDOM(_config: EditorConfig): HTMLElement {
-    const abbr = document.createElement('abbr')
-    abbr.setAttribute('data-tooltip', 'true')
-    return abbr
+    const abbr = document.createElement("abbr");
+    abbr.setAttribute("data-tooltip", "true");
+    return abbr;
   }
 
   override updateDOM(): false {
-    return false
+    return false;
   }
 
   override isInline(): true {
-    return true
+    return true;
   }
 
   override decorate(): ReactElement {
-    const baseText = $getState(this, tooltipBaseTextState)
-    const tooltipText = $getState(this, tooltipTextState)
+    const baseText = $getState(this, tooltipBaseTextState);
+    const tooltipText = $getState(this, tooltipTextState);
     return (
-      <abbr data-tooltip="true" title={tooltipText} className="cursor-help underline decoration-dotted">
+      <abbr
+        data-tooltip="true"
+        title={tooltipText}
+        className="cursor-help underline decoration-dotted"
+      >
         {baseText}
       </abbr>
-    )
+    );
   }
 }
 
@@ -100,16 +111,21 @@ export class TooltipNode extends DecoratorNode<ReactElement> {
 /**
  * TooltipNodeを作成する
  */
-export function $createTooltipNode(baseText: string, tooltipText: string): TooltipNode {
-  const node = $create(TooltipNode)
-  $setState(node, tooltipBaseTextState, baseText)
-  $setState(node, tooltipTextState, tooltipText)
-  return node
+export function $createTooltipNode(
+  baseText: string,
+  tooltipText: string,
+): TooltipNode {
+  const node = $create(TooltipNode);
+  $setState(node, tooltipBaseTextState, baseText);
+  $setState(node, tooltipTextState, tooltipText);
+  return node;
 }
 
 /**
  * ノードが TooltipNode かどうかを判定する
  */
-export function $isTooltipNode(node: LexicalNode | null | undefined): node is TooltipNode {
-  return node instanceof TooltipNode
+export function $isTooltipNode(
+  node: LexicalNode | null | undefined,
+): node is TooltipNode {
+  return node instanceof TooltipNode;
 }

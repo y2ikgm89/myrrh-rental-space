@@ -5,9 +5,9 @@
  * OGP情報（タイトル、説明、画像、favicon）を表示
  */
 
-'use client'
+"use client";
 
-import type { ReactElement } from 'react'
+import type { ReactElement } from "react";
 import type {
   DOMConversionMap,
   DOMConversionOutput,
@@ -15,37 +15,44 @@ import type {
   EditorConfig,
   LexicalNode,
   NodeKey,
-} from 'lexical'
-import { $create, $getState, $setState, createState, DecoratorNode } from 'lexical'
-import { ExternalLink } from 'lucide-react'
+} from "lexical";
+import {
+  $create,
+  $getState,
+  $setState,
+  createState,
+  DecoratorNode,
+} from "lexical";
+import { ExternalLink } from "lucide-react";
+import { parseString } from "../config/type-guards";
 
 // =============================================================================
 // State
 // =============================================================================
 
-export const bookmarkUrlState = createState('url', {
-  parse: (v: unknown): string => typeof v === 'string' ? v : '',
-})
+export const bookmarkUrlState = createState("url", {
+  parse: parseString,
+});
 
-export const bookmarkTitleState = createState('title', {
-  parse: (v: unknown): string => typeof v === 'string' ? v : '',
-})
+export const bookmarkTitleState = createState("title", {
+  parse: parseString,
+});
 
-export const bookmarkDescriptionState = createState('description', {
-  parse: (v: unknown): string => typeof v === 'string' ? v : '',
-})
+export const bookmarkDescriptionState = createState("description", {
+  parse: parseString,
+});
 
-export const bookmarkImageUrlState = createState('imageUrl', {
-  parse: (v: unknown): string => typeof v === 'string' ? v : '',
-})
+export const bookmarkImageUrlState = createState("imageUrl", {
+  parse: parseString,
+});
 
-export const bookmarkFaviconUrlState = createState('faviconUrl', {
-  parse: (v: unknown): string => typeof v === 'string' ? v : '',
-})
+export const bookmarkFaviconUrlState = createState("faviconUrl", {
+  parse: parseString,
+});
 
-export const bookmarkSiteNameState = createState('siteName', {
-  parse: (v: unknown): string => typeof v === 'string' ? v : '',
-})
+export const bookmarkSiteNameState = createState("siteName", {
+  parse: parseString,
+});
 
 // =============================================================================
 // Component
@@ -60,20 +67,16 @@ function BookmarkComponent({
   siteName,
   nodeKey,
 }: {
-  url: string
-  title: string
-  description: string
-  imageUrl: string
-  faviconUrl: string
-  siteName: string
-  nodeKey: NodeKey
+  url: string;
+  title: string;
+  description: string;
+  imageUrl: string;
+  faviconUrl: string;
+  siteName: string;
+  nodeKey: NodeKey;
 }) {
   return (
-    <div
-      data-lexical-node-key={nodeKey}
-      data-bookmark
-      className="my-6"
-    >
+    <div data-lexical-node-key={nodeKey} data-bookmark className="my-6">
       <a
         href={url}
         target="_blank"
@@ -93,7 +96,7 @@ function BookmarkComponent({
                   alt=""
                   className="w-4 h-4 rounded-sm"
                   onError={(e) => {
-                    e.currentTarget.style.display = 'none'
+                    e.currentTarget.style.display = "none";
                   }}
                 />
               ) : (
@@ -122,7 +125,7 @@ function BookmarkComponent({
                 alt=""
                 className="w-full h-full object-cover"
                 onError={(e) => {
-                  e.currentTarget.parentElement?.remove()
+                  e.currentTarget.parentElement?.remove();
                 }}
               />
             </div>
@@ -130,23 +133,25 @@ function BookmarkComponent({
         </div>
       </a>
     </div>
-  )
+  );
 }
 
 // =============================================================================
 // DOM Conversion
 // =============================================================================
 
-function $convertBookmarkElement(element: HTMLElement): null | DOMConversionOutput {
-  const link = element.querySelector('a')
-  if (!link) return null
+function $convertBookmarkElement(
+  element: HTMLElement,
+): null | DOMConversionOutput {
+  const link = element.querySelector("a");
+  if (!link) return null;
 
-  const url = link.getAttribute('href') ?? ''
-  const title = element.getAttribute('data-bookmark-title') ?? ''
-  const description = element.getAttribute('data-bookmark-description') ?? ''
-  const imageUrl = element.getAttribute('data-bookmark-image') ?? ''
-  const faviconUrl = element.getAttribute('data-bookmark-favicon') ?? ''
-  const siteName = element.getAttribute('data-bookmark-site') ?? ''
+  const url = link.getAttribute("href") ?? "";
+  const title = element.getAttribute("data-bookmark-title") ?? "";
+  const description = element.getAttribute("data-bookmark-description") ?? "";
+  const imageUrl = element.getAttribute("data-bookmark-image") ?? "";
+  const faviconUrl = element.getAttribute("data-bookmark-favicon") ?? "";
+  const siteName = element.getAttribute("data-bookmark-site") ?? "";
 
   const node = $createBookmarkNode({
     url,
@@ -155,8 +160,8 @@ function $convertBookmarkElement(element: HTMLElement): null | DOMConversionOutp
     imageUrl,
     faviconUrl,
     siteName,
-  })
-  return { node }
+  });
+  return { node };
 }
 
 // =============================================================================
@@ -165,7 +170,7 @@ function $convertBookmarkElement(element: HTMLElement): null | DOMConversionOutp
 
 export class BookmarkNode extends DecoratorNode<ReactElement> {
   override $config() {
-    return this.config('bookmark', {
+    return this.config("bookmark", {
       extends: DecoratorNode,
       stateConfigs: [
         { flat: true, stateConfig: bookmarkUrlState },
@@ -175,111 +180,107 @@ export class BookmarkNode extends DecoratorNode<ReactElement> {
         { flat: true, stateConfig: bookmarkFaviconUrlState },
         { flat: true, stateConfig: bookmarkSiteNameState },
       ],
-    })
+    });
   }
 
   static override importDOM(): DOMConversionMap | null {
     return {
       div: (element: HTMLElement) => {
-        if (element.hasAttribute('data-bookmark')) {
+        if (element.hasAttribute("data-bookmark")) {
           return {
             conversion: $convertBookmarkElement,
             priority: 1,
-          }
+          };
         }
-        return null
+        return null;
       },
-    }
+    };
   }
 
   override exportDOM(): DOMExportOutput {
-    const url = $getState(this, bookmarkUrlState)
-    const title = $getState(this, bookmarkTitleState)
-    const description = $getState(this, bookmarkDescriptionState)
-    const imageUrl = $getState(this, bookmarkImageUrlState)
-    const faviconUrl = $getState(this, bookmarkFaviconUrlState)
-    const siteName = $getState(this, bookmarkSiteNameState)
+    const url = $getState(this, bookmarkUrlState);
+    const title = $getState(this, bookmarkTitleState);
+    const description = $getState(this, bookmarkDescriptionState);
+    const imageUrl = $getState(this, bookmarkImageUrlState);
+    const faviconUrl = $getState(this, bookmarkFaviconUrlState);
+    const siteName = $getState(this, bookmarkSiteNameState);
 
-    const wrapper = document.createElement('div')
-    wrapper.setAttribute('data-bookmark', 'true')
-    wrapper.setAttribute('data-bookmark-title', title)
-    wrapper.setAttribute('data-bookmark-description', description)
-    wrapper.setAttribute('data-bookmark-image', imageUrl)
-    wrapper.setAttribute('data-bookmark-favicon', faviconUrl)
-    wrapper.setAttribute('data-bookmark-site', siteName)
+    const wrapper = document.createElement("div");
+    wrapper.setAttribute("data-bookmark", "true");
+    wrapper.setAttribute("data-bookmark-title", title);
+    wrapper.setAttribute("data-bookmark-description", description);
+    wrapper.setAttribute("data-bookmark-image", imageUrl);
+    wrapper.setAttribute("data-bookmark-favicon", faviconUrl);
+    wrapper.setAttribute("data-bookmark-site", siteName);
 
-    const link = document.createElement('a')
-    link.href = url
-    link.target = '_blank'
-    link.rel = 'noopener noreferrer'
+    const link = document.createElement("a");
+    link.href = url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
 
-    const content = document.createElement('div')
-    content.setAttribute('data-bookmark-content', '')
+    const content = document.createElement("div");
+    content.setAttribute("data-bookmark-content", "");
 
     // テキスト部分
-    const textDiv = document.createElement('div')
-    textDiv.setAttribute('data-bookmark-text', '')
+    const textDiv = document.createElement("div");
+    textDiv.setAttribute("data-bookmark-text", "");
 
     // サイト情報
-    const siteInfo = document.createElement('div')
-    siteInfo.setAttribute('data-bookmark-site-info', '')
+    const siteInfo = document.createElement("div");
+    siteInfo.setAttribute("data-bookmark-site-info", "");
 
     if (faviconUrl) {
-      const favicon = document.createElement('img')
-      favicon.src = faviconUrl
-      favicon.alt = ''
-      favicon.setAttribute('data-bookmark-favicon-img', '')
-      siteInfo.appendChild(favicon)
+      const favicon = document.createElement("img");
+      favicon.src = faviconUrl;
+      favicon.alt = "";
+      favicon.setAttribute("data-bookmark-favicon-img", "");
+      siteInfo.appendChild(favicon);
     }
 
-    const siteNameEl = document.createElement('span')
-    siteNameEl.textContent = siteName || new URL(url).hostname
-    siteInfo.appendChild(siteNameEl)
-    textDiv.appendChild(siteInfo)
+    const siteNameEl = document.createElement("span");
+    siteNameEl.textContent = siteName || new URL(url).hostname;
+    siteInfo.appendChild(siteNameEl);
+    textDiv.appendChild(siteInfo);
 
     // タイトル
-    const titleEl = document.createElement('h4')
-    titleEl.textContent = title || url
-    textDiv.appendChild(titleEl)
+    const titleEl = document.createElement("h4");
+    titleEl.textContent = title || url;
+    textDiv.appendChild(titleEl);
 
     // 説明
     if (description) {
-      const descEl = document.createElement('p')
-      descEl.textContent = description
-      textDiv.appendChild(descEl)
+      const descEl = document.createElement("p");
+      descEl.textContent = description;
+      textDiv.appendChild(descEl);
     }
 
-    content.appendChild(textDiv)
+    content.appendChild(textDiv);
 
     // 画像部分
     if (imageUrl) {
-      const imageDiv = document.createElement('div')
-      imageDiv.setAttribute('data-bookmark-image-wrap', '')
-      const image = document.createElement('img')
-      image.src = imageUrl
-      image.alt = ''
-      imageDiv.appendChild(image)
-      content.appendChild(imageDiv)
+      const imageDiv = document.createElement("div");
+      imageDiv.setAttribute("data-bookmark-image-wrap", "");
+      const image = document.createElement("img");
+      image.src = imageUrl;
+      image.alt = "";
+      imageDiv.appendChild(image);
+      content.appendChild(imageDiv);
     }
 
-    link.appendChild(content)
-    wrapper.appendChild(link)
+    link.appendChild(content);
+    wrapper.appendChild(link);
 
-    return { element: wrapper }
+    return { element: wrapper };
   }
 
-  override createDOM(config: EditorConfig): HTMLElement {
-    const div = document.createElement('div')
-    const theme = config.theme
-    const className = theme['bookmark']
-    if (className) {
-      div.className = className
-    }
-    return div
+  override createDOM(_config: EditorConfig): HTMLElement {
+    const div = document.createElement("div");
+    div.setAttribute("data-bookmark", "true");
+    return div;
   }
 
   override updateDOM(): false {
-    return false
+    return false;
   }
 
   override decorate(): ReactElement {
@@ -293,9 +294,8 @@ export class BookmarkNode extends DecoratorNode<ReactElement> {
         siteName={$getState(this, bookmarkSiteNameState)}
         nodeKey={this.__key}
       />
-    )
+    );
   }
-
 }
 
 // =============================================================================
@@ -310,27 +310,27 @@ export class BookmarkNode extends DecoratorNode<ReactElement> {
  */
 export function $createBookmarkNode({
   url,
-  title = '',
-  description = '',
-  imageUrl = '',
-  faviconUrl = '',
-  siteName = '',
+  title = "",
+  description = "",
+  imageUrl = "",
+  faviconUrl = "",
+  siteName = "",
 }: {
-  url: string
-  title?: string
-  description?: string
-  imageUrl?: string
-  faviconUrl?: string
-  siteName?: string
+  url: string;
+  title?: string;
+  description?: string;
+  imageUrl?: string;
+  faviconUrl?: string;
+  siteName?: string;
 }): BookmarkNode {
-  const node = $create(BookmarkNode)
-  $setState(node, bookmarkUrlState, url)
-  $setState(node, bookmarkTitleState, title)
-  $setState(node, bookmarkDescriptionState, description)
-  $setState(node, bookmarkImageUrlState, imageUrl)
-  $setState(node, bookmarkFaviconUrlState, faviconUrl)
-  $setState(node, bookmarkSiteNameState, siteName)
-  return node
+  const node = $create(BookmarkNode);
+  $setState(node, bookmarkUrlState, url);
+  $setState(node, bookmarkTitleState, title);
+  $setState(node, bookmarkDescriptionState, description);
+  $setState(node, bookmarkImageUrlState, imageUrl);
+  $setState(node, bookmarkFaviconUrlState, faviconUrl);
+  $setState(node, bookmarkSiteNameState, siteName);
+  return node;
 }
 
 /**
@@ -340,7 +340,7 @@ export function $createBookmarkNode({
  * @returns BookmarkNodeの場合true
  */
 export function $isBookmarkNode(
-  node: LexicalNode | null | undefined
+  node: LexicalNode | null | undefined,
 ): node is BookmarkNode {
-  return node instanceof BookmarkNode
+  return node instanceof BookmarkNode;
 }

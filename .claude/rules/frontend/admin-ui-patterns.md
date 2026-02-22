@@ -7,6 +7,42 @@ paths:
 
 > Swiss Industrial Admin テーマ / 一貫性のある管理 UI を実現するためのパターン集
 
+## タブUI パターン（管理画面 CRUD）
+
+管理画面の CRUD タブページは以下を組み合わせて実装する:
+
+| 設定                     | 値             | 理由                                                                 |
+| ------------------------ | -------------- | -------------------------------------------------------------------- |
+| `shallow`                | `true`         | タブ切り替えで RSC 再レンダリングしない（即時切り替え）              |
+| `TabsContent forceMount` | `true`         | 非アクティブタブを DOM 保持（再マウント防止）                        |
+| コンテンツレンダリング   | 全タブ常時     | 初回ロードで一括取得、以降は再フェッチなし                           |
+| アクションボタン         | タブリスト右端 | タブがコンテキストを持つため、ページヘッダーではなくタブと同行に配置 |
+
+```tsx
+// 推奨パターン（SpaceManagementTabs.tsx が実装例）
+const [activeTab, setActiveTab] = useQueryState(
+  "tab",
+  parseAsStringLiteral(TAB_VALUES)
+    .withDefault("spaces")
+    .withOptions({ history: "push", shallow: true }),  // ← shallow: true
+);
+
+// タブリストとアクションボタンを同行に配置
+<div className="mb-2 flex items-center justify-between">
+  <TabsList>...</TabsList>
+  {activeTab === "spaces" && <Button asChild><Link href="/admin/spaces/new">新規作成</Link></Button>}
+</div>
+
+// 全タブを常時レンダリング + forceMount で DOM 保持
+// Lexical エディタ等の重いコンポーネントを含む場合: forceMount（DOM保持）+ data-[state=inactive]:hidden（CSS非表示）をセットで
+<TabsContent value="spaces" forceMount className="data-[state=inactive]:hidden">{spacesContent}</TabsContent>
+<TabsContent value="locations" forceMount className="data-[state=inactive]:hidden">{locationsContent}</TabsContent>
+```
+
+**禁止**: `shallow: false` + 条件付きレンダリング（タブ切り替えのたびに RSC 再レンダリング + Suspense ローディングが発生する）
+
+---
+
 ## ページヘッダー標準構造
 
 管理画面の各ページヘッダーは以下の構造を使用する:
@@ -484,6 +520,23 @@ export default async function Page({ params }) {
 </div>
 ```
 
+## 多選択肢ダイアログのレイアウト
+
+選択肢が5件以上のダイアログは `grid-cols-3` + `max-w-2xl` で横展開、`max-h-[60vh] overflow-y-auto` でスクロール対応:
+
+```tsx
+<AlertDialogContent className="max-w-2xl">
+  <div className="grid grid-cols-3 gap-2 py-4 max-h-[60vh] overflow-y-auto">
+    <button className="flex flex-col items-center gap-2 p-3 rounded-lg border hover:bg-muted/50 text-center">
+      <div className="p-2 rounded-md bg-primary/10">
+        <Icon />
+      </div>
+      <span className="text-sm font-medium">{label}</span>
+    </button>
+  </div>
+</AlertDialogContent>
+```
+
 ## 禁止事項
 
 1. **型 re-export の追加禁止** — 共有型のローカル aliases は不要（`export type Foo = SharedFoo`）
@@ -498,3 +551,5 @@ export default async function Page({ params }) {
 10. **新規作成ページで手動ヘッダー実装禁止** — `new/page.tsx` も `AdminDetailLayout` を使用（`locations/new` がテンプレート。`Link`+`ArrowLeft`+`Button` の手動実装禁止）
 11. **`backLabel` にエンティティ名を含めること禁止** — `"クーポン一覧に戻る"` NG → `"一覧に戻る"`（デフォルト）/ `"詳細に戻る"` のみ使用
 12. **バックナビゲーションに `ChevronLeft` 禁止** — `ArrowLeft` は `AdminDetailLayout` 内部で自動提供。手動実装が必要な場合も `ArrowLeft` のみ
+13. **タブコンテンツ内にタブ名を繰り返す見出し禁止** — `<TabsContent>` 内で同名の `h2`/`h3` は冗長。タブ自体がコンテキストを持つ
+14. **タブリスト右端ボタンの dialog state をタブ内コンポーネントに持つこと禁止** — `showXxxDialog` state は `*EditTabs` 親で管理し、`onShowXxxDialogChange` prop として渡す

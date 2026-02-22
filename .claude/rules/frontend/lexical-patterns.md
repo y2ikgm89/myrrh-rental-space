@@ -458,6 +458,25 @@ import { type AccentColor } from '../../config/accent-colors'
 | `boxed`     | inset top-stripe   | `box-shadow: inset 0 2px 0 var(--accent)`（box-shadow = レイアウト変更なし） |
 | `minimal`   | 下線色             | `border-bottom-color: var(--accent)`                                         |
 
+### NodeState `parse` 関数の共通ヘルパー（`config/type-guards.ts`）
+
+文字列・真偽値の `parse` 関数は `config/type-guards.ts` の共通ヘルパーを使う。inline lambda の重複禁止:
+
+```typescript
+import { parseString, parseBoolean } from "../config/type-guards";
+
+// OK: ヘルパー使用
+export const titleState = createState("title", { parse: parseString });
+export const openState = createState("open", { parse: parseBoolean });
+
+// NG: inline lambda の重複（parseString/parseBoolean で代替）
+export const titleState = createState("title", {
+  parse: (v: unknown): string => (typeof v === "string" ? v : ""),
+});
+```
+
+enum/カスタム型（デフォルト値あり・型ガード必要）の場合のみカスタム `parse` を書く。
+
 ### 型ガードユーティリティ（createEnumGuard）
 
 ノード固有のリテラル型に対する型ガードは `config/type-guards.ts` の `createEnumGuard` を使用:

@@ -1,11 +1,12 @@
 ---
 paths:
-  - src/**
+  - src/**/*.tsx
+  - src/**/*.css
 ---
 
 # Tailwind CSS パターンルール
 
-> Tailwind CSS 4.1 / CSS-first設定 / Multiple Root Layouts対応
+> Tailwind CSS 4.2 / CSS-first設定 / Multiple Root Layouts対応
 
 ## CSSアーキテクチャ
 
@@ -123,44 +124,9 @@ OKLCH の利点:
 
 ### 管理画面（admin.css） — Swiss Industrial Admin テーマ
 
-実際に定義されているトークン一覧:
+**完全なトークン一覧**: `src/app/(admin)/_styles/admin.css` を参照。
 
-| カテゴリ  | トークン                         | 値                                | Tailwind クラス                       |
-| --------- | -------------------------------- | --------------------------------- | ------------------------------------- |
-| Core      | `--color-background`             | `oklch(0.98 0.005 250)`           | `bg-background`                       |
-| Core      | `--color-foreground`             | `oklch(0.20 0.02 260)`            | `text-foreground`                     |
-| Card      | `--color-card`                   | `oklch(1 0 0)`                    | `bg-card`                             |
-| Card      | `--color-card-foreground`        | `oklch(0.20 0.02 260)`            | `text-card-foreground`                |
-| Popover   | `--color-popover`                | `oklch(1 0 0)`                    | `bg-popover`                          |
-| Popover   | `--color-popover-foreground`     | `oklch(0.20 0.02 260)`            | `text-popover-foreground`             |
-| Primary   | `--color-primary`                | `oklch(0.55 0.20 260)` Trust Blue | `bg-primary` / `text-primary`         |
-| Primary   | `--color-primary-foreground`     | `oklch(1 0 0)`                    | `text-primary-foreground`             |
-| Secondary | `--color-secondary`              | `oklch(0.95 0.01 250)`            | `bg-secondary`                        |
-| Secondary | `--color-secondary-foreground`   | `oklch(0.25 0.02 260)`            | `text-secondary-foreground`           |
-| Muted     | `--color-muted`                  | `oklch(0.95 0.01 250)`            | `bg-muted`                            |
-| Muted     | `--color-muted-foreground`       | `oklch(0.55 0.02 250)`            | `text-muted-foreground`               |
-| Accent    | `--color-accent`                 | `oklch(0.95 0.05 260)`            | `bg-accent`                           |
-| Accent    | `--color-accent-foreground`      | `oklch(0.45 0.15 260)`            | `text-accent-foreground`              |
-| Semantic  | `--color-destructive`            | `oklch(0.55 0.22 25)`             | `bg-destructive` / `text-destructive` |
-| Semantic  | `--color-destructive-foreground` | `oklch(1 0 0)`                    | `text-destructive-foreground`         |
-| Semantic  | `--color-success`                | `oklch(0.60 0.18 145)`            | `bg-success` / `text-success`         |
-| Semantic  | `--color-success-foreground`     | `oklch(1 0 0)`                    | `text-success-foreground`             |
-| Semantic  | `--color-warning`                | `oklch(0.75 0.18 85)`             | `bg-warning` / `text-warning`         |
-| Semantic  | `--color-warning-foreground`     | `oklch(0.20 0.02 85)`             | `text-warning-foreground`             |
-| Semantic  | `--color-info`                   | `oklch(0.55 0.20 260)`            | `bg-info` / `text-info`               |
-| Semantic  | `--color-info-foreground`        | `oklch(1 0 0)`                    | `text-info-foreground`                |
-| Sidebar   | `--color-sidebar-bg`             | `oklch(0.18 0.03 260)` ダーク     | `bg-sidebar-bg`                       |
-| Sidebar   | `--color-sidebar-border`         | `oklch(0.25 0.02 260)`            | `border-sidebar-border`               |
-| Sidebar   | `--color-sidebar-text`           | `oklch(0.92 0.01 260)`            | `text-sidebar-text`                   |
-| Sidebar   | `--color-sidebar-text-muted`     | `oklch(0.70 0.02 260)`            | `text-sidebar-text-muted`             |
-| Sidebar   | `--color-sidebar-accent`         | `oklch(0.55 0.20 260)`            | `bg-sidebar-accent`                   |
-| Sidebar   | `--color-sidebar-nav-hover`      | `oklch(1 0 0 / 0.05)` ホバー背景  | `hover:bg-sidebar-nav-hover`          |
-| Overlay   | `--color-overlay`                | `oklch(0 0 0 / 0.6)` モーダル背景 | `bg-overlay`                          |
-| Border    | `--color-border`                 | `oklch(0.90 0.01 250)`            | `border-border`                       |
-| Border    | `--color-input`                  | `oklch(0.90 0.01 250)`            | `border-input`                        |
-| Border    | `--color-ring`                   | `oklch(0.55 0.20 260)`            | `ring-ring`                           |
-
-**ハードコードカラー vs セマンティックトークン（管理画面）**:
+**よく間違えるハードコードカラー → セマンティックトークン（管理画面）**:
 
 | 禁止                | 代替                             |
 | ------------------- | -------------------------------- |
@@ -182,36 +148,16 @@ OKLCH の利点:
 
 ### 公開ページ（public.css） — Champagne Gold + White テーマ
 
-実際に定義されているトークン一覧:
+**完全なトークン一覧**: `src/app/(public)/_styles/public.css` を参照。
 
-| カテゴリ  | トークン                       | 値                                   | Tailwind クラス                           |
-| --------- | ------------------------------ | ------------------------------------ | ----------------------------------------- |
-| Brand     | `--color-brand-primary`        | `oklch(0.75 0.06 65)` Champagne Gold | `bg-brand-primary` / `text-brand-primary` |
-| Brand     | `--color-brand-secondary`      | `oklch(0.55 0.08 65)` Darker Gold    | `text-brand-secondary`                    |
-| Core      | `--color-background`           | `oklch(0.995 0.002 250)` Pure White  | `bg-background`                           |
-| Core      | `--color-foreground`           | `oklch(0.15 0.01 250)`               | `text-foreground`                         |
-| Card      | `--color-card`                 | `oklch(1 0 0)`                       | `bg-card`                                 |
-| Card      | `--color-card-foreground`      | `oklch(0.15 0.01 250)`               | `text-card-foreground`                    |
-| Surface   | `--color-surface`              | `oklch(0.97 0.003 250)`              | `bg-surface`                              |
-| Primary   | `--color-primary`              | `var(--color-brand-primary)`         | `bg-primary` / `text-primary`             |
-| Primary   | `--color-primary-dark`         | `oklch(0.55 0.08 65)`                | `text-primary-dark`                       |
-| Primary   | `--color-primary-foreground`   | `oklch(0.15 0.01 250)`               | `text-primary-foreground`                 |
-| Secondary | `--color-secondary`            | `oklch(0.96 0.005 250)`              | `bg-secondary`                            |
-| Secondary | `--color-secondary-foreground` | `oklch(0.25 0.02 250)`               | `text-secondary-foreground`               |
-| Muted     | `--color-muted`                | `oklch(0.96 0.005 250)`              | `bg-muted`                                |
-| Muted     | `--color-muted-foreground`     | `oklch(0.45 0.01 250)`               | `text-muted-foreground`                   |
-| Accent    | `--color-accent`               | `oklch(0.96 0.01 65)`                | `bg-accent`                               |
-| Accent    | `--color-accent-foreground`    | `oklch(0.35 0.05 65)`                | `text-accent-foreground`                  |
-| Semantic  | `--color-destructive`          | `oklch(0.55 0.22 25)`                | `bg-destructive` / `text-destructive`     |
-| Semantic  | `--color-success`              | `oklch(0.60 0.18 145)`               | `bg-success` / `text-success`             |
-| Semantic  | `--color-warning`              | `oklch(0.75 0.18 85)`                | `bg-warning` / `text-warning`             |
-| Semantic  | `--color-info`                 | `oklch(0.55 0.18 260)`               | `bg-info` / `text-info`                   |
-| Semantic  | `--color-rating`               | `oklch(0.82 0.17 90)`                | `text-rating` — 星評価用                  |
-| Border    | `--color-border`               | `oklch(0.90 0.005 250)`              | `border-border`                           |
-| Border    | `--color-input`                | `oklch(0.90 0.005 250)`              | `border-input`                            |
-| Border    | `--color-ring`                 | `var(--color-primary-dark)`          | `ring-ring`                               |
-| Font      | `--font-sans`                  | Noto Sans JP                         | `font-sans`                               |
-| Font      | `--font-serif`                 | Noto Serif JP                        | `font-serif` / `font-heading`（後述）     |
+**公開ページ固有トークン**（管理画面に存在しないもの）:
+
+| トークン                | Tailwind クラス                           | 用途               |
+| ----------------------- | ----------------------------------------- | ------------------ |
+| `--color-brand-primary` | `bg-brand-primary` / `text-brand-primary` | Champagne Gold     |
+| `--color-surface`       | `bg-surface`                              | カードより薄い背景 |
+| `--color-primary-dark`  | `text-primary-dark`                       | ゴールド濃いめ     |
+| `--color-rating`        | `text-rating`                             | 星評価（星色）     |
 
 **公開ページ固有のユーティリティクラス**（`@layer utilities` に定義）:
 
@@ -322,6 +268,11 @@ admin.css / public.css の両方で統一:
    - 上記セマンティックトークン表の代替クラスを使用
 
    **例外**: カラーピッカーのスウォッチプレビュー等、特定の色を表示目的で使う場合は許可
+
+3.5. **`start-*` / `end-*` 配置ユーティリティ禁止**（v4.2 廃止予定）
+
+- `start-4` / `end-4` 等（`inset-inline-start` / `inset-inline-end` のショートハンド）は v4.2 で deprecated
+- `inset-s-4` / `inset-e-4` を使用（`justify-start` / `text-end` 等は対象外）
 
 4. **`@apply` 乱用禁止**
    - インライン Tailwind ユーティリティを優先

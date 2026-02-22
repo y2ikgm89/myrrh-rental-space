@@ -4,29 +4,36 @@
  * @description Google マップを埋め込む DecoratorNode
  */
 
-'use client'
+"use client";
 
-import type { ReactElement } from 'react'
+import type { ReactElement } from "react";
 import type {
   DOMConversionMap,
   DOMConversionOutput,
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
-} from 'lexical'
-import { $create, $getState, $setState, createState, DecoratorNode } from 'lexical'
+} from "lexical";
+import {
+  $create,
+  $getState,
+  $setState,
+  createState,
+  DecoratorNode,
+} from "lexical";
+import { parseString } from "../config/type-guards";
 
 // =============================================================================
 // State
 // =============================================================================
 
-export const embedUrlState = createState('embedUrl', {
-  parse: (v: unknown): string => typeof v === 'string' ? v : '',
-})
+export const embedUrlState = createState("embedUrl", {
+  parse: parseString,
+});
 
-export const mapLabelState = createState('mapLabel', {
-  parse: (v: unknown): string => typeof v === 'string' ? v : '',
-})
+export const mapLabelState = createState("mapLabel", {
+  parse: parseString,
+});
 
 // =============================================================================
 // Utilities
@@ -37,17 +44,18 @@ export const mapLabelState = createState('mapLabel', {
  */
 export function toEmbedUrl(url: string): string | null {
   try {
-    const parsed = new URL(url)
+    const parsed = new URL(url);
     // Only accept Google Maps embed URLs (from "Share > Embed a map")
     if (
-      (parsed.hostname.includes('google.com') || parsed.hostname.includes('maps.google')) &&
-      parsed.pathname.includes('/maps/embed')
+      (parsed.hostname.includes("google.com") ||
+        parsed.hostname.includes("maps.google")) &&
+      parsed.pathname.includes("/maps/embed")
     ) {
-      return url
+      return url;
     }
-    return null
+    return null;
   } catch {
-    return null
+    return null;
   }
 }
 
@@ -55,15 +63,21 @@ export function toEmbedUrl(url: string): string | null {
 // DOM Conversion
 // =============================================================================
 
-function $convertMapEmbedElement(element: HTMLElement): null | DOMConversionOutput {
-  if (!element.hasAttribute('data-map')) return null
-  const iframe = element.querySelector('iframe')
-  const mapNode = $create(MapEmbedNode)
+function $convertMapEmbedElement(
+  element: HTMLElement,
+): null | DOMConversionOutput {
+  if (!element.hasAttribute("data-map")) return null;
+  const iframe = element.querySelector("iframe");
+  const mapNode = $create(MapEmbedNode);
   if (iframe) {
-    $setState(mapNode, embedUrlState, iframe.getAttribute('src') ?? '')
+    $setState(mapNode, embedUrlState, iframe.getAttribute("src") ?? "");
   }
-  $setState(mapNode, mapLabelState, element.getAttribute('data-map-label') ?? '')
-  return { node: mapNode }
+  $setState(
+    mapNode,
+    mapLabelState,
+    element.getAttribute("data-map-label") ?? "",
+  );
+  return { node: mapNode };
 }
 
 // =============================================================================
@@ -74,23 +88,23 @@ function MapEmbedComponent({
   embedUrl,
   label,
 }: {
-  embedUrl: string
-  label: string
+  embedUrl: string;
+  label: string;
 }) {
   return (
     <div data-map="true" className="flex flex-col gap-1">
       {label && <p className="text-sm text-muted-foreground">{label}</p>}
-      <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+      <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
         <iframe
           src={embedUrl}
           className="absolute inset-0 h-full w-full border-0"
           loading="lazy"
           referrerPolicy="no-referrer-when-downgrade"
-          title={label || 'Google マップ'}
+          title={label || "Google マップ"}
         />
       </div>
     </div>
-  )
+  );
 }
 
 // =============================================================================
@@ -99,13 +113,13 @@ function MapEmbedComponent({
 
 export class MapEmbedNode extends DecoratorNode<ReactElement> {
   override $config() {
-    return this.config('mapEmbed', {
+    return this.config("mapEmbed", {
       extends: DecoratorNode,
       stateConfigs: [
         { flat: true, stateConfig: embedUrlState },
         { flat: true, stateConfig: mapLabelState },
       ],
-    })
+    });
   }
 
   static override importDOM(): DOMConversionMap | null {
@@ -114,30 +128,30 @@ export class MapEmbedNode extends DecoratorNode<ReactElement> {
         conversion: $convertMapEmbedElement,
         priority: 1,
       }),
-    }
+    };
   }
 
   override exportDOM(): DOMExportOutput {
-    const div = document.createElement('div')
-    const label = $getState(this, mapLabelState)
-    div.setAttribute('data-map', 'true')
-    if (label) div.setAttribute('data-map-label', label)
-    const iframe = document.createElement('iframe')
-    iframe.setAttribute('src', $getState(this, embedUrlState))
-    iframe.setAttribute('loading', 'lazy')
-    iframe.setAttribute('referrerpolicy', 'no-referrer-when-downgrade')
-    div.appendChild(iframe)
-    return { element: div }
+    const div = document.createElement("div");
+    const label = $getState(this, mapLabelState);
+    div.setAttribute("data-map", "true");
+    if (label) div.setAttribute("data-map-label", label);
+    const iframe = document.createElement("iframe");
+    iframe.setAttribute("src", $getState(this, embedUrlState));
+    iframe.setAttribute("loading", "lazy");
+    iframe.setAttribute("referrerpolicy", "no-referrer-when-downgrade");
+    div.appendChild(iframe);
+    return { element: div };
   }
 
   override createDOM(_config: EditorConfig): HTMLElement {
-    const div = document.createElement('div')
-    div.setAttribute('data-map', 'true')
-    return div
+    const div = document.createElement("div");
+    div.setAttribute("data-map", "true");
+    return div;
   }
 
   override updateDOM(): false {
-    return false
+    return false;
   }
 
   override decorate(): ReactElement {
@@ -146,7 +160,7 @@ export class MapEmbedNode extends DecoratorNode<ReactElement> {
         embedUrl={$getState(this, embedUrlState)}
         label={$getState(this, mapLabelState)}
       />
-    )
+    );
   }
 }
 
@@ -157,11 +171,14 @@ export class MapEmbedNode extends DecoratorNode<ReactElement> {
 /**
  * MapEmbedNode を作成する
  */
-export function $createMapEmbedNode(embedUrl: string, mapLabel = ''): MapEmbedNode {
-  const node = $create(MapEmbedNode)
-  $setState(node, embedUrlState, embedUrl)
-  $setState(node, mapLabelState, mapLabel)
-  return node
+export function $createMapEmbedNode(
+  embedUrl: string,
+  mapLabel = "",
+): MapEmbedNode {
+  const node = $create(MapEmbedNode);
+  $setState(node, embedUrlState, embedUrl);
+  $setState(node, mapLabelState, mapLabel);
+  return node;
 }
 
 /**
@@ -170,5 +187,5 @@ export function $createMapEmbedNode(embedUrl: string, mapLabel = ''): MapEmbedNo
 export function $isMapEmbedNode(
   node: LexicalNode | null | undefined,
 ): node is MapEmbedNode {
-  return node instanceof MapEmbedNode
+  return node instanceof MapEmbedNode;
 }

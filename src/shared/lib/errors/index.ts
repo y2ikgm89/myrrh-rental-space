@@ -14,5 +14,5 @@ export {
   getErrorMessage,
   ReservationOverlapError,
   isReservationOverlapError,
-} from './types'
-export type { ErrorLogContext } from './types'
+} from "./types";
+export type { ErrorLogContext } from "./types";

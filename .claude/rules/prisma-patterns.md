@@ -1,6 +1,7 @@
 ---
 paths:
-  - src/**
+  - src/**/*.ts
+  - prisma/**
 ---
 
 # Prisma パターンルール
@@ -248,6 +249,21 @@ events.sort((a, b) => a.startTime.localeCompare(b.startTime));
 
 **適用範囲**: Server→Client 境界を越えるデータのみ。Server Component 内のみで完結する処理は `Date` のままで問題ない。
 
+### ISO 8601 文字列と `Date` の直接比較は常に false
+
+```typescript
+// NG: 文字列と Date の直接比較 → NaN 比較になり常に false
+const now = new Date()
+if (coupon.validUntil > now) { ... }  // false（文字列 > Date は NaN）
+if (coupon.validFrom < now) { ... }   // false（文字列 < Date は NaN）
+
+// OK: new Date() でラップしてから比較
+if (new Date(coupon.validUntil) > now) { ... }
+if (new Date(coupon.validFrom) < now) { ... }
+```
+
+`getCouponStatus` 等のステータス判定で文字列日付と現在時刻を比較する場合に起きやすい。Client Component に ISO 8601 文字列として渡された日付フィールドは必ず `new Date(field)` でラップすること。
+
 ### JSON フィールド配置規則
 
 | ファイル                          | 内容                                      |
@@ -442,7 +458,7 @@ await prisma.$transaction(async (tx) => {
    - `return prismaObj` → NG（React 19 シリアライゼーションエラー）
    - `return prismaArray` → NG
    - `toPlainArray(prismaArray)` のみ（日付マッピングなし）→ NG（戻り値型に `date: string` がある場合、TypeScript 型エラー）
-   - **OK**: `return toPlainObject({ ...obj, createdAt: obj.createdAt.toISOString(), updatedAt: obj.updatedAt.toISOString() })`
+   - **OK**: `return toPlainObject({ ...obj, createdAt: obj.createdAt.toISOString(), updatedAt: obj.updatedAt.toISOString() })` — **`createdAt/updatedAt` だけでなく全ての `Date` フィールド**（`validFrom`, `validUntil`, `startTime`, `endTime`, `publishedAt` 等）も明示的に `.toISOString()` で変換すること。変換漏れがあると型は `Date` でも実態は `string` になりランタイムクラッシュする
    - **OK**: `return toPlainArray(array.map(item => ({ ...item, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() })))`
 
 6. **`renderEditorStateToHtml` のトップレベル import 禁止**

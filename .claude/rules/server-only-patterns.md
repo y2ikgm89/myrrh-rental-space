@@ -1,6 +1,8 @@
 ---
 paths:
-  - src/**
+  - src/shared/lib/**
+  - src/app/(admin)/**
+  - src/app/(public)/**
 ---
 
 # server-only パターンルール

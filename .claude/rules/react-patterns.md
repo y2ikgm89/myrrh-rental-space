@@ -1,6 +1,7 @@
 ---
 paths:
-  - src/**
+  - src/**/*.ts
+  - src/**/*.tsx
 ---
 
 # React パターンルール
@@ -400,27 +401,59 @@ imageUrls: data.imageUrls.map((i) => i.url);
 
 ---
 
-## 禁止事項
+## Next.js 16 PPR + `new Date()` ビルドエラー
 
-| 禁止パターン                                    | 代替                                                                           |
-| ----------------------------------------------- | ------------------------------------------------------------------------------ |
-| `useContext(Context)`                           | `use(Context)` を使用（React 19 stable）                                       |
-| `createContext<T \| null>(null)`                | `createContext<T \| undefined>(undefined)` を使用                              |
-| `forwardRef` / `React.forwardRef`               | `ref` を通常の prop として受け取る                                             |
-| `ComponentPropsWithoutRef`                      | `ComponentPropsWithRef`                                                        |
-| `Input.displayName = 'Input'`                   | 名前付き関数で自動推論                                                         |
-| `useCallback` / `useMemo`（原則）               | プレーン関数・式（Compiler が最適化）                                          |
-| `React.memo()`（原則）                          | プレーン関数コンポーネント（Compiler が最適化）                                |
-| `useCallback` 内で `ref.current` を参照         | プレーン関数に変更                                                             |
-| `watch('fieldName')` (React Hook Form)          | `useWatch({ control, name: 'fieldName' })`                                     |
-| `useOptimistic` なし で楽観的 UI を手動実装     | `useOptimistic` を使用                                                         |
-| `useFormStatus` を form の外で使用              | `<form>` 子孫コンポーネント内に配置                                            |
-| `"use no memo"` を恒久的に使用                  | Rules of React 違反を修正して削除                                              |
-| `eslint-plugin-react-compiler` の継続使用       | `eslint-plugin-react-hooks@latest` に統合済み                                  |
-| クラスコンポーネント（新規作成）                | 関数コンポーネントに書き換える（Compiler 対応）                                |
-| `use(fetchData())` をコンポーネント内に直接記述 | Suspense boundary の外で Promise を生成して渡す                                |
-| `ViewTransition` を `startTransition` 外で使用  | `startTransition` で状態更新をラップする                                       |
-| `useId` の生成値を文字列として依存              | 形式が変更される（19.0: `:r:` → 19.2: `_r_`）。`id` 属性への渡し方のみ使用する |
+PPR（`cacheComponents: true`）環境で Server Component が動的データアクセス前に `new Date()` を呼ぶと以下のエラーが発生する:
+
+```
+Route "..." used `new Date()` before accessing uncached data
+```
+
+`import { connection } from 'next/server'` して `await connection()` を `new Date()` の前に呼ぶ（[公式推奨](https://nextjs.org/docs/app/api-reference/functions/connection)）:
+
+```typescript
+import { connection } from "next/server";
+
+export default async function Page() {
+  await connection(); // 動的データアクセスをマーク
+  const now = new Date(); // OK: connection() の後
+  // ...
+}
+```
+
+**注意**: `headers()` でも回避できるが意味的に誤り。`audit.ts` など実際にヘッダー値を読む箇所は `headers()` のまま。
+
+---
+
+## React 19 `<Activity>` — EXPERIMENTAL 採用禁止
+
+`<Activity>` は `display: none` で DOM を非表示にするため CSS transform アニメーションと非互換（アニメーション中でも要素が消える）。context7/WebFetch で確認済み。
+
+```typescript
+// NG: Activity は EXPERIMENTAL — CSS transform アニメーションと非互換
+import { unstable_Activity as Activity } from 'react'
+<Activity mode="hidden"><AnimatedPanel /></Activity>
+
+// OK: CSS visibility / opacity で代替（DOM を保持しアニメーション可能）
+<div style={{ visibility: isHidden ? 'hidden' : 'visible' }}>
+  <AnimatedPanel />
+</div>
+```
+
+---
+
+## 禁止事項（本文未掲載のパターン）
+
+上記各セクションに加え、以下のパターンも禁止:
+
+| 禁止パターン                                    | 代替                                                      |
+| ----------------------------------------------- | --------------------------------------------------------- |
+| `useOptimistic` なしで楽観的 UI を手動実装      | `useOptimistic` を使用                                    |
+| `useFormStatus` を `<form>` の外で使用          | `<form>` 子孫コンポーネント内に配置                       |
+| クラスコンポーネント（新規作成）                | 関数コンポーネント（Compiler 対応）                       |
+| `use(fetchData())` をコンポーネント内に直接記述 | Suspense boundary の外で Promise を生成して渡す           |
+| `ViewTransition` を `startTransition` 外で使用  | `startTransition` で状態更新をラップする                  |
+| `useId` の生成値を文字列として依存              | `id` 属性への渡し方のみ使用（形式は変更される可能性あり） |
 
 ---
 

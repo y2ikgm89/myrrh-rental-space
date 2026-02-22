@@ -10,7 +10,7 @@ disallowedTools:
   - Write
   - Edit
   - NotebookEdit
-model: inherit
+model: sonnet
 memory: project
 ---
 
@@ -150,9 +150,9 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
 
 ## Rule count reference
 
-**Always-load (13):** type-safety, implementation-quality, test-quality, bun-patterns, error-handling, react-patterns, server-actions, auth-patterns, prisma-patterns, zod-patterns, nuqs-patterns, tailwind-patterns, turbopack-hmr
+**Always-load (13):** type-safety, implementation-quality, test-quality, bun-patterns, error-handling, react-patterns, server-actions, auth-patterns, prisma-patterns, zod-patterns, nuqs-patterns, tailwind-patterns, server-only-patterns
 
-**Conditional (12):** anti-ai-design, project-design-config, design-system-memory, gsap-patterns, visual-effects-patterns, threejs-patterns, pixijs-patterns, accessibility, lexical-patterns, seo-patterns, ui-ux-patterns, deployment-patterns
+**Conditional (13):** anti-ai-design, project-design-config, design-system-memory, gsap-patterns, visual-effects-patterns, threejs-patterns, pixijs-patterns, accessibility, lexical-patterns, seo-patterns, ui-ux-patterns, admin-ui-patterns, deployment-patterns
 
 ## Output format
 

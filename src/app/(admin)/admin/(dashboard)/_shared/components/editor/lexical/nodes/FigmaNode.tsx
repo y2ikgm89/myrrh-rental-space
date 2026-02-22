@@ -4,17 +4,24 @@
  * @description Figma デザインを埋め込む DecoratorNode
  */
 
-'use client'
+"use client";
 
-import type { ReactElement } from 'react'
+import type { ReactElement } from "react";
 import type {
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
   NodeKey,
-} from 'lexical'
-import { $create, $getState, $setState, createState, DecoratorNode } from 'lexical'
-import { useLexicalNodeSelection } from '@lexical/react/useLexicalNodeSelection'
+} from "lexical";
+import {
+  $create,
+  $getState,
+  $setState,
+  createState,
+  DecoratorNode,
+} from "lexical";
+import { useLexicalNodeSelection } from "@lexical/react/useLexicalNodeSelection";
+import { parseString } from "../config/type-guards";
 
 // =============================================================================
 // URL 変換
@@ -22,12 +29,12 @@ import { useLexicalNodeSelection } from '@lexical/react/useLexicalNodeSelection'
 
 export function toFigmaEmbedUrl(url: string): string | null {
   try {
-    const u = new URL(url)
-    if (!u.hostname.includes('figma.com')) return null
-    const encoded = encodeURIComponent(url)
-    return `https://www.figma.com/embed?embed_host=share&url=${encoded}`
+    const u = new URL(url);
+    if (!u.hostname.includes("figma.com")) return null;
+    const encoded = encodeURIComponent(url);
+    return `https://www.figma.com/embed?embed_host=share&url=${encoded}`;
   } catch {
-    return null
+    return null;
   }
 }
 
@@ -35,13 +42,13 @@ export function toFigmaEmbedUrl(url: string): string | null {
 // State
 // =============================================================================
 
-export const figmaEmbedUrlState = createState('embedUrl', {
-  parse: (v: unknown): string => (typeof v === 'string' ? v : ''),
-})
+export const figmaEmbedUrlState = createState("embedUrl", {
+  parse: parseString,
+});
 
-export const figmaLabelState = createState('label', {
-  parse: (v: unknown): string => (typeof v === 'string' ? v : ''),
-})
+export const figmaLabelState = createState("label", {
+  parse: parseString,
+});
 
 // =============================================================================
 // Component
@@ -52,15 +59,15 @@ function FigmaComponent({
   label,
   nodeKey,
 }: {
-  embedUrl: string
-  label: string
-  nodeKey: NodeKey
+  embedUrl: string;
+  label: string;
+  nodeKey: NodeKey;
 }) {
-  const [isSelected, setSelected] = useLexicalNodeSelection(nodeKey)
+  const [isSelected, setSelected] = useLexicalNodeSelection(nodeKey);
 
   return (
     <div
-      className={`rounded-lg border border-border overflow-hidden my-2 ${isSelected ? 'ring-2 ring-ring' : ''}`}
+      className={`rounded-lg border border-border overflow-hidden my-2 ${isSelected ? "ring-2 ring-ring" : ""}`}
       onClick={() => setSelected(true)}
     >
       {label && (
@@ -72,12 +79,12 @@ function FigmaComponent({
         src={embedUrl}
         allow="fullscreen"
         loading="lazy"
-        title={label || 'Figma デザイン'}
+        title={label || "Figma デザイン"}
         className="w-full border-none"
-        style={{ height: '450px' }}
+        style={{ height: "450px" }}
       />
     </div>
-  )
+  );
 }
 
 // =============================================================================
@@ -86,38 +93,35 @@ function FigmaComponent({
 
 export class FigmaNode extends DecoratorNode<ReactElement> {
   override $config() {
-    return this.config('figma', {
+    return this.config("figma", {
       extends: DecoratorNode,
       stateConfigs: [
         { flat: true, stateConfig: figmaEmbedUrlState },
         { flat: true, stateConfig: figmaLabelState },
       ],
-    })
+    });
   }
 
   override createDOM(_config: EditorConfig): HTMLElement {
-    const div = document.createElement('div')
-    div.setAttribute('data-lexical-figma', 'true')
-    return div
+    const div = document.createElement("div");
+    div.setAttribute("data-lexical-figma", "true");
+    return div;
   }
 
   override updateDOM(): false {
-    return false
+    return false;
   }
 
   override exportDOM(): DOMExportOutput {
-    const wrapper = document.createElement('div')
-    wrapper.setAttribute('data-figma', 'true')
-    wrapper.setAttribute('data-figma-label', $getState(this, figmaLabelState))
-    const iframe = document.createElement('iframe')
-    iframe.setAttribute('src', $getState(this, figmaEmbedUrlState))
-    iframe.setAttribute('allow', 'fullscreen')
-    iframe.setAttribute('loading', 'lazy')
-    iframe.style.width = '100%'
-    iframe.style.height = '450px'
-    iframe.style.border = 'none'
-    wrapper.appendChild(iframe)
-    return { element: wrapper }
+    const wrapper = document.createElement("div");
+    wrapper.setAttribute("data-figma", "true");
+    wrapper.setAttribute("data-figma-label", $getState(this, figmaLabelState));
+    const iframe = document.createElement("iframe");
+    iframe.setAttribute("src", $getState(this, figmaEmbedUrlState));
+    iframe.setAttribute("allow", "fullscreen");
+    iframe.setAttribute("loading", "lazy");
+    wrapper.appendChild(iframe);
+    return { element: wrapper };
   }
 
   override decorate(): ReactElement {
@@ -127,7 +131,7 @@ export class FigmaNode extends DecoratorNode<ReactElement> {
         label={$getState(this, figmaLabelState)}
         nodeKey={this.__key}
       />
-    )
+    );
   }
 }
 
@@ -142,13 +146,13 @@ export class FigmaNode extends DecoratorNode<ReactElement> {
  * @returns FigmaNode インスタンス
  */
 export function $createFigmaNode(params: {
-  embedUrl: string
-  label?: string
+  embedUrl: string;
+  label?: string;
 }): FigmaNode {
-  const node = $create(FigmaNode)
-  $setState(node, figmaEmbedUrlState, params.embedUrl)
-  $setState(node, figmaLabelState, params.label ?? '')
-  return node
+  const node = $create(FigmaNode);
+  $setState(node, figmaEmbedUrlState, params.embedUrl);
+  $setState(node, figmaLabelState, params.label ?? "");
+  return node;
 }
 
 /**
@@ -160,5 +164,5 @@ export function $createFigmaNode(params: {
 export function $isFigmaNode(
   node: LexicalNode | null | undefined,
 ): node is FigmaNode {
-  return node instanceof FigmaNode
+  return node instanceof FigmaNode;
 }

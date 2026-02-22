@@ -4,9 +4,9 @@
  * @description Vimeo動画を埋め込むDecoratorNode
  */
 
-'use client'
+"use client";
 
-import type { ReactElement } from 'react'
+import type { ReactElement } from "react";
 import type {
   DOMConversionMap,
   DOMConversionOutput,
@@ -14,16 +14,23 @@ import type {
   EditorConfig,
   LexicalNode,
   NodeKey,
-} from 'lexical'
-import { $create, $getState, $setState, createState, DecoratorNode } from 'lexical'
+} from "lexical";
+import {
+  $create,
+  $getState,
+  $setState,
+  createState,
+  DecoratorNode,
+} from "lexical";
+import { parseString } from "../config/type-guards";
 
 // =============================================================================
 // State
 // =============================================================================
 
-export const vimeoVideoIdState = createState('videoId', {
-  parse: (v: unknown): string => typeof v === 'string' ? v : '',
-})
+export const vimeoVideoIdState = createState("videoId", {
+  parse: parseString,
+});
 
 // =============================================================================
 // Utilities
@@ -35,8 +42,8 @@ export const vimeoVideoIdState = createState('videoId', {
 export function extractVimeoId(url: string): string | null {
   const match = url.match(
     /vimeo\.com(?:\/(?:channels\/\w+|groups\/[^/]+\/videos|video))?\/(\d+)/,
-  )
-  return match?.[1] ?? null
+  );
+  return match?.[1] ?? null;
 }
 
 // =============================================================================
@@ -47,8 +54,8 @@ function VimeoComponent({
   videoId,
   nodeKey,
 }: {
-  videoId: string
-  nodeKey: NodeKey
+  videoId: string;
+  nodeKey: NodeKey;
 }) {
   return (
     <div
@@ -63,25 +70,27 @@ function VimeoComponent({
         className="absolute inset-0 w-full h-full rounded-lg"
       />
     </div>
-  )
+  );
 }
 
 // =============================================================================
 // DOM Conversion
 // =============================================================================
 
-function $convertVimeoElement(element: HTMLElement): null | DOMConversionOutput {
+function $convertVimeoElement(
+  element: HTMLElement,
+): null | DOMConversionOutput {
   if (element instanceof HTMLIFrameElement) {
-    const src = element.getAttribute('src')
+    const src = element.getAttribute("src");
     if (src) {
-      const match = src.match(/player\.vimeo\.com\/video\/(\d+)/)
+      const match = src.match(/player\.vimeo\.com\/video\/(\d+)/);
       if (match?.[1]) {
-        const node = $createVimeoNode({ videoId: match[1] })
-        return { node }
+        const node = $createVimeoNode({ videoId: match[1] });
+        return { node };
       }
     }
   }
-  return null
+  return null;
 }
 
 // =============================================================================
@@ -90,10 +99,10 @@ function $convertVimeoElement(element: HTMLElement): null | DOMConversionOutput 
 
 export class VimeoNode extends DecoratorNode<ReactElement> {
   override $config() {
-    return this.config('vimeo', {
+    return this.config("vimeo", {
       extends: DecoratorNode,
       stateConfigs: [{ flat: true, stateConfig: vimeoVideoIdState }],
-    })
+    });
   }
 
   static override importDOM(): DOMConversionMap | null {
@@ -102,36 +111,41 @@ export class VimeoNode extends DecoratorNode<ReactElement> {
         conversion: $convertVimeoElement,
         priority: 0,
       }),
-    }
+    };
   }
 
   override exportDOM(): DOMExportOutput {
-    const videoId = $getState(this, vimeoVideoIdState)
-    const div = document.createElement('div')
-    div.setAttribute('data-vimeo', 'true')
+    const videoId = $getState(this, vimeoVideoIdState);
+    const div = document.createElement("div");
+    div.setAttribute("data-vimeo", "true");
 
-    const iframe = document.createElement('iframe')
-    iframe.setAttribute('src', `https://player.vimeo.com/video/${videoId}`)
-    iframe.setAttribute('title', 'Vimeo video')
-    iframe.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture')
-    iframe.setAttribute('allowfullscreen', '')
+    const iframe = document.createElement("iframe");
+    iframe.setAttribute("src", `https://player.vimeo.com/video/${videoId}`);
+    iframe.setAttribute("title", "Vimeo video");
+    iframe.setAttribute("allow", "autoplay; fullscreen; picture-in-picture");
+    iframe.setAttribute("allowfullscreen", "");
 
-    div.appendChild(iframe)
-    return { element: div }
+    div.appendChild(iframe);
+    return { element: div };
   }
 
   override createDOM(_config: EditorConfig): HTMLElement {
-    const div = document.createElement('div')
-    div.setAttribute('data-vimeo', 'true')
-    return div
+    const div = document.createElement("div");
+    div.setAttribute("data-vimeo", "true");
+    return div;
   }
 
   override updateDOM(): false {
-    return false
+    return false;
   }
 
   override decorate(): ReactElement {
-    return <VimeoComponent videoId={$getState(this, vimeoVideoIdState)} nodeKey={this.__key} />
+    return (
+      <VimeoComponent
+        videoId={$getState(this, vimeoVideoIdState)}
+        nodeKey={this.__key}
+      />
+    );
   }
 }
 
@@ -145,12 +159,8 @@ export class VimeoNode extends DecoratorNode<ReactElement> {
  * @param params - Vimeoのパラメータ
  * @returns VimeoNode インスタンス
  */
-export function $createVimeoNode({
-  videoId,
-}: {
-  videoId: string
-}): VimeoNode {
-  return $setState($create(VimeoNode), vimeoVideoIdState, videoId)
+export function $createVimeoNode({ videoId }: { videoId: string }): VimeoNode {
+  return $setState($create(VimeoNode), vimeoVideoIdState, videoId);
 }
 
 /**
@@ -160,7 +170,7 @@ export function $createVimeoNode({
  * @returns VimeoNodeの場合true
  */
 export function $isVimeoNode(
-  node: LexicalNode | null | undefined
+  node: LexicalNode | null | undefined,
 ): node is VimeoNode {
-  return node instanceof VimeoNode
+  return node instanceof VimeoNode;
 }

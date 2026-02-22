@@ -4,33 +4,40 @@
  * @description 音声プレイヤーを埋め込むDecoratorNode
  */
 
-'use client'
+"use client";
 
-import type { ReactElement } from 'react'
+import type { ReactElement } from "react";
 import type {
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
   NodeKey,
-} from 'lexical'
-import { $create, $getState, $setState, createState, DecoratorNode } from 'lexical'
-import { useLexicalNodeSelection } from '@lexical/react/useLexicalNodeSelection'
+} from "lexical";
+import {
+  $create,
+  $getState,
+  $setState,
+  createState,
+  DecoratorNode,
+} from "lexical";
+import { useLexicalNodeSelection } from "@lexical/react/useLexicalNodeSelection";
+import { parseString } from "../config/type-guards";
 
 // =============================================================================
 // State
 // =============================================================================
 
-export const audioUrlState = createState('url', {
-  parse: (v: unknown): string => (typeof v === 'string' ? v : ''),
-})
+export const audioUrlState = createState("url", {
+  parse: parseString,
+});
 
-export const audioTitleState = createState('title', {
-  parse: (v: unknown): string => (typeof v === 'string' ? v : ''),
-})
+export const audioTitleState = createState("title", {
+  parse: parseString,
+});
 
-export const audioArtistState = createState('artist', {
-  parse: (v: unknown): string => (typeof v === 'string' ? v : ''),
-})
+export const audioArtistState = createState("artist", {
+  parse: parseString,
+});
 
 // =============================================================================
 // Component
@@ -42,30 +49,32 @@ function AudioComponent({
   artist,
   nodeKey,
 }: {
-  url: string
-  title: string
-  artist: string
-  nodeKey: NodeKey
+  url: string;
+  title: string;
+  artist: string;
+  nodeKey: NodeKey;
 }) {
-  const [isSelected, setSelected] = useLexicalNodeSelection(nodeKey)
+  const [isSelected, setSelected] = useLexicalNodeSelection(nodeKey);
 
   return (
     <div
-      className={`rounded-lg border bg-card p-4 my-2 ${isSelected ? 'ring-2 ring-ring' : ''}`}
+      className={`rounded-lg border bg-card p-4 my-2 ${isSelected ? "ring-2 ring-ring" : ""}`}
       onClick={(e) => {
-        if (e.target instanceof HTMLAudioElement) return
-        setSelected(true)
+        if (e.target instanceof HTMLAudioElement) return;
+        setSelected(true);
       }}
     >
       {(title || artist) && (
         <div className="mb-2">
-          {title && <p className="text-sm font-medium text-foreground">{title}</p>}
+          {title && (
+            <p className="text-sm font-medium text-foreground">{title}</p>
+          )}
           {artist && <p className="text-xs text-muted-foreground">{artist}</p>}
         </div>
       )}
       <audio src={url} controls preload="metadata" className="w-full" />
     </div>
-  )
+  );
 }
 
 // =============================================================================
@@ -74,37 +83,40 @@ function AudioComponent({
 
 export class AudioNode extends DecoratorNode<ReactElement> {
   override $config() {
-    return this.config('audio', {
+    return this.config("audio", {
       extends: DecoratorNode,
       stateConfigs: [
         { flat: true, stateConfig: audioUrlState },
         { flat: true, stateConfig: audioTitleState },
         { flat: true, stateConfig: audioArtistState },
       ],
-    })
+    });
   }
 
   override createDOM(_config: EditorConfig): HTMLElement {
-    const div = document.createElement('div')
-    div.setAttribute('data-lexical-audio', 'true')
-    return div
+    const div = document.createElement("div");
+    div.setAttribute("data-lexical-audio", "true");
+    return div;
   }
 
   override updateDOM(): false {
-    return false
+    return false;
   }
 
   override exportDOM(): DOMExportOutput {
-    const wrapper = document.createElement('div')
-    wrapper.setAttribute('data-audio', 'true')
-    wrapper.setAttribute('data-audio-title', $getState(this, audioTitleState))
-    wrapper.setAttribute('data-audio-artist', $getState(this, audioArtistState))
-    const audio = document.createElement('audio')
-    audio.setAttribute('src', $getState(this, audioUrlState))
-    audio.setAttribute('controls', '')
-    audio.setAttribute('preload', 'metadata')
-    wrapper.appendChild(audio)
-    return { element: wrapper }
+    const wrapper = document.createElement("div");
+    wrapper.setAttribute("data-audio", "true");
+    wrapper.setAttribute("data-audio-title", $getState(this, audioTitleState));
+    wrapper.setAttribute(
+      "data-audio-artist",
+      $getState(this, audioArtistState),
+    );
+    const audio = document.createElement("audio");
+    audio.setAttribute("src", $getState(this, audioUrlState));
+    audio.setAttribute("controls", "");
+    audio.setAttribute("preload", "metadata");
+    wrapper.appendChild(audio);
+    return { element: wrapper };
   }
 
   override decorate(): ReactElement {
@@ -115,7 +127,7 @@ export class AudioNode extends DecoratorNode<ReactElement> {
         artist={$getState(this, audioArtistState)}
         nodeKey={this.__key}
       />
-    )
+    );
   }
 }
 
@@ -130,15 +142,15 @@ export class AudioNode extends DecoratorNode<ReactElement> {
  * @returns AudioNode インスタンス
  */
 export function $createAudioNode(params: {
-  url: string
-  title?: string
-  artist?: string
+  url: string;
+  title?: string;
+  artist?: string;
 }): AudioNode {
-  const node = $create(AudioNode)
-  $setState(node, audioUrlState, params.url)
-  $setState(node, audioTitleState, params.title ?? '')
-  $setState(node, audioArtistState, params.artist ?? '')
-  return node
+  const node = $create(AudioNode);
+  $setState(node, audioUrlState, params.url);
+  $setState(node, audioTitleState, params.title ?? "");
+  $setState(node, audioArtistState, params.artist ?? "");
+  return node;
 }
 
 /**
@@ -150,5 +162,5 @@ export function $createAudioNode(params: {
 export function $isAudioNode(
   node: LexicalNode | null | undefined,
 ): node is AudioNode {
-  return node instanceof AudioNode
+  return node instanceof AudioNode;
 }

@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '=== 進行中の計画 ===' && grep -rl '実装中\\|設計承認済み' \"$CLAUDE_PROJECT_DIR/docs/plans\" 2>/dev/null | grep -v README | grep -v CLAUDE | head -5 || echo '(なし)' && echo '' && echo '=== プロジェクト状況 (docs/plans/README.md 上位100行) ===' && head -100 \"$CLAUDE_PROJECT_DIR/docs/plans/README.md\" 2>/dev/null",
+            "command": "echo '=== 進行中の計画 ===' && grep -rl '実装中\\|設計承認済み' \"$CLAUDE_PROJECT_DIR/docs/plans\" 2>/dev/null | grep -v README | grep -v CLAUDE | head -5 || echo '(なし)'",
             "statusMessage": "進行中タスクを確認中..."
           }
         ]
@@ -19,7 +19,8 @@
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/block-dangerous-bash.sh",
-            "statusMessage": "Checking dangerous commands..."
+            "statusMessage": "Checking dangerous commands...",
+            "timeout": 10
           }
         ]
       },
@@ -28,8 +29,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/block-sensitive-files.sh",
-            "statusMessage": "Checking file protection..."
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/block-sensitive-files.sh",
+            "statusMessage": "Checking file protection...",
+            "timeout": 10
           }
         ]
       }
@@ -53,12 +55,14 @@
           {
             "type": "command",
             "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/schema-change-guard.sh",
-            "statusMessage": "Checking schema changes..."
+            "statusMessage": "Checking schema changes...",
+            "timeout": 10
           },
           {
             "type": "command",
             "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/connection-reminder.sh",
-            "statusMessage": "Checking connection()..."
+            "statusMessage": "Checking connection()...",
+            "timeout": 10
           }
         ]
       }

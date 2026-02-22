@@ -4,9 +4,9 @@
  * @description YouTube動画を埋め込むDecoratorNode
  */
 
-'use client'
+"use client";
 
-import type { ReactElement } from 'react'
+import type { ReactElement } from "react";
 import type {
   DOMConversionMap,
   DOMConversionOutput,
@@ -14,16 +14,23 @@ import type {
   EditorConfig,
   LexicalNode,
   NodeKey,
-} from 'lexical'
-import { $create, $getState, $setState, createState, DecoratorNode } from 'lexical'
+} from "lexical";
+import {
+  $create,
+  $getState,
+  $setState,
+  createState,
+  DecoratorNode,
+} from "lexical";
+import { parseString } from "../config/type-guards";
 
 // =============================================================================
 // State
 // =============================================================================
 
-export const videoIdState = createState('videoId', {
-  parse: (v: unknown): string => typeof v === 'string' ? v : '',
-})
+export const videoIdState = createState("videoId", {
+  parse: parseString,
+});
 
 // =============================================================================
 // Component
@@ -33,8 +40,8 @@ function YouTubeComponent({
   videoId,
   nodeKey,
 }: {
-  videoId: string
-  nodeKey: NodeKey
+  videoId: string;
+  nodeKey: NodeKey;
 }) {
   return (
     <div
@@ -49,25 +56,27 @@ function YouTubeComponent({
         className="absolute inset-0 w-full h-full rounded-lg"
       />
     </div>
-  )
+  );
 }
 
 // =============================================================================
 // DOM Conversion
 // =============================================================================
 
-function $convertYouTubeElement(element: HTMLElement): null | DOMConversionOutput {
+function $convertYouTubeElement(
+  element: HTMLElement,
+): null | DOMConversionOutput {
   if (element instanceof HTMLIFrameElement) {
-    const src = element.getAttribute('src')
+    const src = element.getAttribute("src");
     if (src) {
-      const match = src.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]+)/)
+      const match = src.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]+)/);
       if (match?.[1]) {
-        const node = $createYouTubeNode({ videoId: match[1] })
-        return { node }
+        const node = $createYouTubeNode({ videoId: match[1] });
+        return { node };
       }
     }
   }
-  return null
+  return null;
 }
 
 // =============================================================================
@@ -76,10 +85,10 @@ function $convertYouTubeElement(element: HTMLElement): null | DOMConversionOutpu
 
 export class YouTubeNode extends DecoratorNode<ReactElement> {
   override $config() {
-    return this.config('youtube', {
+    return this.config("youtube", {
       extends: DecoratorNode,
       stateConfigs: [{ flat: true, stateConfig: videoIdState }],
-    })
+    });
   }
 
   static override importDOM(): DOMConversionMap | null {
@@ -88,39 +97,44 @@ export class YouTubeNode extends DecoratorNode<ReactElement> {
         conversion: $convertYouTubeElement,
         priority: 0,
       }),
-    }
+    };
   }
 
   override exportDOM(): DOMExportOutput {
-    const videoId = $getState(this, videoIdState)
-    const div = document.createElement('div')
-    div.setAttribute('data-youtube', 'true')
+    const videoId = $getState(this, videoIdState);
+    const div = document.createElement("div");
+    div.setAttribute("data-youtube", "true");
 
-    const iframe = document.createElement('iframe')
-    iframe.setAttribute('src', `https://www.youtube.com/embed/${videoId}`)
-    iframe.setAttribute('title', 'YouTube video')
+    const iframe = document.createElement("iframe");
+    iframe.setAttribute("src", `https://www.youtube.com/embed/${videoId}`);
+    iframe.setAttribute("title", "YouTube video");
     iframe.setAttribute(
-      'allow',
-      'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
-    )
-    iframe.setAttribute('allowfullscreen', '')
+      "allow",
+      "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture",
+    );
+    iframe.setAttribute("allowfullscreen", "");
 
-    div.appendChild(iframe)
-    return { element: div }
+    div.appendChild(iframe);
+    return { element: div };
   }
 
   override createDOM(_config: EditorConfig): HTMLElement {
-    const div = document.createElement('div')
-    div.setAttribute('data-youtube', 'true')
-    return div
+    const div = document.createElement("div");
+    div.setAttribute("data-youtube", "true");
+    return div;
   }
 
   override updateDOM(): false {
-    return false
+    return false;
   }
 
   override decorate(): ReactElement {
-    return <YouTubeComponent videoId={$getState(this, videoIdState)} nodeKey={this.__key} />
+    return (
+      <YouTubeComponent
+        videoId={$getState(this, videoIdState)}
+        nodeKey={this.__key}
+      />
+    );
   }
 }
 
@@ -137,9 +151,9 @@ export class YouTubeNode extends DecoratorNode<ReactElement> {
 export function $createYouTubeNode({
   videoId,
 }: {
-  videoId: string
+  videoId: string;
 }): YouTubeNode {
-  return $setState($create(YouTubeNode), videoIdState, videoId)
+  return $setState($create(YouTubeNode), videoIdState, videoId);
 }
 
 /**
@@ -149,7 +163,7 @@ export function $createYouTubeNode({
  * @returns YouTubeNodeの場合true
  */
 export function $isYouTubeNode(
-  node: LexicalNode | null | undefined
+  node: LexicalNode | null | undefined,
 ): node is YouTubeNode {
-  return node instanceof YouTubeNode
+  return node instanceof YouTubeNode;
 }

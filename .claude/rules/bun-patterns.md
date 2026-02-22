@@ -2,6 +2,8 @@
 paths:
   - __tests__/**
   - e2e/**
+  - src/**/*.test.ts
+  - src/**/*.spec.ts
 ---
 
 # Bun パターンルール
@@ -439,6 +441,11 @@ bun run test:coverage __tests__/unit   # 特定ディレクトリのみ計測
 5. **テストの削除・無効化禁止**
    - `test.skip()` / `test.only()` をコミットしない
    - 失敗するテストは原因を調査して修正する
+
+6. **`bunfig.toml [test]` の `conditions` キーは機能しない**
+   - Bun はこのキーを無視する
+   - `bun test --conditions=react-server` は CLI フラグとして機能するが、React を server build に解決して `createContext`・`useRef` が消えるため `server-only` 対策には**使わない**こと
+   - `server-only` 対策は `__tests__/setup.ts` の `mock.module('server-only', () => ({}))` で対処（設定済み）
 
 ## 参考
 

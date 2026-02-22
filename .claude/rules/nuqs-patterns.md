@@ -53,7 +53,7 @@ export default function PublicRootLayout({ children }) {
 ```typescript
 'use client'
 
-import { useQueryState, parseAsString, parseAsInteger } from 'nuqs'
+import { useQueryState, parseAsString, parseAsInteger, parseAsStringLiteral } from 'nuqs'
 
 function SearchForm() {
   const [query, setQuery] = useQueryState('q', parseAsString.withDefault(''))
@@ -66,6 +66,29 @@ function SearchForm() {
     />
   )
 }
+```
+
+**⚠️ options は `.withOptions()` でパーサーにチェーンする（3引数形式は非対応）**:
+
+```typescript
+// NG: 3引数形式（nuqs 2.8.8 非対応 — コンパイルエラー）
+useQueryState("tab", parseAsStringLiteral(TAB_VALUES).withDefault("spaces"), {
+  history: "push",
+  shallow: false,
+});
+
+// OK: .withOptions() をパーサーにチェーン
+const TAB_VALUES = ["spaces", "locations", "categories"] as const;
+const [tab, setTab] = useQueryState(
+  "tab",
+  parseAsStringLiteral(TAB_VALUES)
+    .withDefault("spaces")
+    .withOptions({ history: "push", shallow: false }),
+);
+// void で floating promise を回避
+const handleChange = (value: string) => {
+  if (isValidTab(value)) void setTab(value);
+};
 ```
 
 ### 2. useQueryStates（複数パラメータ一括）
@@ -190,18 +213,7 @@ export function SearchControls() {
 
 ### 組み込みパーサー
 
-| パーサー | 型 | import元 |
-|----------|-----|---------|
-| `parseAsString` | `string` | `nuqs` / `nuqs/server` |
-| `parseAsInteger` | `number` | `nuqs` / `nuqs/server` |
-| `parseAsFloat` | `number` | `nuqs` / `nuqs/server` |
-| `parseAsBoolean` | `boolean` | `nuqs` / `nuqs/server` |
-| `parseAsStringLiteral` | リテラル型 | `nuqs` / `nuqs/server` |
-| `parseAsStringEnum` | Enum型 | `nuqs` / `nuqs/server` |
-| `parseAsArrayOf` | 配列 | `nuqs` / `nuqs/server` |
-| `parseAsIsoDateTime` | `Date` | `nuqs` / `nuqs/server` |
-| `parseAsTimestamp` | `Date` | `nuqs` / `nuqs/server` |
-| `parseAsJson` | `T` | `nuqs` / `nuqs/server` |
+`parseAsString`, `parseAsInteger`, `parseAsFloat`, `parseAsBoolean`, `parseAsStringLiteral`, `parseAsStringEnum`, `parseAsArrayOf`, `parseAsIsoDateTime`, `parseAsTimestamp`, `parseAsJson` 等。完全なリストは [nuqs Parsers 公式ドキュメント](https://nuqs.dev/docs/parsers) を参照。
 
 **注意**: Client Component では `nuqs` から、Server Component / パーサー定義では `nuqs/server` から import する。
 
@@ -209,28 +221,28 @@ export function SearchControls() {
 
 ```typescript
 // @/shared/lib/nuqs/parsers.ts
-import { createParser } from 'nuqs/server'
-import { toDateString } from '@/shared/lib/serialize'
+import { createParser } from "nuqs/server";
+import { toDateString } from "@/shared/lib/serialize";
 
 export const parseAsDate = createParser<Date>({
   parse: (value) => {
-    const date = new Date(value)
-    return Number.isNaN(date.getTime()) ? null : date
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
   },
   serialize: (date) => toDateString(date),
   eq: (a, b) => a.getTime() === b.getTime(),
-})
+});
 
 // 注意: nuqs 組み込みの parseAsBoolean とは別物。
 // 組み込み版は URL に `1`/`` を格納するが、こちらは `'true'`/`'false'` 文字列を扱うカスタム実装。
 export const parseAsBoolean = createParser<boolean>({
   parse: (value) => {
-    if (value === 'true') return true
-    if (value === 'false') return false
-    return null
+    if (value === "true") return true;
+    if (value === "false") return false;
+    return null;
   },
-  serialize: (value) => (value ? 'true' : 'false'),
-})
+  serialize: (value) => (value ? "true" : "false"),
+});
 ```
 
 ## プロジェクト標準パーサー
@@ -250,26 +262,27 @@ import {
   loadAdminAuditLogSearchParams,
   adminPageParsers,
   // ...
-} from '@/shared/lib/nuqs'
+} from "@/shared/lib/nuqs";
 ```
 
 **標準パーサー定義**:
 
 ```typescript
 // ページネーション
-export const parseAsPage = parseAsInteger.withDefault(1)
-export const parseAsPerPage = parseAsInteger.withDefault(10)
+export const parseAsPage = parseAsInteger.withDefault(1);
+export const parseAsPerPage = parseAsInteger.withDefault(10);
 
 // ソート
-export type SortOrder = 'asc' | 'desc'
-export const sortOrders: readonly SortOrder[] = ['asc', 'desc']
-export const parseAsSortOrder = parseAsStringLiteral(sortOrders).withDefault('desc')
+export type SortOrder = "asc" | "desc";
+export const sortOrders: readonly SortOrder[] = ["asc", "desc"];
+export const parseAsSortOrder =
+  parseAsStringLiteral(sortOrders).withDefault("desc");
 
 // 検索
-export const parseAsQuery = parseAsString.withDefault('')
+export const parseAsQuery = parseAsString.withDefault("");
 
 // 配列
-export const parseAsCommaSeparated = parseAsArrayOf(parseAsString, ',')
+export const parseAsCommaSeparated = parseAsArrayOf(parseAsString, ",");
 ```
 
 **パーサーmapパターン**（Client Componentで `useQueryStates` に渡す）:
@@ -278,26 +291,26 @@ export const parseAsCommaSeparated = parseAsArrayOf(parseAsString, ',')
 // キャッシュと独立したパーサーmap（Client Component用）
 export const adminPageParsers = {
   q: parseAsQuery,
-  status: parseAsString.withDefault('all'),
+  status: parseAsString.withDefault("all"),
   page: parseAsPage,
   sort: parseAsSortOrder,
-}
+};
 
 // Client Componentで使用
 const [params, setParams] = useQueryStates(adminPageParsers, {
-  history: 'push',
+  history: "push",
   shallow: false,
-})
+});
 ```
 
 ## 型推論
 
 ```typescript
-import type { inferParserType } from 'nuqs'
+import type { inferParserType } from "nuqs";
 
 // パーサーから型を推論
-type PageNumber = inferParserType<typeof parseAsPage>  // number
-type SortOrderType = inferParserType<typeof parseAsSortOrder>  // 'asc' | 'desc'
+type PageNumber = inferParserType<typeof parseAsPage>; // number
+type SortOrderType = inferParserType<typeof parseAsSortOrder>; // 'asc' | 'desc'
 ```
 
 ## useFilterParams フック（管理画面共通）
@@ -305,20 +318,21 @@ type SortOrderType = inferParserType<typeof parseAsSortOrder>  // 'asc' | 'desc'
 管理画面のフィルター機能は共通フックを使用:
 
 ```typescript
-'use client'
+"use client";
 
 import {
   useFilterParams,
   useFilterParamsWithCategory,
-} from '@/admin/hooks/use-filter-params'
+} from "@/admin/hooks/use-filter-params";
 
 // 基本フィルター（カテゴリなし）
 const { params, setSearch, setSearchDebounced, setStatus, setPage, reset } =
-  useFilterParams({ debounceMs: 300, defaultPerPage: 10 })
+  useFilterParams({ debounceMs: 300, defaultPerPage: 10 });
 
 // カテゴリ付きフィルター
-const { params, setCategory } =
-  useFilterParamsWithCategory({ defaultStatus: '' })
+const { params, setCategory } = useFilterParamsWithCategory({
+  defaultStatus: "",
+});
 ```
 
 フックは `useQueryStates` + `{ history: 'push', shallow: false }` で実装されており、`null` セット（URLパラメータ削除）と `page: 1` リセットを自動処理する。
@@ -329,31 +343,31 @@ const { params, setCategory } =
 
    ```typescript
    // NG: パーサーなしのuseQueryState
-   useQueryState('sort')
+   useQueryState("sort");
 
    // OK: パーサーを必ず渡す
-   useQueryState('sort', parseAsSortOrder)
+   useQueryState("sort", parseAsSortOrder);
    ```
 
 2. **型アサーション禁止**
 
    ```typescript
    // NG: 型アサーション
-   params.sort as 'asc' | 'desc'
+   params.sort as "asc" | "desc";
 
    // OK: parseAsSortOrder が型を保証
-   const [sort] = useQueryState('sort', parseAsSortOrder)  // 'asc' | 'desc'
+   const [sort] = useQueryState("sort", parseAsSortOrder); // 'asc' | 'desc'
    ```
 
 3. **直接的なURLSearchParams操作禁止**
 
    ```typescript
    // NG: 手動URLSearchParams
-   const sp = new URLSearchParams(window.location.search)
-   sp.set('page', '2')
+   const sp = new URLSearchParams(window.location.search);
+   sp.set("page", "2");
 
    // OK: nuqsのsetParamsを使用
-   void setParams({ page: 2 })
+   void setParams({ page: 2 });
    ```
 
 4. **パーサーの重複定義禁止**
@@ -363,30 +377,30 @@ const { params, setCategory } =
 
    ```typescript
    // NG: 未処理のPromise（lintエラー）
-   setParams({ page: 2 })
+   setParams({ page: 2 });
 
    // OK: voidで明示
-   void setParams({ page: 2 })
+   void setParams({ page: 2 });
    ```
 
 6. **shallow: true での Server Component 更新禁止**
 
    ```typescript
    // NG: shallow: true だとServer Componentが再レンダリングされない
-   useQueryStates(parsers, { history: 'push', shallow: true })
+   useQueryStates(parsers, { history: "push", shallow: true });
 
    // OK: Server Componentと連携する場合はshallow: false
-   useQueryStates(parsers, { history: 'push', shallow: false })
+   useQueryStates(parsers, { history: "push", shallow: false });
    ```
 
 ## ファイル配置
 
-| パス | 内容 |
-|------|------|
-| `@/shared/lib/nuqs/parsers.ts` | 共有パーサー定義・キャッシュ・ローダー関数・パーサーmap |
-| `@/shared/lib/nuqs/index.ts` | barrel（`parsers.ts` を re-export） |
-| `@/public/lib/search-params.ts` | 公開ページ専用のシンプルなキャッシュ定義 |
-| `@/admin/hooks/use-filter-params.ts` | 管理画面フィルター共通フック |
+| パス                                 | 内容                                                    |
+| ------------------------------------ | ------------------------------------------------------- |
+| `@/shared/lib/nuqs/parsers.ts`       | 共有パーサー定義・キャッシュ・ローダー関数・パーサーmap |
+| `@/shared/lib/nuqs/index.ts`         | barrel（`parsers.ts` を re-export）                     |
+| `@/public/lib/search-params.ts`      | 公開ページ専用のシンプルなキャッシュ定義                |
+| `@/admin/hooks/use-filter-params.ts` | 管理画面フィルター共通フック                            |
 
 ## 参考
 

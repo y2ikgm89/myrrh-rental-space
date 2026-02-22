@@ -43,7 +43,6 @@ import {
 } from "@/admin/components/ui";
 import {
   GripVertical,
-  Plus,
   Settings,
   Trash2,
   Eye,
@@ -251,14 +250,14 @@ function AddSectionDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-md">
+      <AlertDialogContent className="max-w-2xl">
         <AlertDialogHeader>
           <AlertDialogTitle>セクションを追加</AlertDialogTitle>
           <AlertDialogDescription>
             ホームページに追加するセクションタイプを選択
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <div className="grid gap-2 py-4">
+        <div className="grid grid-cols-3 gap-2 py-4 max-h-[60vh] overflow-y-auto">
           {availableTypes.map((type) => {
             const Icon = sectionTypeIcons[type];
             const label = sectionTypeLabels[type];
@@ -274,22 +273,20 @@ function AddSectionDialog({
                   onOpenChange(false);
                 }}
                 disabled={disabled}
-                className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors text-left disabled:opacity-50"
+                className="flex flex-col items-center gap-2 p-3 rounded-lg border hover:bg-muted/50 transition-colors text-center disabled:opacity-50"
               >
                 <div className="p-2 rounded-md bg-primary/10">
                   <Icon className="h-5 w-5 text-primary" />
                 </div>
-                <div className="flex-1">
-                  <p className="font-medium">{label}</p>
+                <div>
+                  <p className="text-sm font-medium">{label}</p>
                   {isCustom && (
                     <p className="text-xs text-muted-foreground">
                       複数追加可能
                     </p>
                   )}
                   {alreadyExists && !isCustom && (
-                    <p className="text-xs text-warning">
-                      既に存在します（再追加可能）
-                    </p>
+                    <p className="text-xs text-warning">再追加可能</p>
                   )}
                 </div>
               </button>
@@ -309,12 +306,15 @@ function AddSectionDialog({
 // =============================================================================
 
 interface HomepageTabProps {
-  /** Instagram APIが設定済みかどうか */
   isInstagramConnected?: boolean;
+  showAddDialog: boolean;
+  onShowAddDialogChange: (open: boolean) => void;
 }
 
 export function HomepageTab({
   isInstagramConnected = false,
+  showAddDialog,
+  onShowAddDialogChange,
 }: HomepageTabProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -322,7 +322,6 @@ export function HomepageTab({
   const [deletingSectionId, setDeletingSectionId] = useState<string | null>(
     null,
   );
-  const [showAddDialog, setShowAddDialog] = useState(false);
 
   // DnD sensors
   const sensors = useSensors(
@@ -481,92 +480,66 @@ export function HomepageTab({
     );
   }
 
-  // No sections - show initialize button
-  if (sections.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <div className="p-4 rounded-full bg-muted/50 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-          <Layout className="h-8 w-8 text-muted-foreground" />
-        </div>
-        <h3 className="text-lg font-medium mb-2">セクションがありません</h3>
-        <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
-          ホームページのセクションを初期化するか、新しいセクションを追加してください
-        </p>
-        <div className="flex items-center justify-center gap-4">
+  const existingTypes = sections.map((s) => s.type);
+
+  return (
+    <>
+      {sections.length === 0 ? (
+        // No sections - show initialize button
+        <div className="text-center py-12">
+          <div className="p-4 rounded-full bg-muted/50 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+            <Layout className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h3 className="text-lg font-medium mb-2">セクションがありません</h3>
+          <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+            ホームページのセクションを初期化するか、新しいセクションを追加してください
+          </p>
           <Button onClick={handleInitializeDefaults} disabled={isPending}>
             <Sparkles className="h-4 w-4 mr-2" />
             デフォルトセクションを作成
           </Button>
-          <Button
-            variant="outline"
-            onClick={() => setShowAddDialog(true)}
-            disabled={isPending}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            セクションを追加
-          </Button>
         </div>
-      </div>
-    );
-  }
-
-  // Main list view
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-medium">ホームページセクション</h3>
-          <p className="text-sm text-muted-foreground">
-            ドラッグで順序変更、スイッチで表示/非表示を切り替え
-          </p>
-        </div>
-        <Button onClick={() => setShowAddDialog(true)} disabled={isPending}>
-          <Plus className="h-4 w-4 mr-2" />
-          セクションを追加
-        </Button>
-      </div>
-
-      {/* Section List */}
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext
-          items={sections.map((s) => s.id)}
-          strategy={verticalListSortingStrategy}
+      ) : (
+        // Main list view
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
         >
-          <div className="space-y-2">
-            {sections.map((section) => (
-              <SortableSectionItem
-                key={section.id}
-                section={section}
-                onEdit={(section) =>
-                  router.push(
-                    `/admin/pages/homepage/edit/sections/${section.id}`,
-                  )
-                }
-                onToggle={handleToggle}
-                onDelete={setDeletingSectionId}
-                disabled={isPending}
-              />
-            ))}
-          </div>
-        </SortableContext>
-      </DndContext>
+          <SortableContext
+            items={sections.map((s) => s.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="space-y-2">
+              {sections.map((section) => (
+                <SortableSectionItem
+                  key={section.id}
+                  section={section}
+                  onEdit={(section) =>
+                    router.push(
+                      `/admin/pages/homepage/edit/sections/${section.id}`,
+                    )
+                  }
+                  onToggle={handleToggle}
+                  onDelete={setDeletingSectionId}
+                  disabled={isPending}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+      )}
 
-      {/* Add Section Dialog */}
+      {/* Dialogs — rendered regardless of sections count */}
       <AddSectionDialog
         open={showAddDialog}
-        onOpenChange={setShowAddDialog}
+        onOpenChange={onShowAddDialogChange}
         onAdd={handleAddSection}
         disabled={isPending}
-        existingTypes={sections.map((s) => s.type)}
+        existingTypes={existingTypes}
         isInstagramConnected={isInstagramConnected}
       />
 
-      {/* Delete Confirmation Dialog */}
       <AlertDialog
         open={!!deletingSectionId}
         onOpenChange={(open: boolean) => !open && setDeletingSectionId(null)}
@@ -589,6 +562,6 @@ export function HomepageTab({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 }

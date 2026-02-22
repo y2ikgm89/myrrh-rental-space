@@ -123,8 +123,11 @@ export async function deletePost(id: string): Promise<ActionResult> {
 try/catch で必ずエラーをログ + `createFailure` を返す。エラー握りつぶし禁止:
 
 ```typescript
-import { logError } from "@/shared/lib/errors";
-import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
+import {
+  logError,
+  ErrorCategory,
+  ErrorSeverity,
+} from "@/shared/lib/errors/server";
 
 export const updateSpace = withPermission<[string, SpaceInput]>(
   "space",
@@ -200,7 +203,11 @@ Server Components / `'use cache'` 関数での非認証データ取得に使用�
 DB 取得に失敗してもページをレンダリング続けたい場合:
 
 ```typescript
-import { safeFetch, ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
+import {
+  safeFetch,
+  ErrorCategory,
+  ErrorSeverity,
+} from "@/shared/lib/errors/server";
 import { cacheLife, cacheTag } from "next/cache";
 import { toPlainObject } from "@/shared/lib/serialize";
 
@@ -226,7 +233,7 @@ async function getNavigationItems() {
 ページレンダリングに必須のデータ（なければ表示できない）:
 
 ```typescript
-import { criticalFetch, ErrorCategory } from "@/shared/lib/errors";
+import { criticalFetch, ErrorCategory } from "@/shared/lib/errors/server";
 
 async function getPublishedPost(slug: string) {
   "use cache";
@@ -262,7 +269,11 @@ async function getPublishedPost(slug: string) {
 カテゴリ・深刻度付きの構造化エラーログ。Server Actions・Server Components で使用:
 
 ```typescript
-import { logError, ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
+import {
+  logError,
+  ErrorCategory,
+  ErrorSeverity,
+} from "@/shared/lib/errors/server";
 
 // NG: console.log のみ
 console.log("エラー:", error);
@@ -416,13 +427,29 @@ try {
 6. **safeFetch の fallback に `undefined` 指定禁止**
    - `undefined` は React 19 シリアライゼーション対象外。`null` または具体的な値を使用
 
+7. **インラインエラーメッセージ変換禁止**
+
+   ```typescript
+   // NG: インライン変換（冗長）
+   catch (error) {
+     logger.error('Failed', { error: error instanceof Error ? error.message : String(error) })
+   }
+
+   // OK: getErrorMessage() を使用
+   import { getErrorMessage } from '@/shared/lib/errors'
+   catch (error) {
+     logger.error('Failed', { error: getErrorMessage(error) })
+   }
+   ```
+
 ## ファイル配置
 
-| パス                                | 内容                                                                                                                                                            |
-| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@/shared/types/server-actions`     | `ActionResult`, `createSuccess`, `createFailure`, `isActionSuccess`                                                                                             |
-| `@/shared/lib/errors`               | `logError`, `createErrorLogger`, `safeFetch`, `criticalFetch`, `ErrorCategory`, `ErrorSeverity`, `normalizeError`, `getErrorMessage`, `ReservationOverlapError` |
-| `@/shared/lib/logger`               | `logger`（汎用ロガー）                                                                                                                                          |
-| `@/shared/lib/action-helpers`       | `createValidationError`, `withValidation`, `withTurnstile`, `withRetry`, `isTransientError`                                                                     |
-| `@/admin/lib/server-action-helpers` | `withPermission`, `withReadPermission`, `withRole`（HOF群）                                                                                                     |
-| `@/admin/lib/action-auth`           | `checkAdminAuth`, `checkPermission`, `checkResourceAccess`, `logAction`                                                                                         |
+| パス                                | 内容                                                                                                                                                                                  |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@/shared/types/server-actions`     | `ActionResult`, `createSuccess`, `createFailure`, `isActionSuccess`                                                                                                                   |
+| `@/shared/lib/errors`               | `ErrorCategory`, `ErrorSeverity`, `normalizeError`, `getErrorMessage`, `ReservationOverlapError`, `isReservationOverlapError`（クライアントセーフ — Client Component から import 可） |
+| `@/shared/lib/errors/server`        | `logError`, `createErrorLogger`, `safeFetch`, `criticalFetch`（サーバー専用）+ 上記を全て re-export。Server Actions / API Routes / `'use cache'` 関数で使用                           |
+| `@/shared/lib/logger`               | `logger`（汎用ロガー）                                                                                                                                                                |
+| `@/shared/lib/action-helpers`       | `createValidationError`, `withValidation`, `withTurnstile`, `withRetry`, `isTransientError`                                                                                           |
+| `@/admin/lib/server-action-helpers` | `withPermission`, `withReadPermission`, `withRole`（HOF群）                                                                                                                           |
+| `@/admin/lib/action-auth`           | `checkAdminAuth`, `checkPermission`, `checkResourceAccess`, `logAction`                                                                                                               |

@@ -3,8 +3,9 @@ name: verification
 description: >
   Build, type-check, and lint verification agent. Use proactively after code changes
   to run `bun run type-check`, `bun run lint`, or `bun run build` and analyze results.
-  Isolates verbose build output from the main conversation. Remembers common error
-  patterns and their fixes across sessions.
+  WARNING: May auto-fix code via lint --fix or similar; use Bash directly for read-only
+  checks. Isolates verbose build output from the main conversation. Remembers common
+  error patterns and their fixes across sessions.
 tools:
   - Bash
   - Read
@@ -62,12 +63,14 @@ Report results in this structure:
 When analyzing errors, watch for these project-specific issues:
 
 **TypeScript 6.0-beta patterns:**
+
 - **`noUncheckedIndexedAccess`**: Array index `arr[i]` and Record access `obj[key]` return `T | undefined`. Fix with guard (`if (!item) continue`), optional chaining (`arr[i]?.prop`), or nullish coalescing (`arr[i] ?? default`)
 - **`noUncheckedSideEffectImports`**: CSS module imports need `declare module '*.css' {}` in `src/shared/types/css.d.ts`
 - **TS2882**: Side-effect imports of non-module files may trigger this
 - **TS2352 with conditional types**: `as unknown as ActionSuccess<T>` pattern required for generic conditional type widening
 
 **General project patterns:**
+
 - **Type assertion errors**: Project bans `as` — suggest type guards (`isValid*` from `enums.ts`) or `satisfies`
 - **Zod 4 migration**: `message` parameter → `{ error: }` parameter
 - **React Compiler conflicts**: `useCallback` with `ref.current` — remove `useCallback`, use plain function
@@ -76,12 +79,14 @@ When analyzing errors, watch for these project-specific issues:
 - **Cache tags**: Must use `CACHE_TAGS.*` constants (magic strings cause lint errors)
 
 **Bun test patterns:**
+
 - **Vitest API is banned**: `vi.fn()` → `mock(() => ...)`, `vi.mock()` → `mock.module()`, `vi.spyOn()` → `spyOn()` — all from `bun:test`
 - `vi.restoreAllMocks()` does not exist in Bun — use `mock.restore()` (resets all mocks)
 
 ## Memory management
 
 Record in your memory:
+
 - Error patterns with their root causes and fixes
 - Build time trends (if notably slow)
 - Flaky test patterns
@@ -96,6 +101,7 @@ test-failures.md       — Test patterns that frequently break
 ```
 
 Format for error memory entries:
+
 ```
 ## [Error Code/Pattern]
 - Symptom: [what the error looks like]

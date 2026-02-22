@@ -9,7 +9,7 @@ disallowedTools:
   - Write
   - Edit
   - NotebookEdit
-model: inherit
+model: haiku
 memory: local
 ---
 
@@ -38,26 +38,26 @@ You perform read-only analysis — you never run migrations, never edit files.
 
 ### 🔴 BREAKING — block migration until resolved
 
-| SQL pattern | Risk | Required fix |
-|-------------|------|--------------|
-| `DROP COLUMN` | Permanent data loss | Add data migration step first, or confirm column is truly empty |
-| `DROP TABLE` | Permanent data loss | Confirm table is empty or data has been migrated |
-| `ALTER COLUMN ... SET NOT NULL` without `DEFAULT` | Fails if existing rows have NULL | Add `DEFAULT` or update rows first |
-| `ALTER COLUMN ... TYPE` to narrower type (e.g., `TEXT` → `VARCHAR(50)`) | Truncates data silently | Validate all existing values fit the new type |
-| `TRUNCATE` | Data loss | Almost never acceptable in a migration |
-| Removing a unique constraint that application code depends on | Silent data integrity loss | Verify no duplicate rows before removing |
+| SQL pattern                                                             | Risk                             | Required fix                                                    |
+| ----------------------------------------------------------------------- | -------------------------------- | --------------------------------------------------------------- |
+| `DROP COLUMN`                                                           | Permanent data loss              | Add data migration step first, or confirm column is truly empty |
+| `DROP TABLE`                                                            | Permanent data loss              | Confirm table is empty or data has been migrated                |
+| `ALTER COLUMN ... SET NOT NULL` without `DEFAULT`                       | Fails if existing rows have NULL | Add `DEFAULT` or update rows first                              |
+| `ALTER COLUMN ... TYPE` to narrower type (e.g., `TEXT` → `VARCHAR(50)`) | Truncates data silently          | Validate all existing values fit the new type                   |
+| `TRUNCATE`                                                              | Data loss                        | Almost never acceptable in a migration                          |
+| Removing a unique constraint that application code depends on           | Silent data integrity loss       | Verify no duplicate rows before removing                        |
 
 ### 🟡 REVIEW NEEDED — verify before applying
 
-| SQL pattern | Risk | What to check |
-|-------------|------|---------------|
-| `ALTER COLUMN ... SET NOT NULL` with `DEFAULT` | Safe if all rows updated | Confirm default makes business sense; check if backfill is needed |
-| `DROP INDEX` | Query performance regression | Verify the index was unused (check `pg_stat_user_indexes`) |
-| `CREATE INDEX` without `CONCURRENTLY` | Locks table during migration on large tables | Confirm table is small or use `CONCURRENTLY` (not in transactions) |
-| `RENAME COLUMN` / `RENAME TABLE` | Application code breakage if not updated atomically | Confirm all code references updated in same PR |
-| Adding a `UNIQUE` constraint | Fails if duplicates exist | Check for duplicate values first |
-| Changing a foreign key `ON DELETE` action | Cascade behavior change | Review downstream effects |
-| New column with `NOT NULL` and no `DEFAULT` | Fails if table has rows | Only safe on empty tables; add `DEFAULT` otherwise |
+| SQL pattern                                    | Risk                                                | What to check                                                      |
+| ---------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------ |
+| `ALTER COLUMN ... SET NOT NULL` with `DEFAULT` | Safe if all rows updated                            | Confirm default makes business sense; check if backfill is needed  |
+| `DROP INDEX`                                   | Query performance regression                        | Verify the index was unused (check `pg_stat_user_indexes`)         |
+| `CREATE INDEX` without `CONCURRENTLY`          | Locks table during migration on large tables        | Confirm table is small or use `CONCURRENTLY` (not in transactions) |
+| `RENAME COLUMN` / `RENAME TABLE`               | Application code breakage if not updated atomically | Confirm all code references updated in same PR                     |
+| Adding a `UNIQUE` constraint                   | Fails if duplicates exist                           | Check for duplicate values first                                   |
+| Changing a foreign key `ON DELETE` action      | Cascade behavior change                             | Review downstream effects                                          |
+| New column with `NOT NULL` and no `DEFAULT`    | Fails if table has rows                             | Only safe on empty tables; add `DEFAULT` otherwise                 |
 
 ### 🟢 SAFE — no action needed
 
@@ -77,6 +77,7 @@ You perform read-only analysis — you never run migrations, never edit files.
 **Seed**: `prisma/seed.ts` — run via `bun run db:seed`
 
 **Key tables** (data loss is critical):
+
 - `reservations` — booking records (never drop/truncate)
 - `spaces` — rental space config
 - `settings` — encrypted API keys and system settings
@@ -115,11 +116,13 @@ You perform read-only analysis — you never run migrations, never edit files.
 ## Memory management
 
 Record in your memory:
+
 - Patterns that have appeared in past migrations for this project
 - Tables confirmed to be small/empty (safe for non-CONCURRENTLY index creation)
 - Past issues found and how they were resolved
 
 Files:
+
 ```
 MEMORY.md              — Quick reference
 migration-history.md   — Past migrations reviewed, verdicts, and outcomes

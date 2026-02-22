@@ -9,6 +9,7 @@ tools:
   - Grep
   - Glob
   - Write
+  - Edit
   - Bash
 model: sonnet
 memory: project
