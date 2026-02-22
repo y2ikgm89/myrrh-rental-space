@@ -1476,18 +1476,9 @@ model Terms {
   type       TermsType
   title      String // 表示タイトル（例: "利用規約"）
   slug       String    @unique // URL用スラッグ（例: "terms-of-use"）
-  isSiteWide Boolean   @default(false) // サイト全体の規約か（true: 公開ページで表示）
   isActive   Boolean   @default(true) // 現在有効な規約か
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
-
-  // SEO/OGP設定（サイト全体規約用）
-  metaDescription String? // メタディスクリプション
-  metaKeywords    String? // メタキーワード
-  ogpTitle        String? // OGPタイトル
-  ogpDescription  String? // OGP説明
-  ogpImageUrl     String? // OGP画像URL
-
   // Relations
   versions   TermsVersion[]
   spaces     Space[] // この規約を使用するスペース
@@ -1495,7 +1486,6 @@ model Terms {
   settingsAsCancellation Settings[] @relation("CancellationPolicy") // キャンセルポリシーとして設定
 
   @@index([type, isActive])
-  @@index([type, isSiteWide])
   // @unique が自動的にインデックスを作成するため @@index([slug]) は不要
   @@map("terms")
 }

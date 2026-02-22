@@ -11,7 +11,6 @@ import {
   createTermsVersionSchema,
   publishTermsVersionSchema,
   updateTermsVersionSchema,
-  updateTermsSeoSchema,
   recordTermsAgreementSchema,
   getTermsForSpaceSchema,
   agreeToTermsSchema,
@@ -539,111 +538,6 @@ describe('getTermsTypeDefaults', () => {
   test('無効なtype値はnullを返す', () => {
     expect(getTermsTypeDefaults('INVALID')).toBeNull()
     expect(getTermsTypeDefaults('')).toBeNull()
-  })
-})
-
-// =============================================================================
-// updateTermsSeoSchema
-// =============================================================================
-
-describe('updateTermsSeoSchema', () => {
-  describe('正常系', () => {
-    test('空オブジェクトは許可', () => {
-      const result = updateTermsSeoSchema.safeParse({})
-      expect(result.success).toBe(true)
-    })
-
-    test('全フィールド指定も許可', () => {
-      const result = updateTermsSeoSchema.safeParse({
-        metaDescription: 'テスト説明',
-        metaKeywords: 'キーワード1,キーワード2',
-        ogpTitle: 'OGPタイトル',
-        ogpDescription: 'OGP説明',
-        ogpImageUrl: 'https://example.com/image.png',
-      })
-      expect(result.success).toBe(true)
-    })
-
-    test('ogpImageUrlが空文字列でも許可', () => {
-      const result = updateTermsSeoSchema.safeParse({
-        ogpImageUrl: '',
-      })
-      expect(result.success).toBe(true)
-    })
-  })
-
-  describe('metaDescription', () => {
-    test('160文字超過はエラー', () => {
-      const result = updateTermsSeoSchema.safeParse({
-        metaDescription: 'あ'.repeat(161),
-      })
-      expect(result.success).toBe(false)
-      if (!result.success) {
-        expect(result.error.issues[0].message).toContain('160文字以内')
-      }
-    })
-
-    test('160文字ちょうどは許可', () => {
-      const result = updateTermsSeoSchema.safeParse({
-        metaDescription: 'あ'.repeat(160),
-      })
-      expect(result.success).toBe(true)
-    })
-  })
-
-  describe('metaKeywords', () => {
-    test('200文字超過はエラー', () => {
-      const result = updateTermsSeoSchema.safeParse({
-        metaKeywords: 'あ'.repeat(201),
-      })
-      expect(result.success).toBe(false)
-      if (!result.success) {
-        expect(result.error.issues[0].message).toContain('200文字以内')
-      }
-    })
-  })
-
-  describe('ogpTitle', () => {
-    test('100文字超過はエラー', () => {
-      const result = updateTermsSeoSchema.safeParse({
-        ogpTitle: 'あ'.repeat(101),
-      })
-      expect(result.success).toBe(false)
-      if (!result.success) {
-        expect(result.error.issues[0].message).toContain('100文字以内')
-      }
-    })
-  })
-
-  describe('ogpDescription', () => {
-    test('200文字超過はエラー', () => {
-      const result = updateTermsSeoSchema.safeParse({
-        ogpDescription: 'あ'.repeat(201),
-      })
-      expect(result.success).toBe(false)
-      if (!result.success) {
-        expect(result.error.issues[0].message).toContain('200文字以内')
-      }
-    })
-  })
-
-  describe('ogpImageUrl', () => {
-    test('無効なURLはエラー', () => {
-      const result = updateTermsSeoSchema.safeParse({
-        ogpImageUrl: 'not-a-url',
-      })
-      expect(result.success).toBe(false)
-      if (!result.success) {
-        expect(result.error.issues[0].message).toContain('有効なURL')
-      }
-    })
-
-    test('有効なURLは許可', () => {
-      const result = updateTermsSeoSchema.safeParse({
-        ogpImageUrl: 'https://example.com/ogp.jpg',
-      })
-      expect(result.success).toBe(true)
-    })
   })
 })
 

@@ -10,7 +10,7 @@
 import { cacheLife, cacheTag } from 'next/cache'
 import { prisma } from '@/shared/lib/prisma'
 import { CACHE_TAGS, CACHE_LIFE } from '@/shared/lib/constants'
-import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
+import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors/server'
 import { isValidAnalyticsType } from '@/shared/lib/validations/enums'
 import type { AnalyticsType } from '@/shared/generated/prisma/enums'
 

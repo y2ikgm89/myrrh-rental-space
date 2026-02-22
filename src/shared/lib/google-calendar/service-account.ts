@@ -6,7 +6,7 @@ import {
   ErrorCategory,
   ErrorSeverity,
   normalizeError,
-} from "@/shared/lib/errors";
+} from "@/shared/lib/errors/server";
 import { safeDecrypt, encryptApiKey } from "@/shared/lib/crypto";
 import { prisma } from "@/shared/lib/prisma";
 

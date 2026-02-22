@@ -17,7 +17,7 @@
 
 import { updateTag } from 'next/cache'
 import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
-import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
+import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors/server'
 import { prisma, Prisma } from '@/shared/lib/prisma'
 import { STORAGE_BUCKETS } from '@/shared/lib/supabase'
 import { uploadFile, deleteFile, deleteFiles } from '@/shared/lib/storage'

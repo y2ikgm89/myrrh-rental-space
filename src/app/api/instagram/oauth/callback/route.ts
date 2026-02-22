@@ -18,7 +18,7 @@ import {
   exchangeForLongLivedToken,
   fetchInstagramUserInfo,
 } from '@/shared/lib/instagram'
-import { logError, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
+import { logError, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors/server'
 
 const STATE_COOKIE_NAME = 'instagram_oauth_state'
 

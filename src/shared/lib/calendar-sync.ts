@@ -18,7 +18,7 @@
 
 import 'server-only'
 import { prisma } from '@/shared/lib/prisma'
-import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
+import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors/server'
 import { fireAndForget } from '@/shared/lib/async-utils'
 import {
   createCalendarEvent,

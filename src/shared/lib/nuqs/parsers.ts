@@ -322,7 +322,7 @@ export async function loadAdminReservationSearchParams(
   return adminReservationSearchParamsCache.all();
 }
 
-const adminTermsTabs = ["list", "meta"] as const;
+const adminTermsTabs = ["list"] as const;
 
 /** 管理画面利用規約検索パラメータキャッシュ */
 const adminTermsSearchParamsCache = createSearchParamsCache({

@@ -3,23 +3,21 @@
 import { prisma } from "@/shared/lib/prisma";
 import { updateTag } from "next/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
-import { TermsStatus, TermsType } from "@/shared/generated/prisma/enums";
+import { TermsStatus } from "@/shared/generated/prisma/enums";
 import {
   createTermsSchema,
   updateTermsSchema,
   createTermsVersionSchema,
   updateTermsVersionSchema,
-  updateTermsSeoSchema,
   getTermsTypeDefaults,
   type CreateTermsInput,
   type UpdateTermsInput,
   type CreateTermsVersionInput,
   type UpdateTermsVersionInput,
-  type UpdateTermsSeoInput,
   type TermsWithVersion,
   type TermsDetail,
   type TermsVersionDetail,
-  type SiteWideTermsSeo,
+  type TermsAgreementItem,
 } from "@/shared/lib/validations/terms";
 import {
   createSuccess,
@@ -462,6 +460,21 @@ export const createTermsVersion = withPermission<
     return createValidationError(validation.error);
   }
 
+  // DRAFT バージョンが既に存在する場合はエラー（1規約につき DRAFT は1つまで）
+  const existingDraft = await prisma.termsVersion.findFirst({
+    where: {
+      termsId: validation.data.termsId,
+      status: TermsStatus.DRAFT,
+    },
+    select: { id: true },
+  });
+
+  if (existingDraft) {
+    return createFailure(
+      "下書きが既に存在します。先に公開または削除してください。",
+    );
+  }
+
   // 最新バージョン番号とHTML変換を並列取得
   const [latestVersion, contentHtml] = await Promise.all([
     prisma.termsVersion.findFirst({
@@ -672,79 +685,69 @@ export const deleteTermsVersion = withPermission<[string]>(
   return createSuccess("バージョンを削除しました");
 });
 
+
 // =============================================================================
-// Site-Wide Terms SEO Management
+// Terms Agreement Viewer
 // =============================================================================
+
+const AGREEMENTS_PER_PAGE = 20;
+
+// IPアドレスの末尾をマスク（例: 192.168.1.*** ）
+function maskIpAddress(ip: string | null): string | null {
+  if (!ip) return null;
+  const lastDot = ip.lastIndexOf(".");
+  if (lastDot === -1) return ip; // IPv6等は未対応→そのまま返す
+  return `${ip.slice(0, lastDot + 1)}***`;
+}
 
 /**
- * サイト全体規約のSEO情報を取得（利用規約ページ用）
+ * 同意記録一覧を取得（管理画面閲覧用）
  */
-export const getSiteWideTermsSeo = withPermission<[], SiteWideTermsSeo | null>(
-  "terms",
-  "read",
-)(async (_user): Promise<ActionResult<SiteWideTermsSeo | null>> => {
-  const terms = await prisma.terms.findFirst({
-    where: {
-      type: TermsType.TERMS_OF_USE,
-      isSiteWide: true,
-    },
-    select: {
-      id: true,
-      title: true,
-      metaDescription: true,
-      metaKeywords: true,
-      ogpTitle: true,
-      ogpDescription: true,
-      ogpImageUrl: true,
-    },
-  });
+export const getTermsAgreements = withPermission<
+  [string, number],
+  { agreements: TermsAgreementItem[]; total: number }
+>("terms", "read")(async (
+  _user,
+  termsId,
+  page,
+): Promise<ActionResult<{ agreements: TermsAgreementItem[]; total: number }>> => {
+  const skip = (page - 1) * AGREEMENTS_PER_PAGE;
 
-  return createSuccess("SEO情報を取得しました", toPlainObject(terms));
-});
+  const [rawAgreements, total] = await Promise.all([
+    prisma.termsAgreement.findMany({
+      where: { termsId },
+      orderBy: { agreedAt: "desc" },
+      skip,
+      take: AGREEMENTS_PER_PAGE,
+      select: {
+        id: true,
+        agreedAt: true,
+        guestName: true,
+        guestEmail: true,
+        reservationId: true,
+        ipAddress: true,
+        version: {
+          select: { version: true },
+        },
+        user: {
+          select: { name: true, email: true },
+        },
+      },
+    }),
+    prisma.termsAgreement.count({ where: { termsId } }),
+  ]);
 
-/**
- * サイト全体規約のSEO情報を更新
- */
-export const updateSiteWideTermsSeo = withPermission<[UpdateTermsSeoInput]>(
-  "terms",
-  "update",
-)(async (_user, input): Promise<ActionResult<void>> => {
-  const validation = updateTermsSeoSchema.safeParse(input);
-  if (!validation.success) {
-    return createValidationError(validation.error);
-  }
+  const agreements: TermsAgreementItem[] = rawAgreements.map((a) => ({
+    id: a.id,
+    agreedAt: a.agreedAt.toISOString(),
+    version: a.version.version,
+    guestName: a.guestName,
+    guestEmail: a.guestEmail,
+    userName: a.user?.name ?? null,
+    userEmail: a.user?.email ?? null,
+    reservationId: a.reservationId,
+    ipAddress: maskIpAddress(a.ipAddress),
+  }));
 
-  const terms = await prisma.terms.findFirst({
-    where: {
-      type: TermsType.TERMS_OF_USE,
-      isSiteWide: true,
-    },
-    select: { id: true },
-  });
-
-  if (!terms) {
-    return createFailure("サイト全体の利用規約が見つかりません");
-  }
-
-  await prisma.terms.update({
-    where: { id: terms.id },
-    data: {
-      metaDescription: validation.data.metaDescription || null,
-      metaKeywords: validation.data.metaKeywords || null,
-      ogpTitle: validation.data.ogpTitle || null,
-      ogpDescription: validation.data.ogpDescription || null,
-      ogpImageUrl: validation.data.ogpImageUrl || null,
-    },
-  });
-
-  updateTag(CACHE_TAGS.TERMS);
-
-  // Cloudflare CDN キャッシュパージ
-  fireAndForget(purgeTermsCache(), {
-    operation: "purgeTermsCache",
-    category: ErrorCategory.EXTERNAL_API,
-    severity: ErrorSeverity.LOW,
-  });
-
-  return createSuccess("SEO設定を更新しました");
+  return createSuccess("同意記録を取得しました", { agreements, total });
 });

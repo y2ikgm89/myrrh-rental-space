@@ -9,7 +9,7 @@
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/shared/lib/prisma'
-import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
+import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors/server'
 
 /**
  * Health check endpoint for Cloud Run / Load Balancer

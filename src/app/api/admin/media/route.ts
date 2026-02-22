@@ -16,7 +16,7 @@ import { uploadFile } from '@/shared/lib/storage'
 import { canAccessAdmin, hasPermission } from '@/admin/lib/permissions'
 import { parseStringArray } from '@/shared/lib/json-validators'
 import { isValidMediaType, isValidMediaUsage } from '@/shared/lib/validations/enums'
-import { logError, normalizeError, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
+import { logError, normalizeError, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors/server'
 
 type MediaWithUploader = Prisma.MediaGetPayload<{
   include: { uploader: { select: { id: true; name: true } } }

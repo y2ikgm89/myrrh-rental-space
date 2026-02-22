@@ -20,7 +20,7 @@
 
 import { supabase, isSupabaseConfigured, STORAGE_BUCKETS, type StorageBucket } from './supabase'
 import { v4 as uuid } from 'uuid'
-import { logError, ErrorCategory, ErrorSeverity, normalizeError } from './errors'
+import { logError, ErrorCategory, ErrorSeverity, normalizeError } from './errors/server'
 
 // =============================================================================
 // Types

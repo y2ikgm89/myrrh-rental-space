@@ -27,7 +27,7 @@ import {
   randomBytes,
   createHmac,
 } from "crypto";
-import { logError, ErrorCategory, ErrorSeverity } from "./errors";
+import { logError, ErrorCategory, ErrorSeverity } from "./errors/server";
 
 const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 12;

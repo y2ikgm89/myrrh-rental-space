@@ -15,7 +15,7 @@
 
 import 'server-only'
 import { BetaAnalyticsDataClient } from '@google-analytics/data'
-import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
+import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors/server'
 import { serverEnv } from '@/shared/lib/env/server'
 
 // =============================================================================

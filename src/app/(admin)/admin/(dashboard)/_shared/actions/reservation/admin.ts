@@ -7,7 +7,7 @@ import {
   ErrorSeverity,
   ReservationOverlapError,
   isReservationOverlapError,
-} from "@/shared/lib/errors";
+} from "@/shared/lib/errors/server";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { updateTag } from "next/cache";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";

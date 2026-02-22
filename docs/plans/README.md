@@ -24,6 +24,24 @@
 
 ## 完了した計画
 
+### 2026-02-22 - 利用規約管理リデザイン ✅
+
+Terms モデルの未使用 SEO フィールド削除・DRAFT 1本制約・同意記録閲覧タブの追加。
+
+**実装内容**:
+
+- [x] Task 1: Prisma migration — `isSiteWide` / SEO フィールド 6本 + インデックス削除
+- [x] Task 2: SEO 関連コード削除（`TermsSeoForm.tsx`, `getSiteWideTermsSeo`, `updateSiteWideTermsSeo`）
+- [x] Task 3: `terms/page.tsx` — メタ情報タブ廃止・シンプル一覧ページに変更
+- [x] Task 4: `createTermsVersion` に DRAFT 1本制約を追加
+- [x] Task 5: `TermsInlineEditor` — DRAFT 存在時に「新規バージョン作成」無効化・ARCHIVED ラベル追加
+- [x] Task 6: `getTermsAgreements` Server Action 新規作成（IPアドレスマスク付き）
+- [x] Task 7: `TermsAgreementsTab` コンポーネント新規作成（ページネーション付き）
+- [x] Task 8: `terms/[id]/edit/page.tsx` — 「編集」「同意記録」タブ付きレイアウトに変更
+- [x] Task 9: `bun run validate && bun run build` 全通過
+
+---
+
 ### 2026-02-20 - コード品質修正（Context API / エラーハンドリング / Date 型 / Tailwind） ✅
 
 React 19 best practices 準拠 + エラーハンドリング強化。

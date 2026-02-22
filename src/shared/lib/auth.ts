@@ -38,7 +38,7 @@ import { prisma, Role } from './prisma'
 import { AuditAction } from '@/shared/generated/prisma/enums'
 import { SESSION_CONFIG, getAppUrl } from './constants'
 import { isRecord } from './serialize'
-import { logError, ErrorCategory, ErrorSeverity, normalizeError } from './errors'
+import { logError, ErrorCategory, ErrorSeverity, normalizeError } from './errors/server'
 import { serverEnv } from './env/server'
 import type { GoogleOAuthCredentials } from './google-oauth-credentials'
 

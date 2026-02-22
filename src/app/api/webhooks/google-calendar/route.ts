@@ -18,7 +18,7 @@ import { CACHE_TAGS, CACHE_LIFE, getCacheTag } from '@/shared/lib/constants'
 import { prisma } from '@/shared/lib/prisma'
 import { syncFromCalendar } from '@/shared/lib/calendar-sync'
 import { isTwoWaySyncEnabled, getTwoWaySyncSettings } from '@/shared/lib/google-calendar'
-import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
+import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors/server'
 import { CalendarSyncMethod } from '@/shared/generated/prisma/enums'
 
 /**

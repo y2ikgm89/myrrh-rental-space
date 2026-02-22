@@ -13,7 +13,7 @@ import { cacheLife, cacheTag } from 'next/cache'
 import type { Metadata } from 'next'
 import { prisma } from '@/shared/lib/prisma'
 import { CACHE_TAGS, CACHE_LIFE, getBaseUrl, SITE_DEFAULTS } from '@/shared/lib/constants'
-import { safeFetch, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
+import { safeFetch, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors/server'
 import { toPlainObject } from '@/shared/lib/serialize'
 import { getSeoSettings } from '@/public/lib/seo/metadata-factory'
 import {

@@ -7,7 +7,7 @@
 
 import { cacheLife, cacheTag } from 'next/cache'
 import { prisma } from '@/shared/lib/prisma'
-import { safeFetch, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
+import { safeFetch, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors/server'
 import { getBaseUrl, SITE_DEFAULTS, CACHE_TAGS, CACHE_LIFE } from '@/shared/lib/constants'
 import { isRecord, toPlainObject } from '@/shared/lib/serialize'
 

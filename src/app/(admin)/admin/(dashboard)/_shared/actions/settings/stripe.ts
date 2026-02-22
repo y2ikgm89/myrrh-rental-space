@@ -18,7 +18,7 @@ import { stripeSettingsSchema, type StripeSettingsInput } from '@/admin/lib/vali
 import { getSession, getRoleFromSession } from '@/shared/lib/auth'
 import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'
 import { logPermissionDenied } from '@/admin/lib/audit'
-import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
+import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors/server'
 
 // =============================================================================
 // Helper Functions

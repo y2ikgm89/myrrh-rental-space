@@ -22,7 +22,7 @@ import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
 import { prisma } from '@/shared/lib/prisma'
 import { verifyAdminSession } from '@/shared/lib/auth'
 import { toCommentAuthor, type CommentAuthor } from '@/shared/lib/validations/comment'
-import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
+import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors/server'
 import { withPermission } from '@/admin/lib/server-action-helpers'
 import { createSuccess, createFailure } from '@/admin/types/server-actions'
 
