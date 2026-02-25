@@ -207,7 +207,7 @@ export function MediaDetailDialog({ item, onClose }: Props) {
                     />
                     <InfoRow
                       label="アップロード者"
-                      value={item.uploader.name}
+                      value={item.uploader?.name ?? '削除済みユーザー'}
                     />
                   </div>
 

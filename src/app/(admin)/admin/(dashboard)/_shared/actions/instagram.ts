@@ -26,7 +26,7 @@ import {
   getTokenExpiryDays,
   shouldRefreshToken,
 } from '@/shared/lib/instagram'
-import { InstagramFeedLayout } from '@/shared/generated/prisma/enums'
+import { InstagramFeedLayout, InstagramMediaType } from '@/shared/generated/prisma/enums'
 import { getValidInstagramFeedLayout } from '@/shared/lib/validations/enums'
 
 // =============================================================================
@@ -362,7 +362,7 @@ export const addInstagramPost = withPermission<[string], void>(
       data: {
         postId: shortcode,
         postUrl: parsed.data,
-        mediaType: 'IMAGE', // デフォルト値、oEmbed取得時に更新
+        mediaType: InstagramMediaType.IMAGE, // デフォルト値、oEmbed取得時に更新
         permalink: parsed.data,
         sortOrder: nextOrder,
       },

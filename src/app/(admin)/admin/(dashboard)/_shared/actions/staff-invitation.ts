@@ -18,7 +18,7 @@
  */
 
 import { randomBytes } from 'crypto'
-import { prisma } from '@/shared/lib/prisma'
+import { prisma, Prisma } from '@/shared/lib/prisma'
 import { updateTag } from 'next/cache'
 import { CACHE_TAGS } from '@/shared/lib/constants'
 import { sendStaffInvitationEmail } from '@/shared/lib/email-service'
@@ -101,18 +101,31 @@ export const sendInvitation = withPermission<[CreateInvitationInput], Invitation
     return createFailure('このメールアドレスには既に有効な招待が存在します。再送する場合は一度削除してください。')
   }
 
-  // 招待作成
+  // 招待作成（Partial Unique Index による重複防止: race condition 対応）
   const token = generateToken()
-  const invitation = await prisma.staffInvitation.create({
-    data: {
-      email,
-      token,
-      role,
-      name,
-      expiresAt: getExpiryDate(),
-      createdBy: user.id,
-    },
-  })
+  let invitation: Awaited<ReturnType<typeof prisma.staffInvitation.create>>
+  try {
+    invitation = await prisma.staffInvitation.create({
+      data: {
+        email,
+        token,
+        role,
+        name,
+        expiresAt: getExpiryDate(),
+        createdBy: user.id,
+      },
+    })
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return createFailure('このメールアドレスには既に有効な招待が存在します。再送する場合は一度削除してください。')
+    }
+    logError(error, {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.HIGH,
+      context: { operation: 'createStaffInvitation', email },
+    })
+    return createFailure('招待の作成に失敗しました')
+  }
 
   // 招待メール送信
   const setupUrl = `${getAppUrl()}/admin/setup/${token}`

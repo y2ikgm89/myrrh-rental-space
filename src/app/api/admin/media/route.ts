@@ -39,10 +39,9 @@ function transformMedia(media: MediaWithUploader) {
     tags: parseStringArray(media.tags),
     createdAt: media.createdAt,
     updatedAt: media.updatedAt,
-    uploader: {
-      id: media.uploader.id,
-      name: media.uploader.name,
-    },
+    uploader: media.uploader
+      ? { id: media.uploader.id, name: media.uploader.name }
+      : null,
   }
 }
 

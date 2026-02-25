@@ -215,6 +215,12 @@ enum InstagramFeedLayout {
   slider
 }
 
+enum InstagramMediaType {
+  IMAGE
+  VIDEO
+  CAROUSEL_ALBUM
+}
+
 // ==============================================
 // Better Auth Models
 // ==============================================
@@ -1277,7 +1283,7 @@ model InstagramPost {
   mediaUrl     String? // メディアURL
   thumbnailUrl String? // サムネイルURL
   caption      String?  @db.Text // キャプション
-  mediaType    String // IMAGE, VIDEO, CAROUSEL_ALBUM
+  mediaType    InstagramMediaType
   permalink    String // 永続リンク
   sortOrder    Int      @default(0)
   createdAt    DateTime @default(now())
@@ -1434,13 +1440,13 @@ model Media {
   tags        Json       @default("[]") // タグ配列
 
   // 管理情報
-  uploadedBy String // アップロードユーザーID
+  uploadedBy String? // アップロードユーザーID（User削除時にnull化）
   isActive   Boolean  @default(true) // ソフトデリート
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   // Relations
-  uploader User @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
+  uploader User? @relation(fields: [uploadedBy], references: [id], onDelete: SetNull)
 
   @@index([type, usage])
   @@index([uploadedBy])

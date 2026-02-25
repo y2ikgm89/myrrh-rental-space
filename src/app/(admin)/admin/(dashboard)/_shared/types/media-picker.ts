@@ -33,7 +33,7 @@ export type MediaData = {
   uploader: {
     id: string
     name: string
-  }
+  } | null
 }
 
 /**

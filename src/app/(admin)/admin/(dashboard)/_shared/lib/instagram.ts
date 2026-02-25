@@ -9,14 +9,15 @@ import { z } from 'zod'
 import type { ApiKeyTestResult } from '@/admin/types/api-keys'
 import { isValidInstagramToken } from '@/admin/lib/validations/instagram'
 import { maskApiKey } from '@/admin/lib/api-keys/helpers'
+import { InstagramMediaType } from '@/shared/generated/prisma/enums'
+
+export type { InstagramMediaType }
 
 // =============================================================================
 // Types
 // =============================================================================
 
-export type InstagramMediaType = 'IMAGE' | 'VIDEO' | 'CAROUSEL_ALBUM'
-
-const VALID_MEDIA_TYPES: ReadonlySet<string> = new Set(['IMAGE', 'VIDEO', 'CAROUSEL_ALBUM'])
+const VALID_MEDIA_TYPES: ReadonlySet<string> = new Set(Object.values(InstagramMediaType))
 
 function isValidMediaType(value: unknown): value is InstagramMediaType {
   return typeof value === 'string' && VALID_MEDIA_TYPES.has(value)
