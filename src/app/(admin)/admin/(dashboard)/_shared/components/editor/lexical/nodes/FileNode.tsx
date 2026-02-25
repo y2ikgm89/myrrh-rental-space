@@ -8,6 +8,7 @@
 
 import type { ReactElement } from "react";
 import type {
+  DOMConversionMap,
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
@@ -137,6 +138,30 @@ export class FileNode extends DecoratorNode<ReactElement> {
         { flat: true, stateConfig: fileMimeState },
       ],
     });
+  }
+
+  static override importDOM(): DOMConversionMap | null {
+    return {
+      a: (domNode) => {
+        if (
+          !(domNode instanceof HTMLElement) ||
+          !domNode.hasAttribute("data-file")
+        )
+          return null;
+        return {
+          conversion: (element) => {
+            const node = $createFileNode({
+              url: element.getAttribute("href") ?? "",
+              fileName: element.getAttribute("data-file-name") ?? "",
+              fileSize: Number(element.getAttribute("data-file-size") ?? 0),
+              mime: element.getAttribute("data-file-mime") ?? "",
+            });
+            return { node };
+          },
+          priority: 2,
+        };
+      },
+    };
   }
 
   override createDOM(_config: EditorConfig): HTMLElement {

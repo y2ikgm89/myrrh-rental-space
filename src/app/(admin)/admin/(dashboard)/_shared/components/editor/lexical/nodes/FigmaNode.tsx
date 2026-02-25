@@ -8,6 +8,7 @@
 
 import type { ReactElement } from "react";
 import type {
+  DOMConversionMap,
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
@@ -100,6 +101,29 @@ export class FigmaNode extends DecoratorNode<ReactElement> {
         { flat: true, stateConfig: figmaLabelState },
       ],
     });
+  }
+
+  static override importDOM(): DOMConversionMap | null {
+    return {
+      div: (domNode) => {
+        if (
+          !(domNode instanceof HTMLElement) ||
+          !domNode.hasAttribute("data-figma")
+        )
+          return null;
+        return {
+          conversion: (element) => {
+            const iframe = element.querySelector("iframe");
+            const node = $createFigmaNode({
+              embedUrl: iframe?.getAttribute("src") ?? "",
+              label: element.getAttribute("data-figma-label") ?? "",
+            });
+            return { node };
+          },
+          priority: 2,
+        };
+      },
+    };
   }
 
   override createDOM(_config: EditorConfig): HTMLElement {

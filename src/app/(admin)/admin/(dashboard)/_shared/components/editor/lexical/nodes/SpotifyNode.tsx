@@ -7,7 +7,12 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { DOMExportOutput, EditorConfig, NodeKey } from "lexical";
+import type {
+  DOMConversionMap,
+  DOMExportOutput,
+  EditorConfig,
+  NodeKey,
+} from "lexical";
 import {
   $create,
   $getState,
@@ -133,6 +138,30 @@ export class SpotifyNode extends DecoratorNode<ReactElement> {
         { flat: true, stateConfig: spotifyContentTypeState },
       ],
     });
+  }
+
+  static override importDOM(): DOMConversionMap | null {
+    return {
+      div: (domNode) => {
+        if (
+          !(domNode instanceof HTMLElement) ||
+          !domNode.hasAttribute("data-spotify")
+        )
+          return null;
+        return {
+          conversion: (element) => {
+            const iframe = element.querySelector("iframe");
+            const rawType = element.getAttribute("data-spotify-type") ?? "";
+            const node = $createSpotifyNode({
+              embedUrl: iframe?.getAttribute("src") ?? "",
+              contentType: isSpotifyContentType(rawType) ? rawType : "track",
+            });
+            return { node };
+          },
+          priority: 2,
+        };
+      },
+    };
   }
 
   override createDOM(_config: EditorConfig): HTMLElement {

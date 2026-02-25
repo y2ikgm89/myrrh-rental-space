@@ -8,6 +8,7 @@
 
 import type { ReactElement } from "react";
 import type {
+  DOMConversionMap,
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
@@ -91,6 +92,30 @@ export class AudioNode extends DecoratorNode<ReactElement> {
         { flat: true, stateConfig: audioArtistState },
       ],
     });
+  }
+
+  static override importDOM(): DOMConversionMap | null {
+    return {
+      div: (domNode) => {
+        if (
+          !(domNode instanceof HTMLElement) ||
+          !domNode.hasAttribute("data-audio")
+        )
+          return null;
+        return {
+          conversion: (element) => {
+            const audio = element.querySelector("audio");
+            const node = $createAudioNode({
+              url: audio?.getAttribute("src") ?? "",
+              title: element.getAttribute("data-audio-title") ?? "",
+              artist: element.getAttribute("data-audio-artist") ?? "",
+            });
+            return { node };
+          },
+          priority: 2,
+        };
+      },
+    };
   }
 
   override createDOM(_config: EditorConfig): HTMLElement {

@@ -7,7 +7,7 @@
 
 "use client";
 
-import type { EditorConfig } from "lexical";
+import type { DOMConversionMap, EditorConfig } from "lexical";
 import {
   $create,
   $getState,
@@ -52,6 +52,34 @@ export class GalleryContainerNode extends ElementNode {
         { flat: true, stateConfig: galleryStyleState },
       ],
     });
+  }
+
+  static override importDOM(): DOMConversionMap | null {
+    return {
+      div: (domNode) => {
+        if (
+          !(domNode instanceof HTMLElement) ||
+          !domNode.hasAttribute("data-gallery")
+        )
+          return null;
+        return {
+          conversion: (element) => {
+            const cols = Number(element.getAttribute("data-gallery-columns"));
+            const style = element.getAttribute("data-gallery-style");
+            const node = $createGalleryContainerNode(
+              cols === 2 || cols === 3 || cols === 4 ? cols : 3,
+            );
+            $setState(
+              node,
+              galleryStyleState,
+              style === "masonry" ? "masonry" : "grid",
+            );
+            return { node };
+          },
+          priority: 2,
+        };
+      },
+    };
   }
 
   override isShadowRoot(): boolean {
@@ -138,6 +166,29 @@ export class GalleryItemNode extends ElementNode {
     });
   }
 
+  static override importDOM(): DOMConversionMap | null {
+    return {
+      figure: (domNode) => {
+        if (
+          !(domNode instanceof HTMLElement) ||
+          !domNode.hasAttribute("data-gallery-item")
+        )
+          return null;
+        return {
+          conversion: (element) => {
+            const node = $createGalleryItemNode({
+              src: element.getAttribute("data-src") ?? "",
+              alt: element.getAttribute("data-alt") ?? "",
+              caption: element.getAttribute("data-caption") ?? "",
+            });
+            return { node, after: () => [] };
+          },
+          priority: 2,
+        };
+      },
+    };
+  }
+
   override isShadowRoot(): boolean {
     return true;
   }
@@ -155,6 +206,12 @@ export class GalleryItemNode extends ElementNode {
   override exportDOM() {
     const figure = document.createElement("figure");
     figure.setAttribute("data-gallery-item", "true");
+    figure.setAttribute("data-src", $getState(this, galleryItemSrcState));
+    figure.setAttribute("data-alt", $getState(this, galleryItemAltState));
+    figure.setAttribute(
+      "data-caption",
+      $getState(this, galleryItemCaptionState),
+    );
     const img = document.createElement("img");
     img.setAttribute("src", $getState(this, galleryItemSrcState));
     img.setAttribute("alt", $getState(this, galleryItemAltState));
