@@ -5,7 +5,6 @@
  */
 
 import { Suspense } from "react";
-import Link from "next/link";
 import { getPosts, getPostCategories, getPostTags } from "@/admin/actions/post";
 import {
   getAdminComments,
@@ -14,19 +13,13 @@ import {
 } from "@/admin/actions/post-comment";
 import { PostFilters } from "./_components/PostFilters";
 import { PostTable } from "./_components/PostTable";
+import { PostsManagementTabs } from "./_components/PostsManagementTabs";
 import { CategoryManager } from "./taxonomy/_components/CategoryManager";
 import { TagManager } from "./taxonomy/_components/TagManager";
 import { CommentFilters } from "./comments/_components/CommentFilters";
 import { CommentTable } from "./comments/_components/CommentTable";
 import { CommentStats } from "./comments/_components/CommentStats";
-import {
-  Button,
-  Pagination,
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from "@/admin/components/ui";
+import { Pagination } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
 import { parsePostStatusFilter } from "@/shared/lib/validations/enums";
 import { createTypeGuard } from "@/shared/lib/serialize";
@@ -144,91 +137,52 @@ async function CommentList({ searchParams }: { searchParams: SearchParams }) {
 
 export default async function PostsPage({ searchParams }: PageProps) {
   await connection();
-  const params = await loadAdminPostSearchParams(searchParams);
-  const currentTab = params.tab;
 
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">投稿管理</h1>
-          <p className="text-sm text-muted-foreground sm:text-base">
-            投稿・カテゴリー・タグ・コメントを管理します
-          </p>
-        </div>
-        {currentTab === "posts" && (
-          <Button asChild className="min-h-10 sm:min-h-9">
-            <Link href="/admin/posts/new">新規作成</Link>
-          </Button>
-        )}
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">
+          投稿管理
+        </h1>
+        <p className="text-sm text-muted-foreground sm:text-base">
+          投稿・カテゴリー・タグ・コメントを管理します
+        </p>
       </div>
 
-      {/* タブ */}
-      <Tabs defaultValue={currentTab} className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="posts" asChild>
-            <Link href="/admin/posts?tab=posts">記事一覧</Link>
-          </TabsTrigger>
-          <TabsTrigger value="categories" asChild>
-            <Link href="/admin/posts?tab=categories">カテゴリー</Link>
-          </TabsTrigger>
-          <TabsTrigger value="tags" asChild>
-            <Link href="/admin/posts?tab=tags">タグ</Link>
-          </TabsTrigger>
-          <TabsTrigger value="comments" asChild>
-            <Link href="/admin/posts?tab=comments">コメント</Link>
-          </TabsTrigger>
-        </TabsList>
-
-        {/* 記事一覧タブ */}
-        <TabsContent value="posts" className="space-y-6">
-          <Suspense fallback={<LoadingState variant="inline" />}>
-            <PostFiltersWrapper />
-          </Suspense>
-          <Suspense fallback={<LoadingState />}>
-            <PostList searchParams={searchParams} />
-          </Suspense>
-        </TabsContent>
-
-        {/* カテゴリータブ */}
-        <TabsContent value="categories">
+      <PostsManagementTabs
+        postsContent={
+          <div className="space-y-6">
+            <Suspense fallback={<LoadingState variant="inline" />}>
+              <PostFiltersWrapper />
+            </Suspense>
+            <Suspense fallback={<LoadingState />}>
+              <PostList searchParams={searchParams} />
+            </Suspense>
+          </div>
+        }
+        categoriesContent={
           <Suspense fallback={<LoadingState />}>
             <CategoryContent />
           </Suspense>
-        </TabsContent>
-
-        {/* タグタブ */}
-        <TabsContent value="tags">
+        }
+        tagsContent={
           <Suspense fallback={<LoadingState />}>
             <TagContent />
           </Suspense>
-        </TabsContent>
-
-        {/* コメントタブ */}
-        <TabsContent value="comments" className="space-y-6">
-          <Suspense
-            fallback={
-              <div className="grid gap-4 md:grid-cols-3">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="rounded-lg border bg-card p-4">
-                    <div className="animate-pulse space-y-2">
-                      <div className="h-4 bg-muted rounded w-20" />
-                      <div className="h-8 bg-muted rounded w-16" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            }
-          >
-            <CommentStatsWrapper />
-          </Suspense>
-          <CommentFilters />
-          <Suspense fallback={<LoadingState />}>
-            <CommentList searchParams={searchParams} />
-          </Suspense>
-        </TabsContent>
-      </Tabs>
+        }
+        commentsContent={
+          <div className="space-y-6">
+            <Suspense fallback={<LoadingState />}>
+              <CommentStatsWrapper />
+            </Suspense>
+            <CommentFilters />
+            <Suspense fallback={<LoadingState />}>
+              <CommentList searchParams={searchParams} />
+            </Suspense>
+          </div>
+        }
+      />
     </div>
   );
 }

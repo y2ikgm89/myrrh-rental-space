@@ -5,20 +5,13 @@
  */
 
 import { Suspense } from "react";
-import Link from "next/link";
 import { getNewsList } from "@/admin/actions/news";
 import { getPageBySlug } from "@/admin/actions/page";
 import { NewsFilters } from "./_components/NewsFilters";
 import { NewsTable } from "./_components/NewsTable";
+import { NewsManagementTabs } from "./_components/NewsManagementTabs";
 import { ListPageSeoForm } from "@/admin/components/ListPageSeoForm";
-import {
-  Button,
-  Pagination,
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from "@/admin/components/ui";
+import { Pagination } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
 import { parseNewsStatusFilter } from "@/shared/lib/validations/enums";
 import { loadAdminNewsSearchParams } from "@/shared/lib/nuqs";
@@ -69,7 +62,7 @@ async function SeoContent() {
 
   if (!page) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
+      <div className="py-8 text-center text-muted-foreground">
         お知らせページのメタ情報が見つかりません。
         <br />
         シードデータを再実行するか、管理者にお問い合わせください。
@@ -98,54 +91,36 @@ async function SeoContent() {
 
 export default async function NewsPage({ searchParams }: PageProps) {
   await connection();
-  const params = await loadAdminNewsSearchParams(searchParams);
-  const currentTab = params.tab;
 
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">お知らせ管理</h1>
-          <p className="text-sm text-muted-foreground sm:text-base">
-            お知らせの作成・編集・公開管理を行います
-          </p>
-        </div>
-        {currentTab === "posts" && (
-          <Button asChild className="min-h-10 sm:min-h-9">
-            <Link href="/admin/news/new">新規作成</Link>
-          </Button>
-        )}
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">
+          お知らせ管理
+        </h1>
+        <p className="text-sm text-muted-foreground sm:text-base">
+          お知らせの作成・編集・公開管理を行います
+        </p>
       </div>
 
-      {/* タブ */}
-      <Tabs defaultValue={currentTab} className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="posts" asChild>
-            <Link href="/admin/news?tab=posts">記事一覧</Link>
-          </TabsTrigger>
-          <TabsTrigger value="meta" asChild>
-            <Link href="/admin/news?tab=meta">メタ情報</Link>
-          </TabsTrigger>
-        </TabsList>
-
-        {/* 記事一覧タブ */}
-        <TabsContent value="posts" className="space-y-6">
-          <Suspense fallback={<LoadingState variant="inline" />}>
-            <NewsFilters />
-          </Suspense>
-          <Suspense fallback={<LoadingState />}>
-            <NewsList searchParams={searchParams} />
-          </Suspense>
-        </TabsContent>
-
-        {/* SEOタブ */}
-        <TabsContent value="meta">
+      <NewsManagementTabs
+        postsContent={
+          <div className="space-y-6">
+            <Suspense fallback={<LoadingState variant="inline" />}>
+              <NewsFilters />
+            </Suspense>
+            <Suspense fallback={<LoadingState />}>
+              <NewsList searchParams={searchParams} />
+            </Suspense>
+          </div>
+        }
+        seoContent={
           <Suspense fallback={<LoadingState />}>
             <SeoContent />
           </Suspense>
-        </TabsContent>
-      </Tabs>
+        }
+      />
     </div>
   );
 }
