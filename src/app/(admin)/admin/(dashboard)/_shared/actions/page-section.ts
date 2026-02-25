@@ -12,9 +12,7 @@ import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
 import { createSuccess, createFailure } from '@/admin/types/server-actions'
 import { createValidationError } from '@/shared/lib/action-helpers'
 import { withPermission } from '@/admin/lib/server-action-helpers'
-import { getSession, getRoleFromSession } from '@/shared/lib/auth'
-import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'
-import { logPermissionDenied } from '@/admin/lib/audit'
+import { checkReadPermissionFor } from '@/admin/lib/permissions'
 import { renderEditorStateToHtmlLazy } from '@/admin/lib/lazy-renderer'
 import {
   SectionType,
@@ -88,18 +86,7 @@ export type PageForEdit = {
 // Helper Functions
 // =============================================================================
 
-async function checkReadPermission(): Promise<boolean> {
-  const session = await getSession()
-  if (!session?.user) return false
-  const role = getRoleFromSession(session)
-  if (!role) return false
-  if (!canAccessAdmin(role)) return false
-  if (!hasPermission(role, 'page', 'read')) {
-    void logPermissionDenied(session.user.id, 'page', 'read')
-    return false
-  }
-  return true
-}
+const checkReadPermission = checkReadPermissionFor('page')
 
 function revalidatePages(pageId?: string) {
   updateTag(CACHE_TAGS.SECTIONS)

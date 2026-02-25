@@ -13,7 +13,7 @@ import { createSuccess, createFailure } from '@/admin/types/server-actions'
 import { createValidationError } from '@/shared/lib/action-helpers'
 import { withPermission } from '@/admin/lib/server-action-helpers'
 import { encrypt, safeDecrypt } from '@/shared/lib/crypto'
-import { verifyAdminSession } from '@/shared/lib/auth'
+import { checkReadPermissionFor } from '@/admin/lib/permissions'
 import {
   instagramSettingsSchema,
   instagramTokenSchema,
@@ -62,6 +62,8 @@ export type InstagramPostData = {
 // Helpers
 // =============================================================================
 
+const checkReadPermission = checkReadPermissionFor('settings')
+
 function getMetadataString(
   metadata: Record<string, unknown> | undefined,
   key: string,
@@ -78,7 +80,22 @@ function getMetadataString(
  * Instagram設定を取得
  */
 export async function getInstagramConfig(): Promise<InstagramConfig> {
-  await verifyAdminSession()
+  if (!(await checkReadPermission())) {
+    return {
+      isConnected: false,
+      username: null,
+      accountType: null,
+      tokenExpiresAt: null,
+      tokenExpiryDays: null,
+      shouldRefreshToken: false,
+      feedEnabled: false,
+      feedLayout: InstagramFeedLayout.grid,
+      feedColumns: 4,
+      feedMaxItems: 8,
+      showCaption: false,
+      showViewAll: true,
+    }
+  }
 
   const settings = await prisma.settings.findUnique({
     where: { id: 'singleton' },
@@ -129,7 +146,7 @@ export async function getInstagramConfig(): Promise<InstagramConfig> {
  * 手動選択されたInstagram投稿を取得
  */
 export async function getInstagramPosts(): Promise<InstagramPostData[]> {
-  await verifyAdminSession()
+  if (!(await checkReadPermission())) return []
 
   const posts = await prisma.instagramPost.findMany({
     orderBy: { sortOrder: 'asc' },
@@ -414,7 +431,7 @@ export const reorderInstagramPosts = withPermission<[string[]], void>(
  * 保存されたアクセストークンを復号化して取得（内部使用）
  */
 export async function getDecryptedInstagramToken(): Promise<string | null> {
-  await verifyAdminSession()
+  if (!(await checkReadPermission())) return null
 
   const settings = await prisma.settings.findUnique({
     where: { id: 'singleton' },

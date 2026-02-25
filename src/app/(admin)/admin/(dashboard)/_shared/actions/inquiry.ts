@@ -52,7 +52,7 @@ export type InquiryPagination = {
 
 const updateStatusSchema = z.object({
   id: z.string().uuid(),
-  status: z.enum(['NEW', 'IN_PROGRESS', 'RESOLVED', 'CLOSED']),
+  status: z.enum(InquiryStatus),
 })
 
 // =============================================================================

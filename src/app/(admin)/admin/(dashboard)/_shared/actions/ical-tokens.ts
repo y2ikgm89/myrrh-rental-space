@@ -8,7 +8,7 @@ import { randomBytes } from 'crypto'
 import { createSuccess, createFailure } from '@/admin/types/server-actions'
 import { createValidationError } from '@/shared/lib/action-helpers'
 import { withPermission } from '@/admin/lib/server-action-helpers'
-import { verifyAdminSession } from '@/shared/lib/auth'
+import { checkReadPermissionFor } from '@/admin/lib/permissions'
 
 // =============================================================================
 // Types
@@ -41,11 +41,13 @@ const createTokenSchema = z.object({
 // Actions
 // =============================================================================
 
+const checkReadPermission = checkReadPermissionFor('settings')
+
 /**
  * iCalトークン一覧を取得
  */
 export async function getICalTokens(): Promise<ICalTokenWithRelations[]> {
-  await verifyAdminSession()
+  if (!(await checkReadPermission())) return []
 
   const tokens = await prisma.iCalToken.findMany({
     include: {
@@ -176,7 +178,9 @@ export async function getICalFeedSettings(): Promise<{
   icalFeedEnabled: boolean
   icalFeedIncludeCustomerInfo: boolean
 }> {
-  await verifyAdminSession()
+  if (!(await checkReadPermission())) {
+    return { icalFeedEnabled: false, icalFeedIncludeCustomerInfo: false }
+  }
 
   const settings = await prisma.settings.findFirst({
     select: {

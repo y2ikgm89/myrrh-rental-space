@@ -27,7 +27,7 @@ import {
 
 const updateStatusSchema = z.object({
   id: z.string().uuid(),
-  status: z.enum(["PENDING", "CONFIRMED", "CANCELLED"]),
+  status: z.enum(ReservationStatus),
 });
 
 const updateNotesSchema = z.object({

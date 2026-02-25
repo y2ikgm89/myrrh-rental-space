@@ -13,7 +13,7 @@ import { createSuccess, createFailure } from '@/admin/types/server-actions'
 import { createValidationError } from '@/shared/lib/action-helpers'
 import { withPermission } from '@/admin/lib/server-action-helpers'
 import { encrypt, safeDecrypt } from '@/shared/lib/crypto'
-import { verifyAdminSession } from '@/shared/lib/auth'
+import { checkReadPermissionFor } from '@/admin/lib/permissions'
 import { isRecord } from '@/shared/lib/serialize'
 import {
   resendSettingsSchema,
@@ -108,11 +108,15 @@ function parseCustomApiKeysMap(value: unknown): CustomApiKeysMap {
 // GET Actions
 // =============================================================================
 
+const checkSettingsReadPermission = checkReadPermissionFor('settings')
+
 /**
  * Resend設定を取得
  */
 export async function getResendConfig(): Promise<ResendConfig> {
-  await verifyAdminSession()
+  if (!(await checkSettingsReadPermission())) {
+    return { apiKeyMasked: null, lastTestedAt: null, connectionStatus: null }
+  }
 
   const settings = await prisma.settings.findUnique({
     where: { id: 'singleton' },
@@ -136,7 +140,9 @@ export async function getResendConfig(): Promise<ResendConfig> {
  * Turnstile設定を取得
  */
 export async function getTurnstileConfig(): Promise<TurnstileConfig> {
-  await verifyAdminSession()
+  if (!(await checkSettingsReadPermission())) {
+    return { siteKey: null, secretKeyMasked: null, lastTestedAt: null, connectionStatus: null }
+  }
 
   const settings = await prisma.settings.findUnique({
     where: { id: 'singleton' },
@@ -162,7 +168,9 @@ export async function getTurnstileConfig(): Promise<TurnstileConfig> {
  * Google Maps設定を取得
  */
 export async function getGoogleMapsConfig(): Promise<GoogleMapsConfig> {
-  await verifyAdminSession()
+  if (!(await checkSettingsReadPermission())) {
+    return { apiKeyMasked: null, lastTestedAt: null, connectionStatus: null }
+  }
 
   const settings = await prisma.settings.findUnique({
     where: { id: 'singleton' },
@@ -186,7 +194,7 @@ export async function getGoogleMapsConfig(): Promise<GoogleMapsConfig> {
  * カスタムAPIキー一覧を取得
  */
 export async function getCustomApiKeys(): Promise<CustomApiKeyData[]> {
-  await verifyAdminSession()
+  if (!(await checkSettingsReadPermission())) return []
 
   const settings = await prisma.settings.findUnique({
     where: { id: 'singleton' },
@@ -539,7 +547,9 @@ export const clearGoogleMapsKeys = withPermission<[]>(
  * Cloudflare設定を取得
  */
 export async function getCloudflareConfig(): Promise<CloudflareConfig> {
-  await verifyAdminSession()
+  if (!(await checkSettingsReadPermission())) {
+    return { zoneId: null, apiTokenMasked: null, lastTestedAt: null, connectionStatus: null }
+  }
 
   const settings = await prisma.settings.findUnique({
     where: { id: 'singleton' },
@@ -754,9 +764,10 @@ export const deleteCustomApiKey = withPermission<[string]>(
 
 /**
  * カスタムAPIキーの復号化された値を取得（内部使用のみ）
+ * Note: 監査ログが残らないため、外部公開目的では使用しないこと
  */
 export async function getCustomApiKeyValue(id: string): Promise<string | null> {
-  await verifyAdminSession()
+  if (!(await checkSettingsReadPermission())) return null
 
   const settings = await prisma.settings.findUnique({
     where: { id: 'singleton' },
@@ -779,7 +790,9 @@ export async function getCustomApiKeyValue(id: string): Promise<string | null> {
  * Google OAuth設定を取得
  */
 export async function getGoogleOAuthConfig(): Promise<GoogleOAuthConfig> {
-  await verifyAdminSession()
+  if (!(await checkSettingsReadPermission())) {
+    return { clientId: null, clientSecretMasked: null, lastTestedAt: null, connectionStatus: null }
+  }
 
   const settings = await prisma.settings.findUnique({
     where: { id: 'singleton' },

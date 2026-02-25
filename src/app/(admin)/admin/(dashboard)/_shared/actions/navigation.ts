@@ -8,9 +8,7 @@ import { z } from 'zod'
 import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
 import { createValidationError } from '@/shared/lib/action-helpers'
 import { withPermission } from '@/admin/lib/server-action-helpers'
-import { getSession, getRoleFromSession } from '@/shared/lib/auth'
-import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'
-import { logPermissionDenied } from '@/admin/lib/audit'
+import { checkReadPermissionFor } from '@/admin/lib/permissions'
 import { purgeHomeCache } from '@/shared/lib/cloudflare'
 import { fireAndForget } from '@/shared/lib/async-utils'
 import { ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
@@ -78,21 +76,7 @@ export type SocialLinkInput = z.infer<typeof socialLinkSchema>
 // Helper Functions
 // =============================================================================
 
-/**
- * 読み取り権限チェック
- */
-async function checkReadPermission(): Promise<boolean> {
-  const session = await getSession()
-  if (!session?.user) return false
-  const role = getRoleFromSession(session)
-  if (!role) return false
-  if (!canAccessAdmin(role)) return false
-  if (!hasPermission(role, 'navigation', 'read')) {
-    void logPermissionDenied(session.user.id, 'navigation', 'read')
-    return false
-  }
-  return true
-}
+const checkReadPermission = checkReadPermissionFor('navigation')
 
 // =============================================================================
 // Navigation Item Actions

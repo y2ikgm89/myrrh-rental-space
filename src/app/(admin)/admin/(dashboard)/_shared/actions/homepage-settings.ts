@@ -12,9 +12,7 @@ import { CACHE_TAGS } from '@/shared/lib/constants'
 import { createSuccess, createFailure } from '@/admin/types/server-actions'
 import { createValidationError } from '@/shared/lib/action-helpers'
 import { withPermission } from '@/admin/lib/server-action-helpers'
-import { getSession, getRoleFromSession } from '@/shared/lib/auth'
-import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'
-import { logPermissionDenied } from '@/admin/lib/audit'
+import { checkReadPermissionFor } from '@/admin/lib/permissions'
 import { purgeHomeCache } from '@/shared/lib/cloudflare'
 import { fireAndForget } from '@/shared/lib/async-utils'
 import { ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
@@ -67,18 +65,7 @@ export type HomepageSectionData = {
 // Helper Functions
 // =============================================================================
 
-async function checkReadPermission(): Promise<boolean> {
-  const session = await getSession()
-  if (!session?.user) return false
-  const role = getRoleFromSession(session)
-  if (!role) return false
-  if (!canAccessAdmin(role)) return false
-  if (!hasPermission(role, 'settings', 'read')) {
-    void logPermissionDenied(session.user.id, 'settings', 'read')
-    return false
-  }
-  return true
-}
+const checkReadPermission = checkReadPermissionFor('settings')
 
 function revalidateHomepage() {
   updateTag(CACHE_TAGS.SECTIONS)

@@ -25,9 +25,8 @@ import { sendStaffInvitationEmail } from '@/shared/lib/email-service'
 import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
 import { createValidationError } from '@/shared/lib/action-helpers'
 import { withPermission } from '@/admin/lib/server-action-helpers'
-import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'
-import { getSession, getRoleFromSession, type User } from '@/shared/lib/auth'
-import { logPermissionDenied } from '@/admin/lib/audit'
+import { checkReadPermissionFor } from '@/admin/lib/permissions'
+import type { User } from '@/shared/lib/auth'
 import {
   createInvitationSchema,
   setupPasswordSchema,
@@ -44,21 +43,7 @@ import { hashPassword } from 'better-auth/crypto'
 // Helper Functions
 // =============================================================================
 
-/**
- * 読み取り権限チェック
- */
-async function checkReadPermission(): Promise<boolean> {
-  const session = await getSession()
-  if (!session?.user) return false
-  const role = getRoleFromSession(session)
-  if (!role) return false
-  if (!canAccessAdmin(role)) return false
-  if (!hasPermission(role, 'user', 'read')) {
-    void logPermissionDenied(session.user.id, 'user', 'read')
-    return false
-  }
-  return true
-}
+const checkReadPermission = checkReadPermissionFor('user')
 
 /**
  * 安全なトークン生成

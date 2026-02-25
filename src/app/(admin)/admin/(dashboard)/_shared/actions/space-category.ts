@@ -11,30 +11,14 @@ import type {
   SpaceCategoryWithStats,
   GetSpaceCategoriesResult,
 } from '@/admin/lib/validations/space-category'
-import { getSession, getRoleFromSession } from '@/shared/lib/auth'
-import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'
-import { logPermissionDenied } from '@/admin/lib/audit'
+import { checkReadPermissionFor } from '@/admin/lib/permissions'
 import { createValidationError } from '@/shared/lib/action-helpers'
 
 // =============================================================================
 // Helper Functions
 // =============================================================================
 
-/**
- * 読み取り権限チェック
- */
-async function checkReadPermission(): Promise<boolean> {
-  const session = await getSession()
-  if (!session?.user) return false
-  const role = getRoleFromSession(session)
-  if (!role) return false
-  if (!canAccessAdmin(role)) return false
-  if (!hasPermission(role, 'spaceCategory', 'read')) {
-    void logPermissionDenied(session.user.id, 'spaceCategory', 'read')
-    return false
-  }
-  return true
-}
+const checkReadPermission = checkReadPermissionFor('spaceCategory')
 
 // =============================================================================
 // Read Operations

@@ -20,9 +20,7 @@ import {
 } from '@/shared/lib/json-validators'
 import { maskSecretKey } from '@/admin/lib/stripe-shared'
 import { extractServiceAccountEmail } from '@/shared/lib/google-calendar'
-import { getSession, getRoleFromSession } from '@/shared/lib/auth'
-import { hasPermission, canAccessAdmin } from '@/admin/lib/permissions'
-import { logPermissionDenied } from '@/admin/lib/audit'
+import { checkReadPermissionFor } from '@/admin/lib/permissions'
 
 import type { SettingsData } from './types'
 import {
@@ -38,21 +36,7 @@ import {
 // Helper Functions
 // =============================================================================
 
-/**
- * 読み取り権限チェック（読み取りアクションは権限なしなら空結果を返す）
- */
-async function checkReadPermission(): Promise<boolean> {
-  const session = await getSession()
-  if (!session?.user) return false
-  const role = getRoleFromSession(session)
-  if (!role) return false
-  if (!canAccessAdmin(role)) return false
-  if (!hasPermission(role, 'settings', 'read')) {
-    void logPermissionDenied(session.user.id, 'settings', 'read')
-    return false
-  }
-  return true
-}
+const checkReadPermission = checkReadPermissionFor('settings')
 
 // =============================================================================
 // Actions

@@ -3,7 +3,7 @@
 import { connection } from "next/server";
 import { prisma } from "@/shared/lib/prisma";
 import { verifyAdminSession } from "@/shared/lib/auth";
-import type {
+import {
   ReservationStatus,
   InquiryStatus,
 } from "@/shared/generated/prisma/enums";
@@ -108,21 +108,21 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     prisma.reservation.count({
       where: {
         createdAt: { gte: thisMonthStart },
-        status: { not: "CANCELLED" },
+        status: { not: ReservationStatus.CANCELLED },
       },
     }),
     // 先月の予約数
     prisma.reservation.count({
       where: {
         createdAt: { gte: lastMonthStart, lte: lastMonthEnd },
-        status: { not: "CANCELLED" },
+        status: { not: ReservationStatus.CANCELLED },
       },
     }),
     // 今月の売上
     prisma.reservation.aggregate({
       where: {
         createdAt: { gte: thisMonthStart },
-        status: "CONFIRMED",
+        status: ReservationStatus.CONFIRMED,
       },
       _sum: { totalPrice: true },
     }),
@@ -130,13 +130,13 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     prisma.reservation.aggregate({
       where: {
         createdAt: { gte: lastMonthStart, lte: lastMonthEnd },
-        status: "CONFIRMED",
+        status: ReservationStatus.CONFIRMED,
       },
       _sum: { totalPrice: true },
     }),
     // 新規お問い合わせ（未対応）
     prisma.inquiry.count({
-      where: { status: "NEW" },
+      where: { status: InquiryStatus.NEW },
     }),
     // 今月のお問い合わせ
     prisma.inquiry.count({
