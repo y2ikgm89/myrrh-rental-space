@@ -73,6 +73,7 @@ docs/api/
 .claude/state/
 .claude/memory/
 .claude/agent-memory-local/
+.claude/agent-memory/
 tmpclaude-*-cwd
 nul
 
