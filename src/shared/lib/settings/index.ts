@@ -7,4 +7,5 @@ export {
   getPublicBusinessSettings,
   getAnnouncementBarCarouselSettingsCached,
   getActiveAnnouncementBarsCached,
-} from './public'
+  getMaintenanceSettings,
+} from "./public";

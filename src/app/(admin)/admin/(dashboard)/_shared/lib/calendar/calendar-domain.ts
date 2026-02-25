@@ -259,24 +259,24 @@ export function getStatusColorClass(status: string): string {
  */
 export function getSpaceColorClass(spaceId: string, index?: number): string {
   const colors = [
-    "border-l-blue-500",
-    "border-l-purple-500",
-    "border-l-pink-500",
-    "border-l-indigo-500",
-    "border-l-teal-500",
-    "border-l-orange-500",
-    "border-l-cyan-500",
-    "border-l-rose-500",
+    "border-l-cal-1",
+    "border-l-cal-2",
+    "border-l-cal-3",
+    "border-l-cal-4",
+    "border-l-cal-5",
+    "border-l-cal-6",
+    "border-l-cal-7",
+    "border-l-cal-8",
   ];
 
   if (index !== undefined) {
-    return colors[index % colors.length] ?? colors[0] ?? "border-l-blue-500";
+    return colors[index % colors.length] ?? colors[0] ?? "border-l-cal-1";
   }
 
   const hash = spaceId
     .split("")
     .reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  return colors[hash % colors.length] ?? colors[0] ?? "border-l-blue-500";
+  return colors[hash % colors.length] ?? colors[0] ?? "border-l-cal-1";
 }
 
 /**

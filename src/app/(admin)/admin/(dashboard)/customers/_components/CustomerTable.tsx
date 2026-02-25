@@ -5,20 +5,20 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/admin/components/ui'
-import { EmptyState } from '@/admin/components/EmptyState'
-import { CustomerStatusBadge } from '@/admin/components/status-badges'
-import { formatDateShort } from '@/shared/lib/utils'
-import type { CustomerData } from '@/admin/actions/customer'
-import { CustomerActionCell } from './CustomerActionCell'
+} from "@/admin/components/ui";
+import { EmptyState } from "@/admin/components/EmptyState";
+import { CustomerStatusBadge } from "@/admin/components/status-badges";
+import { formatDateShort } from "@/shared/lib/utils";
+import type { CustomerData } from "@/admin/actions/customer";
+import { CustomerActionCell } from "./CustomerActionCell";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type CustomerTableProps = {
-  customers: CustomerData[]
-}
+  customers: CustomerData[];
+};
 
 // =============================================================================
 // CustomerTable Component (Server Component)
@@ -29,60 +29,66 @@ export function CustomerTable({ customers }: CustomerTableProps) {
     return (
       <EmptyState
         message="顧客がいません"
-        action={{ label: '新規顧客', href: '/admin/customers/new' }}
+        action={{ label: "新規顧客", href: "/admin/customers/new" }}
       />
-    )
+    );
   }
 
   return (
     <div className="overflow-hidden rounded-lg border bg-card">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>ステータス</TableHead>
-            <TableHead>お名前</TableHead>
-            <TableHead className="hidden lg:table-cell">メールアドレス</TableHead>
-            <TableHead className="hidden md:table-cell">電話番号</TableHead>
-            <TableHead className="hidden text-right md:table-cell">予約数</TableHead>
-            <TableHead className="hidden lg:table-cell">最終予約</TableHead>
-            <TableHead>操作</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {customers.map((customer) => (
-            <TableRow key={customer.id}>
-              <TableCell>
-                <CustomerStatusBadge status={customer.status} />
-              </TableCell>
-              <TableCell className="font-medium">
-                {customer.lastName} {customer.firstName}
-              </TableCell>
-              <TableCell className="hidden lg:table-cell">
-                <a
-                  href={`mailto:${customer.email}`}
-                  className="text-primary hover:underline"
-                >
-                  {customer.email}
-                </a>
-              </TableCell>
-              <TableCell className="hidden text-muted-foreground md:table-cell">
-                {customer.phoneNumber || '-'}
-              </TableCell>
-              <TableCell className="hidden text-right text-muted-foreground md:table-cell">
-                {customer.totalReservations}
-              </TableCell>
-              <TableCell className="hidden text-muted-foreground lg:table-cell">
-                {customer.lastReservationAt
-                  ? formatDateShort(customer.lastReservationAt)
-                  : '-'}
-              </TableCell>
-              <TableCell>
-                <CustomerActionCell customerId={customer.id} />
-              </TableCell>
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>ステータス</TableHead>
+              <TableHead>お名前</TableHead>
+              <TableHead className="hidden lg:table-cell">
+                メールアドレス
+              </TableHead>
+              <TableHead className="hidden md:table-cell">電話番号</TableHead>
+              <TableHead className="hidden text-right md:table-cell">
+                予約数
+              </TableHead>
+              <TableHead className="hidden lg:table-cell">最終予約</TableHead>
+              <TableHead>操作</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {customers.map((customer) => (
+              <TableRow key={customer.id}>
+                <TableCell>
+                  <CustomerStatusBadge status={customer.status} />
+                </TableCell>
+                <TableCell className="font-medium">
+                  {customer.lastName} {customer.firstName}
+                </TableCell>
+                <TableCell className="hidden lg:table-cell">
+                  <a
+                    href={`mailto:${customer.email}`}
+                    className="text-primary hover:underline"
+                  >
+                    {customer.email}
+                  </a>
+                </TableCell>
+                <TableCell className="hidden text-muted-foreground md:table-cell">
+                  {customer.phoneNumber || "-"}
+                </TableCell>
+                <TableCell className="hidden text-right text-muted-foreground md:table-cell">
+                  {customer.totalReservations}
+                </TableCell>
+                <TableCell className="hidden text-muted-foreground lg:table-cell">
+                  {customer.lastReservationAt
+                    ? formatDateShort(customer.lastReservationAt)
+                    : "-"}
+                </TableCell>
+                <TableCell>
+                  <CustomerActionCell customerId={customer.id} />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
-  )
+  );
 }

@@ -27,6 +27,7 @@ import {
 } from "@/shared/lib/google-calendar";
 import { syncFromCalendar } from "@/shared/lib/calendar-sync";
 import { serverEnv } from "@/shared/lib/env/server";
+import { clientEnv } from "@/shared/lib/env/client";
 
 import {
   googleCalendarSettingsSchema,
@@ -272,8 +273,7 @@ export const setupCalendarWebhook = withPermission<
   "settings",
   "update",
 )(async () => {
-  const baseUrl =
-    process.env["NEXT_PUBLIC_APP_URL"] ?? serverEnv.BETTER_AUTH_URL;
+  const baseUrl = clientEnv.NEXT_PUBLIC_APP_URL ?? serverEnv.BETTER_AUTH_URL;
   if (!baseUrl) {
     return createFailure("APP_URLが設定されていません");
   }

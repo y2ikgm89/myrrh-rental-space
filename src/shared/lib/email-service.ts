@@ -17,54 +17,59 @@
  * @module shared/lib/email-service
  */
 
-import 'server-only'
-import { getResendClient, getFromAddress, isEmailEnabled } from './email'
-import { logError, ErrorCategory, ErrorSeverity, normalizeError } from './errors/server'
-import { ReservationConfirmationEmail } from '@/shared/emails/reservation-confirmation'
-import { ReservationCancelledEmail } from '@/shared/emails/reservation-cancelled'
-import { ContactConfirmationEmail } from '@/shared/emails/contact-confirmation'
-import { AdminNotificationEmail } from '@/shared/emails/admin-notification'
-import { StaffInvitationEmail } from '@/shared/emails/staff-invitation'
-import { prisma } from './prisma'
-import { format } from 'date-fns'
-import { ja } from 'date-fns/locale'
+import "server-only";
+import { getResendClient, getFromAddress, isEmailEnabled } from "./email";
+import {
+  logError,
+  ErrorCategory,
+  ErrorSeverity,
+  normalizeError,
+} from "./errors/server";
+import { ReservationConfirmationEmail } from "@/shared/emails/reservation-confirmation";
+import { ReservationCancelledEmail } from "@/shared/emails/reservation-cancelled";
+import { ContactConfirmationEmail } from "@/shared/emails/contact-confirmation";
+import { AdminNotificationEmail } from "@/shared/emails/admin-notification";
+import { StaffInvitationEmail } from "@/shared/emails/staff-invitation";
+import { prisma } from "./prisma";
+import { format } from "date-fns";
+import { ja } from "date-fns/locale";
 import {
   createReservationEvent,
   generateAddToCalendarLinks,
   generateICalContent,
-} from '@/shared/lib/ical'
-import { getAdminUrl, SITE_DEFAULTS } from './constants'
+} from "@/shared/lib/ical";
+import { getAdminUrl, SITE_DEFAULTS } from "./constants";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type ReservationEmailData = {
-  reservationId: string
-  customerEmail: string
-  customerName: string
-  spaceName: string
-  startTime: Date
-  endTime: Date
-  totalPrice: number | null
-  notes?: string
-  location?: string
-}
+  reservationId: string;
+  customerEmail: string;
+  customerName: string;
+  spaceName: string;
+  startTime: Date;
+  endTime: Date;
+  totalPrice: number | null;
+  notes?: string;
+  location?: string;
+};
 
 type ContactEmailData = {
-  inquiryId: string
-  name: string
-  email: string
-  subject: string
-  message: string
-}
+  inquiryId: string;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+};
 
 type StaffInvitationEmailData = {
-  to: string
-  staffName: string
-  setupUrl: string
-  expiresAt: Date
-}
+  to: string;
+  staffName: string;
+  setupUrl: string;
+  expiresAt: Date;
+};
 
 // =============================================================================
 // Helper Functions
@@ -72,24 +77,24 @@ type StaffInvitationEmailData = {
 
 async function getNotificationEmails(): Promise<string[]> {
   const settings = await prisma.settings.findUnique({
-    where: { id: 'singleton' },
+    where: { id: "singleton" },
     select: { notificationEmailAddresses: true },
-  })
+  });
 
-  if (!settings?.notificationEmailAddresses) return []
+  if (!settings?.notificationEmailAddresses) return [];
 
   return settings.notificationEmailAddresses
-    .split(',')
+    .split(",")
     .map((email) => email.trim())
-    .filter(Boolean)
+    .filter(Boolean);
 }
 
 function formatPrice(price: number | null): string {
-  if (price === null) return '未設定'
-  return new Intl.NumberFormat('ja-JP', {
-    style: 'currency',
-    currency: 'JPY',
-  }).format(price)
+  if (price === null) return "未設定";
+  return new Intl.NumberFormat("ja-JP", {
+    style: "currency",
+    currency: "JPY",
+  }).format(price);
 }
 
 // =============================================================================
@@ -100,46 +105,48 @@ function formatPrice(price: number | null): string {
  * カレンダー設定を取得
  */
 async function getCalendarEmailSettings(): Promise<{
-  icalAttachmentEnabled: boolean
-  addToCalendarLinksEnabled: boolean
+  icalAttachmentEnabled: boolean;
+  addToCalendarLinksEnabled: boolean;
 }> {
   const settings = await prisma.settings.findUnique({
-    where: { id: 'singleton' },
+    where: { id: "singleton" },
     select: {
       icalAttachmentEnabled: true,
       addToCalendarLinksEnabled: true,
     },
-  })
+  });
 
   return {
     icalAttachmentEnabled: settings?.icalAttachmentEnabled ?? true,
     addToCalendarLinksEnabled: settings?.addToCalendarLinksEnabled ?? true,
-  }
+  };
 }
 
 /**
  * 予約確認メールを送信
  */
 export async function sendReservationConfirmationEmail(
-  data: ReservationEmailData
+  data: ReservationEmailData,
 ): Promise<{ success: boolean; error?: string }> {
   if (!isEmailEnabled()) {
     // Email disabled: RESEND_API_KEY not set - skip silently in development
-    return { success: true }
+    return { success: true };
   }
 
-  const resend = getResendClient()
+  const resend = getResendClient();
   if (!resend) {
-    return { success: true }
+    return { success: true };
   }
 
   try {
-    const reservationDate = format(data.startTime, 'yyyy年M月d日 (EEEE)', { locale: ja })
-    const startTime = format(data.startTime, 'HH:mm', { locale: ja })
-    const endTime = format(data.endTime, 'HH:mm', { locale: ja })
+    const reservationDate = format(data.startTime, "yyyy年M月d日 (EEEE)", {
+      locale: ja,
+    });
+    const startTime = format(data.startTime, "HH:mm", { locale: ja });
+    const endTime = format(data.endTime, "HH:mm", { locale: ja });
 
     // カレンダー設定を取得
-    const calendarSettings = await getCalendarEmailSettings()
+    const calendarSettings = await getCalendarEmailSettings();
 
     // カレンダーイベントを生成
     const calendarEvent = createReservationEvent({
@@ -150,37 +157,37 @@ export async function sendReservationConfirmationEmail(
       endTime: data.endTime,
       location: data.location,
       notes: data.notes,
-    })
+    });
 
     // Add to Calendarリンクを生成
     const addToCalendarLinks = calendarSettings.addToCalendarLinksEnabled
       ? generateAddToCalendarLinks(calendarEvent)
-      : undefined
+      : undefined;
 
     // iCalファイルを生成（添付用）
-    let attachments: { filename: string; content: Buffer }[] | undefined
+    let attachments: { filename: string; content: Buffer }[] | undefined;
     if (calendarSettings.icalAttachmentEnabled) {
       try {
         attachments = [
           {
             filename: `reservation-${data.reservationId.slice(0, 8)}.ics`,
-            content: Buffer.from(generateICalContent(calendarEvent), 'utf-8'),
+            content: Buffer.from(generateICalContent(calendarEvent), "utf-8"),
           },
-        ]
+        ];
       } catch (icalError) {
         logError(normalizeError(icalError), {
           category: ErrorCategory.UNKNOWN,
           severity: ErrorSeverity.LOW,
           context: {
-            operation: 'generateICalAttachment',
+            operation: "generateICalAttachment",
             reservationId: data.reservationId,
           },
-        })
+        });
         // 添付なしで続行
       }
     }
 
-    await resend.emails.send({
+    const { error: sendError } = await resend.emails.send({
       from: getFromAddress(),
       to: data.customerEmail,
       subject: `【ご予約確認】${data.spaceName} - ${reservationDate}`,
@@ -196,20 +203,33 @@ export async function sendReservationConfirmationEmail(
         addToCalendarLinks,
       }),
       attachments,
-    })
+    });
 
-    return { success: true }
+    if (sendError) {
+      logError(new Error(sendError.message), {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.MEDIUM,
+        context: {
+          operation: "sendReservationConfirmationEmail",
+          reservationId: data.reservationId,
+          customerEmail: data.customerEmail,
+        },
+      });
+      return { success: false, error: "メール送信に失敗しました" };
+    }
+
+    return { success: true };
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.MEDIUM,
       context: {
-        operation: 'sendReservationConfirmationEmail',
+        operation: "sendReservationConfirmationEmail",
         reservationId: data.reservationId,
         customerEmail: data.customerEmail,
       },
-    })
-    return { success: false, error: 'メール送信に失敗しました' }
+    });
+    return { success: false, error: "メール送信に失敗しました" };
   }
 }
 
@@ -222,24 +242,26 @@ export async function sendReservationConfirmationEmail(
  * @returns 送信結果
  */
 export async function sendReservationCancelledEmail(
-  data: ReservationEmailData
+  data: ReservationEmailData,
 ): Promise<{ success: boolean; error?: string }> {
   if (!isEmailEnabled()) {
     // Email disabled: RESEND_API_KEY not set - skip silently in development
-    return { success: true }
+    return { success: true };
   }
 
-  const resend = getResendClient()
+  const resend = getResendClient();
   if (!resend) {
-    return { success: true }
+    return { success: true };
   }
 
   try {
-    const reservationDate = format(data.startTime, 'yyyy年M月d日 (EEEE)', { locale: ja })
-    const startTime = format(data.startTime, 'HH:mm', { locale: ja })
-    const endTime = format(data.endTime, 'HH:mm', { locale: ja })
+    const reservationDate = format(data.startTime, "yyyy年M月d日 (EEEE)", {
+      locale: ja,
+    });
+    const startTime = format(data.startTime, "HH:mm", { locale: ja });
+    const endTime = format(data.endTime, "HH:mm", { locale: ja });
 
-    await resend.emails.send({
+    const { error: sendError } = await resend.emails.send({
       from: getFromAddress(),
       to: data.customerEmail,
       subject: `【予約キャンセル】${data.spaceName} - ${reservationDate}`,
@@ -251,20 +273,33 @@ export async function sendReservationCancelledEmail(
         endTime,
         reservationId: data.reservationId.slice(0, 8).toUpperCase(),
       }),
-    })
+    });
 
-    return { success: true }
+    if (sendError) {
+      logError(new Error(sendError.message), {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.MEDIUM,
+        context: {
+          operation: "sendReservationCancelledEmail",
+          reservationId: data.reservationId,
+          customerEmail: data.customerEmail,
+        },
+      });
+      return { success: false, error: "メール送信に失敗しました" };
+    }
+
+    return { success: true };
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.MEDIUM,
       context: {
-        operation: 'sendReservationCancelledEmail',
+        operation: "sendReservationCancelledEmail",
         reservationId: data.reservationId,
         customerEmail: data.customerEmail,
       },
-    })
-    return { success: false, error: 'メール送信に失敗しました' }
+    });
+    return { success: false, error: "メール送信に失敗しました" };
   }
 }
 
@@ -279,38 +314,40 @@ export async function sendReservationCancelledEmail(
  */
 export async function sendReservationAdminNotification(
   data: ReservationEmailData,
-  action: 'new' | 'update' | 'cancel'
+  action: "new" | "update" | "cancel",
 ): Promise<{ success: boolean; error?: string }> {
   if (!isEmailEnabled()) {
     // Email disabled: RESEND_API_KEY not set - skip silently in development
-    return { success: true }
+    return { success: true };
   }
 
-  const resend = getResendClient()
+  const resend = getResendClient();
   if (!resend) {
-    return { success: true }
+    return { success: true };
   }
 
   try {
-    const notificationEmails = await getNotificationEmails()
-    if (notificationEmails.length === 0) return { success: true }
+    const notificationEmails = await getNotificationEmails();
+    if (notificationEmails.length === 0) return { success: true };
 
-    const reservationDate = format(data.startTime, 'yyyy年M月d日 (EEEE)', { locale: ja })
-    const startTime = format(data.startTime, 'HH:mm', { locale: ja })
-    const endTime = format(data.endTime, 'HH:mm', { locale: ja })
+    const reservationDate = format(data.startTime, "yyyy年M月d日 (EEEE)", {
+      locale: ja,
+    });
+    const startTime = format(data.startTime, "HH:mm", { locale: ja });
+    const endTime = format(data.endTime, "HH:mm", { locale: ja });
 
     const actionText = {
-      new: '新規予約',
-      update: '予約変更',
-      cancel: '予約キャンセル',
-    }[action]
+      new: "新規予約",
+      update: "予約変更",
+      cancel: "予約キャンセル",
+    }[action];
 
-    await resend.emails.send({
+    const { error: sendError } = await resend.emails.send({
       from: getFromAddress(),
       to: notificationEmails,
       subject: `【${actionText}】${data.spaceName} - ${data.customerName}様`,
       react: AdminNotificationEmail({
-        type: 'reservation',
+        type: "reservation",
         action,
         customerName: data.customerName,
         customerEmail: data.customerEmail,
@@ -322,20 +359,33 @@ export async function sendReservationAdminNotification(
         reservationId: data.reservationId.slice(0, 8).toUpperCase(),
         adminUrl: getAdminUrl(`/reservations/${data.reservationId}`),
       }),
-    })
+    });
 
-    return { success: true }
+    if (sendError) {
+      logError(new Error(sendError.message), {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.MEDIUM,
+        context: {
+          operation: "sendReservationAdminNotification",
+          reservationId: data.reservationId,
+          action,
+        },
+      });
+      return { success: false, error: "メール送信に失敗しました" };
+    }
+
+    return { success: true };
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.MEDIUM,
       context: {
-        operation: 'sendReservationAdminNotification',
+        operation: "sendReservationAdminNotification",
         reservationId: data.reservationId,
         action,
       },
-    })
-    return { success: false, error: 'メール送信に失敗しました' }
+    });
+    return { success: false, error: "メール送信に失敗しました" };
   }
 }
 
@@ -352,20 +402,20 @@ export async function sendReservationAdminNotification(
  * @returns 送信結果
  */
 export async function sendContactConfirmationEmail(
-  data: ContactEmailData
+  data: ContactEmailData,
 ): Promise<{ success: boolean; error?: string }> {
   if (!isEmailEnabled()) {
     // Email disabled: RESEND_API_KEY not set - skip silently in development
-    return { success: true }
+    return { success: true };
   }
 
-  const resend = getResendClient()
+  const resend = getResendClient();
   if (!resend) {
-    return { success: true }
+    return { success: true };
   }
 
   try {
-    await resend.emails.send({
+    const { error: sendError } = await resend.emails.send({
       from: getFromAddress(),
       to: data.email,
       subject: `【お問い合わせ受付】${data.subject}`,
@@ -374,20 +424,33 @@ export async function sendContactConfirmationEmail(
         subject: data.subject,
         message: data.message,
       }),
-    })
+    });
 
-    return { success: true }
+    if (sendError) {
+      logError(new Error(sendError.message), {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.MEDIUM,
+        context: {
+          operation: "sendContactConfirmationEmail",
+          inquiryId: data.inquiryId,
+          email: data.email,
+        },
+      });
+      return { success: false, error: "メール送信に失敗しました" };
+    }
+
+    return { success: true };
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.MEDIUM,
       context: {
-        operation: 'sendContactConfirmationEmail',
+        operation: "sendContactConfirmationEmail",
         inquiryId: data.inquiryId,
         email: data.email,
       },
-    })
-    return { success: false, error: 'メール送信に失敗しました' }
+    });
+    return { success: false, error: "メール送信に失敗しました" };
   }
 }
 
@@ -400,28 +463,28 @@ export async function sendContactConfirmationEmail(
  * @returns 送信結果
  */
 export async function sendContactAdminNotification(
-  data: ContactEmailData
+  data: ContactEmailData,
 ): Promise<{ success: boolean; error?: string }> {
   if (!isEmailEnabled()) {
     // Email disabled: RESEND_API_KEY not set - skip silently in development
-    return { success: true }
+    return { success: true };
   }
 
-  const resend = getResendClient()
+  const resend = getResendClient();
   if (!resend) {
-    return { success: true }
+    return { success: true };
   }
 
   try {
-    const notificationEmails = await getNotificationEmails()
-    if (notificationEmails.length === 0) return { success: true }
+    const notificationEmails = await getNotificationEmails();
+    if (notificationEmails.length === 0) return { success: true };
 
-    await resend.emails.send({
+    const { error: sendError } = await resend.emails.send({
       from: getFromAddress(),
       to: notificationEmails,
       subject: `【新規お問い合わせ】${data.subject} - ${data.name}様`,
       react: AdminNotificationEmail({
-        type: 'inquiry',
+        type: "inquiry",
         name: data.name,
         email: data.email,
         subject: data.subject,
@@ -429,19 +492,31 @@ export async function sendContactAdminNotification(
         inquiryId: data.inquiryId.slice(0, 8).toUpperCase(),
         adminUrl: getAdminUrl(`/inquiries/${data.inquiryId}`),
       }),
-    })
+    });
 
-    return { success: true }
+    if (sendError) {
+      logError(new Error(sendError.message), {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.MEDIUM,
+        context: {
+          operation: "sendContactAdminNotification",
+          inquiryId: data.inquiryId,
+        },
+      });
+      return { success: false, error: "メール送信に失敗しました" };
+    }
+
+    return { success: true };
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.MEDIUM,
       context: {
-        operation: 'sendContactAdminNotification',
+        operation: "sendContactAdminNotification",
         inquiryId: data.inquiryId,
       },
-    })
-    return { success: false, error: 'メール送信に失敗しました' }
+    });
+    return { success: false, error: "メール送信に失敗しました" };
   }
 }
 
@@ -459,47 +534,60 @@ export async function sendContactAdminNotification(
  * @returns 送信結果
  */
 export async function sendCalendarSyncRejectionEmail(data: {
-  reservationId: string
-  spaceName: string
-  customerName: string
-  customerEmail: string
-  attemptedStartTime: Date
-  attemptedEndTime: Date
-  currentStartTime: Date
-  currentEndTime: Date
+  reservationId: string;
+  spaceName: string;
+  customerName: string;
+  customerEmail: string;
+  attemptedStartTime: Date;
+  attemptedEndTime: Date;
+  currentStartTime: Date;
+  currentEndTime: Date;
   conflictingReservation: {
-    id: string
-    startTime: Date
-    endTime: Date
-  }
+    id: string;
+    startTime: Date;
+    endTime: Date;
+  };
 }): Promise<{ success: boolean; error?: string }> {
   if (!isEmailEnabled()) {
     // Email disabled: RESEND_API_KEY not set - skip silently in development
-    return { success: true }
+    return { success: true };
   }
 
-  const resend = getResendClient()
+  const resend = getResendClient();
   if (!resend) {
-    return { success: true }
+    return { success: true };
   }
 
   try {
-    const notificationEmails = await getNotificationEmails()
-    if (notificationEmails.length === 0) return { success: true }
+    const notificationEmails = await getNotificationEmails();
+    if (notificationEmails.length === 0) return { success: true };
 
-    const currentDate = format(data.currentStartTime, 'yyyy年M月d日 (EEEE)', { locale: ja })
-    const currentStart = format(data.currentStartTime, 'HH:mm')
-    const currentEnd = format(data.currentEndTime, 'HH:mm')
-
-    const attemptedDate = format(data.attemptedStartTime, 'yyyy年M月d日 (EEEE)', { locale: ja })
-    const attemptedStart = format(data.attemptedStartTime, 'HH:mm')
-    const attemptedEnd = format(data.attemptedEndTime, 'HH:mm')
-
-    const conflictDate = format(data.conflictingReservation.startTime, 'yyyy年M月d日 (EEEE)', {
+    const currentDate = format(data.currentStartTime, "yyyy年M月d日 (EEEE)", {
       locale: ja,
-    })
-    const conflictStart = format(data.conflictingReservation.startTime, 'HH:mm')
-    const conflictEnd = format(data.conflictingReservation.endTime, 'HH:mm')
+    });
+    const currentStart = format(data.currentStartTime, "HH:mm");
+    const currentEnd = format(data.currentEndTime, "HH:mm");
+
+    const attemptedDate = format(
+      data.attemptedStartTime,
+      "yyyy年M月d日 (EEEE)",
+      { locale: ja },
+    );
+    const attemptedStart = format(data.attemptedStartTime, "HH:mm");
+    const attemptedEnd = format(data.attemptedEndTime, "HH:mm");
+
+    const conflictDate = format(
+      data.conflictingReservation.startTime,
+      "yyyy年M月d日 (EEEE)",
+      {
+        locale: ja,
+      },
+    );
+    const conflictStart = format(
+      data.conflictingReservation.startTime,
+      "HH:mm",
+    );
+    const conflictEnd = format(data.conflictingReservation.endTime, "HH:mm");
 
     const textContent = `
 カレンダー同期エラー: 時間変更が拒否されました
@@ -522,26 +610,38 @@ export async function sendCalendarSyncRejectionEmail(data: {
 ${getAdminUrl(`/reservations/${data.reservationId}`)}
 
 ※ Google Calendarでの変更は反映されていません。予約は元の時間のままです。
-    `.trim()
+    `.trim();
 
-    await resend.emails.send({
+    const { error: sendError } = await resend.emails.send({
       from: getFromAddress(),
       to: notificationEmails,
       subject: `【カレンダー同期エラー】時間変更拒否 - ${data.spaceName}`,
       text: textContent,
-    })
+    });
 
-    return { success: true }
+    if (sendError) {
+      logError(new Error(sendError.message), {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.MEDIUM,
+        context: {
+          operation: "sendCalendarSyncRejectionEmail",
+          reservationId: data.reservationId,
+        },
+      });
+      return { success: false, error: "メール送信に失敗しました" };
+    }
+
+    return { success: true };
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.MEDIUM,
       context: {
-        operation: 'sendCalendarSyncRejectionEmail',
+        operation: "sendCalendarSyncRejectionEmail",
         reservationId: data.reservationId,
       },
-    })
-    return { success: false, error: 'メール送信に失敗しました' }
+    });
+    return { success: false, error: "メール送信に失敗しました" };
   }
 }
 
@@ -559,20 +659,20 @@ ${getAdminUrl(`/reservations/${data.reservationId}`)}
  * @returns 送信結果
  */
 export async function sendStaffInvitationEmail(
-  data: StaffInvitationEmailData
+  data: StaffInvitationEmailData,
 ): Promise<{ success: boolean; error?: string }> {
   if (!isEmailEnabled()) {
     // Email disabled: RESEND_API_KEY not set - skip silently in development
-    return { success: true }
+    return { success: true };
   }
 
-  const resend = getResendClient()
+  const resend = getResendClient();
   if (!resend) {
-    return { success: true }
+    return { success: true };
   }
 
   try {
-    await resend.emails.send({
+    const { error: sendError } = await resend.emails.send({
       from: getFromAddress(),
       to: data.to,
       subject: `【スタッフ招待】${SITE_DEFAULTS.name}`,
@@ -581,19 +681,31 @@ export async function sendStaffInvitationEmail(
         setupUrl: data.setupUrl,
         expiresAt: data.expiresAt,
       }),
-    })
+    });
 
-    return { success: true }
+    if (sendError) {
+      logError(new Error(sendError.message), {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.MEDIUM,
+        context: {
+          operation: "sendStaffInvitationEmail",
+          to: data.to,
+        },
+      });
+      return { success: false, error: "メール送信に失敗しました" };
+    }
+
+    return { success: true };
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.MEDIUM,
       context: {
-        operation: 'sendStaffInvitationEmail',
+        operation: "sendStaffInvitationEmail",
         to: data.to,
       },
-    })
-    return { success: false, error: 'メール送信に失敗しました' }
+    });
+    return { success: false, error: "メール送信に失敗しました" };
   }
 }
 
@@ -607,34 +719,34 @@ export async function sendStaffInvitationEmail(
  * @returns 送信結果
  */
 export async function sendWebhookRenewalNotification(data: {
-  success: boolean
-  newExpiration?: Date
-  error?: string
+  success: boolean;
+  newExpiration?: Date;
+  error?: string;
 }): Promise<{ success: boolean; error?: string }> {
   if (!isEmailEnabled()) {
     // Email disabled: RESEND_API_KEY not set - skip silently in development
-    return { success: true }
+    return { success: true };
   }
 
-  const resend = getResendClient()
+  const resend = getResendClient();
   if (!resend) {
-    return { success: true }
+    return { success: true };
   }
 
   try {
-    const notificationEmails = await getNotificationEmails()
-    if (notificationEmails.length === 0) return { success: true }
+    const notificationEmails = await getNotificationEmails();
+    if (notificationEmails.length === 0) return { success: true };
 
     const subject = data.success
-      ? '【Google Calendar】Webhook自動更新完了'
-      : '【エラー】Google Calendar Webhook自動更新失敗'
+      ? "【Google Calendar】Webhook自動更新完了"
+      : "【エラー】Google Calendar Webhook自動更新失敗";
 
-    const renewedAt = format(new Date(), 'yyyy年M月d日 HH:mm', { locale: ja })
+    const renewedAt = format(new Date(), "yyyy年M月d日 HH:mm", { locale: ja });
     const newExpirationStr = data.newExpiration
-      ? format(data.newExpiration, 'yyyy年M月d日 HH:mm', { locale: ja })
-      : '不明'
+      ? format(data.newExpiration, "yyyy年M月d日 HH:mm", { locale: ja })
+      : "不明";
 
-    let textContent: string
+    let textContent: string;
     if (data.success) {
       textContent = `
 Google Calendar Webhookが自動更新されました。
@@ -643,35 +755,44 @@ Google Calendar Webhookが自動更新されました。
 新しい有効期限: ${newExpirationStr}
 
 次の更新は有効期限の2日前に自動実行されます。
-      `.trim()
+      `.trim();
     } else {
       textContent = `
 Google Calendar Webhookの自動更新に失敗しました。
 
 更新試行日時: ${renewedAt}
-エラー: ${data.error || '不明なエラー'}
+エラー: ${data.error || "不明なエラー"}
 
 対応が必要です。管理画面から手動でWebhookを再設定してください:
-${getAdminUrl('/settings')}
+${getAdminUrl("/settings")}
 
 ※ ポーリングが設定されている場合は、引き続きポーリングで同期されます。
-      `.trim()
+      `.trim();
     }
 
-    await resend.emails.send({
+    const { error: sendError } = await resend.emails.send({
       from: getFromAddress(),
       to: notificationEmails,
       subject,
       text: textContent,
-    })
+    });
 
-    return { success: true }
+    if (sendError) {
+      logError(new Error(sendError.message), {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.LOW,
+        context: { operation: "sendWebhookRenewalNotification" },
+      });
+      return { success: false, error: "メール送信に失敗しました" };
+    }
+
+    return { success: true };
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.LOW,
-      context: { operation: 'sendWebhookRenewalNotification' },
-    })
-    return { success: false, error: 'メール送信に失敗しました' }
+      context: { operation: "sendWebhookRenewalNotification" },
+    });
+    return { success: false, error: "メール送信に失敗しました" };
   }
 }

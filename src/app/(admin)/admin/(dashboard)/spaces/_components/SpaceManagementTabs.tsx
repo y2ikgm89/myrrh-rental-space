@@ -57,7 +57,7 @@ export function SpaceManagementTabs({
 
   return (
     <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-      <div className="mb-2 flex items-center justify-between">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <TabsList>
           <TabsTrigger value="spaces">スペース</TabsTrigger>
           <TabsTrigger value="locations">場所</TabsTrigger>
@@ -76,13 +76,25 @@ export function SpaceManagementTabs({
         {activeTab === "categories" && <CreateCategoryDialog />}
       </div>
 
-      <TabsContent value="spaces" forceMount className="data-[state=inactive]:hidden">
+      <TabsContent
+        value="spaces"
+        forceMount
+        className="data-[state=inactive]:hidden"
+      >
         {spacesContent}
       </TabsContent>
-      <TabsContent value="locations" forceMount className="data-[state=inactive]:hidden">
+      <TabsContent
+        value="locations"
+        forceMount
+        className="data-[state=inactive]:hidden"
+      >
         {locationsContent}
       </TabsContent>
-      <TabsContent value="categories" forceMount className="data-[state=inactive]:hidden">
+      <TabsContent
+        value="categories"
+        forceMount
+        className="data-[state=inactive]:hidden"
+      >
         {categoriesContent}
       </TabsContent>
     </Tabs>

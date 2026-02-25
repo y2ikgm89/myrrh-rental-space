@@ -12,14 +12,22 @@
  * @module api/webhooks/google-calendar
  */
 
-import { NextResponse } from 'next/server'
-import { revalidateTag } from 'next/cache'
-import { CACHE_TAGS, CACHE_LIFE, getCacheTag } from '@/shared/lib/constants'
-import { prisma } from '@/shared/lib/prisma'
-import { syncFromCalendar } from '@/shared/lib/calendar-sync'
-import { isTwoWaySyncEnabled, getTwoWaySyncSettings } from '@/shared/lib/google-calendar'
-import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors/server'
-import { CalendarSyncMethod } from '@/shared/generated/prisma/enums'
+import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
+import { CACHE_TAGS, CACHE_LIFE, getCacheTag } from "@/shared/lib/constants";
+import { prisma } from "@/shared/lib/prisma";
+import { syncFromCalendar } from "@/shared/lib/calendar-sync";
+import {
+  isTwoWaySyncEnabled,
+  getTwoWaySyncSettings,
+} from "@/shared/lib/google-calendar";
+import {
+  logError,
+  ErrorCategory,
+  ErrorSeverity,
+  normalizeError,
+} from "@/shared/lib/errors/server";
+import { CalendarSyncMethod } from "@/shared/generated/prisma/enums";
 
 /**
  * Google Calendar Push Notification Webhook
@@ -37,101 +45,114 @@ import { CalendarSyncMethod } from '@/shared/generated/prisma/enums'
 export async function POST(request: Request) {
   try {
     // Google Calendar Push Notificationヘッダーを取得
-    const channelId = request.headers.get('x-goog-channel-id')
-    const resourceId = request.headers.get('x-goog-resource-id')
-    const resourceState = request.headers.get('x-goog-resource-state')
+    const channelId = request.headers.get("x-goog-channel-id");
+    const resourceId = request.headers.get("x-goog-resource-id");
+    const resourceState = request.headers.get("x-goog-resource-state");
 
     // チャンネルIDの検証
     if (!channelId || !resourceId) {
-      logError(new Error('Missing required headers for Google Calendar webhook'), {
-        category: ErrorCategory.VALIDATION,
-        severity: ErrorSeverity.LOW,
-        context: { operation: 'googleCalendarWebhook', hasChannelId: !!channelId, hasResourceId: !!resourceId },
-      })
-      return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+      logError(
+        new Error("Missing required headers for Google Calendar webhook"),
+        {
+          category: ErrorCategory.VALIDATION,
+          severity: ErrorSeverity.LOW,
+          context: {
+            operation: "googleCalendarWebhook",
+            hasChannelId: !!channelId,
+            hasResourceId: !!resourceId,
+          },
+        },
+      );
+      return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
     // 登録されているWebhookか確認
     const settings = await prisma.settings.findUnique({
-      where: { id: 'singleton' },
+      where: { id: "singleton" },
       select: {
         googleCalendarWebhookChannelId: true,
         googleCalendarWebhookResourceId: true,
         googleCalendarWebhookToken: true,
       },
-    })
+    });
 
     // トークン検証（x-goog-channel-token）
-    const receivedToken = request.headers.get('x-goog-channel-token')
-    
+    const receivedToken = request.headers.get("x-goog-channel-token");
+
     // トークンが設定されていない場合はWebhookを拒否（セキュリティ強化）
     if (!settings?.googleCalendarWebhookToken) {
-      logError(new Error('Webhook token not configured'), {
+      logError(new Error("Webhook token not configured"), {
         category: ErrorCategory.VALIDATION,
         severity: ErrorSeverity.HIGH,
-        context: { operation: 'googleCalendarWebhook' },
-      })
-      return NextResponse.json({ error: 'Webhook not configured' }, { status: 500 })
+        context: { operation: "googleCalendarWebhook" },
+      });
+      return NextResponse.json(
+        { error: "Webhook not configured" },
+        { status: 503 },
+      );
     }
-    
+
     if (receivedToken !== settings.googleCalendarWebhookToken) {
-      logError(new Error('Invalid webhook token'), {
+      logError(new Error("Invalid webhook token"), {
         category: ErrorCategory.VALIDATION,
         severity: ErrorSeverity.MEDIUM,
-        context: { operation: 'googleCalendarWebhook', hasToken: !!receivedToken },
-      })
-      return NextResponse.json({ error: 'Invalid token' }, { status: 403 })
+        context: {
+          operation: "googleCalendarWebhook",
+          hasToken: !!receivedToken,
+        },
+      });
+      return NextResponse.json({ error: "Invalid token" }, { status: 403 });
     }
 
     if (
       settings?.googleCalendarWebhookChannelId !== channelId ||
       settings?.googleCalendarWebhookResourceId !== resourceId
     ) {
-      logError(new Error('Unknown webhook channel/resource'), {
+      logError(new Error("Unknown webhook channel/resource"), {
         category: ErrorCategory.VALIDATION,
         severity: ErrorSeverity.LOW,
-        context: { operation: 'googleCalendarWebhook', channelId, resourceId },
-      })
+        context: { operation: "googleCalendarWebhook", channelId, resourceId },
+      });
       // 不明なWebhookでも200を返す（Googleが再送しないように）
-      return NextResponse.json({ success: true, ignored: true })
+      return NextResponse.json({ success: true, ignored: true });
     }
 
     // syncイベントは初回登録時の確認なのでスキップ
-    if (resourceState === 'sync') {
-      return NextResponse.json({ success: true, sync: true })
+    if (resourceState === "sync") {
+      return NextResponse.json({ success: true, sync: true });
     }
 
     // 双方向同期が有効か確認
-    const enabled = await isTwoWaySyncEnabled()
+    const enabled = await isTwoWaySyncEnabled();
     if (!enabled) {
-      return NextResponse.json({ success: true, disabled: true })
+      return NextResponse.json({ success: true, disabled: true });
     }
 
     // 同期方式を確認（webhookまたはbothの場合のみ実行）
-    const syncSettings = await getTwoWaySyncSettings()
+    const syncSettings = await getTwoWaySyncSettings();
     if (syncSettings.syncMethod === CalendarSyncMethod.polling) {
-      return NextResponse.json({ success: true, pollingOnly: true })
+      return NextResponse.json({ success: true, pollingOnly: true });
     }
 
     // 同期実行
-    const result = await syncFromCalendar()
+    const result = await syncFromCalendar();
 
     if (!result.success) {
-      logError(new Error('Webhook sync failed'), {
+      logError(new Error("Webhook sync failed"), {
         category: ErrorCategory.EXTERNAL_API,
         severity: ErrorSeverity.MEDIUM,
-        context: { operation: 'googleCalendarWebhook', errors: result.errors },
-      })
+        context: { operation: "googleCalendarWebhook", errors: result.errors },
+      });
       // エラーでも200を返す（Googleが再送しないように）
       return NextResponse.json({
         success: false,
         errors: result.errors,
-      })
+      });
     }
 
     // キャッシュ無効化: カレンダー同期後に予約データを最新化
-    revalidateTag(CACHE_TAGS.RESERVATIONS, CACHE_LIFE.DYNAMIC_DATA)
-    revalidateTag(getCacheTag.reservations.calendar(), CACHE_LIFE.DYNAMIC_DATA)
+    revalidateTag(CACHE_TAGS.RESERVATIONS, CACHE_LIFE.DYNAMIC_DATA);
+    revalidateTag(getCacheTag.reservations.calendar(), CACHE_LIFE.DYNAMIC_DATA);
 
     return NextResponse.json({
       success: true,
@@ -139,18 +160,18 @@ export async function POST(request: Request) {
       deleted: result.deleted,
       updated: result.updated,
       timestamp: new Date().toISOString(),
-    })
+    });
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.UNKNOWN,
       severity: ErrorSeverity.HIGH,
-      context: { operation: 'googleCalendarWebhook' },
-    })
+      context: { operation: "googleCalendarWebhook" },
+    });
     // エラーでも200を返す（Googleが再送しないように）
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    })
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
   }
 }
 
@@ -159,8 +180,8 @@ export async function POST(request: Request) {
  */
 export async function GET() {
   return NextResponse.json({
-    status: 'ok',
-    message: 'Google Calendar webhook endpoint is ready',
+    status: "ok",
+    message: "Google Calendar webhook endpoint is ready",
     timestamp: new Date().toISOString(),
-  })
+  });
 }

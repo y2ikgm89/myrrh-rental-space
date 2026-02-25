@@ -60,10 +60,10 @@
    * -------------------------------------------------------------------------- */
   --color-destructive: oklch(0.55 0.22 25);
   --color-destructive-foreground: oklch(1 0 0);
-  --color-success: oklch(0.60 0.18 145);
+  --color-success: oklch(0.6 0.18 145);
   --color-success-foreground: oklch(1 0 0);
   --color-warning: oklch(0.75 0.18 85);
-  --color-warning-foreground: oklch(0.20 0.02 85);
+  --color-warning-foreground: oklch(0.2 0.02 85);
   --color-info: oklch(0.55 0.18 260);
   --color-info-foreground: oklch(1 0 0);
   --color-rating: oklch(0.82 0.17 90);
@@ -71,8 +71,8 @@
   /* --------------------------------------------------------------------------
    * Border & Input
    * -------------------------------------------------------------------------- */
-  --color-border: oklch(0.90 0.005 250);
-  --color-input: oklch(0.90 0.005 250);
+  --color-border: oklch(0.9 0.005 250);
+  --color-input: oklch(0.9 0.005 250);
   --color-ring: var(--color-primary-dark);
 
   /* --------------------------------------------------------------------------
@@ -87,8 +87,10 @@
    * Shadows
    * -------------------------------------------------------------------------- */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.03);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.04), 0 2px 4px -2px rgb(0 0 0 / 0.02);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.02);
+  --shadow-md:
+    0 4px 6px -1px rgb(0 0 0 / 0.04), 0 2px 4px -2px rgb(0 0 0 / 0.02);
+  --shadow-lg:
+    0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.02);
 
   /* --------------------------------------------------------------------------
    * Font
@@ -121,7 +123,8 @@
      Non-hero first visible elements cancel the overlap to start below the header.
      :is(section, div):first-of-type targets the first <section> or <div> independently,
      skipping invisible elements like <script> (JSON-LD). */
-  #main-content[data-header-transparent] > :is(section, div):first-of-type:not([data-hero]) {
+  #main-content[data-header-transparent]
+    > :is(section, div):first-of-type:not([data-hero]) {
     margin-top: var(--header-height, 60px);
   }
 
@@ -169,12 +172,34 @@
 }
 
 /* ==========================================================================
+ * Keyframes
+ * ========================================================================== */
+
+@keyframes maintenance-fade-in {
+  from {
+    opacity: 0;
+    translate: 0 8px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+/* ==========================================================================
  * Utility Layer
  * ========================================================================== */
 
 @layer utilities {
   .font-heading {
     font-family: var(--font-serif);
+  }
+
+  /* メンテナンスページ フェードイン（モーション許可時のみ） */
+  @media (prefers-reduced-motion: no-preference) {
+    .animate-maintenance-in {
+      animation: maintenance-fade-in 0.7s ease-out both;
+    }
   }
 
   /* ゴールドアクセントライン — セクションラベル装飾 */

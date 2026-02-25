@@ -8,6 +8,7 @@ import {
 } from "@/shared/lib/errors/server";
 import { prisma } from "@/shared/lib/prisma";
 import { serverEnv } from "@/shared/lib/env/server";
+import { clientEnv } from "@/shared/lib/env/client";
 import { CalendarSyncMethod } from "@/shared/generated/prisma/enums";
 import type { WebhookSetupResult, WebhookRenewalResult } from "./types";
 import { formatGoogleApiError } from "./helpers";
@@ -175,8 +176,7 @@ export async function renewWebhookIfNeeded(): Promise<WebhookRenewalResult> {
     }
 
     // 新しいWebhookを設定
-    const baseUrl =
-      process.env["NEXT_PUBLIC_APP_URL"] ?? serverEnv.BETTER_AUTH_URL;
+    const baseUrl = clientEnv.NEXT_PUBLIC_APP_URL ?? serverEnv.BETTER_AUTH_URL;
     if (!baseUrl) {
       return {
         success: false,

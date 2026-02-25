@@ -161,8 +161,14 @@ export function ResponsiveSidebar({ userInfo }: ResponsiveSidebarProps) {
                     className={`${classes.navItem()} ${isActive ? classes.navItemActive() : ""}`}
                     onClick={() => effectiveIsMobile && closeSidebar()}
                   >
-                    {item.icon}
-                    <span className="text-sm font-medium">{item.label}</span>
+                    <span className={isActive ? "text-sidebar-text" : ""}>
+                      {item.icon}
+                    </span>
+                    <span
+                      className={`text-sm font-medium ${isActive ? "text-sidebar-text" : ""}`}
+                    >
+                      {item.label}
+                    </span>
                   </Link>
                 </li>
               );

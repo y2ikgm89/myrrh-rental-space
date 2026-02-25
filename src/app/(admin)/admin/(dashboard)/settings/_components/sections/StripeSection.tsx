@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * Stripe設定セクション
@@ -6,8 +6,8 @@
  * Stripe APIキーの設定と接続テスト
  */
 
-import { useState, useTransition } from 'react'
-import { useConfirm } from '@/admin/contexts/confirm-context'
+import { useState, useTransition } from "react";
+import { useConfirm } from "@/admin/contexts/confirm-context";
 import {
   Button,
   Card,
@@ -17,35 +17,38 @@ import {
   CardTitle,
   Input,
   Label,
-} from '@/admin/components/ui'
-import { Switch } from '@/admin/components/ui/switch'
+} from "@/admin/components/ui";
+import { Switch } from "@/admin/components/ui/switch";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/admin/components/ui/select'
+} from "@/admin/components/ui/select";
 import {
   updateStripeSettings,
   testStripeConnectionAction,
   clearStripeKeys,
-} from '@/admin/actions/settings'
-import type { SettingsData } from '@/admin/actions/settings'
-import { SUPPORTED_CURRENCIES, SUPPORTED_CURRENCY_VALUES } from '@/admin/lib/stripe-shared'
-import { createTypeGuard } from '@/shared/lib/serialize'
-import { useRefreshOnSuccess } from '../hooks'
-import { StatusBanner } from '../shared/StatusBanner'
-import { formatDateTimeShort } from '@/shared/lib/utils'
+} from "@/admin/actions/settings";
+import type { SettingsData } from "@/admin/actions/settings";
+import {
+  SUPPORTED_CURRENCIES,
+  SUPPORTED_CURRENCY_VALUES,
+} from "@/admin/lib/stripe-shared";
+import { createTypeGuard } from "@/shared/lib/serialize";
+import { useRefreshOnSuccess } from "../hooks";
+import { StatusBanner } from "../shared/StatusBanner";
+import { formatDateTimeShort } from "@/shared/lib/utils";
 
 // =============================================================================
 // Types
 // =============================================================================
 
-const isSupportedCurrency = createTypeGuard(SUPPORTED_CURRENCY_VALUES)
+const isSupportedCurrency = createTypeGuard(SUPPORTED_CURRENCY_VALUES);
 
 interface StripeSectionProps {
-  settings: SettingsData
+  settings: SettingsData;
 }
 
 // =============================================================================
@@ -53,27 +56,29 @@ interface StripeSectionProps {
 // =============================================================================
 
 export function StripeSection({ settings }: StripeSectionProps) {
-  const confirm = useConfirm()
-  const { handleResult, refresh } = useRefreshOnSuccess()
-  const [isPending, startTransition] = useTransition()
-  const [isTesting, setIsTesting] = useState(false)
+  const confirm = useConfirm();
+  const { handleResult, refresh } = useRefreshOnSuccess();
+  const [isPending, startTransition] = useTransition();
+  const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<{
-    success: boolean
-    message: string
-    mode?: 'test' | 'live'
-  } | null>(null)
+    success: boolean;
+    message: string;
+    mode?: "test" | "live";
+  } | null>(null);
 
   const [formData, setFormData] = useState({
     stripeEnabled: settings.stripeEnabled,
     stripeTestMode: settings.stripeTestMode,
-    stripePublishableKey: settings.stripePublishableKey || '',
-    stripeSecretKey: '', // 常に空から開始（セキュリティ）
-    stripeWebhookSecret: '', // 常に空から開始（セキュリティ）
-    stripeCurrency: isSupportedCurrency(settings.stripeCurrency) ? settings.stripeCurrency : 'jpy',
-  })
+    stripePublishableKey: settings.stripePublishableKey || "",
+    stripeSecretKey: "", // 常に空から開始（セキュリティ）
+    stripeWebhookSecret: "", // 常に空から開始（セキュリティ）
+    stripeCurrency: isSupportedCurrency(settings.stripeCurrency)
+      ? settings.stripeCurrency
+      : "jpy",
+  });
 
-  const [showSecretKeyInput, setShowSecretKeyInput] = useState(false)
-  const [showWebhookSecretInput, setShowWebhookSecretInput] = useState(false)
+  const [showSecretKeyInput, setShowSecretKeyInput] = useState(false);
+  const [showWebhookSecretInput, setShowWebhookSecretInput] = useState(false);
 
   const handleSave = () => {
     startTransition(async () => {
@@ -84,81 +89,81 @@ export function StripeSection({ settings }: StripeSectionProps) {
         stripeSecretKey: formData.stripeSecretKey || null,
         stripeWebhookSecret: formData.stripeWebhookSecret || null,
         stripeCurrency: formData.stripeCurrency,
-      })
+      });
       if (result.success) {
         // 入力フィールドをリセット
         setFormData((prev) => ({
           ...prev,
-          stripeSecretKey: '',
-          stripeWebhookSecret: '',
-        }))
-        setShowSecretKeyInput(false)
-        setShowWebhookSecretInput(false)
+          stripeSecretKey: "",
+          stripeWebhookSecret: "",
+        }));
+        setShowSecretKeyInput(false);
+        setShowWebhookSecretInput(false);
       }
-      handleResult(result)
-    })
-  }
+      handleResult(result);
+    });
+  };
 
   const handleConnectionTest = async () => {
     if (!formData.stripeSecretKey) {
       setTestResult({
         success: false,
-        message: 'シークレットキーを入力してください',
-      })
-      return
+        message: "シークレットキーを入力してください",
+      });
+      return;
     }
 
-    setIsTesting(true)
-    setTestResult(null)
+    setIsTesting(true);
+    setTestResult(null);
 
     try {
-      const result = await testStripeConnectionAction(formData.stripeSecretKey)
+      const result = await testStripeConnectionAction(formData.stripeSecretKey);
       if (result.success) {
         setTestResult({
           success: true,
-          message: `接続成功 (アカウントID: ${result.accountId})`,
-          mode: result.mode,
-        })
-        refresh()
+          message: `接続成功 (アカウントID: ${result.data.accountId})`,
+          mode: result.data.mode,
+        });
+        refresh();
       } else {
         setTestResult({
           success: false,
-          message: result.error || '接続に失敗しました',
-        })
+          message: result.error || "接続に失敗しました",
+        });
       }
     } catch {
       setTestResult({
         success: false,
-        message: '接続テストでエラーが発生しました',
-      })
+        message: "接続テストでエラーが発生しました",
+      });
     } finally {
-      setIsTesting(false)
+      setIsTesting(false);
     }
-  }
+  };
 
   const handleClearKeys = async () => {
     const confirmed = await confirm({
-      title: 'Stripeキーをクリアしますか？',
-      description: 'Stripeの全てのキーをクリアしますか？',
-      confirmLabel: 'クリア',
-      variant: 'destructive',
-    })
-    if (!confirmed) return
+      title: "Stripeキーをクリアしますか？",
+      description: "Stripeの全てのキーをクリアしますか？",
+      confirmLabel: "クリア",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
 
     startTransition(async () => {
-      const result = await clearStripeKeys()
+      const result = await clearStripeKeys();
       if (result.success) {
         setFormData((prev) => ({
           ...prev,
-          stripePublishableKey: '',
-          stripeSecretKey: '',
-          stripeWebhookSecret: '',
-        }))
-        setTestResult(null)
+          stripePublishableKey: "",
+          stripeSecretKey: "",
+          stripeWebhookSecret: "",
+        }));
+        setTestResult(null);
       }
-      handleResult(result)
-    })
-  }
+      handleResult(result);
+    });
+  };
 
   return (
     <Card>
@@ -202,8 +207,8 @@ export function StripeSection({ settings }: StripeSectionProps) {
             <Label htmlFor="stripeTestMode">テストモード</Label>
             <p className="text-sm text-muted-foreground">
               {formData.stripeTestMode
-                ? 'テストキーを使用します（実際の決済は行われません）'
-                : '本番キーを使用します（実際の決済が行われます）'}
+                ? "テストキーを使用します（実際の決済は行われません）"
+                : "本番キーを使用します（実際の決済が行われます）"}
             </p>
           </div>
           <Switch
@@ -228,10 +233,13 @@ export function StripeSection({ settings }: StripeSectionProps) {
               type="text"
               value={formData.stripePublishableKey}
               onChange={(e) =>
-                setFormData({ ...formData, stripePublishableKey: e.target.value })
+                setFormData({
+                  ...formData,
+                  stripePublishableKey: e.target.value,
+                })
               }
               placeholder={
-                formData.stripeTestMode ? 'pk_test_...' : 'pk_live_...'
+                formData.stripeTestMode ? "pk_test_..." : "pk_live_..."
               }
               disabled={isPending}
             />
@@ -272,7 +280,7 @@ export function StripeSection({ settings }: StripeSectionProps) {
                   setFormData({ ...formData, stripeSecretKey: e.target.value })
                 }
                 placeholder={
-                  formData.stripeTestMode ? 'sk_test_...' : 'sk_live_...'
+                  formData.stripeTestMode ? "sk_test_..." : "sk_live_..."
                 }
                 disabled={isPending}
               />
@@ -284,7 +292,9 @@ export function StripeSection({ settings }: StripeSectionProps) {
 
           {/* Webhookシークレット */}
           <div className="space-y-2">
-            <Label htmlFor="stripeWebhookSecret">Webhookシークレット（任意）</Label>
+            <Label htmlFor="stripeWebhookSecret">
+              Webhookシークレット（任意）
+            </Label>
             {settings.stripeWebhookSecretMasked && !showWebhookSecretInput ? (
               <div className="flex items-center gap-2">
                 <Input
@@ -311,7 +321,10 @@ export function StripeSection({ settings }: StripeSectionProps) {
                 className="font-mono [&:not(:placeholder-shown)]:[-webkit-text-security:disc]"
                 value={formData.stripeWebhookSecret}
                 onChange={(e) =>
-                  setFormData({ ...formData, stripeWebhookSecret: e.target.value })
+                  setFormData({
+                    ...formData,
+                    stripeWebhookSecret: e.target.value,
+                  })
                 }
                 placeholder="whsec_..."
                 disabled={isPending}
@@ -329,7 +342,8 @@ export function StripeSection({ settings }: StripeSectionProps) {
           <Select
             value={formData.stripeCurrency}
             onValueChange={(value) => {
-              if (isSupportedCurrency(value)) setFormData({ ...formData, stripeCurrency: value })
+              if (isSupportedCurrency(value))
+                setFormData({ ...formData, stripeCurrency: value });
             }}
             disabled={isPending}
           >
@@ -348,17 +362,23 @@ export function StripeSection({ settings }: StripeSectionProps) {
 
         {/* 接続ステータス */}
         {settings.stripeConnectionStatus && (
-          <StatusBanner success={settings.stripeConnectionStatus === 'connected'}>
+          <StatusBanner
+            success={settings.stripeConnectionStatus === "connected"}
+          >
             <div className="flex items-center gap-2">
-              {settings.stripeConnectionStatus === 'connected' ? (
+              {settings.stripeConnectionStatus === "connected" ? (
                 <>
                   <span className="h-2 w-2 rounded-full bg-success" />
-                  <span className="text-sm font-medium text-success">接続済み</span>
+                  <span className="text-sm font-medium text-success">
+                    接続済み
+                  </span>
                 </>
               ) : (
                 <>
                   <span className="h-2 w-2 rounded-full bg-destructive" />
-                  <span className="text-sm font-medium text-destructive">エラー</span>
+                  <span className="text-sm font-medium text-destructive">
+                    エラー
+                  </span>
                 </>
               )}
             </div>
@@ -378,12 +398,14 @@ export function StripeSection({ settings }: StripeSectionProps) {
         {/* 接続テスト結果 */}
         {testResult && (
           <StatusBanner success={testResult.success}>
-            <p className={`text-sm ${testResult.success ? 'text-success' : 'text-destructive'}`}>
+            <p
+              className={`text-sm ${testResult.success ? "text-success" : "text-destructive"}`}
+            >
               {testResult.message}
             </p>
             {testResult.mode && (
               <p className="mt-1 text-xs text-muted-foreground">
-                モード: {testResult.mode === 'test' ? 'テスト' : '本番'}
+                モード: {testResult.mode === "test" ? "テスト" : "本番"}
               </p>
             )}
           </StatusBanner>
@@ -392,7 +414,7 @@ export function StripeSection({ settings }: StripeSectionProps) {
         {/* アクションボタン */}
         <div className="flex flex-wrap gap-2">
           <Button onClick={handleSave} disabled={isPending}>
-            {isPending ? '保存中...' : 'Stripe設定を保存'}
+            {isPending ? "保存中..." : "Stripe設定を保存"}
           </Button>
           {formData.stripeSecretKey && (
             <Button
@@ -400,10 +422,11 @@ export function StripeSection({ settings }: StripeSectionProps) {
               onClick={handleConnectionTest}
               disabled={isPending || isTesting}
             >
-              {isTesting ? 'テスト中...' : '接続テスト'}
+              {isTesting ? "テスト中..." : "接続テスト"}
             </Button>
           )}
-          {(settings.stripeSecretKeyMasked || settings.stripePublishableKey) && (
+          {(settings.stripeSecretKeyMasked ||
+            settings.stripePublishableKey) && (
             <Button
               variant="destructive"
               onClick={handleClearKeys}
@@ -415,5 +438,5 @@ export function StripeSection({ settings }: StripeSectionProps) {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

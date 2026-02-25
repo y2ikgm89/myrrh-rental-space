@@ -1,4 +1,4 @@
-'use server'
+"use server";
 
 /**
  * 基本情報・レイアウト・SEO設定 Server Actions
@@ -6,23 +6,28 @@
  * @module admin/actions/settings/basic
  */
 
-import { prisma } from '@/shared/lib/prisma'
-import { updateTag } from 'next/cache'
-import { CACHE_TAGS } from '@/shared/lib/constants'
-import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
-import { createValidationError } from '@/shared/lib/action-helpers'
-import { withPermission } from '@/admin/lib/server-action-helpers'
-import { safeDecrypt } from '@/shared/lib/crypto'
+import { prisma } from "@/shared/lib/prisma";
+import { updateTag } from "next/cache";
+import { CACHE_TAGS } from "@/shared/lib/constants";
+import {
+  createSuccess,
+  createFailure,
+  type ActionResult,
+} from "@/admin/types/server-actions";
+import { createValidationError } from "@/shared/lib/action-helpers";
+import { withPermission } from "@/admin/lib/server-action-helpers";
+import { safeDecrypt } from "@/shared/lib/crypto";
 import {
   parseBusinessHours,
   parseStringArrayOrNull,
   parseBusinessAttributes,
-} from '@/shared/lib/json-validators'
-import { maskSecretKey } from '@/admin/lib/stripe-shared'
-import { extractServiceAccountEmail } from '@/shared/lib/google-calendar'
-import { checkReadPermissionFor } from '@/admin/lib/permissions'
+} from "@/shared/lib/json-validators";
+import { maskSecretKey } from "@/admin/lib/stripe-shared";
+import { extractServiceAccountEmail } from "@/shared/lib/google-calendar";
+import { checkReadPermissionFor } from "@/admin/lib/permissions";
+import { toPlainObject } from "@/shared/lib/serialize";
 
-import type { SettingsData } from './types'
+import type { SettingsData } from "./types";
 import {
   basicInfoSchema,
   layoutSettingsSchema,
@@ -30,13 +35,13 @@ import {
   type BasicInfoInput,
   type LayoutSettingsInput,
   type SeoSettingsInput,
-} from './schemas'
+} from "./schemas";
 
 // =============================================================================
 // Helper Functions
 // =============================================================================
 
-const checkReadPermission = checkReadPermissionFor('settings')
+const checkReadPermission = checkReadPermissionFor("settings");
 
 // =============================================================================
 // Actions
@@ -48,18 +53,19 @@ const checkReadPermission = checkReadPermissionFor('settings')
  */
 export async function getPublicSettings(): Promise<SettingsData> {
   let settings = await prisma.settings.findUnique({
-    where: { id: 'singleton' },
-  })
+    where: { id: "singleton" },
+  });
 
   if (!settings) {
     settings = await prisma.settings.create({
-      data: { id: 'singleton' },
-    })
+      data: { id: "singleton" },
+    });
   }
 
   // Prisma JsonValueをZodバリデーション関数で安全に変換
   // 機密情報はnullとして返す（公開ページでは不要）
-  return {
+  // toPlainObject でSymbolプロパティを除去し、Client Componentに安全に渡せるPOJOに変換
+  return toPlainObject({
     ...settings,
     businessHours: parseBusinessHours(settings.businessHours),
     regularHolidays: parseStringArrayOrNull(settings.regularHolidays),
@@ -99,53 +105,54 @@ export async function getPublicSettings(): Promise<SettingsData> {
     taxDisplayModeAdmin: settings.taxDisplayModeAdmin,
     taxDisplayModePublic: settings.taxDisplayModePublic,
     taxInputMode: settings.taxInputMode,
-  }
+  });
 }
 
 /**
  * 設定を取得（管理画面用）
  */
 export async function getSettings(): Promise<SettingsData | null> {
-  const hasAccess = await checkReadPermission()
+  const hasAccess = await checkReadPermission();
   if (!hasAccess) {
-    return null
+    return null;
   }
 
   let settings = await prisma.settings.findUnique({
-    where: { id: 'singleton' },
-  })
+    where: { id: "singleton" },
+  });
 
   if (!settings) {
     settings = await prisma.settings.create({
-      data: { id: 'singleton' },
-    })
+      data: { id: "singleton" },
+    });
   }
 
   // Stripeキーをマスク表示用に変換
   const stripeSecretKeyMasked = settings.stripeSecretKey
-    ? maskSecretKey(safeDecrypt(settings.stripeSecretKey) || '****')
-    : null
+    ? maskSecretKey(safeDecrypt(settings.stripeSecretKey) || "****")
+    : null;
   const stripeWebhookSecretMasked = settings.stripeWebhookSecret
-    ? maskSecretKey(safeDecrypt(settings.stripeWebhookSecret) || '****')
-    : null
+    ? maskSecretKey(safeDecrypt(settings.stripeWebhookSecret) || "****")
+    : null;
 
   // Google Calendarサービスアカウントのメールをマスク表示用に抽出
-  let googleCalendarServiceAccountEmailMasked: string | null = null
+  let googleCalendarServiceAccountEmailMasked: string | null = null;
   if (settings.googleCalendarServiceAccountJson) {
-    const decrypted = safeDecrypt(settings.googleCalendarServiceAccountJson)
+    const decrypted = safeDecrypt(settings.googleCalendarServiceAccountJson);
     if (decrypted) {
-      const email = extractServiceAccountEmail(decrypted)
+      const email = extractServiceAccountEmail(decrypted);
       if (email) {
         // メールアドレスをマスク（例: ser****@project.iam.gserviceaccount.com）
-        const [localPart = '', domain = ''] = email.split('@')
+        const [localPart = "", domain = ""] = email.split("@");
         googleCalendarServiceAccountEmailMasked =
-          localPart.slice(0, 3) + '****@' + domain
+          localPart.slice(0, 3) + "****@" + domain;
       }
     }
   }
 
   // Prisma JsonValueをZodバリデーション関数で安全に変換 + Stripeキーはマスク済みで返す
-  return {
+  // toPlainObject でSymbolプロパティを除去し、Client Componentに安全に渡せるPOJOに変換
+  return toPlainObject({
     ...settings,
     businessHours: parseBusinessHours(settings.businessHours),
     regularHolidays: parseStringArrayOrNull(settings.regularHolidays),
@@ -185,99 +192,120 @@ export async function getSettings(): Promise<SettingsData | null> {
     taxDisplayModeAdmin: settings.taxDisplayModeAdmin,
     taxDisplayModePublic: settings.taxDisplayModePublic,
     taxInputMode: settings.taxInputMode,
-  }
+  });
 }
 
 /**
  * 基本情報を更新
  */
 export const updateBasicInfo = withPermission<[data: BasicInfoInput], void>(
-  'settings',
-  'update'
+  "settings",
+  "update",
 )(async (_user, data): Promise<ActionResult<void>> => {
-  const parsed = basicInfoSchema.safeParse(data)
+  const parsed = basicInfoSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error)
+    return createValidationError(parsed.error);
   }
 
   await prisma.settings.upsert({
-    where: { id: 'singleton' },
-    create: { id: 'singleton', ...parsed.data },
+    where: { id: "singleton" },
+    create: { id: "singleton", ...parsed.data },
     update: parsed.data,
-  })
+  });
 
-  updateTag(CACHE_TAGS.SETTINGS)
-  updateTag(CACHE_TAGS.SETTINGS)
+  updateTag(CACHE_TAGS.SETTINGS);
+  updateTag(CACHE_TAGS.SETTINGS);
 
-  return createSuccess('基本情報を更新しました')
-})
+  return createSuccess("基本情報を更新しました");
+});
 
 /**
  * レイアウト設定を更新
  */
-export const updateLayoutSettings = withPermission<[data: LayoutSettingsInput], void>(
-  'settings',
-  'update'
+export const updateLayoutSettings = withPermission<
+  [data: LayoutSettingsInput],
+  void
+>(
+  "settings",
+  "update",
 )(async (_user, data): Promise<ActionResult<void>> => {
-  const parsed = layoutSettingsSchema.safeParse(data)
+  const parsed = layoutSettingsSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error)
+    return createValidationError(parsed.error);
   }
 
   // CUSTOMを選択している場合はカスタム値が必須
-  if (parsed.data.containerWidth === 'CUSTOM' && !parsed.data.containerWidthCustom) {
-    return createFailure('Container幅のカスタム値を入力してください')
+  if (
+    parsed.data.containerWidth === "CUSTOM" &&
+    !parsed.data.containerWidthCustom
+  ) {
+    return createFailure("Container幅のカスタム値を入力してください");
   }
-  if (parsed.data.contentWidth === 'CUSTOM' && !parsed.data.contentWidthCustom) {
-    return createFailure('コンテンツ幅のカスタム値を入力してください')
+  if (
+    parsed.data.contentWidth === "CUSTOM" &&
+    !parsed.data.contentWidthCustom
+  ) {
+    return createFailure("コンテンツ幅のカスタム値を入力してください");
   }
 
   await prisma.settings.upsert({
-    where: { id: 'singleton' },
+    where: { id: "singleton" },
     create: {
-      id: 'singleton',
+      id: "singleton",
       containerWidth: parsed.data.containerWidth,
-      containerWidthCustom: parsed.data.containerWidth === 'CUSTOM' ? parsed.data.containerWidthCustom : null,
+      containerWidthCustom:
+        parsed.data.containerWidth === "CUSTOM"
+          ? parsed.data.containerWidthCustom
+          : null,
       contentWidth: parsed.data.contentWidth,
-      contentWidthCustom: parsed.data.contentWidth === 'CUSTOM' ? parsed.data.contentWidthCustom : null,
+      contentWidthCustom:
+        parsed.data.contentWidth === "CUSTOM"
+          ? parsed.data.contentWidthCustom
+          : null,
     },
     update: {
       containerWidth: parsed.data.containerWidth,
-      containerWidthCustom: parsed.data.containerWidth === 'CUSTOM' ? parsed.data.containerWidthCustom : null,
+      containerWidthCustom:
+        parsed.data.containerWidth === "CUSTOM"
+          ? parsed.data.containerWidthCustom
+          : null,
       contentWidth: parsed.data.contentWidth,
-      contentWidthCustom: parsed.data.contentWidth === 'CUSTOM' ? parsed.data.contentWidthCustom : null,
+      contentWidthCustom:
+        parsed.data.contentWidth === "CUSTOM"
+          ? parsed.data.contentWidthCustom
+          : null,
     },
-  })
+  });
 
-  updateTag(CACHE_TAGS.SETTINGS)
-  updateTag(CACHE_TAGS.SETTINGS)
-  updateTag(CACHE_TAGS.SETTINGS)
-  updateTag(CACHE_TAGS.SETTINGS)
+  updateTag(CACHE_TAGS.SETTINGS);
+  updateTag(CACHE_TAGS.SETTINGS);
+  updateTag(CACHE_TAGS.SETTINGS);
+  updateTag(CACHE_TAGS.SETTINGS);
 
-  return createSuccess('レイアウト設定を更新しました')
-})
+  return createSuccess("レイアウト設定を更新しました");
+});
 
 /**
  * SEO設定を更新
  */
 export const updateSeoSettings = withPermission<[data: SeoSettingsInput], void>(
-  'settings',
-  'update'
+  "settings",
+  "update",
 )(async (_user, data): Promise<ActionResult<void>> => {
-  const parsed = seoSettingsSchema.safeParse(data)
+  const parsed = seoSettingsSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error)
+    return createValidationError(parsed.error);
   }
 
   await prisma.settings.upsert({
-    where: { id: 'singleton' },
-    create: { id: 'singleton', ...parsed.data },
+    where: { id: "singleton" },
+    create: { id: "singleton", ...parsed.data },
     update: parsed.data,
-  })
+  });
 
   // Analytics設定キャッシュを即座に無効化
-  updateTag(CACHE_TAGS.SETTINGS)
-  updateTag(CACHE_TAGS.SETTINGS)
+  updateTag(CACHE_TAGS.SETTINGS);
+  updateTag(CACHE_TAGS.SETTINGS);
 
-  return createSuccess('SEO設定を更新しました')
-})
+  return createSuccess("SEO設定を更新しました");
+});

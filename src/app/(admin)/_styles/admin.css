@@ -19,20 +19,20 @@
   /* Background: 温かみのあるオフホワイト */
   --color-background: oklch(0.98 0.005 250);
   /* Foreground: 深い墨色（純黒を避ける） */
-  --color-foreground: oklch(0.20 0.02 260);
+  --color-foreground: oklch(0.2 0.02 260);
 
   /* --------------------------------------------------------------------------
    * Card & Popover
    * -------------------------------------------------------------------------- */
   --color-card: oklch(1 0 0);
-  --color-card-foreground: oklch(0.20 0.02 260);
+  --color-card-foreground: oklch(0.2 0.02 260);
   --color-popover: oklch(1 0 0);
-  --color-popover-foreground: oklch(0.20 0.02 260);
+  --color-popover-foreground: oklch(0.2 0.02 260);
 
   /* --------------------------------------------------------------------------
    * Primary: Trust Blue - 信頼感のある深いブルー
    * -------------------------------------------------------------------------- */
-  --color-primary: oklch(0.55 0.20 260);
+  --color-primary: oklch(0.55 0.2 260);
   --color-primary-foreground: oklch(1 0 0);
 
   /* --------------------------------------------------------------------------
@@ -62,41 +62,51 @@
   --color-destructive-foreground: oklch(1 0 0);
 
   /* Success: 成功グリーン */
-  --color-success: oklch(0.60 0.18 145);
+  --color-success: oklch(0.6 0.18 145);
   --color-success-foreground: oklch(1 0 0);
 
   /* Warning: 注意イエロー */
   --color-warning: oklch(0.75 0.18 85);
-  --color-warning-foreground: oklch(0.20 0.02 85);
+  --color-warning-foreground: oklch(0.2 0.02 85);
 
   /* Info: 情報ブルー */
-  --color-info: oklch(0.55 0.20 260);
+  --color-info: oklch(0.55 0.2 260);
   --color-info-foreground: oklch(1 0 0);
 
   /* Code Syntax Highlighting: エディタ用シンタックスハイライト */
   --color-syntax-keyword: oklch(0.55 0.22 310);
   --color-syntax-string: oklch(0.55 0.18 145);
-  --color-syntax-number: oklch(0.60 0.18 55);
-  --color-syntax-function: oklch(0.55 0.20 260);
+  --color-syntax-number: oklch(0.6 0.18 55);
+  --color-syntax-function: oklch(0.55 0.2 260);
   --color-syntax-comment: oklch(0.55 0.02 250);
   --color-syntax-tag: oklch(0.55 0.22 25);
-  --color-syntax-attr: oklch(0.55 0.20 260);
+  --color-syntax-attr: oklch(0.55 0.2 260);
   --color-syntax-builtin: oklch(0.55 0.15 200);
-  --color-syntax-class: oklch(0.60 0.18 85);
+  --color-syntax-class: oklch(0.6 0.18 85);
   --color-syntax-operator: oklch(0.45 0.02 250);
 
   /* Media Type: メディア種別カラー */
-  --color-media-image: oklch(0.55 0.20 260);
-  --color-media-video: oklch(0.55 0.20 310);
+  --color-media-image: oklch(0.55 0.2 260);
+  --color-media-video: oklch(0.55 0.2 310);
   --color-media-document: oklch(0.65 0.18 55);
   --color-media-other: oklch(0.55 0.02 250);
+
+  /* Calendar Space Colors: スペース区別用（カレンダービュー） */
+  --color-cal-1: oklch(0.62 0.21 264);
+  --color-cal-2: oklch(0.62 0.22 307);
+  --color-cal-3: oklch(0.66 0.22 350);
+  --color-cal-4: oklch(0.59 0.24 279);
+  --color-cal-5: oklch(0.66 0.13 197);
+  --color-cal-6: oklch(0.73 0.19 57);
+  --color-cal-7: oklch(0.74 0.12 199);
+  --color-cal-8: oklch(0.64 0.24 19);
 
   /* --------------------------------------------------------------------------
    * Border & Input
    * -------------------------------------------------------------------------- */
-  --color-border: oklch(0.90 0.01 250);
-  --color-input: oklch(0.90 0.01 250);
-  --color-ring: oklch(0.55 0.20 260);
+  --color-border: oklch(0.9 0.01 250);
+  --color-input: oklch(0.9 0.01 250);
+  --color-ring: oklch(0.55 0.2 260);
 
   /* --------------------------------------------------------------------------
    * Overlay: モーダル・ドロワー・サイドバー等の背景オーバーレイ（管理画面汎用）
@@ -109,8 +119,8 @@
   --color-sidebar-bg: oklch(0.18 0.03 260);
   --color-sidebar-border: oklch(0.25 0.02 260);
   --color-sidebar-text: oklch(0.92 0.01 260);
-  --color-sidebar-text-muted: oklch(0.70 0.02 260);
-  --color-sidebar-accent: oklch(0.55 0.20 260);
+  --color-sidebar-text-muted: oklch(0.7 0.02 260);
+  --color-sidebar-accent: oklch(0.55 0.2 260);
   --color-sidebar-nav-hover: oklch(1 0 0 / 0.05);
 
   /* --------------------------------------------------------------------------
@@ -125,8 +135,10 @@
    * Shadows: 控えめで洗練された影
    * -------------------------------------------------------------------------- */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.03);
-  --shadow-md: 0 2px 4px -1px rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.03);
-  --shadow-lg: 0 4px 6px -2px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.03);
+  --shadow-md:
+    0 2px 4px -1px rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.03);
+  --shadow-lg:
+    0 4px 6px -2px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.03);
 
   /* --------------------------------------------------------------------------
    * Easing: スムーズなアニメーション

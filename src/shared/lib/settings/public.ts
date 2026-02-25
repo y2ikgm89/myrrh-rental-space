@@ -9,29 +9,38 @@
  * - Symbol プロパティを含むオブジェクトは Client Components に渡せないため
  */
 
-import { cacheLife, cacheTag } from 'next/cache'
-import { prisma } from '@/shared/lib/prisma'
-import { CACHE_TAGS, CACHE_LIFE } from '@/shared/lib/constants'
-import { safeFetch, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors/server'
-import { toPlainObject, toPlainArray } from '@/shared/lib/serialize'
-import { AnnouncementBarAnimation, AnnouncementBarDesignStyle, LayoutWidth, PostPermalinkStructure } from '@/shared/generated/prisma/enums'
+import { cacheLife, cacheTag } from "next/cache";
+import { prisma } from "@/shared/lib/prisma";
+import { CACHE_TAGS, CACHE_LIFE } from "@/shared/lib/constants";
+import {
+  safeFetch,
+  ErrorCategory,
+  ErrorSeverity,
+} from "@/shared/lib/errors/server";
+import { toPlainObject, toPlainArray } from "@/shared/lib/serialize";
+import {
+  AnnouncementBarAnimation,
+  AnnouncementBarDesignStyle,
+  LayoutWidth,
+  PostPermalinkStructure,
+} from "@/shared/generated/prisma/enums";
 
 /** お知らせバー設定のデフォルト値 */
 interface AnnouncementBarSettings {
-  announcementBarAnimation: string
-  announcementBarDuration: number
-  announcementBarAutoPlay: boolean
-  announcementBarPauseOnHover: boolean
-  announcementBarShowArrows: boolean
-  announcementBarShowIndicator: boolean
-  announcementBarDesignStyle: string
-  announcementBarBgColor: string | null
-  announcementBarTextColor: string | null
-  announcementBarStripeColor: string | null
-  announcementBarStripeAnimation: boolean
-  announcementBarGradientAnimation: boolean
-  announcementBarGlassAnimation: boolean
-  announcementBarSticky: boolean
+  announcementBarAnimation: string;
+  announcementBarDuration: number;
+  announcementBarAutoPlay: boolean;
+  announcementBarPauseOnHover: boolean;
+  announcementBarShowArrows: boolean;
+  announcementBarShowIndicator: boolean;
+  announcementBarDesignStyle: string;
+  announcementBarBgColor: string | null;
+  announcementBarTextColor: string | null;
+  announcementBarStripeColor: string | null;
+  announcementBarStripeAnimation: boolean;
+  announcementBarGradientAnimation: boolean;
+  announcementBarGlassAnimation: boolean;
+  announcementBarSticky: boolean;
 }
 
 const DEFAULT_ANNOUNCEMENT_BAR_SETTINGS: AnnouncementBarSettings = {
@@ -49,21 +58,21 @@ const DEFAULT_ANNOUNCEMENT_BAR_SETTINGS: AnnouncementBarSettings = {
   announcementBarGradientAnimation: false,
   announcementBarGlassAnimation: false,
   announcementBarSticky: false,
-}
+};
 
 /**
  * Cookie同意設定を取得
  * キャッシュ: 1時間、設定更新時に無効化
  */
 export async function getCookieConsentSettings() {
-  'use cache'
-  cacheLife(CACHE_LIFE.STATIC_SETTINGS)
-  cacheTag(CACHE_TAGS.COOKIE_CONSENT, CACHE_TAGS.SETTINGS)
+  "use cache";
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
+  cacheTag(CACHE_TAGS.COOKIE_CONSENT, CACHE_TAGS.SETTINGS);
 
   const result = await safeFetch({
     fetch: () =>
       prisma.settings.findUnique({
-        where: { id: 'singleton' },
+        where: { id: "singleton" },
         select: {
           cookieConsentEnabled: true,
           cookieConsentMessage: true,
@@ -75,10 +84,10 @@ export async function getCookieConsentSettings() {
     fallback: null,
     category: ErrorCategory.DATABASE,
     severity: ErrorSeverity.LOW,
-    operationName: 'getCookieConsentSettings',
-  })
+    operationName: "getCookieConsentSettings",
+  });
 
-  return toPlainObject(result)
+  return toPlainObject(result);
 }
 
 /**
@@ -86,14 +95,14 @@ export async function getCookieConsentSettings() {
  * キャッシュ: 1時間、設定更新時に無効化
  */
 export async function getPublicBusinessSettings() {
-  'use cache'
-  cacheLife(CACHE_LIFE.STATIC_SETTINGS)
-  cacheTag(CACHE_TAGS.BUSINESS_SETTINGS, CACHE_TAGS.SETTINGS)
+  "use cache";
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
+  cacheTag(CACHE_TAGS.BUSINESS_SETTINGS, CACHE_TAGS.SETTINGS);
 
   const result = await safeFetch({
     fetch: () =>
       prisma.settings.findUnique({
-        where: { id: 'singleton' },
+        where: { id: "singleton" },
         select: {
           siteName: true,
           siteDescription: true,
@@ -124,10 +133,10 @@ export async function getPublicBusinessSettings() {
     fallback: null,
     category: ErrorCategory.DATABASE,
     severity: ErrorSeverity.LOW,
-    operationName: 'getPublicBusinessSettings',
-  })
+    operationName: "getPublicBusinessSettings",
+  });
 
-  return toPlainObject(result)
+  return toPlainObject(result);
 }
 
 /**
@@ -135,14 +144,14 @@ export async function getPublicBusinessSettings() {
  * キャッシュ: 1時間、設定更新時に無効化
  */
 export async function getAnnouncementBarCarouselSettingsCached() {
-  'use cache'
-  cacheLife(CACHE_LIFE.STATIC_SETTINGS)
-  cacheTag(CACHE_TAGS.ANNOUNCEMENT_BAR, CACHE_TAGS.SETTINGS)
+  "use cache";
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
+  cacheTag(CACHE_TAGS.ANNOUNCEMENT_BAR, CACHE_TAGS.SETTINGS);
 
   const result = await safeFetch({
     fetch: async () => {
       const settings = await prisma.settings.findUnique({
-        where: { id: 'singleton' },
+        where: { id: "singleton" },
         select: {
           announcementBarAnimation: true,
           announcementBarDuration: true,
@@ -159,16 +168,16 @@ export async function getAnnouncementBarCarouselSettingsCached() {
           announcementBarGlassAnimation: true,
           announcementBarSticky: true,
         },
-      })
-      return settings ?? DEFAULT_ANNOUNCEMENT_BAR_SETTINGS
+      });
+      return settings ?? DEFAULT_ANNOUNCEMENT_BAR_SETTINGS;
     },
     fallback: DEFAULT_ANNOUNCEMENT_BAR_SETTINGS,
     category: ErrorCategory.DATABASE,
     severity: ErrorSeverity.LOW,
-    operationName: 'getAnnouncementBarCarouselSettings',
-  })
+    operationName: "getAnnouncementBarCarouselSettings",
+  });
 
-  return toPlainObject(result)
+  return toPlainObject(result);
 }
 
 /**
@@ -178,23 +187,23 @@ export async function getAnnouncementBarCarouselSettingsCached() {
  * Note: 表示期間（startAt/endAt）のフィルタリングはクライアントサイドで実行
  */
 export async function getActiveAnnouncementBarsCached() {
-  'use cache'
-  cacheLife(CACHE_LIFE.DYNAMIC_DATA)
-  cacheTag(CACHE_TAGS.ANNOUNCEMENT_BAR)
+  "use cache";
+  cacheLife(CACHE_LIFE.DYNAMIC_DATA);
+  cacheTag(CACHE_TAGS.ANNOUNCEMENT_BAR);
 
   const result = await safeFetch({
     fetch: () =>
       prisma.announcementBar.findMany({
         where: { isActive: true },
-        orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
+        orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
       }),
     fallback: [],
     category: ErrorCategory.DATABASE,
     severity: ErrorSeverity.LOW,
-    operationName: 'getActiveAnnouncementBars',
-  })
+    operationName: "getActiveAnnouncementBars",
+  });
 
-  return toPlainArray(result)
+  return toPlainArray(result);
 }
 
 /**
@@ -202,26 +211,29 @@ export async function getActiveAnnouncementBarsCached() {
  * キャッシュ: 1時間、設定更新時に無効化
  */
 export async function getPermalinkSettings() {
-  'use cache'
-  cacheLife(CACHE_LIFE.STATIC_SETTINGS)
-  cacheTag(CACHE_TAGS.PERMALINK, CACHE_TAGS.SETTINGS)
+  "use cache";
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
+  cacheTag(CACHE_TAGS.PERMALINK, CACHE_TAGS.SETTINGS);
 
   const result = await safeFetch({
     fetch: () =>
       prisma.settings.findUnique({
-        where: { id: 'singleton' },
+        where: { id: "singleton" },
         select: {
           postUrlPrefixEnabled: true,
           postPermalinkStructure: true,
         },
       }),
-    fallback: { postUrlPrefixEnabled: true, postPermalinkStructure: PostPermalinkStructure.post_name },
+    fallback: {
+      postUrlPrefixEnabled: true,
+      postPermalinkStructure: PostPermalinkStructure.post_name,
+    },
     category: ErrorCategory.DATABASE,
     severity: ErrorSeverity.LOW,
-    operationName: 'getPermalinkSettings',
-  })
+    operationName: "getPermalinkSettings",
+  });
 
-  return toPlainObject(result)
+  return toPlainObject(result);
 }
 
 /**
@@ -231,19 +243,19 @@ export async function getPermalinkSettings() {
  * false の場合は '' (ルートレベル)
  */
 export async function getPostUrlPrefix(): Promise<string> {
-  const settings = await getPermalinkSettings()
-  return settings?.postUrlPrefixEnabled ?? true ? '/posts' : ''
+  const settings = await getPermalinkSettings();
+  return (settings?.postUrlPrefixEnabled ?? true) ? "/posts" : "";
 }
 
 export async function getPublicRobotsTxtSettings() {
-  'use cache'
-  cacheLife(CACHE_LIFE.STATIC_SETTINGS)
-  cacheTag(CACHE_TAGS.ROBOTS_TXT, CACHE_TAGS.SETTINGS)
+  "use cache";
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
+  cacheTag(CACHE_TAGS.ROBOTS_TXT, CACHE_TAGS.SETTINGS);
 
   const result = await safeFetch({
     fetch: () =>
       prisma.settings.findUnique({
-        where: { id: 'singleton' },
+        where: { id: "singleton" },
         select: {
           robotsTxtEnabled: true,
           robotsTxtCustom: true,
@@ -252,10 +264,40 @@ export async function getPublicRobotsTxtSettings() {
     fallback: { robotsTxtEnabled: false, robotsTxtCustom: null },
     category: ErrorCategory.DATABASE,
     severity: ErrorSeverity.LOW,
-    operationName: 'getPublicRobotsTxtSettings',
-  })
+    operationName: "getPublicRobotsTxtSettings",
+  });
 
-  return toPlainObject(result)
+  return toPlainObject(result);
+}
+
+/**
+ * メンテナンス設定を取得
+ * キャッシュ: days、設定更新時に即時無効化（updateTag(CACHE_TAGS.SETTINGS)）
+ * fallback: false（DB障害時はメンテナンスモードを無効扱い）
+ */
+export async function getMaintenanceSettings() {
+  "use cache";
+  cacheLife(CACHE_LIFE.DYNAMIC_DATA);
+  cacheTag(CACHE_TAGS.SETTINGS);
+
+  const result = await safeFetch({
+    fetch: async () => {
+      const settings = await prisma.settings.findUnique({
+        where: { id: "singleton" },
+        select: {
+          maintenanceMode: true,
+          maintenanceMessage: true,
+        },
+      });
+      return settings ?? { maintenanceMode: false, maintenanceMessage: null };
+    },
+    fallback: { maintenanceMode: false, maintenanceMessage: null },
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.HIGH,
+    operationName: "getMaintenanceSettings",
+  });
+
+  return toPlainObject(result);
 }
 
 /**
@@ -263,14 +305,14 @@ export async function getPublicRobotsTxtSettings() {
  * キャッシュ: 1時間、設定更新時に無効化
  */
 export async function getLayoutSettings() {
-  'use cache'
-  cacheLife(CACHE_LIFE.STATIC_SETTINGS)
-  cacheTag(CACHE_TAGS.LAYOUT, CACHE_TAGS.SETTINGS)
+  "use cache";
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
+  cacheTag(CACHE_TAGS.LAYOUT, CACHE_TAGS.SETTINGS);
 
   const result = await safeFetch({
     fetch: () =>
       prisma.settings.findUnique({
-        where: { id: 'singleton' },
+        where: { id: "singleton" },
         select: {
           containerWidth: true,
           containerWidthCustom: true,
@@ -286,9 +328,8 @@ export async function getLayoutSettings() {
     },
     category: ErrorCategory.DATABASE,
     severity: ErrorSeverity.LOW,
-    operationName: 'getLayoutSettings',
-  })
+    operationName: "getLayoutSettings",
+  });
 
-  return toPlainObject(result)
+  return toPlainObject(result);
 }
-
