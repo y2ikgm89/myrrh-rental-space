@@ -256,7 +256,7 @@ export function CommentPanel({
     <>
       {/* モバイル用オーバーレイ - isOpen に連動 */}
       <div
-        className={`fixed inset-0 z-40 bg-black/20 lg:hidden transition-opacity duration-300 ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        className={`fixed inset-0 z-40 bg-overlay/30 lg:hidden transition-opacity duration-300 ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
         onClick={isOpen ? onClose : undefined}
         aria-hidden="true"
       />

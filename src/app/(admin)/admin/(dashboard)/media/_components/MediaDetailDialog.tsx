@@ -126,7 +126,6 @@ export function MediaDetailDialog({ item, onClose }: Props) {
     if (!confirmed) return;
 
     startTransition(async () => {
-      if (!item) return;
       const result = await deleteMedia(item.id);
       if (result.success) {
         toast.success(result.message);
