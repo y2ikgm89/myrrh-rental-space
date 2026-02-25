@@ -28,7 +28,6 @@ import {
   ACTIVE_RESERVATION_STATUSES,
   getValidDiscountType,
   getValidDurationDiscountOverride,
-  getValidTaxRateType,
 } from "@/shared/lib/validations/enums";
 import { purgeSpaceCache } from "@/shared/lib/cloudflare";
 import { fireAndForget } from "@/shared/lib/async-utils";
@@ -104,7 +103,7 @@ function formatSpaceToPlain(s: {
   discountType: string | null;
   discountValue: number | null;
   durationDiscountOverride: string | null;
-  taxRateType: string | null;
+  taxRateType: TaxRateType;
   metaDescription: string | null;
   metaKeywords: string | null;
   ogpTitle: string | null;
@@ -140,7 +139,7 @@ function formatSpaceToPlain(s: {
     durationDiscountOverride: getValidDurationDiscountOverride(
       s.durationDiscountOverride,
     ),
-    taxRateType: getValidTaxRateType(s.taxRateType),
+    taxRateType: s.taxRateType,
     metaDescription: s.metaDescription,
     metaKeywords: s.metaKeywords,
     ogpTitle: s.ogpTitle,

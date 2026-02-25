@@ -488,7 +488,7 @@ model Reservation {
   basePrice              Decimal? @db.Decimal(10, 2) // 割引前価格（記録用）
 
   // 税情報（予約時点の値を記録）
-  taxRateType       String?  // "standard" | "reduced" - 適用された税率タイプ
+  taxRateType       TaxRateType? // 適用された税率タイプ
   taxRate           Decimal? @db.Decimal(5, 2) // 適用税率（%）
   taxAmount         Decimal? @db.Decimal(10, 2) // 税額
   totalPriceWithTax Decimal? @db.Decimal(10, 2) // 税込み合計
@@ -1086,7 +1086,7 @@ model Settings {
   minReservationDuration           Int?    @default(60)
   maxReservationDuration           Int?    @default(480)
   cancellationTermsId              String?
-  cancellationTerms                Terms?  @relation("CancellationPolicy", fields: [cancellationTermsId], references: [id])
+  cancellationTerms                Terms?  @relation("CancellationPolicy", fields: [cancellationTermsId], references: [id], onDelete: SetNull)
   sendReservationConfirmationEmail Boolean @default(true)
   sendAdminNotificationEmail       Boolean @default(true)
 
