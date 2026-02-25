@@ -274,7 +274,7 @@ export const verifySession = cache(async (): Promise<User> => {
  */
 export const verifyAdminSession = cache(async (): Promise<User> => {
   const user = await verifySession()
-  if (user.role !== Role.ADMIN) {
+  if (user.role !== Role.ADMIN && user.role !== Role.SUPER_ADMIN) {
     redirect('/admin/login')
   }
   return user
@@ -298,7 +298,7 @@ export const getCurrentUser = cache(async (): Promise<User | undefined> => {
  */
 export const isAdmin = cache(async (): Promise<boolean> => {
   const user = await getCurrentUser()
-  return user?.role === Role.ADMIN
+  return user?.role === Role.ADMIN || user?.role === Role.SUPER_ADMIN
 })
 
 /**

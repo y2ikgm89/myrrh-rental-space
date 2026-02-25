@@ -764,7 +764,6 @@ export const deleteCustomApiKey = withPermission<[string]>(
 
 /**
  * カスタムAPIキーの復号化された値を取得（内部使用のみ）
- * Note: 監査ログが残らないため、外部公開目的では使用しないこと
  */
 export async function getCustomApiKeyValue(id: string): Promise<string | null> {
   if (!(await checkSettingsReadPermission())) return null

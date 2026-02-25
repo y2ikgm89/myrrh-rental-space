@@ -98,7 +98,7 @@ export const updateReservationStatus = withPermission<
   };
 
   // 確定時: 確認メール送信 + カレンダー同期
-  if (status === "CONFIRMED" && previousStatus !== "CONFIRMED") {
+  if (status === ReservationStatus.CONFIRMED && previousStatus !== ReservationStatus.CONFIRMED) {
     // カレンダーイベント更新 or 新規作成（バックグラウンド）
     if (reservation.googleCalendarEventId) {
       // 既存イベントを更新
@@ -126,7 +126,7 @@ export const updateReservationStatus = withPermission<
         sendReservationConfirmationEmail(emailData),
         sendReservationAdminNotification(
           emailData,
-          previousStatus === "PENDING" ? "new" : "update",
+          previousStatus === ReservationStatus.PENDING ? "new" : "update",
         ),
       ]),
       {
@@ -139,7 +139,7 @@ export const updateReservationStatus = withPermission<
   }
 
   // キャンセル時: キャンセルメール送信 + カレンダー削除
-  if (status === "CANCELLED" && previousStatus !== "CANCELLED") {
+  if (status === ReservationStatus.CANCELLED && previousStatus !== ReservationStatus.CANCELLED) {
     // カレンダーイベント削除（バックグラウンド）
     if (reservation.googleCalendarEventId) {
       fireAndForget(deleteCalendarSync(id, reservation.googleCalendarEventId), {
