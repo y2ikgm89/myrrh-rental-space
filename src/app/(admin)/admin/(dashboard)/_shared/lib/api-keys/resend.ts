@@ -26,27 +26,37 @@ export async function testResendConnection(
   try {
     const resend = new Resend(apiKey)
     // domains.list() で読み取り専用のテスト（副作用なし）
-    await resend.domains.list()
+    const { error } = await resend.domains.list()
+
+    if (error) {
+      const isInvalidKey =
+        typeof error.message === 'string' &&
+        (error.message.includes('Invalid API Key') ||
+          error.message.includes('invalid_api_key'))
+
+      return {
+        success: false,
+        error: isInvalidKey
+          ? 'APIキーが無効です。正しいキーを入力してください。'
+          : '接続テストに失敗しました。しばらく経ってから再試行してください。',
+      }
+    }
 
     return {
       success: true,
       message: 'Resend APIへの接続に成功しました',
     }
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : '接続テストに失敗しました'
-
-    // よくあるエラーパターンをユーザーフレンドリーに変換
-    if (message.includes('Invalid API Key')) {
-      return {
-        success: false,
-        error: 'APIキーが無効です。Resendダッシュボードで確認してください',
-      }
-    }
+    const isInvalidKey =
+      error instanceof Error &&
+      (error.message.includes('Invalid API Key') ||
+        error.message.includes('invalid_api_key'))
 
     return {
       success: false,
-      error: message,
+      error: isInvalidKey
+        ? 'APIキーが無効です。正しいキーを入力してください。'
+        : '接続テストに失敗しました。しばらく経ってから再試行してください。',
     }
   }
 }

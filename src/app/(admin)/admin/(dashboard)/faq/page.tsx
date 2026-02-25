@@ -19,7 +19,6 @@ async function FaqContent() {
 
 export default async function FaqPage() {
   await connection();
-  await connection();
 
   return (
     <div className="space-y-6">

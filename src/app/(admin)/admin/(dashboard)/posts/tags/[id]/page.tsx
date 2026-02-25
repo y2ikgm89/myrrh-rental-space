@@ -23,7 +23,6 @@ type PageProps = {
 }
 
 export default async function EditTagPage({ params }: PageProps) {
-  await connection();
   await connection()
   const { id } = await params
   const tag = await getPostTagById(id)

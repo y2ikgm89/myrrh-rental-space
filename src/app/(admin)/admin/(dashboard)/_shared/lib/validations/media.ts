@@ -2,7 +2,7 @@
  * メディア管理 - バリデーションスキーマ
  */
 
-import { z } from 'zod/v4'
+import { z } from 'zod'
 import {
   MediaType,
   MediaUsage,

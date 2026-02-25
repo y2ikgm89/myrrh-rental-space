@@ -31,7 +31,7 @@ import type {
 } from '@/admin/types/editor-comment'
 import { isCommentableContentType } from '@/admin/types/editor-comment'
 import { createValidationError } from '@/shared/lib/action-helpers'
-import { z } from 'zod/v4'
+import { z } from 'zod'
 import { withPermission } from '@/admin/lib/server-action-helpers'
 import { createSuccess, createFailure } from '@/admin/types/server-actions'
 

@@ -23,7 +23,6 @@ type PageProps = {
 }
 
 export default async function EditCategoryPage({ params }: PageProps) {
-  await connection();
   await connection()
   const { id } = await params
   const category = await getPostCategoryById(id)
