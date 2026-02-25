@@ -16,7 +16,7 @@ export async function DashboardHeader() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold">ダッシュボード</h1>
+      <h1 className="text-2xl font-bold tracking-tight text-foreground">ダッシュボード</h1>
       <p className="text-muted-foreground">
         {format(today, 'yyyy年M月d日 (EEEE)', { locale: ja })}
       </p>

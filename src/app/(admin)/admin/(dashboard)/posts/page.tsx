@@ -152,7 +152,7 @@ export default async function PostsPage({ searchParams }: PageProps) {
       {/* ヘッダー */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">投稿管理</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">投稿管理</h1>
           <p className="text-sm text-muted-foreground sm:text-base">
             投稿・カテゴリー・タグ・コメントを管理します
           </p>

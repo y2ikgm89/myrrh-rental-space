@@ -56,7 +56,7 @@ export default async function AuditLogsPage({ searchParams }: PageProps) {
       {/* ヘッダー */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">監査ログ</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">監査ログ</h1>
           <p className="text-sm text-muted-foreground sm:text-base">
             システム操作の履歴を確認します
           </p>

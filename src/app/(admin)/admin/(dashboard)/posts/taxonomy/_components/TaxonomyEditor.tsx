@@ -223,7 +223,7 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
           </Button>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold">{data.name}</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">{data.name}</h1>
               <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                 {postCount}件の投稿
               </span>
@@ -591,7 +591,7 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
           </Button>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold">{data.name}</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">{data.name}</h1>
               <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                 {postCount}件の投稿
               </span>

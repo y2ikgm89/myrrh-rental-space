@@ -25,7 +25,7 @@ export default async function FaqPage() {
       {/* ヘッダー */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">FAQ管理</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">FAQ管理</h1>
           <p className="text-sm text-muted-foreground sm:text-base">
             よくある質問のカテゴリと質問を管理します
           </p>

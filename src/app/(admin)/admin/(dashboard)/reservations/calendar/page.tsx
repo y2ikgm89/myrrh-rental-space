@@ -65,7 +65,7 @@ export default async function ReservationCalendarPage({
       {/* ヘッダー */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">予約カレンダー</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">予約カレンダー</h1>
           <p className="text-muted-foreground">
             予約をカレンダー形式で確認・管理します
           </p>

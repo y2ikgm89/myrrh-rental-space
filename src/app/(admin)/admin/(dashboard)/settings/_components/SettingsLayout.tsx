@@ -35,7 +35,7 @@ export function SettingsLayout({ title, description, children }: SettingsLayoutP
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">{title}</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">{title}</h1>
           {description && (
             <p className="text-muted-foreground">{description}</p>
           )}

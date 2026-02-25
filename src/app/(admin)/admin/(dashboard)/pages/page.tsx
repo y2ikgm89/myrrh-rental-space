@@ -49,7 +49,7 @@ export default async function PagesManagementPage({
       {/* ヘッダー */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">ページ管理</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">ページ管理</h1>
           <p className="text-sm text-muted-foreground sm:text-base">
             公開ページのコンテンツ・SEO設定
           </p>

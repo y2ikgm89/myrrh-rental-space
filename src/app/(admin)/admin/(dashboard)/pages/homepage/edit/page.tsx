@@ -62,7 +62,7 @@ export default async function HomepageEditPage(): Promise<ReactElement> {
           </Button>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold">ホームページ編集</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">ホームページ編集</h1>
               <Badge variant="secondary">システム</Badge>
             </div>
             <p className="text-muted-foreground">

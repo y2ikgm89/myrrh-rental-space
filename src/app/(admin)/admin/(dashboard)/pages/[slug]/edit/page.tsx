@@ -71,7 +71,7 @@ export default async function EditPagePage({ params }: PageProps): Promise<React
           </Button>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold">{page.title}</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">{page.title}</h1>
               <Badge variant={page.isSystem ? 'secondary' : 'outline'}>
                 {page.isSystem ? 'システム' : 'カスタム'}
               </Badge>
