@@ -2,45 +2,48 @@
  * メディア管理 - バリデーションスキーマ
  */
 
-import { z } from 'zod'
+import { z } from "zod";
 import {
   MediaType,
   MediaUsage,
   isValidMediaType,
   isValidMediaUsage,
-} from '@/shared/lib/validations/enums'
+} from "@/shared/lib/validations/enums";
 
 // Re-export
-export { MediaType, MediaUsage, isValidMediaType, isValidMediaUsage }
+export { MediaType, MediaUsage, isValidMediaType, isValidMediaUsage };
 
 // =============================================================================
 // Zod Schemas for Prisma Enums
 // =============================================================================
 
-const MEDIA_TYPE_VALUES = ['IMAGE', 'VIDEO', 'DOCUMENT', 'OTHER'] as const
-const MEDIA_USAGE_VALUES = ['POST', 'NEWS', 'PAGE', 'SPACE', 'SITE', 'GENERAL'] as const
+export const MediaTypeEnum = z.enum(MediaType);
 
-export const MediaTypeEnum = z.enum(MEDIA_TYPE_VALUES)
-
-export const MediaUsageEnum = z.enum(MEDIA_USAGE_VALUES)
+export const MediaUsageEnum = z.enum(MediaUsage);
 
 // =============================================================================
 // Constants
 // =============================================================================
 
 export const ALLOWED_MIME_TYPES: Record<MediaType, string[]> = {
-  IMAGE: ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'],
-  VIDEO: ['video/mp4', 'video/webm', 'video/quicktime'],
-  DOCUMENT: ['application/pdf'],
+  IMAGE: [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+    "image/svg+xml",
+  ],
+  VIDEO: ["video/mp4", "video/webm", "video/quicktime"],
+  DOCUMENT: ["application/pdf"],
   OTHER: [],
-}
+};
 
 export const MAX_FILE_SIZES: Record<MediaType, number> = {
   IMAGE: 10 * 1024 * 1024, // 10MB
   VIDEO: 100 * 1024 * 1024, // 100MB
   DOCUMENT: 10 * 1024 * 1024, // 10MB
   OTHER: 5 * 1024 * 1024, // 5MB
-}
+};
 
 // =============================================================================
 // Schemas
@@ -50,34 +53,52 @@ export const MAX_FILE_SIZES: Record<MediaType, number> = {
  * メディアアップロード入力
  */
 export const mediaUploadSchema = z.object({
-  type: MediaTypeEnum.default('IMAGE'),
-  usage: MediaUsageEnum.default('GENERAL'),
-  alt: z.string().max(200, { error: '代替テキストは200文字以内で入力してください' }).optional(),
-  title: z.string().max(100, { error: 'タイトルは100文字以内で入力してください' }).optional(),
-  description: z.string().max(500, { error: '説明は500文字以内で入力してください' }).optional(),
+  type: MediaTypeEnum.default("IMAGE"),
+  usage: MediaUsageEnum.default("GENERAL"),
+  alt: z
+    .string()
+    .max(200, { error: "代替テキストは200文字以内で入力してください" })
+    .optional(),
+  title: z
+    .string()
+    .max(100, { error: "タイトルは100文字以内で入力してください" })
+    .optional(),
+  description: z
+    .string()
+    .max(500, { error: "説明は500文字以内で入力してください" })
+    .optional(),
   tags: z
-    .array(z.string().max(50, { error: 'タグは50文字以内で入力してください' }))
-    .max(10, { error: 'タグは最大10個まで設定できます' })
+    .array(z.string().max(50, { error: "タグは50文字以内で入力してください" }))
+    .max(10, { error: "タグは最大10個まで設定できます" })
     .default([]),
-})
+});
 
-export type MediaUploadInput = z.infer<typeof mediaUploadSchema>
+export type MediaUploadInput = z.infer<typeof mediaUploadSchema>;
 
 /**
  * メディア更新入力
  */
 export const mediaUpdateSchema = z.object({
-  alt: z.string().max(200, { error: '代替テキストは200文字以内で入力してください' }).optional(),
-  title: z.string().max(100, { error: 'タイトルは100文字以内で入力してください' }).optional(),
-  description: z.string().max(500, { error: '説明は500文字以内で入力してください' }).optional(),
+  alt: z
+    .string()
+    .max(200, { error: "代替テキストは200文字以内で入力してください" })
+    .optional(),
+  title: z
+    .string()
+    .max(100, { error: "タイトルは100文字以内で入力してください" })
+    .optional(),
+  description: z
+    .string()
+    .max(500, { error: "説明は500文字以内で入力してください" })
+    .optional(),
   tags: z
-    .array(z.string().max(50, { error: 'タグは50文字以内で入力してください' }))
-    .max(10, { error: 'タグは最大10個まで設定できます' })
+    .array(z.string().max(50, { error: "タグは50文字以内で入力してください" }))
+    .max(10, { error: "タグは最大10個まで設定できます" })
     .optional(),
   usage: MediaUsageEnum.optional(),
-})
+});
 
-export type MediaUpdateInput = z.infer<typeof mediaUpdateSchema>
+export type MediaUpdateInput = z.infer<typeof mediaUpdateSchema>;
 
 /**
  * メディアフィルター
@@ -87,9 +108,9 @@ export const mediaFiltersSchema = z.object({
   usage: MediaUsageEnum.optional(),
   search: z.string().optional(),
   mimeType: z.string().optional(),
-})
+});
 
-export type MediaFilters = z.infer<typeof mediaFiltersSchema>
+export type MediaFilters = z.infer<typeof mediaFiltersSchema>;
 
 /**
  * メディアページネーション
@@ -97,9 +118,9 @@ export type MediaFilters = z.infer<typeof mediaFiltersSchema>
 export const mediaPaginationSchema = z.object({
   page: z.number().int().min(1).default(1),
   limit: z.number().int().min(1).max(100).default(24),
-})
+});
 
-export type MediaPagination = z.infer<typeof mediaPaginationSchema>
+export type MediaPagination = z.infer<typeof mediaPaginationSchema>;
 
 // =============================================================================
 // Helpers
@@ -109,26 +130,26 @@ export type MediaPagination = z.infer<typeof mediaPaginationSchema>
  * ファイルタイプからMediaTypeを推定
  */
 export function inferMediaType(mimeType: string): MediaType {
-  if (mimeType.startsWith('image/')) return 'IMAGE'
-  if (mimeType.startsWith('video/')) return 'VIDEO'
-  if (mimeType === 'application/pdf') return 'DOCUMENT'
-  return 'OTHER'
+  if (mimeType.startsWith("image/")) return "IMAGE";
+  if (mimeType.startsWith("video/")) return "VIDEO";
+  if (mimeType === "application/pdf") return "DOCUMENT";
+  return "OTHER";
 }
 
 /**
  * MIMEタイプのバリデーション
  */
 export function isAllowedMimeType(mimeType: string, type?: MediaType): boolean {
-  const mediaType = type || inferMediaType(mimeType)
-  const allowedTypes = ALLOWED_MIME_TYPES[mediaType]
-  return allowedTypes.includes(mimeType) || allowedTypes.length === 0
+  const mediaType = type || inferMediaType(mimeType);
+  const allowedTypes = ALLOWED_MIME_TYPES[mediaType];
+  return allowedTypes.includes(mimeType) || allowedTypes.length === 0;
 }
 
 /**
  * ファイルサイズのバリデーション
  */
 export function isAllowedFileSize(size: number, type: MediaType): boolean {
-  return size <= MAX_FILE_SIZES[type]
+  return size <= MAX_FILE_SIZES[type];
 }
 
 /**
@@ -136,45 +157,45 @@ export function isAllowedFileSize(size: number, type: MediaType): boolean {
  */
 export function validateFile(
   file: File,
-  type?: MediaType
+  type?: MediaType,
 ): { valid: true } | { valid: false; error: string } {
-  const mediaType = type || inferMediaType(file.type)
+  const mediaType = type || inferMediaType(file.type);
 
   if (!isAllowedMimeType(file.type, mediaType)) {
-    const allowed = ALLOWED_MIME_TYPES[mediaType].join(', ') || 'なし'
+    const allowed = ALLOWED_MIME_TYPES[mediaType].join(", ") || "なし";
     return {
       valid: false,
       error: `対応していないファイル形式です。対応形式: ${allowed}`,
-    }
+    };
   }
 
   if (!isAllowedFileSize(file.size, mediaType)) {
-    const maxSizeMB = Math.round(MAX_FILE_SIZES[mediaType] / (1024 * 1024))
+    const maxSizeMB = Math.round(MAX_FILE_SIZES[mediaType] / (1024 * 1024));
     return {
       valid: false,
       error: `ファイルサイズは${maxSizeMB}MB以下にしてください`,
-    }
+    };
   }
 
-  return { valid: true }
+  return { valid: true };
 }
 
 /**
  * MediaTypeフィルター用パーサー
  */
 export function parseMediaTypeFilter(
-  value: string | null | undefined
+  value: string | null | undefined,
 ): MediaType | undefined {
-  if (!value) return undefined
-  return isValidMediaType(value) ? value : undefined
+  if (!value) return undefined;
+  return isValidMediaType(value) ? value : undefined;
 }
 
 /**
  * MediaUsageフィルター用パーサー
  */
 export function parseMediaUsageFilter(
-  value: string | null | undefined
+  value: string | null | undefined,
 ): MediaUsage | undefined {
-  if (!value) return undefined
-  return isValidMediaUsage(value) ? value : undefined
+  if (!value) return undefined;
+  return isValidMediaUsage(value) ? value : undefined;
 }

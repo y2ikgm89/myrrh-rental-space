@@ -1,26 +1,29 @@
-import { Suspense } from 'react'
-import Link from 'next/link'
-import { List } from 'lucide-react'
+import { Suspense } from "react";
+import Link from "next/link";
+import { List } from "lucide-react";
 import {
   getReservationsForCalendar,
   getSpacesForCalendar,
-} from '@/admin/actions/reservation'
-import { getCalendarDateRange, getValidCalendarView } from '@/admin/lib/calendar'
-import { getReservationStatusFilterOrAll } from '@/shared/lib/validations/enums'
-import { loadAdminCalendarSearchParams } from '@/shared/lib/nuqs'
-import { CalendarViewWrapper } from '../_components/calendar'
-import { Button, Breadcrumb } from '@/admin/components/ui'
-import type { Metadata } from 'next'
+} from "@/admin/actions/reservation";
+import {
+  getCalendarDateRange,
+  getValidCalendarView,
+} from "@/admin/lib/calendar";
+import { getReservationStatusFilterOrAll } from "@/shared/lib/validations/enums";
+import { loadAdminCalendarSearchParams } from "@/shared/lib/nuqs";
+import { CalendarViewWrapper } from "../_components/calendar";
+import { Button, Breadcrumb } from "@/admin/components/ui";
+import type { Metadata } from "next";
 import { connection } from "next/server";
 
 export const metadata: Metadata = {
-  title: '予約カレンダー | Myrrh Rental Space',
-}
+  title: "予約カレンダー | Myrrh Rental Space",
+};
 
-type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
 interface PageProps {
-  searchParams: SearchParams
+  searchParams: SearchParams;
 }
 
 function CalendarSkeleton() {
@@ -29,24 +32,24 @@ function CalendarSkeleton() {
       <div className="h-16 animate-pulse rounded-lg bg-muted" />
       <div className="flex-1 animate-pulse rounded-lg bg-muted" />
     </div>
-  )
+  );
 }
 
 async function CalendarData({ searchParams }: { searchParams: SearchParams }) {
-  const params = await loadAdminCalendarSearchParams(searchParams)
-  const view = getValidCalendarView(params.view, 'week')
-  const date = params.date ? new Date(params.date) : new Date()
-  const spaceId = params.spaceId || undefined
-  const status = getReservationStatusFilterOrAll(params.status)
+  const params = await loadAdminCalendarSearchParams(searchParams);
+  const view = getValidCalendarView(params.view, "week");
+  const date = params.date ? new Date(params.date) : new Date();
+  const spaceId = params.spaceId || undefined;
+  const status = getReservationStatusFilterOrAll(params.status);
 
-  const dateRange = getCalendarDateRange(date, view)
+  const dateRange = getCalendarDateRange(date, view);
 
   const [events, spaces] = await Promise.all([
     getReservationsForCalendar(dateRange.start, dateRange.end, spaceId, status),
     getSpacesForCalendar(),
-  ])
+  ]);
 
-  return <CalendarViewWrapper initialEvents={events} spaces={spaces} />
+  return <CalendarViewWrapper initialEvents={events} spaces={spaces} />;
 }
 
 export default async function ReservationCalendarPage({
@@ -57,15 +60,17 @@ export default async function ReservationCalendarPage({
     <div className="flex h-[calc(100vh-8rem)] flex-col space-y-6">
       <Breadcrumb
         items={[
-          { label: '予約管理', href: '/admin/reservations' },
-          { label: 'カレンダー' },
+          { label: "予約管理", href: "/admin/reservations" },
+          { label: "カレンダー" },
         ]}
       />
 
       {/* ヘッダー */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">予約カレンダー</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            予約カレンダー
+          </h1>
           <p className="text-muted-foreground">
             予約をカレンダー形式で確認・管理します
           </p>
@@ -85,5 +90,5 @@ export default async function ReservationCalendarPage({
         </Suspense>
       </div>
     </div>
-  )
+  );
 }

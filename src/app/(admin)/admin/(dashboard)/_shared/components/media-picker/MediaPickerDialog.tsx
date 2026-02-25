@@ -10,7 +10,13 @@ import { useState, type ReactNode } from "react";
 import { Image as ImageIcon, Link, Upload } from "lucide-react";
 import { useMediaSelection } from "@/admin/hooks/use-media-selection";
 import { LibraryTab, UrlTab, UploadTab } from "./tabs";
-import { Dialog, DialogContent, Button } from "@/admin/components/ui";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  Button,
+} from "@/admin/components/ui";
 import type { MediaData } from "@/admin/types/media-picker";
 import type { UploadResult } from "@/admin/hooks/use-media-upload";
 import type { MediaUsage } from "@/admin/lib/validations/media";
@@ -98,11 +104,10 @@ export function MediaPickerDialog({
       }}
     >
       <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col gap-0 p-0 overflow-hidden">
-        {/* Header */}
-        <div className="flex shrink-0 items-center justify-between border-b p-4 pr-12">
-          {/* pr-12 でDialogContent内蔵の X ボタンとの重複を防ぐ */}
-          <h2 className="text-lg font-semibold">メディアを選択</h2>
-        </div>
+        {/* Header - pr-12 でDialogContent内蔵の X ボタンとの重複を防ぐ */}
+        <DialogHeader className="shrink-0 border-b p-4 pr-12">
+          <DialogTitle>メディアを選択</DialogTitle>
+        </DialogHeader>
 
         {/* Tabs */}
         <div className="flex shrink-0 border-b px-4">
