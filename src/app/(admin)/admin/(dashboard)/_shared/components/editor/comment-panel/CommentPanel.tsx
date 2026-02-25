@@ -56,7 +56,7 @@ function isTabValue(value: string): value is TabValue {
 /**
  * コメントパネルコンポーネント
  *
- * isOpen=false の場合は何もレンダリングしない
+ * isOpen=false の場合は CSS translate で非表示にする（アニメーション付き）
  */
 export function CommentPanel({
   isOpen,
@@ -252,21 +252,19 @@ export function CommentPanel({
   // threads are already filtered by tab status from API
   const threadCount = threads.length
 
-  // パネルが閉じている場合は何も表示しない
-  if (!isOpen) return null
-
   return (
     <>
-      {/* モバイル用オーバーレイ */}
+      {/* モバイル用オーバーレイ - isOpen に連動 */}
       <div
-        className="fixed inset-0 z-40 bg-black/20 transition-opacity duration-300 lg:hidden"
-        onClick={onClose}
+        className={`fixed inset-0 z-40 bg-black/20 lg:hidden transition-opacity duration-300 ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        onClick={isOpen ? onClose : undefined}
         aria-hidden="true"
       />
-      {/* サイドパネル */}
+      {/* サイドパネル - translate-x で表示/非表示のアニメーション */}
       <aside
-        className="fixed right-0 top-16 z-50 h-[calc(100vh-4rem)] w-full bg-background border-l shadow-xl sm:w-80 flex flex-col"
+        className={`fixed right-0 top-16 z-50 h-[calc(100vh-4rem)] w-full bg-background border-l shadow-xl sm:w-80 flex flex-col transition-transform duration-200 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
         aria-label="コメントパネル"
+        aria-hidden={!isOpen}
       >
       {/* ヘッダー */}
       <div className="flex items-center justify-between border-b px-4 py-3">

@@ -10,7 +10,14 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { uploadMedia } from "@/admin/actions/media";
 import { formatBytes } from "@/admin/lib/utils";
-import { Button } from "@/admin/components/ui";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  Button,
+} from "@/admin/components/ui";
 import { USAGE_OPTIONS } from "./constants";
 import {
   validateFile,
@@ -124,28 +131,20 @@ export function MediaUploadDialog({
     setPreviewUrl(null);
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4">
-      <div
-        className="bg-background rounded-lg shadow-lg w-full max-w-lg"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold">メディアをアップロード</h2>
-          <button
-            type="button"
-            onClick={handleClose}
-            className="p-1 rounded hover:bg-muted"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) handleClose();
+      }}
+    >
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>メディアをアップロード</DialogTitle>
+        </DialogHeader>
 
         {/* Content */}
-        <div className="p-4 space-y-4">
+        <div className="space-y-4">
           {/* Drop Zone */}
           {!file ? (
             <div
@@ -275,8 +274,7 @@ export function MediaUploadDialog({
           )}
         </div>
 
-        {/* Footer */}
-        <div className="flex justify-end gap-2 p-4 border-t">
+        <DialogFooter>
           <Button variant="outline" onClick={handleClose}>
             キャンセル
           </Button>
@@ -284,8 +282,8 @@ export function MediaUploadDialog({
             {isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             アップロード
           </Button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

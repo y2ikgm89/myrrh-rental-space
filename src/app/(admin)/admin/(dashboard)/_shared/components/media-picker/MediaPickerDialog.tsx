@@ -7,10 +7,10 @@
  */
 
 import { useState, type ReactNode } from "react";
-import { X, Image as ImageIcon, Link, Upload } from "lucide-react";
+import { Image as ImageIcon, Link, Upload } from "lucide-react";
 import { useMediaSelection } from "@/admin/hooks/use-media-selection";
 import { LibraryTab, UrlTab, UploadTab } from "./tabs";
-import { Button } from "@/admin/components/ui";
+import { Dialog, DialogContent, Button } from "@/admin/components/ui";
 import type { MediaData } from "@/admin/types/media-picker";
 import type { UploadResult } from "@/admin/hooks/use-media-upload";
 import type { MediaUsage } from "@/admin/lib/validations/media";
@@ -20,7 +20,6 @@ import type {
   MediaPickerTab,
 } from "@/admin/types/media-picker";
 import { cn } from "@/shared/lib/utils";
-import { Z_INDEX } from "@/admin/lib/styles/z-index";
 
 export interface MediaPickerDialogProps {
   isOpen: boolean;
@@ -91,28 +90,18 @@ export function MediaPickerDialog({
     onClose();
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div
-      className="fixed inset-0 flex items-center justify-center bg-overlay p-4"
-      style={{ zIndex: Z_INDEX.dialog }}
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
     >
-      <div
-        className="flex max-h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg bg-background shadow-lg"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col gap-0 p-0 overflow-hidden">
         {/* Header */}
-        <div className="flex shrink-0 items-center justify-between border-b p-4">
+        <div className="flex shrink-0 items-center justify-between border-b p-4 pr-12">
+          {/* pr-12 でDialogContent内蔵の X ボタンとの重複を防ぐ */}
           <h2 className="text-lg font-semibold">メディアを選択</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded p-1 hover:bg-muted"
-            aria-label="閉じる"
-          >
-            <X className="h-5 w-5" />
-          </button>
         </div>
 
         {/* Tabs */}
@@ -194,8 +183,8 @@ export function MediaPickerDialog({
             )}
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

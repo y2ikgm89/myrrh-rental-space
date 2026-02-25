@@ -44,9 +44,8 @@ export function EventDetailDialog({
   onClose,
   onStatusChange,
 }: EventDetailDialogProps) {
-  if (!event) return null;
-
   const handleStatusChange = (status: ReservationStatus) => {
+    if (!event) return;
     onStatusChange(event.id, status);
   };
 
@@ -63,108 +62,111 @@ export function EventDetailDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <span>{event.title}</span>
-            <ReservationStatusBadge status={event.status} />
+            <span>{event?.title}</span>
+            {event && <ReservationStatusBadge status={event.status} />}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* 日時 */}
-          <div className="flex items-start gap-3">
-            <Clock className="mt-0.5 h-4 w-4 text-muted-foreground" />
-            <div>
-              <div className="font-medium">
-                {format(new Date(event.startTime), "yyyy年M月d日 (E)", {
-                  locale: ja,
-                })}
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {format(new Date(event.startTime), "HH:mm")} -{" "}
-                {format(new Date(event.endTime), "HH:mm")}
+        {event && (
+          <div className="space-y-4">
+            {/* 日時 */}
+            <div className="flex items-start gap-3">
+              <Clock className="mt-0.5 h-4 w-4 text-muted-foreground" />
+              <div>
+                <div className="font-medium">
+                  {format(new Date(event.startTime), "yyyy年M月d日 (E)", {
+                    locale: ja,
+                  })}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {format(new Date(event.startTime), "HH:mm")} -{" "}
+                  {format(new Date(event.endTime), "HH:mm")}
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* スペース */}
-          <div className="flex items-start gap-3">
-            <MapPin className="mt-0.5 h-4 w-4 text-muted-foreground" />
-            <div>
-              <div className="font-medium">{event.spaceName}</div>
-              <div className="text-sm text-muted-foreground">
-                {formatPrice(event.totalPrice)}
+            {/* スペース */}
+            <div className="flex items-start gap-3">
+              <MapPin className="mt-0.5 h-4 w-4 text-muted-foreground" />
+              <div>
+                <div className="font-medium">{event.spaceName}</div>
+                <div className="text-sm text-muted-foreground">
+                  {formatPrice(event.totalPrice)}
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* 顧客情報 */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <User className="h-4 w-4 text-muted-foreground" />
-              <span>{event.customerName}</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <Mail className="h-4 w-4 text-muted-foreground" />
-              <a
-                href={`mailto:${event.customerEmail}`}
-                className="text-primary hover:underline"
-              >
-                {event.customerEmail}
-              </a>
-            </div>
-            {event.customerPhone && (
+            {/* 顧客情報 */}
+            <div className="space-y-2">
               <div className="flex items-center gap-3">
-                <Phone className="h-4 w-4 text-muted-foreground" />
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span>{event.customerName}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <Mail className="h-4 w-4 text-muted-foreground" />
                 <a
-                  href={`tel:${event.customerPhone}`}
+                  href={`mailto:${event.customerEmail}`}
                   className="text-primary hover:underline"
                 >
-                  {event.customerPhone}
+                  {event.customerEmail}
                 </a>
               </div>
-            )}
-          </div>
-
-          {/* メモ */}
-          {event.notes && (
-            <div className="flex items-start gap-3">
-              <FileText className="mt-0.5 h-4 w-4 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">{event.notes}</p>
+              {event.customerPhone && (
+                <div className="flex items-center gap-3">
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  <a
+                    href={`tel:${event.customerPhone}`}
+                    className="text-primary hover:underline"
+                  >
+                    {event.customerPhone}
+                  </a>
+                </div>
+              )}
             </div>
-          )}
 
-          {/* ステータス変更 */}
-          <div className="border-t pt-4">
-            <label className="mb-2 block text-sm font-medium">
-              ステータス変更
-            </label>
-            <Select
-              value={event.status}
-              onValueChange={(value) => {
-                if (isValidReservationStatus(value)) handleStatusChange(value);
-              }}
-              disabled={isPending}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="PENDING">保留中</SelectItem>
-                <SelectItem value="CONFIRMED">確認済み</SelectItem>
-                <SelectItem value="CANCELLED">キャンセル</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+            {/* メモ */}
+            {event.notes && (
+              <div className="flex items-start gap-3">
+                <FileText className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">{event.notes}</p>
+              </div>
+            )}
 
-          {/* 詳細ページリンク */}
-          <div className="flex justify-end border-t pt-4">
-            <Button variant="outline" size="sm" asChild>
-              <Link href={`/admin/reservations/${event.id}`}>
-                詳細を見る
-                <ExternalLink className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
+            {/* ステータス変更 */}
+            <div className="border-t pt-4">
+              <label className="mb-2 block text-sm font-medium">
+                ステータス変更
+              </label>
+              <Select
+                value={event.status}
+                onValueChange={(value) => {
+                  if (isValidReservationStatus(value))
+                    handleStatusChange(value);
+                }}
+                disabled={isPending}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PENDING">保留中</SelectItem>
+                  <SelectItem value="CONFIRMED">確認済み</SelectItem>
+                  <SelectItem value="CANCELLED">キャンセル</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 詳細ページリンク */}
+            <div className="flex justify-end border-t pt-4">
+              <Button variant="outline" size="sm" asChild>
+                <Link href={`/admin/reservations/${event.id}`}>
+                  詳細を見る
+                  <ExternalLink className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
       </DialogContent>
     </Dialog>
   );
