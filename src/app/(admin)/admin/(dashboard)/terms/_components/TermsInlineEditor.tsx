@@ -35,6 +35,13 @@ import {
 import {
   Badge,
   Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
   Input,
   Label,
   Select,
@@ -42,6 +49,10 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
 } from "@/admin/components/ui";
 import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
 import { logger } from "@/shared/lib/logger";
@@ -54,7 +65,11 @@ import {
 } from "@/shared/lib/terms-templates";
 import type { TermsType } from "@/shared/generated/prisma/client";
 import { TermsStatus } from "@/shared/generated/prisma/enums";
-import type { TermsVersionDetail } from "@/shared/lib/validations/terms";
+import type {
+  TermsVersionDetail,
+  TermsAgreementItem,
+} from "@/shared/lib/validations/terms";
+import { TermsAgreementsTab } from "./TermsAgreementsTab";
 
 // =============================================================================
 // Schema
@@ -101,6 +116,8 @@ interface TermsInlineEditorProps {
   initialVersion?: TermsVersionDetail | null;
   businessInfo?: BusinessInfo;
   mode?: "create" | "edit";
+  initialAgreements?: TermsAgreementItem[];
+  initialTotal?: number;
 }
 
 // =============================================================================
@@ -142,11 +159,14 @@ export function TermsInlineEditor({
   initialVersion,
   businessInfo,
   mode = "edit",
+  initialAgreements = [],
+  initialTotal = 0,
 }: TermsInlineEditorProps) {
   const router = useRouter();
   const confirm = useConfirm();
   const [isPending, startTransition] = useTransition();
-  const [isSidePanelOpen, setIsSidePanelOpen] = useState(true);
+  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [hasEditorChanges, setHasEditorChanges] = useState(false);
   const [editorKey, setEditorKey] = useState(0);
   const [templateHtml, setTemplateHtml] = useState<string | null>(null);
@@ -623,6 +643,47 @@ export function TermsInlineEditor({
   // Render
   // =============================================================================
 
+  const deleteDialog =
+    mode === "edit" && terms ? (
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-destructive hover:text-destructive"
+            disabled={isPending}
+          >
+            削除
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>規約を削除しますか？</DialogTitle>
+            <DialogDescription>
+              この操作は取り消せません。すべてのバージョンが削除されます。
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+              disabled={isPending}
+            >
+              キャンセル
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteTerms}
+              disabled={isPending}
+            >
+              {isPending ? "削除中..." : "削除"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    ) : undefined;
+
   return (
     <InlineEditorShell
       onSubmit={handleSubmit(onSubmit)}
@@ -646,22 +707,7 @@ export function TermsInlineEditor({
           onSave={handleSave}
           onPreview={handlePreview}
           onBack={handleBack}
-          extraActions={
-            mode === "edit" && terms ? (
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="text-destructive hover:text-destructive"
-                  disabled={isPending}
-                  onClick={handleDeleteTerms}
-                >
-                  削除
-                </Button>
-              </div>
-            ) : undefined
-          }
+          extraActions={deleteDialog}
         />
       }
       panel={
@@ -671,183 +717,215 @@ export function TermsInlineEditor({
           title="規約設定"
           width="default"
         >
-          <div className="space-y-6">
-            {/* バージョン管理（edit モードのみ） */}
-            {mode === "edit" && localVersions.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="text-sm font-medium">バージョン管理</h3>
-
-                {/* 選択中バージョンのバッジ */}
-                {selectedVersionContent && (
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      variant={statusBadgeVariant(
-                        selectedVersionContent.status,
-                      )}
-                    >
-                      v{selectedVersionContent.version}{" "}
-                      {statusLabel(selectedVersionContent.status)}
-                    </Badge>
-                    {selectedVersionContent.isCurrentVersion && (
-                      <span className="text-xs text-muted-foreground">
-                        現行
-                      </span>
-                    )}
-                  </div>
-                )}
-
-                {/* バージョン選択ドロップダウン */}
-                <Select
-                  value={selectedVersionId}
-                  onValueChange={(id) => void handleVersionSwitch(id)}
-                  disabled={isPending || isLoadingVersion}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="バージョンを選択" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {localVersions.map((v) => (
-                      <SelectItem key={v.id} value={v.id}>
-                        {versionLabel(v)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {/* バージョン別アクション */}
-                {selectedVersionContent?.status === TermsStatus.DRAFT && (
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={handlePublishVersion}
-                      disabled={isPending}
-                      className="flex-1"
-                    >
-                      公開する
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="destructive"
-                      onClick={handleDeleteVersion}
-                      disabled={isPending}
-                    >
-                      削除
-                    </Button>
-                  </div>
-                )}
-
-                {selectedVersionContent?.status === TermsStatus.PUBLISHED &&
-                  !selectedVersionContent.isCurrentVersion && (
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={handleArchiveVersion}
-                        disabled={isPending}
-                        className="flex-1"
-                      >
-                        アーカイブ
-                      </Button>
-                    </div>
+          <Tabs
+            defaultValue={mode === "edit" ? "version" : "settings"}
+            className="w-full"
+          >
+            <TabsList
+              className={`grid w-full ${mode === "edit" ? "grid-cols-3" : "grid-cols-1"}`}
+            >
+              {mode === "edit" && (
+                <TabsTrigger value="version">バージョン</TabsTrigger>
+              )}
+              <TabsTrigger value="settings">設定</TabsTrigger>
+              {mode === "edit" && (
+                <TabsTrigger value="agreements">
+                  同意
+                  {initialTotal > 0 && (
+                    <span className="ml-1 rounded-full bg-muted px-1.5 py-0.5 text-xs tabular-nums">
+                      {initialTotal}
+                    </span>
                   )}
+                </TabsTrigger>
+              )}
+            </TabsList>
 
-                {selectedVersionContent?.status === TermsStatus.ARCHIVED && (
-                  <p className="text-xs text-muted-foreground">アーカイブ済み（参照のみ）</p>
+            {/* バージョン管理タブ（edit モードのみ） */}
+            {mode === "edit" && (
+              <TabsContent value="version" className="mt-4 space-y-4">
+                {localVersions.length > 0 ? (
+                  <div className="space-y-3">
+                    {/* 選択中バージョンのバッジ */}
+                    {selectedVersionContent && (
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant={statusBadgeVariant(
+                            selectedVersionContent.status,
+                          )}
+                        >
+                          v{selectedVersionContent.version}{" "}
+                          {statusLabel(selectedVersionContent.status)}
+                        </Badge>
+                        {selectedVersionContent.isCurrentVersion && (
+                          <span className="text-xs text-muted-foreground">
+                            現行
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* バージョン選択ドロップダウン */}
+                    <Select
+                      value={selectedVersionId}
+                      onValueChange={(id) => void handleVersionSwitch(id)}
+                      disabled={isPending || isLoadingVersion}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="バージョンを選択" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {localVersions.map((v) => (
+                          <SelectItem key={v.id} value={v.id}>
+                            {versionLabel(v)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {/* バージョン別アクション */}
+                    {selectedVersionContent?.status === TermsStatus.DRAFT && (
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={handlePublishVersion}
+                          disabled={isPending}
+                          className="flex-1"
+                        >
+                          公開する
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="destructive"
+                          onClick={handleDeleteVersion}
+                          disabled={isPending}
+                        >
+                          削除
+                        </Button>
+                      </div>
+                    )}
+
+                    {selectedVersionContent?.status === TermsStatus.PUBLISHED &&
+                      !selectedVersionContent.isCurrentVersion && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={handleArchiveVersion}
+                          disabled={isPending}
+                          className="w-full"
+                        >
+                          アーカイブ
+                        </Button>
+                      )}
+
+                    {selectedVersionContent?.status ===
+                      TermsStatus.ARCHIVED && (
+                      <p className="text-xs text-muted-foreground">
+                        アーカイブ済み（参照のみ）
+                      </p>
+                    )}
+
+                    {/* 新しいバージョンを作成 */}
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={handleCreateNewVersion}
+                      disabled={
+                        isPending || isLoadingVersion || hasDraftVersion
+                      }
+                      title={
+                        hasDraftVersion
+                          ? "下書きを先に公開または削除してください"
+                          : undefined
+                      }
+                      className="w-full"
+                    >
+                      新しいバージョンを作成
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    バージョンがありません
+                  </p>
                 )}
-
-                {/* 新しいバージョンを作成 */}
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={handleCreateNewVersion}
-                  disabled={isPending || isLoadingVersion || hasDraftVersion}
-                  title={hasDraftVersion ? "下書きを先に公開または削除してください" : undefined}
-                  className="w-full"
-                >
-                  新しいバージョンを作成
-                </Button>
-              </div>
+              </TabsContent>
             )}
 
-            {/* 基本情報 */}
-            <div className="space-y-4 border-t pt-4 first:border-t-0 first:pt-0">
-              <h3 className="text-sm font-medium">基本情報</h3>
-
-              <div className="space-y-2">
-                <Label htmlFor="title">タイトル *</Label>
-                <Input
-                  id="title"
-                  placeholder="規約のタイトル"
-                  {...register("title")}
-                  disabled={isPending}
-                />
-                {errors.title && (
-                  <p className="text-xs text-destructive">
-                    {errors.title.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="slug">スラッグ *</Label>
-                <Input
-                  id="slug"
-                  placeholder="terms-of-use"
-                  {...register("slug")}
-                  disabled={isPending}
-                />
-                {errors.slug && (
-                  <p className="text-xs text-destructive">
-                    {errors.slug.message}
-                  </p>
-                )}
-                <p className="text-xs text-muted-foreground">
-                  URLに使用されます: /terms/{slug || "slug"}
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label>規約タイプ</Label>
-                {mode === "edit" ? (
-                  <p className="text-sm text-muted-foreground">
-                    {TERMS_TYPES.find((t) => t.value === selectedTypeRaw)
-                      ?.label ?? selectedTypeRaw}
-                  </p>
-                ) : (
-                  <Select
-                    value={selectedType ?? ""}
-                    onValueChange={(v) => void handleTypeChange(v)}
-                    disabled={isPending}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="規約タイプを選択" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TERMS_TYPES.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                          {type.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-                {errors.type && (
-                  <p className="text-xs text-destructive">
-                    {errors.type.message}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* テンプレート選択（create モードのみ） */}
-            {mode === "create" && selectedType && templates.length > 0 && (
-              <div className="space-y-4 border-t pt-4">
-                <h3 className="text-sm font-medium">テンプレート</h3>
+            {/* 設定タブ */}
+            <TabsContent value="settings" className="mt-4 space-y-4">
+              <div className="space-y-4">
                 <div className="space-y-2">
+                  <Label htmlFor="title">タイトル *</Label>
+                  <Input
+                    id="title"
+                    placeholder="規約のタイトル"
+                    {...register("title")}
+                    disabled={isPending}
+                  />
+                  {errors.title && (
+                    <p className="text-xs text-destructive">
+                      {errors.title.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="slug">スラッグ *</Label>
+                  <Input
+                    id="slug"
+                    placeholder="terms-of-use"
+                    {...register("slug")}
+                    disabled={isPending}
+                  />
+                  {errors.slug && (
+                    <p className="text-xs text-destructive">
+                      {errors.slug.message}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    URLに使用されます: /terms/{slug || "slug"}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>規約タイプ</Label>
+                  {mode === "edit" ? (
+                    <p className="text-sm text-muted-foreground">
+                      {TERMS_TYPES.find((t) => t.value === selectedTypeRaw)
+                        ?.label ?? selectedTypeRaw}
+                    </p>
+                  ) : (
+                    <Select
+                      value={selectedType ?? ""}
+                      onValueChange={(v) => void handleTypeChange(v)}
+                      disabled={isPending}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="規約タイプを選択" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TERMS_TYPES.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  {errors.type && (
+                    <p className="text-xs text-destructive">
+                      {errors.type.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* テンプレート選択（create モードのみ） */}
+              {mode === "create" && selectedType && templates.length > 0 && (
+                <div className="space-y-3 border-t pt-4">
                   <Label>テンプレートから作成</Label>
                   <Select
                     value={selectedTemplate || ""}
@@ -875,38 +953,44 @@ export function TermsInlineEditor({
                     </p>
                   )}
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* ショートカットヒント */}
-            <div className="border-t pt-4">
-              <p className="text-xs text-muted-foreground">
-                ショートカット: Ctrl/Cmd + S で保存
-              </p>
-            </div>
-          </div>
+              <div className="border-t pt-4">
+                <p className="text-xs text-muted-foreground">
+                  ショートカット: Ctrl/Cmd + S で保存
+                </p>
+              </div>
+            </TabsContent>
+
+            {/* 同意記録タブ（edit モードのみ） */}
+            {mode === "edit" && terms && (
+              <TabsContent value="agreements" className="mt-4">
+                <TermsAgreementsTab
+                  termsId={terms.id}
+                  initialAgreements={initialAgreements}
+                  initialTotal={initialTotal}
+                />
+              </TabsContent>
+            )}
+          </Tabs>
         </SidePanelShell>
       }
     >
-      <div className="flex h-full flex-col">
-        <div className="min-h-0 flex-1">
-          <LazyLexicalEditor
-            key={editorKey}
-            contentJson={contentJson || undefined}
-            contentHtml={
-              templateHtml ??
-              (initialVersion?.contentHtml && editorKey === 0
-                ? initialVersion.contentHtml
-                : "")
-            }
-            onChange={handleJsonChange}
-            disabled={isPending || isLoadingVersion}
-            className={EDITOR_PROSE_CLASSES}
-            showToolbar
-            height="100%"
-          />
-        </div>
-      </div>
+      <LazyLexicalEditor
+        key={editorKey}
+        contentJson={contentJson || undefined}
+        contentHtml={
+          templateHtml ??
+          (initialVersion?.contentHtml && editorKey === 0
+            ? initialVersion.contentHtml
+            : "")
+        }
+        onChange={handleJsonChange}
+        disabled={isPending || isLoadingVersion}
+        className={EDITOR_PROSE_CLASSES}
+        showToolbar
+        height="100%"
+      />
     </InlineEditorShell>
   );
 }
