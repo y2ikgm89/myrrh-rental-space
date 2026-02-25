@@ -52,6 +52,7 @@ import type {
   GoogleOAuthConfig,
   CustomApiKeyData,
   CustomApiKeysMap,
+  CustomApiKeyStored,
 } from '@/admin/types/api-keys'
 
 // =============================================================================
@@ -75,7 +76,7 @@ function parseConnectionStatus(value: unknown): ConnectionStatus | null {
  * CustomApiKeyStoredの型ガード
  * 必須フィールドの存在と型を検証
  */
-function isCustomApiKeyStored(value: unknown): value is import('@/admin/types/api-keys').CustomApiKeyStored {
+function isCustomApiKeyStored(value: unknown): value is CustomApiKeyStored {
   if (!isRecord(value)) return false
   return (
     typeof value['name'] === 'string' &&

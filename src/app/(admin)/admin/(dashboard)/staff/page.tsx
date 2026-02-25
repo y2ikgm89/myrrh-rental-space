@@ -105,21 +105,7 @@ export default async function StaffPage({ searchParams }: PageProps) {
       </div>
 
       {/* スタッツカード */}
-      <Suspense
-        fallback={
-          <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div
-                key={i}
-                className="rounded-lg border bg-card p-6 animate-pulse"
-              >
-                <div className="h-4 bg-muted rounded w-20 mb-3" />
-                <div className="h-8 bg-muted rounded w-12" />
-              </div>
-            ))}
-          </div>
-        }
-      >
+      <Suspense fallback={<LoadingState />}>
         <StaffStats />
       </Suspense>
 

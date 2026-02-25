@@ -76,13 +76,13 @@ export function SpaceManagementTabs({
         {activeTab === "categories" && <CreateCategoryDialog />}
       </div>
 
-      <TabsContent value="spaces" forceMount>
+      <TabsContent value="spaces" forceMount className="data-[state=inactive]:hidden">
         {spacesContent}
       </TabsContent>
-      <TabsContent value="locations" forceMount>
+      <TabsContent value="locations" forceMount className="data-[state=inactive]:hidden">
         {locationsContent}
       </TabsContent>
-      <TabsContent value="categories" forceMount>
+      <TabsContent value="categories" forceMount className="data-[state=inactive]:hidden">
         {categoriesContent}
       </TabsContent>
     </Tabs>

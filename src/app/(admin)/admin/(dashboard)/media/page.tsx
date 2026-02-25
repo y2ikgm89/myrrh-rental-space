@@ -7,6 +7,7 @@ import type { Metadata } from "next";
 import { loadAdminMediaSearchParams } from "@/shared/lib/nuqs";
 import { MediaFilters } from "./_components/MediaFilters";
 import { MediaListWrapper } from "./_components/MediaListWrapper";
+import { LoadingState } from "@/admin/components/LoadingState";
 import { connection } from "next/server";
 
 export const metadata: Metadata = {
@@ -43,9 +44,7 @@ export default async function MediaPage({ searchParams }: PageProps) {
       </div>
 
       {/* Filters */}
-      <Suspense
-        fallback={<div className="h-10 bg-muted animate-pulse rounded" />}
-      >
+      <Suspense fallback={<LoadingState variant="inline" />}>
         <MediaFilters />
       </Suspense>
 

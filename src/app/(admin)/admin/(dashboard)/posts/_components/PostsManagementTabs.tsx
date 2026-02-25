@@ -73,16 +73,16 @@ export function PostsManagementTabs({
         )}
       </div>
 
-      <TabsContent value="posts" forceMount>
+      <TabsContent value="posts" forceMount className="data-[state=inactive]:hidden">
         {postsContent}
       </TabsContent>
-      <TabsContent value="categories" forceMount>
+      <TabsContent value="categories" forceMount className="data-[state=inactive]:hidden">
         {categoriesContent}
       </TabsContent>
-      <TabsContent value="tags" forceMount>
+      <TabsContent value="tags" forceMount className="data-[state=inactive]:hidden">
         {tagsContent}
       </TabsContent>
-      <TabsContent value="comments" forceMount>
+      <TabsContent value="comments" forceMount className="data-[state=inactive]:hidden">
         {commentsContent}
       </TabsContent>
     </Tabs>

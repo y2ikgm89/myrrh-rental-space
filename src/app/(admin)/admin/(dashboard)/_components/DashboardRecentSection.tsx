@@ -18,6 +18,7 @@ import {
   ReservationStatusBadge,
   InquiryStatusBadge,
 } from '@/admin/components/status-badges'
+import { EmptyState } from '@/admin/components/EmptyState'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 
@@ -43,7 +44,7 @@ export async function DashboardRecentSection() {
         </CardHeader>
         <CardContent>
           {recentReservations.length === 0 ? (
-            <p className="text-muted-foreground text-sm">予約データがありません</p>
+            <EmptyState message="予約データがありません" />
           ) : (
             <Table>
               <TableHeader>
@@ -91,7 +92,7 @@ export async function DashboardRecentSection() {
         </CardHeader>
         <CardContent>
           {recentInquiries.length === 0 ? (
-            <p className="text-muted-foreground text-sm">お問い合わせデータがありません</p>
+            <EmptyState message="お問い合わせデータがありません" />
           ) : (
             <Table>
               <TableHeader>

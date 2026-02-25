@@ -74,7 +74,7 @@ export default function SettingsPage() {
     <div className="space-y-6">
       {/* ヘッダー */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">サイト設定</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">設定</h1>
         <p className="text-muted-foreground">サイト全体の設定を管理します</p>
       </div>
 

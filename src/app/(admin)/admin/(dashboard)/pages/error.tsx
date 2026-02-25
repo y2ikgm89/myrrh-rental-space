@@ -24,7 +24,7 @@ export default function Error({
       <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
       <h2 className="text-xl font-semibold mb-2">エラーが発生しました</h2>
       <p className="text-muted-foreground mb-4 text-center max-w-md">
-        {error.message || 'データの読み込みに失敗しました。'}
+        データの読み込みに失敗しました。
       </p>
       <Button onClick={reset} variant="outline">
         再試行
