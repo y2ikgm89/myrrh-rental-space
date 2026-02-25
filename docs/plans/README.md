@@ -18,11 +18,116 @@
 | 🟢 低  | keysOf/entriesOf の許可例外を type-safety.md に追記   | `.claude/rules/type-safety.md` |
 | 🟢 低  | CSP ヘッダー設定（next.config.ts の securityHeaders） | `next.config.ts`               |
 
-**最終更新**: 2026-02-20（コード品質修正）
+**最終更新**: 2026-02-26（管理画面一貫性リファクタリング・Lexical Phase 2・スペース編集リライト完了）
 
 ---
 
 ## 完了した計画
+
+### 2026-02-26 - DB スキーマ整合性修正 ✅
+
+Instagram メディア型・予約 taxRateType・Staff 招待 partial index の DB スキーマ不整合を修正。
+
+**実装内容**:
+
+- [x] `InstagramMediaType` enum 追加（Media.mediaType フィールド型付け）
+- [x] `Reservation.taxRateType` 型を `String?` → `TaxRateType?` に修正
+- [x] `StaffInvitation` の partial index 追加（有効招待の一意制約）
+- [x] `Media.spaceId` FK onDelete: SetNull に変更
+- [x] `Settings.adminUserId` FK onDelete: SetNull に変更
+- [x] `bun run validate && bun run build` 全通過
+
+---
+
+### 2026-02-25 - 管理画面一貫性・整合性リファクタリング ✅
+
+管理画面全体の実装・UI/UX・コードパターンの不整合を根本的に解消し、最新推奨パターンに統一。
+
+**実装内容**:
+
+- [x] Task 1: `connection()` 二重呼び出し修正 + `terms/[id]` 未呼び出し修正
+- [x] Task 2: `from 'zod/v4'` 非標準インポートパス修正
+- [x] Task 3: 内部エラーメッセージのユーザー露出修正
+- [x] Task 4: Media 系ダイアログを Radix Dialog に完全移行（early-return 除去）
+- [x] Task 5: EventDetailDialog と CommentPanel の early-return 除去
+- [x] Task 6: `checkReadPermission` 重複実装を `checkReadPermissionFor()` HOF に統一
+- [x] Task 7: `verifyAdminSession()` のみの読み取りアクションを `checkReadPermissionFor()` に移行
+- [x] Task 8: Prisma enum 文字列リテラル直書きを enum 定数に修正
+- [x] Task 9: ページ h1 クラス統一（tracking-tight text-foreground）
+- [x] Task 10: `error.tsx` を欠落リソース（faq/terms/customers/inquiries/audit-logs/media/pages/news/coupons）に追加
+- [x] Task 11: タブ実装パターンを news/posts で nuqs + `shallow: true` に統一
+- [x] Task 12: AdminDetailLayout 未使用箇所の対応
+- [x] Task 13: Minor 問題一括修正（import type・EmptyState・forceMount・error.message・LoadingState）
+- [x] Task 14: `bun run validate && bun run build` 全通過
+
+---
+
+### 2026-02-21 - Lexical エディタ Phase 2 ✅
+
+AudioNode・FileNode・FigmaNode・SpotifyNode・GalleryNode・TimelineNode・PricingTableNode の 7 新規ノード追加、Markdown インポート・HTML エクスポート・印刷プレビュー・リンクホバープレビュー・ブロック移動・ショートカットヘルプを実装。
+
+**実装内容**:
+
+- [x] Task 1-A: ImageNode caption 表示バグ修正
+- [x] Task 1-B: RubyNode importDOM ロジック改善
+- [x] Task 1-C: CodeNode 言語セレクタ Inspector パネル追加
+- [x] Task 2-A: AudioNode（音声プレイヤー）
+- [x] Task 2-B: FileNode（ファイル添付）
+- [x] Task 2-C: FigmaNode（Figma 埋め込み）
+- [x] Task 2-D: SpotifyNode（音楽・Podcast 埋め込み）
+- [x] Task 2-E: GalleryNode（画像ギャラリー）
+- [x] Task 2-F: TimelineNode（水平/垂直タイムライン）
+- [x] Task 2-G: PricingTableNode（料金比較表）
+- [x] Task 3-A: Markdown インポート機能
+- [x] Task 3-B: エクスポートメニュー強化（HTML コピー）
+- [x] Task 3-C: プリントプレビューモード
+- [x] Task 4-A: Link ホバープレビュー
+- [x] Task 4-B: ブロック移動ボタン（Up/Down）
+- [x] Task 4-C: ショートカットヘルプモーダル
+
+---
+
+### 2026-02-21 - Lexical エディタ改善（Phase 1） ✅
+
+Lexical 0.40.0 NodeState API・data-attribute パターン準拠 + VimeoNode・MapEmbedNode・RubyNode・TooltipNode・全画面モード・ブロック複製・テーブル強化を追加。
+
+**実装内容**:
+
+- [x] Task 1: YouTubeNode・ImageNode の createDOM BP 違反修正（theme 参照除去）
+- [x] Task 2: ToolbarPlugin に Sub/Sup ボタンを追加
+- [x] Task 3: docs/plans/README.md の AccentColor 計画を完了マーク
+- [x] Task 4: ImageNode にキャプション機能を追加（captionState + figure/figcaption）
+- [x] Task 5: VimeoNode を作成
+- [x] Task 6: VimeoPlugin・VimeoInspectorPanel を作成し登録
+- [x] Task 7: MapEmbedNode を作成
+- [x] Task 8: MapEmbedDialog・MapEmbedInspectorPanel を作成し登録
+- [x] Task 9: RubyNode を作成（インライン DecoratorNode）
+- [x] Task 10: RubyPlugin を作成し FloatingToolbar にボタン追加
+- [x] Task 11: TooltipNode を作成
+- [x] Task 12: TooltipPlugin を作成し FloatingToolbar にボタン追加、CSS 追加
+- [x] Task 13: 全画面モードを実装（isFullscreen + Escape）
+- [x] Task 14: DraggableBlockPlugin にブロック複製・削除を追加
+- [x] Task 15: TablePlugin にセル結合・背景色・リサイザーを有効化
+- [x] Task 16: `bun run validate && bun run build` 全通過
+
+---
+
+### 2026-02-20 - スペース管理編集ページ UX 統一リライト ✅
+
+`SpaceInlineEditor` を廃止し、`AdminDetailLayout + SpaceEditForm`（タブ UI）に完全リライト。
+
+**実装内容**:
+
+- [x] Task 1: SpaceEditForm.tsx — スキーマ・型定義・フォーム骨格
+- [x] Task 2: フォーム本体 — 基本情報 + 右カラム（料金・場所・公開・利用規約）
+- [x] Task 3: フォーム本体 — 画像・設備・SEO/OGP + ボタン
+- [x] Task 4: `spaces/[id]/edit/page.tsx` を AdminDetailLayout で書き換え
+- [x] Task 5: `spaces/new/page.tsx` を AdminDetailLayout で書き換え
+- [x] Task 6: `SpaceInlineEditor.tsx` を削除
+- [x] Task 7: 全体検証・ビルド
+- [x] Task 8（追加）: nuqs URL タブ（5タブ）+ forceMount + エラーバッジ + スティッキー保存バー
+
+---
 
 ### 2026-02-22 - 利用規約管理リデザイン ✅
 

@@ -1490,16 +1490,16 @@ git commit -m "feat(terms): 利用規約管理 UX 全面見直し（InlineEditor
 
 実装完了後に以下を手動確認する:
 
-- [ ] `/admin/terms` の一覧から `[編集]` クリック → `/admin/terms/[id]/edit` に遷移する
-- [ ] `/admin/terms/[id]` にアクセス → `/admin/terms/[id]/edit` にリダイレクトされる
-- [ ] edit ページのサイドパネルにバージョン一覧が表示される
-- [ ] バージョンドロップダウンで切り替えるとエディタが更新される（re-mount）
-- [ ] DRAFT バージョン選択中: 「公開する」「削除」ボタンが表示される
-- [ ] PUBLISHED & 現行バージョン選択中: 「読み取り専用」バッジ表示・エディタが disabled
-- [ ] PUBLISHED & 非現行バージョン選択中: 「アーカイブ」ボタンが表示される
-- [ ] 「新しいバージョンを作成」でバージョンが追加されドロップダウンに現れる
-- [ ] 「公開する」で PUBLISHED に変わり `router.refresh()` が呼ばれる
-- [ ] `/admin/terms/new` で規約作成後 `/admin/terms/[id]/edit` に遷移する
-- [ ] `/terms/[slug]` で公開されている規約の contentHtml が表示される
-- [ ] 未公開の規約スラッグでアクセス → 404
-- [ ] ヘッダーの「プレビュー」ボタンが `/terms/[slug]` を新タブで開く
+- [x] `/admin/terms` の一覧から `[編集]` クリック → `/admin/terms/[id]/edit` に遷移する
+- [x] `/admin/terms/[id]` にアクセス → `/admin/terms/[id]/edit` にリダイレクトされる
+- [x] edit ページのサイドパネルにバージョン一覧が表示される
+- [x] バージョンドロップダウンで切り替えるとエディタが更新される（re-mount）
+- [x] DRAFT バージョン選択中: 「公開する」「削除」ボタンが表示される
+- [x] PUBLISHED & 現行バージョン選択中: 「読み取り専用」バッジ表示・エディタが disabled
+- [x] PUBLISHED & 非現行バージョン選択中: 「アーカイブ」ボタンが表示される
+- [x] 「新しいバージョンを作成」でバージョンが追加されドロップダウンに現れる
+- [x] 「公開する」で PUBLISHED に変わり `router.refresh()` が呼ばれる
+- [x] `/admin/terms/new` で規約作成後 `/admin/terms/[id]/edit` に遷移する
+- [x] `/terms/[slug]` で公開されている規約の contentHtml が表示される
+- [x] 未公開の規約スラッグでアクセス → 404
+- [x] ヘッダーの「プレビュー」ボタンが `/terms/[slug]` を新タブで開く

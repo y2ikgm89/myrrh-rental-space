@@ -936,13 +936,13 @@ Expected: ビルド成功
 
 **Step 3: 各 Critical 修正の動作確認**
 
-- [ ] MediaUploadDialog が Dialog として動作する（開閉アニメーション付き）
-- [ ] MediaDetailDialog が `item` null でも DOM にマウントされる
-- [ ] MediaPickerDialog が Dialog として動作する
-- [ ] EventDetailDialog が `event` null でも DOM にマウントされる
-- [ ] CommentPanel がアニメーション付きで開閉する
-- [ ] FAQ ページが正常に表示される（connection() 1回のみ）
-- [ ] タブ切り替えでページリロードしない（news/posts）
+- [x] MediaUploadDialog が Dialog として動作する（開閉アニメーション付き）
+- [x] MediaDetailDialog が `item` null でも DOM にマウントされる
+- [x] MediaPickerDialog が Dialog として動作する
+- [x] EventDetailDialog が `event` null でも DOM にマウントされる
+- [x] CommentPanel がアニメーション付きで開閉する
+- [x] FAQ ページが正常に表示される（connection() 1回のみ）
+- [x] タブ切り替えでページリロードしない（news/posts）
 
 **Step 4: 最終コミット**
 

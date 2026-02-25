@@ -1960,22 +1960,22 @@ Expected: 型エラー・lint エラー・ビルドエラーなし
 
 **動作確認チェックリスト:**
 
-- [ ] Phase 1-A: ImageNode でキャプション入力 → エディタ上に表示されること
-- [ ] Phase 1-B: `<ruby>京<rt>きょう</rt>都<rt>と</rt></ruby>` を HTML インポート → 正しく変換されること
-- [ ] Phase 1-C: コードブロック選択 → Inspector に言語セレクタが表示・変更できること
-- [ ] Phase 2-A: 「音声プレイヤー」から AudioNode を挿入 → audio タグが表示されること
-- [ ] Phase 2-B: 「ファイル添付」から FileNode を挿入 → ファイル名・サイズが表示されること
-- [ ] Phase 2-C: Figma URL を入力 → embed iframe が表示されること
-- [ ] Phase 2-D: Spotify URL を入力 → Spotify 埋め込みが表示されること
-- [ ] Phase 2-E: ギャラリー挿入 → 列数指定 → Inspector から画像追加できること
-- [ ] Phase 2-F: タイムライン挿入 → year・label を Inspector から編集できること
-- [ ] Phase 2-G: 料金表挿入 → プラン名・価格を Inspector から編集できること
-- [ ] Phase 3-A: Markdown インポート → 確認ダイアログ後にコンテンツ変換されること
-- [ ] Phase 3-B: HTML コピー → クリップボードに HTML が入ること
-- [ ] Phase 3-C: プリントプレビュー → A4 レイアウトで表示 → 印刷できること
-- [ ] Phase 4-A: リンク上でホバー → URL プレビュー Popover が表示されること
-- [ ] Phase 4-B: ブロック横の ↑↓ ボタン → ブロックが移動すること
-- [ ] Phase 4-C: `Ctrl+/` または `?` ボタン → ショートカット一覧が表示されること
+- [x] Phase 1-A: ImageNode でキャプション入力 → エディタ上に表示されること
+- [x] Phase 1-B: `<ruby>京<rt>きょう</rt>都<rt>と</rt></ruby>` を HTML インポート → 正しく変換されること
+- [x] Phase 1-C: コードブロック選択 → Inspector に言語セレクタが表示・変更できること
+- [x] Phase 2-A: 「音声プレイヤー」から AudioNode を挿入 → audio タグが表示されること
+- [x] Phase 2-B: 「ファイル添付」から FileNode を挿入 → ファイル名・サイズが表示されること
+- [x] Phase 2-C: Figma URL を入力 → embed iframe が表示されること
+- [x] Phase 2-D: Spotify URL を入力 → Spotify 埋め込みが表示されること
+- [x] Phase 2-E: ギャラリー挿入 → 列数指定 → Inspector から画像追加できること
+- [x] Phase 2-F: タイムライン挿入 → year・label を Inspector から編集できること
+- [x] Phase 2-G: 料金表挿入 → プラン名・価格を Inspector から編集できること
+- [x] Phase 3-A: Markdown インポート → 確認ダイアログ後にコンテンツ変換されること
+- [x] Phase 3-B: HTML コピー → クリップボードに HTML が入ること
+- [x] Phase 3-C: プリントプレビュー → A4 レイアウトで表示 → 印刷できること
+- [x] Phase 4-A: リンク上でホバー → URL プレビュー Popover が表示されること
+- [x] Phase 4-B: ブロック横の ↑↓ ボタン → ブロックが移動すること
+- [x] Phase 4-C: `Ctrl+/` または `?` ボタン → ショートカット一覧が表示されること
 
 ---
 
