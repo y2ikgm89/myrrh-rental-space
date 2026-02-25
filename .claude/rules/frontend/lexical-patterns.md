@@ -700,6 +700,7 @@ editor.update(() => {
 ```
 
 21. **`TableCellResizerPlugin` は @lexical/react 0.40.0 に存在しない**: 使用禁止。`<TablePlugin hasCellMerge={true} hasCellBackgroundColor={true} />` が現バージョンのテーブル強化の上限
+22. **`exportDOM` 定義時に `importDOM` 省略禁止**: `exportDOM` を定義したすべてのノードは `static override importDOM(): DOMConversionMap | null` も必ず実装する。省略すると Lexical dev-mode が `exportDOM implemented without matching importDOM` を警告し続ける
 
 ## 新規ノード登録チェックリスト
 
@@ -729,7 +730,44 @@ editor.update(() => {
 
 ## HTML互換性
 
-exportDOM/importDOMは公開ページでのHTMLレンダリングに必須:
+`exportDOM` と `importDOM` はセットで実装が必須（片方のみで dev-mode に警告が出る）:
 
-- `exportDOM()`: エディタ状態 → HTML
-- `importDOM()`: HTML → エディタ状態（再編集時）
+- `exportDOM()`: エディタ状態 → HTML（クリップボード・公開ページ出力）
+- `importDOM()`: HTML → エディタ状態（クリップボードペースト・再編集時）
+
+### importDOM 実装パターン
+
+```typescript
+static override importDOM(): DOMConversionMap | null {
+  return {
+    div: (domNode) => {  // exportDOM が出力するタグ名
+      if (!(domNode instanceof HTMLElement) || !domNode.hasAttribute("data-xxx"))
+        return null;  // 別ノードの同タグは null を返してスキップ
+      return {
+        conversion: (element) => {
+          const node = $createXxxNode({
+            value: element.getAttribute("data-value") ?? "",  // getAttribute は string | null → ?? "" 必須
+          });
+          return { node };
+        },
+        priority: 2,  // div/figure/li 等の汎用タグをオーバーライドするために必須
+      };
+    },
+  };
+}
+```
+
+**`after: () => []`** — HTML の子要素を Lexical 子ノードとして取り込まない場合のみ使用:
+
+```typescript
+// NG: テキスト編集可能ノードに使用（子ノードが復元されなくなる）
+// OK: 画像ノード等、子要素(<img>/<figcaption> 等)を Lexical 子ノードにしたくない場合のみ
+return { node, after: () => [] };
+```
+
+### createDOM と exportDOM のタグ不一致は許容される
+
+`createDOM`（エディタ内レンダリング用）と `exportDOM`（HTML出力用）が異なるタグを使ってもよい:
+
+- Lexical のクリップボードは **`exportDOM` の HTML を使用**（`createDOM` の DOM はクリップボードに使われない）
+- 内部コピペは JSON パス（`exportJSON`/`importJSON`）→ `importDOM` は `exportDOM` 出力タグに合わせる

@@ -3,7 +3,7 @@ name: lexical-node
 description: Creates custom Lexical editor nodes with DecoratorNode or ElementNode patterns. Use when adding new content types to the rich text editor, such as embeds, callouts, or interactive elements. Implements NodeState API ($config + createState), exportDOM/importDOM, type-safe factory functions, and React Compiler compatible patterns.
 argument-hint: <NodeName> [decorator|element]
 disable-model-invocation: true
-allowed-tools: Read, Write, Edit, Glob, Grep
+allowed-tools: Read, Write, Edit, Glob, Grep, mcp__context7__resolve-library-id, mcp__context7__query-docs
 ---
 
 # Lexical カスタムノード作成
@@ -31,6 +31,9 @@ Lexicalエディタ用のカスタムノードを作成します。
 
 - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/ImageNode.tsx`
 - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/CalloutNode.tsx`
+
+Lexical 0.40 の NodeState API 仕様が不明な場合は `context7` で参照:
+`resolve-library-id('lexical')` → `query-docs(id, 'NodeState createState $getState $setState')`
 
 ### 3. ノードファイル作成
 

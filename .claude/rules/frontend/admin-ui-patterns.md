@@ -201,6 +201,75 @@ export const getCommentThreads = withPermission<[Query], Thread[]>(
 });
 ```
 
+## テーブルレスポンシブ対応パターン
+
+管理画面の全テーブルは **2層ラッパー** + **カラム Progressive Disclosure** で実装する。
+
+### 2層ラッパー（必須）
+
+```tsx
+// 外側: overflow-hidden で border-radius をクリップ
+// 内側: overflow-x-auto で横スクロールを有効化
+<div className="overflow-hidden rounded-lg border bg-card">
+  <div className="overflow-x-auto">
+    <Table>...</Table>
+  </div>
+</div>
+```
+
+**禁止**: `overflow-hidden` のみ（角丸はきれいだがスクロール不可）
+
+### カラム Progressive Disclosure（必須）
+
+重要度の低いカラムは `hidden md:table-cell` / `hidden lg:table-cell` で段階的に非表示にする。
+ヘッダー行・仮想行（ホームページ行等）・全データ行に **対称的に適用** すること:
+
+```tsx
+<TableHeader>
+  <TableRow>
+    <TableHead>常時表示（必須情報）</TableHead>
+    <TableHead className="hidden md:table-cell">md以上（補助情報）</TableHead>
+    <TableHead className="hidden lg:table-cell">lg以上（詳細情報）</TableHead>
+  </TableRow>
+</TableHeader>
+<TableBody>
+  {items.map((item) => (
+    <TableRow key={item.id}>
+      <TableCell>...</TableCell>
+      <TableCell className="hidden md:table-cell">...</TableCell>  {/* ヘッダーと一致 */}
+      <TableCell className="hidden lg:table-cell">...</TableCell>  {/* ヘッダーと一致 */}
+    </TableRow>
+  ))}
+</TableBody>
+```
+
+**標準優先度（プロジェクト基準）**:
+
+| 常時表示                   | sm以上     | md以上               | lg以上               |
+| -------------------------- | ---------- | -------------------- | -------------------- |
+| ステータス・タイトル・操作 | スラッグ等 | 補助情報・料金・日時 | 詳細情報・住所・PV数 |
+
+### インラインコントロールのモバイル非表示
+
+複雑なインラインコントロール（Select・フォーム等）は小画面で折り畳む:
+
+```tsx
+<div className="flex items-center justify-end gap-2">
+  <div className="hidden sm:block">
+    <ReservationStatusSelect ... />  {/* sm未満では非表示 */}
+  </div>
+  <ReservationActionCell ... />  {/* 常時表示 */}
+</div>
+```
+
+### 全テーブルファイル一括検索コマンド
+
+```bash
+grep -rl "overflow-hidden rounded-lg border bg-card" src/
+```
+
+---
+
 ## テーブル操作列 ActionDropdown パターン
 
 管理画面の全テーブル操作列は `ActionDropdown`（`[⋮]`アイコン）に統一する。
@@ -553,3 +622,5 @@ export default async function Page({ params }) {
 12. **バックナビゲーションに `ChevronLeft` 禁止** — `ArrowLeft` は `AdminDetailLayout` 内部で自動提供。手動実装が必要な場合も `ArrowLeft` のみ
 13. **タブコンテンツ内にタブ名を繰り返す見出し禁止** — `<TabsContent>` 内で同名の `h2`/`h3` は冗長。タブ自体がコンテキストを持つ
 14. **タブリスト右端ボタンの dialog state をタブ内コンポーネントに持つこと禁止** — `showXxxDialog` state は `*EditTabs` 親で管理し、`onShowXxxDialogChange` prop として渡す
+15. **テーブルカラム非表示をヘッダーのみ・データ行のみに適用禁止** — ヘッダー・仮想行（ホームページ行等）・全データ行に対称的に `hidden md:table-cell` を適用する
+16. **テーブルに `overflow-x-auto` なしで `overflow-hidden` のみ使用禁止** — モバイルでテーブルがクリップされスクロール不可になる。必ず2層ラッパーを使う

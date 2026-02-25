@@ -29,6 +29,7 @@ You review code for cache-related violations and report findings concisely.
 
 1. `git diff --cached HEAD 2>/dev/null || git diff HEAD~1` で変更差分を取得
 2. 変更ファイルの中からキャッシュ関連コード（`updateTag` / `revalidateTag` / `'use cache'` / `cacheTag` / `safeFetch`）を確認
+   - Next.js 16 キャッシュ API 仕様が不明確な場合は `context7` で `next.js` ドキュメントを参照
 3. 以下の4項目をチェック
 4. 結果を報告
 

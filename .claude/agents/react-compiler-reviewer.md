@@ -9,6 +9,8 @@ tools:
   - Grep
   - Glob
   - Bash
+  - mcp__context7__resolve-library-id
+  - mcp__context7__query-docs
 model: sonnet
 memory: project
 ---
@@ -26,6 +28,7 @@ memory: project
    bunx eslint <file> --rule '{"react-hooks/purity":"error","react-hooks/refs":"error","react-hooks/immutability":"error","react-hooks/incompatible-library":"error"}' 2>/dev/null
    ```
 4. 発見事項を出力フォーマットに従ってレポート
+5. **仕様不明な場合**: `context7` で `react` / `react-compiler` ドキュメントを参照してから判断
 
 ## チェックリスト
 

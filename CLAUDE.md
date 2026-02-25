@@ -36,7 +36,7 @@
 
 ### スキル
 
-Skill ツールで明示的に呼び出す。1% でも該当する可能性があれば必ず呼び出すこと。
+Skill ツールで明示的に呼び出す。1% でも該当する可能性があれば必ず呼び出すこと。`（Task）` 注釈があるもののみ Task ツール経由、それ以外は全て Skill ツール。
 
 **常時（ワークフロー）**
 
@@ -71,13 +71,23 @@ Skill ツールで明示的に呼び出す。1% でも該当する可能性が�
 | `google-calendar-debug`                   | カレンダー同期問題時                       |
 | `turbopack-hmr`                           | Turbopack HMR エラー時                     |
 | `claude-md-management:claude-md-improver` | CLAUDE.md・rules・agents の定期メンテ時    |
+| `claude-md-management:revise-claude-md`   | セッション終了時の学びを CLAUDE.md に記録  |
 | `code-simplifier:code-simplifier`（Task） | コードリファクタリング・重複排除・最適化時 |
 
 ### ツール
 
 - **コードベース調査**: `serena`（LSP ベース）、`codebase-explorer`（広範な探索）
-- **専門エージェント**: `.claude/agents/` 参照（security-reviewer, project-reviewer, test-writer 等）
-- **MCP**: `serena`, `context7`, `playwright`, `github`（`.mcp.json` 設定済）
+- **専門エージェント（Task ツール — proactive 呼び出し推奨）**: `.claude/agents/` 参照
+  - `security-reviewer`: auth・Stripe・OAuth・API Route・外部連携コード変更後
+  - `project-reviewer`: 管理画面コード作成・大規模リファクタリング後（型安全・カラートークン・rules 違反）
+  - `cache-strategy-reviewer`: `updateTag`・`revalidateTag`・`'use cache'` 関数変更後
+  - `lexical-reviewer`: `src/**/lexical/` 配下 Node/Plugin 編集後
+  - `test-writer`: 新規 lib 関数・Server Action・バリデーションスキーマ実装後
+  - `db-migration-reviewer`: `bunx --bun prisma migrate dev` 実行前
+- **プロジェクト MCP** (`github`): `.mcp.json` 設定済 — PR・Issue・ブランチ操作
+- **グローバル Plugin/MCP** (`serena`, `context7`, `playwright`): ユーザーレベルで設定済
+  - `context7`: ライブラリ公式ドキュメント参照時 — `resolve-library-id` → `query-docs`（対象: Lexical / React 19 / Next.js 16 / Prisma 7 / Zod 4 / Better Auth）
+  - `playwright`: UI 実装後の視覚確認・E2E デバッグ（`browser_navigate` → `browser_take_screenshot`）
 - **ui-ux-pro-max**: `python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --domain <domain> --stack nextjs`
 - **ドキュメント更新**: `docs/plans/YYYY-MM-DD-title.md` → `docs/plans/README.md`
 
@@ -146,7 +156,7 @@ bun run e2e                                     # E2E テスト（Playwright）
 gcloud builds submit --config=cloudbuild.yaml   # Cloud Run デプロイ（Cloud Build 経由）
 ```
 
-> **自動フック**: Prettier + ESLint --fix（.ts/.tsx）/ schema-change-guard（schema.prisma）/ type-check-on-stop（TS 変更時の型チェック）
+> **自動フック**: Prettier + ESLint --fix（.ts/.tsx）/ schema-change-guard（schema.prisma）/ type-check-on-stop（Stop イベント毎に型チェック実行）
 > **保護**: `.env*`, `bun.lock`, `prisma/migrations/*.sql` は直接編集不可（PreToolUse フック）
 
 ### コーディング規約

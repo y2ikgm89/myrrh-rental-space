@@ -3,7 +3,7 @@ name: lexical-plugin
 description: Creates custom Lexical editor plugins in dialog, command, or listener patterns. Use when adding new editor behaviors like insert menus, keyboard shortcuts, content transformations, or event handling. Generates React Compiler compatible plugin code with proper command registration.
 argument-hint: <PluginName> [dialog|command|listener]
 disable-model-invocation: true
-allowed-tools: Read, Write, Edit, Glob, Grep
+allowed-tools: Read, Write, Edit, Glob, Grep, mcp__context7__resolve-library-id, mcp__context7__query-docs
 ---
 
 # Lexical カスタムプラグイン作成
@@ -20,6 +20,7 @@ Lexicalエディタ用のカスタムプラグインを作成します。
 ### 1. 要件確認
 
 ユーザーに以下を確認:
+
 - プラグインの目的
 - 関連するノードがあるか
 - UI（ダイアログ）が必要か
@@ -27,6 +28,7 @@ Lexicalエディタ用のカスタムプラグインを作成します。
 ### 2. 既存実装の確認
 
 参照実装を読み込む:
+
 - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/plugins/ImagePlugin.tsx`
 - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/plugins/YouTubePlugin.tsx`
 

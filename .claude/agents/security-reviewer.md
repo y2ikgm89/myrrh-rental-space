@@ -18,31 +18,39 @@ You are a security specialist for the Myrrh Rental Space project (Next.js 16 / B
 ## Review Checklist
 
 ### Server Actions & API Routes
+
 - Every admin Server Action uses `withPermission` HOF — no bare `async function` without auth check
 - `server-only` import present in files that access secrets (`prisma.ts`, `auth.ts`, `crypto.ts`, `env/server.ts`, etc.)
 - API routes in `src/app/api/` validate input with Zod before processing
 - Webhook routes verify signatures before trusting payload
 
 ### Auth & Sessions (Better Auth)
+
 - Session tokens not exposed to client components
 - RBAC: `withPermission(resource, action)` covers all write operations
 - No IDOR: resource access checks that the user owns the resource
 - OAuth callbacks (Instagram `src/app/api/instagram/`) have CSRF state parameter validation
+- Role checks include BOTH `Role.ADMIN` and `Role.SUPER_ADMIN` — checking only `Role.ADMIN` locks out SUPER_ADMIN (full-access role)
 
 ### Payments (Stripe)
+
 - Webhook handler verifies `stripe.webhooks.constructEvent()` before processing
 - Stripe secret keys only in `src/shared/lib/env/server.ts` (never `NEXT_PUBLIC_`)
 - No Stripe customer/payment data logged to console or stored in plaintext
 
 ### Encryption (`src/shared/lib/crypto.ts`)
+
 - `ENCRYPTION_KEY` only read server-side
 - No plaintext secrets stored in DB after decryption
 
 ### Environment Variables
+
 - No server-only secrets have `NEXT_PUBLIC_` prefix
 - Client env vars (`NEXT_PUBLIC_*`) contain no secrets
+- Server-side code accesses `NEXT_PUBLIC_*` via `clientEnv` (not `process.env` directly) — direct access bypasses type validation
 
 ### General
+
 - No `console.log` of sensitive data (tokens, keys, PII)
 - Error messages returned to client don't leak internal details (DB errors, stack traces)
 - SQL-like queries use Prisma parameterized queries — no string interpolation in `$queryRaw`

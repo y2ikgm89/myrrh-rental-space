@@ -25,6 +25,8 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
 5. **Report findings** organized by severity
 6. **Update your memory** with new patterns or recurring issues
 
+> **API 仕様確認**: React 19 / Next.js 16 / Prisma 7 / Zod 4 のパターンが不明確な場合は `context7` で公式ドキュメントを参照してからレビュー
+
 ## Critical rules to enforce
 
 ### Always check (every review)

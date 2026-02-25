@@ -3,7 +3,7 @@ name: lexical-toolbar
 description: Adds new toolbar buttons to the Lexical editor with dialog, direct-insert, or format-toggle patterns. Use when extending the editor toolbar with new actions like inserting tables, code blocks, dividers, or custom formatting options.
 argument-hint: <FeatureName>
 disable-model-invocation: true
-allowed-tools: Read, Write, Edit, Glob, Grep
+allowed-tools: Read, Write, Edit, Glob, Grep, mcp__context7__resolve-library-id, mcp__context7__query-docs
 ---
 
 # Lexical ツールバー拡張
@@ -19,6 +19,7 @@ Lexicalエディタのツールバーに新規ボタンを追加します。
 ### 1. 要件確認
 
 ユーザーに以下を確認:
+
 - ボタンの動作（ダイアログ表示 / 直接挿入 / フォーマット変更）
 - アイコン（lucide-reactから選択）
 - ツールチップテキスト
@@ -26,6 +27,7 @@ Lexicalエディタのツールバーに新規ボタンを追加します。
 ### 2. 既存実装の確認
 
 参照実装を読み込む:
+
 - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/plugins/ToolbarPlugin.tsx`
 - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/LexicalEditor.tsx`
 
@@ -143,15 +145,15 @@ import { INSERT_${FEATURE_NAME}_COMMAND } from './${FeatureName}Plugin'
 
 ```typescript
 // 太字/斜体等のテキストフォーマット
-editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'bold')
+editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold");
 
 // ブロックタイプ変更
 editor.update(() => {
-  const selection = $getSelection()
+  const selection = $getSelection();
   if ($isRangeSelection(selection)) {
-    $setBlocksType(selection, () => $createBlockNode())
+    $setBlocksType(selection, () => $createBlockNode());
   }
-})
+});
 ```
 
 ### 4. ボタン配置ガイド
@@ -163,6 +165,7 @@ editor.update(() => {
 ```
 
 新規ボタンの推奨配置:
+
 - メディア系: `[画像][YouTube]` の後
 - フォーマット系: `[B][I][U][S]` の後
 - ブロック系: `[見出し▼]...[引用]` の後
@@ -177,16 +180,16 @@ editor.update(() => {
 
 よく使うアイコン:
 
-| 機能 | アイコン |
-|------|----------|
-| テーブル | `Table2` |
-| コードブロック | `Code` |
-| 水平線 | `Minus` |
-| 絵文字 | `Smile` |
-| カラー | `Palette` |
-| ファイル | `FileText` |
-| カード | `Square` |
-| コールアウト | `AlertCircle` |
+| 機能           | アイコン      |
+| -------------- | ------------- |
+| テーブル       | `Table2`      |
+| コードブロック | `Code`        |
+| 水平線         | `Minus`       |
+| 絵文字         | `Smile`       |
+| カラー         | `Palette`     |
+| ファイル       | `FileText`    |
+| カード         | `Square`      |
+| コールアウト   | `AlertCircle` |
 
 ### 6. 状態表示（アクティブ状態）
 

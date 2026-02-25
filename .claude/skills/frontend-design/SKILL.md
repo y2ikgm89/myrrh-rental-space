@@ -18,14 +18,14 @@ argument-hint: <ComponentOrPageName>
 `project-design-config.md` §モーション設計 に定義されたコンポーネントを使用。
 一般的な構成:
 
-| コンポーネント | 用途 |
-|--------------|------|
-| `SplitText` | 見出し reveal (chars/words/lines) |
-| `ScrollReveal` | 汎用入場 (y + opacity) |
-| `ParallaxImage` | スクロール連動画像移動 |
-| `MagneticButton` | CTA マウス追従 |
-| `ScrollIndicator` | Hero 下部スクロールヒント |
-| `SectionLabel` | 装飾付きラベル |
+| コンポーネント    | 用途                              |
+| ----------------- | --------------------------------- |
+| `SplitText`       | 見出し reveal (chars/words/lines) |
+| `ScrollReveal`    | 汎用入場 (y + opacity)            |
+| `ParallaxImage`   | スクロール連動画像移動            |
+| `MagneticButton`  | CTA マウス追従                    |
+| `ScrollIndicator` | Hero 下部スクロールヒント         |
+| `SectionLabel`    | 装飾付きラベル                    |
 
 ---
 
@@ -45,23 +45,23 @@ argument-hint: <ComponentOrPageName>
 `project-design-config.md` §ブランド のムードが確立済み。新セクション/ページもこの方向に従う。
 大きく逸脱する場合はユーザーに確認。
 
-| ムード | 特徴 |
-|--------|------|
-| `warm-minimal` | 暖色ニュートラル、丸みのあるサンセリフ body、柔らかい影 |
-| `elegant` | Serif heading、余白贅沢、控えめアクセント |
-| `japanese-modern` | 和の余白 + モダンタイポ |
+| ムード            | 特徴                                                    |
+| ----------------- | ------------------------------------------------------- |
+| `warm-minimal`    | 暖色ニュートラル、丸みのあるサンセリフ body、柔らかい影 |
+| `elegant`         | Serif heading、余白贅沢、控えめアクセント               |
+| `japanese-modern` | 和の余白 + モダンタイポ                                 |
 
 ### 1.4 コンポジション制約（2-3 個選択）
 
-| 制約 | 説明 |
-|------|------|
-| **Scale contrast** | heading と body のサイズ差 4x+ |
-| **Typographic hierarchy** | 複数フォントファミリーの対比 |
-| **Intentional tension** | グリッドを 1 箇所破る |
-| **Negative space mastery** | 40%+ の余白 |
-| **Depth layering** | z-index 重なり |
-| **Directional flow** | 視線誘導パターン |
-| **Asymmetric balance** | 視覚的重さでバランス |
+| 制約                       | 説明                           |
+| -------------------------- | ------------------------------ |
+| **Scale contrast**         | heading と body のサイズ差 4x+ |
+| **Typographic hierarchy**  | 複数フォントファミリーの対比   |
+| **Intentional tension**    | グリッドを 1 箇所破る          |
+| **Negative space mastery** | 40%+ の余白                    |
+| **Depth layering**         | z-index 重なり                 |
+| **Directional flow**       | 視線誘導パターン               |
+| **Asymmetric balance**     | 視覚的重さでバランス           |
 
 ---
 
@@ -96,6 +96,7 @@ python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --domain styl
 **Anti-AI checks**: [このコンポーネント固有の回避パターン]
 
 ### 既存コンポーネント再利用
+
 - SplitText: [使う / 使わない + variant]
 - ScrollReveal: [使う / 使わない]
 - ParallaxImage: [使う / 使わない + speed]
@@ -103,18 +104,22 @@ python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --domain styl
 - SectionLabel: [使う / 使わない + テキスト]
 
 ### Typography
+
 (project-design-config.md §タイポグラフィ から)
 
 ### Color Allocation
+
 (project-design-config.md §カラーパレット から)
 
 ### Motion Plan
+
 - **主役**: [SplitText variant + 対象テキスト]
 - **脇役**: [ScrollReveal + 対象要素]
 - **静止**: [何が動かないか]
 - **入場順序**: [具体的順序]
 
 ### Reference
+
 - 既存: [参照したセクション名]
 - 外部: [URL（あれば）]
 ```
@@ -137,12 +142,15 @@ python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --domain styl
 `gsap.matchMedia()` パターン A を使用（`gsap-patterns.md` 参照）:
 
 ```typescript
-useGSAP(() => {
-  const mm = gsap.matchMedia()
-  mm.add('(prefers-reduced-motion: no-preference)', () => {
-    // アニメーション
-  })
-}, { scope: containerRef })
+useGSAP(
+  () => {
+    const mm = gsap.matchMedia();
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
+      // アニメーション
+    });
+  },
+  { scope: containerRef },
+);
 ```
 
 ### 4.4 レスポンシブ
@@ -181,13 +189,14 @@ edit_memory('design-system', ...)
 - [ ] Design Brief との整合性確認済み
 - [ ] アニメーション定数使用（マジックナンバーなし）
 - [ ] `reduced-motion` 対応（`gsap.matchMedia()` パターン A/B/C）
+- [ ] playwright MCP でスクリーンショット確認（新規ページ実装時のみ）
 
 ## 参照ファイル
 
-| ファイル | 内容 |
-|----------|------|
-| `.claude/rules/project-design-config.md` | プロジェクト固有デザイン値 |
-| `.claude/rules/anti-ai-design.md` | Anti-AI 強制ルール |
-| `.claude/rules/design-system-memory.md` | デザイン記憶プロトコル |
-| `.claude/rules/gsap-patterns.md` | GSAP / ScrollTrigger |
+| ファイル                                                      | 内容                         |
+| ------------------------------------------------------------- | ---------------------------- |
+| `.claude/rules/project-design-config.md`                      | プロジェクト固有デザイン値   |
+| `.claude/rules/anti-ai-design.md`                             | Anti-AI 強制ルール           |
+| `.claude/rules/design-system-memory.md`                       | デザイン記憶プロトコル       |
+| `.claude/rules/gsap-patterns.md`                              | GSAP / ScrollTrigger         |
 | `docs/reference/claude-rules/micro-interactions-reference.md` | マイクロインタラクション標準 |
