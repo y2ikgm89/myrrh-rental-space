@@ -273,7 +273,7 @@ export async function getTodayReservations(): Promise<RecentReservation[]> {
   const reservations = await prisma.reservation.findMany({
     where: {
       startTime: { gte: todayStart, lte: todayEnd },
-      status: { not: "CANCELLED" },
+      status: { not: ReservationStatus.CANCELLED },
     },
     orderBy: { startTime: "asc" },
     select: {
