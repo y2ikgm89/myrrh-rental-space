@@ -60,6 +60,7 @@
 
 - **ダイアログを条件分岐の内側でレンダリング禁止** — early return や三項演算子の片側に `<Dialog>` / `<AlertDialog>` を置くと、他の状態から `open={true}` にしても表示されない。ダイアログはコンポーネント末尾のトップレベルで常にレンダリングする
 - **Prisma オブジェクトを `{ ...prismaObj }` で Client Component に渡すと Symbol エラー** — `nodejs.util.inspect.custom` 等の Symbol プロパティが混入し `Only plain objects can be passed to Client Components` エラーが発生。`toPlainObject({ ...prismaObj, customFields })` でラップして返す（`@/shared/lib/serialize`）。`Date` フィールドは実行時 ISO 文字列になるため表示には `toISOString()` / `formatSerializedDate()` を使用
+- **管理者入力 HTML は `SanitizedHtml` 必須** — 生の HTML 直接レンダリング禁止。`import { SanitizedHtml } from "@/shared/components/SanitizedHtml"` を使う（isomorphic-dompurify, ADD_TAGS: ['iframe']）。例外: JSON-LD の `<script type="application/ld+json">` は JSON.stringify() 経由のため安全で変更不要
 
 ## 管理画面 UI
 
@@ -101,3 +102,4 @@
 
 - **設定依存エラーは 503（500 禁止）** — Webhook トークン未設定・API キー未設定等の「依存関係が未設定」は `{ status: 503 }` を返す。500 にすると Google Calendar 等の外部サービスが自動リトライを繰り返す
 - **OAuth コールバック: URL クエリパラメータに生エラーメッセージ禁止** — `?error=認証エラー: ${error.message}` はブラウザ履歴・ログに内部詳細が永続する。`logError()` で内部記録のみ行い、URL には固定の安全メッセージを返す（例: `"Instagram認証に失敗しました。再度お試しください。"`）
+- **HTTP レスポンスボディに `error.message` 露出禁止** — DB ホスト名・スキーマ名等の内部情報を含む可能性がある。`logError()` でサーバー側記録のみ行い、外部レスポンスにはフィールドを含めないか固定メッセージにする（URL パラメータだけでなくレスポンスボディも対象）
