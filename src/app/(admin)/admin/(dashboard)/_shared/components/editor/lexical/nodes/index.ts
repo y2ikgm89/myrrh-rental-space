@@ -374,3 +374,24 @@ export {
   inlineWidthState,
 } from './InlineImageNode'
 export type { InlineImagePosition } from './InlineImageNode'
+
+// Testimonial
+export {
+  TestimonialContainerNode,
+  $createTestimonialContainerNode,
+  $isTestimonialContainerNode,
+  TestimonialItemNode,
+  $createTestimonialItemNode,
+  $isTestimonialItemNode,
+  TESTIMONIAL_LAYOUTS,
+  testimonialLayoutState,
+  testimonialColumnsState,
+  testimonialAccentColorState,
+  testimonialAuthorNameState,
+  testimonialAuthorTitleState,
+  testimonialAvatarUrlState,
+  testimonialRatingState,
+  testimonialDateState,
+  isTestimonialLayout,
+} from './TestimonialNode'
+export type { TestimonialLayout, TestimonialColumns, TestimonialRating } from './TestimonialNode'

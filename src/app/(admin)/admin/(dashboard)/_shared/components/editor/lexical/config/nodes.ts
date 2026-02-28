@@ -51,6 +51,7 @@ import { GalleryContainerNode, GalleryItemNode } from '../nodes/GalleryNode'
 import { TimelineContainerNode, TimelineItemNode } from '../nodes/TimelineNode'
 import { PricingTableContainerNode, PricingPlanNode, PricingFeatureNode } from '../nodes/PricingTableNode'
 import { InlineImageNode } from '../nodes/InlineImageNode'
+import { TestimonialContainerNode, TestimonialItemNode } from '../nodes/TestimonialNode'
 
 /**
  * エディタに登録する全ノード一覧
@@ -113,4 +114,6 @@ export const EDITOR_NODES: ReadonlyArray<Klass<LexicalNode>> = [
   PricingPlanNode,
   PricingFeatureNode,
   InlineImageNode,
+  TestimonialContainerNode,
+  TestimonialItemNode,
 ]

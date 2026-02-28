@@ -115,3 +115,5 @@ export { PricingTablePlugin } from './PricingTablePlugin'
 export { TableActionMenuPlugin } from './TableActionMenuPlugin'
 
 export { InlineImagePlugin } from './InlineImagePlugin'
+
+export { TestimonialPlugin } from './TestimonialPlugin'

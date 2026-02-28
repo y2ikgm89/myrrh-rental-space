@@ -61,6 +61,7 @@ import {
   LayoutGrid,
   Clock,
   Table2,
+  MessageSquareQuote,
 } from "lucide-react";
 import {
   SiX,
@@ -476,6 +477,17 @@ const INSERT_ITEMS: readonly InsertItem[] = [
     showInToolbar: false,
     showInPicker: true,
     dialogId: "pricingTable",
+  },
+  {
+    id: "testimonial",
+    type: "dialog",
+    label: "口コミ・テスティモニアル",
+    icon: MessageSquareQuote,
+    keywords: ["testimonial", "review", "口コミ", "レビュー", "評価", "customer"],
+    category: "layout",
+    showInToolbar: false,
+    showInPicker: true,
+    dialogId: "testimonial",
   },
   {
     id: "table",
