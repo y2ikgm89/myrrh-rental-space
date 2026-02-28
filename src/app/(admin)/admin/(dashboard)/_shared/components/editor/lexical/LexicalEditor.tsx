@@ -56,6 +56,7 @@ import { AutoSavePlugin, useAutoSaveStatus } from './plugins/AutoSavePlugin'
 import { ImageDropPlugin } from './plugins/ImageDropPlugin'
 import { FindReplacePlugin } from './plugins/FindReplacePlugin'
 import { BlockTemplatePlugin } from './plugins/BlockTemplatePlugin'
+import { TableActionMenuPlugin } from './plugins/TableActionMenuPlugin'
 import { StatusBar } from './parts/StatusBar'
 import { editorTheme } from './theme'
 import { InspectorSidebar } from './inspector'
@@ -186,6 +187,7 @@ function EditorInner({
         )}
         <DisablePlugin disabled={disabled} />
         <DraggableBlockPlugin anchorElem={contentWidthRef} />
+        <TableActionMenuPlugin anchorElem={contentWidthRef} />
         {contentWrapperRef && (
           <FloatingToolbarPlugin
             anchorElem={contentWrapperRef}
