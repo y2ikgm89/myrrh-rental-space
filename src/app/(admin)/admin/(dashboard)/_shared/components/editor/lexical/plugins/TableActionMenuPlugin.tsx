@@ -9,7 +9,7 @@
 
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
@@ -81,7 +81,7 @@ function computeMenuPosition(
 
   return {
     top: cellRect.top - anchorRect.top + anchorElem.scrollTop,
-    left: cellRect.right - anchorRect.left - 28,
+    left: cellRect.right - anchorRect.left - 28 + anchorElem.scrollLeft,
   }
 }
 
@@ -176,7 +176,6 @@ export function TableActionMenuPlugin({ anchorElem }: TableActionMenuPluginProps
   const [editor] = useLexicalComposerContext()
   const [menuPosition, setMenuPosition] = useState<MenuPosition | null>(null)
   const [isMergedCell, setIsMergedCell] = useState(false)
-  const selectedCellKeyRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!anchorElem) return
@@ -186,22 +185,21 @@ export function TableActionMenuPlugin({ anchorElem }: TableActionMenuPluginProps
         const cellNode = getSelectedCellNode()
         if (!cellNode) {
           setMenuPosition(null)
-          selectedCellKeyRef.current = null
           return
         }
 
         const position = computeMenuPosition(cellNode, editor, anchorElem)
         if (!position) {
           setMenuPosition(null)
-          selectedCellKeyRef.current = null
           return
         }
 
-        selectedCellKeyRef.current = cellNode.getKey()
         setMenuPosition(position)
-        setIsMergedCell(cellNode.__colSpan > 1 || cellNode.__rowSpan > 1)
+        setIsMergedCell(cellNode.getColSpan() > 1 || cellNode.getRowSpan() > 1)
       })
     }
+
+    let isFirstUpdate = true
 
     return mergeRegister(
       editor.registerCommand(
@@ -212,10 +210,13 @@ export function TableActionMenuPlugin({ anchorElem }: TableActionMenuPluginProps
         },
         COMMAND_PRIORITY_CRITICAL,
       ),
-      editor.registerUpdateListener(({ dirtyElements, dirtyLeaves, prevEditorState }) => {
+      editor.registerUpdateListener(({ dirtyElements, dirtyLeaves }) => {
         // Re-compute position when table layout changes
+        if (isFirstUpdate) {
+          isFirstUpdate = false
+          return
+        }
         if (dirtyElements.size === 0 && dirtyLeaves.size === 0) return
-        if (prevEditorState.isEmpty()) return
         updateMenu()
       }),
     )
@@ -249,14 +250,12 @@ export function TableActionMenuPlugin({ anchorElem }: TableActionMenuPluginProps
     editor.update(() => {
       $deleteTableRow__EXPERIMENTAL()
     })
-    setMenuPosition(null)
   }
 
   const handleDeleteColumn = () => {
     editor.update(() => {
       $deleteTableColumn__EXPERIMENTAL()
     })
-    setMenuPosition(null)
   }
 
   const handleUnmergeCell = () => {

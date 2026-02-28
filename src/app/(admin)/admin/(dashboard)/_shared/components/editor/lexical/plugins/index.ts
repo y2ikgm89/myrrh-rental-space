@@ -111,3 +111,5 @@ export { GalleryPlugin } from './GalleryPlugin'
 export { TimelinePlugin } from './TimelinePlugin'
 
 export { PricingTablePlugin } from './PricingTablePlugin'
+
+export { TableActionMenuPlugin } from './TableActionMenuPlugin'
