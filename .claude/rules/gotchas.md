@@ -17,6 +17,7 @@
 - **`bun run build` は env チェックなし**（`SKIP_ENV_VALIDATION=true`）— 本番デプロイ前は `bun run build:strict`
 - **`@t3-oss/env-nextjs` は `process.env` のスナップショット** — `SKIP_ENV_VALIDATION=true` 時、`createEnv()` は `{ ...process.env }` の浅いコピーを返す。テストで `process.env["KEY"] = ...` しても `serverEnv.KEY` に反映されない。テスト可能にしたいコードは `process.env["KEY"]` を直接参照する
 - **`verification` エージェントはコードを自動修正する** — `bun run validate && bun run build` 実行時に型エラーを検出するとコードを自動変更することがある。検証のみなら Bash で `bun run validate` を直接実行
+- **ESLint 10 未対応（2026年2月時点）** — `eslint-config-next` が依存する `eslint-plugin-react@7.x` が `context.getFilename()`（ESLint 10 で削除）を使用。`TypeError: contextOrFilename.getFilename is not a function` でクラッシュ。`eslint` は `9.39.2` 固定（`^` なし）。Next.js が `eslint-plugin-react` を更新するまで維持
 
 ## ファイル操作・Git
 
@@ -49,6 +50,9 @@
 - **`createDOM` → data-attribute 変換後は `theme.ts` の旧エントリを削除** — `config.theme.*` 参照除去後、`theme.ts` に残った CSS クラスエントリが dead code になる。変換時にセットで削除する
 - **NodeState `parse` には `config/type-guards.ts` の `parseString` / `parseBoolean` を使う** — inline lambda の重複は禁止（`lexical-patterns.md` 参照）
 - **`exportDOM` を定義したら `importDOM` も必須** — 片方のみで dev-mode に `exportDOM implemented without matching importDOM` 警告が出続ける。`static override importDOM(): DOMConversionMap | null` をセットで実装する（パターンは `lexical-patterns.md § HTML互換性` 参照）
+- **`createEnumGuard` の型ガードは `string` を要求** — `createEnumGuard` が返す関数は `(value: string) => value is T` シグネチャ。`parse: (v: unknown)` から直接渡すと型エラー。AccentColor 等の parse パターン: `parse: (v: unknown): AccentColor => typeof v === "string" && isAccentColor(v) ? v : "default"`
+- **`importDOM` で `getAttribute()` → AccentColor 変換に型ガード必須** — `element.getAttribute("data-color") ?? "default"` の型は `string`（`AccentColor` ではない）。必ず `isAccentColor(colorAttr) ? colorAttr : "default"` でガードする
+- **コンポジットノード（`isShadowRoot()` あり）には `canInsertTextBefore/After` が必須** — 欠落するとキーボード操作でテキストがノード境界外に漏れる。`LayoutContainerNode`・`LayoutItemNode` 等の全コンポジットノードに `override canInsertTextBefore(): false { return false }` と `override canInsertTextAfter(): false { return false }` をセットで実装する（戻り型は `boolean` ではなくリテラル `false`）
 
 ## errors モジュール（server-only 境界）
 
@@ -96,7 +100,7 @@
 ## 外部 API SDK
 
 - **Resend SDK v3+（v6 含む）は例外を投げない** — `resend.emails.send()` / `resend.domains.list()` 等はすべて `{ data, error }` を返す（ネットワークエラーも含む）。`try/catch` のみでは API エラーをキャッチできない。必ず `const { error } = await resend.xxx()` で `error` をチェックする。`catch` ブロックは React Email レンダリング例外の保険として保持する
-- **Stripe API version `2026-01-28.clover`** — stripe SDK v20.3.1 のデフォルトバージョン（プレビューではない）。設定監査で「余分な`.clover`サフィックス」と誤識別しないこと
+- **Stripe API version `2026-02-25.clover`** — stripe SDK v20.4.0 のデフォルトバージョン（プレビューではない）。SDK アップグレード時は `bun run type-check` の型エラーで新バージョン文字列が判明 → `stripe.ts` の `apiVersion` を更新。監査時に「余分な `.clover` サフィックス」と誤識別しないこと
 
 ## API Routes
 

@@ -415,7 +415,8 @@ import { createState } from "lexical";
 import { type AccentColor, isAccentColor } from "../config/accent-colors";
 
 export const colorState = createState("color", {
-  parse: (v): AccentColor => (isAccentColor(v) ? v : "default"),
+  parse: (v: unknown): AccentColor =>
+    typeof v === "string" && isAccentColor(v) ? v : "default",
 });
 ```
 

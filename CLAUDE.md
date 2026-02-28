@@ -83,6 +83,7 @@ Skill ツールで明示的に呼び出す。1% でも該当する可能性が�
   - `cache-strategy-reviewer`: `updateTag`・`revalidateTag`・`'use cache'` 関数変更後
   - `lexical-reviewer`: `src/**/lexical/` 配下 Node/Plugin 編集後
   - `test-writer`: 新規 lib 関数・Server Action・バリデーションスキーマ実装後
+  - `e2e-test-writer`: 新規管理画面ページ・公開ページ・認証フロー実装後（Playwright E2E）
   - `db-migration-reviewer`: `bunx --bun prisma migrate dev` 実行前
 - **プロジェクト MCP** (`github`): `.mcp.json` 設定済 — PR・Issue・ブランチ操作
 - **グローバル Plugin/MCP** (`serena`, `context7`, `playwright`): ユーザーレベルで設定済
@@ -102,11 +103,11 @@ Skill ツールで明示的に呼び出す。1% でも該当する可能性が�
 | Next.js      | 16.1.6     | `'use cache'`, `updateTag`, PPR (`cacheComponents: true`)     |
 | React        | 19.2.4     | React Compiler 1.0, `use()`, `useEffectEvent` (stable)        |
 | TypeScript   | 6.0-beta   | `erasableSyntaxOnly`, `verbatimModuleSyntax` → type-safety.md |
-| Prisma       | 7.4.0      | WASM エンジン, mapped enums（`as const` オブジェクト）        |
-| Tailwind CSS | 4.2.0      | CSS-first, `@theme`, セマンティックカラートークン必須         |
+| Prisma       | 7.4.2      | WASM エンジン, mapped enums（`as const` オブジェクト）        |
+| Tailwind CSS | 4.2.1      | CSS-first, `@theme`, セマンティックカラートークン必須         |
 | Zod          | 4.3.6      | `{ error: }` パラメータ（`message:` は非推奨）                |
-| Better Auth  | 1.4.18     | RBAC, `withPermission` HOF 必須                               |
-| Bun          | 1.3.x      | テストランナー (`bun:test`), `bunx --bun` でネイティブ実行    |
+| Better Auth  | 1.4.20     | RBAC, `withPermission` HOF 必須                               |
+| Bun          | 1.3.10     | テストランナー (`bun:test`), `bunx --bun` でネイティブ実行    |
 
 ### 構造
 
@@ -154,6 +155,9 @@ bun run db:generate                             # Prisma スキーマ再生成
 bun run db:studio                               # Prisma Studio（DB GUI）
 bun run e2e                                     # E2E テスト（Playwright）
 gcloud builds submit --config=cloudbuild.yaml   # Cloud Run デプロイ（Cloud Build 経由）
+bun upgrade                                     # Bun ランタイム自体のアップグレード
+bun outdated                                    # 依存パッケージの最新版確認
+bun update                                      # semver 範囲内の依存パッケージ一括更新
 ```
 
 > **自動フック**: Prettier + ESLint --fix（.ts/.tsx）/ schema-change-guard（schema.prisma）/ type-check-on-stop（Stop イベント毎に型チェック実行）

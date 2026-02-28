@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '=== 進行中の計画 ===' && grep -rl '実装中\\|設計承認済み' \"$CLAUDE_PROJECT_DIR/docs/plans\" 2>/dev/null | grep -v README | grep -v CLAUDE | head -5 || echo '(なし)'",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-start.sh",
             "statusMessage": "進行中タスクを確認中..."
           }
         ]
@@ -42,25 +42,25 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/prettier-format.sh",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/prettier-format.sh",
             "statusMessage": "Formatting...",
             "timeout": 30
           },
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/eslint-fix.sh",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/eslint-fix.sh",
             "statusMessage": "Linting...",
             "timeout": 30
           },
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/schema-change-guard.sh",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/schema-change-guard.sh",
             "statusMessage": "Checking schema changes...",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/connection-reminder.sh",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/connection-reminder.sh",
             "statusMessage": "Checking connection()...",
             "timeout": 10
           }
