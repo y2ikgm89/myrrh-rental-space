@@ -41,8 +41,8 @@ function createTestEditor(): LexicalEditor {
 
 describe('inspectable-nodes', () => {
   describe('INSPECTABLE_NODE_TYPES', () => {
-    test('対応しているノードタイプが27つ定義されている', () => {
-      expect(INSPECTABLE_NODE_TYPES).toHaveLength(27)
+    test('対応しているノードタイプが32つ定義されている', () => {
+      expect(INSPECTABLE_NODE_TYPES).toHaveLength(32)
     })
 
     test('すべてのインスペクタブルノードタイプが含まれている', () => {
@@ -54,6 +54,9 @@ describe('inspectable-nodes', () => {
         'galleryContainer', 'galleryItem', 'timelineContainer', 'timelineItem',
         'pricingPlan', 'pricingFeature',
         'inlineImage',
+        'testimonialContainer', 'testimonialItem',
+        'featureIconListContainer', 'featureIconItem',
+        'cover',
       ]
       expect(INSPECTABLE_NODE_TYPES).toEqual(expectedTypes)
     })
