@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * FaqListSection — FAQ accordion with details/summary
@@ -8,65 +8,80 @@
  * Optional FAQ JSON-LD for schema.org FAQPage.
  */
 
-import { useRef, type ReactElement } from 'react'
-import Link from 'next/link'
-import { useGSAP } from '@gsap/react'
-import { gsap } from '@/public/lib/gsap-config'
-import { ScrollReveal } from '@/public/components/animations/ScrollReveal'
-import { SplitText } from '@/public/components/animations/SplitText'
-import { SectionLabel } from '@/public/components/ui/SectionLabel'
-import { SectionWrapper, getTitleClasses, getTitleStyle } from '@/public/components/sections/SectionWrapper'
-import { DURATION, EASE, STAGGER } from '@/public/lib/animations'
-import { CONTAINER_WIDTH_MAP } from '@/public/lib/section-style-maps'
-import { parseContainerWidth, parseFaqInitialOpen } from '@/shared/lib/validations/section'
-import type { FaqListConfig } from '@/shared/lib/validations/section'
-import type { SectionDesign } from '@/shared/lib/validations/section-design'
+import { useRef, type ReactElement } from "react";
+import Link from "next/link";
+import { useGSAP } from "@gsap/react";
+import { gsap } from "@/public/lib/gsap-config";
+import { ScrollReveal } from "@/public/components/animations/ScrollReveal";
+import { SplitText } from "@/public/components/animations/SplitText";
+import { SectionLabel } from "@/public/components/ui/SectionLabel";
+import {
+  SectionWrapper,
+  getTitleClasses,
+  getTitleStyle,
+} from "@/public/components/sections/SectionWrapper";
+import { DURATION, EASE, STAGGER } from "@/public/lib/animations";
+import { CONTAINER_WIDTH_MAP } from "@/public/lib/section-style-maps";
+import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
+import {
+  parseContainerWidth,
+  parseFaqInitialOpen,
+} from "@/shared/lib/validations/section";
+import type { FaqListConfig } from "@/shared/lib/validations/section";
+import type { SectionDesign } from "@/shared/lib/validations/section-design";
 
 export interface FaqData {
-  readonly id: string
-  readonly question: string
-  readonly answer: string
+  readonly id: string;
+  readonly question: string;
+  readonly answer: string;
 }
 
 interface FaqListSectionProps {
-  readonly config: FaqListConfig
-  readonly items: readonly FaqData[]
-  readonly design: SectionDesign
+  readonly config: FaqListConfig;
+  readonly items: readonly FaqData[];
+  readonly design: SectionDesign;
 }
 
 const VARIANT_STYLES = {
   default: {
-    container: 'divide-y divide-border',
-    item: 'py-4 first:pt-0 last:pb-0',
-    summary: 'flex w-full cursor-pointer items-center justify-between gap-4 text-left font-heading text-base font-medium md:text-lg [&::marker]:content-none [&::-webkit-details-marker]:hidden',
+    container: "divide-y divide-border",
+    item: "py-4 first:pt-0 last:pb-0",
+    summary:
+      "flex w-full cursor-pointer items-center justify-between gap-4 text-left font-heading text-base font-medium md:text-lg [&::marker]:content-none [&::-webkit-details-marker]:hidden",
     marker: true,
   },
   bordered: {
-    container: 'space-y-3',
-    item: 'rounded-lg border border-border bg-card p-4 hover:shadow-md transition-shadow',
-    summary: 'flex w-full cursor-pointer items-center justify-between gap-4 text-left font-heading text-base font-medium md:text-lg [&::marker]:content-none [&::-webkit-details-marker]:hidden',
+    container: "space-y-3",
+    item: "rounded-lg border border-border bg-card p-4 hover:shadow-md transition-shadow",
+    summary:
+      "flex w-full cursor-pointer items-center justify-between gap-4 text-left font-heading text-base font-medium md:text-lg [&::marker]:content-none [&::-webkit-details-marker]:hidden",
     marker: true,
   },
   minimal: {
-    container: 'divide-y divide-border/50',
-    item: 'py-4 first:pt-0 last:pb-0',
-    summary: 'flex w-full cursor-pointer items-center justify-between gap-4 text-left text-sm font-medium md:text-base [&::marker]:content-none [&::-webkit-details-marker]:hidden',
+    container: "divide-y divide-border/50",
+    item: "py-4 first:pt-0 last:pb-0",
+    summary:
+      "flex w-full cursor-pointer items-center justify-between gap-4 text-left text-sm font-medium md:text-base [&::marker]:content-none [&::-webkit-details-marker]:hidden",
     marker: false,
   },
-} as const
+} as const;
 
-export function FaqListSection({ config, items, design }: FaqListSectionProps): ReactElement {
-  const listRef = useRef<HTMLDivElement>(null)
+export function FaqListSection({
+  config,
+  items,
+  design,
+}: FaqListSectionProps): ReactElement {
+  const listRef = useRef<HTMLDivElement>(null);
 
   useGSAP(
     () => {
-      const list = listRef.current
-      if (!list) return
+      const list = listRef.current;
+      if (!list) return;
 
-      const mm = gsap.matchMedia()
-      mm.add('(prefers-reduced-motion: no-preference)', () => {
-        const faqItems = list.querySelectorAll('[data-faq-item]')
-        if (faqItems.length === 0) return
+      const mm = gsap.matchMedia();
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        const faqItems = list.querySelectorAll("[data-faq-item]");
+        if (faqItems.length === 0) return;
 
         gsap.fromTo(
           faqItems,
@@ -79,54 +94,78 @@ export function FaqListSection({ config, items, design }: FaqListSectionProps): 
             stagger: STAGGER.element * 0.6,
             scrollTrigger: {
               trigger: list,
-              start: 'top 80%',
-              toggleActions: 'play none none none',
+              start: "top 80%",
+              toggleActions: "play none none none",
             },
           },
-        )
-      })
+        );
+      });
     },
     { scope: listRef },
-  )
+  );
 
-  if (items.length === 0) return <></>
+  if (items.length === 0) return <></>;
 
-  const styles = VARIANT_STYLES[config.variant] ?? VARIANT_STYLES.default
-  const containerWidth = CONTAINER_WIDTH_MAP[parseContainerWidth(config.containerWidth)]
-  const initialOpen = parseFaqInitialOpen(config.initialOpen)
+  const styles = VARIANT_STYLES[config.variant] ?? VARIANT_STYLES.default;
+  const containerWidth =
+    CONTAINER_WIDTH_MAP[parseContainerWidth(config.containerWidth)];
+  const initialOpen = parseFaqInitialOpen(config.initialOpen);
 
-  // NOTE: pre-existing dangerouslySetInnerHTML for admin-managed FAQ content
   return (
     <>
       <SectionWrapper design={design}>
         <div className={`mx-auto ${containerWidth}`}>
           <div className="mb-10 text-center md:mb-14">
             <ScrollReveal>
-              {config.sectionLabel && <SectionLabel>{config.sectionLabel}</SectionLabel>}
+              {config.sectionLabel && (
+                <SectionLabel>{config.sectionLabel}</SectionLabel>
+              )}
             </ScrollReveal>
-            <h2 className={`mt-4 font-heading ${getTitleClasses(design)} font-bold tracking-tight`} style={getTitleStyle(design)}>
-              <SplitText variant="words">
-                {config.title}
-              </SplitText>
+            <h2
+              className={`mt-4 font-heading ${getTitleClasses(design)} font-bold tracking-tight`}
+              style={getTitleStyle(design)}
+            >
+              <SplitText variant="words">{config.title}</SplitText>
             </h2>
           </div>
 
           <div ref={listRef} className={styles.container}>
             {items.map((item, index) => (
-              <details key={item.id} data-faq-item="" className={`group ${styles.item}`} open={initialOpen === 'all' || (initialOpen === 'first' && index === 0)}>
+              <details
+                key={item.id}
+                data-faq-item=""
+                className={`group ${styles.item}`}
+                open={
+                  initialOpen === "all" ||
+                  (initialOpen === "first" && index === 0)
+                }
+              >
                 <summary className={styles.summary}>
                   <span>{item.question}</span>
                   {styles.marker && (
-                    <span className="shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-45" aria-hidden="true">
-                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
+                    <span
+                      className="shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-45"
+                      aria-hidden="true"
+                    >
+                      <svg
+                        className="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={1.5}
+                          d="M12 4v16m8-8H4"
+                        />
                       </svg>
                     </span>
                   )}
                 </summary>
-                <div
+                <SanitizedHtml
+                  html={item.answer}
                   className="mt-3 text-sm leading-relaxed text-muted-foreground"
-                  dangerouslySetInnerHTML={{ __html: item.answer }}
                 />
               </details>
             ))}
@@ -153,19 +192,19 @@ export function FaqListSection({ config, items, design }: FaqListSectionProps): 
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'FAQPage',
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
             mainEntity: items.map((item) => ({
-              '@type': 'Question',
+              "@type": "Question",
               name: item.question,
               acceptedAnswer: {
-                '@type': 'Answer',
-                text: item.answer.replace(/<[^>]*>/g, ''),
+                "@type": "Answer",
+                text: item.answer.replace(/<[^>]*>/g, ""),
               },
             })),
           }),
         }}
       />
     </>
-  )
+  );
 }
