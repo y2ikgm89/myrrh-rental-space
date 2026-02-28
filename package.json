@@ -39,6 +39,7 @@
     "@google-analytics/data": "^5.2.1",
     "@gsap/react": "^2.1.2",
     "@hookform/resolvers": "^5.2.2",
+    "@icons-pack/react-simple-icons": "^13.11.2",
     "@lexical/code": "^0.40.0",
     "@lexical/html": "^0.40.0",
     "@lexical/link": "^0.40.0",
