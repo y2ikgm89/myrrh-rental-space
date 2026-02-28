@@ -182,6 +182,23 @@ if (result.success) {
 return result as unknown as ActionSuccess<T>;
 ```
 
+**5. `keysOf()` / `entriesOf()` 内部実装（`@/shared/lib/serialize` のみ）**
+
+```typescript
+// OK: keysOf / entriesOf の実装内部のみ許可（呼び出し側では as 不要）
+// @/shared/lib/serialize.ts
+export function keysOf<T extends object>(obj: T): (keyof T)[] {
+  return Object.keys(obj) as (keyof T)[];
+}
+export function entriesOf<T extends object>(obj: T): [keyof T, T[keyof T]][] {
+  return Object.entries(obj) as [keyof T, T[keyof T]][];
+}
+// 呼び出し側: keysOf(config) と書くだけで as 不要
+```
+
+> ジェネリック制約 `T extends object` によりキーが `keyof T` に限定されるため型安全。
+> 呼び出し側で `Object.keys(obj) as ConfigKey[]` と書くことは禁止。`keysOf(obj)` を使う。
+
 ### 禁止パターンと代替手段
 
 | 禁止パターン                        | 代替                                      |
