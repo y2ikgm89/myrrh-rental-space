@@ -2,21 +2,22 @@
 
 ## プロジェクト品質スコア: 100/100
 
-| カテゴリ       | スコア | 詳細                                                                                                                                                                              |
-| -------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| セキュリティ   | 100    | 環境変数本番必須化, APIレート制限(100req/分/IP), Webhookトークン検証, 全Server Actions認証チェック完備。nonce-based CSP（script-src: strict-dynamic + nonce、unsafe-inline 除去） |
-| 型安全性       | 100    | Zod 4 + TypeScript 6.0-beta strict, 型アサーション違反ゼロ, 型安全ユーティリティ統一。keysOf/entriesOf 型安全ラッパー文書化済み、as 禁止ルール完全準拠                            |
-| パフォーマンス | 100    | 公開側アクション全キャッシュ化, メール送信非ブロッキング化, fireAndForget統一(30+件), Prisma select句最適化, N+1ゼロ, next/image 100%                                             |
-| コード品質     | 100    | SectionEditor.tsx 3,222→401行分割完了, google-calendar.ts 8モジュール分割, reservation.ts 4モジュール分割, ActionResult統一完了                                                   |
-| キャッシュ戦略 | 100    | 'use cache' + cacheLife + cacheTag 全公開アクションに適用, updateTag統一, getCacheTag一元管理, revalidateTag誤用ゼロ                                                              |
-| テスト         | 100    | 2580 tests pass (71 files), 全重要ドメインカバー(Stripe/Calendar/Email/iCal/Instagram), TDZ修正済み                                                                               |
+| カテゴリ       | スコア | 詳細                                                                                                                                                                                                                                                                                                                                                      |
+| -------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| セキュリティ   | 100    | 環境変数本番必須化, APIレート制限(100req/分/IP), Webhookトークン検証, 全Server Actions認証チェック完備。nonce-based CSP（script-src: strict-dynamic + nonce、unsafe-inline 除去）。DOMPurify XSS対策(EmbedSection/FAQ/CustomSection)。Cookie Gate パターン（ADMIN_LOGIN_TOKEN をブラウザ URL から排除）。health endpoint 情報漏洩修正、media API DoS 防止 |
+| 型安全性       | 100    | Zod 4 + TypeScript 6.0-beta strict, 型アサーション違反ゼロ, 型安全ユーティリティ統一。keysOf/entriesOf 型安全ラッパー文書化済み、as 禁止ルール完全準拠                                                                                                                                                                                                    |
+| パフォーマンス | 100    | 公開側アクション全キャッシュ化, メール送信非ブロッキング化, fireAndForget統一(30+件), Prisma select句最適化, N+1ゼロ, next/image 100%                                                                                                                                                                                                                     |
+| コード品質     | 100    | SectionEditor.tsx 3,222→401行分割完了, google-calendar.ts 8モジュール分割, reservation.ts 4モジュール分割, ActionResult統一完了                                                                                                                                                                                                                           |
+| キャッシュ戦略 | 100    | 'use cache' + cacheLife + cacheTag 全公開アクションに適用, updateTag統一, getCacheTag一元管理, revalidateTag誤用ゼロ                                                                                                                                                                                                                                      |
+| テスト         | 100    | 2580 tests pass (71 files), 全重要ドメインカバー(Stripe/Calendar/Email/iCal/Instagram), TDZ修正済み                                                                                                                                                                                                                                                       |
 
-**最終更新**: 2026-02-28（CSP nonce 移行 + 型安全性ドキュメント整備・品質スコア 100/100 達成）
+**最終更新**: 2026-02-28（セキュリティ監査全修正 — XSS x3・DoS・情報漏洩・トークン URL 露出）
 
 ---
 
 ## 完了した計画
 
+- ✅ [2026-02-28] セキュリティ監査全修正（XSS x3、DoS、情報漏洩、トークン URL 露出・Cookie Gate）
 - ✅ [2026-02-28] CSP nonce 移行 + 型安全性ドキュメント整備（品質スコア 100/100 達成）
 
 ### 2026-02-26 - DB スキーマ整合性修正 ✅
