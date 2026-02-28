@@ -19,6 +19,7 @@ import type { Metadata, Viewport } from "next";
 import type { ReactElement, ReactNode } from "react";
 import { Suspense } from "react";
 import { connection } from "next/server";
+import { headers } from "next/headers";
 import { Noto_Sans_JP, Noto_Serif_JP } from "next/font/google";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { Header } from "@/public/components/layouts/Header";
@@ -85,14 +86,17 @@ export const viewport: Viewport = {
  * リクエスト時に評価される
  */
 async function DynamicContent(): Promise<ReactElement> {
-  const [cookieSettings, analyticsConfig] = await Promise.all([
+  const [cookieSettings, analyticsConfig, headersList] = await Promise.all([
     getCookieConsentSettings(),
     getAnalyticsConfig(),
+    headers(),
   ]);
+
+  const nonce = headersList.get("x-nonce");
 
   return (
     <>
-      <AnalyticsProvider config={analyticsConfig} />
+      <AnalyticsProvider config={analyticsConfig} nonce={nonce} />
       <WebVitalsReporter enabled={analyticsConfig.analyticsType !== null} />
       {cookieSettings?.cookieConsentEnabled && (
         <CookieConsentBanner
