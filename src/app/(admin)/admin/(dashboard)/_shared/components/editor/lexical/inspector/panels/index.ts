@@ -33,3 +33,4 @@ export { TestimonialContainerInspectorPanel } from './TestimonialContainerInspec
 export { TestimonialItemInspectorPanel } from './TestimonialItemInspectorPanel'
 export { FeatureIconListContainerInspectorPanel } from './FeatureIconListContainerInspectorPanel'
 export { FeatureIconListItemInspectorPanel } from './FeatureIconListItemInspectorPanel'
+export { CoverInspectorPanel } from './CoverInspectorPanel'

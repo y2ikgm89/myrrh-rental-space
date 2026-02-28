@@ -38,6 +38,7 @@ import type { PricingPlanNode, PricingFeatureNode } from '../../nodes/PricingTab
 import type { InlineImageNode } from '../../nodes/InlineImageNode'
 import type { TestimonialContainerNode, TestimonialItemNode } from '../../nodes/TestimonialNode'
 import type { FeatureIconListContainerNode, FeatureIconItemNode } from '../../nodes/FeatureIconListNode'
+import type { CoverNode } from '../../nodes/CoverNode'
 
 // =============================================================================
 // Types
@@ -75,6 +76,7 @@ export type InspectableNodeType =
   | 'testimonialItem'
   | 'featureIconListContainer'
   | 'featureIconItem'
+  | 'cover'
 
 /**
  * 選択中ノード情報のDiscriminated Union型
@@ -114,6 +116,7 @@ export type SelectedNodeInfo =
   | { nodeType: 'testimonialItem'; node: TestimonialItemNode; nodeKey: NodeKey }
   | { nodeType: 'featureIconListContainer'; node: FeatureIconListContainerNode; nodeKey: NodeKey }
   | { nodeType: 'featureIconItem'; node: FeatureIconItemNode; nodeKey: NodeKey }
+  | { nodeType: 'cover'; node: CoverNode; nodeKey: NodeKey }
   | null
 
 /**

@@ -419,3 +419,30 @@ export type {
   IconSize,
   IconLibrary,
 } from './FeatureIconListNode'
+
+// Cover
+export {
+  CoverNode,
+  $createCoverNode,
+  $isCoverNode,
+  COVER_MIN_HEIGHTS,
+  COVER_CONTENT_ALIGNS,
+  COVER_CONTENT_POSITIONS,
+  COVER_OVERLAY_OPACITIES,
+  isCoverMinHeight,
+  isCoverContentAlign,
+  isCoverContentPosition,
+  backgroundImageUrlState,
+  overlayColorState,
+  overlayOpacityState,
+  minHeightState,
+  contentAlignState,
+  contentPositionState,
+} from './CoverNode'
+export type {
+  CoverMinHeight,
+  CoverContentAlign,
+  CoverContentPosition,
+  CoverOverlayOpacity,
+  CreateCoverNodeOptions,
+} from './CoverNode'

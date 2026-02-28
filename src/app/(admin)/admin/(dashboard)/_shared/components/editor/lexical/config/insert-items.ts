@@ -596,6 +596,17 @@ const INSERT_ITEMS: readonly InsertItem[] = [
     showInPicker: true,
     dialogId: "tabs",
   },
+  {
+    id: "cover",
+    type: "dialog",
+    label: "カバー",
+    icon: PanelTop,
+    keywords: ["cover", "hero", "background", "image", "背景", "カバー", "ヒーロー"],
+    category: "layout",
+    showInToolbar: true,
+    showInPicker: true,
+    dialogId: "cover",
+  },
 
   // ========== テキスト変換 ==========
   {
