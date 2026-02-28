@@ -361,50 +361,67 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
   if (pathname.startsWith("/admin")) {
     // ログインページへのアクセス制限（シークレットトークンまたはワンタイムトークン必須）
     if (pathname === "/admin/login") {
-      const token = searchParams.get("token");
-
-      if (!token) {
-        return new NextResponse(null, { status: 404 });
-      }
-
-      // 環境変数のトークンと一致するかチェック
-      if (token === getAdminLoginToken()) {
+      // Cookie gate: admin-gate cookie があれば許可（URL にトークン不要）
+      const adminGateCookie = req.cookies.get("admin-gate");
+      if (adminGateCookie?.value === "1") {
         return createResponse();
       }
 
+      const token = searchParams.get("token");
+      if (!token) return new NextResponse(null, { status: 404 });
+
+      // トークン検証後: cookie をセットして token-free URL にリダイレクト
+      const setGateCookieAndRedirect = () => {
+        const cleanUrl = new URL(pathname, req.url);
+        // token 以外の searchParams を維持
+        searchParams.forEach((value, key) => {
+          if (key !== "token") cleanUrl.searchParams.set(key, value);
+        });
+        const response = NextResponse.redirect(cleanUrl);
+        response.cookies.set("admin-gate", "1", {
+          httpOnly: true,
+          secure: serverEnv.NODE_ENV === "production",
+          sameSite: "strict",
+          maxAge: 60 * 60, // 1時間
+          path: "/admin",
+        });
+        return response;
+      };
+
+      if (token === getAdminLoginToken()) {
+        return setGateCookieAndRedirect();
+      }
+
+      // ワンタイムトークン検証（既存コード）
       const parsedToken = loginTokenSchema.safeParse(token);
       if (!parsedToken.success) {
         return new NextResponse(null, { status: 404 });
       }
 
-      // ワンタイムトークンをチェック
       try {
         const loginToken = await prisma.loginToken.findUnique({
           where: { token: parsedToken.data },
         });
-
-        // トークンが存在し、有効期限が切れていない場合
         if (loginToken && loginToken.expiresAt > new Date()) {
-          return createResponse();
+          return setGateCookieAndRedirect();
         }
       } catch (error: unknown) {
-        // データベースエラーの場合は環境変数のトークンでフォールバック
         logger.error("Error checking login token", {
           error: getErrorMessage(error),
         });
       }
 
-      // トークンが無効な場合は404を返す（存在しないページとして扱う）
       return new NextResponse(null, { status: 404 });
     }
 
     // Better Auth セッションクッキーのチェック（高速な初期チェック）
     const sessionCookie = getSessionCookie(req);
 
-    // 未認証の場合はログインページへリダイレクト（トークン付きURL）
+    // 未認証の場合はログインページへリダイレクト
+    // admin-gate cookie が有効なら /admin/login に token なしでアクセス可能
+    // cookie が切れた場合はユーザーが招待 URL を再度使用する
     if (!sessionCookie) {
       const loginUrl = new URL("/admin/login", req.url);
-      loginUrl.searchParams.set("token", getAdminLoginToken());
       return NextResponse.redirect(loginUrl);
     }
 

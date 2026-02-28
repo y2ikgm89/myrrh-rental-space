@@ -1,26 +1,23 @@
-'use client'
+"use client";
 
 /**
  * ログアウトボタン
  *
- * トークン付きでログインページにリダイレクトする
+ * ログアウト後 /admin/login にリダイレクトする
+ * admin-gate cookie が有効な間はトークンなしでアクセス可能
  */
 
-import { useRouter } from 'next/navigation'
-import { signOut } from '@/shared/lib/auth-client'
-import type { ReactElement } from 'react'
+import { useRouter } from "next/navigation";
+import { signOut } from "@/shared/lib/auth-client";
+import type { ReactElement } from "react";
 
-interface LogoutButtonProps {
-  token: string
-}
-
-export function LogoutButton({ token }: LogoutButtonProps): ReactElement {
-  const router = useRouter()
+export function LogoutButton(): ReactElement {
+  const router = useRouter();
 
   const handleLogout = async (): Promise<void> => {
-    await signOut()
-    router.push(`/admin/login?token=${token}`)
-  }
+    await signOut();
+    router.push("/admin/login");
+  };
 
   return (
     <button
@@ -30,5 +27,5 @@ export function LogoutButton({ token }: LogoutButtonProps): ReactElement {
     >
       ログアウト
     </button>
-  )
+  );
 }

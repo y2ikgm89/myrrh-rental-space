@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * TopBar
@@ -8,38 +8,46 @@
  * ブランディング表示（ロゴ/サイト名）対応
  */
 
-import { useState } from 'react'
-import Image from 'next/image'
-import { Menu } from 'lucide-react'
-import Link from 'next/link'
-import { useAdminLayout } from '@/admin/contexts/admin-layout-context'
-import { Button } from '@/admin/components/ui'
-import { LogoutButton } from './LogoutButton'
+import { useState } from "react";
+import Image from "next/image";
+import { Menu } from "lucide-react";
+import Link from "next/link";
+import { useAdminLayout } from "@/admin/contexts/admin-layout-context";
+import { Button } from "@/admin/components/ui";
+import { LogoutButton } from "./LogoutButton";
 
 type TopBarProps = {
-  token: string
-  siteName: string | null
-  headerLogoUrl: string | null
-  useHeaderLogo: boolean
-}
+  siteName: string | null;
+  headerLogoUrl: string | null;
+  useHeaderLogo: boolean;
+};
 
-export function TopBar({ token, siteName, headerLogoUrl, useHeaderLogo }: TopBarProps) {
-  const { toggleSidebar, isMobile, isFullscreen, hasMounted } = useAdminLayout()
-  const [logoError, setLogoError] = useState(false)
+export function TopBar({
+  siteName,
+  headerLogoUrl,
+  useHeaderLogo,
+}: TopBarProps) {
+  const { toggleSidebar, isMobile, isFullscreen, hasMounted } =
+    useAdminLayout();
+  const [logoError, setLogoError] = useState(false);
 
   // フルスクリーンモード時はヘッダーを非表示
-  if (isFullscreen) return null
+  if (isFullscreen) return null;
 
   // Hydration対策: マウント前はSSR時と同じ値（isMobile=false）を使用
-  const showMobileMenu = hasMounted && isMobile
+  const showMobileMenu = hasMounted && isMobile;
 
-  const displayName = siteName || '管理画面'
+  const displayName = siteName || "管理画面";
 
   // ブランディング表示: ロゴまたはテキスト
   const renderBranding = () => {
     // テキスト表示の条件: ロゴ無効 or ロゴURL無し or ロゴ読込失敗
     if (!useHeaderLogo || !headerLogoUrl || logoError) {
-      return <span className="text-lg font-semibold text-foreground">{displayName}</span>
+      return (
+        <span className="text-lg font-semibold text-foreground">
+          {displayName}
+        </span>
+      );
     }
 
     // ロゴ表示
@@ -53,8 +61,8 @@ export function TopBar({ token, siteName, headerLogoUrl, useHeaderLogo }: TopBar
         onError={() => setLogoError(true)}
         priority
       />
-    )
-  }
+    );
+  };
 
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b bg-card px-4 shadow-sm lg:px-6">
@@ -86,8 +94,8 @@ export function TopBar({ token, siteName, headerLogoUrl, useHeaderLogo }: TopBar
         >
           サイトを表示
         </Link>
-        <LogoutButton token={token} />
+        <LogoutButton />
       </div>
     </header>
-  )
+  );
 }
