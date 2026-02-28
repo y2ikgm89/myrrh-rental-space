@@ -39,6 +39,7 @@ import { $isTimelineContainerNode, $isTimelineItemNode } from '../nodes/Timeline
 import { $isPricingPlanNode, $isPricingFeatureNode } from '../nodes/PricingTableNode'
 import { $isInlineImageNode } from '../nodes/InlineImageNode'
 import { $isTestimonialContainerNode, $isTestimonialItemNode } from '../nodes/TestimonialNode'
+import { $isFeatureIconListContainerNode, $isFeatureIconItemNode } from '../nodes/FeatureIconListNode'
 import type { InspectableNodeType, InspectableResult } from '../inspector/hooks/inspectable-nodes'
 
 // =============================================================================
@@ -82,6 +83,8 @@ export function getInspectableInfoFromRegistry(node: LexicalNode): InspectableRe
   if ($isInlineImageNode(node)) return { nodeType: 'inlineImage', node, nodeKey }
   if ($isTestimonialContainerNode(node)) return { nodeType: 'testimonialContainer', node, nodeKey }
   if ($isTestimonialItemNode(node)) return { nodeType: 'testimonialItem', node, nodeKey }
+  if ($isFeatureIconListContainerNode(node)) return { nodeType: 'featureIconListContainer', node, nodeKey }
+  if ($isFeatureIconItemNode(node)) return { nodeType: 'featureIconItem', node, nodeKey }
   return null
 }
 
@@ -98,4 +101,5 @@ export const INSPECTABLE_NODE_TYPES_FROM_REGISTRY: readonly InspectableNodeType[
   'pricingPlan', 'pricingFeature',
   'inlineImage',
   'testimonialContainer', 'testimonialItem',
+  'featureIconListContainer', 'featureIconItem',
 ]

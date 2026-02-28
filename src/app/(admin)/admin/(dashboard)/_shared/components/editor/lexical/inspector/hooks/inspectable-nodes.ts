@@ -37,6 +37,7 @@ import type { TimelineContainerNode, TimelineItemNode } from '../../nodes/Timeli
 import type { PricingPlanNode, PricingFeatureNode } from '../../nodes/PricingTableNode'
 import type { InlineImageNode } from '../../nodes/InlineImageNode'
 import type { TestimonialContainerNode, TestimonialItemNode } from '../../nodes/TestimonialNode'
+import type { FeatureIconListContainerNode, FeatureIconItemNode } from '../../nodes/FeatureIconListNode'
 
 // =============================================================================
 // Types
@@ -72,6 +73,8 @@ export type InspectableNodeType =
   | 'inlineImage'
   | 'testimonialContainer'
   | 'testimonialItem'
+  | 'featureIconListContainer'
+  | 'featureIconItem'
 
 /**
  * 選択中ノード情報のDiscriminated Union型
@@ -109,6 +112,8 @@ export type SelectedNodeInfo =
   | { nodeType: 'inlineImage'; node: InlineImageNode; nodeKey: NodeKey }
   | { nodeType: 'testimonialContainer'; node: TestimonialContainerNode; nodeKey: NodeKey }
   | { nodeType: 'testimonialItem'; node: TestimonialItemNode; nodeKey: NodeKey }
+  | { nodeType: 'featureIconListContainer'; node: FeatureIconListContainerNode; nodeKey: NodeKey }
+  | { nodeType: 'featureIconItem'; node: FeatureIconItemNode; nodeKey: NodeKey }
   | null
 
 /**

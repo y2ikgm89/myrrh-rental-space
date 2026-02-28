@@ -40,6 +40,7 @@ import {
   PricingTablePlugin,
   InlineImagePlugin,
   TestimonialPlugin,
+  FeatureIconListPlugin,
 } from '../plugins'
 
 // =============================================================================
@@ -83,6 +84,7 @@ export const REGISTRY_DIALOG_IDS = [
   'pricingTable',
   'inlineImage',
   'testimonial',
+  'feature-icon-list',
 ] as const
 
 export type RegistryDialogId = (typeof REGISTRY_DIALOG_IDS)[number]
@@ -123,4 +125,5 @@ export const DIALOG_REGISTRY: readonly DialogRegistryEntry[] = [
   { dialogId: 'pricingTable', component: PricingTablePlugin },
   { dialogId: 'inlineImage', component: InlineImagePlugin },
   { dialogId: 'testimonial', component: TestimonialPlugin },
+  { dialogId: 'feature-icon-list', component: FeatureIconListPlugin },
 ]

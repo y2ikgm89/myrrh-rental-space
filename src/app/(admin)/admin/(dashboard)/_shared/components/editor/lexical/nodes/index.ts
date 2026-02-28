@@ -395,3 +395,27 @@ export {
   isTestimonialLayout,
 } from './TestimonialNode'
 export type { TestimonialLayout, TestimonialColumns, TestimonialRating } from './TestimonialNode'
+
+// FeatureIconList
+export {
+  FeatureIconListContainerNode,
+  $createFeatureIconListContainerNode,
+  $isFeatureIconListContainerNode,
+  FeatureIconItemNode,
+  $createFeatureIconItemNode,
+  $isFeatureIconItemNode,
+  ICON_SIZES,
+  ICON_LIBRARIES,
+  isIconSize,
+  isIconLibrary,
+  featureIconListColumnsState,
+  featureIconListAccentColorState,
+  featureIconListIconSizeState,
+  featureIconItemNameState,
+  featureIconItemLibraryState,
+} from './FeatureIconListNode'
+export type {
+  FeatureIconListColumns,
+  IconSize,
+  IconLibrary,
+} from './FeatureIconListNode'

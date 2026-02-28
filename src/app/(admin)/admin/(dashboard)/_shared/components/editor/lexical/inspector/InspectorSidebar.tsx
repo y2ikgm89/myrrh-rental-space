@@ -37,6 +37,8 @@ import {
   InlineImageInspectorPanel,
   TestimonialContainerInspectorPanel,
   TestimonialItemInspectorPanel,
+  FeatureIconListContainerInspectorPanel,
+  FeatureIconListItemInspectorPanel,
 } from './panels'
 import { Settings2 } from 'lucide-react'
 
@@ -109,6 +111,10 @@ function renderPanel(info: SelectedNodeInfo) {
       return <TestimonialContainerInspectorPanel nodeKey={info.nodeKey} node={info.node} />
     case 'testimonialItem':
       return <TestimonialItemInspectorPanel nodeKey={info.nodeKey} node={info.node} />
+    case 'featureIconListContainer':
+      return <FeatureIconListContainerInspectorPanel nodeKey={info.nodeKey} node={info.node} />
+    case 'featureIconItem':
+      return <FeatureIconListItemInspectorPanel nodeKey={info.nodeKey} node={info.node} />
   }
 }
 
