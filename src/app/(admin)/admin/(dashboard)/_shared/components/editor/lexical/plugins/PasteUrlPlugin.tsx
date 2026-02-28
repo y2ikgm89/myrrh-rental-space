@@ -26,16 +26,14 @@ export function PasteUrlPlugin() {
 
         if (!text || !URL_PATTERN.test(text)) return false
 
-        let isEmptyParagraph = false
-        editor.getEditorState().read(() => {
-          const selection = $getSelection()
-          if (!$isRangeSelection(selection) || !selection.isCollapsed()) return
-          const node = selection.anchor.getNode()
-          const parent = node.getParent()
-          if (parent && $isRootOrShadowRoot(parent.getParent())) {
-            isEmptyParagraph = node.getTextContent() === ''
-          }
-        })
+        const selection = $getSelection()
+        if (!$isRangeSelection(selection) || !selection.isCollapsed()) return false
+        const node = selection.anchor.getNode()
+        const parent = node.getParent()
+        const isEmptyParagraph =
+          parent != null &&
+          $isRootOrShadowRoot(parent.getParent()) &&
+          node.getTextContent() === ''
 
         if (!isEmptyParagraph) return false
 

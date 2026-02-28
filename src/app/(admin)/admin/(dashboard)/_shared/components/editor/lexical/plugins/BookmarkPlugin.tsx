@@ -88,7 +88,7 @@ export function BookmarkPlugin({ isOpen, onClose }: BookmarkPluginProps) {
       },
       COMMAND_PRIORITY_LOW,
     )
-  }, [editor, startTransition])
+  }, [editor])
 
   const resetForm = () => {
     setUrl('')
