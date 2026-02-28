@@ -84,6 +84,8 @@
 
 - **`X-XSS-Protection` ヘッダー追加禁止** — Chromium/Firefox削除済み、`mode=block` はXSS悪用リスクあり。`next.config.ts` headers に新規追加しないこと（削除済み）
 - **`Permissions-Policy` に `interest-cohort=()` 追加禁止** — Google FLoC は2022年廃止済み。不要（削除済み）
+- **セキュリティヘッダーは `proxy.ts` に一元化（`next.config.ts` への追加禁止）** — nonce のリクエスト毎生成が必須なため。Cache-Control のみ `next.config.ts` で管理。CSP nonce: `Buffer.from(crypto.randomUUID()).toString('base64')`
+- **`proxy.ts` の rewrite パスは `createResponse()` と同一ヘッダーセット必須** — `NextResponse.rewrite()` を追加する際は requestHeaders に `x-nonce` / `x-pathname` / `Content-Security-Policy`、レスポンスに `response.headers.set("x-pathname", pathname)` + `applySecurityHeaders()` を必ず設定。欠落するとその URL パスでのみ nonce 伝播が壊れる
 
 ## 環境変数
 
