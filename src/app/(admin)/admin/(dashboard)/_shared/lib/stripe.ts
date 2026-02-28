@@ -8,33 +8,38 @@
  * @important server-only — Client Component から import 禁止
  */
 
-import 'server-only'
-import Stripe from 'stripe'
-import { safeDecrypt } from '@/shared/lib/crypto'
-import { serverEnv } from '@/shared/lib/env/server'
-import { isValidSecretKey, isTestKey } from './stripe-shared'
+import "server-only";
+import Stripe from "stripe";
+import { safeDecrypt } from "@/shared/lib/crypto";
+import { serverEnv } from "@/shared/lib/env/server";
+import {
+  logError,
+  ErrorCategory,
+  ErrorSeverity,
+} from "@/shared/lib/errors/server";
+import { isValidSecretKey, isTestKey } from "./stripe-shared";
 
 /**
  * Stripe設定の取得元
  */
-export type StripeConfigSource = 'env' | 'db' | null
+export type StripeConfigSource = "env" | "db" | null;
 
 /**
  * Stripe接続テスト結果
  */
 export interface StripeConnectionTestResult {
-  success: boolean
-  error?: string
-  accountId?: string
-  mode?: 'test' | 'live'
-  source?: StripeConfigSource
+  success: boolean;
+  error?: string;
+  accountId?: string;
+  mode?: "test" | "live";
+  source?: StripeConfigSource;
 }
 
 /**
  * 環境変数からStripeシークレットキーを取得
  */
 function getEnvSecretKey(): string | null {
-  return serverEnv.STRIPE_SECRET_KEY ?? null
+  return serverEnv.STRIPE_SECRET_KEY ?? null;
 }
 
 /**
@@ -43,9 +48,9 @@ function getEnvSecretKey(): string | null {
  */
 export function createStripeClient(secretKey: string): Stripe {
   return new Stripe(secretKey, {
-    apiVersion: '2026-01-28.clover',
+    apiVersion: "2026-02-25.clover",
     typescript: true,
-  })
+  });
 }
 
 /**
@@ -54,21 +59,21 @@ export function createStripeClient(secretKey: string): Stripe {
  * @returns Stripeクライアントと設定元
  */
 export async function getStripeClient(
-  dbSecretKey?: string | null
+  dbSecretKey?: string | null,
 ): Promise<{ client: Stripe | null; source: StripeConfigSource }> {
-  const envKey = getEnvSecretKey()
+  const envKey = getEnvSecretKey();
   if (envKey) {
-    return { client: createStripeClient(envKey), source: 'env' }
+    return { client: createStripeClient(envKey), source: "env" };
   }
 
   if (dbSecretKey) {
-    const decryptedKey = safeDecrypt(dbSecretKey)
+    const decryptedKey = safeDecrypt(dbSecretKey);
     if (decryptedKey) {
-      return { client: createStripeClient(decryptedKey), source: 'db' }
+      return { client: createStripeClient(decryptedKey), source: "db" };
     }
   }
 
-  return { client: null, source: null }
+  return { client: null, source: null };
 }
 
 /**
@@ -76,41 +81,49 @@ export async function getStripeClient(
  * @param secretKey - テストするシークレットキー（平文）
  */
 export async function testStripeConnection(
-  secretKey: string
+  secretKey: string,
 ): Promise<StripeConnectionTestResult> {
   try {
     if (!isValidSecretKey(secretKey)) {
       return {
         success: false,
-        error: 'シークレットキーの形式が正しくありません。sk_test_ または sk_live_ で始まる必要があります。',
-      }
+        error:
+          "シークレットキーの形式が正しくありません。sk_test_ または sk_live_ で始まる必要があります。",
+      };
     }
 
-    const stripe = createStripeClient(secretKey)
-    const account = await stripe.accounts.retrieve()
+    const stripe = createStripeClient(secretKey);
+    const account = await stripe.accounts.retrieve();
 
     return {
       success: true,
       accountId: account.id,
-      mode: isTestKey(secretKey) ? 'test' : 'live',
-    }
+      mode: isTestKey(secretKey) ? "test" : "live",
+    };
   } catch (error) {
-    const message = error instanceof Error ? error.message : '接続テストに失敗しました'
-
     if (error instanceof Stripe.errors.StripeAuthenticationError) {
       return {
         success: false,
-        error: 'APIキーが無効です。正しいキーを入力してください。',
-      }
+        error: "APIキーが無効です。正しいキーを入力してください。",
+      };
     }
 
     if (error instanceof Stripe.errors.StripePermissionError) {
       return {
         success: false,
-        error: 'このAPIキーにはアカウント情報へのアクセス権限がありません。',
-      }
+        error: "このAPIキーにはアカウント情報へのアクセス権限がありません。",
+      };
     }
 
-    return { success: false, error: message }
+    logError(error, {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: "testStripeConnection" },
+    });
+    return {
+      success: false,
+      error:
+        "Stripe接続テストに失敗しました。詳細はサーバーログを確認してください。",
+    };
   }
 }
