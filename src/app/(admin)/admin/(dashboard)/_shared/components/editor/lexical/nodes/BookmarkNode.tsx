@@ -103,7 +103,16 @@ function BookmarkComponent({
                 <ExternalLink className="w-4 h-4 text-muted-foreground" />
               )}
               <span className="text-xs text-muted-foreground truncate">
-                {siteName || new URL(url).hostname}
+                {siteName ||
+                  (url
+                    ? (() => {
+                        try {
+                          return new URL(url).hostname;
+                        } catch {
+                          return url;
+                        }
+                      })()
+                    : "")}
               </span>
             </div>
             {/* タイトル */}
@@ -238,7 +247,15 @@ export class BookmarkNode extends DecoratorNode<ReactElement> {
     }
 
     const siteNameEl = document.createElement("span");
-    siteNameEl.textContent = siteName || new URL(url).hostname;
+    siteNameEl.textContent =
+      siteName ||
+      (() => {
+        try {
+          return url ? new URL(url).hostname : "";
+        } catch {
+          return url;
+        }
+      })();
     siteInfo.appendChild(siteNameEl);
     textDiv.appendChild(siteInfo);
 
