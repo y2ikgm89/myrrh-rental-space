@@ -15,6 +15,16 @@
 
 ---
 
+## 進行中の計画
+
+- 🔄 [2026-02-28] Lexical エディタ最適化（公式 Playground 水準・プロジェクト固有ブロック追加・UX 改善）
+  - 設計書: `docs/plans/2026-02-28-lexical-optimization-design.md`
+  - Phase 1: TableActionMenuPlugin / TableCellResizerPlugin / InlineImageNode
+  - Phase 2: TestimonialNode / FeatureIconListNode / CoverNode
+  - Phase 3: URL ペースト Bookmark 変換 / CharacterLimitPlugin
+
+---
+
 ## 完了した計画
 
 - ✅ [2026-02-28] Brand Icons 導入（`@icons-pack/react-simple-icons`、Lexical X/Instagram/YouTube/Figma アイコン置き換え）
