@@ -17,6 +17,7 @@
 
 ## 完了した計画
 
+- ✅ [2026-02-28] Brand Icons 導入（`@icons-pack/react-simple-icons`、Lexical X/Instagram/YouTube/Figma アイコン置き換え）
 - ✅ [2026-02-28] セキュリティ監査全修正（XSS x3、DoS、情報漏洩、トークン URL 露出・Cookie Gate）
 - ✅ [2026-02-28] CSP nonce 移行 + 型安全性ドキュメント整備（品質スコア 100/100 達成）
 
