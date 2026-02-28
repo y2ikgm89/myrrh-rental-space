@@ -34,6 +34,7 @@ import {
   TimelineItemInspectorPanel,
   PricingPlanInspectorPanel,
   PricingFeatureInspectorPanel,
+  InlineImageInspectorPanel,
 } from './panels'
 import { Settings2 } from 'lucide-react'
 
@@ -100,6 +101,8 @@ function renderPanel(info: SelectedNodeInfo) {
       return <PricingPlanInspectorPanel nodeKey={info.nodeKey} node={info.node} />
     case 'pricingFeature':
       return <PricingFeatureInspectorPanel nodeKey={info.nodeKey} node={info.node} />
+    case 'inlineImage':
+      return <InlineImageInspectorPanel nodeKey={info.nodeKey} node={info.node} />
   }
 }
 

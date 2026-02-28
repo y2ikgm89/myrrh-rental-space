@@ -28,3 +28,4 @@ export { TimelineContainerInspectorPanel } from './TimelineContainerInspectorPan
 export { TimelineItemInspectorPanel } from './TimelineItemInspectorPanel'
 export { PricingPlanInspectorPanel } from './PricingPlanInspectorPanel'
 export { PricingFeatureInspectorPanel } from './PricingFeatureInspectorPanel'
+export { InlineImageInspectorPanel } from './InlineImageInspectorPanel'

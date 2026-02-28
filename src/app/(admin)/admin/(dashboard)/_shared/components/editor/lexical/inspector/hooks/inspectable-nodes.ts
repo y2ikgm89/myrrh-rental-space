@@ -35,6 +35,7 @@ import type { SpotifyNode } from '../../nodes/SpotifyNode'
 import type { GalleryContainerNode, GalleryItemNode } from '../../nodes/GalleryNode'
 import type { TimelineContainerNode, TimelineItemNode } from '../../nodes/TimelineNode'
 import type { PricingPlanNode, PricingFeatureNode } from '../../nodes/PricingTableNode'
+import type { InlineImageNode } from '../../nodes/InlineImageNode'
 
 // =============================================================================
 // Types
@@ -67,6 +68,7 @@ export type InspectableNodeType =
   | 'timelineItem'
   | 'pricingPlan'
   | 'pricingFeature'
+  | 'inlineImage'
 
 /**
  * 選択中ノード情報のDiscriminated Union型
@@ -101,6 +103,7 @@ export type SelectedNodeInfo =
   | { nodeType: 'timelineItem'; node: TimelineItemNode; nodeKey: NodeKey }
   | { nodeType: 'pricingPlan'; node: PricingPlanNode; nodeKey: NodeKey }
   | { nodeType: 'pricingFeature'; node: PricingFeatureNode; nodeKey: NodeKey }
+  | { nodeType: 'inlineImage'; node: InlineImageNode; nodeKey: NodeKey }
   | null
 
 /**

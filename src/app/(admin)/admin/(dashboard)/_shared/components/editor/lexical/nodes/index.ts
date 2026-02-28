@@ -361,3 +361,16 @@ export {
   $isPricingFeatureNode,
   featureIncludedState,
 } from './PricingTableNode'
+
+// InlineImage
+export {
+  InlineImageNode,
+  $createInlineImageNode,
+  $isInlineImageNode,
+  INLINE_IMAGE_POSITIONS,
+  inlineSrcState,
+  inlineAltTextState,
+  inlinePositionState,
+  inlineWidthState,
+} from './InlineImageNode'
+export type { InlineImagePosition } from './InlineImageNode'

@@ -113,3 +113,5 @@ export { TimelinePlugin } from './TimelinePlugin'
 export { PricingTablePlugin } from './PricingTablePlugin'
 
 export { TableActionMenuPlugin } from './TableActionMenuPlugin'
+
+export { InlineImagePlugin } from './InlineImagePlugin'

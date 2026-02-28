@@ -38,6 +38,7 @@ import {
   GalleryPlugin,
   TimelinePlugin,
   PricingTablePlugin,
+  InlineImagePlugin,
 } from '../plugins'
 
 // =============================================================================
@@ -79,6 +80,7 @@ export const REGISTRY_DIALOG_IDS = [
   'gallery',
   'timeline',
   'pricingTable',
+  'inlineImage',
 ] as const
 
 export type RegistryDialogId = (typeof REGISTRY_DIALOG_IDS)[number]
@@ -117,4 +119,5 @@ export const DIALOG_REGISTRY: readonly DialogRegistryEntry[] = [
   { dialogId: 'gallery', component: GalleryPlugin },
   { dialogId: 'timeline', component: TimelinePlugin },
   { dialogId: 'pricingTable', component: PricingTablePlugin },
+  { dialogId: 'inlineImage', component: InlineImagePlugin },
 ]
