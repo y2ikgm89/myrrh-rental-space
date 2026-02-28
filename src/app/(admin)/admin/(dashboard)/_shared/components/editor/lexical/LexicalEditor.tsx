@@ -54,6 +54,7 @@ import {
 import { WordCountPlugin, useWordCount } from './plugins/WordCountPlugin'
 import { AutoSavePlugin, useAutoSaveStatus } from './plugins/AutoSavePlugin'
 import { ImageDropPlugin } from './plugins/ImageDropPlugin'
+import { PasteUrlPlugin } from './plugins/PasteUrlPlugin'
 import { FindReplacePlugin } from './plugins/FindReplacePlugin'
 import { BlockTemplatePlugin } from './plugins/BlockTemplatePlugin'
 import { TableActionMenuPlugin } from './plugins'
@@ -204,6 +205,7 @@ function EditorInner({
         <PageBreakPlugin />
         <ComponentPickerPlugin openDialog={dialogManager.openDialog} />
         <ImageDropPlugin />
+        <PasteUrlPlugin />
         <FindReplacePlugin anchorElem={contentWrapperRef} />
         <TableOfContentsPlugin />
         <KeyboardShortcutsPlugin openDialog={dialogManager.openDialog} />

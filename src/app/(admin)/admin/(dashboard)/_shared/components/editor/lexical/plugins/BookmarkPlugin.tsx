@@ -8,9 +8,10 @@
 
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { $insertNodeToNearestRoot } from '@lexical/utils'
+import { COMMAND_PRIORITY_LOW, createCommand } from 'lexical'
 import { Loader2, ExternalLink, AlertCircle } from 'lucide-react'
 import { $createBookmarkNode } from '../nodes/BookmarkNode'
 import { fetchOgp } from '../../../../actions/fetch-ogp'
@@ -24,6 +25,14 @@ import {
   Input,
   Label,
 } from '@/admin/components/ui'
+
+// =============================================================================
+// Command
+// =============================================================================
+
+export const INSERT_BOOKMARK_COMMAND = createCommand<{ url: string }>(
+  'INSERT_BOOKMARK_COMMAND',
+)
 
 // =============================================================================
 // Types
@@ -53,6 +62,33 @@ export function BookmarkPlugin({ isOpen, onClose }: BookmarkPluginProps) {
   const [preview, setPreview] = useState<OgpPreview>(null)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+
+  // INSERT_BOOKMARK_COMMAND ハンドラ（PasteUrlPlugin 等から URL を受け取り自動挿入）
+  useEffect(() => {
+    return editor.registerCommand(
+      INSERT_BOOKMARK_COMMAND,
+      (payload) => {
+        startTransition(async () => {
+          const result = await fetchOgp(payload.url)
+          if (result.success) {
+            editor.update(() => {
+              const bookmarkNode = $createBookmarkNode({
+                url: result.data.url,
+                title: result.data.title,
+                description: result.data.description,
+                imageUrl: result.data.imageUrl,
+                faviconUrl: result.data.faviconUrl,
+                siteName: result.data.siteName,
+              })
+              $insertNodeToNearestRoot(bookmarkNode)
+            })
+          }
+        })
+        return true
+      },
+      COMMAND_PRIORITY_LOW,
+    )
+  }, [editor, startTransition])
 
   const resetForm = () => {
     setUrl('')
