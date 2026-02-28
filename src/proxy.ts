@@ -183,10 +183,23 @@ const DYNAMIC_PREFIXES = [
 export async function proxy(req: NextRequest): Promise<NextResponse> {
   const { pathname, searchParams } = req.nextUrl;
 
-  // ヘッダーにパス名を設定（Server Componentで使用）
+  // nonce 生成（リクエスト毎にユニーク）
+  // Buffer.from(uuid).toString('base64') は Next.js 16 公式推奨パターン
+  const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
+  const cspValue = buildCsp(nonce);
+
+  // パス名と nonce を Server Components に伝播し、セキュリティヘッダーを付与
   const createResponse = () => {
-    const response = NextResponse.next();
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set("x-nonce", nonce);
+    requestHeaders.set("x-pathname", pathname);
+    requestHeaders.set("Content-Security-Policy", cspValue);
+
+    const response = NextResponse.next({
+      request: { headers: requestHeaders },
+    });
     response.headers.set("x-pathname", pathname);
+    applySecurityHeaders(response.headers, cspValue);
     return response;
   };
 
@@ -219,7 +232,14 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
         // プレフィックス無効時: /posts/ にリライト
         const url = req.nextUrl.clone();
         url.pathname = `/posts${pathname}`;
-        return NextResponse.rewrite(url);
+        const requestHeaders = new Headers(req.headers);
+        requestHeaders.set("x-nonce", nonce);
+        requestHeaders.set("Content-Security-Policy", cspValue);
+        const response = NextResponse.rewrite(url, {
+          request: { headers: requestHeaders },
+        });
+        applySecurityHeaders(response.headers, cspValue);
+        return response;
       }
     }
   }
@@ -247,7 +267,14 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
     if (segments.length === 3 && seg2) {
       const url = req.nextUrl.clone();
       url.pathname = `/posts/${seg2}`;
-      return NextResponse.rewrite(url);
+      const requestHeaders = new Headers(req.headers);
+      requestHeaders.set("x-nonce", nonce);
+      requestHeaders.set("Content-Security-Policy", cspValue);
+      const response = NextResponse.rewrite(url, {
+        request: { headers: requestHeaders },
+      });
+      applySecurityHeaders(response.headers, cspValue);
+      return response;
     }
 
     // date_name構造: /posts/[year]/[month]/[slug] → /posts/[slug]
@@ -269,7 +296,14 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
       ) {
         const url = req.nextUrl.clone();
         url.pathname = `/posts/${slug}`;
-        return NextResponse.rewrite(url);
+        const requestHeaders = new Headers(req.headers);
+        requestHeaders.set("x-nonce", nonce);
+        requestHeaders.set("Content-Security-Policy", cspValue);
+        const response = NextResponse.rewrite(url, {
+          request: { headers: requestHeaders },
+        });
+        applySecurityHeaders(response.headers, cspValue);
+        return response;
       }
     }
   }
