@@ -1,55 +1,5 @@
 import type { NextConfig } from "next";
 
-const isDev = process.env["NODE_ENV"] === "development";
-
-// Content Security Policy 設定
-// https://developer.mozilla.org/ja/docs/Web/HTTP/CSP
-const cspDirectives: Record<string, string[]> = {
-  "default-src": ["'self'"],
-  "script-src": [
-    "'self'",
-    "'unsafe-inline'", // Next.js inline scripts
-    ...(isDev ? ["'unsafe-eval'"] : []), // 開発環境のみ: HMR用
-    "https://challenges.cloudflare.com", // Turnstile
-    "https://js.stripe.com", // Stripe
-  ],
-  "style-src": ["'self'", "'unsafe-inline'"], // Tailwind CSS / styled-jsx
-  "img-src": [
-    "'self'",
-    "data:",
-    "blob:",
-    "https://*.supabase.co", // Supabase Storage
-    "https://img.youtube.com", // YouTube thumbnails
-    "https://placehold.co", // Placeholder images
-    "https://images.unsplash.com", // Unsplash images
-  ],
-  "font-src": ["'self'"],
-  "connect-src": [
-    "'self'",
-    "https://*.supabase.co", // Supabase API
-    "https://api.stripe.com", // Stripe API
-    "https://unpkg.com", // detect-gpu benchmarks
-    ...(isDev ? ["ws://localhost:*"] : []), // 開発環境: WebSocket HMR
-  ],
-  "frame-src": [
-    "'self'",
-    "https://challenges.cloudflare.com", // Turnstile widget
-    "https://js.stripe.com", // Stripe Elements
-    "https://www.youtube.com", // YouTube embeds
-  ],
-  "object-src": ["'none'"],
-  "base-uri": ["'self'"],
-  "form-action": ["'self'"],
-  "frame-ancestors": ["'none'"],
-  "upgrade-insecure-requests": [],
-};
-
-const cspHeader = Object.entries(cspDirectives)
-  .map(([key, values]) =>
-    values.length > 0 ? `${key} ${values.join(" ")}` : key,
-  )
-  .join("; ");
-
 const nextConfig: NextConfig = {
   // React Compiler for automatic memoization
   reactCompiler: true,
@@ -171,46 +121,13 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  // Security headers and Cache-Control
+  // Cache-Control（セキュリティヘッダーは proxy.ts に一元化）
   async headers() {
-    // 共通セキュリティヘッダー
-    const securityHeaders = [
-      {
-        key: "X-DNS-Prefetch-Control",
-        value: "on",
-      },
-      {
-        key: "Strict-Transport-Security",
-        value: "max-age=63072000; includeSubDomains; preload",
-      },
-      {
-        key: "X-Content-Type-Options",
-        value: "nosniff",
-      },
-      {
-        key: "X-Frame-Options",
-        value: "DENY",
-      },
-      {
-        key: "Referrer-Policy",
-        value: "strict-origin-when-cross-origin",
-      },
-      {
-        key: "Permissions-Policy",
-        value: "camera=(), microphone=(), geolocation=()",
-      },
-      {
-        key: "Content-Security-Policy",
-        value: cspHeader,
-      },
-    ];
-
     return [
       // 管理画面（キャッシュ禁止）
       {
         source: "/admin/:path*",
         headers: [
-          ...securityHeaders,
           {
             key: "Cache-Control",
             value: "private, no-cache, no-store, must-revalidate",
@@ -221,7 +138,6 @@ const nextConfig: NextConfig = {
       {
         source: "/reservation/:path*",
         headers: [
-          ...securityHeaders,
           {
             key: "Cache-Control",
             value: "private, no-cache, no-store, must-revalidate",
@@ -232,7 +148,6 @@ const nextConfig: NextConfig = {
       {
         source: "/api/:path*",
         headers: [
-          ...securityHeaders,
           {
             key: "Cache-Control",
             value: "private, no-cache",
@@ -243,7 +158,6 @@ const nextConfig: NextConfig = {
       {
         source: "/:path*",
         headers: [
-          ...securityHeaders,
           {
             key: "Cache-Control",
             value: "public, s-maxage=3600, stale-while-revalidate=3600",
