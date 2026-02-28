@@ -7,7 +7,7 @@
 
 "use client";
 
-import type { DOMConversionMap, EditorConfig } from "lexical";
+import type { DOMConversionMap, EditorConfig, LexicalNode } from "lexical";
 import {
   $create,
   $getState,
@@ -115,7 +115,7 @@ export class FeatureIconListContainerNode extends ElementNode {
     return true;
   }
 
-  override canBeEmpty(): boolean {
+  override canBeEmpty(): false {
     return false;
   }
 
@@ -272,10 +272,7 @@ export class FeatureIconItemNode extends ElementNode {
     return li;
   }
 
-  override updateDOM(
-    prevNode: FeatureIconItemNode,
-    dom: HTMLElement,
-  ): boolean {
+  override updateDOM(prevNode: FeatureIconItemNode, dom: HTMLElement): boolean {
     const iconNameChange = $getStateChange(
       this,
       prevNode,
@@ -350,22 +347,18 @@ export function $createFeatureIconItemNode(
 ): FeatureIconItemNode {
   const node = $create(FeatureIconItemNode);
   $setState(node, featureIconItemNameState, params.iconName ?? "");
-  $setState(
-    node,
-    featureIconItemLibraryState,
-    params.iconLibrary ?? "lucide",
-  );
+  $setState(node, featureIconItemLibraryState, params.iconLibrary ?? "lucide");
   return node;
 }
 
 export function $isFeatureIconListContainerNode(
-  node: unknown,
+  node: LexicalNode | null | undefined,
 ): node is FeatureIconListContainerNode {
   return node instanceof FeatureIconListContainerNode;
 }
 
 export function $isFeatureIconItemNode(
-  node: unknown,
+  node: LexicalNode | null | undefined,
 ): node is FeatureIconItemNode {
   return node instanceof FeatureIconItemNode;
 }

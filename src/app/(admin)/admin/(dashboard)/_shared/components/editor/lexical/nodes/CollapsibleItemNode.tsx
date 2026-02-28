@@ -7,7 +7,7 @@
  * スタイルは lexical-content.css の [data-collapsible-item] セレクターで管理
  */
 
-'use client'
+"use client";
 
 import type {
   DOMConversionMap,
@@ -15,25 +15,35 @@ import type {
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
-} from 'lexical'
-import { $create, $getState, $getStateChange, $setState, createState, ElementNode } from 'lexical'
+} from "lexical";
+import {
+  $create,
+  $getState,
+  $getStateChange,
+  $setState,
+  createState,
+  ElementNode,
+} from "lexical";
+import { parseBoolean } from "../config/type-guards";
 
 // =============================================================================
 // State
 // =============================================================================
 
-export const openState = createState('open', {
-  parse: (v: unknown): boolean => typeof v === 'boolean' ? v : false,
-})
+export const openState = createState("open", {
+  parse: parseBoolean,
+});
 
 // =============================================================================
 // DOM Conversion
 // =============================================================================
 
-function $convertCollapsibleItemElement(element: HTMLElement): null | DOMConversionOutput {
-  const isOpen = element instanceof HTMLDetailsElement ? element.open : false
-  const node = $createCollapsibleItemNode(isOpen)
-  return { node }
+function $convertCollapsibleItemElement(
+  element: HTMLElement,
+): null | DOMConversionOutput {
+  const isOpen = element instanceof HTMLDetailsElement ? element.open : false;
+  const node = $createCollapsibleItemNode(isOpen);
+  return { node };
 }
 
 // =============================================================================
@@ -42,65 +52,65 @@ function $convertCollapsibleItemElement(element: HTMLElement): null | DOMConvers
 
 export class CollapsibleItemNode extends ElementNode {
   override $config() {
-    return this.config('collapsible-item', {
+    return this.config("collapsible-item", {
       extends: ElementNode,
       stateConfigs: [{ flat: true, stateConfig: openState }],
-    })
+    });
   }
 
   static override importDOM(): DOMConversionMap | null {
     return {
       details: (element: HTMLElement) => {
-        if (element.hasAttribute('data-collapsible-item')) {
+        if (element.hasAttribute("data-collapsible-item")) {
           return {
             conversion: $convertCollapsibleItemElement,
             priority: 2,
-          }
+          };
         }
-        return null
+        return null;
       },
-    }
+    };
   }
 
   override exportDOM(): DOMExportOutput {
-    const isOpen = $getState(this, openState)
-    const element = document.createElement('details')
-    element.setAttribute('data-collapsible-item', 'true')
+    const isOpen = $getState(this, openState);
+    const element = document.createElement("details");
+    element.setAttribute("data-collapsible-item", "true");
     if (isOpen) {
-      element.setAttribute('open', 'true')
+      element.setAttribute("open", "true");
     }
-    return { element }
+    return { element };
   }
 
   override createDOM(_config: EditorConfig): HTMLElement {
-    const isOpen = $getState(this, openState)
-    const element = document.createElement('div')
-    element.setAttribute('data-collapsible-item', 'true')
+    const isOpen = $getState(this, openState);
+    const element = document.createElement("div");
+    element.setAttribute("data-collapsible-item", "true");
     if (isOpen) {
-      element.setAttribute('data-open', 'true')
+      element.setAttribute("data-open", "true");
     }
-    return element
+    return element;
   }
 
   override updateDOM(prevNode: CollapsibleItemNode, dom: HTMLElement): boolean {
-    const change = $getStateChange(this, prevNode, openState)
+    const change = $getStateChange(this, prevNode, openState);
     if (change) {
-      const [newOpen] = change
+      const [newOpen] = change;
       if (newOpen) {
-        dom.setAttribute('data-open', 'true')
+        dom.setAttribute("data-open", "true");
       } else {
-        dom.removeAttribute('data-open')
+        dom.removeAttribute("data-open");
       }
     }
-    return false
+    return false;
   }
 
   override canInsertTextBefore(): false {
-    return false
+    return false;
   }
 
   override canInsertTextAfter(): false {
-    return false
+    return false;
   }
 }
 
@@ -108,12 +118,14 @@ export class CollapsibleItemNode extends ElementNode {
 // Factory Functions
 // =============================================================================
 
-export function $createCollapsibleItemNode(open: boolean = true): CollapsibleItemNode {
-  return $setState($create(CollapsibleItemNode), openState, open)
+export function $createCollapsibleItemNode(
+  open: boolean = true,
+): CollapsibleItemNode {
+  return $setState($create(CollapsibleItemNode), openState, open);
 }
 
 export function $isCollapsibleItemNode(
-  node: LexicalNode | null | undefined
+  node: LexicalNode | null | undefined,
 ): node is CollapsibleItemNode {
-  return node instanceof CollapsibleItemNode
+  return node instanceof CollapsibleItemNode;
 }

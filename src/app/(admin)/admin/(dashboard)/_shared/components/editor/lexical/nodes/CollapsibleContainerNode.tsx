@@ -7,7 +7,7 @@
  * スタイルは lexical-content.css の [data-collapsible-container] セレクターで管理
  */
 
-'use client'
+"use client";
 
 import type {
   DOMConversionMap,
@@ -15,64 +15,88 @@ import type {
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
-} from 'lexical'
-import { $create, $getState, $getStateChange, $setState, createState, ElementNode, $isElementNode, $createParagraphNode } from 'lexical'
-import { createEnumGuard } from '../config/type-guards'
-import { isAccentColor, type AccentColor } from '../config/accent-colors'
-import { $isCollapsibleItemNode } from './CollapsibleItemNode'
+} from "lexical";
+import {
+  $create,
+  $getState,
+  $getStateChange,
+  $setState,
+  createState,
+  ElementNode,
+  $isElementNode,
+  $createParagraphNode,
+} from "lexical";
+import { createEnumGuard } from "../config/type-guards";
+import { isAccentColor, type AccentColor } from "../config/accent-colors";
+import { $isCollapsibleItemNode } from "./CollapsibleItemNode";
 
 // =============================================================================
 // Types
 // =============================================================================
 
-export type CollapsibleStyle = 'default' | 'minimal' | 'card' | 'filled'
+export type CollapsibleStyle = "default" | "minimal" | "card" | "filled";
 
-export const COLLAPSIBLE_STYLES: readonly CollapsibleStyle[] = ['default', 'minimal', 'card', 'filled'] as const
+export const COLLAPSIBLE_STYLES: readonly CollapsibleStyle[] = [
+  "default",
+  "minimal",
+  "card",
+  "filled",
+] as const;
 
-export type CollapsibleRadius = 'none' | 'sm' | 'md' | 'lg'
+export type CollapsibleRadius = "none" | "sm" | "md" | "lg";
 
-export const COLLAPSIBLE_RADII: readonly CollapsibleRadius[] = ['none', 'sm', 'md', 'lg'] as const
+export const COLLAPSIBLE_RADII: readonly CollapsibleRadius[] = [
+  "none",
+  "sm",
+  "md",
+  "lg",
+] as const;
 
 // =============================================================================
 // Type Guards
 // =============================================================================
 
-export const isCollapsibleStyle = createEnumGuard<CollapsibleStyle>(COLLAPSIBLE_STYLES)
-export const isCollapsibleRadius = createEnumGuard<CollapsibleRadius>(COLLAPSIBLE_RADII)
+export const isCollapsibleStyle =
+  createEnumGuard<CollapsibleStyle>(COLLAPSIBLE_STYLES);
+export const isCollapsibleRadius =
+  createEnumGuard<CollapsibleRadius>(COLLAPSIBLE_RADII);
 
 // =============================================================================
 // State
 // =============================================================================
 
-export const collapsibleStyleState = createState('collapsibleStyle', {
+export const collapsibleStyleState = createState("collapsibleStyle", {
   parse: (v: unknown): CollapsibleStyle =>
-    typeof v === 'string' && isCollapsibleStyle(v) ? v : 'default',
-})
+    typeof v === "string" && isCollapsibleStyle(v) ? v : "default",
+});
 
-export const borderRadiusState = createState('borderRadius', {
+export const borderRadiusState = createState("borderRadius", {
   parse: (v: unknown): CollapsibleRadius =>
-    typeof v === 'string' && isCollapsibleRadius(v) ? v : 'md',
-})
+    typeof v === "string" && isCollapsibleRadius(v) ? v : "md",
+});
 
-export const collapsibleColorState = createState('collapsibleColor', {
+export const collapsibleColorState = createState("collapsibleColor", {
   parse: (v: unknown): AccentColor =>
-    typeof v === 'string' && isAccentColor(v) ? v : 'default',
-})
+    typeof v === "string" && isAccentColor(v) ? v : "default",
+});
 
 // =============================================================================
 // DOM Conversion
 // =============================================================================
 
-function $convertCollapsibleContainerElement(element: HTMLElement): null | DOMConversionOutput {
-  const rawStyle = element.getAttribute('data-collapsible-style')
-  const style = rawStyle && isCollapsibleStyle(rawStyle) ? rawStyle : 'default'
-  const rawRadius = element.getAttribute('data-collapsible-radius')
-  const radius = rawRadius && isCollapsibleRadius(rawRadius) ? rawRadius : 'md'
-  const colorAttr = element.getAttribute('data-color')
-  const color: AccentColor = colorAttr && isAccentColor(colorAttr) ? colorAttr : 'default'
+function $convertCollapsibleContainerElement(
+  element: HTMLElement,
+): null | DOMConversionOutput {
+  const rawStyle = element.getAttribute("data-collapsible-style");
+  const style = rawStyle && isCollapsibleStyle(rawStyle) ? rawStyle : "default";
+  const rawRadius = element.getAttribute("data-collapsible-radius");
+  const radius = rawRadius && isCollapsibleRadius(rawRadius) ? rawRadius : "md";
+  const colorAttr = element.getAttribute("data-color");
+  const color: AccentColor =
+    colorAttr && isAccentColor(colorAttr) ? colorAttr : "default";
 
-  const node = $createCollapsibleContainerNode(style, radius, color)
-  return { node }
+  const node = $createCollapsibleContainerNode(style, radius, color);
+  return { node };
 }
 
 // =============================================================================
@@ -81,112 +105,115 @@ function $convertCollapsibleContainerElement(element: HTMLElement): null | DOMCo
 
 export class CollapsibleContainerNode extends ElementNode {
   override $config() {
-    return this.config('collapsible-container', {
+    return this.config("collapsible-container", {
       extends: ElementNode,
       stateConfigs: [
         { flat: true, stateConfig: collapsibleStyleState },
         { flat: true, stateConfig: borderRadiusState },
         { flat: true, stateConfig: collapsibleColorState },
       ],
-    })
+    });
   }
 
   static override importDOM(): DOMConversionMap | null {
     return {
       div: (element: HTMLElement) => {
-        if (element.hasAttribute('data-collapsible-container')) {
+        if (element.hasAttribute("data-collapsible-container")) {
           return {
             conversion: $convertCollapsibleContainerElement,
             priority: 1,
-          }
+          };
         }
-        return null
+        return null;
       },
-    }
+    };
   }
 
   override exportDOM(): DOMExportOutput {
-    const style = $getState(this, collapsibleStyleState)
-    const radius = $getState(this, borderRadiusState)
-    const color = $getState(this, collapsibleColorState)
-    const element = document.createElement('div')
-    element.setAttribute('data-collapsible-container', 'true')
-    element.setAttribute('data-collapsible-style', style)
-    element.setAttribute('data-collapsible-radius', radius)
-    element.setAttribute('data-color', color)
-    return { element }
+    const style = $getState(this, collapsibleStyleState);
+    const radius = $getState(this, borderRadiusState);
+    const color = $getState(this, collapsibleColorState);
+    const element = document.createElement("div");
+    element.setAttribute("data-collapsible-container", "true");
+    element.setAttribute("data-collapsible-style", style);
+    element.setAttribute("data-collapsible-radius", radius);
+    element.setAttribute("data-color", color);
+    return { element };
   }
 
   override createDOM(_config: EditorConfig): HTMLElement {
-    const style = $getState(this, collapsibleStyleState)
-    const radius = $getState(this, borderRadiusState)
-    const color = $getState(this, collapsibleColorState)
-    const element = document.createElement('div')
-    element.setAttribute('data-collapsible-container', 'true')
-    element.setAttribute('data-collapsible-style', style)
-    element.setAttribute('data-collapsible-radius', radius)
-    element.setAttribute('data-color', color)
-    return element
+    const style = $getState(this, collapsibleStyleState);
+    const radius = $getState(this, borderRadiusState);
+    const color = $getState(this, collapsibleColorState);
+    const element = document.createElement("div");
+    element.setAttribute("data-collapsible-container", "true");
+    element.setAttribute("data-collapsible-style", style);
+    element.setAttribute("data-collapsible-radius", radius);
+    element.setAttribute("data-color", color);
+    return element;
   }
 
-  override updateDOM(prevNode: CollapsibleContainerNode, dom: HTMLElement): boolean {
-    const styleChange = $getStateChange(this, prevNode, collapsibleStyleState)
+  override updateDOM(
+    prevNode: CollapsibleContainerNode,
+    dom: HTMLElement,
+  ): boolean {
+    const styleChange = $getStateChange(this, prevNode, collapsibleStyleState);
     if (styleChange) {
-      const [newStyle] = styleChange
-      dom.setAttribute('data-collapsible-style', newStyle)
+      const [newStyle] = styleChange;
+      dom.setAttribute("data-collapsible-style", newStyle);
     }
-    const radiusChange = $getStateChange(this, prevNode, borderRadiusState)
+    const radiusChange = $getStateChange(this, prevNode, borderRadiusState);
     if (radiusChange) {
-      const [newRadius] = radiusChange
-      dom.setAttribute('data-collapsible-radius', newRadius)
+      const [newRadius] = radiusChange;
+      dom.setAttribute("data-collapsible-radius", newRadius);
     }
-    const colorChange = $getStateChange(this, prevNode, collapsibleColorState)
+    const colorChange = $getStateChange(this, prevNode, collapsibleColorState);
     if (colorChange) {
-      const [newColor] = colorChange
-      dom.setAttribute('data-color', newColor)
+      const [newColor] = colorChange;
+      dom.setAttribute("data-color", newColor);
     }
-    return false
+    return false;
   }
 
   override isShadowRoot(): boolean {
-    return true
+    return true;
   }
 
-  override canBeEmpty(): boolean {
-    return false
+  override canBeEmpty(): false {
+    return false;
   }
 
   override canInsertTextBefore(): false {
-    return false
+    return false;
   }
 
   override canInsertTextAfter(): false {
-    return false
+    return false;
   }
 
   override collapseAtStart(): boolean {
-    const children = this.getChildren()
-    const paragraph = $createParagraphNode()
+    const children = this.getChildren();
+    const paragraph = $createParagraphNode();
 
     // 3-tier: Container → Item → Title/Content
     // Flatten first item's first child's children into a paragraph
     for (const child of children) {
       if ($isCollapsibleItemNode(child)) {
-        const itemChildren = child.getChildren()
+        const itemChildren = child.getChildren();
         for (const itemChild of itemChildren) {
           if ($isElementNode(itemChild)) {
-            const grandchildren = itemChild.getChildren()
+            const grandchildren = itemChild.getChildren();
             for (const grandchild of grandchildren) {
-              paragraph.append(grandchild)
+              paragraph.append(grandchild);
             }
           }
         }
-        break // Only first item
+        break; // Only first item
       }
     }
 
-    this.replace(paragraph)
-    return true
+    this.replace(paragraph);
+    return true;
   }
 }
 
@@ -195,19 +222,19 @@ export class CollapsibleContainerNode extends ElementNode {
 // =============================================================================
 
 export function $createCollapsibleContainerNode(
-  style: CollapsibleStyle = 'default',
-  radius: CollapsibleRadius = 'md',
-  color: AccentColor = 'default',
+  style: CollapsibleStyle = "default",
+  radius: CollapsibleRadius = "md",
+  color: AccentColor = "default",
 ): CollapsibleContainerNode {
-  const node = $create(CollapsibleContainerNode)
-  $setState(node, collapsibleStyleState, style)
-  $setState(node, borderRadiusState, radius)
-  $setState(node, collapsibleColorState, color)
-  return node
+  const node = $create(CollapsibleContainerNode);
+  $setState(node, collapsibleStyleState, style);
+  $setState(node, borderRadiusState, radius);
+  $setState(node, collapsibleColorState, color);
+  return node;
 }
 
 export function $isCollapsibleContainerNode(
-  node: LexicalNode | null | undefined
+  node: LexicalNode | null | undefined,
 ): node is CollapsibleContainerNode {
-  return node instanceof CollapsibleContainerNode
+  return node instanceof CollapsibleContainerNode;
 }

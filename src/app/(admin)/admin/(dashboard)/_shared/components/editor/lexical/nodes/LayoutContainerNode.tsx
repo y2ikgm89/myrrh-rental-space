@@ -109,7 +109,7 @@ export class LayoutContainerNode extends ElementNode {
   }
 
   // 空のコンテナを許可しない
-  override canBeEmpty(): boolean {
+  override canBeEmpty(): false {
     return false;
   }
 

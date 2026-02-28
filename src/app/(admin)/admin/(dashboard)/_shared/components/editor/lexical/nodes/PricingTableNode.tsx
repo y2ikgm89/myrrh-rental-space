@@ -86,7 +86,7 @@ export class PricingTableContainerNode extends ElementNode {
     return true;
   }
 
-  override canBeEmpty(): boolean {
+  override canBeEmpty(): false {
     return false;
   }
 

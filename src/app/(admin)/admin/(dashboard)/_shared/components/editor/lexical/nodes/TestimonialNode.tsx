@@ -7,7 +7,7 @@
 
 "use client";
 
-import type { DOMConversionMap, EditorConfig } from "lexical";
+import type { DOMConversionMap, EditorConfig, LexicalNode } from "lexical";
 import {
   $create,
   $getState,
@@ -121,17 +121,14 @@ export class TestimonialContainerNode extends ElementNode {
     return true;
   }
 
-  override canBeEmpty(): boolean {
+  override canBeEmpty(): false {
     return false;
   }
 
   override createDOM(_config: EditorConfig): HTMLElement {
     const div = document.createElement("div");
     div.setAttribute("data-testimonial", "");
-    div.setAttribute(
-      "data-layout",
-      $getState(this, testimonialLayoutState),
-    );
+    div.setAttribute("data-layout", $getState(this, testimonialLayoutState));
     div.setAttribute(
       "data-columns",
       String($getState(this, testimonialColumnsState)),
@@ -180,10 +177,7 @@ export class TestimonialContainerNode extends ElementNode {
   override exportDOM() {
     const div = document.createElement("div");
     div.setAttribute("data-testimonial", "");
-    div.setAttribute(
-      "data-layout",
-      $getState(this, testimonialLayoutState),
-    );
+    div.setAttribute("data-layout", $getState(this, testimonialLayoutState));
     div.setAttribute(
       "data-columns",
       String($getState(this, testimonialColumnsState)),
@@ -257,8 +251,7 @@ export class TestimonialItemNode extends ElementNode {
         return {
           conversion: (element) => {
             const authorName = element.getAttribute("data-author-name") ?? "";
-            const authorTitle =
-              element.getAttribute("data-author-title") ?? "";
+            const authorTitle = element.getAttribute("data-author-title") ?? "";
             const avatarUrl = element.getAttribute("data-avatar-url") ?? "";
             const ratingRaw = element.getAttribute("data-rating");
             const date = element.getAttribute("data-date") ?? "";
@@ -302,17 +295,11 @@ export class TestimonialItemNode extends ElementNode {
       "data-rating",
       String($getState(this, testimonialRatingState)),
     );
-    blockquote.setAttribute(
-      "data-date",
-      $getState(this, testimonialDateState),
-    );
+    blockquote.setAttribute("data-date", $getState(this, testimonialDateState));
     return blockquote;
   }
 
-  override updateDOM(
-    prevNode: TestimonialItemNode,
-    dom: HTMLElement,
-  ): boolean {
+  override updateDOM(prevNode: TestimonialItemNode, dom: HTMLElement): boolean {
     const authorNameChange = $getStateChange(
       this,
       prevNode,
@@ -376,10 +363,7 @@ export class TestimonialItemNode extends ElementNode {
       "data-rating",
       String($getState(this, testimonialRatingState)),
     );
-    blockquote.setAttribute(
-      "data-date",
-      $getState(this, testimonialDateState),
-    );
+    blockquote.setAttribute("data-date", $getState(this, testimonialDateState));
     return { element: blockquote };
   }
 
@@ -429,13 +413,13 @@ export function $createTestimonialItemNode(
 }
 
 export function $isTestimonialContainerNode(
-  node: unknown,
+  node: LexicalNode | null | undefined,
 ): node is TestimonialContainerNode {
   return node instanceof TestimonialContainerNode;
 }
 
 export function $isTestimonialItemNode(
-  node: unknown,
+  node: LexicalNode | null | undefined,
 ): node is TestimonialItemNode {
   return node instanceof TestimonialItemNode;
 }
