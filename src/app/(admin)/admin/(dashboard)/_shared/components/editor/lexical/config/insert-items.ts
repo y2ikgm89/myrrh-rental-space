@@ -8,22 +8,22 @@
  * 2. type: 'dialog' の場合は dialog-registry.ts にもエントリーを追加
  */
 
-import type { LexicalEditor, ElementNode } from 'lexical'
-import type { LucideIcon } from 'lucide-react'
+import type { ComponentType } from "react";
+import type { LexicalEditor, ElementNode } from "lexical";
 import {
   $createParagraphNode,
   $getSelection,
   $isRangeSelection,
-} from 'lexical'
-import { $createHeadingNode, $createQuoteNode } from '@lexical/rich-text'
-import { $setBlocksType } from '@lexical/selection'
+} from "lexical";
+import { $createHeadingNode, $createQuoteNode } from "@lexical/rich-text";
+import { $setBlocksType } from "@lexical/selection";
 import {
   INSERT_ORDERED_LIST_COMMAND,
   INSERT_UNORDERED_LIST_COMMAND,
   INSERT_CHECK_LIST_COMMAND,
-} from '@lexical/list'
-import { INSERT_HORIZONTAL_RULE_COMMAND } from '@lexical/react/LexicalHorizontalRuleNode'
-import { $createCodeNode } from '@lexical/code'
+} from "@lexical/list";
+import { INSERT_HORIZONTAL_RULE_COMMAND } from "@lexical/react/LexicalHorizontalRuleNode";
+import { $createCodeNode } from "@lexical/code";
 import {
   Pilcrow,
   Heading1,
@@ -65,78 +65,95 @@ import {
   LayoutGrid,
   Clock,
   Table2,
-} from 'lucide-react'
-import { applyTextCaseToSelection } from '../plugins/TextCasePlugin'
-import { INSERT_PAGE_BREAK_COMMAND } from '../plugins/PageBreakPlugin'
-import { INSERT_COLLAPSIBLE_COMMAND } from '../plugins/CollapsiblePlugin'
-import { INSERT_TOC_COMMAND } from '../plugins/TableOfContentsPlugin'
-import type { DialogId } from '../dialogs/dialog-types'
+} from "lucide-react";
+import { applyTextCaseToSelection } from "../plugins/TextCasePlugin";
+import { INSERT_PAGE_BREAK_COMMAND } from "../plugins/PageBreakPlugin";
+import { INSERT_COLLAPSIBLE_COMMAND } from "../plugins/CollapsiblePlugin";
+import { INSERT_TOC_COMMAND } from "../plugins/TableOfContentsPlugin";
+import type { DialogId } from "../dialogs/dialog-types";
 
 // =============================================================================
 // Types
 // =============================================================================
 
-export type InsertCategory = 'basic' | 'list' | 'media' | 'layout' | 'format' | 'widget' | 'other' | 'template'
+export type InsertCategory =
+  | "basic"
+  | "list"
+  | "media"
+  | "layout"
+  | "format"
+  | "widget"
+  | "other"
+  | "template";
+
+export type IconComponent = ComponentType<{
+  size?: number | string;
+  color?: string;
+  className?: string;
+}>;
 
 type InsertItemBase = {
-  id: string
-  label: string
-  icon: LucideIcon
-  keywords: readonly string[]
-  category: InsertCategory
+  id: string;
+  label: string;
+  icon: IconComponent;
+  keywords: readonly string[];
+  category: InsertCategory;
   /** Toolbar Insert メニューに表示するか */
-  showInToolbar: boolean
+  showInToolbar: boolean;
   /** ComponentPicker "/" に表示するか */
-  showInPicker: boolean
-}
+  showInPicker: boolean;
+};
 
 type DialogInsertItem = InsertItemBase & {
-  type: 'dialog'
-  dialogId: DialogId
-}
+  type: "dialog";
+  dialogId: DialogId;
+};
 
 type CommandInsertItem = InsertItemBase & {
-  type: 'command'
-  dispatch: (editor: LexicalEditor) => void
-}
+  type: "command";
+  dispatch: (editor: LexicalEditor) => void;
+};
 
 type TransformInsertItem = InsertItemBase & {
-  type: 'transform'
-  transform: (editor: LexicalEditor) => void
-}
+  type: "transform";
+  transform: (editor: LexicalEditor) => void;
+};
 
-export type InsertItem = DialogInsertItem | CommandInsertItem | TransformInsertItem
+export type InsertItem =
+  | DialogInsertItem
+  | CommandInsertItem
+  | TransformInsertItem;
 
 // =============================================================================
 // Category Labels
 // =============================================================================
 
 export const CATEGORY_LABELS: Record<InsertCategory, string> = {
-  basic: '基本ブロック',
-  list: 'リスト',
-  media: 'メディア',
-  layout: 'レイアウト',
-  format: 'テキスト変換',
-  widget: 'ウィジェット',
-  other: 'その他',
-  template: 'テンプレート',
-}
+  basic: "基本ブロック",
+  list: "リスト",
+  media: "メディア",
+  layout: "レイアウト",
+  format: "テキスト変換",
+  widget: "ウィジェット",
+  other: "その他",
+  template: "テンプレート",
+};
 
 export const CATEGORY_ORDER: readonly InsertCategory[] = [
-  'basic',
-  'list',
-  'media',
-  'layout',
-  'format',
-  'widget',
-  'other',
-  'template',
-] as const
+  "basic",
+  "list",
+  "media",
+  "layout",
+  "format",
+  "widget",
+  "other",
+  "template",
+] as const;
 
 /** セパレータを表示しないカテゴリ遷移ペア（Toolbar Insertメニューのビジュアルグループ化用） */
 export const MERGED_CATEGORY_PAIRS: ReadonlySet<string> = new Set([
-  'media→layout',
-])
+  "media→layout",
+]);
 
 // =============================================================================
 // Helpers for transform items
@@ -144,11 +161,11 @@ export const MERGED_CATEGORY_PAIRS: ReadonlySet<string> = new Set([
 
 function setBlockType(editor: LexicalEditor, createNode: () => ElementNode) {
   editor.update(() => {
-    const selection = $getSelection()
+    const selection = $getSelection();
     if ($isRangeSelection(selection)) {
-      $setBlocksType(selection, createNode)
+      $setBlocksType(selection, createNode);
     }
-  })
+  });
 }
 
 // =============================================================================
@@ -158,78 +175,78 @@ function setBlockType(editor: LexicalEditor, createNode: () => ElementNode) {
 const INSERT_ITEMS: readonly InsertItem[] = [
   // ========== 基本ブロック ==========
   {
-    id: 'paragraph',
-    type: 'transform',
-    label: '本文',
+    id: "paragraph",
+    type: "transform",
+    label: "本文",
     icon: Pilcrow,
-    keywords: ['paragraph', 'normal', 'honbun', 'text'],
-    category: 'basic',
+    keywords: ["paragraph", "normal", "honbun", "text"],
+    category: "basic",
     showInToolbar: false,
     showInPicker: true,
     transform: (editor) => setBlockType(editor, () => $createParagraphNode()),
   },
   {
-    id: 'h1',
-    type: 'transform',
-    label: '見出し1',
+    id: "h1",
+    type: "transform",
+    label: "見出し1",
     icon: Heading1,
-    keywords: ['heading', 'h1', 'midashi', 'title'],
-    category: 'basic',
+    keywords: ["heading", "h1", "midashi", "title"],
+    category: "basic",
     showInToolbar: false,
     showInPicker: true,
-    transform: (editor) => setBlockType(editor, () => $createHeadingNode('h1')),
+    transform: (editor) => setBlockType(editor, () => $createHeadingNode("h1")),
   },
   {
-    id: 'h2',
-    type: 'transform',
-    label: '見出し2',
+    id: "h2",
+    type: "transform",
+    label: "見出し2",
     icon: Heading2,
-    keywords: ['heading', 'h2', 'midashi'],
-    category: 'basic',
+    keywords: ["heading", "h2", "midashi"],
+    category: "basic",
     showInToolbar: false,
     showInPicker: true,
-    transform: (editor) => setBlockType(editor, () => $createHeadingNode('h2')),
+    transform: (editor) => setBlockType(editor, () => $createHeadingNode("h2")),
   },
   {
-    id: 'h3',
-    type: 'transform',
-    label: '見出し3',
+    id: "h3",
+    type: "transform",
+    label: "見出し3",
     icon: Heading3,
-    keywords: ['heading', 'h3', 'midashi'],
-    category: 'basic',
+    keywords: ["heading", "h3", "midashi"],
+    category: "basic",
     showInToolbar: false,
     showInPicker: true,
-    transform: (editor) => setBlockType(editor, () => $createHeadingNode('h3')),
+    transform: (editor) => setBlockType(editor, () => $createHeadingNode("h3")),
   },
   {
-    id: 'h4',
-    type: 'transform',
-    label: '見出し4',
+    id: "h4",
+    type: "transform",
+    label: "見出し4",
     icon: Heading4,
-    keywords: ['heading', 'h4', 'midashi'],
-    category: 'basic',
+    keywords: ["heading", "h4", "midashi"],
+    category: "basic",
     showInToolbar: false,
     showInPicker: true,
-    transform: (editor) => setBlockType(editor, () => $createHeadingNode('h4')),
+    transform: (editor) => setBlockType(editor, () => $createHeadingNode("h4")),
   },
   {
-    id: 'quote',
-    type: 'transform',
-    label: '引用',
+    id: "quote",
+    type: "transform",
+    label: "引用",
     icon: TextQuote,
-    keywords: ['quote', 'blockquote', 'inyou'],
-    category: 'basic',
+    keywords: ["quote", "blockquote", "inyou"],
+    category: "basic",
     showInToolbar: false,
     showInPicker: true,
     transform: (editor) => setBlockType(editor, () => $createQuoteNode()),
   },
   {
-    id: 'code',
-    type: 'transform',
-    label: 'コードブロック',
+    id: "code",
+    type: "transform",
+    label: "コードブロック",
     icon: Code,
-    keywords: ['code', 'codeblock', 'programming', 'koudo'],
-    category: 'basic',
+    keywords: ["code", "codeblock", "programming", "koudo"],
+    category: "basic",
     showInToolbar: false,
     showInPicker: true,
     transform: (editor) => setBlockType(editor, () => $createCodeNode()),
@@ -237,419 +254,465 @@ const INSERT_ITEMS: readonly InsertItem[] = [
 
   // ========== リスト ==========
   {
-    id: 'ul',
-    type: 'command',
-    label: '箇条書き',
+    id: "ul",
+    type: "command",
+    label: "箇条書き",
     icon: List,
-    keywords: ['bullet', 'list', 'ul', 'kajogaki'],
-    category: 'list',
+    keywords: ["bullet", "list", "ul", "kajogaki"],
+    category: "list",
     showInToolbar: false,
     showInPicker: true,
-    dispatch: (editor) => editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined),
+    dispatch: (editor) =>
+      editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined),
   },
   {
-    id: 'ol',
-    type: 'command',
-    label: '番号付きリスト',
+    id: "ol",
+    type: "command",
+    label: "番号付きリスト",
     icon: ListOrdered,
-    keywords: ['numbered', 'list', 'ol', 'bangou'],
-    category: 'list',
+    keywords: ["numbered", "list", "ol", "bangou"],
+    category: "list",
     showInToolbar: false,
     showInPicker: true,
-    dispatch: (editor) => editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined),
+    dispatch: (editor) =>
+      editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined),
   },
   {
-    id: 'checklist',
-    type: 'command',
-    label: 'チェックリスト',
+    id: "checklist",
+    type: "command",
+    label: "チェックリスト",
     icon: ListChecks,
-    keywords: ['check', 'todo', 'list', 'chekkurisuto', 'task'],
-    category: 'list',
+    keywords: ["check", "todo", "list", "chekkurisuto", "task"],
+    category: "list",
     showInToolbar: false,
     showInPicker: true,
-    dispatch: (editor) => editor.dispatchCommand(INSERT_CHECK_LIST_COMMAND, undefined),
+    dispatch: (editor) =>
+      editor.dispatchCommand(INSERT_CHECK_LIST_COMMAND, undefined),
   },
 
   // ========== メディア ==========
   {
-    id: 'image',
-    type: 'dialog',
-    label: '画像',
+    id: "image",
+    type: "dialog",
+    label: "画像",
     icon: ImageIcon,
-    keywords: ['image', 'photo', 'picture', 'gazou', 'img'],
-    category: 'media',
+    keywords: ["image", "photo", "picture", "gazou", "img"],
+    category: "media",
     showInToolbar: true,
     showInPicker: true,
-    dialogId: 'image',
+    dialogId: "image",
   },
   {
-    id: 'youtube',
-    type: 'dialog',
-    label: 'YouTube',
+    id: "youtube",
+    type: "dialog",
+    label: "YouTube",
     icon: Youtube,
-    keywords: ['youtube', 'video', 'embed', 'douga', 'movie'],
-    category: 'media',
+    keywords: ["youtube", "video", "embed", "douga", "movie"],
+    category: "media",
     showInToolbar: true,
     showInPicker: true,
-    dialogId: 'youtube',
+    dialogId: "youtube",
   },
   {
-    id: 'vimeo',
-    type: 'dialog',
-    label: 'Vimeo',
+    id: "vimeo",
+    type: "dialog",
+    label: "Vimeo",
     icon: Video,
-    keywords: ['vimeo', 'video', 'embed', 'douga', 'movie'],
-    category: 'media',
+    keywords: ["vimeo", "video", "embed", "douga", "movie"],
+    category: "media",
     showInToolbar: true,
     showInPicker: true,
-    dialogId: 'vimeo',
+    dialogId: "vimeo",
   },
   {
-    id: 'x',
-    type: 'dialog',
-    label: 'X (Twitter)',
+    id: "x",
+    type: "dialog",
+    label: "X (Twitter)",
     icon: Twitter,
-    keywords: ['x', 'twitter', 'tweet', 'embed', 'social', 'sns'],
-    category: 'media',
+    keywords: ["x", "twitter", "tweet", "embed", "social", "sns"],
+    category: "media",
     showInToolbar: true,
     showInPicker: true,
-    dialogId: 'x',
+    dialogId: "x",
   },
   {
-    id: 'instagram',
-    type: 'dialog',
-    label: 'Instagram',
+    id: "instagram",
+    type: "dialog",
+    label: "Instagram",
     icon: Instagram,
-    keywords: ['instagram', 'insta', 'embed', 'social', 'sns', 'photo'],
-    category: 'media',
+    keywords: ["instagram", "insta", "embed", "social", "sns", "photo"],
+    category: "media",
     showInToolbar: true,
     showInPicker: true,
-    dialogId: 'instagram',
+    dialogId: "instagram",
   },
   {
-    id: 'mapEmbed',
-    type: 'dialog',
-    label: 'Google マップ',
+    id: "mapEmbed",
+    type: "dialog",
+    label: "Google マップ",
     icon: Map,
-    keywords: ['map', 'google', 'maps', 'chizu', 'embed', 'location', 'access'],
-    category: 'media',
+    keywords: ["map", "google", "maps", "chizu", "embed", "location", "access"],
+    category: "media",
     showInToolbar: true,
     showInPicker: true,
-    dialogId: 'mapEmbed',
+    dialogId: "mapEmbed",
   },
   {
-    id: 'audio',
-    type: 'dialog',
-    label: '音声プレイヤー',
+    id: "audio",
+    type: "dialog",
+    label: "音声プレイヤー",
     icon: Volume2,
-    keywords: ['audio', '音声', 'sound', 'music', '音楽', 'podcast'],
-    category: 'media',
+    keywords: ["audio", "音声", "sound", "music", "音楽", "podcast"],
+    category: "media",
     showInToolbar: false,
     showInPicker: true,
-    dialogId: 'audio',
+    dialogId: "audio",
   },
   {
-    id: 'file',
-    type: 'dialog',
-    label: 'ファイル添付',
+    id: "file",
+    type: "dialog",
+    label: "ファイル添付",
     icon: Paperclip,
-    keywords: ['file', 'ファイル', 'download', 'ダウンロード', 'attach', '添付'],
-    category: 'media',
+    keywords: [
+      "file",
+      "ファイル",
+      "download",
+      "ダウンロード",
+      "attach",
+      "添付",
+    ],
+    category: "media",
     showInToolbar: false,
     showInPicker: true,
-    dialogId: 'file',
+    dialogId: "file",
   },
   {
-    id: 'figma',
-    type: 'dialog',
-    label: 'Figma',
+    id: "figma",
+    type: "dialog",
+    label: "Figma",
     icon: Figma,
-    keywords: ['figma', 'デザイン', 'design', 'prototype', 'プロトタイプ'],
-    category: 'media',
+    keywords: ["figma", "デザイン", "design", "prototype", "プロトタイプ"],
+    category: "media",
     showInToolbar: false,
     showInPicker: true,
-    dialogId: 'figma',
+    dialogId: "figma",
   },
   {
-    id: 'spotify',
-    type: 'dialog',
-    label: 'Spotify',
+    id: "spotify",
+    type: "dialog",
+    label: "Spotify",
     icon: Music,
-    keywords: ['spotify', '音楽', 'music', 'podcast', 'ポッドキャスト', 'track', 'playlist'],
-    category: 'media',
+    keywords: [
+      "spotify",
+      "音楽",
+      "music",
+      "podcast",
+      "ポッドキャスト",
+      "track",
+      "playlist",
+    ],
+    category: "media",
     showInToolbar: false,
     showInPicker: true,
-    dialogId: 'spotify',
+    dialogId: "spotify",
   },
   {
-    id: 'gallery',
-    type: 'dialog',
-    label: '画像ギャラリー',
+    id: "gallery",
+    type: "dialog",
+    label: "画像ギャラリー",
     icon: LayoutGrid,
-    keywords: ['gallery', 'ギャラリー', 'images', '画像', 'photos', '写真'],
-    category: 'media',
+    keywords: ["gallery", "ギャラリー", "images", "画像", "photos", "写真"],
+    category: "media",
     showInToolbar: false,
     showInPicker: true,
-    dialogId: 'gallery',
+    dialogId: "gallery",
   },
   {
-    id: 'timeline',
-    type: 'dialog',
-    label: 'タイムライン',
+    id: "timeline",
+    type: "dialog",
+    label: "タイムライン",
     icon: Clock,
-    keywords: ['timeline', 'タイムライン', 'history', '歴史', 'chronology', '年表'],
-    category: 'layout',
+    keywords: [
+      "timeline",
+      "タイムライン",
+      "history",
+      "歴史",
+      "chronology",
+      "年表",
+    ],
+    category: "layout",
     showInToolbar: false,
     showInPicker: true,
-    dialogId: 'timeline',
+    dialogId: "timeline",
   },
   {
-    id: 'pricingTable',
-    type: 'dialog',
-    label: '料金比較表',
+    id: "pricingTable",
+    type: "dialog",
+    label: "料金比較表",
     icon: Table2,
-    keywords: ['pricing', 'price', 'plan', '料金', '比較', 'table', 'プラン'],
-    category: 'layout',
+    keywords: ["pricing", "price", "plan", "料金", "比較", "table", "プラン"],
+    category: "layout",
     showInToolbar: false,
     showInPicker: true,
-    dialogId: 'pricingTable',
+    dialogId: "pricingTable",
   },
   {
-    id: 'table',
-    type: 'dialog',
-    label: 'テーブル',
+    id: "table",
+    type: "dialog",
+    label: "テーブル",
     icon: Table,
-    keywords: ['table', 'grid', 'hyou', 'excel'],
-    category: 'media',
+    keywords: ["table", "grid", "hyou", "excel"],
+    category: "media",
     showInToolbar: true,
     showInPicker: true,
-    dialogId: 'table',
+    dialogId: "table",
   },
 
   // ========== レイアウト ==========
   {
-    id: 'layout',
-    type: 'dialog',
-    label: 'カラム',
+    id: "layout",
+    type: "dialog",
+    label: "カラム",
     icon: Columns,
-    keywords: ['column', 'layout', 'grid', 'karamu', '2column', '3column'],
-    category: 'layout',
+    keywords: ["column", "layout", "grid", "karamu", "2column", "3column"],
+    category: "layout",
     showInToolbar: true,
     showInPicker: true,
-    dialogId: 'layout',
+    dialogId: "layout",
   },
   {
-    id: 'callout',
-    type: 'dialog',
-    label: 'コールアウト',
+    id: "callout",
+    type: "dialog",
+    label: "コールアウト",
     icon: AlertCircle,
-    keywords: ['callout', 'alert', 'note', 'chuui', 'info', 'warning'],
-    category: 'layout',
+    keywords: ["callout", "alert", "note", "chuui", "info", "warning"],
+    category: "layout",
     showInToolbar: true,
     showInPicker: true,
-    dialogId: 'callout',
+    dialogId: "callout",
   },
   {
-    id: 'pullQuote',
-    type: 'dialog',
-    label: 'プルクォート',
+    id: "pullQuote",
+    type: "dialog",
+    label: "プルクォート",
     icon: Quote,
-    keywords: ['pullquote', 'quote', 'inyou', 'blockquote', 'highlight'],
-    category: 'layout',
+    keywords: ["pullquote", "quote", "inyou", "blockquote", "highlight"],
+    category: "layout",
     showInToolbar: true,
     showInPicker: true,
-    dialogId: 'pullQuote',
+    dialogId: "pullQuote",
   },
   {
-    id: 'collapsible',
-    type: 'command',
-    label: '折りたたみ',
+    id: "collapsible",
+    type: "command",
+    label: "折りたたみ",
     icon: ChevronsDownUp,
-    keywords: ['collapsible', 'accordion', 'faq', 'oritakamu', 'toggle', 'details'],
-    category: 'layout',
+    keywords: [
+      "collapsible",
+      "accordion",
+      "faq",
+      "oritakamu",
+      "toggle",
+      "details",
+    ],
+    category: "layout",
     showInToolbar: true,
     showInPicker: true,
-    dispatch: (editor) => editor.dispatchCommand(INSERT_COLLAPSIBLE_COMMAND, undefined),
+    dispatch: (editor) =>
+      editor.dispatchCommand(INSERT_COLLAPSIBLE_COMMAND, undefined),
   },
   {
-    id: 'steps',
-    type: 'dialog',
-    label: 'ステップ',
+    id: "steps",
+    type: "dialog",
+    label: "ステップ",
     icon: Footprints,
-    keywords: ['steps', 'howto', 'guide', 'junban', 'tejun', 'process'],
-    category: 'layout',
+    keywords: ["steps", "howto", "guide", "junban", "tejun", "process"],
+    category: "layout",
     showInToolbar: true,
     showInPicker: true,
-    dialogId: 'steps',
+    dialogId: "steps",
   },
   {
-    id: 'tabs',
-    type: 'dialog',
-    label: 'タブ',
+    id: "tabs",
+    type: "dialog",
+    label: "タブ",
     icon: PanelTop,
-    keywords: ['tabs', 'tabu', 'switch', 'panel', 'toggle'],
-    category: 'layout',
+    keywords: ["tabs", "tabu", "switch", "panel", "toggle"],
+    category: "layout",
     showInToolbar: true,
     showInPicker: true,
-    dialogId: 'tabs',
+    dialogId: "tabs",
   },
 
   // ========== テキスト変換 ==========
   {
-    id: 'lowercase',
-    type: 'command',
-    label: '小文字',
+    id: "lowercase",
+    type: "command",
+    label: "小文字",
     icon: CaseLower,
-    keywords: ['lowercase', 'komoji', 'small', 'lower'],
-    category: 'format',
+    keywords: ["lowercase", "komoji", "small", "lower"],
+    category: "format",
     showInToolbar: false,
     showInPicker: true,
-    dispatch: (editor) => applyTextCaseToSelection(editor, 'lowercase'),
+    dispatch: (editor) => applyTextCaseToSelection(editor, "lowercase"),
   },
   {
-    id: 'uppercase',
-    type: 'command',
-    label: '大文字',
+    id: "uppercase",
+    type: "command",
+    label: "大文字",
     icon: CaseUpper,
-    keywords: ['uppercase', 'oomoji', 'capital', 'upper'],
-    category: 'format',
+    keywords: ["uppercase", "oomoji", "capital", "upper"],
+    category: "format",
     showInToolbar: false,
     showInPicker: true,
-    dispatch: (editor) => applyTextCaseToSelection(editor, 'uppercase'),
+    dispatch: (editor) => applyTextCaseToSelection(editor, "uppercase"),
   },
   {
-    id: 'capitalize',
-    type: 'command',
-    label: '先頭大文字',
+    id: "capitalize",
+    type: "command",
+    label: "先頭大文字",
     icon: CaseSensitive,
-    keywords: ['capitalize', 'sentou', 'title', 'titlecase'],
-    category: 'format',
+    keywords: ["capitalize", "sentou", "title", "titlecase"],
+    category: "format",
     showInToolbar: false,
     showInPicker: true,
-    dispatch: (editor) => applyTextCaseToSelection(editor, 'capitalize'),
+    dispatch: (editor) => applyTextCaseToSelection(editor, "capitalize"),
   },
 
   // ========== ウィジェット ==========
   {
-    id: 'button',
-    type: 'dialog',
-    label: 'ボタン',
+    id: "button",
+    type: "dialog",
+    label: "ボタン",
     icon: MousePointerClick,
-    keywords: ['button', 'cta', 'botan', 'link', 'action'],
-    category: 'widget',
+    keywords: ["button", "cta", "botan", "link", "action"],
+    category: "widget",
     showInToolbar: true,
     showInPicker: true,
-    dialogId: 'button',
+    dialogId: "button",
   },
   {
-    id: 'bookmark',
-    type: 'dialog',
-    label: 'ブックマーク',
+    id: "bookmark",
+    type: "dialog",
+    label: "ブックマーク",
     icon: Link2,
-    keywords: ['bookmark', 'ogp', 'card', 'linkcard', 'embed', 'shiori'],
-    category: 'widget',
+    keywords: ["bookmark", "ogp", "card", "linkcard", "embed", "shiori"],
+    category: "widget",
     showInToolbar: true,
     showInPicker: true,
-    dialogId: 'bookmark',
+    dialogId: "bookmark",
   },
 
   // ========== その他 ==========
   {
-    id: 'hr',
-    type: 'command',
-    label: '区切り線',
+    id: "hr",
+    type: "command",
+    label: "区切り線",
     icon: Minus,
-    keywords: ['divider', 'hr', 'horizontal', 'kugirisenn', 'line'],
-    category: 'other',
+    keywords: ["divider", "hr", "horizontal", "kugirisenn", "line"],
+    category: "other",
     showInToolbar: true,
     showInPicker: true,
-    dispatch: (editor) => editor.dispatchCommand(INSERT_HORIZONTAL_RULE_COMMAND, undefined),
+    dispatch: (editor) =>
+      editor.dispatchCommand(INSERT_HORIZONTAL_RULE_COMMAND, undefined),
   },
   {
-    id: 'toc',
-    type: 'command',
-    label: '目次',
+    id: "toc",
+    type: "command",
+    label: "目次",
     icon: ListTree,
-    keywords: ['toc', 'table of contents', 'mokuji', 'heading', 'navigation'],
-    category: 'other',
+    keywords: ["toc", "table of contents", "mokuji", "heading", "navigation"],
+    category: "other",
     showInToolbar: true,
     showInPicker: true,
     dispatch: (editor) => editor.dispatchCommand(INSERT_TOC_COMMAND, undefined),
   },
   {
-    id: 'pageBreak',
-    type: 'command',
-    label: 'ページ区切り',
+    id: "pageBreak",
+    type: "command",
+    label: "ページ区切り",
     icon: Scissors,
-    keywords: ['pagebreak', 'print', 'kukiri', 'page', 'insatsu'],
-    category: 'other',
+    keywords: ["pagebreak", "print", "kukiri", "page", "insatsu"],
+    category: "other",
     showInToolbar: true,
     showInPicker: true,
-    dispatch: (editor) => editor.dispatchCommand(INSERT_PAGE_BREAK_COMMAND, undefined),
+    dispatch: (editor) =>
+      editor.dispatchCommand(INSERT_PAGE_BREAK_COMMAND, undefined),
   },
 
   // ========== テンプレート ==========
   {
-    id: 'blockTemplateInsert',
-    type: 'dialog',
-    label: 'テンプレート挿入',
+    id: "blockTemplateInsert",
+    type: "dialog",
+    label: "テンプレート挿入",
     icon: Blocks,
-    keywords: ['template', 'block', 'tenpure-to', 'テンプレート', 'ブロック', 'saiyou'],
-    category: 'template',
+    keywords: [
+      "template",
+      "block",
+      "tenpure-to",
+      "テンプレート",
+      "ブロック",
+      "saiyou",
+    ],
+    category: "template",
     showInToolbar: true,
     showInPicker: true,
-    dialogId: 'blockTemplateInsert',
+    dialogId: "blockTemplateInsert",
   },
   {
-    id: 'blockTemplateSave',
-    type: 'dialog',
-    label: 'テンプレート保存',
+    id: "blockTemplateSave",
+    type: "dialog",
+    label: "テンプレート保存",
     icon: Save,
-    keywords: ['template', 'save', 'hozon', 'テンプレート', '保存'],
-    category: 'template',
+    keywords: ["template", "save", "hozon", "テンプレート", "保存"],
+    category: "template",
     showInToolbar: true,
     showInPicker: false,
-    dialogId: 'blockTemplateSave',
+    dialogId: "blockTemplateSave",
   },
-]
+];
 
 // =============================================================================
 // Query Functions
 // =============================================================================
 
 /** Toolbar用: showInToolbar=trueのアイテム。dialog系はopenDialogがある場合のみ含む */
-export function getToolbarInsertItems(hasDialog: boolean): readonly InsertItem[] {
+export function getToolbarInsertItems(
+  hasDialog: boolean,
+): readonly InsertItem[] {
   return INSERT_ITEMS.filter((item) => {
-    if (!item.showInToolbar) return false
-    if (item.type === 'dialog' && !hasDialog) return false
-    return true
-  })
+    if (!item.showInToolbar) return false;
+    if (item.type === "dialog" && !hasDialog) return false;
+    return true;
+  });
 }
 
 /** ComponentPicker用: showInPicker=trueのアイテム。dialog系はopenDialogがある場合のみ含む */
-export function getPickerInsertItems(hasDialog: boolean): readonly InsertItem[] {
+export function getPickerInsertItems(
+  hasDialog: boolean,
+): readonly InsertItem[] {
   return INSERT_ITEMS.filter((item) => {
-    if (!item.showInPicker) return false
-    if (item.type === 'dialog' && !hasDialog) return false
-    return true
-  })
+    if (!item.showInPicker) return false;
+    if (item.type === "dialog" && !hasDialog) return false;
+    return true;
+  });
 }
 
 /** アイテムのonSelect実行 */
 export function executeInsertItem(
   item: InsertItem,
   editor: LexicalEditor,
-  openDialog?: (id: DialogId) => void
+  openDialog?: (id: DialogId) => void,
 ): void {
   switch (item.type) {
-    case 'dialog':
-      openDialog?.(item.dialogId)
-      break
-    case 'command':
-      item.dispatch(editor)
-      break
-    case 'transform':
-      item.transform(editor)
-      break
+    case "dialog":
+      openDialog?.(item.dialogId);
+      break;
+    case "command":
+      item.dispatch(editor);
+      break;
+    case "transform":
+      item.transform(editor);
+      break;
   }
 }
