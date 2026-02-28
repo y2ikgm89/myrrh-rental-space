@@ -57,17 +57,22 @@ describe('InlineImageNode', () => {
     expect(result).toBe(true)
   })
 
-  test('default position is full and default width is 200', async () => {
+  test('default position and width are omitted from JSON (NodeState flat serialization omits defaults)', async () => {
     const editor = createEditor()
-    let pos = ''
-    let w = 0
     await editor.update(() => {
+      const para = $createParagraphNode()
       const node = $createInlineImageNode({ src: 'x', altText: '' })
-      pos = node.getPosition()
-      w = node.getWidth()
+      para.append(node)
+      $getRoot().append(para)
     })
-    expect(pos).toBe('full')
-    expect(w).toBe(200)
+    const json = editor.getEditorState().toJSON()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const nodeJson = (json.root.children[0] as any).children[0]
+    // flat: true + NodeState API はデフォルト値を JSON から省略する
+    // position: 'full' と width: 200 は省略され undefined になる
+    expect(nodeJson.position).toBeUndefined()
+    expect(nodeJson.width).toBeUndefined()
+    expect(nodeJson.src).toBe('x')
   })
 
   test('$isInlineImageNode returns false for non-InlineImageNode', async () => {
@@ -80,21 +85,23 @@ describe('InlineImageNode', () => {
     expect(result).toBe(false)
   })
 
-  test('getSrc and getAltText return correct values', async () => {
+  test('src and altText are serialized correctly', async () => {
     const editor = createEditor()
-    let src = ''
-    let altText = ''
     await editor.update(() => {
+      const para = $createParagraphNode()
       const node = $createInlineImageNode({
         src: 'https://example.com/photo.png',
         altText: 'A photo',
         position: 'right',
         width: 150,
       })
-      src = node.getSrc()
-      altText = node.getAltText()
+      para.append(node)
+      $getRoot().append(para)
     })
-    expect(src).toBe('https://example.com/photo.png')
-    expect(altText).toBe('A photo')
+    const json = editor.getEditorState().toJSON()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const nodeJson = (json.root.children[0] as any).children[0]
+    expect(nodeJson.src).toBe('https://example.com/photo.png')
+    expect(nodeJson.altText).toBe('A photo')
   })
 })

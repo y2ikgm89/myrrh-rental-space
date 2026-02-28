@@ -210,22 +210,6 @@ export class InlineImageNode extends DecoratorNode<ReactElement> {
     );
   }
 
-  // Public accessor methods
-  getPosition(): InlineImagePosition {
-    return $getState(this, inlinePositionState);
-  }
-
-  getWidth(): number {
-    return $getState(this, inlineWidthState);
-  }
-
-  getSrc(): string {
-    return $getState(this, inlineSrcState);
-  }
-
-  getAltText(): string {
-    return $getState(this, inlineAltTextState);
-  }
 }
 
 // =============================================================================

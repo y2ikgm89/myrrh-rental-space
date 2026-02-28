@@ -7,7 +7,7 @@
 "use client";
 
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { $insertNodes } from "lexical";
+import { $getSelection, $insertNodes, $isRangeSelection } from "lexical";
 import { MediaPickerDialog } from "@/admin/components/media-picker";
 import { $createInlineImageNode } from "../nodes/InlineImageNode";
 import type { SelectedMedia } from "@/admin/types/media-picker";
@@ -32,6 +32,10 @@ export function InlineImagePlugin({ isOpen, onClose }: InlineImagePluginProps) {
     if (media.length === 0) return;
 
     editor.update(() => {
+      const selection = $getSelection();
+      if ($isRangeSelection(selection)) {
+        selection.removeText();
+      }
       const nodes = media.map((m) =>
         $createInlineImageNode({
           src: m.url,
