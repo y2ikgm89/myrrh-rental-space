@@ -36,6 +36,65 @@ function getAdminLoginToken(): string {
   throw new Error("ADMIN_LOGIN_TOKEN is required in production");
 }
 
+// =============================================================================
+// CSP / Security Headers
+// =============================================================================
+
+/**
+ * セキュリティヘッダー（CSP以外）
+ * proxy.ts に一元化 — next.config.ts からは移動済み
+ */
+const SECURITY_HEADERS: ReadonlyArray<readonly [string, string]> = [
+  ["Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload"],
+  ["X-Content-Type-Options", "nosniff"],
+  ["X-Frame-Options", "DENY"],
+  ["Referrer-Policy", "strict-origin-when-cross-origin"],
+  ["Permissions-Policy", "camera=(), microphone=(), geolocation=()"],
+  ["X-DNS-Prefetch-Control", "on"],
+];
+
+/**
+ * CSP ヘッダー値をビルド（リクエスト毎に nonce を埋め込む）
+ *
+ * script-src: 'unsafe-inline' → 'nonce-${nonce}' + 'strict-dynamic'
+ * - 'strict-dynamic': nonce 付きスクリプトから動的にロードされるスクリプトも許可（GTM/GA4 対応）
+ * - 開発環境のみ 'unsafe-eval' を追加（HMR/devtools 用）
+ *
+ * style-src: 'unsafe-inline' を維持
+ * - インライン style 属性（style={{ ... }}）は nonce で保護不可のため維持
+ *
+ * @see https://nextjs.org/docs/app/guides/content-security-policy
+ */
+function buildCsp(nonce: string): string {
+  const isDev = serverEnv.NODE_ENV === "development";
+  return `
+    default-src 'self';
+    script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ""};
+    style-src 'self' 'unsafe-inline';
+    img-src 'self' data: blob: https://*.supabase.co https://img.youtube.com https://placehold.co https://images.unsplash.com;
+    font-src 'self';
+    connect-src 'self' https://*.supabase.co https://api.stripe.com https://unpkg.com https://www.google-analytics.com https://analytics.google.com${isDev ? " ws://localhost:*" : ""};
+    frame-src 'self' https://challenges.cloudflare.com https://js.stripe.com https://www.youtube.com https://player.vimeo.com https://open.spotify.com https://www.figma.com https://www.instagram.com;
+    object-src 'none';
+    base-uri 'self';
+    form-action 'self';
+    frame-ancestors 'none';
+    upgrade-insecure-requests;
+  `
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+/**
+ * セキュリティヘッダー（HSTS, X-Content-Type-Options, CSP 等）を response に適用
+ */
+function applySecurityHeaders(headers: Headers, csp: string): void {
+  for (const [key, value] of SECURITY_HEADERS) {
+    headers.set(key, value);
+  }
+  headers.set("Content-Security-Policy", csp);
+}
+
 // 投稿URLの予約済みサブパス
 const POST_RESERVED_SUBPATHS = new Set(["category", "tag"]);
 
