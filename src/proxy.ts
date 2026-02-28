@@ -234,10 +234,12 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
         url.pathname = `/posts${pathname}`;
         const requestHeaders = new Headers(req.headers);
         requestHeaders.set("x-nonce", nonce);
+        requestHeaders.set("x-pathname", pathname);
         requestHeaders.set("Content-Security-Policy", cspValue);
         const response = NextResponse.rewrite(url, {
           request: { headers: requestHeaders },
         });
+        response.headers.set("x-pathname", pathname);
         applySecurityHeaders(response.headers, cspValue);
         return response;
       }
@@ -269,10 +271,12 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
       url.pathname = `/posts/${seg2}`;
       const requestHeaders = new Headers(req.headers);
       requestHeaders.set("x-nonce", nonce);
+      requestHeaders.set("x-pathname", pathname);
       requestHeaders.set("Content-Security-Policy", cspValue);
       const response = NextResponse.rewrite(url, {
         request: { headers: requestHeaders },
       });
+      response.headers.set("x-pathname", pathname);
       applySecurityHeaders(response.headers, cspValue);
       return response;
     }
@@ -298,10 +302,12 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
         url.pathname = `/posts/${slug}`;
         const requestHeaders = new Headers(req.headers);
         requestHeaders.set("x-nonce", nonce);
+        requestHeaders.set("x-pathname", pathname);
         requestHeaders.set("Content-Security-Policy", cspValue);
         const response = NextResponse.rewrite(url, {
           request: { headers: requestHeaders },
         });
+        response.headers.set("x-pathname", pathname);
         applySecurityHeaders(response.headers, cspValue);
         return response;
       }
