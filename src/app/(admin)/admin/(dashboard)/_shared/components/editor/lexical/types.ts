@@ -53,4 +53,6 @@ export type LexicalEditorProps = {
   onAutoSave?: (json: string) => Promise<void>;
   /** オートセーブのstorageキー（LocalStorage保存用） */
   autoSaveKey?: string;
+  /** 文字数制限（指定時のみ CharacterLimitPlugin をマウント） */
+  characterLimit?: number;
 };

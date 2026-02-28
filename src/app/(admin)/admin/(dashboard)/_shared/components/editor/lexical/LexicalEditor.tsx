@@ -25,6 +25,7 @@ import { ClickableLinkPlugin } from '@lexical/react/LexicalClickableLinkPlugin'
 import { MarkdownShortcutPlugin } from '@lexical/react/LexicalMarkdownShortcutPlugin'
 import { TablePlugin } from '@lexical/react/LexicalTablePlugin'
 import { HorizontalRulePlugin } from '@lexical/react/LexicalHorizontalRulePlugin'
+import { CharacterLimitPlugin } from '@lexical/react/LexicalCharacterLimitPlugin'
 import type { EditorState, LexicalEditor as LexicalEditorType } from 'lexical'
 
 import { useMediaQuery } from '@/shared/hooks'
@@ -85,6 +86,7 @@ function EditorInner({
   contentWidthStyle,
   onAutoSave,
   autoSaveKey,
+  characterLimit,
 }: LexicalEditorProps) {
   const editorRef = useRef<LexicalEditorType | null>(null)
   const [contentWrapperRef, setContentWrapperRef] = useState<HTMLDivElement | null>(null)
@@ -230,6 +232,9 @@ function EditorInner({
         <CollapsiblePlugin />
         <EmojiPickerPlugin />
         <WordCountPlugin onUpdate={updateWordCount} />
+        {characterLimit !== undefined && (
+          <CharacterLimitPlugin charset="UTF-16" maxLength={characterLimit} />
+        )}
 
         {/* ステータスバー */}
         <StatusBar wordCount={wordCountData} saveStatus={saveStatus} />
