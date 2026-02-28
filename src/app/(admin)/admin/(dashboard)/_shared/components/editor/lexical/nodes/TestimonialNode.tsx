@@ -195,11 +195,11 @@ export class TestimonialContainerNode extends ElementNode {
     return { element: div };
   }
 
-  override canInsertTextBefore(): boolean {
+  override canInsertTextBefore(): false {
     return false;
   }
 
-  override canInsertTextAfter(): boolean {
+  override canInsertTextAfter(): false {
     return false;
   }
 }
@@ -383,11 +383,11 @@ export class TestimonialItemNode extends ElementNode {
     return { element: blockquote };
   }
 
-  override canInsertTextBefore(): boolean {
+  override canInsertTextBefore(): false {
     return false;
   }
 
-  override canInsertTextAfter(): boolean {
+  override canInsertTextAfter(): false {
     return false;
   }
 }

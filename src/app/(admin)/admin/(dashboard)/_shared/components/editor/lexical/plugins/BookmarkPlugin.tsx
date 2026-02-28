@@ -13,6 +13,7 @@ import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext
 import { $insertNodeToNearestRoot } from '@lexical/utils'
 import { COMMAND_PRIORITY_LOW, createCommand } from 'lexical'
 import { Loader2, ExternalLink, AlertCircle } from 'lucide-react'
+import { logger } from '@/shared/lib/logger'
 import { $createBookmarkNode } from '../nodes/BookmarkNode'
 import { fetchOgp } from '../../../../actions/fetch-ogp'
 import {
@@ -82,6 +83,8 @@ export function BookmarkPlugin({ isOpen, onClose }: BookmarkPluginProps) {
               })
               $insertNodeToNearestRoot(bookmarkNode)
             })
+          } else {
+            logger.warn('PasteUrlPlugin: OGP fetch failed', { url: payload.url })
           }
         })
         return true

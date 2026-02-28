@@ -189,11 +189,11 @@ export class FeatureIconListContainerNode extends ElementNode {
     return { element: ul };
   }
 
-  override canInsertTextBefore(): boolean {
+  override canInsertTextBefore(): false {
     return false;
   }
 
-  override canInsertTextAfter(): boolean {
+  override canInsertTextAfter(): false {
     return false;
   }
 }
@@ -311,11 +311,11 @@ export class FeatureIconItemNode extends ElementNode {
     return { element: li };
   }
 
-  override canInsertTextBefore(): boolean {
+  override canInsertTextBefore(): false {
     return false;
   }
 
-  override canInsertTextAfter(): boolean {
+  override canInsertTextAfter(): false {
     return false;
   }
 }
