@@ -9,24 +9,26 @@
  * - isShadowRoot()でネスト境界を形成
  */
 
+"use client";
+
 import type {
   DOMConversionMap,
   DOMConversionOutput,
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
-} from 'lexical'
-import { $create, $createParagraphNode, ElementNode } from 'lexical'
-import { $isLayoutContainerNode } from './LayoutContainerNode'
+} from "lexical";
+import { $create, $createParagraphNode, ElementNode } from "lexical";
+import { $isLayoutContainerNode } from "./LayoutContainerNode";
 
 // =============================================================================
 // Type Guard (declared early for use in class)
 // =============================================================================
 
 export function $isLayoutItemNode(
-  node: LexicalNode | null | undefined
+  node: LexicalNode | null | undefined,
 ): node is LayoutItemNode {
-  return node instanceof LayoutItemNode
+  return node instanceof LayoutItemNode;
 }
 
 // =============================================================================
@@ -34,8 +36,8 @@ export function $isLayoutItemNode(
 // =============================================================================
 
 function $convertLayoutItemElement(): DOMConversionOutput | null {
-  const node = $createLayoutItemNode()
-  return { node }
+  const node = $createLayoutItemNode();
+  return { node };
 }
 
 // =============================================================================
@@ -44,73 +46,76 @@ function $convertLayoutItemElement(): DOMConversionOutput | null {
 
 export class LayoutItemNode extends ElementNode {
   override $config() {
-    return this.config('layout-item', { extends: ElementNode })
+    return this.config("layout-item", { extends: ElementNode });
   }
 
   static override importDOM(): DOMConversionMap | null {
     return {
       div: (element: HTMLElement) => {
-        if (!element.hasAttribute('data-lexical-layout-item')) {
-          return null
+        if (!element.hasAttribute("data-lexical-layout-item")) {
+          return null;
         }
         return {
           conversion: $convertLayoutItemElement,
           priority: 2,
-        }
+        };
       },
-    }
+    };
   }
 
-  override createDOM(config: EditorConfig): HTMLElement {
-    const dom = document.createElement('div')
-    dom.setAttribute('data-lexical-layout-item', 'true')
-
-    if (config.theme['layoutItem']) {
-      dom.className = config.theme['layoutItem']
-    }
-
-    return dom
+  override createDOM(_config: EditorConfig): HTMLElement {
+    const dom = document.createElement("div");
+    dom.setAttribute("data-lexical-layout-item", "true");
+    return dom;
   }
 
   override exportDOM(): DOMExportOutput {
-    const element = document.createElement('div')
-    element.setAttribute('data-lexical-layout-item', 'true')
-    return { element }
+    const element = document.createElement("div");
+    element.setAttribute("data-lexical-layout-item", "true");
+    return { element };
   }
 
   override updateDOM(): boolean {
-    return false
+    return false;
   }
 
   // レイアウトアイテムは選択境界として機能
   override isShadowRoot(): boolean {
-    return true
+    return true;
+  }
+
+  // テキストの漏れ防止
+  override canInsertTextBefore(): false {
+    return false;
+  }
+
+  override canInsertTextAfter(): false {
+    return false;
   }
 
   // 先頭でBackspace時の挙動
   override collapseAtStart(): boolean {
-    const parent = this.getParent()
+    const parent = this.getParent();
     if (!$isLayoutContainerNode(parent)) {
-      return false
+      return false;
     }
 
-    const siblings = parent.getChildren()
-    const isFirst = siblings[0] === this
+    const siblings = parent.getChildren();
+    const isFirst = siblings[0] === this;
     const allEmpty = siblings.every(
       (sibling) =>
-        $isLayoutItemNode(sibling) &&
-        sibling.getChildren().length === 0
-    )
+        $isLayoutItemNode(sibling) && sibling.getChildren().length === 0,
+    );
 
     if (isFirst && allEmpty) {
       // 全カラムが空なら、コンテナを段落に置換
-      const paragraph = $createParagraphNode()
-      parent.replace(paragraph)
-      paragraph.select()
-      return true
+      const paragraph = $createParagraphNode();
+      parent.replace(paragraph);
+      paragraph.select();
+      return true;
     }
 
-    return false
+    return false;
   }
 }
 
@@ -119,5 +124,5 @@ export class LayoutItemNode extends ElementNode {
 // =============================================================================
 
 export function $createLayoutItemNode(): LayoutItemNode {
-  return $create(LayoutItemNode)
+  return $create(LayoutItemNode);
 }

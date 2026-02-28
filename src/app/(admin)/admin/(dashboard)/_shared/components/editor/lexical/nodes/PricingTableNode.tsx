@@ -7,7 +7,7 @@
 
 "use client";
 
-import type { DOMConversionMap, EditorConfig } from "lexical";
+import type { DOMConversionMap, EditorConfig, LexicalNode } from "lexical";
 import {
   $create,
   $getState,
@@ -16,29 +16,32 @@ import {
   createState,
   ElementNode,
 } from "lexical";
+import { parseBoolean, parseString } from "../config/type-guards";
+import { type AccentColor, isAccentColor } from "../config/accent-colors";
 
 // =============================================================================
 // PricingPlanNode States
 // =============================================================================
 
 export const planNameState = createState("name", {
-  parse: (v: unknown): string => (typeof v === "string" ? v : ""),
+  parse: parseString,
 });
 
 export const planPriceState = createState("price", {
-  parse: (v: unknown): string => (typeof v === "string" ? v : ""),
+  parse: parseString,
 });
 
 export const planPeriodState = createState("period", {
-  parse: (v: unknown): string => (typeof v === "string" ? v : ""),
+  parse: parseString,
 });
 
 export const planFeaturedState = createState("featured", {
-  parse: (v: unknown): boolean => v === true,
+  parse: parseBoolean,
 });
 
 export const planColorState = createState("color", {
-  parse: (v: unknown): string => (typeof v === "string" ? v : "default"),
+  parse: (v: unknown): AccentColor =>
+    typeof v === "string" && isAccentColor(v) ? v : "default",
 });
 
 // =============================================================================
@@ -104,11 +107,11 @@ export class PricingTableContainerNode extends ElementNode {
     return { element: div };
   }
 
-  override canInsertTextBefore(): boolean {
+  override canInsertTextBefore(): false {
     return false;
   }
 
-  override canInsertTextAfter(): boolean {
+  override canInsertTextAfter(): false {
     return false;
   }
 }
@@ -170,12 +173,13 @@ export class PricingPlanNode extends ElementNode {
           return null;
         return {
           conversion: (element) => {
+            const colorAttr = element.getAttribute("data-color") ?? "default";
             const node = $createPricingPlanNode({
               name: element.getAttribute("data-name") ?? "",
               price: element.getAttribute("data-price") ?? "",
               period: element.getAttribute("data-period") ?? "",
               featured: element.getAttribute("data-featured") === "true",
-              color: element.getAttribute("data-color") ?? "default",
+              color: isAccentColor(colorAttr) ? colorAttr : "default",
             });
             return { node };
           },
@@ -199,11 +203,11 @@ export class PricingPlanNode extends ElementNode {
     return { element: div };
   }
 
-  override canInsertTextBefore(): boolean {
+  override canInsertTextBefore(): false {
     return false;
   }
 
-  override canInsertTextAfter(): boolean {
+  override canInsertTextAfter(): false {
     return false;
   }
 }
@@ -278,11 +282,11 @@ export class PricingFeatureNode extends ElementNode {
     return { element: li };
   }
 
-  override canInsertTextBefore(): boolean {
+  override canInsertTextBefore(): false {
     return false;
   }
 
-  override canInsertTextAfter(): boolean {
+  override canInsertTextAfter(): false {
     return false;
   }
 }
@@ -301,7 +305,7 @@ export function $createPricingPlanNode(
     price?: string;
     period?: string;
     featured?: boolean;
-    color?: string;
+    color?: AccentColor;
   } = {},
 ): PricingPlanNode {
   const node = $create(PricingPlanNode);
@@ -324,17 +328,19 @@ export function $createPricingFeatureNode(
 }
 
 export function $isPricingTableContainerNode(
-  node: unknown,
+  node: LexicalNode | null | undefined,
 ): node is PricingTableContainerNode {
   return node instanceof PricingTableContainerNode;
 }
 
-export function $isPricingPlanNode(node: unknown): node is PricingPlanNode {
+export function $isPricingPlanNode(
+  node: LexicalNode | null | undefined,
+): node is PricingPlanNode {
   return node instanceof PricingPlanNode;
 }
 
 export function $isPricingFeatureNode(
-  node: unknown,
+  node: LexicalNode | null | undefined,
 ): node is PricingFeatureNode {
   return node instanceof PricingFeatureNode;
 }

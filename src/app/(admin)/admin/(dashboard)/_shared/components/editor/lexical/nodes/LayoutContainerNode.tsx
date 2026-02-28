@@ -9,7 +9,7 @@
  * - isShadowRoot()でネスト境界を形成
  */
 
-'use client'
+"use client";
 
 import type {
   DOMConversionMap,
@@ -17,29 +17,38 @@ import type {
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
-} from 'lexical'
-import { $create, $getState, $getStateChange, $setState, createState, ElementNode } from 'lexical'
+} from "lexical";
+import {
+  $create,
+  $getState,
+  $getStateChange,
+  $setState,
+  createState,
+  ElementNode,
+} from "lexical";
 
 // =============================================================================
 // State
 // =============================================================================
 
-export const templateColumnsState = createState('templateColumns', {
+export const templateColumnsState = createState("templateColumns", {
   parse: (v: unknown): string =>
-    typeof v === 'string' && v.length > 0 ? v : '1fr 1fr',
-})
+    typeof v === "string" && v.length > 0 ? v : "1fr 1fr",
+});
 
 // =============================================================================
 // DOM Conversion
 // =============================================================================
 
 function $convertLayoutContainerElement(
-  element: HTMLElement
+  element: HTMLElement,
 ): DOMConversionOutput | null {
   const templateColumns =
-    element.style.gridTemplateColumns || element.dataset['layoutTemplate'] || '1fr 1fr'
-  const node = $createLayoutContainerNode(templateColumns)
-  return { node }
+    element.style.gridTemplateColumns ||
+    element.dataset["layoutTemplate"] ||
+    "1fr 1fr";
+  const node = $createLayoutContainerNode(templateColumns);
+  return { node };
 }
 
 // =============================================================================
@@ -48,68 +57,69 @@ function $convertLayoutContainerElement(
 
 export class LayoutContainerNode extends ElementNode {
   override $config() {
-    return this.config('layout-container', {
+    return this.config("layout-container", {
       extends: ElementNode,
       stateConfigs: [{ flat: true, stateConfig: templateColumnsState }],
-    })
+    });
   }
 
   static override importDOM(): DOMConversionMap | null {
     return {
       div: (element: HTMLElement) => {
-        if (!element.hasAttribute('data-lexical-layout-container')) {
-          return null
+        if (!element.hasAttribute("data-lexical-layout-container")) {
+          return null;
         }
         return {
           conversion: $convertLayoutContainerElement,
           priority: 2,
-        }
+        };
       },
-    }
+    };
   }
 
-  override createDOM(config: EditorConfig): HTMLElement {
-    const templateColumns = $getState(this, templateColumnsState)
-    const dom = document.createElement('div')
-    dom.setAttribute('data-lexical-layout-container', 'true')
-    dom.style.gridTemplateColumns = templateColumns
-
-    if (config.theme['layoutContainer']) {
-      dom.className = config.theme['layoutContainer']
-    }
-
-    return dom
+  override createDOM(_config: EditorConfig): HTMLElement {
+    const templateColumns = $getState(this, templateColumnsState);
+    const dom = document.createElement("div");
+    dom.setAttribute("data-lexical-layout-container", "true");
+    dom.style.gridTemplateColumns = templateColumns;
+    return dom;
   }
 
   override exportDOM(): DOMExportOutput {
-    const templateColumns = $getState(this, templateColumnsState)
-    const element = document.createElement('div')
-    element.setAttribute('data-lexical-layout-container', 'true')
-    element.setAttribute('data-layout-template', templateColumns)
-    element.style.gridTemplateColumns = templateColumns
-    return { element }
+    const templateColumns = $getState(this, templateColumnsState);
+    const element = document.createElement("div");
+    element.setAttribute("data-lexical-layout-container", "true");
+    element.setAttribute("data-layout-template", templateColumns);
+    element.style.gridTemplateColumns = templateColumns;
+    return { element };
   }
 
-  override updateDOM(
-    prevNode: LayoutContainerNode,
-    dom: HTMLElement
-  ): boolean {
-    const change = $getStateChange(this, prevNode, templateColumnsState)
+  override updateDOM(prevNode: LayoutContainerNode, dom: HTMLElement): boolean {
+    const change = $getStateChange(this, prevNode, templateColumnsState);
     if (change) {
-      const [newColumns] = change
-      dom.style.gridTemplateColumns = newColumns
+      const [newColumns] = change;
+      dom.style.gridTemplateColumns = newColumns;
     }
-    return false
+    return false;
   }
 
   // レイアウトコンテナは選択境界として機能
   override isShadowRoot(): boolean {
-    return true
+    return true;
   }
 
   // 空のコンテナを許可しない
   override canBeEmpty(): boolean {
-    return false
+    return false;
+  }
+
+  // テキストの漏れ防止
+  override canInsertTextBefore(): false {
+    return false;
+  }
+
+  override canInsertTextAfter(): false {
+    return false;
   }
 }
 
@@ -118,13 +128,17 @@ export class LayoutContainerNode extends ElementNode {
 // =============================================================================
 
 export function $createLayoutContainerNode(
-  templateColumns: string = '1fr 1fr'
+  templateColumns: string = "1fr 1fr",
 ): LayoutContainerNode {
-  return $setState($create(LayoutContainerNode), templateColumnsState, templateColumns)
+  return $setState(
+    $create(LayoutContainerNode),
+    templateColumnsState,
+    templateColumns,
+  );
 }
 
 export function $isLayoutContainerNode(
-  node: LexicalNode | null | undefined
+  node: LexicalNode | null | undefined,
 ): node is LayoutContainerNode {
-  return node instanceof LayoutContainerNode
+  return node instanceof LayoutContainerNode;
 }

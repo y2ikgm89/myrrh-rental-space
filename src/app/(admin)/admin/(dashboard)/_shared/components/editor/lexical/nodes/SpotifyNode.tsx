@@ -11,6 +11,7 @@ import type {
   DOMConversionMap,
   DOMExportOutput,
   EditorConfig,
+  LexicalNode,
   NodeKey,
 } from "lexical";
 import {
@@ -226,6 +227,8 @@ export function $createSpotifyNode(params: {
  * @param node - 判定対象のノード
  * @returns SpotifyNode の場合 true
  */
-export function $isSpotifyNode(node: unknown): node is SpotifyNode {
+export function $isSpotifyNode(
+  node: LexicalNode | null | undefined,
+): node is SpotifyNode {
   return node instanceof SpotifyNode;
 }

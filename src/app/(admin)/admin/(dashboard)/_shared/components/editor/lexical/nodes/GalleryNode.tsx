@@ -7,7 +7,7 @@
 
 "use client";
 
-import type { DOMConversionMap, EditorConfig } from "lexical";
+import type { DOMConversionMap, EditorConfig, LexicalNode } from "lexical";
 import {
   $create,
   $getState,
@@ -86,6 +86,10 @@ export class GalleryContainerNode extends ElementNode {
     return true;
   }
 
+  override canBeEmpty(): false {
+    return false;
+  }
+
   override createDOM(_config: EditorConfig): HTMLElement {
     const div = document.createElement("div");
     div.setAttribute("data-gallery", "true");
@@ -125,11 +129,11 @@ export class GalleryContainerNode extends ElementNode {
     return { element: div };
   }
 
-  override canInsertTextBefore(): boolean {
+  override canInsertTextBefore(): false {
     return false;
   }
 
-  override canInsertTextAfter(): boolean {
+  override canInsertTextAfter(): false {
     return false;
   }
 }
@@ -225,11 +229,11 @@ export class GalleryItemNode extends ElementNode {
     return { element: figure };
   }
 
-  override canInsertTextBefore(): boolean {
+  override canInsertTextBefore(): false {
     return false;
   }
 
-  override canInsertTextAfter(): boolean {
+  override canInsertTextAfter(): false {
     return false;
   }
 }
@@ -262,11 +266,13 @@ export function $createGalleryItemNode(
 }
 
 export function $isGalleryContainerNode(
-  node: unknown,
+  node: LexicalNode | null | undefined,
 ): node is GalleryContainerNode {
   return node instanceof GalleryContainerNode;
 }
 
-export function $isGalleryItemNode(node: unknown): node is GalleryItemNode {
+export function $isGalleryItemNode(
+  node: LexicalNode | null | undefined,
+): node is GalleryItemNode {
   return node instanceof GalleryItemNode;
 }

@@ -101,20 +101,11 @@ export const editorTheme: EditorThemeClasses = {
   tableCellSelected: "bg-primary/10",
   tableSelected: "outline outline-2 outline-primary",
 
-  // カスタムノード（createDOMでdata-attributesのみ使用するノードはテーマ不要）
-  tableOfContents: "my-6",
-
   // 区切り線 (HorizontalRule)
   // 公式Lexical Playgroundパターン: 疑似要素で線を描画
   // pt-2 でドラッグハンドルアイコン（20px）の中心（10px）付近に線を配置
   hr: "pt-2 pb-0.5 border-none my-8 cursor-pointer after:content-[''] after:block after:h-0.5 after:bg-border",
   hrSelected: "outline outline-2 outline-primary select-none",
-
-  // レイアウト
-  layoutContainer:
-    "my-6 rounded-lg border border-dashed border-muted-foreground/30 p-3",
-  layoutItem:
-    "min-h-[60px] p-3 rounded border border-transparent hover:border-muted-foreground/20",
 
   // マーク（コメント用）
   // 公式推奨: @lexical/mark の MarkNode 用スタイル

@@ -7,7 +7,7 @@
 
 "use client";
 
-import type { DOMConversionMap, EditorConfig } from "lexical";
+import type { DOMConversionMap, EditorConfig, LexicalNode } from "lexical";
 import {
   $create,
   $getState,
@@ -16,6 +16,8 @@ import {
   createState,
   ElementNode,
 } from "lexical";
+import { parseString } from "../config/type-guards";
+import { type AccentColor, isAccentColor } from "../config/accent-colors";
 
 // =============================================================================
 // Types
@@ -33,7 +35,8 @@ export const timelineDirectionState = createState("direction", {
 });
 
 export const timelineColorState = createState("color", {
-  parse: (v: unknown): string => (typeof v === "string" ? v : "default"),
+  parse: (v: unknown): AccentColor =>
+    typeof v === "string" && isAccentColor(v) ? v : "default",
 });
 
 // =============================================================================
@@ -62,10 +65,10 @@ export class TimelineContainerNode extends ElementNode {
         return {
           conversion: (element) => {
             const direction = element.getAttribute("data-direction");
-            const color = element.getAttribute("data-color");
+            const colorAttr = element.getAttribute("data-color") ?? "default";
             const node = $createTimelineContainerNode(
               direction === "horizontal" ? "horizontal" : "vertical",
-              color ?? "default",
+              isAccentColor(colorAttr) ? colorAttr : "default",
             );
             return { node };
           },
@@ -112,11 +115,15 @@ export class TimelineContainerNode extends ElementNode {
     return { element: div };
   }
 
-  override canInsertTextBefore(): boolean {
+  override canBeEmpty(): false {
     return false;
   }
 
-  override canInsertTextAfter(): boolean {
+  override canInsertTextBefore(): false {
+    return false;
+  }
+
+  override canInsertTextAfter(): false {
     return false;
   }
 }
@@ -126,11 +133,11 @@ export class TimelineContainerNode extends ElementNode {
 // =============================================================================
 
 export const timelineYearState = createState("year", {
-  parse: (v: unknown): string => (typeof v === "string" ? v : ""),
+  parse: parseString,
 });
 
 export const timelineLabelState = createState("label", {
-  parse: (v: unknown): string => (typeof v === "string" ? v : ""),
+  parse: parseString,
 });
 
 // =============================================================================
@@ -195,11 +202,11 @@ export class TimelineItemNode extends ElementNode {
     return { element: div };
   }
 
-  override canInsertTextBefore(): boolean {
+  override canInsertTextBefore(): false {
     return false;
   }
 
-  override canInsertTextAfter(): boolean {
+  override canInsertTextAfter(): false {
     return false;
   }
 }
@@ -210,7 +217,7 @@ export class TimelineItemNode extends ElementNode {
 
 export function $createTimelineContainerNode(
   direction: TimelineDirection = "vertical",
-  color = "default",
+  color: AccentColor = "default",
 ): TimelineContainerNode {
   const node = $create(TimelineContainerNode);
   $setState(node, timelineDirectionState, direction);
@@ -231,11 +238,13 @@ export function $createTimelineItemNode(
 }
 
 export function $isTimelineContainerNode(
-  node: unknown,
+  node: LexicalNode | null | undefined,
 ): node is TimelineContainerNode {
   return node instanceof TimelineContainerNode;
 }
 
-export function $isTimelineItemNode(node: unknown): node is TimelineItemNode {
+export function $isTimelineItemNode(
+  node: LexicalNode | null | undefined,
+): node is TimelineItemNode {
   return node instanceof TimelineItemNode;
 }
