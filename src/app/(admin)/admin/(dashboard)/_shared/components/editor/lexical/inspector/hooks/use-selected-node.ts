@@ -12,11 +12,12 @@
  * @module
  */
 
-'use client'
+"use client";
 
-import { useEffect, useEffectEvent, useState } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
+import { useEffect, useEffectEvent, useState } from "react";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
+  $getNodeByKey,
   $getSelection,
   $isNodeSelection,
   $isRangeSelection,
@@ -24,19 +25,21 @@ import {
   mergeRegister,
   COMMAND_PRIORITY_LOW,
   type LexicalNode,
-} from 'lexical'
+} from "lexical";
+import { $isTableSelection } from "@lexical/table";
+import { $isCustomTableNode } from "../../nodes/CustomTableNode";
 
 import {
   getInspectableInfo,
   type SelectedNodeInfo,
   type InspectableNodeType,
-} from './inspectable-nodes'
+} from "./inspectable-nodes";
 
 // =============================================================================
 // Re-exports
 // =============================================================================
 
-export type { SelectedNodeInfo, InspectableNodeType }
+export type { SelectedNodeInfo, InspectableNodeType };
 
 // =============================================================================
 // Hook
@@ -74,52 +77,65 @@ export type { SelectedNodeInfo, InspectableNodeType }
  * ```
  */
 export function useSelectedNode(): SelectedNodeInfo {
-  const [editor] = useLexicalComposerContext()
-  const [selectedNode, setSelectedNode] = useState<SelectedNodeInfo>(null)
+  const [editor] = useLexicalComposerContext();
+  const [selectedNode, setSelectedNode] = useState<SelectedNodeInfo>(null);
 
   /**
    * 選択状態を読み取り、インスペクター対象ノードを特定する
    */
   const updateSelectedNode = useEffectEvent(() => {
     editor.getEditorState().read(() => {
-      const selection = $getSelection()
+      const selection = $getSelection();
 
       // NodeSelection: DecoratorNode（Button, Image等）が選択された場合
       if ($isNodeSelection(selection)) {
-        const nodes = selection.getNodes()
-        const singleNode = nodes.length === 1 ? nodes[0] : undefined
+        const nodes = selection.getNodes();
+        const singleNode = nodes.length === 1 ? nodes[0] : undefined;
         if (singleNode) {
-          const info = getInspectableInfo(singleNode)
+          const info = getInspectableInfo(singleNode);
           if (info) {
-            setSelectedNode(info)
-            return
+            setSelectedNode(info);
+            return;
           }
+        }
+      }
+
+      // TableSelection: セル範囲選択時はテーブルノードをインスペクト
+      if ($isTableSelection(selection)) {
+        const tableNode = $getNodeByKey(selection.tableKey);
+        if ($isCustomTableNode(tableNode)) {
+          setSelectedNode({
+            nodeType: "table",
+            node: tableNode,
+            nodeKey: tableNode.getKey(),
+          });
+          return;
         }
       }
 
       // RangeSelection: ElementNode（Callout等）内にカーソルがある場合
       if ($isRangeSelection(selection)) {
-        const anchorNode = selection.anchor.getNode()
+        const anchorNode = selection.anchor.getNode();
         // 親をたどってInspectableNodeを探す
-        let current: LexicalNode | null = anchorNode
+        let current: LexicalNode | null = anchorNode;
         while (current !== null) {
-          const info = getInspectableInfo(current)
+          const info = getInspectableInfo(current);
           if (info) {
-            setSelectedNode(info)
-            return
+            setSelectedNode(info);
+            return;
           }
-          current = current.getParent()
+          current = current.getParent();
         }
       }
 
       // 該当なし
-      setSelectedNode(null)
-    })
-  })
+      setSelectedNode(null);
+    });
+  });
 
   useEffect(() => {
     // 初回実行
-    updateSelectedNode()
+    updateSelectedNode();
 
     // リスナー登録
     // - SELECTION_CHANGE_COMMAND: 選択が変わった時
@@ -128,16 +144,16 @@ export function useSelectedNode(): SelectedNodeInfo {
       editor.registerCommand(
         SELECTION_CHANGE_COMMAND,
         () => {
-          updateSelectedNode()
-          return false // 他のハンドラにも伝播させる
+          updateSelectedNode();
+          return false; // 他のハンドラにも伝播させる
         },
-        COMMAND_PRIORITY_LOW
+        COMMAND_PRIORITY_LOW,
       ),
       editor.registerUpdateListener(() => {
-        updateSelectedNode()
-      })
-    )
-  }, [editor])
+        updateSelectedNode();
+      }),
+    );
+  }, [editor]);
 
-  return selectedNode
+  return selectedNode;
 }

@@ -4,9 +4,12 @@
  * @description 選択中ノードのプロパティ編集サイドバー
  */
 
-'use client'
+"use client";
 
-import { useSelectedNode, type SelectedNodeInfo } from './hooks/use-selected-node'
+import {
+  useSelectedNode,
+  type SelectedNodeInfo,
+} from "./hooks/use-selected-node";
 import {
   ButtonInspectorPanel,
   ImageInspectorPanel,
@@ -40,8 +43,10 @@ import {
   FeatureIconListContainerInspectorPanel,
   FeatureIconListItemInspectorPanel,
   CoverInspectorPanel,
-} from './panels'
-import { Settings2 } from 'lucide-react'
+  TableInspectorPanel,
+  TableCellInspectorPanel,
+} from "./panels";
+import { Settings2 } from "lucide-react";
 
 // =============================================================================
 // Panel Renderer
@@ -51,73 +56,125 @@ import { Settings2 } from 'lucide-react'
  * Discriminated Unionにより型ガードなしで型安全にパネルをレンダリング
  */
 function renderPanel(info: SelectedNodeInfo) {
-  if (!info) return null
+  if (!info) return null;
 
   switch (info.nodeType) {
-    case 'button':
-      return <ButtonInspectorPanel nodeKey={info.nodeKey} node={info.node} />
-    case 'image':
-      return <ImageInspectorPanel nodeKey={info.nodeKey} node={info.node} />
-    case 'callout':
-      return <CalloutInspectorPanel nodeKey={info.nodeKey} node={info.node} />
-    case 'bookmark':
-      return <BookmarkInspectorPanel nodeKey={info.nodeKey} node={info.node} />
-    case 'pullQuote':
-      return <PullQuoteInspectorPanel nodeKey={info.nodeKey} node={info.node} />
-    case 'collapsible':
-      return <CollapsibleInspectorPanel nodeKey={info.nodeKey} node={info.node} />
-    case 'steps':
-      return <StepsInspectorPanel nodeKey={info.nodeKey} node={info.node} />
-    case 'tabs':
-      return <TabsInspectorPanel nodeKey={info.nodeKey} node={info.node} />
-    case 'layout':
-      return <LayoutInspectorPanel nodeKey={info.nodeKey} node={info.node} />
-    case 'youtube':
-      return <YouTubeInspectorPanel nodeKey={info.nodeKey} node={info.node} />
-    case 'vimeo':
-      return <VimeoInspectorPanel nodeKey={info.nodeKey} node={info.node} />
-    case 'x':
-      return <XInspectorPanel nodeKey={info.nodeKey} node={info.node} />
-    case 'instagram':
-      return <InstagramInspectorPanel nodeKey={info.nodeKey} node={info.node} />
-    case 'pageBreak':
-      return <PageBreakInspectorPanel />
-    case 'mapEmbed':
-      return <MapEmbedInspectorPanel nodeKey={info.nodeKey} node={info.node} />
-    case 'code':
-      return <CodeInspectorPanel nodeKey={info.nodeKey} node={info.node} />
-    case 'audio':
-      return <AudioInspectorPanel nodeKey={info.nodeKey} node={info.node} />
-    case 'file':
-      return <FileInspectorPanel nodeKey={info.nodeKey} node={info.node} />
-    case 'figma':
-      return <FigmaInspectorPanel nodeKey={info.nodeKey} node={info.node} />
-    case 'spotify':
-      return <SpotifyInspectorPanel nodeKey={info.nodeKey} node={info.node} />
-    case 'galleryContainer':
-      return <GalleryContainerInspectorPanel nodeKey={info.nodeKey} node={info.node} />
-    case 'galleryItem':
-      return <GalleryItemInspectorPanel nodeKey={info.nodeKey} node={info.node} />
-    case 'timelineContainer':
-      return <TimelineContainerInspectorPanel nodeKey={info.nodeKey} node={info.node} />
-    case 'timelineItem':
-      return <TimelineItemInspectorPanel nodeKey={info.nodeKey} node={info.node} />
-    case 'pricingPlan':
-      return <PricingPlanInspectorPanel nodeKey={info.nodeKey} node={info.node} />
-    case 'pricingFeature':
-      return <PricingFeatureInspectorPanel nodeKey={info.nodeKey} node={info.node} />
-    case 'inlineImage':
-      return <InlineImageInspectorPanel nodeKey={info.nodeKey} node={info.node} />
-    case 'testimonialContainer':
-      return <TestimonialContainerInspectorPanel nodeKey={info.nodeKey} node={info.node} />
-    case 'testimonialItem':
-      return <TestimonialItemInspectorPanel nodeKey={info.nodeKey} node={info.node} />
-    case 'featureIconListContainer':
-      return <FeatureIconListContainerInspectorPanel nodeKey={info.nodeKey} node={info.node} />
-    case 'featureIconItem':
-      return <FeatureIconListItemInspectorPanel nodeKey={info.nodeKey} node={info.node} />
-    case 'cover':
-      return <CoverInspectorPanel nodeKey={info.nodeKey} node={info.node} />
+    case "button":
+      return <ButtonInspectorPanel nodeKey={info.nodeKey} node={info.node} />;
+    case "image":
+      return <ImageInspectorPanel nodeKey={info.nodeKey} node={info.node} />;
+    case "callout":
+      return <CalloutInspectorPanel nodeKey={info.nodeKey} node={info.node} />;
+    case "bookmark":
+      return <BookmarkInspectorPanel nodeKey={info.nodeKey} node={info.node} />;
+    case "pullQuote":
+      return (
+        <PullQuoteInspectorPanel nodeKey={info.nodeKey} node={info.node} />
+      );
+    case "collapsible":
+      return (
+        <CollapsibleInspectorPanel nodeKey={info.nodeKey} node={info.node} />
+      );
+    case "steps":
+      return <StepsInspectorPanel nodeKey={info.nodeKey} node={info.node} />;
+    case "tabs":
+      return <TabsInspectorPanel nodeKey={info.nodeKey} node={info.node} />;
+    case "layout":
+      return <LayoutInspectorPanel nodeKey={info.nodeKey} node={info.node} />;
+    case "youtube":
+      return <YouTubeInspectorPanel nodeKey={info.nodeKey} node={info.node} />;
+    case "vimeo":
+      return <VimeoInspectorPanel nodeKey={info.nodeKey} node={info.node} />;
+    case "x":
+      return <XInspectorPanel nodeKey={info.nodeKey} node={info.node} />;
+    case "instagram":
+      return (
+        <InstagramInspectorPanel nodeKey={info.nodeKey} node={info.node} />
+      );
+    case "pageBreak":
+      return <PageBreakInspectorPanel />;
+    case "mapEmbed":
+      return <MapEmbedInspectorPanel nodeKey={info.nodeKey} node={info.node} />;
+    case "code":
+      return <CodeInspectorPanel nodeKey={info.nodeKey} node={info.node} />;
+    case "audio":
+      return <AudioInspectorPanel nodeKey={info.nodeKey} node={info.node} />;
+    case "file":
+      return <FileInspectorPanel nodeKey={info.nodeKey} node={info.node} />;
+    case "figma":
+      return <FigmaInspectorPanel nodeKey={info.nodeKey} node={info.node} />;
+    case "spotify":
+      return <SpotifyInspectorPanel nodeKey={info.nodeKey} node={info.node} />;
+    case "galleryContainer":
+      return (
+        <GalleryContainerInspectorPanel
+          nodeKey={info.nodeKey}
+          node={info.node}
+        />
+      );
+    case "galleryItem":
+      return (
+        <GalleryItemInspectorPanel nodeKey={info.nodeKey} node={info.node} />
+      );
+    case "timelineContainer":
+      return (
+        <TimelineContainerInspectorPanel
+          nodeKey={info.nodeKey}
+          node={info.node}
+        />
+      );
+    case "timelineItem":
+      return (
+        <TimelineItemInspectorPanel nodeKey={info.nodeKey} node={info.node} />
+      );
+    case "pricingPlan":
+      return (
+        <PricingPlanInspectorPanel nodeKey={info.nodeKey} node={info.node} />
+      );
+    case "pricingFeature":
+      return (
+        <PricingFeatureInspectorPanel nodeKey={info.nodeKey} node={info.node} />
+      );
+    case "inlineImage":
+      return (
+        <InlineImageInspectorPanel nodeKey={info.nodeKey} node={info.node} />
+      );
+    case "testimonialContainer":
+      return (
+        <TestimonialContainerInspectorPanel
+          nodeKey={info.nodeKey}
+          node={info.node}
+        />
+      );
+    case "testimonialItem":
+      return (
+        <TestimonialItemInspectorPanel
+          nodeKey={info.nodeKey}
+          node={info.node}
+        />
+      );
+    case "featureIconListContainer":
+      return (
+        <FeatureIconListContainerInspectorPanel
+          nodeKey={info.nodeKey}
+          node={info.node}
+        />
+      );
+    case "featureIconItem":
+      return (
+        <FeatureIconListItemInspectorPanel
+          nodeKey={info.nodeKey}
+          node={info.node}
+        />
+      );
+    case "cover":
+      return <CoverInspectorPanel nodeKey={info.nodeKey} node={info.node} />;
+    case "table":
+      return <TableInspectorPanel nodeKey={info.nodeKey} node={info.node} />;
+    case "tableCell":
+      return (
+        <TableCellInspectorPanel nodeKey={info.nodeKey} node={info.node} />
+      );
   }
 }
 
@@ -126,12 +183,14 @@ function renderPanel(info: SelectedNodeInfo) {
 // =============================================================================
 
 export function InspectorSidebar() {
-  const selectedNode = useSelectedNode()
+  const selectedNode = useSelectedNode();
 
   return (
     <div className="w-64 border-l border-border bg-background flex flex-col h-full">
       {selectedNode ? (
-        <div className="flex-1 overflow-y-auto">{renderPanel(selectedNode)}</div>
+        <div className="flex-1 overflow-y-auto">
+          {renderPanel(selectedNode)}
+        </div>
       ) : (
         <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-4">
           <Settings2 className="h-8 w-8 mb-2 opacity-50" />
@@ -143,5 +202,5 @@ export function InspectorSidebar() {
         </div>
       )}
     </div>
-  )
+  );
 }
