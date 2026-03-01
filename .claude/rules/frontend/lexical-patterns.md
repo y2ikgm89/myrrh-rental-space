@@ -16,7 +16,7 @@ paths:
 
 | 技術           | バージョン         | 互換性                               |
 | -------------- | ------------------ | ------------------------------------ |
-| Lexical        | 0.40.0             | React 17+対応                        |
+| Lexical        | 0.41.x             | React 17+対応                        |
 | React          | 19.2.4             | ✅ peerDependencies対応              |
 | React Compiler | 1.0.0              | ✅ 自動メモ化（useCallback基本不要） |
 | Turbopack      | Next.js 16 default | ✅ optimizePackageImports設定済み    |
@@ -707,17 +707,18 @@ editor.update(() => {
 
 ノード + プラグイン + インスペクターパネルをフル追加する場合の登録箇所（合計 9 箇所）:
 
-| ファイル                               | 内容                                       | 必須条件                          |
-| -------------------------------------- | ------------------------------------------ | --------------------------------- |
-| `config/nodes.ts`                      | `EDITOR_NODES` に追加                      | 全ノード                          |
-| `nodes/index.ts`                       | barrel export                              | 全ノード                          |
-| `config/dialog-registry.ts`            | `REGISTRY_DIALOG_IDS` + `DIALOG_REGISTRY`  | Dialog 使用時                     |
-| `config/insert-items.ts`               | `INSERT_ITEMS`                             | ツールバー/ピッカーに表示する場合 |
-| `plugins/index.ts`                     | Plugin export                              | Plugin あり                       |
-| `config/inspector-registry.ts`         | `getInspectableInfoFromRegistry`           | Inspector あり                    |
-| `inspector/hooks/inspectable-nodes.ts` | `InspectableNodeType` + `SelectedNodeInfo` | Inspector あり                    |
-| `inspector/InspectorSidebar.tsx`       | switch case                                | Inspector あり                    |
-| `inspector/panels/index.ts`            | Panel export                               | Inspector あり                    |
+| ファイル                                       | 内容                                       | 必須条件                                       |
+| ---------------------------------------------- | ------------------------------------------ | ---------------------------------------------- |
+| `config/nodes.ts`                              | `EDITOR_NODES` に追加                      | 全ノード                                       |
+| `nodes/index.ts`                               | barrel export                              | 全ノード                                       |
+| `config/dialog-registry.ts`                    | `REGISTRY_DIALOG_IDS` + `DIALOG_REGISTRY`  | Dialog 使用時                                  |
+| `config/insert-items.ts`                       | `INSERT_ITEMS`                             | ツールバー/ピッカーに表示する場合              |
+| `plugins/index.ts`                             | Plugin export                              | Plugin あり                                    |
+| `config/inspector-registry.ts`                 | `getInspectableInfoFromRegistry`           | Inspector あり                                 |
+| `inspector/hooks/inspectable-nodes.ts`         | `InspectableNodeType` + `SelectedNodeInfo` | Inspector あり                                 |
+| `inspector/InspectorSidebar.tsx`               | switch case                                | Inspector あり                                 |
+| `inspector/panels/index.ts`                    | Panel export                               | Inspector あり                                 |
+| `__tests__/unit/.../inspectable-nodes.test.ts` | カウントと `expectedTypes` を更新          | Inspector あり（`InspectableNodeType` 追加時） |
 
 **ポイント**: FloatingToolbar 経由で開くインラインノード（Ruby / Tooltip 等）は `INSERT_ITEMS` 不要だが `dialog-registry` への登録は必要。登録漏れは型エラーではなく実行時に無音で失敗するため注意。
 
