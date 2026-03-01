@@ -124,7 +124,7 @@ async function main() {
         prisma.news
           .update({
             where: { id },
-            data: { contentJson: content as Prisma.JsonValue },
+            data: { contentJson: content as Prisma.InputJsonValue },
           })
           .then(() => undefined),
     );
@@ -147,7 +147,7 @@ async function main() {
         prisma.newsVersion
           .update({
             where: { id },
-            data: { contentJson: content as Prisma.JsonValue },
+            data: { contentJson: content as Prisma.InputJsonValue },
           })
           .then(() => undefined),
     );
@@ -170,7 +170,7 @@ async function main() {
         prisma.post
           .update({
             where: { id },
-            data: { contentJson: content as Prisma.JsonValue },
+            data: { contentJson: content as Prisma.InputJsonValue },
           })
           .then(() => undefined),
     );
@@ -193,7 +193,7 @@ async function main() {
         prisma.postVersion
           .update({
             where: { id },
-            data: { contentJson: content as Prisma.JsonValue },
+            data: { contentJson: content as Prisma.InputJsonValue },
           })
           .then(() => undefined),
     );
@@ -216,7 +216,7 @@ async function main() {
         prisma.section
           .update({
             where: { id },
-            data: { contentJson: content as Prisma.JsonValue },
+            data: { contentJson: content as Prisma.InputJsonValue },
           })
           .then(() => undefined),
     );
@@ -239,7 +239,7 @@ async function main() {
         prisma.faqItem
           .update({
             where: { id },
-            data: { answerJson: content as Prisma.JsonValue },
+            data: { answerJson: content as Prisma.InputJsonValue },
           })
           .then(() => undefined),
     );
@@ -262,7 +262,7 @@ async function main() {
         prisma.termsVersion
           .update({
             where: { id },
-            data: { contentJson: content as Prisma.JsonValue },
+            data: { contentJson: content as Prisma.InputJsonValue },
           })
           .then(() => undefined),
     );
