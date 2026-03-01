@@ -700,7 +700,7 @@ editor.update(() => {
 });
 ```
 
-21. **`TableCellResizerPlugin` は @lexical/react 0.40.0 に存在しない**: 使用禁止。`<TablePlugin hasCellMerge={true} hasCellBackgroundColor={true} />` が現バージョンのテーブル強化の上限
+21. **`TableCellResizerPlugin` は @lexical/react 0.41.x に存在しない**: 使用禁止。`<TablePlugin hasCellMerge={true} hasCellBackgroundColor={true} />` が現バージョンのテーブル強化の上限
 22. **`exportDOM` 定義時に `importDOM` 省略禁止**: `exportDOM` を定義したすべてのノードは `static override importDOM(): DOMConversionMap | null` も必ず実装する。省略すると Lexical dev-mode が `exportDOM implemented without matching importDOM` を警告し続ける
 
 ## 新規ノード登録チェックリスト
