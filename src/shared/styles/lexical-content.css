@@ -1324,3 +1324,21 @@ details[data-collapsible-item]
   text-decoration: underline dotted;
   cursor: help;
 }
+
+/* --------------------------------------------------------------------------
+ * CustomTableNode (data-table-style)
+ *
+ * data-table-style="stripes": 偶数行に縞模様背景色を適用
+ * --table-border-color / --table-border-width: 枠線 CSS 変数（inline style 経由）
+ * -------------------------------------------------------------------------- */
+
+[data-table-style="stripes"] tbody tr:nth-child(even) td {
+  background-color: var(--color-muted);
+}
+
+table[style*="--table-border-color"] td,
+table[style*="--table-border-color"] th {
+  border-color: var(--table-border-color);
+  border-width: var(--table-border-width, 1px);
+  border-style: solid;
+}
