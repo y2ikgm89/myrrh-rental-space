@@ -4,46 +4,74 @@
  * @description テーブル挿入ダイアログを提供するプラグイン
  */
 
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { INSERT_TABLE_COMMAND } from '@lexical/table'
+import { useState } from "react";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { TableRowNode, TableCellHeaderStates } from "@lexical/table";
+import { $createParagraphNode, $insertNodes } from "lexical";
+import { $createCustomTableNode } from "../nodes/CustomTableNode";
+import { $createCustomTableCellNode } from "../nodes/CustomTableCellNode";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@/admin/components/ui/dialog'
-import { Button } from '@/admin/components/ui/button'
-import { Input } from '@/admin/components/ui/input'
-import { Label } from '@/admin/components/ui/label'
+} from "@/admin/components/ui/dialog";
+import { Button } from "@/admin/components/ui/button";
+import { Input } from "@/admin/components/ui/input";
+import { Label } from "@/admin/components/ui/label";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type TableInsertPluginProps = {
-  isOpen: boolean
-  onClose: () => void
-}
+  isOpen: boolean;
+  onClose: () => void;
+};
 
 // =============================================================================
 // Hook
 // =============================================================================
 
 export function useTableDialog() {
-  const [isTableDialogOpen, setIsTableDialogOpen] = useState(false)
+  const [isTableDialogOpen, setIsTableDialogOpen] = useState(false);
 
-  const openTableDialog = () => setIsTableDialogOpen(true)
-  const closeTableDialog = () => setIsTableDialogOpen(false)
+  const openTableDialog = () => setIsTableDialogOpen(true);
+  const closeTableDialog = () => setIsTableDialogOpen(false);
 
   return {
     isTableDialogOpen,
     openTableDialog,
     closeTableDialog,
+  };
+}
+
+// =============================================================================
+// Helpers
+// =============================================================================
+
+function $insertCustomTable(rowCount: number, colCount: number): void {
+  const tableNode = $createCustomTableNode();
+
+  for (let r = 0; r < rowCount; r++) {
+    const rowNode = new TableRowNode();
+    const isHeaderRow = r === 0; // hasHeader がデフォルト true
+
+    for (let c = 0; c < colCount; c++) {
+      const headerState = isHeaderRow
+        ? TableCellHeaderStates.ROW
+        : TableCellHeaderStates.NO_STATUS;
+      const cellNode = $createCustomTableCellNode(headerState);
+      cellNode.append($createParagraphNode());
+      rowNode.append(cellNode);
+    }
+    tableNode.append(rowNode);
   }
+
+  $insertNodes([tableNode]);
 }
 
 // =============================================================================
@@ -51,41 +79,39 @@ export function useTableDialog() {
 // =============================================================================
 
 export function TableInsertPlugin({ isOpen, onClose }: TableInsertPluginProps) {
-  const [editor] = useLexicalComposerContext()
-  const [rows, setRows] = useState('3')
-  const [columns, setColumns] = useState('3')
+  const [editor] = useLexicalComposerContext();
+  const [rows, setRows] = useState("3");
+  const [columns, setColumns] = useState("3");
 
   // バリデーション（派生値として計算）
-  const rowNum = parseInt(rows, 10)
-  const colNum = parseInt(columns, 10)
+  const rowNum = parseInt(rows, 10);
+  const colNum = parseInt(columns, 10);
   const isValid =
     !isNaN(rowNum) &&
     !isNaN(colNum) &&
     rowNum > 0 &&
     rowNum <= 100 &&
     colNum > 0 &&
-    colNum <= 20
+    colNum <= 20;
 
   const handleInsert = () => {
-    if (!isValid) return
+    if (!isValid) return;
 
-    editor.dispatchCommand(INSERT_TABLE_COMMAND, {
-      rows,
-      columns,
-      includeHeaders: true,
-    })
+    editor.update(() => {
+      $insertCustomTable(rowNum, colNum);
+    });
 
     // リセット
-    setRows('3')
-    setColumns('3')
-    onClose()
-  }
+    setRows("3");
+    setColumns("3");
+    onClose();
+  };
 
   const handleClose = () => {
-    setRows('3')
-    setColumns('3')
-    onClose()
-  }
+    setRows("3");
+    setColumns("3");
+    onClose();
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
@@ -135,5 +161,5 @@ export function TableInsertPlugin({ isOpen, onClose }: TableInsertPluginProps) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
