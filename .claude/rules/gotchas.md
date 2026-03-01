@@ -53,6 +53,7 @@
 - **`createEnumGuard` の型ガードは `string` を要求** — `createEnumGuard` が返す関数は `(value: string) => value is T` シグネチャ。`parse: (v: unknown)` から直接渡すと型エラー。AccentColor 等の parse パターン: `parse: (v: unknown): AccentColor => typeof v === "string" && isAccentColor(v) ? v : "default"`
 - **`importDOM` で `getAttribute()` → AccentColor 変換に型ガード必須** — `element.getAttribute("data-color") ?? "default"` の型は `string`（`AccentColor` ではない）。必ず `isAccentColor(colorAttr) ? colorAttr : "default"` でガードする
 - **コンポジットノード（`isShadowRoot()` あり）には `canInsertTextBefore/After` が必須** — 欠落するとキーボード操作でテキストがノード境界外に漏れる。`LayoutContainerNode`・`LayoutItemNode` 等の全コンポジットノードに `override canInsertTextBefore(): false { return false }` と `override canInsertTextAfter(): false { return false }` をセットで実装する（戻り型は `boolean` ではなくリテラル `false`）
+- **`canBeEmpty()` の戻り型は `: false` リテラル必須** — `canInsertTextBefore/After` と同様、コンテナノードの `canBeEmpty()` も `override canBeEmpty(): false { return false }` とリテラル型で実装する。`: boolean` は TypeScript の narrowing が機能せず lexical-reviewer に検出される
 
 ## errors モジュール（server-only 境界）
 

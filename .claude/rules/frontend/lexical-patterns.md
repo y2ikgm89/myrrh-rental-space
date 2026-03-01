@@ -271,12 +271,12 @@ isShadowRoot(): boolean {
 コンテナノードで `false` を返し、空のコンテナが残存するのを防止:
 
 ```typescript
-canBeEmpty(): boolean {
+override canBeEmpty(): false {
   return false
 }
 ```
 
-**対象:** CollapsibleContainerNode, StepsContainerNode, TabsContainerNode, LayoutContainerNode
+**対象:** CollapsibleContainerNode, StepsContainerNode, TabsContainerNode, LayoutContainerNode, PricingTableNode, TestimonialNode（ContainerNode）, FeatureIconListNode（ContainerNode）
 
 ### collapseAtStart()
 

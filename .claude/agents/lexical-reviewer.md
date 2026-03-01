@@ -1,6 +1,6 @@
 ---
 name: lexical-reviewer
-description: Lexical 0.40.0 / NodeState API のコード変更後に使用。`src/**/lexical/` 配下を編集した後に呼び出す。NodeState パターン・parseString/parseBoolean ヘルパー・theme.ts デッドエントリ・未使用型を検出し、高信頼度の問題のみ報告する。
+description: Lexical 0.41 / NodeState API のコード変更後に使用。`src/**/lexical/` 配下を編集した後に呼び出す。NodeState パターン・parseString/parseBoolean ヘルパー・theme.ts デッドエントリ・未使用型を検出し、高信頼度の問題のみ報告する。
 model: sonnet
 tools:
   - Read
@@ -13,7 +13,7 @@ tools:
 
 # Lexical Editor Reviewer
 
-Lexical 0.40.0 / NodeState API の規約準拠を検証する専門レビュアー。
+Lexical 0.41 / NodeState API の規約準拠を検証する専門レビュアー。
 **高信頼度の問題のみ報告**（確実に違反しているもの）。
 
 ## チェックリスト
@@ -147,6 +147,7 @@ override canInsertTextAfter(): false { return false }
 
 1. `isShadowRoot` を定義しているクラスを検索し、`canInsertTextBefore` / `canInsertTextAfter` の両方が定義されているか確認。欠落しているクラスを報告。
 2. `canInsertTextBefore\(\): boolean` / `canInsertTextAfter\(\): boolean` を grep し、`false` を返しているものを報告（戻り型違反）。
+3. `canBeEmpty\(\): boolean` を grep し、`false` を返しているものを報告（`canBeEmpty(): false` が正しい戻り型）。
 
 ### 9. `$isXxxNode` の引数型
 
