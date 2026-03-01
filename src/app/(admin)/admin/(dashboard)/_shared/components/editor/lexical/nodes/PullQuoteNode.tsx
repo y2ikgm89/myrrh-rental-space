@@ -5,7 +5,7 @@
  * 子ノード: PullQuoteTextNode + PullQuoteCitationNode
  */
 
-'use client'
+"use client";
 
 import type {
   DOMConversionMap,
@@ -13,50 +13,68 @@ import type {
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
-} from 'lexical'
-import { $create, $getState, $getStateChange, $setState, createState, ElementNode, $createParagraphNode, $isElementNode } from 'lexical'
-import { createEnumGuard } from '../config/type-guards'
-import { isAccentColor, type AccentColor } from '../config/accent-colors'
+} from "lexical";
+import {
+  $create,
+  $getState,
+  $getStateChange,
+  $setState,
+  createState,
+  ElementNode,
+  $createParagraphNode,
+  $isElementNode,
+} from "lexical";
+import { createEnumGuard } from "../config/type-guards";
+import { isAccentColor, type AccentColor } from "../config/accent-colors";
 
 // =============================================================================
 // Types
 // =============================================================================
 
-export type PullQuoteStyle = 'classic' | 'modern' | 'minimal'
+export type PullQuoteStyle = "classic" | "modern" | "minimal";
 
-export const PULL_QUOTE_STYLES: readonly PullQuoteStyle[] = ['classic', 'modern', 'minimal'] as const
+export const PULL_QUOTE_STYLES: readonly PullQuoteStyle[] = [
+  "classic",
+  "modern",
+  "minimal",
+] as const;
 
 // =============================================================================
 // Type Guards
 // =============================================================================
 
-export const isPullQuoteStyle = createEnumGuard<PullQuoteStyle>(PULL_QUOTE_STYLES)
+export const isPullQuoteStyle =
+  createEnumGuard<PullQuoteStyle>(PULL_QUOTE_STYLES);
 
 // =============================================================================
 // State
 // =============================================================================
 
-export const quoteStyleState = createState('quoteStyle', {
+export const quoteStyleState = createState("quoteStyle", {
   parse: (v: unknown): PullQuoteStyle =>
-    typeof v === 'string' && isPullQuoteStyle(v) ? v : 'classic',
-})
+    typeof v === "string" && isPullQuoteStyle(v) ? v : "classic",
+});
 
-export const pullQuoteColorState = createState('pullQuoteColor', {
+export const pullQuoteColorState = createState("pullQuoteColor", {
   parse: (v: unknown): AccentColor =>
-    typeof v === 'string' && isAccentColor(v) ? v : 'default',
-})
+    typeof v === "string" && isAccentColor(v) ? v : "default",
+});
 
 // =============================================================================
 // DOM Conversion
 // =============================================================================
 
-function $convertPullQuoteElement(element: HTMLElement): null | DOMConversionOutput {
-  const styleAttr = element.getAttribute('data-pull-quote-style')
-  const style = styleAttr && isPullQuoteStyle(styleAttr) ? styleAttr : 'classic'
-  const colorAttr = element.getAttribute('data-color')
-  const color: AccentColor = colorAttr && isAccentColor(colorAttr) ? colorAttr : 'default'
-  const node = $createPullQuoteNode(style, color)
-  return { node }
+function $convertPullQuoteElement(
+  element: HTMLElement,
+): null | DOMConversionOutput {
+  const styleAttr = element.getAttribute("data-pull-quote-style");
+  const style =
+    styleAttr && isPullQuoteStyle(styleAttr) ? styleAttr : "classic";
+  const colorAttr = element.getAttribute("data-color");
+  const color: AccentColor =
+    colorAttr && isAccentColor(colorAttr) ? colorAttr : "default";
+  const node = $createPullQuoteNode(style, color);
+  return { node };
 }
 
 // =============================================================================
@@ -65,93 +83,97 @@ function $convertPullQuoteElement(element: HTMLElement): null | DOMConversionOut
 
 export class PullQuoteNode extends ElementNode {
   override $config() {
-    return this.config('pull-quote', {
+    return this.config("pull-quote", {
       extends: ElementNode,
       stateConfigs: [
         { flat: true, stateConfig: quoteStyleState },
         { flat: true, stateConfig: pullQuoteColorState },
       ],
-    })
+    });
   }
 
   static override importDOM(): DOMConversionMap | null {
     return {
       figure: (element: HTMLElement) => {
-        if (element.hasAttribute('data-pull-quote')) {
+        if (element.hasAttribute("data-pull-quote")) {
           return {
             conversion: $convertPullQuoteElement,
             priority: 1,
-          }
+          };
         }
-        return null
+        return null;
       },
-    }
+    };
   }
 
   override exportDOM(): DOMExportOutput {
-    const quoteStyle = $getState(this, quoteStyleState)
-    const color = $getState(this, pullQuoteColorState)
-    const element = document.createElement('figure')
-    element.setAttribute('data-pull-quote', 'true')
-    element.setAttribute('data-pull-quote-style', quoteStyle)
-    element.setAttribute('data-color', color)
-    return { element }
+    const quoteStyle = $getState(this, quoteStyleState);
+    const color = $getState(this, pullQuoteColorState);
+    const element = document.createElement("figure");
+    element.setAttribute("data-pull-quote", "true");
+    element.setAttribute("data-pull-quote-style", quoteStyle);
+    element.setAttribute("data-color", color);
+    return { element };
   }
 
   override createDOM(_config: EditorConfig): HTMLElement {
-    const quoteStyle = $getState(this, quoteStyleState)
-    const color = $getState(this, pullQuoteColorState)
-    const element = document.createElement('figure')
-    element.setAttribute('data-pull-quote', 'true')
-    element.setAttribute('data-pull-quote-style', quoteStyle)
-    element.setAttribute('data-color', color)
-    return element
+    const quoteStyle = $getState(this, quoteStyleState);
+    const color = $getState(this, pullQuoteColorState);
+    const element = document.createElement("figure");
+    element.setAttribute("data-pull-quote", "true");
+    element.setAttribute("data-pull-quote-style", quoteStyle);
+    element.setAttribute("data-color", color);
+    return element;
   }
 
   override updateDOM(prevNode: PullQuoteNode, dom: HTMLElement): boolean {
-    const styleChange = $getStateChange(this, prevNode, quoteStyleState)
+    const styleChange = $getStateChange(this, prevNode, quoteStyleState);
     if (styleChange) {
-      const [newStyle] = styleChange
-      dom.setAttribute('data-pull-quote-style', newStyle)
+      const [newStyle] = styleChange;
+      dom.setAttribute("data-pull-quote-style", newStyle);
     }
 
-    const colorChange = $getStateChange(this, prevNode, pullQuoteColorState)
+    const colorChange = $getStateChange(this, prevNode, pullQuoteColorState);
     if (colorChange) {
-      const [newColor] = colorChange
-      dom.setAttribute('data-color', newColor)
+      const [newColor] = colorChange;
+      dom.setAttribute("data-color", newColor);
     }
 
-    return false
+    return false;
   }
 
   override isShadowRoot(): boolean {
-    return true
+    return true;
+  }
+
+  override canBeEmpty(): false {
+    return false;
   }
 
   override canInsertTextBefore(): false {
-    return false
+    return false;
   }
 
   override canInsertTextAfter(): false {
-    return false
+    return false;
   }
 
   override collapseAtStart(): boolean {
-    const children = this.getChildren()
-    const paragraph = $createParagraphNode()
+    const children = this.getChildren();
+    const paragraph = $createParagraphNode();
 
     if (children.length > 0) {
-      const firstChild = children[0]
+      const firstChild = children[0];
       if ($isElementNode(firstChild)) {
-        const firstChildChildren = firstChild.getChildren()
+        const firstChildChildren = firstChild.getChildren();
         for (const child of firstChildChildren) {
-          paragraph.append(child)
+          paragraph.append(child);
         }
       }
     }
 
-    this.replace(paragraph)
-    return true
+    this.replace(paragraph);
+    return true;
   }
 }
 
@@ -166,13 +188,13 @@ export class PullQuoteNode extends ElementNode {
  * @returns PullQuoteNode インスタンス
  */
 export function $createPullQuoteNode(
-  quoteStyle: PullQuoteStyle = 'classic',
-  color: AccentColor = 'default'
+  quoteStyle: PullQuoteStyle = "classic",
+  color: AccentColor = "default",
 ): PullQuoteNode {
-  const node = $create(PullQuoteNode)
-  $setState(node, quoteStyleState, quoteStyle)
-  $setState(node, pullQuoteColorState, color)
-  return node
+  const node = $create(PullQuoteNode);
+  $setState(node, quoteStyleState, quoteStyle);
+  $setState(node, pullQuoteColorState, color);
+  return node;
 }
 
 /**
@@ -182,7 +204,7 @@ export function $createPullQuoteNode(
  * @returns PullQuoteNodeの場合true
  */
 export function $isPullQuoteNode(
-  node: LexicalNode | null | undefined
+  node: LexicalNode | null | undefined,
 ): node is PullQuoteNode {
-  return node instanceof PullQuoteNode
+  return node instanceof PullQuoteNode;
 }
