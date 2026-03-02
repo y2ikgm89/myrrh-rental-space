@@ -42,7 +42,7 @@
     "@icons-pack/react-simple-icons": "^13.11.2",
     "@lexical/code": "^0.40.0",
     "@lexical/html": "^0.40.0",
-    "@lexical/link": "^0.40.0",
+    "@lexical/link": "^0.41.0",
     "@lexical/list": "^0.40.0",
     "@lexical/react": "^0.40.0",
     "@lexical/rich-text": "^0.40.0",
