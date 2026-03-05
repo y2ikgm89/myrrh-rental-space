@@ -24,13 +24,16 @@ interface PostPreviewContentProps {
 }
 
 type PreviewState =
-  | { status: "loading" }
   | { status: "error"; message: string }
   | { status: "ready"; data: PostPreviewData };
 
 function readFromStorage(identifier: string): PreviewState {
   if (typeof window === "undefined") {
-    return { status: "loading" };
+    // dynamic({ ssr: false }) により、このパスは到達しない
+    return {
+      status: "error",
+      message: "プレビューデータの読み込みに失敗しました。",
+    };
   }
 
   const key = getPreviewStorageKey("post", identifier);
@@ -79,14 +82,6 @@ export function PostPreviewContent({
     return (
       <div className="mx-auto max-w-6xl px-5 py-24 text-center">
         <p className="text-muted-foreground">{state.message}</p>
-      </div>
-    );
-  }
-
-  if (state.status === "loading") {
-    return (
-      <div className="mx-auto max-w-6xl px-5 py-24 text-center">
-        <p className="text-muted-foreground">読み込み中...</p>
       </div>
     );
   }

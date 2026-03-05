@@ -288,12 +288,26 @@ export function usePostEditor({
   };
 
   const handlePreview = async () => {
-    const values = getValues();
-    const identifier =
-      mode === "create" ? "preview-new" : slug || "preview-new";
-    const contentHtml = await generatePreviewHtml(values.contentJson || "");
-    const previewData = toPreviewData(values, categories, contentHtml);
-    saveAndOpenPreview(identifier, previewData, "/posts");
+    try {
+      const values = getValues();
+      const identifier =
+        mode === "create" ? "preview-new" : slug || "preview-new";
+      const contentHtml = await generatePreviewHtml(
+        values.contentJson || "",
+        "post",
+      );
+      if (contentHtml === null) {
+        toast.error("プレビューの生成に失敗しました");
+        return;
+      }
+      const previewData = toPreviewData(values, categories, contentHtml);
+      saveAndOpenPreview(identifier, previewData, "/posts");
+    } catch (error) {
+      logger.error("プレビュー生成中にエラーが発生しました", {
+        error: getErrorMessage(error),
+      });
+      toast.error("プレビューの生成に失敗しました");
+    }
   };
 
   // ==========================================================================

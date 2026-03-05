@@ -244,12 +244,26 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
   };
 
   const handlePreview = async () => {
-    const values = getValues();
-    const identifier =
-      mode === "create" ? "preview-new" : slug || "preview-new";
-    const contentHtml = await generatePreviewHtml(values.contentJson || "");
-    const previewData = toPreviewData(values, contentHtml);
-    saveAndOpenPreview(identifier, previewData, "/news");
+    try {
+      const values = getValues();
+      const identifier =
+        mode === "create" ? "preview-new" : slug || "preview-new";
+      const contentHtml = await generatePreviewHtml(
+        values.contentJson || "",
+        "news",
+      );
+      if (contentHtml === null) {
+        toast.error("プレビューの生成に失敗しました");
+        return;
+      }
+      const previewData = toPreviewData(values, contentHtml);
+      saveAndOpenPreview(identifier, previewData, "/news");
+    } catch (error) {
+      logger.error("プレビュー生成中にエラーが発生しました", {
+        error: getErrorMessage(error),
+      });
+      toast.error("プレビューの生成に失敗しました");
+    }
   };
 
   // ==========================================================================
