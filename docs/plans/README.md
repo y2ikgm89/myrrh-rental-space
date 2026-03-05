@@ -17,6 +17,13 @@
 
 ## 進行中の計画
 
+- ✅ [2026-03-05] コード品質改善（Prisma select 最適化・大規模ファイル分割・README 更新）
+  - 計画書: `docs/plans/2026-03-05-code-quality-improvements.md`
+  - Task 1-4: findMany に select 追加（announcement-bar, coupon, faq 等 16 ファイル）
+  - Task 5-7: post.ts(1052L)/api-keys.ts(979L)/terms.ts(756L) をサブディレクトリ分割
+  - Task 8-9: list クエリで contentHtml/contentJson を除外（post, news）
+  - README バージョン情報更新（Next.js 16.1.6 / React 19.2.4 / TypeScript 6.0-beta）
+
 - 🔄 [2026-02-28] Lexical エディタ最適化（公式 Playground 水準・プロジェクト固有ブロック追加・UX 改善）
   - 設計書: `docs/plans/2026-02-28-lexical-optimization-design.md`
   - Phase 1: TableActionMenuPlugin / TableCellResizerPlugin / InlineImageNode
