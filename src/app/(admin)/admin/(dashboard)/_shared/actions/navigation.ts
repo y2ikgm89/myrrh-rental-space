@@ -1,82 +1,103 @@
-'use server'
+"use server";
 
-import { prisma } from '@/shared/lib/prisma'
-import { updateTag } from 'next/cache'
-import { CACHE_TAGS } from '@/shared/lib/constants'
-import { NavigationType, SocialPlatform } from '@/shared/generated/prisma/enums'
-import { z } from 'zod'
-import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
-import { createValidationError } from '@/shared/lib/action-helpers'
-import { withPermission } from '@/admin/lib/server-action-helpers'
-import { checkReadPermissionFor } from '@/admin/lib/permissions'
-import { purgeHomeCache } from '@/shared/lib/cloudflare'
-import { fireAndForget } from '@/shared/lib/async-utils'
-import { ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
-import { toPlainArray } from '@/shared/lib/serialize'
+import { prisma } from "@/shared/lib/prisma";
+import { updateTag } from "next/cache";
+import { CACHE_TAGS } from "@/shared/lib/constants";
+import {
+  NavigationType,
+  SocialPlatform,
+} from "@/shared/generated/prisma/enums";
+import { z } from "zod";
+import {
+  createSuccess,
+  createFailure,
+  type ActionResult,
+} from "@/admin/types/server-actions";
+import { createValidationError } from "@/shared/lib/action-helpers";
+import { withPermission } from "@/admin/lib/server-action-helpers";
+import { checkReadPermissionFor } from "@/admin/lib/permissions";
+import { purgeHomeCache } from "@/shared/lib/cloudflare";
+import { fireAndForget } from "@/shared/lib/async-utils";
+import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
+import { toPlainArray } from "@/shared/lib/serialize";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 export type NavigationItemData = {
-  id: string
-  type: NavigationType
-  parentId: string | null
-  label: string
-  url: string
-  isExternal: boolean
-  order: number
-  isActive: boolean
-  createdAt: Date
-  updatedAt: Date
-  children: NavigationItemData[]
-}
+  id: string;
+  type: NavigationType;
+  parentId: string | null;
+  label: string;
+  url: string;
+  isExternal: boolean;
+  order: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  children: NavigationItemData[];
+};
 
 export type SocialLinkData = {
-  id: string
-  platform: SocialPlatform
-  url: string
-  iconUrl: string | null
-  order: number
-  isActive: boolean
-  showOnDesktop: boolean
-  showOnMobile: boolean
-  createdAt: Date
-  updatedAt: Date
-}
+  id: string;
+  platform: SocialPlatform;
+  url: string;
+  iconUrl: string | null;
+  order: number;
+  isActive: boolean;
+  showOnDesktop: boolean;
+  showOnMobile: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 // =============================================================================
 // Schemas
 // =============================================================================
 
 const navigationItemSchema = z.object({
-  type: z.enum(['HEADER_DESKTOP', 'HEADER_MOBILE', 'FOOTER']),
+  type: z.enum(["HEADER_DESKTOP", "HEADER_MOBILE", "FOOTER"]),
   parentId: z.string().uuid().nullable().optional(),
-  label: z.string().min(1, { error: 'ラベルは必須です' }).max(50, { error: 'ラベルは50文字以内' }),
-  url: z.string().min(1, { error: 'URLは必須です' }).max(500),
+  label: z
+    .string()
+    .min(1, { error: "ラベルは必須です" })
+    .max(50, { error: "ラベルは50文字以内" }),
+  url: z.string().min(1, { error: "URLは必須です" }).max(500),
   isExternal: z.boolean().default(false),
   order: z.number().int().min(0),
   isActive: z.boolean().default(true),
-})
+});
 
 const socialLinkSchema = z.object({
-  platform: z.enum(['TWITTER', 'FACEBOOK', 'INSTAGRAM', 'YOUTUBE', 'LINE', 'TIKTOK', 'OTHER']),
-  url: z.string().min(1, { error: 'URLは必須です' }).url({ error: '有効なURLを入力してください' }),
+  platform: z.enum([
+    "TWITTER",
+    "FACEBOOK",
+    "INSTAGRAM",
+    "YOUTUBE",
+    "LINE",
+    "TIKTOK",
+    "OTHER",
+  ]),
+  url: z
+    .string()
+    .min(1, { error: "URLは必須です" })
+    .url({ error: "有効なURLを入力してください" }),
   iconUrl: z.string().nullable().optional(),
   order: z.number().int().min(0),
   isActive: z.boolean().default(true),
   showOnDesktop: z.boolean().default(true),
   showOnMobile: z.boolean().default(true),
-})
+});
 
-export type NavigationItemInput = z.infer<typeof navigationItemSchema>
-export type SocialLinkInput = z.infer<typeof socialLinkSchema>
+export type NavigationItemInput = z.infer<typeof navigationItemSchema>;
+export type SocialLinkInput = z.infer<typeof socialLinkSchema>;
 
 // =============================================================================
 // Helper Functions
 // =============================================================================
 
-const checkReadPermission = checkReadPermissionFor('navigation')
+const checkReadPermission = checkReadPermissionFor("navigation");
 
 // =============================================================================
 // Navigation Item Actions
@@ -85,21 +106,45 @@ const checkReadPermission = checkReadPermissionFor('navigation')
 /**
  * ナビゲーションアイテム一覧を取得
  */
-export async function getNavigationItems(type?: NavigationType): Promise<NavigationItemData[]> {
-  const hasPermission = await checkReadPermission()
+export async function getNavigationItems(
+  type?: NavigationType,
+): Promise<NavigationItemData[]> {
+  const hasPermission = await checkReadPermission();
   if (!hasPermission) {
-    return []
+    return [];
   }
 
   const items = await prisma.navigationItem.findMany({
     where: type ? { type, parentId: null } : { parentId: null },
-    include: {
+    select: {
+      id: true,
+      type: true,
+      parentId: true,
+      label: true,
+      url: true,
+      isExternal: true,
+      order: true,
+      isActive: true,
+      createdAt: true,
+      updatedAt: true,
       children: {
-        orderBy: { order: 'asc' },
+        select: {
+          id: true,
+          type: true,
+          parentId: true,
+          label: true,
+          url: true,
+          isExternal: true,
+          order: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+        orderBy: { order: "asc" },
       },
     },
-    orderBy: { order: 'asc' },
-  })
+    orderBy: { order: "asc" },
+  });
 
   return items.map((item) => ({
     ...item,
@@ -107,73 +152,87 @@ export async function getNavigationItems(type?: NavigationType): Promise<Navigat
       ...child,
       children: [],
     })),
-  }))
+  }));
 }
 
 /**
  * ナビゲーションアイテムを作成
  */
-export const createNavigationItem = withPermission<[data: NavigationItemInput], { id: string }>(
-  'navigation',
-  'create'
+export const createNavigationItem = withPermission<
+  [data: NavigationItemInput],
+  { id: string }
+>(
+  "navigation",
+  "create",
 )(async (_user, data): Promise<ActionResult<{ id: string }>> => {
-  const parsed = navigationItemSchema.safeParse(data)
+  const parsed = navigationItemSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error)
+    return createValidationError(parsed.error);
   }
 
   const item = await prisma.navigationItem.create({
     data: parsed.data,
-  })
+  });
 
-  updateTag(CACHE_TAGS.NAVIGATION)
+  updateTag(CACHE_TAGS.NAVIGATION);
 
   // Cloudflare CDN キャッシュパージ（ナビゲーションは全ページに影響）
-  fireAndForget(purgeHomeCache(), { operation: 'purgeHomeCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
+  fireAndForget(purgeHomeCache(), {
+    operation: "purgeHomeCache",
+    category: ErrorCategory.EXTERNAL_API,
+    severity: ErrorSeverity.LOW,
+  });
 
-  return createSuccess('ナビゲーションを作成しました', { id: item.id })
-})
+  return createSuccess("ナビゲーションを作成しました", { id: item.id });
+});
 
 /**
  * ナビゲーションアイテムを更新
  */
-export const updateNavigationItem = withPermission<[id: string, data: NavigationItemInput], void>(
-  'navigation',
-  'update'
+export const updateNavigationItem = withPermission<
+  [id: string, data: NavigationItemInput],
+  void
+>(
+  "navigation",
+  "update",
 )(async (_user, id, data): Promise<ActionResult<void>> => {
-  const parsed = navigationItemSchema.safeParse(data)
+  const parsed = navigationItemSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error)
+    return createValidationError(parsed.error);
   }
 
   const existing = await prisma.navigationItem.findUnique({
     where: { id },
     select: { id: true },
-  })
+  });
 
   if (!existing) {
-    return createFailure('ナビゲーションが見つかりません')
+    return createFailure("ナビゲーションが見つかりません");
   }
 
   await prisma.navigationItem.update({
     where: { id },
     data: parsed.data,
-  })
+  });
 
-  updateTag(CACHE_TAGS.NAVIGATION)
+  updateTag(CACHE_TAGS.NAVIGATION);
 
   // Cloudflare CDN キャッシュパージ（ナビゲーションは全ページに影響）
-  fireAndForget(purgeHomeCache(), { operation: 'purgeHomeCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
+  fireAndForget(purgeHomeCache(), {
+    operation: "purgeHomeCache",
+    category: ErrorCategory.EXTERNAL_API,
+    severity: ErrorSeverity.LOW,
+  });
 
-  return createSuccess('ナビゲーションを更新しました')
-})
+  return createSuccess("ナビゲーションを更新しました");
+});
 
 /**
  * ナビゲーションアイテムを削除
  */
 export const deleteNavigationItem = withPermission<[id: string], void>(
-  'navigation',
-  'delete'
+  "navigation",
+  "delete",
 )(async (_user, id): Promise<ActionResult<void>> => {
   const item = await prisma.navigationItem.findUnique({
     where: { id },
@@ -182,27 +241,31 @@ export const deleteNavigationItem = withPermission<[id: string], void>(
         select: { id: true },
       },
     },
-  })
+  });
 
   if (!item) {
-    return createFailure('ナビゲーションが見つかりません')
+    return createFailure("ナビゲーションが見つかりません");
   }
 
   if (item.children.length > 0) {
-    return createFailure('サブメニューがあるため削除できません')
+    return createFailure("サブメニューがあるため削除できません");
   }
 
   await prisma.navigationItem.delete({
     where: { id },
-  })
+  });
 
-  updateTag(CACHE_TAGS.NAVIGATION)
+  updateTag(CACHE_TAGS.NAVIGATION);
 
   // Cloudflare CDN キャッシュパージ（ナビゲーションは全ページに影響）
-  fireAndForget(purgeHomeCache(), { operation: 'purgeHomeCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
+  fireAndForget(purgeHomeCache(), {
+    operation: "purgeHomeCache",
+    category: ErrorCategory.EXTERNAL_API,
+    severity: ErrorSeverity.LOW,
+  });
 
-  return createSuccess('ナビゲーションを削除しました')
-})
+  return createSuccess("ナビゲーションを削除しました");
+});
 
 /**
  * ナビゲーションの順序を更新
@@ -211,8 +274,8 @@ export const updateNavigationOrder = withPermission<
   [items: { id: string; order: number; parentId?: string | null }[]],
   void
 >(
-  'navigation',
-  'update'
+  "navigation",
+  "update",
 )(async (_user, items): Promise<ActionResult<void>> => {
   await prisma.$transaction(
     items.map((item) =>
@@ -222,41 +285,52 @@ export const updateNavigationOrder = withPermission<
           order: item.order,
           ...(item.parentId !== undefined && { parentId: item.parentId }),
         },
-      })
-    )
-  )
+      }),
+    ),
+  );
 
-  updateTag(CACHE_TAGS.NAVIGATION)
+  updateTag(CACHE_TAGS.NAVIGATION);
 
   // Cloudflare CDN キャッシュパージ（ナビゲーションは全ページに影響）
-  fireAndForget(purgeHomeCache(), { operation: 'purgeHomeCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
+  fireAndForget(purgeHomeCache(), {
+    operation: "purgeHomeCache",
+    category: ErrorCategory.EXTERNAL_API,
+    severity: ErrorSeverity.LOW,
+  });
 
-  return createSuccess('順序を更新しました')
-})
+  return createSuccess("順序を更新しました");
+});
 
 /**
  * SNSリンクの順序を更新
  */
-export const updateSocialLinkOrder = withPermission<[items: { id: string; order: number }[]], void>(
-  'navigation',
-  'update'
+export const updateSocialLinkOrder = withPermission<
+  [items: { id: string; order: number }[]],
+  void
+>(
+  "navigation",
+  "update",
 )(async (_user, items): Promise<ActionResult<void>> => {
   await prisma.$transaction(
     items.map((item) =>
       prisma.socialLink.update({
         where: { id: item.id },
         data: { order: item.order },
-      })
-    )
-  )
+      }),
+    ),
+  );
 
-  updateTag(CACHE_TAGS.NAVIGATION)
+  updateTag(CACHE_TAGS.NAVIGATION);
 
   // Cloudflare CDN キャッシュパージ（ナビゲーションは全ページに影響）
-  fireAndForget(purgeHomeCache(), { operation: 'purgeHomeCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
+  fireAndForget(purgeHomeCache(), {
+    operation: "purgeHomeCache",
+    category: ErrorCategory.EXTERNAL_API,
+    severity: ErrorSeverity.LOW,
+  });
 
-  return createSuccess('順序を更新しました')
-})
+  return createSuccess("順序を更新しました");
+});
 
 // =============================================================================
 // Social Link Actions
@@ -267,116 +341,150 @@ export const updateSocialLinkOrder = withPermission<[items: { id: string; order:
  */
 export type GetSocialLinksOptions = {
   /** デスクトップで表示するリンクのみ取得 */
-  showOnDesktop?: boolean
+  showOnDesktop?: boolean;
   /** モバイルで表示するリンクのみ取得 */
-  showOnMobile?: boolean
+  showOnMobile?: boolean;
   /** アクティブなリンクのみ取得（デフォルト: true） */
-  activeOnly?: boolean
-}
+  activeOnly?: boolean;
+};
 
 /**
  * SNSリンク一覧を取得
  */
-export async function getSocialLinks(options: GetSocialLinksOptions = {}): Promise<SocialLinkData[]> {
-  const hasPermission = await checkReadPermission()
+export async function getSocialLinks(
+  options: GetSocialLinksOptions = {},
+): Promise<SocialLinkData[]> {
+  const hasPermission = await checkReadPermission();
   if (!hasPermission) {
-    return []
+    return [];
   }
 
-  const { showOnDesktop, showOnMobile, activeOnly = false } = options
+  const { showOnDesktop, showOnMobile, activeOnly = false } = options;
 
-  return toPlainArray(await prisma.socialLink.findMany({
-    where: {
-      ...(activeOnly && { isActive: true }),
-      ...(showOnDesktop !== undefined && { showOnDesktop }),
-      ...(showOnMobile !== undefined && { showOnMobile }),
-    },
-    orderBy: { order: 'asc' },
-  }))
+  return toPlainArray(
+    await prisma.socialLink.findMany({
+      where: {
+        ...(activeOnly && { isActive: true }),
+        ...(showOnDesktop !== undefined && { showOnDesktop }),
+        ...(showOnMobile !== undefined && { showOnMobile }),
+      },
+      select: {
+        id: true,
+        platform: true,
+        url: true,
+        iconUrl: true,
+        order: true,
+        isActive: true,
+        showOnDesktop: true,
+        showOnMobile: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: { order: "asc" },
+    }),
+  );
 }
 
 /**
  * SNSリンクを作成
  */
-export const createSocialLink = withPermission<[data: SocialLinkInput], { id: string }>(
-  'navigation',
-  'create'
+export const createSocialLink = withPermission<
+  [data: SocialLinkInput],
+  { id: string }
+>(
+  "navigation",
+  "create",
 )(async (_user, data): Promise<ActionResult<{ id: string }>> => {
-  const parsed = socialLinkSchema.safeParse(data)
+  const parsed = socialLinkSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error)
+    return createValidationError(parsed.error);
   }
 
   const link = await prisma.socialLink.create({
     data: parsed.data,
-  })
+  });
 
-  updateTag(CACHE_TAGS.NAVIGATION)
+  updateTag(CACHE_TAGS.NAVIGATION);
 
   // Cloudflare CDN キャッシュパージ（ナビゲーションは全ページに影響）
-  fireAndForget(purgeHomeCache(), { operation: 'purgeHomeCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
+  fireAndForget(purgeHomeCache(), {
+    operation: "purgeHomeCache",
+    category: ErrorCategory.EXTERNAL_API,
+    severity: ErrorSeverity.LOW,
+  });
 
-  return createSuccess('SNSリンクを作成しました', { id: link.id })
-})
+  return createSuccess("SNSリンクを作成しました", { id: link.id });
+});
 
 /**
  * SNSリンクを更新
  */
-export const updateSocialLink = withPermission<[id: string, data: SocialLinkInput], void>(
-  'navigation',
-  'update'
+export const updateSocialLink = withPermission<
+  [id: string, data: SocialLinkInput],
+  void
+>(
+  "navigation",
+  "update",
 )(async (_user, id, data): Promise<ActionResult<void>> => {
-  const parsed = socialLinkSchema.safeParse(data)
+  const parsed = socialLinkSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error)
+    return createValidationError(parsed.error);
   }
 
   const existing = await prisma.socialLink.findUnique({
     where: { id },
     select: { id: true },
-  })
+  });
 
   if (!existing) {
-    return createFailure('SNSリンクが見つかりません')
+    return createFailure("SNSリンクが見つかりません");
   }
 
   await prisma.socialLink.update({
     where: { id },
     data: parsed.data,
-  })
+  });
 
-  updateTag(CACHE_TAGS.NAVIGATION)
+  updateTag(CACHE_TAGS.NAVIGATION);
 
   // Cloudflare CDN キャッシュパージ（ナビゲーションは全ページに影響）
-  fireAndForget(purgeHomeCache(), { operation: 'purgeHomeCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
+  fireAndForget(purgeHomeCache(), {
+    operation: "purgeHomeCache",
+    category: ErrorCategory.EXTERNAL_API,
+    severity: ErrorSeverity.LOW,
+  });
 
-  return createSuccess('SNSリンクを更新しました')
-})
+  return createSuccess("SNSリンクを更新しました");
+});
 
 /**
  * SNSリンクを削除
  */
 export const deleteSocialLink = withPermission<[id: string], void>(
-  'navigation',
-  'delete'
+  "navigation",
+  "delete",
 )(async (_user, id): Promise<ActionResult<void>> => {
   const link = await prisma.socialLink.findUnique({
     where: { id },
     select: { id: true },
-  })
+  });
 
   if (!link) {
-    return createFailure('SNSリンクが見つかりません')
+    return createFailure("SNSリンクが見つかりません");
   }
 
   await prisma.socialLink.delete({
     where: { id },
-  })
+  });
 
-  updateTag(CACHE_TAGS.NAVIGATION)
+  updateTag(CACHE_TAGS.NAVIGATION);
 
   // Cloudflare CDN キャッシュパージ（ナビゲーションは全ページに影響）
-  fireAndForget(purgeHomeCache(), { operation: 'purgeHomeCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
+  fireAndForget(purgeHomeCache(), {
+    operation: "purgeHomeCache",
+    category: ErrorCategory.EXTERNAL_API,
+    severity: ErrorSeverity.LOW,
+  });
 
-  return createSuccess('SNSリンクを削除しました')
-})
+  return createSuccess("SNSリンクを削除しました");
+});

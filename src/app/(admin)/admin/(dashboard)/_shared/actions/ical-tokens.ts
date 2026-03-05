@@ -1,61 +1,69 @@
-'use server'
+"use server";
 
-import { prisma } from '@/shared/lib/prisma'
-import { updateTag } from 'next/cache'
-import { CACHE_TAGS } from '@/shared/lib/constants'
-import { z } from 'zod'
-import { randomBytes } from 'crypto'
-import { createSuccess, createFailure } from '@/admin/types/server-actions'
-import { createValidationError } from '@/shared/lib/action-helpers'
-import { withPermission } from '@/admin/lib/server-action-helpers'
-import { checkReadPermissionFor } from '@/admin/lib/permissions'
+import { prisma } from "@/shared/lib/prisma";
+import { updateTag } from "next/cache";
+import { CACHE_TAGS } from "@/shared/lib/constants";
+import { z } from "zod";
+import { randomBytes } from "crypto";
+import { createSuccess, createFailure } from "@/admin/types/server-actions";
+import { createValidationError } from "@/shared/lib/action-helpers";
+import { withPermission } from "@/admin/lib/server-action-helpers";
+import { checkReadPermissionFor } from "@/admin/lib/permissions";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 export type ICalTokenWithRelations = {
-  id: string
-  token: string
-  name: string
-  spaceId: string | null
-  spaceName: string | null
-  createdBy: string
-  createdByName: string | null
-  expiresAt: Date | null
-  createdAt: Date
-  lastUsedAt: Date | null
-}
+  id: string;
+  token: string;
+  name: string;
+  spaceId: string | null;
+  spaceName: string | null;
+  createdBy: string;
+  createdByName: string | null;
+  expiresAt: Date | null;
+  createdAt: Date;
+  lastUsedAt: Date | null;
+};
 
 // =============================================================================
 // Schemas
 // =============================================================================
 
 const createTokenSchema = z.object({
-  name: z.string().min(1, { error: 'トークン名は必須です' }).max(100),
+  name: z.string().min(1, { error: "トークン名は必須です" }).max(100),
   spaceId: z.string().uuid().nullable(),
   expiresInDays: z.number().int().min(0).nullable(), // 0 or null = 無期限
-})
+});
 
 // =============================================================================
 // Actions
 // =============================================================================
 
-const checkReadPermission = checkReadPermissionFor('settings')
+const checkReadPermission = checkReadPermissionFor("settings");
 
 /**
  * iCalトークン一覧を取得
  */
 export async function getICalTokens(): Promise<ICalTokenWithRelations[]> {
-  if (!(await checkReadPermission())) return []
+  if (!(await checkReadPermission())) return [];
 
   const tokens = await prisma.iCalToken.findMany({
-    include: {
+    select: {
+      id: true,
+      token: true,
+      name: true,
+      spaceId: true,
+      createdBy: true,
+      expiresAt: true,
+      createdAt: true,
+      lastUsedAt: true,
       space: { select: { name: true } },
       user: { select: { name: true } },
     },
-    orderBy: { createdAt: 'desc' },
-  })
+    orderBy: { createdAt: "desc" },
+  });
 
   return tokens.map((t) => ({
     id: t.id,
@@ -68,7 +76,7 @@ export async function getICalTokens(): Promise<ICalTokenWithRelations[]> {
     expiresAt: t.expiresAt,
     createdAt: t.createdAt,
     lastUsedAt: t.lastUsedAt,
-  }))
+  }));
 }
 
 /**
@@ -78,35 +86,35 @@ export const createICalToken = withPermission<
   [{ name: string; spaceId: string | null; expiresInDays: number | null }],
   { id: string; token: string }
 >(
-  'settings',
-  'update'
+  "settings",
+  "update",
 )(async (user, data) => {
-  const parsed = createTokenSchema.safeParse(data)
+  const parsed = createTokenSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error)
+    return createValidationError(parsed.error);
   }
 
-  const { name, spaceId, expiresInDays } = parsed.data
+  const { name, spaceId, expiresInDays } = parsed.data;
 
   // スペースIDの検証
   if (spaceId) {
     const space = await prisma.space.findUnique({
       where: { id: spaceId },
       select: { id: true },
-    })
+    });
     if (!space) {
-      return createFailure('スペースが見つかりません')
+      return createFailure("スペースが見つかりません");
     }
   }
 
   // セキュアなトークン生成（32バイト = 256ビット）
-  const token = randomBytes(32).toString('base64url')
+  const token = randomBytes(32).toString("base64url");
 
   // 有効期限計算
-  let expiresAt: Date | null = null
+  let expiresAt: Date | null = null;
   if (expiresInDays && expiresInDays > 0) {
-    expiresAt = new Date()
-    expiresAt.setDate(expiresAt.getDate() + expiresInDays)
+    expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + expiresInDays);
   }
 
   const newToken = await prisma.iCalToken.create({
@@ -117,38 +125,38 @@ export const createICalToken = withPermission<
       createdBy: user.id,
       expiresAt,
     },
-  })
+  });
 
-  updateTag(CACHE_TAGS.SETTINGS)
+  updateTag(CACHE_TAGS.SETTINGS);
 
-  return createSuccess('トークンを作成しました', {
+  return createSuccess("トークンを作成しました", {
     id: newToken.id,
     token: newToken.token,
-  })
-})
+  });
+});
 
 /**
  * iCalトークンを削除
  */
 export const deleteICalToken = withPermission<[string]>(
-  'settings',
-  'update'
+  "settings",
+  "update",
 )(async (_user, id) => {
   const token = await prisma.iCalToken.findUnique({
     where: { id },
     select: { id: true },
-  })
+  });
 
   if (!token) {
-    return createFailure('トークンが見つかりません')
+    return createFailure("トークンが見つかりません");
   }
 
-  await prisma.iCalToken.delete({ where: { id } })
+  await prisma.iCalToken.delete({ where: { id } });
 
-  updateTag(CACHE_TAGS.SETTINGS)
+  updateTag(CACHE_TAGS.SETTINGS);
 
-  return createSuccess('トークンを削除しました')
-})
+  return createSuccess("トークンを削除しました");
+});
 
 /**
  * iCalフィード設定を更新
@@ -156,30 +164,30 @@ export const deleteICalToken = withPermission<[string]>(
 export const updateICalFeedSettings = withPermission<
   [{ icalFeedEnabled: boolean; icalFeedIncludeCustomerInfo: boolean }]
 >(
-  'settings',
-  'update'
+  "settings",
+  "update",
 )(async (_user, data) => {
   await prisma.settings.updateMany({
     data: {
       icalFeedEnabled: data.icalFeedEnabled,
       icalFeedIncludeCustomerInfo: data.icalFeedIncludeCustomerInfo,
     },
-  })
+  });
 
-  updateTag(CACHE_TAGS.SETTINGS)
+  updateTag(CACHE_TAGS.SETTINGS);
 
-  return createSuccess('設定を保存しました')
-})
+  return createSuccess("設定を保存しました");
+});
 
 /**
  * iCalフィード設定を取得
  */
 export async function getICalFeedSettings(): Promise<{
-  icalFeedEnabled: boolean
-  icalFeedIncludeCustomerInfo: boolean
+  icalFeedEnabled: boolean;
+  icalFeedIncludeCustomerInfo: boolean;
 }> {
   if (!(await checkReadPermission())) {
-    return { icalFeedEnabled: false, icalFeedIncludeCustomerInfo: false }
+    return { icalFeedEnabled: false, icalFeedIncludeCustomerInfo: false };
   }
 
   const settings = await prisma.settings.findFirst({
@@ -187,10 +195,10 @@ export async function getICalFeedSettings(): Promise<{
       icalFeedEnabled: true,
       icalFeedIncludeCustomerInfo: true,
     },
-  })
+  });
 
   return {
     icalFeedEnabled: settings?.icalFeedEnabled ?? false,
     icalFeedIncludeCustomerInfo: settings?.icalFeedIncludeCustomerInfo ?? false,
-  }
+  };
 }

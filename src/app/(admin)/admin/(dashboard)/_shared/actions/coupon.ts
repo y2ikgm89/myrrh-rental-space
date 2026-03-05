@@ -92,7 +92,27 @@ const checkReadPermission = checkReadPermissionFor("coupon");
  * Prisma Couponをフロントエンド用に変換
  * Date フィールドを明示的に ISO 8601 文字列へ変換（React 19 Server→Client 境界対応）
  */
-function formatCoupon(coupon: Coupon): CouponData {
+function formatCoupon(
+  coupon: Pick<
+    Coupon,
+    | "id"
+    | "code"
+    | "name"
+    | "description"
+    | "type"
+    | "discountValue"
+    | "minReservationAmount"
+    | "maxDiscountAmount"
+    | "validFrom"
+    | "validUntil"
+    | "usageLimit"
+    | "usageCount"
+    | "isActive"
+    | "canCombineWithDurationDiscount"
+    | "createdAt"
+    | "updatedAt"
+  >,
+): CouponData {
   return toPlainObject({
     ...coupon,
     validFrom: coupon.validFrom.toISOString(),
@@ -278,6 +298,24 @@ export async function getCoupons(
       prisma.coupon.count({ where }),
       prisma.coupon.findMany({
         where,
+        select: {
+          id: true,
+          code: true,
+          name: true,
+          description: true,
+          type: true,
+          discountValue: true,
+          minReservationAmount: true,
+          maxDiscountAmount: true,
+          validFrom: true,
+          validUntil: true,
+          usageLimit: true,
+          usageCount: true,
+          isActive: true,
+          canCombineWithDurationDiscount: true,
+          createdAt: true,
+          updatedAt: true,
+        },
         orderBy: { [sortBy]: sortOrder },
         skip: (page - 1) * limit,
         take: limit,
