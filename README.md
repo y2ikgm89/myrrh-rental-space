@@ -4,16 +4,16 @@
 
 ## 技術スタック
 
-| カテゴリ | 技術 | バージョン |
-|---------|------|-----------|
-| フレームワーク | Next.js (App Router) | 16.1.1 |
-| UI ライブラリ | React | 19.2.3 |
-| 言語 | TypeScript | 5.9.3 |
-| ランタイム | Bun | 1.3.5 |
-| ORM | Prisma | 7.2.0 |
-| データベース | PostgreSQL | 16 |
-| 認証 | Better Auth | 1.4.11 |
-| スタイリング | Tailwind CSS | 4.x |
+| カテゴリ       | 技術                 | バージョン |
+| -------------- | -------------------- | ---------- |
+| フレームワーク | Next.js (App Router) | 16.1.6     |
+| UI ライブラリ  | React                | 19.2.4     |
+| 言語           | TypeScript           | 6.0-beta   |
+| ランタイム     | Bun                  | 1.3.10     |
+| ORM            | Prisma               | 7.4.2      |
+| データベース   | PostgreSQL           | 16         |
+| 認証           | Better Auth          | 1.5.3      |
+| スタイリング   | Tailwind CSS         | 4.x        |
 
 ## 開発環境セットアップ
 
@@ -71,17 +71,17 @@ http://localhost:3000 でアクセスできます。
 
 ## コマンド一覧
 
-| コマンド | 説明 |
-|---------|------|
-| `bun dev` | 開発サーバー起動 |
-| `bun run build` | プロダクションビルド |
-| `bun start` | 本番サーバー起動 |
-| `bun run lint` | ESLint 実行 |
-| `bun run type-check` | TypeScript 型チェック |
-| `bunx --bun prisma studio` | Prisma Studio（DB GUI）起動 |
-| `bunx --bun prisma migrate dev` | マイグレーション実行 |
-| `docker compose up -d` | DB コンテナ起動 |
-| `docker compose down` | DB コンテナ停止 |
+| コマンド                        | 説明                        |
+| ------------------------------- | --------------------------- |
+| `bun dev`                       | 開発サーバー起動            |
+| `bun run build`                 | プロダクションビルド        |
+| `bun start`                     | 本番サーバー起動            |
+| `bun run lint`                  | ESLint 実行                 |
+| `bun run type-check`            | TypeScript 型チェック       |
+| `bunx --bun prisma studio`      | Prisma Studio（DB GUI）起動 |
+| `bunx --bun prisma migrate dev` | マイグレーション実行        |
+| `docker compose up -d`          | DB コンテナ起動             |
+| `docker compose down`           | DB コンテナ停止             |
 
 ## データベース
 
