@@ -277,7 +277,7 @@ function GoodTitle() {
 ### ESLint — eslint-plugin-react-hooks（Compiler ルール統合済み）
 
 React Compiler 1.0 から、コンパイラ用 lint ルールは `eslint-plugin-react-hooks` に統合された。
-`eslint-plugin-react-compiler` は**非推奨・不要**（`eslint.config.mjs` で `eslint-plugin-react-hooks@7` の `recommended` プリセットを直接展開している）。
+`eslint-plugin-react-compiler` は**非推奨・不要**（`eslint-config-next` が `eslint-plugin-react-hooks@7` の `recommended` プリセットを自動注入する）。
 
 **有効化済みのコンパイラ ESLint ルール（`eslint.config.mjs`）**:
 

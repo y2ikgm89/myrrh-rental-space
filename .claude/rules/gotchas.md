@@ -23,6 +23,7 @@
 - **`bun run build` は env チェックなし**（`SKIP_ENV_VALIDATION=true`）— 本番デプロイ前は `bun run build:strict`
 - **`@t3-oss/env-nextjs` は `process.env` のスナップショット** — `SKIP_ENV_VALIDATION=true` 時、`createEnv()` は `{ ...process.env }` の浅いコピーを返す。テストで `process.env["KEY"] = ...` しても `serverEnv.KEY` に反映されない。テスト可能にしたいコードは `process.env["KEY"]` を直接参照する
 - **`verification` エージェントはコードを自動修正する** — `bun run validate && bun run build` 実行時に型エラーを検出するとコードを自動変更することがある。検証のみなら Bash で `bun run validate` を直接実行
+- **ESLint 10 未対応（Next.js 16 対応待ち）** — `eslint-config-next` が依存する `eslint-plugin-react@7.x` が `context.getFilename()`（ESLint 10 で削除）を使用。`TypeError: contextOrFilename.getFilename is not a function` でクラッシュ。`eslint` は `9.39.2` 固定（`^` なし）。Next.js が `eslint-config-next` を ESLint 10 対応に更新するまで維持
 
 ## ファイル操作・Git
 
