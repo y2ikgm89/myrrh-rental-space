@@ -24,15 +24,7 @@ import { toISOString } from "@/shared/lib/serialize";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 import { getPublishedPost } from "@/public/actions/post";
 import { ArticleDetailHero } from "@/public/components/ArticleDetailHero";
-import dynamic from "next/dynamic";
-
-const PostPreviewContent = dynamic(
-  () =>
-    import("../_components/PostPreviewContent").then(
-      (m) => m.PostPreviewContent,
-    ),
-  { ssr: false },
-);
+import { PostPreviewContent } from "../_components/PostPreviewContent";
 
 interface PageProps {
   params: Promise<{ slug: string }>;

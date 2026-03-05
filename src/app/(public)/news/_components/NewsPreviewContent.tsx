@@ -9,7 +9,7 @@
  */
 
 import type { ReactElement } from "react";
-import { useState } from "react";
+import { useRef, useSyncExternalStore } from "react";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 import { ArticleDetailHero } from "@/public/components/ArticleDetailHero";
 import {
@@ -19,7 +19,7 @@ import {
   type NewsPreviewData,
 } from "@/shared/types";
 
-interface NewsPreviewContentProps {
+export interface NewsPreviewContentProps {
   identifier: string;
 }
 
@@ -76,7 +76,18 @@ function readFromStorage(identifier: string): PreviewState {
 export function NewsPreviewContent({
   identifier,
 }: NewsPreviewContentProps): ReactElement {
-  const [state] = useState<PreviewState>(() => readFromStorage(identifier));
+  const snapshotRef = useRef<PreviewState | null>(null);
+  const state = useSyncExternalStore(
+    () => () => {},
+    () => {
+      snapshotRef.current ??= readFromStorage(identifier);
+      return snapshotRef.current;
+    },
+    (): PreviewState => ({
+      status: "error",
+      message: "プレビューデータの読み込みに失敗しました。",
+    }),
+  );
 
   if (state.status === "error") {
     return (
