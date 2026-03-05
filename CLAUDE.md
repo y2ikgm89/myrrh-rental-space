@@ -81,7 +81,7 @@ Skill ツールで明示的に呼び出す。1% でも該当する可能性が�
   - `security-reviewer`: auth・Stripe・OAuth・API Route・外部連携コード変更後
   - `project-reviewer`: 管理画面コード作成・大規模リファクタリング後（型安全・カラートークン・rules 違反）
   - `cache-strategy-reviewer`: `updateTag`・`revalidateTag`・`'use cache'` 関数変更後
-  - `lexical-reviewer`: `src/**/lexical/` 配下 Node/Plugin 編集後
+  - `lexical-reviewer`: `src/**/lexical/` 配下 Node/Plugin 編集後（`nodes.ts` の Node Replacement 設定変更も含む）
   - `test-writer`: 新規 lib 関数・Server Action・バリデーションスキーマ実装後
   - `e2e-test-writer`: 新規管理画面ページ・公開ページ・認証フロー実装後（Playwright E2E）
   - `db-migration-reviewer`: `bunx --bun prisma migrate dev` 実行前
