@@ -1,38 +1,27 @@
 "use server";
 
-/**
- * External Service API Keys Server Actions
- *
- * 外部サービスAPIキーの管理用Server Actions
- */
-
 import { prisma } from "@/shared/lib/prisma";
 import { updateTag } from "next/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { createSuccess, createFailure } from "@/admin/types/server-actions";
 import { createValidationError } from "@/shared/lib/action-helpers";
 import { withPermission } from "@/admin/lib/server-action-helpers";
-import { encrypt, safeDecrypt } from "@/shared/lib/crypto";
-import { checkReadPermissionFor } from "@/admin/lib/permissions";
-import { isRecord } from "@/shared/lib/serialize";
+import { encrypt } from "@/shared/lib/crypto";
 import {
   resendSettingsSchema,
   turnstileSettingsSchema,
   googleMapsSettingsSchema,
   cloudflareSettingsSchema,
   customApiKeySchema,
+  googleOAuthSettingsSchema,
   type ResendSettingsInput,
   type TurnstileSettingsInput,
   type GoogleMapsSettingsInput,
   type CloudflareSettingsInput,
   type CustomApiKeyInput,
+  type GoogleOAuthSettingsInput,
 } from "@/admin/lib/validations/api-keys";
 import {
-  maskResendKey,
-  maskTurnstileKey,
-  maskGoogleMapsKey,
-  maskCloudflareToken,
-  maskGoogleOAuthSecret,
   testResendConnection,
   testTurnstileConnection,
   testGoogleMapsConnection,
@@ -40,193 +29,7 @@ import {
   testGoogleOAuthConnection,
 } from "@/admin/lib/api-keys";
 import { resetAuthInstance } from "@/shared/lib/auth";
-import {
-  googleOAuthSettingsSchema,
-  type GoogleOAuthSettingsInput,
-} from "@/admin/lib/validations/api-keys";
-import type {
-  ResendConfig,
-  TurnstileConfig,
-  GoogleMapsConfig,
-  CloudflareConfig,
-  GoogleOAuthConfig,
-  CustomApiKeyData,
-  CustomApiKeysMap,
-  CustomApiKeyStored,
-} from "@/admin/types/api-keys";
-
-// =============================================================================
-// Type Guards
-// =============================================================================
-
-/**
- * ConnectionStatus型ガード
- */
-type ConnectionStatus = "connected" | "error";
-
-function isConnectionStatus(value: unknown): value is ConnectionStatus {
-  return value === "connected" || value === "error";
-}
-
-function parseConnectionStatus(value: unknown): ConnectionStatus | null {
-  return isConnectionStatus(value) ? value : null;
-}
-
-/**
- * CustomApiKeyStoredの型ガード
- * 必須フィールドの存在と型を検証
- */
-function isCustomApiKeyStored(value: unknown): value is CustomApiKeyStored {
-  if (!isRecord(value)) return false;
-  return (
-    typeof value["name"] === "string" &&
-    typeof value["keyName"] === "string" &&
-    typeof value["keyValue"] === "string" &&
-    typeof value["createdAt"] === "string" &&
-    typeof value["updatedAt"] === "string"
-  );
-}
-
-/**
- * unknownからCustomApiKeysMapを安全にパースする
- * PrismaのJSONフィールドから取得した値を型安全に扱う
- */
-function parseCustomApiKeysMap(value: unknown): CustomApiKeysMap {
-  if (!isRecord(value)) return {};
-
-  const result: CustomApiKeysMap = {};
-
-  for (const [key, entry] of Object.entries(value)) {
-    if (isCustomApiKeyStored(entry)) {
-      result[key] = entry;
-    }
-  }
-
-  return result;
-}
-
-// =============================================================================
-// GET Actions
-// =============================================================================
-
-const checkReadPermission = checkReadPermissionFor("settings");
-
-/**
- * Resend設定を取得
- */
-export async function getResendConfig(): Promise<ResendConfig> {
-  if (!(await checkReadPermission())) {
-    return { apiKeyMasked: null, lastTestedAt: null, connectionStatus: null };
-  }
-
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: {
-      resendApiKey: true,
-      resendLastTestedAt: true,
-      resendConnectionStatus: true,
-    },
-  });
-
-  return {
-    apiKeyMasked: settings?.resendApiKey
-      ? maskResendKey(safeDecrypt(settings.resendApiKey) || "****")
-      : null,
-    lastTestedAt: settings?.resendLastTestedAt || null,
-    connectionStatus: parseConnectionStatus(settings?.resendConnectionStatus),
-  };
-}
-
-/**
- * Turnstile設定を取得
- */
-export async function getTurnstileConfig(): Promise<TurnstileConfig> {
-  if (!(await checkReadPermission())) {
-    return {
-      siteKey: null,
-      secretKeyMasked: null,
-      lastTestedAt: null,
-      connectionStatus: null,
-    };
-  }
-
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: {
-      turnstileSiteKey: true,
-      turnstileSecretKey: true,
-      turnstileLastTestedAt: true,
-      turnstileConnectionStatus: true,
-    },
-  });
-
-  return {
-    siteKey: settings?.turnstileSiteKey || null,
-    secretKeyMasked: settings?.turnstileSecretKey
-      ? maskTurnstileKey(safeDecrypt(settings.turnstileSecretKey) || "****")
-      : null,
-    lastTestedAt: settings?.turnstileLastTestedAt || null,
-    connectionStatus: parseConnectionStatus(
-      settings?.turnstileConnectionStatus,
-    ),
-  };
-}
-
-/**
- * Google Maps設定を取得
- */
-export async function getGoogleMapsConfig(): Promise<GoogleMapsConfig> {
-  if (!(await checkReadPermission())) {
-    return { apiKeyMasked: null, lastTestedAt: null, connectionStatus: null };
-  }
-
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: {
-      googleMapsApiKey: true,
-      googleMapsLastTestedAt: true,
-      googleMapsConnectionStatus: true,
-    },
-  });
-
-  return {
-    apiKeyMasked: settings?.googleMapsApiKey
-      ? maskGoogleMapsKey(safeDecrypt(settings.googleMapsApiKey) || "****")
-      : null,
-    lastTestedAt: settings?.googleMapsLastTestedAt || null,
-    connectionStatus: parseConnectionStatus(
-      settings?.googleMapsConnectionStatus,
-    ),
-  };
-}
-
-/**
- * カスタムAPIキー一覧を取得
- */
-export async function getCustomApiKeys(): Promise<CustomApiKeyData[]> {
-  if (!(await checkReadPermission())) return [];
-
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: { customApiKeys: true },
-  });
-
-  if (!settings?.customApiKeys || typeof settings.customApiKeys !== "object") {
-    return [];
-  }
-
-  const keysMap = parseCustomApiKeysMap(settings.customApiKeys);
-  return Object.entries(keysMap).map(([id, data]) => ({
-    id,
-    name: data.name,
-    keyName: data.keyName,
-    description: data.description,
-    lastTestedAt: data.lastTestedAt ? new Date(data.lastTestedAt) : undefined,
-    connectionStatus: data.connectionStatus,
-    createdAt: new Date(data.createdAt),
-    updatedAt: new Date(data.updatedAt),
-  }));
-}
+import { parseCustomApiKeysMap } from "./helpers";
 
 // =============================================================================
 // UPDATE Actions - Resend
@@ -564,41 +367,6 @@ export const clearGoogleMapsKeys = withPermission<[]>(
 // =============================================================================
 
 /**
- * Cloudflare設定を取得
- */
-export async function getCloudflareConfig(): Promise<CloudflareConfig> {
-  if (!(await checkReadPermission())) {
-    return {
-      zoneId: null,
-      apiTokenMasked: null,
-      lastTestedAt: null,
-      connectionStatus: null,
-    };
-  }
-
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: {
-      cloudflareZoneId: true,
-      cloudflareApiToken: true,
-      cloudflareLastTestedAt: true,
-      cloudflareConnectionStatus: true,
-    },
-  });
-
-  return {
-    zoneId: settings?.cloudflareZoneId || null,
-    apiTokenMasked: settings?.cloudflareApiToken
-      ? maskCloudflareToken(safeDecrypt(settings.cloudflareApiToken) || "****")
-      : null,
-    lastTestedAt: settings?.cloudflareLastTestedAt || null,
-    connectionStatus: parseConnectionStatus(
-      settings?.cloudflareConnectionStatus,
-    ),
-  };
-}
-
-/**
  * Cloudflare設定を更新
  */
 export const updateCloudflareSettings = withPermission<
@@ -799,67 +567,9 @@ export const deleteCustomApiKey = withPermission<[string]>(
   return createSuccess("APIキーを削除しました");
 });
 
-/**
- * カスタムAPIキーの復号化された値を取得（内部使用のみ）
- */
-export async function getCustomApiKeyValue(id: string): Promise<string | null> {
-  if (!(await checkReadPermission())) return null;
-
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: { customApiKeys: true },
-  });
-
-  const keysMap = settings?.customApiKeys
-    ? parseCustomApiKeysMap(settings.customApiKeys)
-    : null;
-  if (!keysMap || !keysMap[id]) {
-    return null;
-  }
-
-  return safeDecrypt(keysMap[id].keyValue);
-}
-
 // =============================================================================
 // Google OAuth (ログイン & カレンダー共通)
 // =============================================================================
-
-/**
- * Google OAuth設定を取得
- */
-export async function getGoogleOAuthConfig(): Promise<GoogleOAuthConfig> {
-  if (!(await checkReadPermission())) {
-    return {
-      clientId: null,
-      clientSecretMasked: null,
-      lastTestedAt: null,
-      connectionStatus: null,
-    };
-  }
-
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: {
-      googleOAuthClientId: true,
-      googleOAuthClientSecret: true,
-      googleOAuthLastTestedAt: true,
-      googleOAuthConnectionStatus: true,
-    },
-  });
-
-  return {
-    clientId: settings?.googleOAuthClientId || null,
-    clientSecretMasked: settings?.googleOAuthClientSecret
-      ? maskGoogleOAuthSecret(
-          safeDecrypt(settings.googleOAuthClientSecret) || "****",
-        )
-      : null,
-    lastTestedAt: settings?.googleOAuthLastTestedAt || null,
-    connectionStatus: parseConnectionStatus(
-      settings?.googleOAuthConnectionStatus,
-    ),
-  };
-}
 
 /**
  * Google OAuth設定を更新
