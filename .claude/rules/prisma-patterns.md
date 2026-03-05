@@ -397,12 +397,6 @@ const post = await prisma.post.findUnique({ where: { id } });
 ### Include vs Select
 
 ```typescript
-// OK: リレーションが必要な場合
-const post = await prisma.post.findUnique({
-  where: { id },
-  include: { author: true },
-});
-
 // OK: リレーションの一部フィールドのみ（推奨）
 const post = await prisma.post.findUnique({
   where: { id },
@@ -414,6 +408,47 @@ const post = await prisma.post.findUnique({
     },
   },
 });
+```
+
+**⚠️ `include` と top-level `select` は同時使用不可**。`include: { _count }` や `include: { relation }` を含む findMany を explicit select に変換する場合、リレーションを `select` 内でネストする:
+
+```typescript
+// NG: include + select を同時使用（Prisma エラー）
+prisma.postCategory.findMany({
+  select: { id: true, name: true },
+  include: { _count: { select: { posts: true } } }, // ← エラー
+});
+
+// OK: select 内でネスト
+prisma.postCategory.findMany({
+  select: {
+    id: true,
+    name: true,
+    _count: { select: { posts: true } }, // ← ネストして解決
+    author: { select: { id: true, name: true, email: true } },
+  },
+});
+```
+
+### List クエリ専用型（Omit パターン）
+
+list クエリで重いフィールド（`contentHtml` / `contentJson` 等）を除外する場合、`Omit` で list 専用型を派生させる。
+**select 変換後はコンポーネントの prop 型も更新が必要**（`bun run type-check` で洗い出せる）:
+
+```typescript
+// validations/post.ts — 重いフィールドを除いた list 専用型
+export type PostListData = Omit<PostData, "contentHtml" | "contentJson">;
+
+export type GetPostsResult = {
+  posts: PostListData[]; // PostData[] から変更
+  total: number;
+  // ...
+};
+
+// PostTable.tsx — 受け取る prop 型も更新する
+type PostTableProps = {
+  posts: PostListData[]; // PostData[] → PostListData[]
+};
 ```
 
 ### トランザクション
