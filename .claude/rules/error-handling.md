@@ -1,6 +1,10 @@
 ---
 paths:
-  - src/**
+  - src/**/actions/**
+  - src/**/mutations.ts
+  - src/**/queries.ts
+  - src/app/api/**
+  - src/shared/lib/**
 ---
 
 # エラーハンドリングルール
