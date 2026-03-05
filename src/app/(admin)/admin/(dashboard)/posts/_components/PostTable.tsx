@@ -11,14 +11,14 @@ import { EmptyState } from "@/admin/components/EmptyState";
 import { PostStatusBadge } from "@/admin/components/status-badges";
 import { PostActionCell } from "./PostActionCell";
 import { formatDateTimeShort } from "@/shared/lib/utils";
-import type { PostData } from "@/admin/lib/validations/post";
+import type { PostListData } from "@/admin/lib/validations/post";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type PostTableProps = {
-  posts: PostData[];
+  posts: PostListData[];
 };
 
 // =============================================================================

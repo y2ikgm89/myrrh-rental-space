@@ -267,10 +267,15 @@ export type PostTagData = {
 };
 
 /**
+ * 投稿記事一覧用データ型（contentHtml/contentJson を除外）
+ */
+export type PostListData = Omit<PostData, "contentHtml" | "contentJson">;
+
+/**
  * 投稿記事一覧取得結果型
  */
 export type GetPostsResult = {
-  posts: PostData[];
+  posts: PostListData[];
   total: number;
   page: number;
   limit: number;

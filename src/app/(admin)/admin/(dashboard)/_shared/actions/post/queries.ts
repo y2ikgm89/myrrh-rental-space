@@ -74,26 +74,34 @@ export async function getPosts(
     prisma.post.count({ where }),
     prisma.post.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        excerpt: true,
+        thumbnailUrl: true,
+        ogpImageUrl: true,
+        categoryId: true,
+        metaDescription: true,
+        metaKeywords: true,
+        ogpTitle: true,
+        ogpDescription: true,
+        publishedAt: true,
+        status: true,
+        viewCount: true,
+        createdAt: true,
+        updatedAt: true,
+        contentWidth: true,
+        contentWidthCustom: true,
         category: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-          },
+          select: { id: true, name: true, slug: true },
         },
         author: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
+          select: { id: true, name: true, email: true },
         },
         postTags: {
-          include: {
-            tag: {
-              select: { id: true, name: true, slug: true },
-            },
+          select: {
+            tag: { select: { id: true, name: true, slug: true } },
           },
         },
       },
@@ -180,6 +188,15 @@ export async function getPostVersions(
 
   const versions = await prisma.postVersion.findMany({
     where: { postId },
+    select: {
+      id: true,
+      postId: true,
+      version: true,
+      contentHtml: true,
+      contentJson: true,
+      createdAt: true,
+      createdBy: true,
+    },
     orderBy: { version: "desc" },
   });
 
@@ -205,7 +222,17 @@ export async function getPostCategories(): Promise<PostCategoryData[]> {
   }
 
   const categories = await prisma.postCategory.findMany({
-    include: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      description: true,
+      order: true,
+      metaTitle: true,
+      metaDescription: true,
+      ogpImageUrl: true,
+      createdAt: true,
+      updatedAt: true,
       _count: {
         select: { posts: true },
       },
@@ -235,7 +262,17 @@ export async function getPostCategoryById(
 
   const category = await prisma.postCategory.findUnique({
     where: { id },
-    include: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      description: true,
+      order: true,
+      metaTitle: true,
+      metaDescription: true,
+      ogpImageUrl: true,
+      createdAt: true,
+      updatedAt: true,
       _count: {
         select: { posts: true },
       },
@@ -327,7 +364,16 @@ export async function getPostTags(): Promise<PostTagData[]> {
   }
 
   const tags = await prisma.postTag.findMany({
-    include: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      description: true,
+      metaTitle: true,
+      metaDescription: true,
+      ogpImageUrl: true,
+      createdAt: true,
+      updatedAt: true,
       _count: {
         select: { posts: true },
       },
@@ -355,7 +401,16 @@ export async function getPostTagById(id: string): Promise<PostTagData | null> {
 
   const tag = await prisma.postTag.findUnique({
     where: { id },
-    include: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      description: true,
+      metaTitle: true,
+      metaDescription: true,
+      ogpImageUrl: true,
+      createdAt: true,
+      updatedAt: true,
       _count: {
         select: { posts: true },
       },
