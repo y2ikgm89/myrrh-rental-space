@@ -8,25 +8,36 @@
  * - サイドパネル設定
  */
 
-import { format } from 'date-fns'
-import { newsFormSchema, type NewsFormData, type NewsData } from '@/admin/lib/validations/news'
+import { format } from "date-fns";
+import {
+  newsFormSchema,
+  type NewsFormData,
+  type NewsData,
+} from "@/admin/lib/validations/news";
 import {
   createNews,
   updateNews,
   deleteNews,
   publishNews,
   unpublishNews,
-} from '@/admin/actions/news'
-import { isValidLayoutWidth, type LayoutWidth } from '@/shared/lib/validations/enums'
-import type { NewsPreviewData } from '@/shared/types'
-import { SEO_FIELD_NAMES, OGP_FIELD_NAMES, type ContentTypeConfig } from './types'
+} from "@/admin/actions/news";
+import {
+  isValidLayoutWidth,
+  type LayoutWidth,
+} from "@/shared/lib/validations/enums";
+import type { NewsPreviewData } from "@/shared/types";
+import {
+  SEO_FIELD_NAMES,
+  OGP_FIELD_NAMES,
+  type ContentTypeConfig,
+} from "./types";
 import {
   TitleSlugFields,
   SEOFields,
   OGPFields,
   UnifiedPublishFields,
   LayoutFields,
-} from '../side-panel'
+} from "../side-panel";
 
 // =============================================================================
 // Types
@@ -34,17 +45,17 @@ import {
 
 /** News用送信ペイロード型 */
 type NewsSubmitPayload = {
-  slug: string
-  title: string
-  contentJson: string
-  contentWidth: LayoutWidth | null
-  contentWidthCustom: number | null
-  metaDescription: string | null
-  metaKeywords: string | null
-  ogpTitle: string | null
-  ogpDescription: string | null
-  ogpImageUrl: string | null
-}
+  slug: string;
+  title: string;
+  contentJson: string;
+  contentWidth: LayoutWidth | null;
+  contentWidthCustom: number | null;
+  metaDescription: string | null;
+  metaKeywords: string | null;
+  ogpTitle: string | null;
+  ogpDescription: string | null;
+  ogpImageUrl: string | null;
+};
 
 // =============================================================================
 // Transforms
@@ -54,37 +65,37 @@ type NewsSubmitPayload = {
 function toFormData(data?: NewsData): NewsFormData {
   if (!data) {
     return {
-      slug: '',
-      title: '',
-      contentJson: '',
+      slug: "",
+      title: "",
+      contentJson: "",
       isPublished: false,
-      publishedAt: '',
-      contentWidth: '',
-      contentWidthCustom: '',
-      metaDescription: '',
-      metaKeywords: '',
-      ogpTitle: '',
-      ogpDescription: '',
-      ogpImageUrl: '',
-    }
+      publishedAt: "",
+      contentWidth: "",
+      contentWidthCustom: "",
+      metaDescription: "",
+      metaKeywords: "",
+      ogpTitle: "",
+      ogpDescription: "",
+      ogpImageUrl: "",
+    };
   }
 
   return {
     slug: data.slug,
     title: data.title,
-    contentJson: data.contentJson ? JSON.stringify(data.contentJson) : '',
+    contentJson: data.contentJson ? JSON.stringify(data.contentJson) : "",
     isPublished: data.isPublished,
     publishedAt: data.publishedAt
       ? format(new Date(data.publishedAt), "yyyy-MM-dd'T'HH:mm")
-      : '',
-    contentWidth: data.contentWidth ?? '',
-    contentWidthCustom: data.contentWidthCustom?.toString() ?? '',
-    metaDescription: data.metaDescription ?? '',
-    metaKeywords: data.metaKeywords ?? '',
-    ogpTitle: data.ogpTitle ?? '',
-    ogpDescription: data.ogpDescription ?? '',
-    ogpImageUrl: data.ogpImageUrl ?? '',
-  }
+      : "",
+    contentWidth: data.contentWidth ?? "",
+    contentWidthCustom: data.contentWidthCustom?.toString() ?? "",
+    metaDescription: data.metaDescription ?? "",
+    metaKeywords: data.metaKeywords ?? "",
+    ogpTitle: data.ogpTitle ?? "",
+    ogpDescription: data.ogpDescription ?? "",
+    ogpImageUrl: data.ogpImageUrl ?? "",
+  };
 }
 
 /** フォームデータ → 送信ペイロード */
@@ -93,7 +104,9 @@ function toSubmitPayload(formData: NewsFormData): NewsSubmitPayload {
     slug: formData.slug,
     title: formData.title,
     contentJson: formData.contentJson,
-    contentWidth: isValidLayoutWidth(formData.contentWidth) ? formData.contentWidth : null,
+    contentWidth: isValidLayoutWidth(formData.contentWidth)
+      ? formData.contentWidth
+      : null,
     contentWidthCustom: formData.contentWidthCustom
       ? parseInt(formData.contentWidthCustom, 10)
       : null,
@@ -102,17 +115,17 @@ function toSubmitPayload(formData: NewsFormData): NewsSubmitPayload {
     ogpTitle: formData.ogpTitle || null,
     ogpDescription: formData.ogpDescription || null,
     ogpImageUrl: formData.ogpImageUrl || null,
-  }
+  };
 }
 
 /** フォームデータ → プレビューデータ */
 function toPreviewData(formData: NewsFormData): NewsPreviewData {
   return {
-    title: formData.title || '無題',
-    slug: formData.slug || 'preview-new',
-    content: formData.contentJson || '',
+    title: formData.title || "無題",
+    slug: formData.slug || "preview-new",
+    contentHtml: "",
     publishedAt: formData.publishedAt || null,
-  }
+  };
 }
 
 // =============================================================================
@@ -126,11 +139,11 @@ export const newsConfig: ContentTypeConfig<
   NewsSubmitPayload
 > = {
   // 基本情報
-  id: 'news',
-  label: 'お知らせ',
-  listPath: '/admin/news',
-  slugPrefix: 'news/',
-  previewBasePath: '/news',
+  id: "news",
+  label: "お知らせ",
+  listPath: "/admin/news",
+  slugPrefix: "news/",
+  previewBasePath: "/news",
 
   // スキーマ
   formSchema: newsFormSchema,
@@ -145,7 +158,7 @@ export const newsConfig: ContentTypeConfig<
 
   // 公開制御
   publishControl: {
-    type: 'isPublished',
+    type: "isPublished",
   },
 
   // データ変換
@@ -166,38 +179,38 @@ export const newsConfig: ContentTypeConfig<
 
   // サイドパネル
   sidePanel: {
-    title: 'お知らせ設定',
-    width: 'default',
+    title: "お知らせ設定",
+    width: "default",
     tabs: [
       {
-        id: 'basic',
-        label: '基本',
+        id: "basic",
+        label: "基本",
         sections: [
           {
-            title: '基本情報',
+            title: "基本情報",
             component: TitleSlugFields,
             props: {
-              fields: { title: 'title', slug: 'slug' },
-              slugPreviewPath: '/news',
-              titlePlaceholder: 'お知らせのタイトル',
-              slugPlaceholder: 'news-slug',
+              fields: { title: "title", slug: "slug" },
+              slugPreviewPath: "/news",
+              titlePlaceholder: "お知らせのタイトル",
+              slugPlaceholder: "news-slug",
             },
           },
         ],
       },
       {
-        id: 'seo',
-        label: 'SEO・OGP',
+        id: "seo",
+        label: "SEO・OGP",
         sections: [
           {
-            title: 'SEO設定',
+            title: "SEO設定",
             component: SEOFields,
             props: {
               fields: SEO_FIELD_NAMES,
             },
           },
           {
-            title: 'OGP設定',
+            title: "OGP設定",
             component: OGPFields,
             props: {
               fields: OGP_FIELD_NAMES,
@@ -206,21 +219,21 @@ export const newsConfig: ContentTypeConfig<
         ],
       },
       {
-        id: 'publish',
-        label: '公開',
+        id: "publish",
+        label: "公開",
         sections: [
           {
-            title: '公開設定',
+            title: "公開設定",
             component: UnifiedPublishFields,
             props: {
-              controlType: 'isPublished',
+              controlType: "isPublished",
               fields: {
-                publishedAt: 'publishedAt',
+                publishedAt: "publishedAt",
               },
             },
           },
           {
-            title: 'レイアウト',
+            title: "レイアウト",
             component: LayoutFields,
             props: {},
           },
@@ -228,4 +241,4 @@ export const newsConfig: ContentTypeConfig<
       },
     ],
   },
-}
+};

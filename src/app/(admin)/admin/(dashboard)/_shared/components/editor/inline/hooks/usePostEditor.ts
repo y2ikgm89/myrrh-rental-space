@@ -25,6 +25,7 @@ import {
   publishPost,
   unpublishPost,
 } from "@/admin/actions/post";
+import { generatePreviewHtml } from "@/admin/actions/preview";
 import { usePreview } from "@/admin/hooks";
 import { logger } from "@/shared/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
@@ -126,6 +127,7 @@ function toSubmitPayload(formData: PostFormData) {
 function toPreviewData(
   formData: PostFormData,
   categories: CategoryOption[],
+  contentHtml: string,
 ): PostPreviewData {
   const tags = parseTagsString(formData.tags);
   const selectedCategory = categories.find((c) => c.id === formData.categoryId);
@@ -134,7 +136,7 @@ function toPreviewData(
     title: formData.title || "無題",
     slug: formData.slug || "preview-new",
     excerpt: formData.excerpt || "",
-    content: formData.contentJson || "",
+    contentHtml,
     thumbnailUrl: formData.thumbnailUrl || "",
     publishedAt: formData.publishedAt || null,
     tags,
@@ -285,11 +287,12 @@ export function usePostEditor({
     });
   };
 
-  const handlePreview = () => {
+  const handlePreview = async () => {
     const values = getValues();
     const identifier =
       mode === "create" ? "preview-new" : slug || "preview-new";
-    const previewData = toPreviewData(values, categories);
+    const contentHtml = await generatePreviewHtml(values.contentJson || "");
+    const previewData = toPreviewData(values, categories, contentHtml);
     saveAndOpenPreview(identifier, previewData, "/posts");
   };
 

@@ -24,17 +24,32 @@ import { toISOString } from "@/shared/lib/serialize";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 import { getPublishedPost } from "@/public/actions/post";
 import { ArticleDetailHero } from "@/public/components/ArticleDetailHero";
+import dynamic from "next/dynamic";
+
+const PostPreviewContent = dynamic(
+  () =>
+    import("../_components/PostPreviewContent").then(
+      (m) => m.PostPreviewContent,
+    ),
+  { ssr: false },
+);
 
 interface PageProps {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ preview?: string }>;
 }
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: PageProps): Promise<Metadata> {
   await connection();
 
   const { slug } = await params;
+  const sp = await searchParams;
+  if (sp.preview === "true") {
+    return { title: "プレビュー", robots: { index: false, follow: false } };
+  }
   const [post, settings] = await Promise.all([
     getPublishedPost(slug),
     getSeoSettings(),
@@ -62,10 +77,17 @@ export async function generateMetadata({
 
 export default async function PostDetailPage({
   params,
+  searchParams,
 }: PageProps): Promise<ReactElement> {
   await connection();
 
   const { slug } = await params;
+  const sp = await searchParams;
+
+  if (sp.preview === "true") {
+    return <PostPreviewContent identifier={slug} />;
+  }
+
   const post = await getPublishedPost(slug);
 
   if (!post) {

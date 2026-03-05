@@ -166,7 +166,7 @@ function toPreviewData(
     title: formData.title || "無題",
     slug: formData.slug || "preview-new",
     excerpt: formData.excerpt || "",
-    content: formData.contentJson || "",
+    contentHtml: "",
     thumbnailUrl: formData.thumbnailUrl || "",
     publishedAt: formData.publishedAt || null,
     tags,

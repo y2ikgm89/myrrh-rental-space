@@ -23,6 +23,7 @@ import {
   publishNews,
   unpublishNews,
 } from "@/admin/actions/news";
+import { generatePreviewHtml } from "@/admin/actions/preview";
 import { usePreview } from "@/admin/hooks";
 import { logger } from "@/shared/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
@@ -102,11 +103,14 @@ function toSubmitPayload(formData: NewsFormData) {
   };
 }
 
-function toPreviewData(formData: NewsFormData): NewsPreviewData {
+function toPreviewData(
+  formData: NewsFormData,
+  contentHtml: string,
+): NewsPreviewData {
   return {
     title: formData.title || "無題",
     slug: formData.slug || "preview-new",
-    content: formData.contentJson || "",
+    contentHtml,
     publishedAt: formData.publishedAt || null,
   };
 }
@@ -239,11 +243,12 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
     });
   };
 
-  const handlePreview = () => {
+  const handlePreview = async () => {
     const values = getValues();
     const identifier =
       mode === "create" ? "preview-new" : slug || "preview-new";
-    const previewData = toPreviewData(values);
+    const contentHtml = await generatePreviewHtml(values.contentJson || "");
+    const previewData = toPreviewData(values, contentHtml);
     saveAndOpenPreview(identifier, previewData, "/news");
   };
 

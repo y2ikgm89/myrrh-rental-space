@@ -4,7 +4,7 @@
  * エディタで編集中のコンテンツを保存前にプレビューするための型定義
  */
 
-import { z } from 'zod'
+import { z } from "zod";
 
 // =============================================================================
 // Zod Schemas
@@ -17,7 +17,7 @@ export const PostPreviewDataSchema = z.object({
   title: z.string(),
   slug: z.string(),
   excerpt: z.string(),
-  content: z.string(),
+  contentHtml: z.string(),
   thumbnailUrl: z.string(),
   publishedAt: z.string().nullable(),
   tags: z.array(z.string()),
@@ -25,7 +25,7 @@ export const PostPreviewDataSchema = z.object({
     name: z.string(),
     slug: z.string(),
   }),
-})
+});
 
 /**
  * ニュースプレビューデータスキーマ
@@ -33,9 +33,9 @@ export const PostPreviewDataSchema = z.object({
 export const NewsPreviewDataSchema = z.object({
   title: z.string(),
   slug: z.string(),
-  content: z.string(),
+  contentHtml: z.string(),
   publishedAt: z.string().nullable(),
-})
+});
 
 /**
  * ページプレビューデータスキーマ
@@ -47,7 +47,7 @@ export const PagePreviewDataSchema = z.object({
   slug: z.string(),
   description: z.string().nullable(),
   showSidebar: z.boolean(),
-})
+});
 
 /**
  * プレビューデータコンテナのベーススキーマ
@@ -55,34 +55,34 @@ export const PagePreviewDataSchema = z.object({
 const PreviewDataBaseSchema = z.object({
   version: z.literal(1),
   timestamp: z.number(),
-})
+});
 
 /**
  * コンテンツタイプ別のプレビューデータコンテナスキーマ
  */
 export const PostPreviewContainerSchema = PreviewDataBaseSchema.extend({
-  contentType: z.literal('post'),
+  contentType: z.literal("post"),
   data: PostPreviewDataSchema,
-})
+});
 
 export const NewsPreviewContainerSchema = PreviewDataBaseSchema.extend({
-  contentType: z.literal('news'),
+  contentType: z.literal("news"),
   data: NewsPreviewDataSchema,
-})
+});
 
 export const PagePreviewContainerSchema = PreviewDataBaseSchema.extend({
-  contentType: z.literal('page'),
+  contentType: z.literal("page"),
   data: PagePreviewDataSchema,
-})
+});
 
 /**
  * プレビューデータのunionスキーマ
  */
-export const PreviewContainerSchema = z.discriminatedUnion('contentType', [
+export const PreviewContainerSchema = z.discriminatedUnion("contentType", [
   PostPreviewContainerSchema,
   NewsPreviewContainerSchema,
   PagePreviewContainerSchema,
-])
+]);
 
 // =============================================================================
 // Preview Data Types
@@ -92,28 +92,28 @@ export const PreviewContainerSchema = z.discriminatedUnion('contentType', [
  * 投稿プレビューデータ
  */
 export type PostPreviewData = {
-  title: string
-  slug: string
-  excerpt: string
-  content: string
-  thumbnailUrl: string
-  publishedAt: string | null
-  tags: string[]
+  title: string;
+  slug: string;
+  excerpt: string;
+  contentHtml: string;
+  thumbnailUrl: string;
+  publishedAt: string | null;
+  tags: string[];
   category: {
-    name: string
-    slug: string
-  }
-}
+    name: string;
+    slug: string;
+  };
+};
 
 /**
  * ニュースプレビューデータ
  */
 export type NewsPreviewData = {
-  title: string
-  slug: string
-  content: string
-  publishedAt: string | null
-}
+  title: string;
+  slug: string;
+  contentHtml: string;
+  publishedAt: string | null;
+};
 
 /**
  * ページプレビューデータ
@@ -121,11 +121,11 @@ export type NewsPreviewData = {
  * Note: content は廃止（セクションシステムに移行済み）
  */
 export type PagePreviewData = {
-  title: string
-  slug: string
-  description: string | null
-  showSidebar: boolean
-}
+  title: string;
+  slug: string;
+  description: string | null;
+  showSidebar: boolean;
+};
 
 // =============================================================================
 // Preview Container Type
@@ -138,24 +138,24 @@ export type PagePreviewData = {
  */
 export type PreviewData<T> = {
   /** バージョン（将来の互換性のため） */
-  version: 1
+  version: 1;
   /** 保存時刻（ミリ秒） */
-  timestamp: number
+  timestamp: number;
   /** コンテンツタイプ */
-  contentType: 'post' | 'news' | 'page'
+  contentType: "post" | "news" | "page";
   /** 実際のプレビューデータ */
-  data: T
-}
+  data: T;
+};
 
 // =============================================================================
 // Constants
 // =============================================================================
 
 /** プレビューデータの有効期限（30分） */
-export const PREVIEW_EXPIRY_MS = 30 * 60 * 1000
+export const PREVIEW_EXPIRY_MS = 30 * 60 * 1000;
 
 /** プレビュー用セッションストレージキーのプレフィックス */
-export const PREVIEW_STORAGE_PREFIX = 'preview-'
+export const PREVIEW_STORAGE_PREFIX = "preview-";
 
 // =============================================================================
 // Helper Functions
@@ -169,10 +169,10 @@ export const PREVIEW_STORAGE_PREFIX = 'preview-'
  * @returns ストレージキー
  */
 export function getPreviewStorageKey(
-  contentType: 'post' | 'news' | 'page',
-  identifier: string
+  contentType: "post" | "news" | "page",
+  identifier: string,
 ): string {
-  return `${PREVIEW_STORAGE_PREFIX}${contentType}-${identifier}`
+  return `${PREVIEW_STORAGE_PREFIX}${contentType}-${identifier}`;
 }
 
 /**
@@ -182,5 +182,5 @@ export function getPreviewStorageKey(
  * @returns 有効期限内の場合 true
  */
 export function isPreviewDataValid(timestamp: number): boolean {
-  return Date.now() - timestamp < PREVIEW_EXPIRY_MS
+  return Date.now() - timestamp < PREVIEW_EXPIRY_MS;
 }

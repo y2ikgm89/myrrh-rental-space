@@ -5,45 +5,59 @@
  * コンテンツ幅: DB設定に従う（getNewsLayoutSettings → resolveWidthStyles）
  */
 
-import type { Metadata } from 'next'
-import type { ReactElement } from 'react'
-import { connection } from 'next/server'
-import { notFound } from 'next/navigation'
+import type { Metadata } from "next";
+import type { ReactElement } from "react";
+import { connection } from "next/server";
+import { notFound } from "next/navigation";
 import {
   NewsArticleJsonLd,
   BreadcrumbJsonLd,
-} from '@/public/components/seo/JsonLd'
+} from "@/public/components/seo/JsonLd";
 import {
   generateArticleMetadata,
   getSeoSettings,
-} from '@/public/lib/seo/metadata-factory'
-import { getNewsLayoutSettings } from '@/public/lib/layout-settings'
-import { resolveWidthStyles } from '@/shared/lib/styles/layout-mapper'
-import { getBaseUrl } from '@/shared/lib/constants'
-import { toISOString } from '@/shared/lib/serialize'
-import { SanitizedHtml } from '@/shared/components/SanitizedHtml'
-import {
-  getPublishedNewsItem,
-} from '@/public/actions/news'
-import { ArticleDetailHero } from '@/public/components/ArticleDetailHero'
+} from "@/public/lib/seo/metadata-factory";
+import { getNewsLayoutSettings } from "@/public/lib/layout-settings";
+import { resolveWidthStyles } from "@/shared/lib/styles/layout-mapper";
+import { getBaseUrl } from "@/shared/lib/constants";
+import { toISOString } from "@/shared/lib/serialize";
+import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
+import { getPublishedNewsItem } from "@/public/actions/news";
+import { ArticleDetailHero } from "@/public/components/ArticleDetailHero";
+import dynamic from "next/dynamic";
+
+const NewsPreviewContent = dynamic(
+  () =>
+    import("../_components/NewsPreviewContent").then(
+      (m) => m.NewsPreviewContent,
+    ),
+  { ssr: false },
+);
 
 interface PageProps {
-  params: Promise<{ slug: string }>
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ preview?: string }>;
 }
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: PageProps): Promise<Metadata> {
-  await connection()
+  await connection();
 
-  const { slug } = await params
+  const { slug } = await params;
+  const sp = await searchParams;
+  if (sp.preview === "true") {
+    return { title: "プレビュー", robots: { index: false, follow: false } };
+  }
+
   const [newsItem, settings] = await Promise.all([
     getPublishedNewsItem(slug),
     getSeoSettings(),
-  ])
+  ]);
 
   if (!newsItem) {
-    return { title: 'お知らせが見つかりません' }
+    return { title: "お知らせが見つかりません" };
   }
 
   return generateArticleMetadata(
@@ -58,38 +72,45 @@ export async function generateMetadata({
     {
       canonicalUrl: `${getBaseUrl()}/news/${slug}`,
       siteName: settings?.siteName ?? undefined,
-    }
-  )
+    },
+  );
 }
 
 export default async function NewsDetailPage({
   params,
+  searchParams,
 }: PageProps): Promise<ReactElement> {
-  await connection()
+  await connection();
 
-  const { slug } = await params
-  const newsItem = await getPublishedNewsItem(slug)
+  const { slug } = await params;
+  const sp = await searchParams;
 
-  if (!newsItem) {
-    notFound()
+  if (sp.preview === "true") {
+    return <NewsPreviewContent identifier={slug} />;
   }
 
-  const layoutConfig = await getNewsLayoutSettings(newsItem.id)
+  const newsItem = await getPublishedNewsItem(slug);
+
+  if (!newsItem) {
+    notFound();
+  }
+
+  const layoutConfig = await getNewsLayoutSettings(newsItem.id);
   const { className: contentClassName, style: contentStyle } =
     resolveWidthStyles({
       width: layoutConfig.contentWidth,
       customPx: layoutConfig.contentWidthCustom,
-    })
+    });
 
-  const baseUrl = getBaseUrl()
-  const datePublished = toISOString(newsItem.publishedAt) ?? ''
+  const baseUrl = getBaseUrl();
+  const datePublished = toISOString(newsItem.publishedAt) ?? "";
 
   return (
     <>
       <BreadcrumbJsonLd
         items={[
-          { name: 'ホーム', url: '/' },
-          { name: 'お知らせ', url: '/news' },
+          { name: "ホーム", url: "/" },
+          { name: "お知らせ", url: "/news" },
           { name: newsItem.title, url: `/news/${slug}` },
         ]}
       />
@@ -116,5 +137,5 @@ export default async function NewsDetailPage({
         </div>
       </article>
     </>
-  )
+  );
 }
