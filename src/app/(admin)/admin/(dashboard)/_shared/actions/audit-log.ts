@@ -11,9 +11,7 @@ import {
   createFailure,
   type ActionResult,
 } from "@/admin/types/server-actions";
-import { getSession, getRoleFromSession } from "@/shared/lib/auth";
-import { hasPermission, canAccessAdmin } from "@/admin/lib/permissions";
-import { logPermissionDenied } from "@/admin/lib/audit";
+import { withReadPermission } from "@/admin/lib/server-action-helpers";
 import { isRecord, toPlainObject } from "@/shared/lib/serialize";
 import { z } from "zod";
 
@@ -118,54 +116,17 @@ const filtersSchema = z.object({
 });
 
 // =============================================================================
-// Helper Functions
-// =============================================================================
-
-/**
- * 監査ログ権限チェック
- */
-async function checkAuditLogPermission(): Promise<
-  { user: { id: string } } | { error: string }
-> {
-  const session = await getSession();
-
-  if (!session?.user) {
-    return { error: "ログインが必要です" };
-  }
-
-  const role = getRoleFromSession(session);
-  if (!role) {
-    return { error: "権限情報が取得できません" };
-  }
-
-  if (!canAccessAdmin(role)) {
-    return { error: "管理者権限が必要です" };
-  }
-
-  if (!hasPermission(role, "auditLog", "read")) {
-    void logPermissionDenied(session.user.id, "auditLog", "read");
-    return { error: "監査ログの閲覧権限がありません" };
-  }
-
-  return { user: { id: session.user.id } };
-}
-
-// =============================================================================
 // Actions
 // =============================================================================
 
 /**
  * 監査ログ一覧を取得
  */
-export async function getAuditLogs(
-  filters: AuditLogFilters = {},
-): Promise<ActionResult<AuditLogResult>> {
-  const check = await checkAuditLogPermission();
-  if ("error" in check) {
-    return createFailure(check.error);
-  }
-
-  const validated = filtersSchema.safeParse(filters);
+export const getAuditLogs = withReadPermission<
+  [AuditLogFilters?],
+  ActionResult<AuditLogResult>
+>("auditLog")(async (_user, filters) => {
+  const validated = filtersSchema.safeParse(filters ?? {});
   if (!validated.success) {
     return createFailure("入力が不正です");
   }
@@ -234,17 +195,15 @@ export async function getAuditLogs(
       totalPages: Math.ceil(total / perPage),
     }),
   );
-}
+});
 
 /**
  * 監査ログの統計を取得
  */
-export async function getAuditLogStats(): Promise<ActionResult<AuditLogStats>> {
-  const check = await checkAuditLogPermission();
-  if ("error" in check) {
-    return createFailure(check.error);
-  }
-
+export const getAuditLogStats = withReadPermission<
+  [],
+  ActionResult<AuditLogStats>
+>("auditLog")(async () => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -281,17 +240,15 @@ export async function getAuditLogStats(): Promise<ActionResult<AuditLogStats>> {
     securityEvents,
     byAction,
   });
-}
+});
 
 /**
  * リソース一覧を取得（フィルター用）
  */
-export async function getAuditLogResources(): Promise<ActionResult<string[]>> {
-  const check = await checkAuditLogPermission();
-  if ("error" in check) {
-    return createFailure(check.error);
-  }
-
+export const getAuditLogResources = withReadPermission<
+  [],
+  ActionResult<string[]>
+>("auditLog")(async () => {
   const resources = await prisma.auditLog.findMany({
     select: { resource: true },
     distinct: ["resource"],
@@ -302,4 +259,4 @@ export async function getAuditLogResources(): Promise<ActionResult<string[]>> {
     "リソース一覧を取得しました",
     resources.map((r) => r.resource),
   );
-}
+});
