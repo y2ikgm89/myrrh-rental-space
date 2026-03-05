@@ -105,7 +105,20 @@ export async function getLocations(options?: {
     prisma.location.findMany({
       where,
       orderBy: { sortOrder: "asc" },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        address: true,
+        access: true,
+        imageUrl: true,
+        imageUrls: true,
+        businessHours: true,
+        sortOrder: true,
+        isPublished: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
         _count: {
           select: { spaces: true },
         },
