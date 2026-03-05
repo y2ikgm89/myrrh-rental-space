@@ -23,7 +23,6 @@
 - **`bun run build` は env チェックなし**（`SKIP_ENV_VALIDATION=true`）— 本番デプロイ前は `bun run build:strict`
 - **`@t3-oss/env-nextjs` は `process.env` のスナップショット** — `SKIP_ENV_VALIDATION=true` 時、`createEnv()` は `{ ...process.env }` の浅いコピーを返す。テストで `process.env["KEY"] = ...` しても `serverEnv.KEY` に反映されない。テスト可能にしたいコードは `process.env["KEY"]` を直接参照する
 - **`verification` エージェントはコードを自動修正する** — `bun run validate && bun run build` 実行時に型エラーを検出するとコードを自動変更することがある。検証のみなら Bash で `bun run validate` を直接実行
-- **ESLint 10 未対応（2026年2月時点）** — `eslint-config-next` が依存する `eslint-plugin-react@7.x` が `context.getFilename()`（ESLint 10 で削除）を使用。`TypeError: contextOrFilename.getFilename is not a function` でクラッシュ。`eslint` は `9.39.2` 固定（`^` なし）。Next.js が `eslint-plugin-react` を更新するまで維持
 
 ## ファイル操作・Git
 
@@ -73,6 +72,7 @@
 ## React / コンポーネント
 
 - **ダイアログを条件分岐の内側でレンダリング禁止** — early return や三項演算子の片側に `<Dialog>` / `<AlertDialog>` を置くと、他の状態から `open={true}` にしても表示されない。ダイアログはコンポーネント末尾のトップレベルで常にレンダリングする
+- **sessionStorage / localStorage 読み取りに `useState` lazy initializer 禁止** — React 19 公式は `useSyncExternalStore` を推奨（`subscribe` = no-op、`getSnapshot` は `useRef` キャッシュ必須）→ `react-patterns.md §useSyncExternalStore`
 - **Prisma オブジェクトを `{ ...prismaObj }` で Client Component に渡すと Symbol エラー** — `nodejs.util.inspect.custom` 等の Symbol プロパティが混入し `Only plain objects can be passed to Client Components` エラーが発生。`toPlainObject({ ...prismaObj, customFields })` でラップして返す（`@/shared/lib/serialize`）。`Date` フィールドは実行時 ISO 文字列になるため表示には `toISOString()` / `formatSerializedDate()` を使用
 - **管理者入力 HTML は `SanitizedHtml` 必須** — 生の HTML 直接レンダリング禁止。`import { SanitizedHtml } from "@/shared/components/SanitizedHtml"` を使う（isomorphic-dompurify, ADD_TAGS: ['iframe']）。例外: JSON-LD の `<script type="application/ld+json">` は JSON.stringify() 経由のため安全で変更不要
 
@@ -93,7 +93,7 @@
 ## 認証・認可
 
 - **`verifyAdminSession()` / `isAdmin()` は `SUPER_ADMIN` も必須チェック** — `role !== Role.ADMIN` のみでは `SUPER_ADMIN`（全権限保有）が管理画面にアクセスできないバグになる。`role !== Role.ADMIN && role !== Role.SUPER_ADMIN` の形式で記述する
-- **接続テスト・確認系アクションも `withPermission` HOF 必須** — 「テスト」「確認」という名称でも管理画面 Server Action は全て `withPermission` でラップする。独自の `checkXxxPermission()` ヘルパーは監査ログが欠落する
+- **接続テスト・確認系アクションも HOF 必須** — 書き込み系は `withPermission`、読み取り系は `withReadPermission`。独自の `checkXxxPermission()` ヘルパーは権限チェックが非標準になり欠落が生じる
 
 ## HTTP セキュリティヘッダー
 

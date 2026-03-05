@@ -277,7 +277,7 @@ function GoodTitle() {
 ### ESLint — eslint-plugin-react-hooks（Compiler ルール統合済み）
 
 React Compiler 1.0 から、コンパイラ用 lint ルールは `eslint-plugin-react-hooks` に統合された。
-`eslint-plugin-react-compiler` は**非推奨・不要**（`eslint-config-next` が `eslint-plugin-react-hooks@7` を自動注入する）。
+`eslint-plugin-react-compiler` は**非推奨・不要**（`eslint.config.mjs` で `eslint-plugin-react-hooks@7` の `recommended` プリセットを直接展開している）。
 
 **有効化済みのコンパイラ ESLint ルール（`eslint.config.mjs`）**:
 
@@ -421,6 +421,41 @@ export default async function Page() {
 ```
 
 **注意**: `headers()` でも回避できるが意味的に誤り。`audit.ts` など実際にヘッダー値を読む箇所は `headers()` のまま。
+
+---
+
+## useSyncExternalStore — 外部ストア読み取り（React 19 公式推奨）
+
+sessionStorage / localStorage など**変更通知を持たない外部ストア**を読み取る場合、
+`useState` lazy initializer ではなく `useSyncExternalStore` を使用する（React 19 公式推奨）。
+
+```typescript
+import { useRef, useSyncExternalStore } from "react";
+
+// NG: 外部ストアに useState lazy initializer（React 19 非推奨）
+const [data] = useState(() => sessionStorage.getItem(key));
+
+// OK: useSyncExternalStore（React 19 公式パターン）
+const snapshotRef = useRef<T | null>(null);
+const data = useSyncExternalStore(
+  () => () => {}, // subscribe: no-op（変更通知なし）
+  () => {
+    snapshotRef.current ??= readFromStorage(); // getSnapshot: useRef でキャッシュ（参照安定性）
+    return snapshotRef.current;
+  },
+  (): T => fallbackValue, // getServerSnapshot: dynamic({ ssr: false }) でも必須
+);
+```
+
+**3 引数の役割:**
+
+| 引数                | sessionStorage 向け実装               | 理由                                           |
+| ------------------- | ------------------------------------- | ---------------------------------------------- |
+| `subscribe`         | `() => () => {}` (no-op)              | sessionStorage は変更イベントを発火しない      |
+| `getSnapshot`       | `useRef` でキャッシュした読み取り関数 | 毎レンダーで新しい参照を返すと無限ループ       |
+| `getServerSnapshot` | エラー/空状態の fallback 値           | `dynamic({ ssr: false })` でも型安全のため必須 |
+
+**注意**: ブラウザ API 依存のため `dynamic({ ssr: false })` とセットで使用する。
 
 ---
 
