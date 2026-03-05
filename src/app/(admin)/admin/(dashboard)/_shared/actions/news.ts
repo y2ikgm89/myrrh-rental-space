@@ -94,6 +94,24 @@ export async function getNewsList(
     prisma.news.count({ where }),
     prisma.news.findMany({
       where,
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        contentHtml: true,
+        contentJson: true,
+        isPublished: true,
+        publishedAt: true,
+        createdAt: true,
+        updatedAt: true,
+        contentWidth: true,
+        contentWidthCustom: true,
+        metaDescription: true,
+        metaKeywords: true,
+        ogpTitle: true,
+        ogpDescription: true,
+        ogpImageUrl: true,
+      },
       orderBy: {
         [sortBy]: sortOrder,
       },
@@ -443,6 +461,15 @@ export async function getNewsVersions(
 
   const versions = await prisma.newsVersion.findMany({
     where: { newsId },
+    select: {
+      id: true,
+      newsId: true,
+      version: true,
+      contentHtml: true,
+      contentJson: true,
+      createdAt: true,
+      createdBy: true,
+    },
     orderBy: { version: "desc" },
   });
 

@@ -166,7 +166,16 @@ export const getAuditLogs = withReadPermission<
   const [logs, total] = await Promise.all([
     prisma.auditLog.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        userId: true,
+        action: true,
+        resource: true,
+        resourceId: true,
+        oldValue: true,
+        newValue: true,
+        metadata: true,
+        createdAt: true,
         user: {
           select: {
             id: true,

@@ -1,4 +1,4 @@
-'use server'
+"use server";
 
 /**
  * ホームページセクション Server Actions
@@ -6,18 +6,18 @@
  * 統一 Section モデル（pageId = null でホームページ判別）
  */
 
-import { prisma } from '@/shared/lib/prisma'
-import { updateTag } from 'next/cache'
-import { CACHE_TAGS } from '@/shared/lib/constants'
-import { createSuccess, createFailure } from '@/admin/types/server-actions'
-import { createValidationError } from '@/shared/lib/action-helpers'
-import { withPermission } from '@/admin/lib/server-action-helpers'
-import { checkReadPermissionFor } from '@/admin/lib/permissions'
-import { purgeHomeCache } from '@/shared/lib/cloudflare'
-import { fireAndForget } from '@/shared/lib/async-utils'
-import { ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
-import { toPlainObject, toPlainArray } from '@/shared/lib/serialize'
-import { renderEditorStateToHtmlLazy } from '@/admin/lib/lazy-renderer'
+import { prisma } from "@/shared/lib/prisma";
+import { updateTag } from "next/cache";
+import { CACHE_TAGS } from "@/shared/lib/constants";
+import { createSuccess, createFailure } from "@/admin/types/server-actions";
+import { createValidationError } from "@/shared/lib/action-helpers";
+import { withPermission } from "@/admin/lib/server-action-helpers";
+import { checkReadPermissionFor } from "@/admin/lib/permissions";
+import { purgeHomeCache } from "@/shared/lib/cloudflare";
+import { fireAndForget } from "@/shared/lib/async-utils";
+import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
+import { toPlainObject, toPlainArray } from "@/shared/lib/serialize";
+import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
 import {
   SectionType,
   createSectionSchema,
@@ -30,17 +30,17 @@ import {
   type UpdateSectionInput,
   type UpdateSectionOrderInput,
   type SectionConfig,
-} from '@/shared/lib/validations/section'
+} from "@/shared/lib/validations/section";
 
 /**
  * PrismaのJson型をSectionConfigに変換（ランタイムバリデーション付き）
  */
 function parseSectionConfig(type: SectionType, config: unknown): SectionConfig {
-  const result = validateSectionConfig(type, config)
+  const result = validateSectionConfig(type, config);
   if (result.success) {
-    return result.data
+    return result.data;
   }
-  return defaultSectionConfigs[type]
+  return defaultSectionConfigs[type];
 }
 
 // =============================================================================
@@ -48,33 +48,37 @@ function parseSectionConfig(type: SectionType, config: unknown): SectionConfig {
 // =============================================================================
 
 export type HomepageSectionData = {
-  id: string
-  type: SectionType
-  title: string | null
-  config: SectionConfig
-  design: unknown
-  contentHtml: string | null
-  contentJson: unknown
-  order: number
-  isActive: boolean
-  createdAt: Date
-  updatedAt: Date
-}
+  id: string;
+  type: SectionType;
+  title: string | null;
+  config: SectionConfig;
+  design: unknown;
+  contentHtml: string | null;
+  contentJson: unknown;
+  order: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 // =============================================================================
 // Helper Functions
 // =============================================================================
 
-const checkReadPermission = checkReadPermissionFor('settings')
+const checkReadPermission = checkReadPermissionFor("settings");
 
 function revalidateHomepage() {
-  updateTag(CACHE_TAGS.SECTIONS)
-  updateTag(CACHE_TAGS.HOMEPAGE_SECTIONS)
-  updateTag(CACHE_TAGS.PAGES)
-  updateTag(CACHE_TAGS.SETTINGS)
+  updateTag(CACHE_TAGS.SECTIONS);
+  updateTag(CACHE_TAGS.HOMEPAGE_SECTIONS);
+  updateTag(CACHE_TAGS.PAGES);
+  updateTag(CACHE_TAGS.SETTINGS);
 
   // Cloudflare CDN キャッシュパージ
-  fireAndForget(purgeHomeCache(), { operation: 'purgeHomeCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
+  fireAndForget(purgeHomeCache(), {
+    operation: "purgeHomeCache",
+    category: ErrorCategory.EXTERNAL_API,
+    severity: ErrorSeverity.LOW,
+  });
 }
 
 // =============================================================================
@@ -84,72 +88,108 @@ function revalidateHomepage() {
 /**
  * 全ホームページセクションを取得（管理画面用）
  */
-export async function getHomepageSections(): Promise<HomepageSectionData[] | null> {
-  const hasAccess = await checkReadPermission()
-  if (!hasAccess) return null
+export async function getHomepageSections(): Promise<
+  HomepageSectionData[] | null
+> {
+  const hasAccess = await checkReadPermission();
+  if (!hasAccess) return null;
 
   const sections = await prisma.section.findMany({
     where: { pageId: null },
-    orderBy: { order: 'asc' },
-  })
+    select: {
+      id: true,
+      type: true,
+      title: true,
+      config: true,
+      design: true,
+      contentHtml: true,
+      contentJson: true,
+      order: true,
+      isActive: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+    orderBy: { order: "asc" },
+  });
 
-  return toPlainArray(sections.map((section) => ({
-    ...section,
-    config: parseSectionConfig(section.type, section.config),
-  })))
+  return toPlainArray(
+    sections.map((section) => ({
+      ...section,
+      config: parseSectionConfig(section.type, section.config),
+    })),
+  );
 }
 
 /**
  * 公開用: アクティブなホームページセクションを取得
  */
-export async function getPublicHomepageSections(): Promise<HomepageSectionData[]> {
+export async function getPublicHomepageSections(): Promise<
+  HomepageSectionData[]
+> {
   const sections = await prisma.section.findMany({
     where: { pageId: null, isActive: true },
-    orderBy: { order: 'asc' },
-  })
+    select: {
+      id: true,
+      type: true,
+      title: true,
+      config: true,
+      design: true,
+      contentHtml: true,
+      contentJson: true,
+      order: true,
+      isActive: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+    orderBy: { order: "asc" },
+  });
 
-  return toPlainArray(sections.map((section) => ({
-    ...section,
-    config: parseSectionConfig(section.type, section.config),
-  })))
+  return toPlainArray(
+    sections.map((section) => ({
+      ...section,
+      config: parseSectionConfig(section.type, section.config),
+    })),
+  );
 }
 
 /**
  * 単一セクションを取得
  */
-export async function getHomepageSection(id: string): Promise<HomepageSectionData | null> {
-  const hasAccess = await checkReadPermission()
-  if (!hasAccess) return null
+export async function getHomepageSection(
+  id: string,
+): Promise<HomepageSectionData | null> {
+  const hasAccess = await checkReadPermission();
+  if (!hasAccess) return null;
 
   const section = await prisma.section.findUnique({
     where: { id },
-  })
+  });
 
-  if (!section || section.pageId !== null) return null
+  if (!section || section.pageId !== null) return null;
 
   return toPlainObject({
     ...section,
     config: parseSectionConfig(section.type, section.config),
-  })
+  });
 }
 
 /**
  * タイプでホームページセクションを取得
  */
 export async function getHomepageSectionByType(
-  type: SectionType
+  type: SectionType,
 ): Promise<HomepageSectionData | null> {
   const section = await prisma.section.findFirst({
     where: { type, pageId: null },
-    orderBy: { order: 'asc' },
-  })
+    orderBy: { order: "asc" },
+  });
 
-  if (!section) return null
+  if (!section) return null;
 
   return toPlainObject({
     ...section,
     config: parseSectionConfig(section.type, section.config),
-  })
+  });
 }
 
 // =============================================================================
@@ -159,32 +199,38 @@ export async function getHomepageSectionByType(
 /**
  * ホームページセクションを作成
  */
-export const createHomepageSection = withPermission<[CreateSectionInput], { id: string }>(
-  'settings',
-  'update'
+export const createHomepageSection = withPermission<
+  [CreateSectionInput],
+  { id: string }
+>(
+  "settings",
+  "update",
 )(async (_user, input) => {
-  const parsed = createSectionSchema.safeParse({ ...input, pageId: undefined })
+  const parsed = createSectionSchema.safeParse({ ...input, pageId: undefined });
   if (!parsed.success) {
-    return createValidationError(parsed.error)
+    return createValidationError(parsed.error);
   }
 
-  const { type, title, config, design, contentJson, order, isActive } = parsed.data
+  const { type, title, config, design, contentJson, order, isActive } =
+    parsed.data;
 
   // 設定を検証
-  const configValidation = validateSectionConfig(type, config)
+  const configValidation = validateSectionConfig(type, config);
   if (!configValidation.success) {
-    return createValidationError(configValidation.error, '設定エラー')
+    return createValidationError(configValidation.error, "設定エラー");
   }
 
   // 次のorder値を取得
   const maxOrder = await prisma.section.aggregate({
     where: { pageId: null },
     _max: { order: true },
-  })
-  const nextOrder = order ?? (maxOrder._max.order ?? -1) + 1
+  });
+  const nextOrder = order ?? (maxOrder._max.order ?? -1) + 1;
 
   // JSON → HTML 変換（contentJsonが提供されている場合）
-  const contentHtml = contentJson ? await renderEditorStateToHtmlLazy(contentJson) : null
+  const contentHtml = contentJson
+    ? await renderEditorStateToHtmlLazy(contentJson)
+    : null;
 
   const section = await prisma.section.create({
     data: {
@@ -198,11 +244,11 @@ export const createHomepageSection = withPermission<[CreateSectionInput], { id: 
       order: nextOrder,
       isActive,
     },
-  })
+  });
 
-  revalidateHomepage()
-  return createSuccess('セクションを作成しました', { id: section.id })
-})
+  revalidateHomepage();
+  return createSuccess("セクションを作成しました", { id: section.id });
+});
 
 // =============================================================================
 // Update Actions
@@ -211,86 +257,107 @@ export const createHomepageSection = withPermission<[CreateSectionInput], { id: 
 /**
  * ホームページセクションを更新
  */
-export const updateHomepageSection = withPermission<[string, UpdateSectionInput], void>(
-  'settings',
-  'update'
+export const updateHomepageSection = withPermission<
+  [string, UpdateSectionInput],
+  void
+>(
+  "settings",
+  "update",
 )(async (_user, id, input) => {
-  const parsed = updateSectionSchema.safeParse(input)
+  const parsed = updateSectionSchema.safeParse(input);
   if (!parsed.success) {
-    return createValidationError(parsed.error)
+    return createValidationError(parsed.error);
   }
 
   const existing = await prisma.section.findUnique({
     where: { id },
     select: { id: true, pageId: true, type: true },
-  })
+  });
 
   if (!existing || existing.pageId !== null) {
-    return createFailure('セクションが見つかりません')
+    return createFailure("セクションが見つかりません");
   }
 
   // 設定を検証（configが更新される場合）
   if (parsed.data.config) {
-    const configValidation = validateSectionConfig(existing.type, parsed.data.config)
+    const configValidation = validateSectionConfig(
+      existing.type,
+      parsed.data.config,
+    );
     if (!configValidation.success) {
-      return createValidationError(configValidation.error, '設定エラー')
+      return createValidationError(configValidation.error, "設定エラー");
     }
-    parsed.data.config = configValidation.data
+    parsed.data.config = configValidation.data;
   }
 
   await prisma.section.update({
     where: { id },
     data: {
       title: parsed.data.title,
-      config: parsed.data.config ? JSON.parse(JSON.stringify(parsed.data.config)) : undefined,
-      design: parsed.data.design ? JSON.parse(JSON.stringify(parsed.data.design)) : undefined,
-      ...(parsed.data.contentJson !== undefined ? {
-        contentJson: parsed.data.contentJson ? JSON.parse(parsed.data.contentJson) : null,
-        contentHtml: parsed.data.contentJson ? await renderEditorStateToHtmlLazy(parsed.data.contentJson) : null,
-      } : {}),
+      config: parsed.data.config
+        ? JSON.parse(JSON.stringify(parsed.data.config))
+        : undefined,
+      design: parsed.data.design
+        ? JSON.parse(JSON.stringify(parsed.data.design))
+        : undefined,
+      ...(parsed.data.contentJson !== undefined
+        ? {
+            contentJson: parsed.data.contentJson
+              ? JSON.parse(parsed.data.contentJson)
+              : null,
+            contentHtml: parsed.data.contentJson
+              ? await renderEditorStateToHtmlLazy(parsed.data.contentJson)
+              : null,
+          }
+        : {}),
       isActive: parsed.data.isActive,
     },
-  })
+  });
 
-  revalidateHomepage()
-  return createSuccess('セクションを更新しました')
-})
+  revalidateHomepage();
+  return createSuccess("セクションを更新しました");
+});
 
 /**
  * セクションの有効/無効を切り替え
  */
 export const toggleHomepageSection = withPermission<[string, boolean], void>(
-  'settings',
-  'update'
+  "settings",
+  "update",
 )(async (_user, id, isActive) => {
   const existing = await prisma.section.findUnique({
     where: { id },
     select: { id: true, pageId: true },
-  })
+  });
 
   if (!existing || existing.pageId !== null) {
-    return createFailure('セクションが見つかりません')
+    return createFailure("セクションが見つかりません");
   }
 
   await prisma.section.update({
     where: { id },
     data: { isActive },
-  })
+  });
 
-  revalidateHomepage()
-  return createSuccess(isActive ? 'セクションを有効にしました' : 'セクションを無効にしました')
-})
+  revalidateHomepage();
+  return createSuccess(
+    isActive ? "セクションを有効にしました" : "セクションを無効にしました",
+  );
+});
 
 /**
  * ホームページセクションの順序を更新（DnD用）
  */
-export const updateSectionOrder = withPermission<[UpdateSectionOrderInput], void>(
-  'settings',
-  'update'
+export const updateSectionOrder = withPermission<
+  [UpdateSectionOrderInput],
+  void
+>(
+  "settings",
+  "update",
 )(async (_user, input) => {
-  const parsed = updateSectionOrderSchema.safeParse(input)
+  const parsed = updateSectionOrderSchema.safeParse(input);
   if (!parsed.success) {
-    return createValidationError(parsed.error)
+    return createValidationError(parsed.error);
   }
 
   await prisma.$transaction(
@@ -298,13 +365,13 @@ export const updateSectionOrder = withPermission<[UpdateSectionOrderInput], void
       prisma.section.update({
         where: { id: item.id },
         data: { order: item.order },
-      })
-    )
-  )
+      }),
+    ),
+  );
 
-  revalidateHomepage()
-  return createSuccess('順序を更新しました')
-})
+  revalidateHomepage();
+  return createSuccess("順序を更新しました");
+});
 
 // =============================================================================
 // Delete Actions
@@ -314,25 +381,25 @@ export const updateSectionOrder = withPermission<[UpdateSectionOrderInput], void
  * ホームページセクションを削除
  */
 export const deleteHomepageSection = withPermission<[string], void>(
-  'settings',
-  'update'
+  "settings",
+  "update",
 )(async (_user, id) => {
   const existing = await prisma.section.findUnique({
     where: { id },
     select: { id: true, pageId: true },
-  })
+  });
 
   if (!existing || existing.pageId !== null) {
-    return createFailure('セクションが見つかりません')
+    return createFailure("セクションが見つかりません");
   }
 
   await prisma.section.delete({
     where: { id },
-  })
+  });
 
-  revalidateHomepage()
-  return createSuccess('セクションを削除しました')
-})
+  revalidateHomepage();
+  return createSuccess("セクションを削除しました");
+});
 
 // =============================================================================
 // Initialization
@@ -342,14 +409,14 @@ export const deleteHomepageSection = withPermission<[string], void>(
  * デフォルトホームページセクションを初期化
  */
 export const initializeDefaultSections = withPermission<[], void>(
-  'settings',
-  'update'
+  "settings",
+  "update",
 )(async () => {
   const existingCount = await prisma.section.count({
     where: { pageId: null },
-  })
+  });
   if (existingCount > 0) {
-    return createSuccess('既にセクションが存在します')
+    return createSuccess("既にセクションが存在します");
   }
 
   await prisma.$transaction(
@@ -363,10 +430,10 @@ export const initializeDefaultSections = withPermission<[], void>(
           order: index,
           isActive: true,
         },
-      })
-    )
-  )
+      }),
+    ),
+  );
 
-  revalidateHomepage()
-  return createSuccess('デフォルトセクションを作成しました')
-})
+  revalidateHomepage();
+  return createSuccess("デフォルトセクションを作成しました");
+});
