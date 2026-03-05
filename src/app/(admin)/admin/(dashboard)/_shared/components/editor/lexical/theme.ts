@@ -90,9 +90,11 @@ export const editorTheme: EditorThemeClasses = {
   },
 
   // テーブル
-  table: "border-collapse w-full my-6 border border-border",
+  // w-full は意図的に除去: 横幅はコンテンツに追従させる (fixedLayout state で明示的に設定)
+  table: "border-collapse my-6 border border-border",
   tableRow: "",
-  tableCell: "border border-border p-2 min-w-[50px] align-top",
+  // py-1.5 (6px): 縦方向は最小限、px-3 (12px): 可読性確保
+  tableCell: "border border-border px-3 py-1.5 min-w-[3rem] align-top",
   tableCellHeader: "bg-muted font-bold text-left",
   tableAddColumns:
     "absolute top-0 w-5 h-full bg-muted/50 cursor-pointer hover:bg-muted",

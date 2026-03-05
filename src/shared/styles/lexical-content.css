@@ -1330,7 +1330,20 @@ details[data-collapsible-item]
  *
  * data-table-style="stripes": 偶数行に縞模様背景色を適用
  * --table-border-color / --table-border-width: 枠線 CSS 変数（inline style 経由）
+ *
+ * セル内コンテンツのマージンリセット:
+ *   ParagraphNode の mb-4 / heading の mt-* が td/th 内でセル高さを押し上げるため、
+ *   セル内の最初・最後の子要素の margin を 0 にリセットする。
+ *   これにより、セルの縦幅がテキストコンテンツに追従して自動調整される。
  * -------------------------------------------------------------------------- */
+
+table :is(td, th) > :first-child {
+  margin-top: 0;
+}
+
+table :is(td, th) > :last-child {
+  margin-bottom: 0;
+}
 
 [data-table-style="stripes"] tbody tr:nth-child(even) td {
   background-color: var(--color-muted);

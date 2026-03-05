@@ -190,7 +190,9 @@ export function $createCustomTableNode(): CustomTableNode {
   $setState(node, tableStyleState, "default");
   $setState(node, tableHasHeaderState, true);
   $setState(node, tableHasFooterState, false);
-  $setState(node, tableFixedLayoutState, true);
+  // false: テーブル幅はコンテンツに追従 (table-layout: auto)
+  // true にすると width: 100% + table-layout: fixed に切り替わる
+  $setState(node, tableFixedLayoutState, false);
   $setState(node, tableBackgroundColorState, "");
   $setState(node, tableBorderColorState, "");
   $setState(node, tableBorderWidthState, 1);

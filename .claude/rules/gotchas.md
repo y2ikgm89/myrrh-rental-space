@@ -60,6 +60,9 @@
 - **`importDOM` で `getAttribute()` → AccentColor 変換に型ガード必須** — `element.getAttribute("data-color") ?? "default"` の型は `string`（`AccentColor` ではない）。必ず `isAccentColor(colorAttr) ? colorAttr : "default"` でガードする
 - **コンポジットノード（`isShadowRoot()` あり）には `canInsertTextBefore/After` が必須** — 欠落するとキーボード操作でテキストがノード境界外に漏れる。`LayoutContainerNode`・`LayoutItemNode` 等の全コンポジットノードに `override canInsertTextBefore(): false { return false }` と `override canInsertTextAfter(): false { return false }` をセットで実装する（戻り型は `boolean` ではなくリテラル `false`）
 - **`canBeEmpty()` の戻り型は `: false` リテラル必須** — `canInsertTextBefore/After` と同様、コンテナノードの `canBeEmpty()` も `override canBeEmpty(): false { return false }` とリテラル型で実装する。`: boolean` は TypeScript の narrowing が機能せず lexical-reviewer に検出される
+- **Lexical 組み込みノード継承時は Node Replacement パターン必須** — `CustomTableNode extends TableNode` で独自型文字列 `"custom-table"` を使いつつ、`EDITOR_NODES` に `{ replace: TableNode, with: () => $createCustomTableNode(), withKlass: CustomTableNode }` をセット登録する。`withKlass` が `editor._nodes.get("table")` に `CustomTableNode` を割り当てるため `TablePlugin.hasNodes([TableNode])` が通過する。親の型文字列をそのまま使う手法（`this.config("table", ...)`）は公式パターン外なので禁止。既存 DB データの `"type": "table"` は `withKlass` により `CustomTableNode.importJSON()` が呼ばれ透過的に読み込まれる
+- **テーブルセル内の `mb-4` が余分な縦幅を生む** — HTML 仕様でテーブルセル内はマージン相殺が起きず、`ParagraphNode` の `mb-4`（16px）がそのまま余白になる。`lexical-content.css` に `table :is(td, th) > :last-child { margin-bottom: 0; }` を追加（unlayered CSS は Tailwind utilities より優先）
+- **`theme.ts` の `w-full` と `fixedLayout` state は競合する** — テーマクラスの `w-full` がインライン style による `fixedLayout` 制御を上書きする。テーマから `w-full` を削除し、幅制御は `CustomTableNode._applyAttributes()` の `fixedLayout` state に一本化すること
 
 ## errors モジュール（server-only 境界）
 

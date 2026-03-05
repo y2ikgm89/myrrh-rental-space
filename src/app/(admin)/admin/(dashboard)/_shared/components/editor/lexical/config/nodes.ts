@@ -9,11 +9,17 @@ import { ListItemNode, ListNode } from "@lexical/list";
 import { LinkNode, AutoLinkNode } from "@lexical/link";
 import { CodeNode, CodeHighlightNode } from "@lexical/code";
 import { MarkNode } from "@lexical/mark";
-import { TableRowNode } from "@lexical/table";
-import { CustomTableNode } from "../nodes/CustomTableNode";
-import { CustomTableCellNode } from "../nodes/CustomTableCellNode";
+import { TableNode, TableCellNode, TableRowNode } from "@lexical/table";
+import {
+  CustomTableNode,
+  $createCustomTableNode,
+} from "../nodes/CustomTableNode";
+import {
+  CustomTableCellNode,
+  $createCustomTableCellNode,
+} from "../nodes/CustomTableCellNode";
 import { HorizontalRuleNode } from "@lexical/react/LexicalHorizontalRuleNode";
-import type { Klass, LexicalNode } from "lexical";
+import type { Klass, LexicalNode, LexicalNodeReplacement } from "lexical";
 
 import { ImageNode } from "../nodes/ImageNode";
 import { YouTubeNode } from "../nodes/YouTubeNode";
@@ -70,7 +76,9 @@ import { CoverNode } from "../nodes/CoverNode";
 /**
  * エディタに登録する全ノード一覧
  */
-export const EDITOR_NODES: ReadonlyArray<Klass<LexicalNode>> = [
+export const EDITOR_NODES: ReadonlyArray<
+  Klass<LexicalNode> | LexicalNodeReplacement
+> = [
   // 公式ノード
   HeadingNode,
   QuoteNode,
@@ -80,9 +88,27 @@ export const EDITOR_NODES: ReadonlyArray<Klass<LexicalNode>> = [
   AutoLinkNode,
   CodeNode,
   CodeHighlightNode,
+  // テーブル: Node Replacement パターン（公式ベストプラクティス）
+  // withKlass により editor._nodes.get("table") = CustomTableNode となり
+  // TablePlugin.hasNodes([TableNode]) および $isTableNode() が正常動作する
   CustomTableNode,
+  {
+    replace: TableNode,
+    with: () => $createCustomTableNode(),
+    withKlass: CustomTableNode,
+  },
   TableRowNode,
   CustomTableCellNode,
+  {
+    replace: TableCellNode,
+    with: (node: TableCellNode) =>
+      $createCustomTableCellNode(
+        node.getHeaderStyles(),
+        node.getColSpan(),
+        node.getWidth() ?? undefined,
+      ),
+    withKlass: CustomTableCellNode,
+  },
   HorizontalRuleNode,
   MarkNode,
   // カスタムノード
