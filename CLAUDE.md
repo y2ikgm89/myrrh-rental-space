@@ -59,6 +59,7 @@ Skill ツールで明示的に呼び出す。1% でも該当する可能性が�
 | `prisma-migration`                                    | DBスキーマ変更時                           |
 | `parallax-section`                                    | パララックスセクション実装時（公開ページ） |
 | `lexical-node` / `lexical-plugin` / `lexical-toolbar` | Lexical 拡張追加時                         |
+| `split-action-file`                                   | 500行超の Server Action ファイル分割時     |
 
 **問題対応・メンテ**
 
@@ -85,6 +86,7 @@ Skill ツールで明示的に呼び出す。1% でも該当する可能性が�
   - `test-writer`: 新規 lib 関数・Server Action・バリデーションスキーマ実装後
   - `e2e-test-writer`: 新規管理画面ページ・公開ページ・認証フロー実装後（Playwright E2E）
   - `db-migration-reviewer`: `bunx --bun prisma migrate dev` 実行前
+  - `large-file-detector`: 500行超アクションファイルの定期チェック・分割候補の洗い出し
 - **プロジェクト MCP** (`github`): `.mcp.json` 設定済 — PR・Issue・ブランチ操作
 - **グローバル Plugin/MCP** (`serena`, `context7`, `playwright`): ユーザーレベルで設定済
   - `context7`: ライブラリ公式ドキュメント参照時 — `resolve-library-id` → `query-docs`（対象: Lexical / React 19 / Next.js 16 / Prisma 7 / Zod 4 / Better Auth）
