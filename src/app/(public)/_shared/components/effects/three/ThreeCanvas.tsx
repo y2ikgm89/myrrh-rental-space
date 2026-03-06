@@ -73,7 +73,7 @@ export function ThreeCanvas({
   return (
     <div ref={containerRef} id={id} className={className}>
       {shouldRenderThree && isInView ? (
-        <ScrollRefContext.Provider value={scrollRef}>
+        <ScrollRefContext value={scrollRef}>
           <ThreeCanvasInner
             id={id}
             className={className}
@@ -86,7 +86,7 @@ export function ThreeCanvas({
           >
             {children}
           </ThreeCanvasInner>
-        </ScrollRefContext.Provider>
+        </ScrollRefContext>
       ) : (
         (fallback ?? null)
       )}

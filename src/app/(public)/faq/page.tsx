@@ -56,6 +56,7 @@ export default async function FaqPage(): Promise<ReactElement> {
       />
 
       {/* FAQPage JSON-LD -- sanitized via JSON.stringify (no raw HTML in output) */}
+      {/* eslint-disable @eslint-react/dom/no-dangerously-set-innerhtml -- JSON-LD: JSON.stringify-encoded, no raw HTML */}
       {faqJsonLd && (
         <script
           type="application/ld+json"

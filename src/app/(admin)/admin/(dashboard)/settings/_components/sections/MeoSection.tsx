@@ -112,7 +112,7 @@ export function MeoSection({ settings, socialLinkCount }: MeoSectionProps) {
   const { handleResult } = useRefreshOnSuccess();
   const [isPending, startTransition] = useTransition();
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(() => ({
     latitude: settings.latitude,
     longitude: settings.longitude,
     priceRange: settings.priceRange || "",
@@ -121,7 +121,7 @@ export function MeoSection({ settings, socialLinkCount }: MeoSectionProps) {
     businessAttributes:
       parseBusinessAttributes(settings.businessAttributes) ?? {},
     paymentAccepted: settings.paymentAccepted || "",
-  });
+  }));
 
   const { score, items } = calculateMeoScore(
     {

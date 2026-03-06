@@ -107,7 +107,7 @@ export function clearPreviewData(
  *
  * @example
  * ```tsx
- * const { saveAndOpenPreview } = usePreview('post')
+ * const { saveAndOpenPreview } = createPreviewHandlers('post')
  *
  * const handlePreview = () => {
  *   const values = getValues()
@@ -119,7 +119,7 @@ export function clearPreviewData(
  * }
  * ```
  */
-export function usePreview<T extends ContentType>(contentType: T) {
+export function createPreviewHandlers<T extends ContentType>(contentType: T) {
   const save = (identifier: string, data: PreviewDataMap[T] | AnyPreviewData) => {
     savePreviewData(contentType, identifier, data)
   }

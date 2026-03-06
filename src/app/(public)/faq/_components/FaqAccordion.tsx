@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useGSAP } from '@gsap/react'
 import { gsap } from '@/public/lib/gsap-config'
 import { DURATION, EASE, STAGGER } from '@/public/lib/animations'
+import { SanitizedHtml } from '@/shared/components/SanitizedHtml'
 
 interface FaqItemData {
   readonly id: string
@@ -79,9 +80,9 @@ export function FaqAccordion({ items }: FaqAccordionProps): ReactElement {
               </svg>
             </span>
           </summary>
-          <div
+          <SanitizedHtml
+            html={item.answerHtml}
             className="mt-3 text-sm leading-relaxed text-muted-foreground"
-            dangerouslySetInnerHTML={{ __html: item.answerHtml }}
           />
         </details>
       ))}

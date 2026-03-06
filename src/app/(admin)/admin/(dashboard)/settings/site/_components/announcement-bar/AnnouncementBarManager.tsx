@@ -75,7 +75,7 @@ export function AnnouncementBarManager({
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   // カルーセル設定のステート
-  const [carouselSettings, setCarouselSettings] = useState<CarouselSettings>({
+  const [carouselSettings, setCarouselSettings] = useState<CarouselSettings>(() => ({
     announcementBarAnimation: validateAnimation(initialCarouselSettings.announcementBarAnimation ?? AnnouncementBarAnimation.fade),
     announcementBarDuration: initialCarouselSettings.announcementBarDuration,
     announcementBarAutoPlay: initialCarouselSettings.announcementBarAutoPlay,
@@ -90,7 +90,7 @@ export function AnnouncementBarManager({
     announcementBarGradientAnimation: initialCarouselSettings.announcementBarGradientAnimation,
     announcementBarGlassAnimation: initialCarouselSettings.announcementBarGlassAnimation,
     announcementBarSticky: initialCarouselSettings.announcementBarSticky ?? false,
-  })
+  }))
 
   const {
     register,

@@ -130,7 +130,7 @@ export function LocationDetail({ location }: LocationDetailProps) {
                 </div>
                 <div className="grid gap-2 grid-cols-2 sm:grid-cols-4">
                   {location.imageUrls.map((url: string, index: number) => (
-                    <div key={index} className="relative aspect-square">
+                    <div key={url} className="relative aspect-square">
                       <Image
                         src={url}
                         alt={`${location.name} ${index + 1}`}

@@ -94,6 +94,7 @@ export function useSelectedNode(): SelectedNodeInfo {
         if (singleNode) {
           const info = getInspectableInfo(singleNode);
           if (info) {
+            // eslint-disable-next-line @eslint-react/hooks-extra/no-direct-set-state-in-use-effect
             setSelectedNode(info);
             return;
           }
@@ -104,6 +105,7 @@ export function useSelectedNode(): SelectedNodeInfo {
       if ($isTableSelection(selection)) {
         const tableNode = $getNodeByKey(selection.tableKey);
         if ($isCustomTableNode(tableNode)) {
+          // eslint-disable-next-line @eslint-react/hooks-extra/no-direct-set-state-in-use-effect
           setSelectedNode({
             nodeType: "table",
             node: tableNode,
@@ -121,6 +123,7 @@ export function useSelectedNode(): SelectedNodeInfo {
         while (current !== null) {
           const info = getInspectableInfo(current);
           if (info) {
+            // eslint-disable-next-line @eslint-react/hooks-extra/no-direct-set-state-in-use-effect
             setSelectedNode(info);
             return;
           }
@@ -129,6 +132,7 @@ export function useSelectedNode(): SelectedNodeInfo {
       }
 
       // 該当なし
+      // eslint-disable-next-line @eslint-react/hooks-extra/no-direct-set-state-in-use-effect
       setSelectedNode(null);
     });
   });

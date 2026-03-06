@@ -11,20 +11,20 @@ import { gsap } from '@/public/lib/gsap-config'
  * preference (animations OK), and `false` when prefers-reduced-motion is active.
  *
  * Automatically updates if the OS setting changes mid-session.
- * Use in event handlers: `if (!motionOk.current) return`
+ * Use in event handlers: `if (!motionOkRef.current) return`
  */
 export function useMotionPreference(): React.RefObject<boolean> {
-  const motionOk = useRef(true)
+  const motionOkRef = useRef(true)
 
   useGSAP(() => {
     const mm = gsap.matchMedia()
     mm.add('(prefers-reduced-motion: reduce)', () => {
-      motionOk.current = false
+      motionOkRef.current = false
       return () => {
-        motionOk.current = true
+        motionOkRef.current = true
       }
     })
   })
 
-  return motionOk
+  return motionOkRef
 }

@@ -65,7 +65,7 @@ export function PermalinkSection({ settings }: PermalinkSectionProps) {
   const [isPending, startTransition] = useTransition()
 
   const [structure, setStructure] = useState<PostPermalinkStructure>(
-    getValidPostPermalinkStructure(settings.postPermalinkStructure)
+    () => getValidPostPermalinkStructure(settings.postPermalinkStructure)
   )
   const [prefixEnabled, setPrefixEnabled] = useState(settings.postUrlPrefixEnabled)
 

@@ -71,6 +71,7 @@ export function CustomerSelector({
 
     // 検索クエリが2文字未満の場合は検索しない
     if (!searchQuery || searchQuery.trim().length < 2) {
+      // eslint-disable-next-line @eslint-react/hooks-extra/no-direct-set-state-in-use-effect
       setSearchResults([]);
       return;
     }

@@ -43,7 +43,7 @@ export function FaqCategoryList({ categories }: FaqCategoryListProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    new Set(categories.map((c) => c.id))
+    () => new Set(categories.map((c) => c.id))
   )
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deletingItem, setDeletingItem] = useState<{ type: 'category' | 'item'; id: string; name: string } | null>(null)

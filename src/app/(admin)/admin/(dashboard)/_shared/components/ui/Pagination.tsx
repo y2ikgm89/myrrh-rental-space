@@ -85,6 +85,7 @@ export function Pagination({ currentPage, totalPages, total }: PaginationProps) 
         {pageNumbers.map((page, i) =>
           page === 'ellipsis' ? (
             <span
+              /* eslint-disable-next-line @eslint-react/no-array-index-key */
               key={`ellipsis-${i}`}
               className="flex h-8 w-8 items-center justify-center text-sm text-muted-foreground"
             >

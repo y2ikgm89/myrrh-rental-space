@@ -151,8 +151,8 @@ function RoleCard({ config }: { config: RoleConfig }) {
             できること
           </h4>
           <ul className="space-y-1.5">
-            {config.capabilities.map((item, i) => (
-              <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+            {config.capabilities.map((item) => (
+              <li key={item} className="text-sm text-muted-foreground flex items-start gap-2">
                 <span className="text-success mt-0.5">•</span>
                 {item}
               </li>
@@ -168,8 +168,8 @@ function RoleCard({ config }: { config: RoleConfig }) {
               制限
             </h4>
             <ul className="space-y-1.5">
-              {config.restrictions.map((item, i) => (
-                <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+              {config.restrictions.map((item) => (
+                <li key={item} className="text-sm text-muted-foreground flex items-start gap-2">
                   <span className="text-destructive/60 mt-0.5">•</span>
                   {item}
                 </li>

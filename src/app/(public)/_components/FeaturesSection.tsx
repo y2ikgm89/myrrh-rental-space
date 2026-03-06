@@ -163,9 +163,9 @@ export function FeaturesSection({ config, design }: FeaturesSectionProps): React
             {/* Remaining features — 2 columns */}
             {restFeatures.length > 0 && (
               <div className="grid gap-8 md:grid-cols-2 md:gap-10">
-                {restFeatures.map((feature, index) => (
+                {restFeatures.map((feature) => (
                   <div
-                    key={`feature-${index}`}
+                    key={feature.title}
                     data-feature=""
                     className="flex items-start gap-4"
                   >
@@ -190,9 +190,9 @@ export function FeaturesSection({ config, design }: FeaturesSectionProps): React
 
         {layout === 'equal-grid' && (
           <div className={`grid gap-8 ${getGridColsClass(config.columns)}`}>
-            {items.map((feature, index) => (
+            {items.map((feature) => (
               <div
-                key={`feature-${index}`}
+                key={feature.title}
                 data-feature=""
                 className="flex flex-col items-start gap-3"
               >
@@ -213,9 +213,9 @@ export function FeaturesSection({ config, design }: FeaturesSectionProps): React
 
         {layout === 'icon-left' && (
           <div className="flex flex-col gap-6">
-            {items.map((feature, index) => (
+            {items.map((feature) => (
               <div
-                key={`feature-${index}`}
+                key={feature.title}
                 data-feature=""
                 className="flex items-start gap-4"
               >

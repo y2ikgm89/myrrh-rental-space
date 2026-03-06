@@ -84,13 +84,13 @@ export function LayoutSection({ settings }: LayoutSectionProps) {
   const [isPending, startTransition] = useTransition()
 
   const [containerWidth, setContainerWidth] = useState<LayoutWidth>(
-    getValidLayoutWidth(settings.containerWidth, LayoutWidth.LG)
+    () => getValidLayoutWidth(settings.containerWidth, LayoutWidth.LG)
   )
   const [containerWidthCustom, setContainerWidthCustom] = useState<string>(
     settings.containerWidthCustom?.toString() || ''
   )
   const [contentWidth, setContentWidth] = useState<LayoutWidth>(
-    getValidLayoutWidth(settings.contentWidth, LayoutWidth.MD)
+    () => getValidLayoutWidth(settings.contentWidth, LayoutWidth.MD)
   )
   const [contentWidthCustom, setContentWidthCustom] = useState<string>(
     settings.contentWidthCustom?.toString() || ''

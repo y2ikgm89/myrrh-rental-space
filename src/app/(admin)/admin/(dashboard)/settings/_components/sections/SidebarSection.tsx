@@ -55,12 +55,12 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
     return result.success ? result.data : defaultWidgets
   }
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(() => ({
     sidebarEnabled: settings.sidebarEnabled ?? true,
     sidebarWidgets: parseWidgets(settings.sidebarWidgets),
     sidebarRecentCount: settings.sidebarRecentCount ?? 5,
     sidebarPopularCount: settings.sidebarPopularCount ?? 5,
-  })
+  }))
 
   const handleSave = () => {
     startTransition(async () => {

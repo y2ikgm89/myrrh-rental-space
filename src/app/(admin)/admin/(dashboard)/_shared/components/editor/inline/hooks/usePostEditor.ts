@@ -26,7 +26,7 @@ import {
   unpublishPost,
 } from "@/admin/actions/post";
 import { generatePreviewHtml } from "@/admin/actions/preview";
-import { usePreview } from "@/admin/hooks";
+import { createPreviewHandlers } from "@/admin/hooks";
 import { logger } from "@/shared/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
 import type { PostPreviewData } from "@/shared/types";
@@ -167,7 +167,7 @@ export function usePostEditor({
   const [tags, setTags] = useState<TagOption[]>(initialTags);
 
   // プレビュー
-  const { saveAndOpenPreview } = usePreview("post");
+  const { saveAndOpenPreview } = createPreviewHandlers("post");
 
   // フォーム（型アサーション不要）
   const form = useForm<PostFormData>({

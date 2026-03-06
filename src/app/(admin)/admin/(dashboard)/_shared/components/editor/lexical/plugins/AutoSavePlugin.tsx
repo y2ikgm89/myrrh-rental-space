@@ -47,15 +47,15 @@ export function AutoSavePlugin({
   const [editor] = useLexicalComposerContext()
   const localTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const serverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const isFirstUpdate = useRef(true)
+  const isFirstUpdateRef = useRef(true)
 
   useEffect(() => {
     if (!autoSaveKey && !onAutoSave) return
 
     return editor.registerUpdateListener(({ editorState, dirtyElements, dirtyLeaves }) => {
       // 初回更新は無視（初期化時）
-      if (isFirstUpdate.current) {
-        isFirstUpdate.current = false
+      if (isFirstUpdateRef.current) {
+        isFirstUpdateRef.current = false
         return
       }
 

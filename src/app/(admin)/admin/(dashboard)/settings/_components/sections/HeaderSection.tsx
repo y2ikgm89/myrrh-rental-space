@@ -83,10 +83,10 @@ export function HeaderSection({ settings }: HeaderSectionProps) {
   const [isPending, startTransition] = useTransition()
 
   const [behavior, setBehavior] = useState<HeaderScrollBehavior>(
-    getValidHeaderScrollBehavior(settings.headerScrollBehavior)
+    () => getValidHeaderScrollBehavior(settings.headerScrollBehavior)
   )
   const [backgroundMode, setBackgroundMode] = useState<HeaderBackgroundMode>(
-    getValidHeaderBackgroundMode(settings.headerBackgroundMode)
+    () => getValidHeaderBackgroundMode(settings.headerBackgroundMode)
   )
 
   const handleSave = () => {

@@ -46,7 +46,7 @@ const INDUSTRY_TYPES = [
 export function BusinessInfoSection({ settings }: BusinessInfoSectionProps) {
   const { handleResult } = useRefreshOnSuccess()
   const [isPending, startTransition] = useTransition()
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(() => ({
     businessName: settings.businessName || '',
     businessNameKana: settings.businessNameKana || '',
     representativeName: settings.representativeName || '',
@@ -58,7 +58,7 @@ export function BusinessInfoSection({ settings }: BusinessInfoSectionProps) {
     registrationNumber: settings.registrationNumber || '',
     invoiceNumber: settings.invoiceNumber || '',
     businessDescription: settings.businessDescription || '',
-  })
+  }))
 
   const handleSave = () => {
     startTransition(async () => {

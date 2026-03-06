@@ -24,7 +24,7 @@ import {
   unpublishNews,
 } from "@/admin/actions/news";
 import { generatePreviewHtml } from "@/admin/actions/preview";
-import { usePreview } from "@/admin/hooks";
+import { createPreviewHandlers } from "@/admin/hooks";
 import { logger } from "@/shared/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
 import type { NewsPreviewData } from "@/shared/types";
@@ -123,7 +123,7 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
   const router = useRouter();
 
   // プレビュー
-  const { saveAndOpenPreview } = usePreview("news");
+  const { saveAndOpenPreview } = createPreviewHandlers("news");
 
   // フォーム（型アサーション不要）
   const form = useForm<NewsFormData>({

@@ -40,6 +40,7 @@ export function SanitizedHtml({ html, className }: SanitizedHtmlProps) {
     <div
       className={className}
       // DOMPurify sanitized - XSS対策済み
+      // eslint-disable-next-line @eslint-react/dom/no-dangerously-set-innerhtml
       dangerouslySetInnerHTML={{ __html: cleanHtml }}
     />
   )

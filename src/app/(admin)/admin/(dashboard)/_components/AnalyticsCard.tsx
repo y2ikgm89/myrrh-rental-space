@@ -124,8 +124,8 @@ export async function AnalyticsCard() {
           <div>
             <p className="text-sm font-medium mb-2">人気ページ Top 5</p>
             <ul className="space-y-1">
-              {stats.topPages.map((page, i) => (
-                <li key={i} className="flex justify-between text-sm">
+              {stats.topPages.map((page) => (
+                <li key={page.path} className="flex justify-between text-sm">
                   <span className="truncate flex-1 mr-2" title={page.title || page.path}>
                     {page.title || page.path}
                   </span>

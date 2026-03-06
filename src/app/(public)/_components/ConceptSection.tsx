@@ -65,6 +65,7 @@ export function ConceptSection({ config, design }: ConceptSectionProps): ReactEl
           style={getTextStyle(design)}
         >
           {body.split('\n').map((line, i, arr) => (
+            // eslint-disable-next-line @eslint-react/no-array-index-key
             <span key={i}>
               {line}
               {i < arr.length - 1 && <br />}

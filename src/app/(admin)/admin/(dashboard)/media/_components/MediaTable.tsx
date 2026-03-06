@@ -11,7 +11,7 @@ import { MediaDetailDialog } from './MediaDetailDialog'
 import { formatDate } from '@/shared/lib/utils'
 import { formatBytes } from '@/admin/lib/utils'
 import { USAGE_LABELS } from './constants'
-import { useCopyUrl, useDeleteMedia } from './hooks'
+import { createCopyUrlHandler, useDeleteMedia } from './hooks'
 import { isValidMediaUsage } from '@/admin/lib/validations/media'
 import {
   Table,
@@ -44,7 +44,7 @@ function hasTypeIcon(type: string): type is keyof typeof TYPE_ICONS {
 
 export function MediaTable({ items }: Props) {
   const [detailItem, setDetailItem] = useState<MediaData | null>(null)
-  const handleCopyUrl = useCopyUrl()
+  const handleCopyUrl = createCopyUrlHandler()
   const { handleDelete, isPending } = useDeleteMedia()
 
   return (

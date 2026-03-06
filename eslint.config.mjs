@@ -107,19 +107,6 @@ const eslintConfig = defineConfig([
     },
   },
 
-  // @eslint-react ルール調整
-  {
-    name: "eslint-react-overrides",
-    rules: {
-      // <Context.Provider> は React 19 でも有効な構文（<Context> への変換は任意）
-      "@eslint-react/no-context-provider": "off",
-      // SanitizedHtml コンポーネント (DOMPurify) で安全に処理済みのため off
-      "@eslint-react/dom/no-dangerously-set-innerhtml": "off",
-      // ref 命名規則は既存コードへの影響が大きく価値に見合わない
-      "@eslint-react/naming-convention/ref-name": "off",
-    },
-  },
-
   // Prettier（末尾: 競合ルール無効化）
   prettier,
 

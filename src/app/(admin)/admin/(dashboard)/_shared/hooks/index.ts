@@ -29,7 +29,7 @@ export { useKanaInput } from "./use-kana-input";
 
 // Preview
 export {
-  usePreview,
+  createPreviewHandlers,
   savePreviewData,
   openPreview,
   clearPreviewData,

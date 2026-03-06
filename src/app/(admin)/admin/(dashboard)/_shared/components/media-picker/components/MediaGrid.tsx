@@ -28,6 +28,7 @@ export function MediaGridSkeleton() {
     <div className="grid grid-cols-4 gap-2 sm:grid-cols-5 md:grid-cols-6">
       {Array.from({ length: 12 }).map((_, i) => (
         <div
+          /* eslint-disable-next-line @eslint-react/no-array-index-key */
           key={i}
           className="aspect-square animate-pulse rounded-lg bg-muted"
         />

@@ -188,6 +188,7 @@ export function FaqListSection({
       </SectionWrapper>
 
       {/* FAQ JSON-LD */}
+      {/* eslint-disable @eslint-react/dom/no-dangerously-set-innerhtml -- JSON-LD: JSON.stringify-encoded, no raw HTML */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -205,6 +206,7 @@ export function FaqListSection({
           }),
         }}
       />
+      {/* eslint-enable @eslint-react/dom/no-dangerously-set-innerhtml */}
     </>
   );
 }

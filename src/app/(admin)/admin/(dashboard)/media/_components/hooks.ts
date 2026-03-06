@@ -13,7 +13,7 @@ import type { MediaData } from '@/admin/types/media-picker'
 /**
  * URLコピー機能
  */
-export function useCopyUrl(): (url: string) => Promise<void> {
+export function createCopyUrlHandler(): (url: string) => Promise<void> {
   return async (url: string) => {
     await navigator.clipboard.writeText(url)
     toast.success('URLをコピーしました')

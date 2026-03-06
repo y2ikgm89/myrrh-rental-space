@@ -66,7 +66,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <ConfirmContext.Provider value={{ confirm }}>
+    <ConfirmContext value={{ confirm }}>
       {children}
       <AlertDialog open={open} onOpenChange={(v) => !v && handleCancel()}>
         <AlertDialogContent>
@@ -94,7 +94,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </ConfirmContext.Provider>
+    </ConfirmContext>
   );
 }
 

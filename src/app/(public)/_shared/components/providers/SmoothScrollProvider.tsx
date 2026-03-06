@@ -119,8 +119,8 @@ export function SmoothScrollProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <LenisContext.Provider value={contextValue}>
+    <LenisContext value={contextValue}>
       {children}
-    </LenisContext.Provider>
+    </LenisContext>
   )
 }

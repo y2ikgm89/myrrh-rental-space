@@ -66,7 +66,7 @@ export function StripeSection({ settings }: StripeSectionProps) {
     mode?: "test" | "live";
   } | null>(null);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(() => ({
     stripeEnabled: settings.stripeEnabled,
     stripeTestMode: settings.stripeTestMode,
     stripePublishableKey: settings.stripePublishableKey || "",
@@ -75,7 +75,7 @@ export function StripeSection({ settings }: StripeSectionProps) {
     stripeCurrency: isSupportedCurrency(settings.stripeCurrency)
       ? settings.stripeCurrency
       : "jpy",
-  });
+  }));
 
   const [showSecretKeyInput, setShowSecretKeyInput] = useState(false);
   const [showWebhookSecretInput, setShowWebhookSecretInput] = useState(false);

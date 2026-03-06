@@ -125,7 +125,7 @@ export function GallerySection({ config, design }: GallerySectionProps): ReactEl
       <div ref={gridRef} className={layoutClass}>
         {config.images.map((image, index) => (
           <div
-            key={index}
+            key={image.url}
             data-gallery-item=""
             className={`rounded-lg ${hoverClasses.wrapper} ${
               isCarousel ? 'min-w-[280px] snap-center md:min-w-[320px]' : ''

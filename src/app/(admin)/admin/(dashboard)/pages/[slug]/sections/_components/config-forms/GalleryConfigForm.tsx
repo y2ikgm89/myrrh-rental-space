@@ -206,7 +206,7 @@ export default function GalleryConfigForm({ section, onSave, isPending, onDirtyC
           {images.length > 0 ? (
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
               {images.map((img, index) => (
-                <div key={`${img.url}-${index}`} className="group relative aspect-square overflow-hidden rounded-lg border">
+                <div key={img.url} className="group relative aspect-square overflow-hidden rounded-lg border">
                   <Image
                     src={img.url}
                     alt={img.alt ?? ''}

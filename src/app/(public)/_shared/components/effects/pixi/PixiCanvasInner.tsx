@@ -138,9 +138,9 @@ export function PixiCanvasInner({
       }}
     >
       {app ? (
-        <PixiAppContext.Provider value={app}>
+        <PixiAppContext value={app}>
           {children}
-        </PixiAppContext.Provider>
+        </PixiAppContext>
       ) : null}
     </div>
   )

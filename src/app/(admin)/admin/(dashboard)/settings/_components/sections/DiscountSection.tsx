@@ -140,7 +140,7 @@ export function DiscountSection({ settings }: DiscountSectionProps) {
                   .sort((a, b) => a.hours - b.hours)
                   .map((rule, index) => (
                     <div
-                      key={index}
+                      key={rule.hours}
                       className="flex items-center gap-3 rounded-lg border p-3"
                     >
                       <div className="flex-1 grid gap-3 sm:grid-cols-2">

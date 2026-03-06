@@ -77,9 +77,12 @@ export function MonthView({
 
       {/* 日付グリッド */}
       <div className="flex flex-1 flex-col">
-        {weeks.map((week, weekIndex) => (
+        {weeks.map((week) => {
+          const firstDay = week[0];
+          if (!firstDay) return null;
+          return (
           <div
-            key={weekIndex}
+            key={format(firstDay, 'yyyy-MM-dd')}
             className="grid flex-1 grid-cols-7 border-b last:border-b-0"
           >
             {week.map((day, dayIndex) => {
@@ -152,7 +155,8 @@ export function MonthView({
               );
             })}
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

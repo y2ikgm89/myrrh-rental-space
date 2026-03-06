@@ -23,14 +23,14 @@ export function HtmlInitializerPlugin({
   editorRef,
 }: HtmlInitializerPluginProps) {
   const [editor] = useLexicalComposerContext();
-  const hasInitialized = useRef(false);
+  const hasInitializedRef = useRef(false);
 
   useEffect(() => {
     editorRef.current = editor;
   }, [editor, editorRef]);
 
   useEffect(() => {
-    if (hasInitialized.current || !content) return;
+    if (hasInitializedRef.current || !content) return;
 
     try {
       editor.update(() => {
@@ -47,7 +47,7 @@ export function HtmlInitializerPlugin({
       });
     }
 
-    hasInitialized.current = true;
+    hasInitializedRef.current = true;
   }, [editor, content]);
 
   return null;

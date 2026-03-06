@@ -126,7 +126,7 @@ export function AdminLayoutProvider({ children }: AdminLayoutProviderProps) {
   };
 
   return (
-    <AdminLayoutContext.Provider
+    <AdminLayoutContext
       value={{
         sidebarState,
         toggleSidebar,
@@ -139,7 +139,7 @@ export function AdminLayoutProvider({ children }: AdminLayoutProviderProps) {
       }}
     >
       {children}
-    </AdminLayoutContext.Provider>
+    </AdminLayoutContext>
   );
 }
 

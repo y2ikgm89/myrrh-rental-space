@@ -115,6 +115,7 @@ export function TestimonialSection({ config, design }: TestimonialSectionProps):
 
             return (
               <div
+                /* eslint-disable-next-line @eslint-react/no-array-index-key */
                 key={index}
                 data-testimonial-card=""
                 className={`${cardClasses} ${CARD_CLASS[config.layout]}`}

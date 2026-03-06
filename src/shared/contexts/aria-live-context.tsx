@@ -67,9 +67,9 @@ export function AriaLiveProvider({
   };
 
   return (
-    <AriaLiveContext.Provider value={{ message, politeness, announce, clear }}>
+    <AriaLiveContext value={{ message, politeness, announce, clear }}>
       {children}
-    </AriaLiveContext.Provider>
+    </AriaLiveContext>
   );
 }
 

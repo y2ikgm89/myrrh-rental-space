@@ -49,7 +49,7 @@ const ANALYTICS_TYPE_OPTIONS = [
 export function SeoSection({ settings }: SeoSectionProps) {
   const { handleResult } = useRefreshOnSuccess();
   const [isPending, startTransition] = useTransition();
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(() => ({
     // Meta settings
     defaultMetaDescription: settings.defaultMetaDescription || "",
     defaultMetaKeywords: settings.defaultMetaKeywords || "",
@@ -63,7 +63,7 @@ export function SeoSection({ settings }: SeoSectionProps) {
     // Webmaster settings
     googleSearchConsoleId: settings.googleSearchConsoleId || "",
     bingWebmasterToolsId: settings.bingWebmasterToolsId || "",
-  });
+  }));
 
   const handleSave = () => {
     startTransition(async () => {

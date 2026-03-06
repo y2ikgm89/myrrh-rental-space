@@ -102,8 +102,8 @@ export function VisualEffectsProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <VisualEffectsContext.Provider value={value}>
+    <VisualEffectsContext value={value}>
       {children}
-    </VisualEffectsContext.Provider>
+    </VisualEffectsContext>
   );
 }

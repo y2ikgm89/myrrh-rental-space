@@ -437,6 +437,7 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
                       const openError = getSlotError(key, slotIndex, 'openTime')
                       const closeError = getSlotError(key, slotIndex, 'closeTime')
                       return (
+                        // eslint-disable-next-line @eslint-react/no-array-index-key
                         <div key={slotIndex} className="flex flex-col gap-1">
                           <div className="flex items-center gap-2">
                             <Input

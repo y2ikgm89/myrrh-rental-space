@@ -10,7 +10,7 @@ import type { MediaData } from "@/admin/types/media-picker";
 import { MediaDetailDialog } from "./MediaDetailDialog";
 import { formatBytes } from "@/admin/lib/utils";
 import { TYPE_CONFIG } from "./constants";
-import { useCopyUrl, useDeleteMedia } from "./hooks";
+import { createCopyUrlHandler, useDeleteMedia } from "./hooks";
 import { isValidMediaType, MediaType } from "@/admin/lib/validations/media";
 
 type Props = {
@@ -20,7 +20,7 @@ type Props = {
 export function MediaGrid({ items }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailItem, setDetailItem] = useState<MediaData | null>(null);
-  const handleCopyUrl = useCopyUrl();
+  const handleCopyUrl = createCopyUrlHandler();
   const { handleDelete, isPending } = useDeleteMedia();
 
   return (

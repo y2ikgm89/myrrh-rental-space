@@ -151,7 +151,11 @@ export function FeaturesConfigForm({
           )}
 
           {items.map((item, index) => (
-            <div key={index} className="rounded-lg border p-4 space-y-3">
+            <div
+              /* eslint-disable-next-line @eslint-react/no-array-index-key */
+              key={index}
+              className="rounded-lg border p-4 space-y-3"
+            >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <GripVertical className="h-4 w-4 text-muted-foreground" />

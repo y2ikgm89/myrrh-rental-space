@@ -88,6 +88,7 @@ export function UnifiedSidePanel<T extends FieldValues>({
                 const SectionComponent = section.component
 
                 return (
+                  // eslint-disable-next-line @eslint-react/no-array-index-key
                   <Card key={`${tab.id}-${index}`}>
                     <CardHeader className="pb-3">
                       <CardTitle className="text-sm">{section.title}</CardTitle>

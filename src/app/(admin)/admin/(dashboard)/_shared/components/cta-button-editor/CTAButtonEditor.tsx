@@ -101,6 +101,7 @@ export function CTAButtonEditor({
     <div className={compact ? 'space-y-2' : 'space-y-3'}>
       {buttons.map((button, index) => (
         <ButtonItemEditor
+          /* eslint-disable-next-line @eslint-react/no-array-index-key */
           key={index}
           button={button}
           index={index}

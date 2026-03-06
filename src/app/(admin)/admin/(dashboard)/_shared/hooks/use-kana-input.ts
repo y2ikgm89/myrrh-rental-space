@@ -69,9 +69,9 @@ export function useKanaInput(options: UseKanaInputOptions = {}): UseKanaInputRet
   const [previewKana, setPreviewKana] = useState('')
 
   // 変換中フラグ
-  const isComposing = useRef(false)
+  const isComposingRef = useRef(false)
   // 変換中のひらがな（compositionend で使用）
-  const lastHiragana = useRef('')
+  const lastHiraganaRef = useRef('')
 
   // 表示用カナ（確定 + プレビュー）
   const kana = confirmedKana + previewKana
@@ -83,8 +83,8 @@ export function useKanaInput(options: UseKanaInputOptions = {}): UseKanaInputRet
   }
 
   const handleCompositionStart = () => {
-    isComposing.current = true
-    lastHiragana.current = ''
+    isComposingRef.current = true
+    lastHiraganaRef.current = ''
     setPreviewKana('')
   }
 
@@ -94,7 +94,7 @@ export function useKanaInput(options: UseKanaInputOptions = {}): UseKanaInputRet
 
     // ひらがなの場合、プレビューを更新
     if (isHiraganaOnly(data)) {
-      lastHiragana.current = data
+      lastHiraganaRef.current = data
       const katakana = toKatakana(data)
       setPreviewKana(katakana)
     } else {
@@ -104,7 +104,7 @@ export function useKanaInput(options: UseKanaInputOptions = {}): UseKanaInputRet
   }
 
   const handleCompositionEnd = (e: React.CompositionEvent<HTMLInputElement>) => {
-    isComposing.current = false
+    isComposingRef.current = false
 
     // 最終的に確定する文字列を決定
     let finalKana = ''
@@ -113,9 +113,9 @@ export function useKanaInput(options: UseKanaInputOptions = {}): UseKanaInputRet
     if (finalData && isKanaOnly(finalData)) {
       // ひらがな/カタカナで確定された場合（そのまま確定）
       finalKana = toKatakana(finalData)
-    } else if (lastHiragana.current) {
+    } else if (lastHiraganaRef.current) {
       // 漢字に変換された場合、最後に保存したひらがなを使用
-      finalKana = toKatakana(lastHiragana.current)
+      finalKana = toKatakana(lastHiraganaRef.current)
     }
 
     // プレビューをクリアして確定カナに追加
@@ -129,7 +129,7 @@ export function useKanaInput(options: UseKanaInputOptions = {}): UseKanaInputRet
       })
     }
 
-    lastHiragana.current = ''
+    lastHiraganaRef.current = ''
   }
 
   const handleInput = (e: React.FormEvent<HTMLInputElement>) => {
@@ -140,23 +140,23 @@ export function useKanaInput(options: UseKanaInputOptions = {}): UseKanaInputRet
     if (currentValue === '') {
       setConfirmedKana('')
       setPreviewKana('')
-      lastHiragana.current = ''
+      lastHiraganaRef.current = ''
       onKanaChange?.('')
       return
     }
 
     // composition 中でない場合はスキップ
-    if (!isComposing.current) return
+    if (!isComposingRef.current) return
 
     // InputEvent の data を取得（フォールバック用）
     const nativeEvent = e.nativeEvent
     const inputData = nativeEvent instanceof InputEvent ? nativeEvent.data : null
 
-    // ひらがな入力時、lastHiragana を更新
+    // ひらがな入力時、lastHiraganaRef を更新
     if (inputData && isHiraganaOnly(inputData)) {
       // 差分追加（compositionUpdate が取れない場合のフォールバック）
-      if (!lastHiragana.current) {
-        lastHiragana.current = inputData
+      if (!lastHiraganaRef.current) {
+        lastHiraganaRef.current = inputData
         setPreviewKana(toKatakana(inputData))
       }
     }
