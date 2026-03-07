@@ -1,51 +1,55 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "lib": ["dom", "esnext"],
+    "lib": [
+      "dom",
+      "esnext"
+    ],
     "skipLibCheck": true,
     "noEmit": true,
-
     // ── Strict type-checking ──────────────────────────────────────────────
     // Next.js が自動注入するが strict: true は明示必須（未指定だと false が注入される）
     "strict": true,
     "noUncheckedIndexedAccess": true,
-
     // TS 6.0: non-erasable TypeScript syntax (enum, namespace, parameter properties) をエラーにする。
     // TS 7.0 + Node.js native TypeScript 実行に向けた準備。
     "erasableSyntaxOnly": true,
-
     // インデックスシグネチャ由来のプロパティはブラケット記法を強制。
     // 明示的に宣言されたプロパティはドット記法で引き続き OK。
     "noPropertyAccessFromIndexSignature": true,
-
     // class の override は明示的な override キーワードを要求。
     "noImplicitOverride": true,
-
     // import/export のないファイルもモジュールとして扱い、グローバルスコープ汚染を防ぐ。
     "moduleDetection": "force",
-
     // ── Module resolution ─────────────────────────────────────────────────
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "verbatimModuleSyntax": true,
-
     // ── React / JSX ───────────────────────────────────────────────────────
     "jsx": "react-jsx",
-
     // ── Build ─────────────────────────────────────────────────────────────
     "incremental": true,
-
     // ── Next.js plugin ────────────────────────────────────────────────────
-    "plugins": [{ "name": "next" }],
-
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
     // ── Path aliases ──────────────────────────────────────────────────────
     "paths": {
-      "@/*": ["./src/*"],
-      "@/admin/*": ["./src/app/(admin)/admin/(dashboard)/_shared/*"],
-      "@/public/*": ["./src/app/(public)/_shared/*"],
-      "@/shared/*": ["./src/shared/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@/admin/*": [
+        "./src/app/(admin)/admin/(dashboard)/_shared/*"
+      ],
+      "@/public/*": [
+        "./src/app/(public)/_shared/*"
+      ],
+      "@/shared/*": [
+        "./src/shared/*"
+      ]
     },
-
     // ── Next.js 自動注入（Next.js が上書きするが明示して意図を示す） ───────
     "allowJs": true,
     "module": "esnext",

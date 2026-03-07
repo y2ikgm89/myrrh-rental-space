@@ -5,16 +5,16 @@ paths:
 
 # PixiJS パターンルール
 
-> **配置**: `.claude/rules/frontend/pixijs-patterns.md`（`paths:` フロントマター付き — public 作業時に自動適用）
+> Codex 用参照ドキュメント。PixiJS 実装はこのファイルを正本とする。
 > PixiJS 8.16.0 / WebGL2 / カスタムGLSLフィルター
 
 ## 概要
 
 PixiJS v8 による2Dエフェクト（フィルムグレイン、ビネット、パーティクルスプライト）。
 エフェクトレベル L4 専用（デスクトップ専用GPU のみ）。
-→ `.claude/rules/visual-effects-patterns.md`
+→ `docs/reference/codex-rules/visual-effects-patterns.md`
 
-> **詳細リファレンス**: `docs/reference/claude-rules/pixijs-reference.md`
+> 追加情報は `src/app/(public)/_shared/components/effects/pixi/` と PixiJS 公式 docs を参照。
 
 ## SSRゲートパターン
 
@@ -298,7 +298,7 @@ ScrollTrigger.create({
 
 **スクロール速度連動**: `Math.min(Math.abs(velocity) * 0.002, maxIntensity)` で速度に応じたフィルター強度を計算。
 
-> **詳細（タイムライン駆動シーケンス、DOM協調、速度計算式）**: → `docs/reference/claude-rules/pixijs-reference.md` §GSAP ↔ PixiJS タイムライン統合
+> **実装参照**: `src/app/(public)/_shared/components/effects/pixi/`
 
 ## 禁止事項
 
@@ -367,4 +367,4 @@ useEffect(() => {
 | `effects/pixi/hooks/use-pixi-app.ts` | PixiAppContext + `usePixiApp()` フック |
 | `effects/pixi/hooks/use-pixi-scroll.ts` | Lenis → ref スクロール同期 |
 
-> **詳細パターン（共通頂点シェーダー、フィルターカタログ10種表、Vignette/Blur/Displacement/ColorMatrix/Scanline/Glow/Shockwave GLSLコード、フィルター組合せガイド、Graphics API表+ベジェ例、スクロール速度連動、スプライトアニメーション、インタラクティブパターン4種、テキストエフェクト、WebGPU、ui-ux-pro-maxマッピング）**: → `docs/reference/claude-rules/pixijs-reference.md`
+> **詳細パターン**: `src/app/(public)/_shared/components/effects/pixi/` 以下の実装を優先して読む。

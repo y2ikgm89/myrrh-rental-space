@@ -5,7 +5,7 @@ paths:
 
 # ビジュアルエフェクトアーキテクチャ
 
-> **配置**: `.claude/rules/frontend/visual-effects-patterns.md`（`paths:` フロントマター付き — public 作業時に自動適用）
+> Codex 用参照ドキュメント。公開ページの effect level と WebGL 管理はこのファイルを正本とする。
 > エフェクトレベル L1-L4 / パフォーマンスバジェット / GPU検出 / WebGLコンテキスト管理
 
 ## 概要
@@ -13,7 +13,7 @@ paths:
 公開ページのビジュアルエフェクトは4段階のレベルシステムで管理。
 デバイスのGPU能力に応じて自動的にエフェクトレベルを決定し、パフォーマンスを保証する。
 
-> **詳細リファレンス**: `docs/reference/claude-rules/visual-effects-reference.md`
+> 実装詳細は `src/app/(public)/_shared/components/effects/` を参照。
 
 ## エフェクトレベル定義
 
@@ -99,7 +99,7 @@ degradeTo(toEffectLevel(effectLevel - 1))
 const ctx = useVisualEffectsOptional()  // null | VisualEffectsContextValue
 ```
 
-> **VisualEffectsProvider完全実装**: → `docs/reference/claude-rules/visual-effects-reference.md`
+> **VisualEffectsProvider 実装**: `src/app/(public)/_shared/components/effects/core/VisualEffectsProvider.tsx`
 
 ## prefers-reduced-motion の動的監視
 
@@ -220,7 +220,7 @@ import { useLenis } from 'lenis/react'
 
 **注意**: `gsap.config({ autoSleep: 0 })` で ticker スリープを防止。デフォルトでは ~2秒のアイドル後に ticker が停止し、Lenis の scroll 処理がデッドロックする。
 
-> **詳細（タイミング協調、イベントバス、全レベル同時実装例）**: → `docs/reference/claude-rules/visual-effects-reference.md` §クロスレベルオーケストレーション
+> **実装参照**: `src/app/(public)/_shared/components/effects/core/ScrollOrchestrator.tsx` と `src/app/(public)/_shared/components/effects/`
 
 ## グレースフルデグラデーション要約
 
@@ -235,7 +235,7 @@ import { useLenis } from 'lenis/react'
 
 **要件**: L3/L4エフェクトは必ずL2/L1フォールバックを用意。視覚的な「ジャンプ」を防ぐため、CSS opacity crossfade でデグラデーション時のトランジションを提供。
 
-> **詳細（トランジションアニメーション、テスト戦略）**: → `docs/reference/claude-rules/visual-effects-reference.md` §レベル遷移アニメーション
+> **実装参照**: `src/app/(public)/_shared/components/effects/core/VisualEffectsProvider.tsx`
 
 ## 禁止事項
 
@@ -287,4 +287,4 @@ degradeTo(2)  // L4 → L2 にダウングレード
 | `effects/three/` | Three.js / R3F コンポーネント |
 | `effects/pixi/` | PixiJS v8 コンポーネント |
 
-> **詳細パターン（VisualEffectsProvider完全実装、detect-gpu API詳細、ブレンドモード、カスタムカーソル、Lottie、CSS scroll-driven、CSSエフェクトカタログ12種、View Transitions API、FPSモニター、WebVitalsReporter、ui-ux-pro-maxマッピング）**: → `docs/reference/claude-rules/visual-effects-reference.md`
+> **詳細パターン**: `src/app/(public)/_shared/components/effects/` 以下の実装を優先して読む。

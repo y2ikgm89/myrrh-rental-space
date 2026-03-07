@@ -355,6 +355,16 @@ export const sectionConfigSchemas = {
 
 type SectionConfigSchemas = typeof sectionConfigSchemas
 
+function createSectionConfigParser<TSchema extends z.ZodType>(
+  schema: TSchema,
+  fallback: z.output<TSchema>
+) {
+  return (config: unknown): z.output<TSchema> => {
+    const result = schema.safeParse(config)
+    return result.success ? result.data : fallback
+  }
+}
+
 /**
  * セクションタイプに応じた config を検証
  *
@@ -528,23 +538,6 @@ export const getInstagramConfig = createSectionConfigGetter(SectionType.INSTAGRA
 /**
  * 汎用: セクションタイプに応じた config 取得（型安全）
  */
-export function getSafeConfig<T extends SectionType>(
-  type: T,
-  config: unknown
-): z.output<SectionConfigSchemas[T]> {
-  const schema = sectionConfigSchemas[type]
-  const result = schema.safeParse(config)
-  if (result.success) {
-    // Zodの型推論制約: schema.safeParseの結果型がジェネリックTと連動しない
-    return result.data as z.output<SectionConfigSchemas[T]>
-  }
-  return defaultSectionConfigs[type] as z.output<SectionConfigSchemas[T]>
-}
-
-// =============================================================================
-// Select値バリデーター（型アサーション不要）
-// =============================================================================
-
 const heroHeightSchema = z.enum(heroHeightValues)
 const maxWidthOptionsSchema = z.enum(maxWidthValues)
 const paddingOptionsSchema = z.enum(paddingValues)
@@ -925,6 +918,138 @@ export const defaultSectionConfigs: {
     count: 6,
     gap: 'md',
   },
+}
+
+const sectionConfigParsers = {
+  [SectionType.HERO]: createSectionConfigParser(
+    heroConfigSchema,
+    defaultSectionConfigs[SectionType.HERO]
+  ),
+  [SectionType.HERO_PARALLAX]: createSectionConfigParser(
+    heroParallaxConfigSchema,
+    defaultSectionConfigs[SectionType.HERO_PARALLAX]
+  ),
+  [SectionType.CUSTOM]: createSectionConfigParser(
+    customConfigSchema,
+    defaultSectionConfigs[SectionType.CUSTOM]
+  ),
+  [SectionType.CONCEPT]: createSectionConfigParser(
+    conceptConfigSchema,
+    defaultSectionConfigs[SectionType.CONCEPT]
+  ),
+  [SectionType.SPACE_LIST]: createSectionConfigParser(
+    spaceListConfigSchema,
+    defaultSectionConfigs[SectionType.SPACE_LIST]
+  ),
+  [SectionType.SPACE_SHOWCASE]: createSectionConfigParser(
+    spaceShowcaseConfigSchema,
+    defaultSectionConfigs[SectionType.SPACE_SHOWCASE]
+  ),
+  [SectionType.NEWS_LIST]: createSectionConfigParser(
+    newsListConfigSchema,
+    defaultSectionConfigs[SectionType.NEWS_LIST]
+  ),
+  [SectionType.POST_LIST]: createSectionConfigParser(
+    postListConfigSchema,
+    defaultSectionConfigs[SectionType.POST_LIST]
+  ),
+  [SectionType.FAQ_LIST]: createSectionConfigParser(
+    faqListConfigSchema,
+    defaultSectionConfigs[SectionType.FAQ_LIST]
+  ),
+  [SectionType.FEATURES]: createSectionConfigParser(
+    featuresConfigSchema,
+    defaultSectionConfigs[SectionType.FEATURES]
+  ),
+  [SectionType.TESTIMONIAL]: createSectionConfigParser(
+    testimonialConfigSchema,
+    defaultSectionConfigs[SectionType.TESTIMONIAL]
+  ),
+  [SectionType.GALLERY]: createSectionConfigParser(
+    galleryConfigSchema,
+    defaultSectionConfigs[SectionType.GALLERY]
+  ),
+  [SectionType.CTA]: createSectionConfigParser(
+    ctaConfigSchema,
+    defaultSectionConfigs[SectionType.CTA]
+  ),
+  [SectionType.CONTACT_FORM]: createSectionConfigParser(
+    contactFormConfigSchema,
+    defaultSectionConfigs[SectionType.CONTACT_FORM]
+  ),
+  [SectionType.MAP]: createSectionConfigParser(
+    mapConfigSchema,
+    defaultSectionConfigs[SectionType.MAP]
+  ),
+  [SectionType.EMBED]: createSectionConfigParser(
+    embedConfigSchema,
+    defaultSectionConfigs[SectionType.EMBED]
+  ),
+  [SectionType.INSTAGRAM]: createSectionConfigParser(
+    instagramConfigSchema,
+    defaultSectionConfigs[SectionType.INSTAGRAM]
+  ),
+} satisfies {
+  [K in SectionType]: (config: unknown) => z.output<SectionConfigSchemas[K]>
+}
+
+/**
+ * 汎用: セクションタイプに応じた config 取得（型安全）
+ */
+export function getSafeConfig(type: typeof SectionType.HERO, config: unknown): HeroConfig
+export function getSafeConfig(type: typeof SectionType.HERO_PARALLAX, config: unknown): HeroParallaxConfig
+export function getSafeConfig(type: typeof SectionType.CUSTOM, config: unknown): CustomConfig
+export function getSafeConfig(type: typeof SectionType.CONCEPT, config: unknown): ConceptConfig
+export function getSafeConfig(type: typeof SectionType.SPACE_LIST, config: unknown): SpaceListConfig
+export function getSafeConfig(type: typeof SectionType.SPACE_SHOWCASE, config: unknown): SpaceShowcaseConfig
+export function getSafeConfig(type: typeof SectionType.NEWS_LIST, config: unknown): NewsListConfig
+export function getSafeConfig(type: typeof SectionType.POST_LIST, config: unknown): PostListConfig
+export function getSafeConfig(type: typeof SectionType.FAQ_LIST, config: unknown): FaqListConfig
+export function getSafeConfig(type: typeof SectionType.FEATURES, config: unknown): FeaturesConfig
+export function getSafeConfig(type: typeof SectionType.TESTIMONIAL, config: unknown): TestimonialConfig
+export function getSafeConfig(type: typeof SectionType.GALLERY, config: unknown): GalleryConfig
+export function getSafeConfig(type: typeof SectionType.CTA, config: unknown): CtaConfig
+export function getSafeConfig(type: typeof SectionType.CONTACT_FORM, config: unknown): ContactFormConfig
+export function getSafeConfig(type: typeof SectionType.MAP, config: unknown): MapConfig
+export function getSafeConfig(type: typeof SectionType.EMBED, config: unknown): EmbedConfig
+export function getSafeConfig(type: typeof SectionType.INSTAGRAM, config: unknown): InstagramConfig
+export function getSafeConfig(type: SectionType, config: unknown): SectionConfig {
+  switch (type) {
+    case SectionType.HERO:
+      return sectionConfigParsers[SectionType.HERO](config)
+    case SectionType.HERO_PARALLAX:
+      return sectionConfigParsers[SectionType.HERO_PARALLAX](config)
+    case SectionType.CUSTOM:
+      return sectionConfigParsers[SectionType.CUSTOM](config)
+    case SectionType.CONCEPT:
+      return sectionConfigParsers[SectionType.CONCEPT](config)
+    case SectionType.SPACE_LIST:
+      return sectionConfigParsers[SectionType.SPACE_LIST](config)
+    case SectionType.SPACE_SHOWCASE:
+      return sectionConfigParsers[SectionType.SPACE_SHOWCASE](config)
+    case SectionType.NEWS_LIST:
+      return sectionConfigParsers[SectionType.NEWS_LIST](config)
+    case SectionType.POST_LIST:
+      return sectionConfigParsers[SectionType.POST_LIST](config)
+    case SectionType.FAQ_LIST:
+      return sectionConfigParsers[SectionType.FAQ_LIST](config)
+    case SectionType.FEATURES:
+      return sectionConfigParsers[SectionType.FEATURES](config)
+    case SectionType.TESTIMONIAL:
+      return sectionConfigParsers[SectionType.TESTIMONIAL](config)
+    case SectionType.GALLERY:
+      return sectionConfigParsers[SectionType.GALLERY](config)
+    case SectionType.CTA:
+      return sectionConfigParsers[SectionType.CTA](config)
+    case SectionType.CONTACT_FORM:
+      return sectionConfigParsers[SectionType.CONTACT_FORM](config)
+    case SectionType.MAP:
+      return sectionConfigParsers[SectionType.MAP](config)
+    case SectionType.EMBED:
+      return sectionConfigParsers[SectionType.EMBED](config)
+    case SectionType.INSTAGRAM:
+      return sectionConfigParsers[SectionType.INSTAGRAM](config)
+  }
 }
 
 // =============================================================================

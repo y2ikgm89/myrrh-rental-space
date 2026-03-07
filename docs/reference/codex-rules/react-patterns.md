@@ -254,7 +254,7 @@ const isValid = useWatch({
 
 ---
 
-> **詳細リファレンス（React 19.2 新API / Compiler 制限事項）**: `docs/reference/claude-rules/react-api-reference.md`
+> 追加の React API 詳細は [react.dev](https://react.dev/) を参照。
 
 ---
 

@@ -5,8 +5,7 @@ paths:
 
 # Anti-AI デザイン強制ルール
 
-> **配置**: `.claude/rules/frontend/anti-ai-design.md`（`paths:` フロントマター付き — public 作業時に自動適用）
-> 公開ページ UI 実装時に自動ロード。プロジェクト固有のブランドに即した独自 UI を実現する。
+> Codex 用参照ドキュメント。公開ページ UI の anti-AI ガードレールはこのファイルを正本とする。
 
 ## デザイン言語の参照
 
@@ -62,8 +61,8 @@ paths:
 ## 実装時の適用フロー
 
 ```
-1. Serena memory `design-system` を read_memory で読み込み
-2. /frontend-design で Design Brief 作成
+1. `project-design-config.md` と `design-system-memory.md` を確認
+2. `.agents/skills/frontend-design/SKILL.md` で Design Brief 作成
 3. Design Brief の Anti-AI checks を確認
 4. animations.ts の定数を使用して実装
 5. セルフレビュー質問（3/6 以上 yes）
@@ -72,10 +71,10 @@ paths:
 
 ## 参照
 
-- `.claude/rules/project-design-config.md` — プロジェクト固有デザイン値
+- `docs/reference/codex-rules/project-design-config.md` — プロジェクト固有デザイン値
 - `(public*)/_styles/public*.css` — テーマ変数
 - `(public*)/_shared/lib/animations.ts` — DURATION / EASE / STAGGER / PARALLAX 定数
 - `(public*)/_shared/components/animations/` — SplitText, ParallaxImage, MagneticButton, ScrollReveal
-- `.claude/skills/frontend-design/SKILL.md` — 実装前デザイン分析スキル
-- `.claude/skills/frontend-design/reference/anti-ai-patterns.md` — 詳細パターンカタログ
-- `docs/reference/claude-rules/micro-interactions-reference.md` — マイクロインタラクション標準
+- `.agents/skills/frontend-design/SKILL.md` — 実装前デザイン分析スキル
+- `.agents/skills/frontend-design/reference/anti-ai-patterns.md` — 詳細パターンカタログ
+- `docs/reference/codex-rules/ui-ux-patterns.md` — UI / UX の補助ルール

@@ -5,7 +5,7 @@ paths:
 
 # Lexical エディタ実装パターン
 
-> **配置**: `.claude/rules/frontend/lexical-patterns.md`（`paths:` フロントマター付き — admin Lexical 作業時に自動適用）
+> Codex 用参照ドキュメント。admin Lexical 実装はこのファイルを正本とする。
 > Next.js 16 / React 19 / Turbopack / React Compiler 対応
 
 ## 概要

@@ -15,6 +15,7 @@ import type {
   CalendarConnectionTestResult,
 } from "./types";
 import { formatGoogleApiError } from "./helpers";
+import { parseServiceAccountCredentials } from "./service-account";
 
 /**
  * サービスアカウントの接続テスト
@@ -24,9 +25,10 @@ export async function testServiceAccountConnection(params: {
   calendarId: string;
 }): Promise<CalendarConnectionTestResult> {
   try {
-    const credentials = JSON.parse(params.serviceAccountJson) as {
-      client_email?: string;
-    };
+    const credentials = parseServiceAccountCredentials(params.serviceAccountJson);
+    if (!credentials) {
+      throw new Error("Invalid service account credentials JSON");
+    }
 
     const auth = new google.auth.GoogleAuth({
       credentials,

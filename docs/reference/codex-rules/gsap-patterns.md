@@ -5,7 +5,7 @@ paths:
 
 # GSAP パターンルール
 
-> **配置**: `.claude/rules/frontend/gsap-patterns.md`（`paths:` フロントマター付き — public 作業時に自動適用）
+> Codex 用参照ドキュメント。公開ページの GSAP 実装はこのファイルを正本とする。
 > GSAP 3.14.2 / @gsap/react 2.1 / ScrollTrigger / Lenis 1.3.17 対応
 
 ## 基本ルール
@@ -595,4 +595,4 @@ gsap.set(imageRef.current, { scale: 1.15 })  // 初期値も GSAP で設定
 | `@/public/components/animations/ParallaxImage.tsx` | scrub パララックス画像（パターン A-1 の実装例） |
 | `@/public/components/animations/MagneticButton.tsx` | マウス追従マグネットボタン（パターン C の実装例） |
 
-> **詳細リファレンス**: `docs/reference/claude-rules/gsap-reference.md`
+> 追加の API 詳細は [GSAP docs](https://gsap.com/docs/v3/) と既存実装を参照。

@@ -1,6 +1,6 @@
 # Turbopack HMR エラー対処
 
-> **Note**: このコンテンツは `.claude/rules/` から `.claude/skills/turbopack-hmr/SKILL.md`（`user-invocable: false`）に移行済み。
+> Codex 用参照ドキュメント。Claude 側に mirror skill があっても、Codex ではこのノートを正本とする。
 > Next.js 16 + Turbopack 開発時の HMR エラー対処
 
 ## 対象エラー

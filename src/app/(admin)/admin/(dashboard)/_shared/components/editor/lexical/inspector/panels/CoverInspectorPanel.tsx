@@ -24,10 +24,10 @@ import {
   isCoverMinHeight,
   isCoverContentAlign,
   isCoverContentPosition,
+  isCoverOverlayOpacity,
   type CoverMinHeight,
   type CoverContentAlign,
   type CoverContentPosition,
-  type CoverOverlayOpacity,
 } from '../../nodes/CoverNode'
 import { ACCENT_COLORS, ACCENT_COLOR_LABELS, isAccentColor } from '../../config/accent-colors'
 import { InspectorHeader } from '../InspectorHeader'
@@ -119,19 +119,8 @@ export function CoverInspectorPanel({ nodeKey, node }: CoverInspectorPanelProps)
 
   const handleOverlayOpacityChange = (value: string) => {
     const parsed = parseInt(value, 10)
-    if (
-      parsed === 0 ||
-      parsed === 10 ||
-      parsed === 20 ||
-      parsed === 30 ||
-      parsed === 40 ||
-      parsed === 50 ||
-      parsed === 60 ||
-      parsed === 70 ||
-      parsed === 80
-    ) {
-      const opacity = parsed as CoverOverlayOpacity
-      updateNode((n) => { $setState(n, overlayOpacityState, opacity) })
+    if (isCoverOverlayOpacity(parsed)) {
+      updateNode((n) => { $setState(n, overlayOpacityState, parsed) })
     }
   }
 

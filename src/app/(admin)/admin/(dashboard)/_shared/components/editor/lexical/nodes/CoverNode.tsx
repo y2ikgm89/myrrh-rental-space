@@ -49,7 +49,7 @@ export const isCoverMinHeight = createEnumGuard<CoverMinHeight>(COVER_MIN_HEIGHT
 export const isCoverContentAlign = createEnumGuard<CoverContentAlign>(COVER_CONTENT_ALIGNS)
 export const isCoverContentPosition = createEnumGuard<CoverContentPosition>(COVER_CONTENT_POSITIONS)
 
-function isCoverOverlayOpacity(v: unknown): v is CoverOverlayOpacity {
+export function isCoverOverlayOpacity(v: unknown): v is CoverOverlayOpacity {
   return (
     v === 0 ||
     v === 10 ||

@@ -811,6 +811,10 @@ type LinkPreviewState = {
   position: { top: number; left: number }
 }
 
+function getElementFromTarget(target: EventTarget | null): HTMLElement | null {
+  return target instanceof HTMLElement ? target : null
+}
+
 function LinkHoverPreview({ url, position }: LinkPreviewState) {
   let domain = ''
   try {
@@ -841,9 +845,9 @@ export function LinkHoverPreviewPlugin() {
     if (!rootElement) return
 
     function handleMouseOver(e: MouseEvent) {
-      const target = e.target as HTMLElement
-      const linkEl = target.closest('a[href]') as HTMLAnchorElement | null
-      if (!linkEl) return
+      const target = getElementFromTarget(e.target)
+      const linkEl = target?.closest('a[href]')
+      if (!(linkEl instanceof HTMLAnchorElement)) return
       const url = linkEl.getAttribute('href') ?? linkEl.href
       if (!url) return
       const rect = linkEl.getBoundingClientRect()
@@ -851,7 +855,7 @@ export function LinkHoverPreviewPlugin() {
     }
 
     function handleMouseOut(e: MouseEvent) {
-      const relatedTarget = e.relatedTarget as HTMLElement | null
+      const relatedTarget = getElementFromTarget(e.relatedTarget)
       if (!relatedTarget?.closest('a[href]')) {
         setPreviewState(null)
       }

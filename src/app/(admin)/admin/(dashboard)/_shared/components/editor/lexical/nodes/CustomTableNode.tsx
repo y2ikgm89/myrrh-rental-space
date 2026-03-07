@@ -16,20 +16,22 @@ import {
   createState,
 } from "lexical";
 import { TableNode } from "@lexical/table";
-import { parseBoolean, parseString } from "../config/type-guards";
+import { createEnumGuard, parseBoolean, parseString } from "../config/type-guards";
 
 // =============================================================================
 // 型定義
 // =============================================================================
 
-export type TableStyle = "default" | "stripes";
+export const TABLE_STYLE_VALUES = ["default", "stripes"] as const;
+export type TableStyle = (typeof TABLE_STYLE_VALUES)[number];
+export const isTableStyle = createEnumGuard<TableStyle>(TABLE_STYLE_VALUES);
 
 // =============================================================================
 // Parse ヘルパー
 // =============================================================================
 
 function parseTableStyle(v: unknown): TableStyle {
-  return v === "stripes" ? "stripes" : "default";
+  return typeof v === "string" && isTableStyle(v) ? v : "default";
 }
 
 function parseBorderWidth(v: unknown): number {

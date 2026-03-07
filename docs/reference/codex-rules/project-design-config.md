@@ -5,7 +5,7 @@ paths:
 
 # Project Design Config（プロジェクト固有）
 
-> **配置**: `.claude/rules/frontend/project-design-config.md`（`paths:` フロントマター付き — public 作業時に自動適用）
+> Codex 用参照ドキュメント。ブランド、カラー、タイポ、モーションの正本はこのファイルとする。
 > 顧客ブランド固有のデザイン値を一箇所に集約。他のルールファイル・スキルはここを参照する。
 > 別プロジェクトへ移植時はこのファイルのみ書き換える。
 

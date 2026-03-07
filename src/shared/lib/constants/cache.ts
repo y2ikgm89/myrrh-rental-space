@@ -214,6 +214,12 @@ export const getCacheTag = {
     list: () => CACHE_TAGS.STAFF,
     detail: (id: string) => `${CACHE_TAGS.STAFF}-${id}`,
   },
+  layoutSettings: {
+    site: () => CACHE_TAGS.LAYOUT_SETTINGS,
+    post: (postId: string) => `${CACHE_TAGS.LAYOUT_SETTINGS}-post-${postId}`,
+    news: (newsId: string) => `${CACHE_TAGS.LAYOUT_SETTINGS}-news-${newsId}`,
+    page: (slug: string) => `${CACHE_TAGS.LAYOUT_SETTINGS}-page-${slug}`,
+  },
   pageSeo: {
     detail: (slug: string) => `${CACHE_TAGS.PAGE_SEO}-${slug}`,
   },

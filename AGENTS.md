@@ -14,21 +14,23 @@
 
 ### Tech stack
 
+下記バージョンは `package.json` / `bun.lock` で現在解決されている実ランタイムに合わせる。
+
 | 技術 | バージョン | 備考 |
 |------|-----------|------|
 | Next.js | 16.1.6 | `'use cache'`, `updateTag`, PPR対応 |
 | React | 19.2.4 | React Compiler 1.0, `<Activity>`, `useEffectEvent` |
-| TypeScript | 6.0-beta | TS 7.0 準備用 `--stableTypeOrdering` 利用可 |
-| Bun | 1.3.x | Bun.SQL, HTML直接実行 |
-| Prisma | 7.4.0 | 型生成98%削減, mapped enums |
+| TypeScript | 6.0.0-dev.20260228 | TS 7.0 準備用 `--stableTypeOrdering` 利用可 |
+| Bun | 1.3.10 | Bun.SQL, HTML直接実行 |
+| Prisma | 7.4.2 | 型生成98%削減, mapped enums |
 | PostgreSQL | - | Supabase経由 |
-| Better Auth | 1.4.18 | RBAC, Auth.js統合 |
-| Tailwind CSS | 4.1.18 | CSS-first設定, @theme |
+| Better Auth | 1.5.3 | RBAC, Auth.js統合 |
+| Tailwind CSS | 4.2.1 | CSS-first設定, @theme |
 | Zod | 4.3.6 | `{ error: }` パラメータ, z.fromJSONSchema() |
-| nuqs | 2.8.8 | createSearchParamsCache, Zod 4統合 |
-| Lexical | 0.40.0 | React 19対応, Node transforms, mergeRegister本体移動 |
+| nuqs | 2.8.9 | createSearchParamsCache, Zod 4統合 |
+| Lexical | 0.41.0 | React 19対応, Node transforms, mergeRegister本体移動 |
 | GSAP | 3.14.2 | ScrollTrigger, @gsap/react 2.1 |
-| Three.js | 0.182.0 | @react-three/fiber 9.5, @react-three/drei 10.7 |
+| Three.js | 0.183.2 | @react-three/fiber 9.5, @react-three/drei 10.7 |
 | PixiJS | 8.16.0 | 2D WebGLレンダラー |
 | Lenis | 1.3.17 | スムーススクロール |
 
@@ -223,12 +225,34 @@ bun run e2e
 - `AGENTS.override.md` があるディレクトリでは、同階層の `AGENTS.md` より override を優先する前提で運用する
 - 指示が競合する場合は、ユーザーの直接指示を最優先とする
 
+### Codex instruction topology
+
+- Codex の一次情報はリポジトリルートの `AGENTS.md` とし、全体方針・不変条件・禁止事項だけを書く
+- ディレクトリ固有の制約は `AGENTS.override.md` に閉じ込め、ルート `AGENTS.md` へ逆流させない
+- `docs/reference/codex-rules/*.md` は詳細リファレンスとして扱い、`AGENTS.md` には要約だけを置く
+- `.agents/skills/<skill-name>/SKILL.md` は繰り返し実行する手順だけを書く。ポリシーや世界観は `AGENTS.md` / `codex-rules` 側に寄せる
+- Claude 用の `.claude/*` は維持してよいが、Codex では正本として扱わない。Codex 向け説明から `.claude/*` を参照しない
+- 暗黙の memory API やツール固有状態に依存せず、永続化が必要な判断は `docs/reference/` や `docs/architecture/` に明示的に残す
+- 追加基準の詳細は `docs/reference/codex-rules/instruction-topology.md` を参照する
+
 ### Codex skill operation
 
 - Codex 用スキルはリポジトリ直下の `.agents/skills/<skill-name>/SKILL.md` に配置する
 - `SKILL.md` の frontmatter は `name` と `description` のみを使用する
 - ルールの一次情報は `AGENTS.md` / `AGENTS.override.md` とし、詳細資料は `docs/reference/` に置く
 - `.claude/rules` と `.claude/skills` は Codex の参照対象にしない（後方互換レイヤーは作らない）
+- 1 skill = 1 workflow を原則とし、複数の unrelated task をまとめた巨大スキルは作らない
+- `description` には「いつ使うか」「何をしないか」が分かる境界を書く
+- skill には入力、手順、使用コマンド、完了条件だけを書く。一般論や重複ルールは `codex-rules` へ寄せる
+- スクリプトやテンプレートを使う skill は、まず skill ディレクトリ直下の `scripts/` / `reference/` / `assets/` を再利用する
+- リポジトリ前提で既に満たしている環境構築手順や、Codex で使えない API / `.claude/*` 参照は書かない
+- 追加・改修方針の詳細は `.agents/skills/README.md` を参照する
+
+### Codex delegation stance
+
+- このリポジトリでは、Codex 向けの責務分離は `AGENTS.md` / `AGENTS.override.md` / `.agents/skills` で表現する
+- Claude Code 用 sub-agent は `.claude/agents/` に維持してよいが、Codex 用に疑似 sub-agent を増やさない
+- Codex 側で別責務が必要になった場合も、まずは skill 化または `AGENTS.override.md` 化を優先する
 
 ### Claude Code sub-agents (`.claude/agents/`)
 
@@ -247,3 +271,5 @@ Claude Code 専用サブエージェント（Codex からは参照しない）:
 - `docs/requirements/` : 機能要件
 - `docs/plans/` : 実装計画
 - `docs/reference/` : 詳細ルール
+- `docs/reference/codex-rules/instruction-topology.md` : Codex 向け instruction / skill / override の責務整理
+- `.agents/skills/README.md` : Codex スキルの索引と作成基準

@@ -5,16 +5,16 @@ paths:
 
 # Three.js パターンルール
 
-> **配置**: `.claude/rules/frontend/threejs-patterns.md`（`paths:` フロントマター付き — public 作業時に自動適用）
+> Codex 用参照ドキュメント。Three.js / R3F 実装はこのファイルを正本とする。
 > Three.js 0.182.0 / @react-three/fiber 9.5 / @react-three/drei 10.7
 
 ## 概要
 
 Three.js による3Dエフェクト。エフェクトレベル L3 以上で有効。
 R3F（React Three Fiber）を使用し、React コンポーネントとして3Dシーンを構成。
-→ `.claude/rules/visual-effects-patterns.md`
+→ `docs/reference/codex-rules/visual-effects-patterns.md`
 
-> **詳細リファレンス**: `docs/reference/claude-rules/threejs-reference.md`
+> 追加情報は `src/app/(public)/_shared/components/effects/three/` と Three.js / R3F 公式 docs を参照。
 
 ## SSRゲートパターン（3段階）
 
@@ -226,7 +226,7 @@ useFrame(() => {
 | gsap.to(mesh.position, {...}) | ⚠️ 非推奨 | R3Fのフレームループと競合する可能性 |
 | gsap.to(uniforms, {...}) | ✅ OK | uniform値の更新は安全 |
 
-> **詳細（カメラパス、shader uniform制御、セクション別シーン切替）**: → `docs/reference/claude-rules/threejs-reference.md` §GSAP ↔ Three.js 統合パターン
+> **実装参照**: `src/app/(public)/_shared/components/effects/three/`
 
 ## モデルローディング要約
 
@@ -250,7 +250,7 @@ useGLTF.preload('/models/space.glb')
 
 **モデル最適化チェックリスト**: ポリゴン < 50K、テクスチャ < 2048px、Draco圧縮有効、glb形式推奨。
 
-> **詳細（Clone、アニメーションMixer、スクロール制御、最適化）**: → `docs/reference/claude-rules/threejs-reference.md` §モデルローディングパターン
+> **実装参照**: `src/app/(public)/_shared/components/effects/three/`
 
 ## 禁止事項
 
@@ -314,4 +314,4 @@ useFrame(() => {
 | `effects/three/hooks/use-scroll-uniforms.ts` | Lenis → mutable ref 同期（`useScrollUniforms()`） |
 | `effects/three/hooks/use-theme-colors.ts` | CSS変数 → THREE.Color 用文字列変換（`useThemeColors()`） |
 
-> **詳細パターン（マテリアルカタログ8種、ジオメトリカタログ7種+波面例、Dreiカタログ15種、ライティングレシピ4種、Float詳細、オンデマンドレンダリング、PostProcessing/EffectComposer、カスタムShaderMaterial 3パターン、ScrollScene、シェーダースニペット、ui-ux-pro-maxマッピング）**: → `docs/reference/claude-rules/threejs-reference.md`
+> **詳細パターン**: `src/app/(public)/_shared/components/effects/three/` 以下の実装を優先して読む。

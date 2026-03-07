@@ -294,7 +294,8 @@ export function TabsPlugin({ isOpen, onClose }: TabsPluginProps) {
     const rootElement = editor.getRootElement()
 
     const handleClick = (event: MouseEvent) => {
-      const target = event.target as HTMLElement
+      if (!(event.target instanceof HTMLElement)) return
+      const target = event.target
       const tabElement = target.closest('[role="tab"]')
       if (!tabElement) return
 

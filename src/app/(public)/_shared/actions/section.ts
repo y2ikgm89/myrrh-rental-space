@@ -7,7 +7,7 @@
 
 import { cacheLife, cacheTag } from "next/cache";
 import { prisma } from "@/shared/lib/prisma";
-import { CACHE_TAGS, CACHE_LIFE } from "@/shared/lib/constants";
+import { CACHE_TAGS, CACHE_LIFE, getCacheTag } from "@/shared/lib/constants";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import { SectionType, PostStatus } from "@/shared/generated/prisma/enums";
 import {
@@ -261,7 +261,7 @@ export async function getPublishedFaqItems(
 export async function getPublicPage(slug: string) {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
-  cacheTag(CACHE_TAGS.PAGES, `${CACHE_TAGS.PAGES}-${slug}`);
+  cacheTag(CACHE_TAGS.PAGES, getCacheTag.pages.detail(slug));
 
   if (!slugParamSchema.safeParse(slug).success) return null;
 

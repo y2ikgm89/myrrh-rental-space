@@ -55,16 +55,11 @@ export type ActionResult<TData = void> = ActionSuccess<TData> | ActionFailure
  */
 export function createSuccess(message: string): ActionSuccess<void>
 export function createSuccess<T>(message: string, data: T): ActionSuccess<T>
-export function createSuccess<T>(
-  message: string,
-  data?: T
-): ActionSuccess<T | void> {
+export function createSuccess<T>(message: string, data?: T) {
   if (data === undefined) {
-    return { success: true, message } as unknown as ActionSuccess<void>
+    return { success: true, message }
   }
-  // TS 6.0: conditional type ActionSuccess<T> can't be resolved when T is generic;
-  // overload signatures ensure callers see correct types
-  return { success: true, message, data } as unknown as ActionSuccess<T>
+  return { success: true, message, data }
 }
 
 /**

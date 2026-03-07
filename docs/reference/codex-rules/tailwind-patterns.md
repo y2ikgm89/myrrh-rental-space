@@ -338,4 +338,4 @@ Tailwind CSS 4 の必要要件:
 - [Next.js Multiple Root Layouts](https://nextjs.org/docs/app/building-your-application/routing/route-groups#creating-multiple-root-layouts)
 - `src/app/(admin)/_styles/admin.css` — 管理画面テーマ実装
 - `src/app/(public)/_styles/public.css` — 公開ページテーマ実装
-- `.claude/rules/project-design-config.md` — ブランド固有デザイン値
+- `docs/reference/codex-rules/project-design-config.md` — ブランド固有デザイン値

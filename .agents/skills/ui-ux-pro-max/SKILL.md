@@ -1,229 +1,71 @@
 ---
 name: ui-ux-pro-max
-description: "UI/UX design intelligence. 50 styles, 21 palettes, 50 font pairings, 20 charts, 8 stacks (React, Next.js, Vue, Svelte, SwiftUI, React Native, Flutter, Tailwind). Actions: plan, build, create, design, implement, review, fix, improve, optimize, enhance, refactor, check UI/UX code. Projects: website, landing page, dashboard, admin panel, e-commerce, SaaS, portfolio, blog, mobile app, .html, .tsx, .vue, .svelte. Elements: button, modal, navbar, sidebar, card, table, form, chart. Styles: glassmorphism, claymorphism, minimalism, brutalism, neumorphism, bento grid, dark mode, responsive, skeuomorphism, flat design. Topics: color palette, accessibility, animation, layout, typography, font pairing, spacing, hover, shadow, gradient."
+description: 付属データベースを検索して UI 方針を素早く集める。`frontend-design` の前段や UI レビュー時の補助として使う。
 ---
 
+# ui-ux-pro-max
 
-# UI/UX Pro Max - Design Intelligence
+この skill は local CSV を検索して UI の方向付けを集めるためのもの。
+ブランドの正本は `project-design-config.md` であり、この skill が上書きしてはいけない。
 
-Searchable database of UI styles, color palettes, font pairings, chart types, product recommendations, UX guidelines, and stack-specific best practices.
+## 使う場面
 
-## Prerequisites
+- 新規 UI の方向性を決める前
+- public / admin UI のレビュー観点を増やしたいとき
+- typography / palette / layout / UX の候補を短時間で集めたいとき
 
-Check if Python is installed:
+## 使わない場面
+
+- プロジェクト固有トークンを決め打ちしたいとき
+- 単なる実装作業で、すでに方向性が決まっているとき
+
+## コマンド
 
 ```bash
-python3 --version || python --version
+python3 .agents/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --domain <domain>
+python3 .agents/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --stack nextjs
 ```
 
-If Python is not installed, install it based on user's OS:
+既定の stack はこのプロジェクトでは `nextjs`。
 
-**macOS:**
-```bash
-brew install python3
-```
+## ドメイン
 
-**Ubuntu/Debian:**
-```bash
-sudo apt update && sudo apt install python3
-```
+| ドメイン | 使いどころ |
+|---------|------------|
+| `product` | 画面種別や業種の方向性 |
+| `style` | 見た目のトーン、レイアウト傾向 |
+| `typography` | フォントペアリング |
+| `color` | カラーパレット候補 |
+| `landing` | ページ構成や CTA 配置 |
+| `chart` | ダッシュボードの可視化 |
+| `ux` | アクセシビリティ、操作性、落とし穴 |
 
-**Windows:**
-```powershell
-winget install Python.Python.3.12
-```
+## 推奨フロー
 
----
+1. まず `product` か `style` で方向を絞る
+2. 必要なら `typography` と `color` を追加する
+3. UI レビューでは `ux` を最後に引く
+4. 実装前に結果を 3-5 行へ圧縮し、`frontend-design` の Design Brief に渡す
 
-## How to Use This Skill
+## 出力のまとめ方
 
-When user requests UI/UX work (design, build, create, implement, review, fix, improve), follow this workflow:
+検索結果をそのまま貼らず、次の形に要約する。
 
-### Step 1: Analyze User Requirements
+- Direction: 何を目指すか
+- Typography: どの対比を使うか
+- Color: どの比率で使うか
+- Layout/Motion: 何を強調し、何を抑えるか
+- Risks: AIっぽさ、コントラスト不足、動き過多など
 
-Extract key information from user request:
-- **Product type**: SaaS, e-commerce, portfolio, dashboard, landing page, etc.
-- **Style keywords**: minimal, playful, professional, elegant, dark mode, etc.
-- **Industry**: healthcare, fintech, gaming, education, etc.
-- **Stack**: React, Vue, Next.js, or default to `html-tailwind`
+## ガードレール
 
-### Step 2: Search Relevant Domains
+- `project-design-config.md` と矛盾する提案をそのまま採用しない
+- 管理画面の固定テーマを勝手に再設計しない
+- raw search result を大量に貼らない
+- `frontend-design` や `ui-ux-patterns.md` を飛ばして、この skill だけで実装判断を完了しない
 
-Use `search.py` multiple times to gather comprehensive information. Search until you have enough context.
+## Done
 
-```bash
-python3 .agents/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --domain <domain> [-n <max_results>]
-```
-
-**Recommended search order:**
-
-1. **Product** - Get style recommendations for product type
-2. **Style** - Get detailed style guide (colors, effects, frameworks)
-3. **Typography** - Get font pairings with Google Fonts imports
-4. **Color** - Get color palette (Primary, Secondary, CTA, Background, Text, Border)
-5. **Landing** - Get page structure (if landing page)
-6. **Chart** - Get chart recommendations (if dashboard/analytics)
-7. **UX** - Get best practices and anti-patterns
-8. **Stack** - Get stack-specific guidelines (default: html-tailwind)
-
-### Step 3: Stack Guidelines (Default: html-tailwind)
-
-If user doesn't specify a stack, **default to `html-tailwind`**.
-
-```bash
-python3 .agents/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --stack html-tailwind
-```
-
-Available stacks: `html-tailwind`, `react`, `nextjs`, `vue`, `svelte`, `swiftui`, `react-native`, `flutter`
-
----
-
-## Search Reference
-
-### Available Domains
-
-| Domain | Use For | Example Keywords |
-|--------|---------|------------------|
-| `product` | Product type recommendations | SaaS, e-commerce, portfolio, healthcare, beauty, service |
-| `style` | UI styles, colors, effects | glassmorphism, minimalism, dark mode, brutalism |
-| `typography` | Font pairings, Google Fonts | elegant, playful, professional, modern |
-| `color` | Color palettes by product type | saas, ecommerce, healthcare, beauty, fintech, service |
-| `landing` | Page structure, CTA strategies | hero, hero-centric, testimonial, pricing, social-proof |
-| `chart` | Chart types, library recommendations | trend, comparison, timeline, funnel, pie |
-| `ux` | Best practices, anti-patterns | animation, accessibility, z-index, loading |
-| `prompt` | AI prompts, CSS keywords | (style name) |
-
-### Available Stacks
-
-| Stack | Focus |
-|-------|-------|
-| `html-tailwind` | Tailwind utilities, responsive, a11y (DEFAULT) |
-| `react` | State, hooks, performance, patterns |
-| `nextjs` | SSR, routing, images, API routes |
-| `vue` | Composition API, Pinia, Vue Router |
-| `svelte` | Runes, stores, SvelteKit |
-| `swiftui` | Views, State, Navigation, Animation |
-| `react-native` | Components, Navigation, Lists |
-| `flutter` | Widgets, State, Layout, Theming |
-
----
-
-## Example Workflow
-
-**User request:** "Làm landing page cho dịch vụ chăm sóc da chuyên nghiệp"
-
-**AI should:**
-
-```bash
-# 1. Search product type
-python3 .agents/skills/ui-ux-pro-max/scripts/search.py "beauty spa wellness service" --domain product
-
-# 2. Search style (based on industry: beauty, elegant)
-python3 .agents/skills/ui-ux-pro-max/scripts/search.py "elegant minimal soft" --domain style
-
-# 3. Search typography
-python3 .agents/skills/ui-ux-pro-max/scripts/search.py "elegant luxury" --domain typography
-
-# 4. Search color palette
-python3 .agents/skills/ui-ux-pro-max/scripts/search.py "beauty spa wellness" --domain color
-
-# 5. Search landing page structure
-python3 .agents/skills/ui-ux-pro-max/scripts/search.py "hero-centric social-proof" --domain landing
-
-# 6. Search UX guidelines
-python3 .agents/skills/ui-ux-pro-max/scripts/search.py "animation" --domain ux
-python3 .agents/skills/ui-ux-pro-max/scripts/search.py "accessibility" --domain ux
-
-# 7. Search stack guidelines (default: html-tailwind)
-python3 .agents/skills/ui-ux-pro-max/scripts/search.py "layout responsive" --stack html-tailwind
-```
-
-**Then:** Synthesize all search results and implement the design.
-
----
-
-## Tips for Better Results
-
-1. **Be specific with keywords** - "healthcare SaaS dashboard" > "app"
-2. **Search multiple times** - Different keywords reveal different insights
-3. **Combine domains** - Style + Typography + Color = Complete design system
-4. **Always check UX** - Search "animation", "z-index", "accessibility" for common issues
-5. **Use stack flag** - Get implementation-specific best practices
-6. **Iterate** - If first search doesn't match, try different keywords
-
----
-
-## Common Rules for Professional UI
-
-These are frequently overlooked issues that make UI look unprofessional:
-
-### Icons & Visual Elements
-
-| Rule | Do | Don't |
-|------|----|----- |
-| **No emoji icons** | Use SVG icons (Heroicons, Lucide, Simple Icons) | Use emojis like 🎨 🚀 ⚙️ as UI icons |
-| **Stable hover states** | Use color/opacity transitions on hover | Use scale transforms that shift layout |
-| **Correct brand logos** | Research official SVG from Simple Icons | Guess or use incorrect logo paths |
-| **Consistent icon sizing** | Use fixed viewBox (24x24) with w-6 h-6 | Mix different icon sizes randomly |
-
-### Interaction & Cursor
-
-| Rule | Do | Don't |
-|------|----|----- |
-| **Cursor pointer** | Add `cursor-pointer` to all clickable/hoverable cards | Leave default cursor on interactive elements |
-| **Hover feedback** | Provide visual feedback (color, shadow, border) | No indication element is interactive |
-| **Smooth transitions** | Use `transition-colors duration-200` | Instant state changes or too slow (>500ms) |
-
-### Light/Dark Mode Contrast
-
-| Rule | Do | Don't |
-|------|----|----- |
-| **Glass card light mode** | Use `bg-white/80` or higher opacity | Use `bg-white/10` (too transparent) |
-| **Text contrast light** | Use `#0F172A` (slate-900) for text | Use `#94A3B8` (slate-400) for body text |
-| **Muted text light** | Use `#475569` (slate-600) minimum | Use gray-400 or lighter |
-| **Border visibility** | Use `border-gray-200` in light mode | Use `border-white/10` (invisible) |
-
-### Layout & Spacing
-
-| Rule | Do | Don't |
-|------|----|----- |
-| **Floating navbar** | Add `top-4 left-4 right-4` spacing | Stick navbar to `top-0 left-0 right-0` |
-| **Content padding** | Account for fixed navbar height | Let content hide behind fixed elements |
-| **Consistent max-width** | Use same `max-w-6xl` or `max-w-7xl` | Mix different container widths |
-
----
-
-## Pre-Delivery Checklist
-
-Before delivering UI code, verify these items:
-
-### Visual Quality
-- [ ] No emojis used as icons (use SVG instead)
-- [ ] All icons from consistent icon set (Heroicons/Lucide)
-- [ ] Brand logos are correct (verified from Simple Icons)
-- [ ] Hover states don't cause layout shift
-- [ ] Use theme colors directly (bg-primary) not var() wrapper
-
-### Interaction
-- [ ] All clickable elements have `cursor-pointer`
-- [ ] Hover states provide clear visual feedback
-- [ ] Transitions are smooth (150-300ms)
-- [ ] Focus states visible for keyboard navigation
-
-### Light/Dark Mode
-- [ ] Light mode text has sufficient contrast (4.5:1 minimum)
-- [ ] Glass/transparent elements visible in light mode
-- [ ] Borders visible in both modes
-- [ ] Test both modes before delivery
-
-### Layout
-- [ ] Floating elements have proper spacing from edges
-- [ ] No content hidden behind fixed navbars
-- [ ] Responsive at 320px, 768px, 1024px, 1440px
-- [ ] No horizontal scroll on mobile
-
-### Accessibility
-- [ ] All images have alt text
-- [ ] Form inputs have labels
-- [ ] Color is not the only indicator
-- [ ] `prefers-reduced-motion` respected
+- 必要最小限の domain だけ検索した
+- 結果を短い判断材料へ圧縮した
+- プロジェクト固有ルールとの整合性を確認した

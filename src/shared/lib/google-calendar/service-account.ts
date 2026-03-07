@@ -1,6 +1,7 @@
 import "server-only";
 
 import { google, type calendar_v3 } from "googleapis";
+import { z } from "zod";
 import {
   logError,
   ErrorCategory,
@@ -9,6 +10,26 @@ import {
 } from "@/shared/lib/errors/server";
 import { safeDecrypt, encryptApiKey } from "@/shared/lib/crypto";
 import { prisma } from "@/shared/lib/prisma";
+
+const serviceAccountCredentialsSchema = z
+  .object({
+    client_email: z.string().optional(),
+  })
+  .passthrough();
+
+type ServiceAccountCredentials = z.output<typeof serviceAccountCredentialsSchema>;
+
+export function parseServiceAccountCredentials(
+  json: string,
+): ServiceAccountCredentials | null {
+  try {
+    const parsed = JSON.parse(json);
+    const result = serviceAccountCredentialsSchema.safeParse(parsed);
+    return result.success ? result.data : null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * サービスアカウントのGoogle Calendar APIクライアントを取得
@@ -39,8 +60,17 @@ export async function getServiceAccountClient(): Promise<calendar_v3.Calendar | 
     return null;
   }
 
+  const credentials = parseServiceAccountCredentials(decryptedJson);
+  if (!credentials) {
+    logError(new Error("Invalid service account credentials JSON"), {
+      category: ErrorCategory.UNKNOWN,
+      severity: ErrorSeverity.HIGH,
+      context: { operation: "getServiceAccountClient" },
+    });
+    return null;
+  }
+
   try {
-    const credentials = JSON.parse(decryptedJson);
     const auth = new google.auth.GoogleAuth({
       credentials,
       scopes: ["https://www.googleapis.com/auth/calendar.events"],
@@ -68,10 +98,5 @@ export function encryptServiceAccountJson(json: string): string {
  * サービスアカウントJSONからメールアドレスを抽出（マスク表示用）
  */
 export function extractServiceAccountEmail(json: string): string | null {
-  try {
-    const parsed = JSON.parse(json);
-    return parsed.client_email ?? null;
-  } catch {
-    return null;
-  }
+  return parseServiceAccountCredentials(json)?.client_email ?? null;
 }

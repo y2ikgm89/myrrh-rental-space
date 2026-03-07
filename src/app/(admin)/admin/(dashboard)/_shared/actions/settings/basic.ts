@@ -43,6 +43,10 @@ import {
 
 const checkReadPermission = checkReadPermissionFor("settings");
 
+function invalidateSettingsCache(): void {
+  updateTag(CACHE_TAGS.SETTINGS);
+}
+
 // =============================================================================
 // Actions
 // =============================================================================
@@ -213,8 +217,7 @@ export const updateBasicInfo = withPermission<[data: BasicInfoInput], void>(
     update: parsed.data,
   });
 
-  updateTag(CACHE_TAGS.SETTINGS);
-  updateTag(CACHE_TAGS.SETTINGS);
+  invalidateSettingsCache();
 
   return createSuccess("基本情報を更新しました");
 });
@@ -277,10 +280,7 @@ export const updateLayoutSettings = withPermission<
     },
   });
 
-  updateTag(CACHE_TAGS.SETTINGS);
-  updateTag(CACHE_TAGS.SETTINGS);
-  updateTag(CACHE_TAGS.SETTINGS);
-  updateTag(CACHE_TAGS.SETTINGS);
+  invalidateSettingsCache();
 
   return createSuccess("レイアウト設定を更新しました");
 });
@@ -303,9 +303,8 @@ export const updateSeoSettings = withPermission<[data: SeoSettingsInput], void>(
     update: parsed.data,
   });
 
-  // Analytics設定キャッシュを即座に無効化
-  updateTag(CACHE_TAGS.SETTINGS);
-  updateTag(CACHE_TAGS.SETTINGS);
+  // Settings を親タグとして共有する派生キャッシュ（SEO / Analytics など）をまとめて無効化
+  invalidateSettingsCache();
 
   return createSuccess("SEO設定を更新しました");
 });

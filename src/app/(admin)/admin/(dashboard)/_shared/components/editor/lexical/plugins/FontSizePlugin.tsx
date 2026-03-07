@@ -151,11 +151,11 @@ export function FontSizePlugin() {
     if (e.key === 'Enter') {
       e.preventDefault()
       handleInputBlur()
-      ;(e.target as HTMLInputElement).blur()
+      e.currentTarget.blur()
     } else if (e.key === 'Escape') {
       e.preventDefault()
       setInputValue(fontSize)
-      ;(e.target as HTMLInputElement).blur()
+      e.currentTarget.blur()
     }
   }
 

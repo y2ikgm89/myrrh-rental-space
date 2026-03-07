@@ -316,7 +316,7 @@ describe('createPost', () => {
 })
 ```
 
-> **詳細リファレンス（モック詳細実装・Bun ランタイム API）**: `docs/reference/claude-rules/bun-test-reference.md`
+> 追加の Bun Test API 詳細は [bun.sh/docs/test](https://bun.sh/docs/test) と `__tests__/mocks/` を参照。
 
 ---
 

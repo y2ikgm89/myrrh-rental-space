@@ -5,7 +5,7 @@ paths:
 
 # SEO / 構造化データパターンルール
 
-> **配置**: `.claude/rules/frontend/seo-patterns.md`（`paths:` フロントマター付き — public 作業時に自動適用）
+> Codex 用参照ドキュメント。公開ページの SEO / JSON-LD 実装はこのファイルを正本とする。
 > JSON-LD @graph / microdata / NAP一貫性 / MEO対応
 
 ## 構造化データ配置

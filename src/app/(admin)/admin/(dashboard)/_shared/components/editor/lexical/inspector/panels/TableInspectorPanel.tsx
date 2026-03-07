@@ -32,7 +32,7 @@ import {
   tableBorderWidthState,
   tableHtmlAnchorState,
   tableCssClassState,
-  type TableStyle,
+  isTableStyle,
   type CustomTableNode,
 } from "../../nodes/CustomTableNode";
 import type { NodeKey } from "lexical";
@@ -102,9 +102,11 @@ export function TableInspectorPanel({
             <Select
               value={tableStyle}
               onValueChange={(v) =>
-                updateNode((n) => {
-                  $setState(n, tableStyleState, v as TableStyle);
-                })
+                isTableStyle(v)
+                  ? updateNode((n) => {
+                      $setState(n, tableStyleState, v);
+                    })
+                  : undefined
               }
             >
               <SelectTrigger className="h-8 text-sm">

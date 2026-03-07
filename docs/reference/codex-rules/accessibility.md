@@ -6,7 +6,7 @@ paths:
 
 # アクセシビリティ（a11y）ルール
 
-> **配置**: `.claude/rules/frontend/accessibility.md`（`paths:` フロントマター付き — public・admin 作業時に自動適用）
+> Codex 用参照ドキュメント。public / admin の a11y ルールはこのファイルを正本とする。
 > WCAG 2.2 AA / React 19 / GSAP prefers-reduced-motion / SkipLink / AriaLiveRegion 対応
 
 ## 概要
@@ -482,5 +482,5 @@ useEffect(() => {
 
 - [WCAG 2.2 (W3C)](https://www.w3.org/TR/WCAG22/)
 - [GSAP Accessibility Guide](https://gsap.com/resources/a11y)
-- `.claude/rules/gsap-patterns.md` §reduced-motion 対応（パターン A/B/C）
-- `.claude/rules/visual-effects-patterns.md` §エフェクトレベル定義
+- `docs/reference/codex-rules/gsap-patterns.md` §reduced-motion 対応（パターン A/B/C）
+- `docs/reference/codex-rules/visual-effects-patterns.md` §エフェクトレベル定義
