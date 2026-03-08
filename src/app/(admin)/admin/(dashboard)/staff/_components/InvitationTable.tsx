@@ -9,15 +9,11 @@ import {
 } from "@/admin/components/ui";
 import { RoleBadge } from "@/admin/components/status-badges";
 import { InvitationActions } from "./InvitationActions";
+import type { InvitationData } from "@/shared/domain/staff-invitations/types";
 import { formatDateTimeShort, formatDateShort } from "@/shared/lib/utils";
-import type { getPendingInvitations } from "@/admin/actions/staff-invitation";
-
-type PendingInvitation = Awaited<
-  ReturnType<typeof getPendingInvitations>
->[number];
 
 type InvitationTableProps = {
-  invitations: PendingInvitation[];
+  invitations: InvitationData[];
 };
 
 export function InvitationTable({ invitations }: InvitationTableProps) {

@@ -33,7 +33,7 @@ import {
 import { StatusBanner } from '../shared'
 import { useRefreshOnSuccess } from '../hooks'
 import { formatDateTimeShort } from '@/shared/lib/utils'
-import { InstagramFeedLayout } from '@/shared/generated/prisma/enums'
+import { InstagramFeedLayout } from '@/shared/db/enums'
 import { isValidInstagramFeedLayout } from '@/shared/lib/validations/enums'
 
 // =============================================================================

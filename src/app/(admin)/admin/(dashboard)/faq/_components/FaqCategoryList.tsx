@@ -20,7 +20,7 @@ import {
   DialogTitle,
 } from '@/admin/components/ui'
 import { deleteFaqCategory, deleteFaqItem, toggleFaqItemPublished } from '@/admin/actions/faq'
-import type { FaqCategoryWithItems } from '@/admin/lib/validations/faq'
+import type { FaqCategoryWithItems } from '@/shared/domain/faq/types'
 
 const styles = tv({
   slots: {

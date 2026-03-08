@@ -1,51 +1,39 @@
 "use server";
 
-/**
- * ホームページセクション Server Actions
- *
- * 統一 Section モデル（pageId = null でホームページ判別）
- */
-
-import { prisma } from "@/shared/lib/prisma";
 import { updateTag } from "next/cache";
-import { CACHE_TAGS } from "@/shared/lib/constants";
-import { createSuccess, createFailure } from "@/admin/types/server-actions";
-import { createValidationError } from "@/shared/lib/action-helpers";
-import { withPermission } from "@/admin/lib/server-action-helpers";
+import { executeAdminMutation } from "@/admin/lib/admin-action";
 import { checkReadPermissionFor } from "@/admin/lib/permissions";
-import { purgeHomeCache } from "@/shared/lib/cloudflare";
-import { fireAndForget } from "@/shared/lib/async-utils";
-import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
-import { toPlainObject, toPlainArray } from "@/shared/lib/serialize";
 import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
+import { createSuccess } from "@/admin/types/server-actions";
+import { createValidationError } from "@/shared/lib/action-helpers";
+import { fireAndForget } from "@/shared/lib/async-utils";
+import { purgeHomeCache } from "@/shared/lib/cloudflare";
+import { CACHE_TAGS } from "@/shared/lib/constants";
+import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
+import {
+  createHomepageSectionCommand,
+  deleteHomepageSectionCommand,
+  initializeDefaultHomepageSectionsCommand,
+  toggleHomepageSectionCommand,
+  updateHomepageSectionCommand,
+  updateHomepageSectionOrderCommand,
+} from "@/shared/domain/sections/commands";
+import {
+  getHomepageSectionByTypeQuery,
+  getHomepageSectionQuery,
+  getHomepageSectionsQuery,
+  getPublicHomepageSectionsQuery,
+} from "@/shared/domain/sections/admin-queries";
 import {
   SectionType,
   createSectionSchema,
-  updateSectionSchema,
   updateSectionOrderSchema,
-  validateSectionConfig,
-  defaultSectionConfigs,
-  defaultHomepageSectionOrder,
+  updateSectionSchema,
   type CreateSectionInput,
+  type SectionConfig,
   type UpdateSectionInput,
   type UpdateSectionOrderInput,
-  type SectionConfig,
 } from "@/shared/lib/validations/section";
-
-/**
- * PrismaのJson型をSectionConfigに変換（ランタイムバリデーション付き）
- */
-function parseSectionConfig(type: SectionType, config: unknown): SectionConfig {
-  const result = validateSectionConfig(type, config);
-  if (result.success) {
-    return result.data;
-  }
-  return defaultSectionConfigs[type];
-}
-
-// =============================================================================
-// Types
-// =============================================================================
 
 export type HomepageSectionData = {
   id: string;
@@ -61,10 +49,6 @@ export type HomepageSectionData = {
   updatedAt: Date;
 };
 
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
 const checkReadPermission = checkReadPermissionFor("settings");
 
 function revalidateHomepage() {
@@ -73,7 +57,6 @@ function revalidateHomepage() {
   updateTag(CACHE_TAGS.PAGES);
   updateTag(CACHE_TAGS.SETTINGS);
 
-  // Cloudflare CDN キャッシュパージ
   fireAndForget(purgeHomeCache(), {
     operation: "purgeHomeCache",
     category: ErrorCategory.EXTERNAL_API,
@@ -81,359 +64,155 @@ function revalidateHomepage() {
   });
 }
 
-// =============================================================================
-// Read Actions
-// =============================================================================
-
-/**
- * 全ホームページセクションを取得（管理画面用）
- */
 export async function getHomepageSections(): Promise<
   HomepageSectionData[] | null
 > {
-  const hasAccess = await checkReadPermission();
-  if (!hasAccess) return null;
+  if (!(await checkReadPermission())) {
+    return null;
+  }
 
-  const sections = await prisma.section.findMany({
-    where: { pageId: null },
-    select: {
-      id: true,
-      type: true,
-      title: true,
-      config: true,
-      design: true,
-      contentHtml: true,
-      contentJson: true,
-      order: true,
-      isActive: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-    orderBy: { order: "asc" },
-  });
-
-  return toPlainArray(
-    sections.map((section) => ({
-      ...section,
-      config: parseSectionConfig(section.type, section.config),
-    })),
-  );
+  return getHomepageSectionsQuery();
 }
 
-/**
- * 公開用: アクティブなホームページセクションを取得
- */
 export async function getPublicHomepageSections(): Promise<
   HomepageSectionData[]
 > {
-  const sections = await prisma.section.findMany({
-    where: { pageId: null, isActive: true },
-    select: {
-      id: true,
-      type: true,
-      title: true,
-      config: true,
-      design: true,
-      contentHtml: true,
-      contentJson: true,
-      order: true,
-      isActive: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-    orderBy: { order: "asc" },
-  });
-
-  return toPlainArray(
-    sections.map((section) => ({
-      ...section,
-      config: parseSectionConfig(section.type, section.config),
-    })),
-  );
+  return getPublicHomepageSectionsQuery();
 }
 
-/**
- * 単一セクションを取得
- */
 export async function getHomepageSection(
   id: string,
 ): Promise<HomepageSectionData | null> {
-  const hasAccess = await checkReadPermission();
-  if (!hasAccess) return null;
+  if (!(await checkReadPermission())) {
+    return null;
+  }
 
-  const section = await prisma.section.findUnique({
-    where: { id },
-  });
-
-  if (!section || section.pageId !== null) return null;
-
-  return toPlainObject({
-    ...section,
-    config: parseSectionConfig(section.type, section.config),
-  });
+  return getHomepageSectionQuery(id);
 }
 
-/**
- * タイプでホームページセクションを取得
- */
 export async function getHomepageSectionByType(
   type: SectionType,
 ): Promise<HomepageSectionData | null> {
-  const section = await prisma.section.findFirst({
-    where: { type, pageId: null },
-    orderBy: { order: "asc" },
-  });
-
-  if (!section) return null;
-
-  return toPlainObject({
-    ...section,
-    config: parseSectionConfig(section.type, section.config),
-  });
+  return getHomepageSectionByTypeQuery(type);
 }
 
-// =============================================================================
-// Create Actions
-// =============================================================================
-
-/**
- * ホームページセクションを作成
- */
-export const createHomepageSection = withPermission<
-  [CreateSectionInput],
-  { id: string }
->(
-  "settings",
-  "update",
-)(async (_user, input) => {
+export const createHomepageSection = async (input: CreateSectionInput) => {
   const parsed = createSectionSchema.safeParse({ ...input, pageId: undefined });
   if (!parsed.success) {
     return createValidationError(parsed.error);
   }
 
-  const { type, title, config, design, contentJson, order, isActive } =
-    parsed.data;
-
-  // 設定を検証
-  const configValidation = validateSectionConfig(type, config);
-  if (!configValidation.success) {
-    return createValidationError(configValidation.error, "設定エラー");
-  }
-
-  // 次のorder値を取得
-  const maxOrder = await prisma.section.aggregate({
-    where: { pageId: null },
-    _max: { order: true },
-  });
-  const nextOrder = order ?? (maxOrder._max.order ?? -1) + 1;
-
-  // JSON → HTML 変換（contentJsonが提供されている場合）
-  const contentHtml = contentJson
-    ? await renderEditorStateToHtmlLazy(contentJson)
+  const contentHtml = parsed.data.contentJson
+    ? await renderEditorStateToHtmlLazy(parsed.data.contentJson)
     : null;
 
-  const section = await prisma.section.create({
-    data: {
-      pageId: null,
-      type,
-      title,
-      config: configValidation.data,
-      design: JSON.parse(JSON.stringify(design ?? {})),
-      contentJson: contentJson ? JSON.parse(contentJson) : null,
-      contentHtml,
-      order: nextOrder,
-      isActive,
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () =>
+      createHomepageSectionCommand(parsed.data, contentHtml),
+    success: (result) => createSuccess("セクションを作成しました", result),
+    afterSuccess: () => {
+      revalidateHomepage();
     },
+    resolveAuditResourceId: (result) => result.id,
   });
+};
 
-  revalidateHomepage();
-  return createSuccess("セクションを作成しました", { id: section.id });
-});
-
-// =============================================================================
-// Update Actions
-// =============================================================================
-
-/**
- * ホームページセクションを更新
- */
-export const updateHomepageSection = withPermission<
-  [string, UpdateSectionInput],
-  void
->(
-  "settings",
-  "update",
-)(async (_user, id, input) => {
+export const updateHomepageSection = async (
+  id: string,
+  input: UpdateSectionInput,
+) => {
   const parsed = updateSectionSchema.safeParse(input);
   if (!parsed.success) {
     return createValidationError(parsed.error);
   }
 
-  const existing = await prisma.section.findUnique({
-    where: { id },
-    select: { id: true, pageId: true, type: true },
+  const contentHtml =
+    parsed.data.contentJson === undefined
+      ? undefined
+      : parsed.data.contentJson
+        ? await renderEditorStateToHtmlLazy(parsed.data.contentJson)
+        : null;
+
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    resourceId: id,
+    execute: async () =>
+      updateHomepageSectionCommand(id, parsed.data, contentHtml),
+    success: () => createSuccess("セクションを更新しました"),
+    afterSuccess: () => {
+      revalidateHomepage();
+    },
   });
+};
 
-  if (!existing || existing.pageId !== null) {
-    return createFailure("セクションが見つかりません");
-  }
-
-  // 設定を検証（configが更新される場合）
-  if (parsed.data.config) {
-    const configValidation = validateSectionConfig(
-      existing.type,
-      parsed.data.config,
-    );
-    if (!configValidation.success) {
-      return createValidationError(configValidation.error, "設定エラー");
-    }
-    parsed.data.config = configValidation.data;
-  }
-
-  await prisma.section.update({
-    where: { id },
-    data: {
-      title: parsed.data.title,
-      config: parsed.data.config
-        ? JSON.parse(JSON.stringify(parsed.data.config))
-        : undefined,
-      design: parsed.data.design
-        ? JSON.parse(JSON.stringify(parsed.data.design))
-        : undefined,
-      ...(parsed.data.contentJson !== undefined
-        ? {
-            contentJson: parsed.data.contentJson
-              ? JSON.parse(parsed.data.contentJson)
-              : null,
-            contentHtml: parsed.data.contentJson
-              ? await renderEditorStateToHtmlLazy(parsed.data.contentJson)
-              : null,
-          }
-        : {}),
-      isActive: parsed.data.isActive,
+export const toggleHomepageSection = async (id: string, isActive: boolean) =>
+  executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    resourceId: id,
+    execute: async () => toggleHomepageSectionCommand(id, isActive),
+    success: () =>
+      createSuccess(
+        isActive
+          ? "セクションを有効にしました"
+          : "セクションを無効にしました",
+      ),
+    afterSuccess: () => {
+      revalidateHomepage();
     },
   });
 
-  revalidateHomepage();
-  return createSuccess("セクションを更新しました");
-});
-
-/**
- * セクションの有効/無効を切り替え
- */
-export const toggleHomepageSection = withPermission<[string, boolean], void>(
-  "settings",
-  "update",
-)(async (_user, id, isActive) => {
-  const existing = await prisma.section.findUnique({
-    where: { id },
-    select: { id: true, pageId: true },
-  });
-
-  if (!existing || existing.pageId !== null) {
-    return createFailure("セクションが見つかりません");
-  }
-
-  await prisma.section.update({
-    where: { id },
-    data: { isActive },
-  });
-
-  revalidateHomepage();
-  return createSuccess(
-    isActive ? "セクションを有効にしました" : "セクションを無効にしました",
-  );
-});
-
-/**
- * ホームページセクションの順序を更新（DnD用）
- */
-export const updateSectionOrder = withPermission<
-  [UpdateSectionOrderInput],
-  void
->(
-  "settings",
-  "update",
-)(async (_user, input) => {
+export const updateSectionOrder = async (input: UpdateSectionOrderInput) => {
   const parsed = updateSectionOrderSchema.safeParse(input);
   if (!parsed.success) {
     return createValidationError(parsed.error);
   }
 
-  await prisma.$transaction(
-    parsed.data.sections.map((item) =>
-      prisma.section.update({
-        where: { id: item.id },
-        data: { order: item.order },
-      }),
-    ),
-  );
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => updateHomepageSectionOrderCommand(parsed.data),
+    success: () => createSuccess("順序を更新しました"),
+    afterSuccess: () => {
+      revalidateHomepage();
+    },
+  });
+};
 
-  revalidateHomepage();
-  return createSuccess("順序を更新しました");
-});
-
-// =============================================================================
-// Delete Actions
-// =============================================================================
-
-/**
- * ホームページセクションを削除
- */
-export const deleteHomepageSection = withPermission<[string], void>(
-  "settings",
-  "update",
-)(async (_user, id) => {
-  const existing = await prisma.section.findUnique({
-    where: { id },
-    select: { id: true, pageId: true },
+export const deleteHomepageSection = async (id: string) =>
+  executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    resourceId: id,
+    execute: async () => deleteHomepageSectionCommand(id),
+    success: () => createSuccess("セクションを削除しました"),
+    afterSuccess: () => {
+      revalidateHomepage();
+    },
   });
 
-  if (!existing || existing.pageId !== null) {
-    return createFailure("セクションが見つかりません");
-  }
+export const initializeDefaultSections = async () =>
+  {
+    let initializedDefaultSectionsCreated = false;
 
-  await prisma.section.delete({
-    where: { id },
-  });
-
-  revalidateHomepage();
-  return createSuccess("セクションを削除しました");
-});
-
-// =============================================================================
-// Initialization
-// =============================================================================
-
-/**
- * デフォルトホームページセクションを初期化
- */
-export const initializeDefaultSections = withPermission<[], void>(
-  "settings",
-  "update",
-)(async () => {
-  const existingCount = await prisma.section.count({
-    where: { pageId: null },
-  });
-  if (existingCount > 0) {
-    return createSuccess("既にセクションが存在します");
-  }
-
-  await prisma.$transaction(
-    defaultHomepageSectionOrder.map((type, index) =>
-      prisma.section.create({
-        data: {
-          pageId: null,
-          type,
-          config: defaultSectionConfigs[type],
-          design: {},
-          order: index,
-          isActive: true,
-        },
-      }),
-    ),
-  );
-
-  revalidateHomepage();
-  return createSuccess("デフォルトセクションを作成しました");
-});
+    return executeAdminMutation<void>({
+      resource: "settings",
+      action: "update",
+      execute: async () => {
+        initializedDefaultSectionsCreated =
+          await initializeDefaultHomepageSectionsCommand();
+      },
+      success: () =>
+        createSuccess(
+          initializedDefaultSectionsCreated
+            ? "デフォルトセクションを作成しました"
+            : "既にセクションが存在します",
+        ),
+      afterSuccess: () => {
+        revalidateHomepage();
+      },
+    });
+  };

@@ -1,4 +1,4 @@
-'use server'
+"use server";
 
 /**
  * メール設定・通知設定 Server Actions
@@ -6,72 +6,64 @@
  * @module admin/actions/settings/email
  */
 
-import { prisma } from '@/shared/lib/prisma'
-import { updateTag } from 'next/cache'
-import { CACHE_TAGS } from '@/shared/lib/constants'
-import { createSuccess, type ActionResult } from '@/admin/types/server-actions'
-import { createValidationError } from '@/shared/lib/action-helpers'
-import { withPermission } from '@/admin/lib/server-action-helpers'
+import { updateTag } from "next/cache";
+import { CACHE_TAGS } from "@/shared/lib/constants";
+import { createValidationError } from "@/shared/lib/action-helpers";
+import { executeAdminMutation } from "@/admin/lib/admin-action";
+import {
+  createSuccess,
+  type ActionResult,
+} from "@/admin/types/server-actions";
+import {
+  updateEmailSettings as updateEmailSettingsCommand,
+  updateNotificationSettings as updateNotificationSettingsCommand,
+} from "@/shared/domain/settings/commands";
 
 import {
   emailSettingsSchema,
   notificationSettingsSchema,
   type EmailSettingsInput,
   type NotificationSettingsInput,
-} from './schemas'
+} from "./schemas";
 
-// =============================================================================
-// Actions
-// =============================================================================
+function invalidateSettingsCache(): void {
+  updateTag(CACHE_TAGS.SETTINGS);
+}
 
-/**
- * メール設定を更新
- */
-export const updateEmailSettings = withPermission<[data: EmailSettingsInput], void>(
-  'settings',
-  'update'
-)(async (_user, data): Promise<ActionResult<void>> => {
-  const parsed = emailSettingsSchema.safeParse(data)
+export async function updateEmailSettings(
+  data: EmailSettingsInput,
+): Promise<ActionResult<void>> {
+  const parsed = emailSettingsSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error)
+    return createValidationError(parsed.error);
   }
 
-  const updateData = {
-    ...parsed.data,
-    senderEmail: parsed.data.senderEmail || null,
-    replyToEmail: parsed.data.replyToEmail || null,
-  }
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      await updateEmailSettingsCommand(parsed.data);
+    },
+    success: () => createSuccess("メール設定を更新しました"),
+    afterSuccess: invalidateSettingsCache,
+  });
+}
 
-  await prisma.settings.upsert({
-    where: { id: 'singleton' },
-    create: { id: 'singleton', ...updateData },
-    update: updateData,
-  })
-
-  updateTag(CACHE_TAGS.SETTINGS)
-
-  return createSuccess('メール設定を更新しました')
-})
-
-/**
- * 通知設定を更新
- */
-export const updateNotificationSettings = withPermission<[data: NotificationSettingsInput], void>(
-  'settings',
-  'update'
-)(async (_user, data): Promise<ActionResult<void>> => {
-  const parsed = notificationSettingsSchema.safeParse(data)
+export async function updateNotificationSettings(
+  data: NotificationSettingsInput,
+): Promise<ActionResult<void>> {
+  const parsed = notificationSettingsSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error)
+    return createValidationError(parsed.error);
   }
 
-  await prisma.settings.upsert({
-    where: { id: 'singleton' },
-    create: { id: 'singleton', ...parsed.data },
-    update: parsed.data,
-  })
-
-  updateTag(CACHE_TAGS.SETTINGS)
-
-  return createSuccess('通知設定を更新しました')
-})
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      await updateNotificationSettingsCommand(parsed.data);
+    },
+    success: () => createSuccess("通知設定を更新しました"),
+    afterSuccess: invalidateSettingsCache,
+  });
+}

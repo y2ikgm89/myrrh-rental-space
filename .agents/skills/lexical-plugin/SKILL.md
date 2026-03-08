@@ -1,6 +1,6 @@
 ---
 name: lexical-plugin
-description: 管理画面の Lexical に新しい plugin を追加するときに使う。dialog、command、listener のどれで実装するかを決め、editor への統合まで揃える。
+description: 管理画面の Lexical に新しい plugin を追加するときに使う。dialog、command、listener のどれで実装するかを決め、editor への統合まで揃える。既存実装の監査や deprecated API 除去が主目的なら lexical-audit を使う。
 ---
 
 # lexical-plugin
@@ -38,6 +38,8 @@ node 自体の追加が主目的なら `lexical-node`、toolbar 追加が主目�
 
 - `updateListener` 内で `editor.update()` を呼ばない
 - `$` 系 API は read/update クロージャの中だけで使う
+- editor を Composer 外へ渡す必要がある場合は独自 `useEffect` で ref 同期せず `EditorRefPlugin` を使う
+- HTML を node に変換して流し込む場合は `root.select()` の後に `$insertNodes()` する
 - listener 登録解除を漏らさない
 - plugin 単体で完結せず、呼び出し側統合を忘れない
 

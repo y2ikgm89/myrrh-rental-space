@@ -7,7 +7,8 @@ import {
   ErrorSeverity,
   normalizeError,
 } from "@/shared/lib/errors/server";
-import { prisma } from "@/shared/lib/prisma";
+import { getGoogleOAuthAccount } from "@/shared/domain/auth/queries";
+import { updateGoogleOAuthAccountTokens } from "@/shared/domain/auth/commands";
 import { getGoogleOAuthCredentials } from "@/shared/lib/google-oauth-credentials";
 import type { CalendarConnectionTestResult } from "./types";
 import { formatGoogleApiError } from "./helpers";
@@ -18,19 +19,7 @@ import { formatGoogleApiError } from "./helpers";
 export async function getOAuthClient(
   userId: string,
 ): Promise<calendar_v3.Calendar | null> {
-  const account = await prisma.account.findFirst({
-    where: {
-      userId,
-      providerId: "google",
-    },
-    select: {
-      id: true,
-      accountId: true,
-      accessToken: true,
-      refreshToken: true,
-      accessTokenExpiresAt: true,
-    },
-  });
+  const account = await getGoogleOAuthAccount(userId);
 
   if (!account?.accessToken) {
     return null;
@@ -59,16 +48,11 @@ export async function getOAuthClient(
     const accountId = account.id;
     oauth2Client.on("tokens", async (tokens) => {
       if (tokens.access_token) {
-        // refreshTokenも更新（Googleがローテーションした場合に備える）
-        await prisma.account.update({
-          where: { id: accountId },
-          data: {
-            accessToken: tokens.access_token,
-            refreshToken: tokens.refresh_token ?? undefined,
-            accessTokenExpiresAt: tokens.expiry_date
-              ? new Date(tokens.expiry_date)
-              : undefined,
-          },
+        await updateGoogleOAuthAccountTokens({
+          accountId,
+          accessToken: tokens.access_token,
+          refreshToken: tokens.refresh_token ?? undefined,
+          expiryDate: tokens.expiry_date ?? undefined,
         });
       }
     });

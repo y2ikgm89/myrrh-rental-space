@@ -18,7 +18,7 @@ import {
   type DragEndEvent,
 } from '@/admin/components/ui'
 import type { SensorDescriptor, SensorOptions } from '@dnd-kit/core'
-import type { NavigationType } from '@/shared/generated/prisma/enums'
+import type { NavigationType } from '@/shared/db/enums'
 import type { NavigationItemData, SocialLinkData, FlatNavigationItem } from './types'
 import { SortableNavRow, SortableSocialRow } from './SortableNavItem'
 

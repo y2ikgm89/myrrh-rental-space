@@ -62,3 +62,10 @@ export function maskGoogleMapsKey(key: string): string {
 export function maskCloudflareToken(token: string): string {
   return maskApiKey(token, 8, 4) // xxxxxxxx...xxxx
 }
+
+/**
+ * Google OAuth Client Secret用のマスク
+ */
+export function maskGoogleOAuthSecret(secret: string): string {
+  return maskApiKey(secret, 8, 4)
+}

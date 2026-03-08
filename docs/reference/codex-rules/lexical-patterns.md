@@ -17,7 +17,7 @@ paths:
 
 | 技術 | バージョン | 互換性 |
 |------|-----------|--------|
-| Lexical | 0.40.0 | React 17+対応 |
+| Lexical | 0.41.0 | React 17+対応 |
 | React | 19.2.4 | ✅ peerDependencies対応 |
 | React Compiler | 1.0.0 | ✅ 自動メモ化（useCallback基本不要） |
 | Turbopack | Next.js 16 default | ✅ optimizePackageImports設定済み |
@@ -414,6 +414,36 @@ const handleSubmit = () => {
 }
 ```
 
+### エディタ参照の取得
+
+LexicalComposer の外へ editor インスタンスを渡す必要がある場合は、
+独自の `useEffect` で ref を同期せず `EditorRefPlugin` を使う:
+
+```typescript
+import { EditorRefPlugin } from '@lexical/react/LexicalEditorRefPlugin'
+
+const editorRef = useRef<LexicalEditor | null>(null)
+
+<EditorRefPlugin editorRef={editorRef} />
+```
+
+### HTML 初期化パターン
+
+HTML を Lexical node に変換して初期化するときは、`$insertNodes()` の前に root を選択する:
+
+```typescript
+editor.update(() => {
+  const parser = new DOMParser()
+  const dom = parser.parseFromString(htmlString, 'text/html')
+  const nodes = $generateNodesFromDOM(editor, dom)
+  const root = $getRoot()
+
+  root.clear()
+  root.select()
+  $insertNodes(nodes)
+})
+```
+
 ### コマンド登録パターン（ツールバーボタン等から直接呼び出す場合）
 
 ```typescript
@@ -547,10 +577,11 @@ const initialConfig = {
 5. **型アサーション禁止**: 型ガード関数 `$isXxxNode()` を使用
 6. **制御コンポーネント化禁止**: EditorStateを親コンポーネントで管理しない
 7. **LexicalErrorBoundary省略禁止**: RichTextPluginには必須（v0.36+ は named export: `{ LexicalErrorBoundary }`）
-8. **RichTextPlugin の placeholder prop 使用禁止**: ContentEditable に直接 `placeholder` を渡す
+8. **プレースホルダーの渡し先を誤らない**: `ContentEditable` に `placeholder` と `aria-placeholder` を渡す
 9. **`@lexical/utils` からの `mergeRegister` / `$findMatchingParent` import禁止**: v0.40.0で `lexical` 本体に移動。`import { mergeRegister } from 'lexical'` を使用
 10. **レガシーノードパターン禁止**: `static getType()`, `static clone()`, `static importJSON()`, `exportJSON()`, `__property`, `getWritable()`, `getLatest()`, `$applyNodeReplacement`, `SerializedXxxNode` interface — すべて `$config` + `createState` + `$getState` / `$setState` に置換済み
 11. **ブロックレベルノードへの `$insertNodes` 使用禁止**: `$insertNodeToNearestRoot` (`@lexical/utils`) を使用。`$insertNodes` はインライン/混合ノード専用
+12. **deprecated な `__EXPERIMENTAL` テーブル API 使用禁止**: `@lexical/table` の stable な `*AtSelection` API を使用する
 12. **React render内でのノードプロパティ直接アクセス禁止**: `editor.getEditorState().read(() => $getState(node, xxxState))` で囲む。Lexicalはアクティブなeditor stateが必要
 13. **`node.__property` 直接アクセス禁止**: `$getState(node, xxxState)` を使用。`__` フィールドは `$config` で自動管理
 14. **ノードクラスに getter/setter ラッパー定義禁止**: `node.getText()` / `node.setText(v)` ではなく `$getState(node, textState)` / `$setState(node, textState, v)` を直接使用。ラッパーメソッドは後方互換性ハックであり CLAUDE.md §禁止事項に違反

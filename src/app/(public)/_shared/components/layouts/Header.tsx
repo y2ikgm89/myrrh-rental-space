@@ -21,8 +21,8 @@ import Link from 'next/link'
 import { useGSAP } from '@gsap/react'
 import { gsap, ScrollTrigger } from '@/public/lib/gsap-config'
 import { useMotionPreference } from '@/public/hooks/use-motion-preference'
-import type { PublicNavItem } from '@/public/lib/navigation'
-import { HeaderScrollBehavior, HeaderBackgroundMode } from '@/shared/generated/prisma/enums'
+import type { PublicNavItem } from '@/shared/domain/navigation/queries'
+import { HeaderScrollBehavior, HeaderBackgroundMode } from '@/shared/db/enums'
 import { cn } from '@/shared/lib/utils'
 
 interface HeaderProps {

@@ -18,7 +18,7 @@ import {
 } from "@/admin/components/ui";
 import { InquiryStatusBadge } from "@/admin/components/status-badges";
 import { updateInquiryStatus } from "@/admin/actions/inquiry";
-import type { InquiryData } from "@/admin/actions/inquiry";
+import type { InquiryData } from "@/shared/domain/inquiries/types";
 import {
   isValidInquiryStatus,
   type InquiryStatus,

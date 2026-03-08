@@ -42,7 +42,8 @@ import {
   updatePostTag,
   deletePostTag,
 } from '@/admin/actions/post'
-import type { PostTagData, PostTagInput } from '@/admin/lib/validations/post'
+import type { PostTagData } from '@/shared/domain/posts/types'
+import type { PostTagInput } from '@/admin/lib/validations/post'
 import { useTagFilters, type TaxonomySortField } from '../_hooks/use-taxonomy-filters'
 
 // =============================================================================

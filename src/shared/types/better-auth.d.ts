@@ -7,7 +7,7 @@
  * このファイルでは追加のユーザーフィールドのみ定義
  */
 
-import type { Role } from '@/shared/generated/prisma/client'
+import type { Role } from '@/shared/db/enums'
 
 declare module 'better-auth' {
   interface User {

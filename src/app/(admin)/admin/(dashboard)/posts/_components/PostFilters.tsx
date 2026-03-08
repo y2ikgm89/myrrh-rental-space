@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/admin/components/ui'
-import type { PostCategoryData } from '@/admin/lib/validations/post'
+import type { PostCategoryData } from '@/shared/domain/posts/types'
 import { useFilterParamsWithCategory } from '@/admin/hooks'
 
 type PostFiltersProps = {

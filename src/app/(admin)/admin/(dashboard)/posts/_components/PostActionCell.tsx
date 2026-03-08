@@ -8,7 +8,7 @@ import {
   ActionDropdownSeparator,
 } from '@/admin/components/ActionDropdown'
 import { publishPost, unpublishPost } from '@/admin/actions/post'
-import { PostStatus } from '@/shared/generated/prisma/enums'
+import { PostStatus } from '@/shared/db/enums'
 
 type PostActionCellProps = {
   postId: string

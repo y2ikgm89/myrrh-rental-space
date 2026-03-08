@@ -5,11 +5,11 @@
  */
 
 import { describe, test, expect, mock, beforeEach } from 'bun:test'
-import { Role } from '@/shared/generated/prisma/enums'
+import { Role } from '@/shared/db/enums'
 
 // prismaのモック — 空配列は never[] と推論されるため明示的に型付け
 const mockFindMany = mock<() => Promise<{ pageId: string }[]>>(() => Promise.resolve([]))
-mock.module('@/shared/lib/prisma', () => ({
+mock.module('@/shared/db/prisma', () => ({
   prisma: {
     userPageAssignment: {
       findMany: mockFindMany,

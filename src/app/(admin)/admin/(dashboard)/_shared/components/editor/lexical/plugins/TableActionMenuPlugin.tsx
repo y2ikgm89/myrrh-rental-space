@@ -13,11 +13,11 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
-  $deleteTableColumn__EXPERIMENTAL,
-  $deleteTableRow__EXPERIMENTAL,
+  $deleteTableColumnAtSelection,
+  $deleteTableRowAtSelection,
   $getTableCellNodeFromLexicalNode,
-  $insertTableColumn__EXPERIMENTAL,
-  $insertTableRow__EXPERIMENTAL,
+  $insertTableColumnAtSelection,
+  $insertTableRowAtSelection,
   $isTableSelection,
   $unmergeCell,
 } from '@lexical/table'
@@ -224,37 +224,37 @@ export function TableActionMenuPlugin({ anchorElem }: TableActionMenuPluginProps
 
   const handleInsertRowAbove = () => {
     editor.update(() => {
-      $insertTableRow__EXPERIMENTAL(false)
+      $insertTableRowAtSelection(false)
     })
   }
 
   const handleInsertRowBelow = () => {
     editor.update(() => {
-      $insertTableRow__EXPERIMENTAL(true)
+      $insertTableRowAtSelection(true)
     })
   }
 
   const handleInsertColumnLeft = () => {
     editor.update(() => {
-      $insertTableColumn__EXPERIMENTAL(false)
+      $insertTableColumnAtSelection(false)
     })
   }
 
   const handleInsertColumnRight = () => {
     editor.update(() => {
-      $insertTableColumn__EXPERIMENTAL(true)
+      $insertTableColumnAtSelection(true)
     })
   }
 
   const handleDeleteRow = () => {
     editor.update(() => {
-      $deleteTableRow__EXPERIMENTAL()
+      $deleteTableRowAtSelection()
     })
   }
 
   const handleDeleteColumn = () => {
     editor.update(() => {
-      $deleteTableColumn__EXPERIMENTAL()
+      $deleteTableColumnAtSelection()
     })
   }
 

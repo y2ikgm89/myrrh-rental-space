@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { ReservationStatus } from '@/shared/generated/prisma/enums'
+import { ReservationStatus } from '@/shared/db/enums'
 
 /**
  * 管理者用予約作成バリデーションスキーマ

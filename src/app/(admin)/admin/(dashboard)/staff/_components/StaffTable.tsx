@@ -10,13 +10,11 @@ import {
 import { EmptyState } from "@/admin/components/EmptyState";
 import { RoleBadge } from "@/admin/components/status-badges";
 import { UserActions } from "./UserActions";
+import type { UserData } from "@/shared/domain/users/types";
 import { formatDateShort } from "@/shared/lib/utils";
-import type { getUsers } from "@/admin/actions/user";
-
-type StaffUser = Awaited<ReturnType<typeof getUsers>>["users"][number];
 
 type StaffTableProps = {
-  users: StaffUser[];
+  users: UserData[];
 };
 
 export function StaffTable({ users }: StaffTableProps) {

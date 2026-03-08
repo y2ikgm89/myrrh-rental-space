@@ -5,7 +5,7 @@
  * Prisma への依存なし
  */
 
-import { Role } from '@/shared/generated/prisma/enums'
+import { Role } from '@/shared/db/enums'
 
 // =============================================================================
 // Types

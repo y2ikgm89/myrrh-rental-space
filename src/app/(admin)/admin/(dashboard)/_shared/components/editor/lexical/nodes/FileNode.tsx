@@ -195,7 +195,7 @@ export class FileNode extends DecoratorNode<ReactElement> {
         fileName={$getState(this, fileNameState)}
         fileSize={$getState(this, fileSizeState)}
         mime={$getState(this, fileMimeState)}
-        nodeKey={this.__key}
+        nodeKey={this.getKey()}
       />
     );
   }

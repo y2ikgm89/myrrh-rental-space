@@ -7,7 +7,7 @@
  * - 併用設定: best（最もお得な割引のみ）/ both（両方適用）
  */
 
-import type { CouponType } from '@/shared/generated/prisma/enums'
+import type { CouponType } from '@/shared/db/enums'
 import {
   DiscountType,
   DurationDiscountOverride,
@@ -15,7 +15,7 @@ import {
   TaxDisplayMode,
   TaxInputMode,
   DiscountCombinationMode,
-} from '@/shared/generated/prisma/enums'
+} from '@/shared/db/enums'
 // Coupon型の簡易定義（Prismaのモデルに依存しない）
 // Prisma拡張でDecimal→number自動変換済みのため、number型で統一
 type CouponLike = {

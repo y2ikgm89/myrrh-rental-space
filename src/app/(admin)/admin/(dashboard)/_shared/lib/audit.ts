@@ -11,8 +11,8 @@
 import 'server-only'
 
 import { headers } from 'next/headers'
-import { prisma } from '@/shared/lib/prisma'
-import { AuditAction } from '@/shared/generated/prisma/enums'
+import { AuditAction } from '@/shared/db/enums'
+import { createAuditLogRecord } from '@/shared/domain/audit-log/commands'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors/server'
 
 // =============================================================================
@@ -76,16 +76,14 @@ async function getRequestMetadata(): Promise<AuditLogMetadata> {
 export async function createAuditLog(input: AuditLogInput): Promise<void> {
   try {
     const metadata = await getRequestMetadata()
-    await prisma.auditLog.create({
-      data: {
-        userId: input.userId,
-        action: input.action,
-        resource: input.resource,
-        resourceId: input.resourceId,
-        oldValue: input.oldValue ?? undefined,
-        newValue: input.newValue ?? undefined,
-        metadata: JSON.parse(JSON.stringify({ ...metadata, ...input.metadata })),
-      },
+    await createAuditLogRecord({
+      userId: input.userId,
+      action: input.action,
+      resource: input.resource,
+      resourceId: input.resourceId,
+      oldValue: input.oldValue,
+      newValue: input.newValue,
+      metadata: { ...metadata, ...input.metadata },
     })
   } catch (error) {
     // ログ記録失敗は無視（本番ではSentry等に送信推奨）

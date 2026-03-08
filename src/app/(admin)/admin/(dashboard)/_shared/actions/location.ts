@@ -1,431 +1,224 @@
 "use server";
 
-import { prisma, Prisma } from "@/shared/lib/prisma";
 import { updateTag } from "next/cache";
-import { CACHE_TAGS } from "@/shared/lib/constants";
+import { z } from "zod";
+import { executeAdminMutation } from "@/admin/lib/admin-action";
+import { checkReadPermissionFor } from "@/admin/lib/permissions";
 import {
   createSuccess,
   createFailure,
   type ActionResult,
 } from "@/admin/types/server-actions";
-import { withPermission } from "@/admin/lib/server-action-helpers";
-import { locationFormSchema } from "@/admin/lib/validations/location";
-import type {
-  LocationFormInput,
-  LocationWithStats,
-  GetLocationsResult,
-} from "@/admin/lib/validations/location";
-import { checkReadPermissionFor } from "@/admin/lib/permissions";
 import {
-  parseBusinessHours,
-  type BusinessHours,
-} from "@/shared/lib/json-validators";
-import { parseStringArray } from "@/shared/lib/json-validators";
+  locationFormSchema,
+  type LocationFormInput,
+} from "@/admin/lib/validations/location";
+import {
+  createLocation as createLocationCommand,
+  deleteLocation as deleteLocationCommand,
+  hardDeleteLocation as hardDeleteLocationCommand,
+  toggleLocationPublish as toggleLocationPublishCommand,
+  updateLocation as updateLocationCommand,
+  updateLocationOrder as updateLocationOrderCommand,
+} from "@/shared/domain/locations/commands";
+import {
+  getLocationById as getLocationByIdQuery,
+  getLocations as getLocationsQuery,
+  getPublishedLocations as getPublishedLocationsQuery,
+} from "@/shared/domain/locations/queries";
+import type {
+  GetLocationsResult,
+  LocationWithStats,
+  PublishedLocationOption,
+} from "@/shared/domain/locations/types";
 import { createValidationError } from "@/shared/lib/action-helpers";
-import { toPlainArray } from "@/shared/lib/serialize";
-
-// =============================================================================
-// Prisma JSON Helpers (server-only)
-// =============================================================================
-
-/**
- * BusinessHoursをPrisma JSON互換のプレーンオブジェクトに変換
- *
- * BusinessHours型（新形式: isOpen + slots配列）をPrismaのInputJsonValueに変換。
- * 型の構造的非互換性（曜日キー vs インデックスシグネチャ）を解消する。
- */
-function businessHoursToJson(
-  value: BusinessHours | null | undefined,
-): Prisma.InputJsonValue | typeof Prisma.JsonNull {
-  if (value === null || value === undefined) return Prisma.JsonNull;
-
-  const days = [
-    "monday",
-    "tuesday",
-    "wednesday",
-    "thursday",
-    "friday",
-    "saturday",
-    "sunday",
-  ] as const;
-  const result: Record<
-    string,
-    { isOpen: boolean; slots: Array<{ openTime: string; closeTime: string }> }
-  > = {};
-  for (const day of days) {
-    const dayData = value[day];
-    result[day] = {
-      isOpen: dayData.isOpen,
-      slots: dayData.slots.map((slot) => ({
-        openTime: slot.openTime,
-        closeTime: slot.closeTime,
-      })),
-    };
-  }
-  return result;
-}
-
-// =============================================================================
-// Helper Functions
-// =============================================================================
+import { CACHE_TAGS } from "@/shared/lib/constants";
 
 const checkReadPermission = checkReadPermissionFor("location");
+const idSchema = z.string().uuid({ error: "場所IDが不正です" });
+const publishSchema = z.object({
+  id: z.string().uuid({ error: "場所IDが不正です" }),
+  isPublished: z.boolean(),
+});
+const locationOrderSchema = z.array(
+  z.object({
+    id: z.string().uuid({ error: "場所IDが不正です" }),
+    sortOrder: z.number().int().min(0, { error: "並び順が不正です" }),
+  }),
+);
 
-// =============================================================================
-// Read Operations
-// =============================================================================
-
-/**
- * 場所一覧を取得
- */
 export async function getLocations(options?: {
   includeInactive?: boolean;
   search?: string;
 }): Promise<GetLocationsResult> {
-  const hasPermissionResult = await checkReadPermission();
-  if (!hasPermissionResult) {
+  const hasPermission = await checkReadPermission();
+  if (!hasPermission) {
     return { locations: [], total: 0 };
   }
 
-  const { includeInactive = false, search } = options ?? {};
-
-  const where = {
-    ...(includeInactive ? {} : { isActive: true }),
-    ...(search
-      ? {
-          OR: [
-            { name: { contains: search, mode: "insensitive" as const } },
-            { address: { contains: search, mode: "insensitive" as const } },
-          ],
-        }
-      : {}),
-  };
-
-  const [locations, total] = await Promise.all([
-    prisma.location.findMany({
-      where,
-      orderBy: { sortOrder: "asc" },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        address: true,
-        access: true,
-        imageUrl: true,
-        imageUrls: true,
-        businessHours: true,
-        sortOrder: true,
-        isPublished: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-        _count: {
-          select: { spaces: true },
-        },
-      },
-    }),
-    prisma.location.count({ where }),
-  ]);
-
-  const formattedLocations: LocationWithStats[] = locations.map((loc) => ({
-    id: loc.id,
-    name: loc.name,
-    description: loc.description,
-    address: loc.address,
-    access: loc.access,
-    imageUrl: loc.imageUrl,
-    imageUrls: parseStringArray(loc.imageUrls),
-    businessHours: parseBusinessHours(loc.businessHours),
-    sortOrder: loc.sortOrder,
-    isPublished: loc.isPublished,
-    isActive: loc.isActive,
-    createdAt: loc.createdAt,
-    updatedAt: loc.updatedAt,
-    _count: loc._count,
-  }));
-
-  return {
-    locations: formattedLocations,
-    total,
-  };
+  return getLocationsQuery(options);
 }
 
-/**
- * 場所を1件取得
- */
 export async function getLocationById(
   id: string,
 ): Promise<ActionResult<LocationWithStats>> {
-  const hasPermissionResult = await checkReadPermission();
-  if (!hasPermissionResult) {
+  const hasPermission = await checkReadPermission();
+  if (!hasPermission) {
     return createFailure("権限がありません");
   }
 
-  const location = await prisma.location.findUnique({
-    where: { id },
-    include: {
-      _count: {
-        select: { spaces: true },
-      },
-    },
-  });
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) {
+    return createValidationError(validated.error);
+  }
 
+  const location = await getLocationByIdQuery(validated.data);
   if (!location) {
     return createFailure("場所が見つかりません");
   }
 
-  const formatted: LocationWithStats = {
-    id: location.id,
-    name: location.name,
-    description: location.description,
-    address: location.address,
-    access: location.access,
-    imageUrl: location.imageUrl,
-    imageUrls: parseStringArray(location.imageUrls),
-    businessHours: parseBusinessHours(location.businessHours),
-    sortOrder: location.sortOrder,
-    isPublished: location.isPublished,
-    isActive: location.isActive,
-    createdAt: location.createdAt,
-    updatedAt: location.updatedAt,
-    _count: location._count,
-  };
-
-  return createSuccess("取得しました", formatted);
+  return createSuccess("取得しました", location);
 }
 
-/**
- * 公開されている場所一覧を取得（セレクトボックス用）
- */
 export async function getPublishedLocations(): Promise<
-  ActionResult<{ id: string; name: string; address: string }[]>
+  ActionResult<PublishedLocationOption[]>
 > {
-  const hasPermissionResult = await checkReadPermission();
-  if (!hasPermissionResult) {
+  const hasPermission = await checkReadPermission();
+  if (!hasPermission) {
     return createFailure("権限がありません");
   }
 
-  const locations = await prisma.location.findMany({
-    where: { isPublished: true, isActive: true },
-    orderBy: { sortOrder: "asc" },
-    select: {
-      id: true,
-      name: true,
-      address: true,
-    },
-  });
-
-  return createSuccess("取得しました", toPlainArray(locations));
+  const locations = await getPublishedLocationsQuery();
+  return createSuccess("取得しました", locations);
 }
 
-// =============================================================================
-// Create Operations
-// =============================================================================
-
-/**
- * 場所を作成
- */
-export const createLocation = withPermission<
-  [input: LocationFormInput],
-  { id: string }
->(
-  "location",
-  "create",
-)(async (_user, input): Promise<ActionResult<{ id: string }>> => {
+export async function createLocation(
+  input: LocationFormInput,
+): Promise<ActionResult<{ id: string }>> {
   const parsed = locationFormSchema.safeParse(input);
-
   if (!parsed.success) {
     return createValidationError(parsed.error);
   }
 
-  const data = parsed.data;
-
-  const location = await prisma.location.create({
-    data: {
-      name: data.name,
-      description: data.description || null,
-      address: data.address,
-      access: data.access || null,
-      imageUrl: data.imageUrl,
-      imageUrls: data.imageUrls.map((i) => i.url),
-      businessHours: businessHoursToJson(data.businessHours ?? null),
-      sortOrder: data.sortOrder,
-      isPublished: data.isPublished,
+  return executeAdminMutation({
+    resource: "location",
+    action: "create",
+    execute: async () => createLocationCommand(parsed.data),
+    success: (result) => createSuccess("場所を作成しました", result),
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.LOCATIONS);
     },
+    resolveAuditResourceId: (result) => result.id,
   });
+}
 
-  updateTag(CACHE_TAGS.LOCATIONS);
+export async function updateLocation(
+  id: string,
+  input: LocationFormInput,
+): Promise<ActionResult<{ id: string }>> {
+  const validatedId = idSchema.safeParse(id);
+  if (!validatedId.success) {
+    return createValidationError(validatedId.error);
+  }
 
-  return createSuccess("場所を作成しました", { id: location.id });
-});
-
-// =============================================================================
-// Update Operations
-// =============================================================================
-
-/**
- * 場所を更新
- */
-export const updateLocation = withPermission<
-  [id: string, input: LocationFormInput],
-  { id: string }
->(
-  "location",
-  "update",
-)(async (_user, id, input): Promise<ActionResult<{ id: string }>> => {
   const parsed = locationFormSchema.safeParse(input);
-
   if (!parsed.success) {
     return createValidationError(parsed.error);
   }
 
-  const existing = await prisma.location.findUnique({
-    where: { id },
-    select: { id: true },
+  return executeAdminMutation({
+    resource: "location",
+    action: "update",
+    resourceId: validatedId.data,
+    execute: async () => updateLocationCommand(validatedId.data, parsed.data),
+    success: (result) => createSuccess("場所を更新しました", result),
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.LOCATIONS);
+    },
+    resolveAuditResourceId: (result) => result.id,
   });
-  if (!existing) {
-    return createFailure("場所が見つかりません");
+}
+
+export async function toggleLocationPublish(
+  id: string,
+  isPublished: boolean,
+): Promise<ActionResult<{ id: string; isPublished: boolean }>> {
+  const parsed = publishSchema.safeParse({ id, isPublished });
+  if (!parsed.success) {
+    return createValidationError(parsed.error);
   }
 
-  const data = parsed.data;
+  return executeAdminMutation({
+    resource: "location",
+    action: "publish",
+    resourceId: parsed.data.id,
+    execute: async () =>
+      toggleLocationPublishCommand(parsed.data.id, parsed.data.isPublished),
+    success: (result) => createSuccess("公開状態を更新しました", result),
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.LOCATIONS);
+    },
+    resolveAuditResourceId: (result) => result.id,
+  });
+}
 
-  await prisma.location.update({
-    where: { id },
-    data: {
-      name: data.name,
-      description: data.description || null,
-      address: data.address,
-      access: data.access || null,
-      imageUrl: data.imageUrl,
-      imageUrls: data.imageUrls.map((i) => i.url),
-      businessHours: businessHoursToJson(data.businessHours ?? null),
-      sortOrder: data.sortOrder,
-      isPublished: data.isPublished,
+export async function updateLocationOrder(
+  items: { id: string; sortOrder: number }[],
+): Promise<ActionResult<{ updated: number }>> {
+  const parsed = locationOrderSchema.safeParse(items);
+  if (!parsed.success) {
+    return createValidationError(parsed.error);
+  }
+
+  return executeAdminMutation({
+    resource: "location",
+    action: "update",
+    execute: async () => updateLocationOrderCommand(parsed.data),
+    success: (result) => createSuccess("並び順を更新しました", result),
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.LOCATIONS);
     },
   });
+}
 
-  updateTag(CACHE_TAGS.LOCATIONS);
-
-  return createSuccess("場所を更新しました", { id });
-});
-
-/**
- * 場所の公開状態を切り替え
- */
-export const toggleLocationPublish = withPermission<
-  [id: string, isPublished: boolean],
-  { id: string; isPublished: boolean }
->(
-  "location",
-  "publish",
-)(async (
-  _user,
-  id,
-  isPublished,
-): Promise<ActionResult<{ id: string; isPublished: boolean }>> => {
-  const existing = await prisma.location.findUnique({
-    where: { id },
-    select: { id: true },
-  });
-  if (!existing) {
-    return createFailure("場所が見つかりません");
+export async function deleteLocation(
+  id: string,
+): Promise<ActionResult<{ id: string }>> {
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) {
+    return createValidationError(validated.error);
   }
 
-  await prisma.location.update({
-    where: { id },
-    data: { isPublished },
+  return executeAdminMutation({
+    resource: "location",
+    action: "delete",
+    resourceId: validated.data,
+    execute: async () => deleteLocationCommand(validated.data),
+    success: (result) => createSuccess("場所を削除しました", result),
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.LOCATIONS);
+    },
+    resolveAuditResourceId: (result) => result.id,
   });
+}
 
-  updateTag(CACHE_TAGS.LOCATIONS);
-
-  return createSuccess("公開状態を更新しました", { id, isPublished });
-});
-
-/**
- * 場所の並び順を更新
- */
-export const updateLocationOrder = withPermission<
-  [items: { id: string; sortOrder: number }[]],
-  { updated: number }
->(
-  "location",
-  "update",
-)(async (_user, items): Promise<ActionResult<{ updated: number }>> => {
-  await prisma.$transaction(
-    items.map((item) =>
-      prisma.location.update({
-        where: { id: item.id },
-        data: { sortOrder: item.sortOrder },
-      }),
-    ),
-  );
-
-  updateTag(CACHE_TAGS.LOCATIONS);
-
-  return createSuccess("並び順を更新しました", { updated: items.length });
-});
-
-// =============================================================================
-// Delete Operations
-// =============================================================================
-
-/**
- * 場所を削除（論理削除）
- */
-export const deleteLocation = withPermission<[id: string], { id: string }>(
-  "location",
-  "delete",
-)(async (_user, id): Promise<ActionResult<{ id: string }>> => {
-  const existing = await prisma.location.findUnique({
-    where: { id },
-    include: { _count: { select: { spaces: true } } },
-  });
-
-  if (!existing) {
-    return createFailure("場所が見つかりません");
+export async function hardDeleteLocation(
+  id: string,
+): Promise<ActionResult<{ id: string }>> {
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) {
+    return createValidationError(validated.error);
   }
 
-  if (existing._count.spaces > 0) {
-    return createFailure(
-      `この場所には${existing._count.spaces}件のスペースが紐づいています。先にスペースの場所を変更してください。`,
-    );
-  }
-
-  await prisma.location.update({
-    where: { id },
-    data: { isActive: false },
+  return executeAdminMutation({
+    resource: "location",
+    action: "delete",
+    resourceId: validated.data,
+    execute: async () => hardDeleteLocationCommand(validated.data),
+    success: (result) => createSuccess("場所を完全に削除しました", result),
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.LOCATIONS);
+    },
+    resolveAuditResourceId: (result) => result.id,
   });
-
-  updateTag(CACHE_TAGS.LOCATIONS);
-
-  return createSuccess("場所を削除しました", { id });
-});
-
-/**
- * 場所を物理削除
- */
-export const hardDeleteLocation = withPermission<[id: string], { id: string }>(
-  "location",
-  "delete",
-)(async (_user, id): Promise<ActionResult<{ id: string }>> => {
-  const existing = await prisma.location.findUnique({
-    where: { id },
-    include: { _count: { select: { spaces: true } } },
-  });
-
-  if (!existing) {
-    return createFailure("場所が見つかりません");
-  }
-
-  if (existing._count.spaces > 0) {
-    return createFailure(
-      `この場所には${existing._count.spaces}件のスペースが紐づいています。`,
-    );
-  }
-
-  await prisma.location.delete({ where: { id } });
-
-  updateTag(CACHE_TAGS.LOCATIONS);
-
-  return createSuccess("場所を完全に削除しました", { id });
-});
+}

@@ -17,9 +17,9 @@ import { createUser, updateUser } from "@/admin/actions/user";
 import {
   createUserSchema,
   updateUserSchema,
-  type UserData,
 } from "@/admin/lib/validations/user";
-import { Role } from "@/shared/generated/prisma/enums";
+import type { UserData } from "@/shared/domain/users/types";
+import { Role } from "@/shared/db/enums";
 import { keysOf } from "@/shared/lib/serialize";
 
 // ロールラベル（クライアント用ローカル定義）

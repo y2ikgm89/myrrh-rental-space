@@ -35,7 +35,6 @@ export {
 export {
   type PostPreviewData,
   type NewsPreviewData,
-  type PagePreviewData,
   type PreviewData,
   PREVIEW_EXPIRY_MS,
   PREVIEW_STORAGE_PREFIX,
@@ -43,6 +42,5 @@ export {
   isPreviewDataValid,
   PostPreviewContainerSchema,
   NewsPreviewContainerSchema,
-  PagePreviewContainerSchema,
   PreviewContainerSchema,
 } from './preview'

@@ -6,7 +6,7 @@
  */
 
 import { z } from 'zod'
-import { LayoutWidth } from '@/shared/generated/prisma/enums'
+import { LayoutWidth } from '@/shared/db/enums'
 
 // =============================================================================
 // システムページ定義

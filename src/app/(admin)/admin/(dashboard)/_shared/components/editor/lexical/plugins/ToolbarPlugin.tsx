@@ -392,14 +392,14 @@ export function ToolbarPlugin({
   }
 
   const handleBlockTypeChange = (type: BlockType) => {
+    if (type === 'ul' || type === 'ol') {
+      handleInsertList(type)
+      return
+    }
+
     editor.update(() => {
       const selection = $getSelection()
       if (!$isRangeSelection(selection)) return
-
-      if (type === 'ul' || type === 'ol') {
-        handleInsertList(type)
-        return
-      }
 
       if (type === 'quote') {
         $setBlocksType(selection, () => $createQuoteNode())

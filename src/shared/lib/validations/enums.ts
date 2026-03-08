@@ -37,8 +37,7 @@ import {
   CalendarSyncMethod,
   EditorCommentStatus,
   PostPermalinkStructure,
-} from "@/shared/generated/prisma/client";
-
+} from "@/shared/db/enums";
 // =============================================================================
 // Re-export all enums
 // =============================================================================

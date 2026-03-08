@@ -1,204 +1,125 @@
 "use server";
 
-import { prisma } from "@/shared/lib/prisma";
+/**
+ * iCal トークン Server Actions
+ */
+
 import { updateTag } from "next/cache";
-import { CACHE_TAGS } from "@/shared/lib/constants";
 import { z } from "zod";
-import { randomBytes } from "crypto";
-import { createSuccess, createFailure } from "@/admin/types/server-actions";
+import { CACHE_TAGS } from "@/shared/lib/constants";
 import { createValidationError } from "@/shared/lib/action-helpers";
-import { withPermission } from "@/admin/lib/server-action-helpers";
 import { checkReadPermissionFor } from "@/admin/lib/permissions";
-
-// =============================================================================
-// Types
-// =============================================================================
-
-export type ICalTokenWithRelations = {
-  id: string;
-  token: string;
-  name: string;
-  spaceId: string | null;
-  spaceName: string | null;
-  createdBy: string;
-  createdByName: string | null;
-  expiresAt: Date | null;
-  createdAt: Date;
-  lastUsedAt: Date | null;
-};
-
-// =============================================================================
-// Schemas
-// =============================================================================
+import { executeAdminMutation } from "@/admin/lib/admin-action";
+import {
+  createSuccess,
+  type ActionResult,
+} from "@/admin/types/server-actions";
+import {
+  getICalFeedSettings as getICalFeedSettingsQuery,
+  getICalTokens as getICalTokensQuery,
+} from "@/shared/domain/settings/admin-queries";
+import {
+  createICalToken as createICalTokenCommand,
+  deleteICalToken as deleteICalTokenCommand,
+  updateICalFeedSettings as updateICalFeedSettingsCommand,
+} from "@/shared/domain/settings/commands";
+import type {
+  ICalFeedSettingsData,
+  ICalTokenWithRelations,
+} from "@/shared/domain/settings/types";
 
 const createTokenSchema = z.object({
   name: z.string().min(1, { error: "トークン名は必須です" }).max(100),
   spaceId: z.string().uuid().nullable(),
-  expiresInDays: z.number().int().min(0).nullable(), // 0 or null = 無期限
+  expiresInDays: z.number().int().min(0).nullable(),
 });
 
-// =============================================================================
-// Actions
-// =============================================================================
+const icalFeedSettingsSchema = z.object({
+  icalFeedEnabled: z.boolean(),
+  icalFeedIncludeCustomerInfo: z.boolean(),
+});
+
+const deleteTokenSchema = z.object({
+  id: z.string().uuid({ error: "トークンIDの形式が不正です" }),
+});
 
 const checkReadPermission = checkReadPermissionFor("settings");
 
-/**
- * iCalトークン一覧を取得
- */
-export async function getICalTokens(): Promise<ICalTokenWithRelations[]> {
-  if (!(await checkReadPermission())) return [];
-
-  const tokens = await prisma.iCalToken.findMany({
-    select: {
-      id: true,
-      token: true,
-      name: true,
-      spaceId: true,
-      createdBy: true,
-      expiresAt: true,
-      createdAt: true,
-      lastUsedAt: true,
-      space: { select: { name: true } },
-      user: { select: { name: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
-
-  return tokens.map((t) => ({
-    id: t.id,
-    token: t.token,
-    name: t.name,
-    spaceId: t.spaceId,
-    spaceName: t.space?.name ?? null,
-    createdBy: t.createdBy,
-    createdByName: t.user.name,
-    expiresAt: t.expiresAt,
-    createdAt: t.createdAt,
-    lastUsedAt: t.lastUsedAt,
-  }));
+function invalidateSettingsCache(): void {
+  updateTag(CACHE_TAGS.SETTINGS);
 }
 
-/**
- * iCalトークンを作成
- */
-export const createICalToken = withPermission<
-  [{ name: string; spaceId: string | null; expiresInDays: number | null }],
-  { id: string; token: string }
->(
-  "settings",
-  "update",
-)(async (user, data) => {
+export async function getICalTokens(): Promise<ICalTokenWithRelations[]> {
+  if (!(await checkReadPermission())) {
+    return [];
+  }
+
+  return getICalTokensQuery();
+}
+
+export async function createICalToken(
+  data: z.infer<typeof createTokenSchema>,
+): Promise<ActionResult<{ id: string; token: string }>> {
   const parsed = createTokenSchema.safeParse(data);
   if (!parsed.success) {
     return createValidationError(parsed.error);
   }
 
-  const { name, spaceId, expiresInDays } = parsed.data;
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async (user) =>
+      createICalTokenCommand({
+        ...parsed.data,
+        createdBy: user.id,
+      }),
+    success: (result) => createSuccess("トークンを作成しました", result),
+    afterSuccess: invalidateSettingsCache,
+  });
+}
 
-  // スペースIDの検証
-  if (spaceId) {
-    const space = await prisma.space.findUnique({
-      where: { id: spaceId },
-      select: { id: true },
-    });
-    if (!space) {
-      return createFailure("スペースが見つかりません");
-    }
+export async function deleteICalToken(id: string): Promise<ActionResult<void>> {
+  const parsed = deleteTokenSchema.safeParse({ id });
+  if (!parsed.success) {
+    return createValidationError(parsed.error);
   }
 
-  // セキュアなトークン生成（32バイト = 256ビット）
-  const token = randomBytes(32).toString("base64url");
-
-  // 有効期限計算
-  let expiresAt: Date | null = null;
-  if (expiresInDays && expiresInDays > 0) {
-    expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + expiresInDays);
-  }
-
-  const newToken = await prisma.iCalToken.create({
-    data: {
-      token,
-      name,
-      spaceId,
-      createdBy: user.id,
-      expiresAt,
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      await deleteICalTokenCommand(parsed.data.id);
     },
+    success: () => createSuccess("トークンを削除しました"),
+    afterSuccess: invalidateSettingsCache,
   });
+}
 
-  updateTag(CACHE_TAGS.SETTINGS);
-
-  return createSuccess("トークンを作成しました", {
-    id: newToken.id,
-    token: newToken.token,
-  });
-});
-
-/**
- * iCalトークンを削除
- */
-export const deleteICalToken = withPermission<[string]>(
-  "settings",
-  "update",
-)(async (_user, id) => {
-  const token = await prisma.iCalToken.findUnique({
-    where: { id },
-    select: { id: true },
-  });
-
-  if (!token) {
-    return createFailure("トークンが見つかりません");
+export async function updateICalFeedSettings(
+  data: ICalFeedSettingsData,
+): Promise<ActionResult<void>> {
+  const parsed = icalFeedSettingsSchema.safeParse(data);
+  if (!parsed.success) {
+    return createValidationError(parsed.error);
   }
 
-  await prisma.iCalToken.delete({ where: { id } });
-
-  updateTag(CACHE_TAGS.SETTINGS);
-
-  return createSuccess("トークンを削除しました");
-});
-
-/**
- * iCalフィード設定を更新
- */
-export const updateICalFeedSettings = withPermission<
-  [{ icalFeedEnabled: boolean; icalFeedIncludeCustomerInfo: boolean }]
->(
-  "settings",
-  "update",
-)(async (_user, data) => {
-  await prisma.settings.updateMany({
-    data: {
-      icalFeedEnabled: data.icalFeedEnabled,
-      icalFeedIncludeCustomerInfo: data.icalFeedIncludeCustomerInfo,
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      await updateICalFeedSettingsCommand(parsed.data);
     },
+    success: () => createSuccess("設定を保存しました"),
+    afterSuccess: invalidateSettingsCache,
   });
+}
 
-  updateTag(CACHE_TAGS.SETTINGS);
-
-  return createSuccess("設定を保存しました");
-});
-
-/**
- * iCalフィード設定を取得
- */
-export async function getICalFeedSettings(): Promise<{
-  icalFeedEnabled: boolean;
-  icalFeedIncludeCustomerInfo: boolean;
-}> {
+export async function getICalFeedSettings(): Promise<ICalFeedSettingsData> {
   if (!(await checkReadPermission())) {
     return { icalFeedEnabled: false, icalFeedIncludeCustomerInfo: false };
   }
 
-  const settings = await prisma.settings.findFirst({
-    select: {
-      icalFeedEnabled: true,
-      icalFeedIncludeCustomerInfo: true,
-    },
-  });
-
-  return {
-    icalFeedEnabled: settings?.icalFeedEnabled ?? false,
-    icalFeedIncludeCustomerInfo: settings?.icalFeedIncludeCustomerInfo ?? false,
-  };
+  return getICalFeedSettingsQuery();
 }
+
+export type { ICalTokenWithRelations };

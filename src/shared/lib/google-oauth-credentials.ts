@@ -8,8 +8,7 @@
  */
 
 import 'server-only'
-import { prisma } from './prisma'
-import { safeDecrypt } from './crypto'
+import { getDecryptedGoogleOAuthCredentials } from '@/shared/domain/settings/api-key-queries'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from './errors/server'
 import { serverEnv } from '@/shared/lib/env/server'
 
@@ -27,22 +26,9 @@ export interface GoogleOAuthCredentials {
  */
 export async function getGoogleOAuthCredentials(): Promise<GoogleOAuthCredentials | null> {
   try {
-    const settings = await prisma.settings.findUnique({
-      where: { id: 'singleton' },
-      select: {
-        googleOAuthClientId: true,
-        googleOAuthClientSecret: true,
-      },
-    })
-
-    if (settings?.googleOAuthClientId && settings?.googleOAuthClientSecret) {
-      const clientSecret = safeDecrypt(settings.googleOAuthClientSecret)
-      if (clientSecret) {
-        return {
-          clientId: settings.googleOAuthClientId,
-          clientSecret,
-        }
-      }
+    const credentials = await getDecryptedGoogleOAuthCredentials()
+    if (credentials) {
+      return credentials
     }
   } catch (error) {
     // ビルド時やDB不可の場合は環境変数にフォールバック

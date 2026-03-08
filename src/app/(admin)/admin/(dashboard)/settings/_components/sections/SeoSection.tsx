@@ -22,7 +22,7 @@ import {
 import { updateSeoSettings } from "@/admin/actions/settings";
 import type { SettingsData } from "@/admin/actions/settings";
 import { useRefreshOnSuccess } from "../hooks";
-import { AnalyticsType } from "@/shared/generated/prisma/enums";
+import { AnalyticsType } from "@/shared/db/enums";
 import {
   isValidAnalyticsType,
   getValidAnalyticsType,

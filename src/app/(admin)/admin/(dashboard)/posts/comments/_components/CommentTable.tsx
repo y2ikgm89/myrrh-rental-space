@@ -28,8 +28,8 @@ import {
   deleteCommentAdmin,
   deleteCommentsAdmin,
   restoreCommentAdmin,
-  type AdminCommentData,
 } from '@/admin/actions/post-comment'
+import type { AdminCommentData } from '@/shared/domain/post-comments/types'
 import { cn } from '@/shared/lib/utils'
 
 type Props = {
@@ -220,7 +220,7 @@ export function CommentTable({ comments }: Props) {
               </TableCell>
               <TableCell className="hidden md:table-cell">
                 <Link
-                  href={`/posts/${comment.postSlug}`}
+                  href={comment.postUrl}
                   target="_blank"
                   className="text-sm text-primary hover:underline flex items-center gap-1"
                 >

@@ -6,7 +6,7 @@
  */
 
 import { describe, test, expect, beforeEach, mock } from 'bun:test'
-import { Role } from '@/shared/generated/prisma/enums'
+import { Role } from '@/shared/db/enums'
 import type { ActionResult } from '@/shared/types/server-actions'
 import {
   SUPER_ADMIN_USER,

@@ -9,10 +9,9 @@
 
 import type { Metadata } from 'next'
 import type { ReactElement } from 'react'
-import { connection } from 'next/server'
 import { BreadcrumbJsonLd } from '@/public/components/seo/JsonLd'
 import { generatePageMetadata } from '@/public/lib/page-metadata'
-import { getPageSectionsWithFallback } from '@/public/actions/section'
+import { getPageSectionsWithFallback } from '@/shared/domain/sections/queries'
 import { SectionRenderer } from '@/public/components/sections/SectionRenderer'
 import { ReservationForm } from './_components/ReservationForm'
 
@@ -21,8 +20,6 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function ReservationPage(): Promise<ReactElement> {
-  await connection()
-
   const sections = await getPageSectionsWithFallback('reservation')
 
   return (

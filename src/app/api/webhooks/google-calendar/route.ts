@@ -15,7 +15,7 @@
 import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { CACHE_TAGS, CACHE_LIFE, getCacheTag } from "@/shared/lib/constants";
-import { prisma } from "@/shared/lib/prisma";
+import { getGoogleCalendarWebhookState } from "@/shared/domain/settings/admin-queries";
 import { syncFromCalendar } from "@/shared/lib/calendar-sync";
 import {
   isTwoWaySyncEnabled,
@@ -27,7 +27,7 @@ import {
   ErrorSeverity,
   normalizeError,
 } from "@/shared/lib/errors/server";
-import { CalendarSyncMethod } from "@/shared/generated/prisma/enums";
+import { CalendarSyncMethod } from "@/shared/db/enums";
 
 /**
  * Google Calendar Push Notification Webhook
@@ -67,20 +67,13 @@ export async function POST(request: Request) {
     }
 
     // 登録されているWebhookか確認
-    const settings = await prisma.settings.findUnique({
-      where: { id: "singleton" },
-      select: {
-        googleCalendarWebhookChannelId: true,
-        googleCalendarWebhookResourceId: true,
-        googleCalendarWebhookToken: true,
-      },
-    });
+    const settings = await getGoogleCalendarWebhookState();
 
     // トークン検証（x-goog-channel-token）
     const receivedToken = request.headers.get("x-goog-channel-token");
 
     // トークンが設定されていない場合はWebhookを拒否（セキュリティ強化）
-    if (!settings?.googleCalendarWebhookToken) {
+    if (!settings.token) {
       logError(new Error("Webhook token not configured"), {
         category: ErrorCategory.VALIDATION,
         severity: ErrorSeverity.HIGH,
@@ -92,7 +85,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (receivedToken !== settings.googleCalendarWebhookToken) {
+    if (receivedToken !== settings.token) {
       logError(new Error("Invalid webhook token"), {
         category: ErrorCategory.VALIDATION,
         severity: ErrorSeverity.MEDIUM,
@@ -105,8 +98,8 @@ export async function POST(request: Request) {
     }
 
     if (
-      settings?.googleCalendarWebhookChannelId !== channelId ||
-      settings?.googleCalendarWebhookResourceId !== resourceId
+      settings.channelId !== channelId ||
+      settings.resourceId !== resourceId
     ) {
       logError(new Error("Unknown webhook channel/resource"), {
         category: ErrorCategory.VALIDATION,

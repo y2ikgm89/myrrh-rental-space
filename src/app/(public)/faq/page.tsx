@@ -10,10 +10,12 @@
 
 import type { Metadata } from 'next'
 import type { ReactElement } from 'react'
-import { connection } from 'next/server'
 import { BreadcrumbJsonLd } from '@/public/components/seo/JsonLd'
 import { generatePageMetadata } from '@/public/lib/page-metadata'
-import { getPageSectionsWithFallback, getPublishedFaqItems } from '@/public/actions/section'
+import {
+  getPageSectionsWithFallback,
+  getPublishedFaqItems,
+} from '@/shared/domain/sections/queries'
 import { SectionRenderer } from '@/public/components/sections/SectionRenderer'
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -21,8 +23,6 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function FaqPage(): Promise<ReactElement> {
-  await connection()
-
   const [sections, items] = await Promise.all([
     getPageSectionsWithFallback('faq'),
     getPublishedFaqItems(50),

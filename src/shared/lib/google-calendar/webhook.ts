@@ -6,10 +6,17 @@ import {
   ErrorSeverity,
   normalizeError,
 } from "@/shared/lib/errors/server";
-import { prisma } from "@/shared/lib/prisma";
+import {
+  getGoogleCalendarWebhookState,
+  getTwoWaySyncSettings,
+} from "@/shared/domain/settings/admin-queries";
+import {
+  saveGoogleCalendarWebhook,
+  saveGoogleCalendarWebhookToken,
+} from "@/shared/domain/settings/commands";
 import { serverEnv } from "@/shared/lib/env/server";
 import { clientEnv } from "@/shared/lib/env/client";
-import { CalendarSyncMethod } from "@/shared/generated/prisma/enums";
+import { CalendarSyncMethod } from "@/shared/db/enums";
 import type { WebhookSetupResult, WebhookRenewalResult } from "./types";
 import { formatGoogleApiError } from "./helpers";
 import { getServiceAccountClient } from "./service-account";
@@ -27,12 +34,9 @@ export async function setupWebhookWatch(
     return { success: false, error: "Google Calendar is not configured" };
   }
 
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: { googleCalendarId: true },
-  });
+  const settings = await getGoogleCalendarWebhookState();
 
-  if (!settings?.googleCalendarId) {
+  if (!settings.calendarId) {
     return { success: false, error: "Calendar ID is not configured" };
   }
 
@@ -43,7 +47,7 @@ export async function setupWebhookWatch(
     expiration.setDate(expiration.getDate() + 7); // 7日間有効（最大）
 
     const response = await client.events.watch({
-      calendarId: settings.googleCalendarId,
+      calendarId: settings.calendarId,
       requestBody: {
         id: channelId,
         type: "web_hook",
@@ -53,16 +57,21 @@ export async function setupWebhookWatch(
       },
     });
 
-    // トークンをDBに保存
-    await prisma.settings.update({
-      where: { id: "singleton" },
-      data: { googleCalendarWebhookToken: webhookToken },
-    });
+    const registeredChannelId = response.data.id ?? undefined;
+    const registeredResourceId = response.data.resourceId ?? undefined;
+    if (!registeredChannelId || !registeredResourceId) {
+      return {
+        success: false,
+        error: "Google Calendar webhook response is invalid",
+      };
+    }
+
+    await saveGoogleCalendarWebhookToken(webhookToken);
 
     return {
       success: true,
-      channelId: response.data.id ?? undefined,
-      resourceId: response.data.resourceId ?? undefined,
+      channelId: registeredChannelId,
+      resourceId: registeredResourceId,
       expiration: response.data.expiration
         ? new Date(parseInt(response.data.expiration))
         : undefined,
@@ -121,25 +130,20 @@ export async function stopWebhookWatch(
  * 既存のWebhookを停止し、新しいWebhookを設定
  */
 export async function renewWebhookIfNeeded(): Promise<WebhookRenewalResult> {
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: {
-      googleCalendarWebhookExpiration: true,
-      googleCalendarWebhookChannelId: true,
-      googleCalendarWebhookResourceId: true,
-      googleCalendarSyncMethod: true,
-    },
-  });
+  const [webhookState, syncSettings] = await Promise.all([
+    getGoogleCalendarWebhookState(),
+    getTwoWaySyncSettings(),
+  ]);
 
   // Webhookが設定されていない場合はスキップ
-  if (!settings?.googleCalendarWebhookExpiration) {
+  if (!webhookState.expiration) {
     return { success: true, renewed: false };
   }
 
   // Webhook方式でない場合はスキップ
   if (
-    settings.googleCalendarSyncMethod !== CalendarSyncMethod.webhook &&
-    settings.googleCalendarSyncMethod !== CalendarSyncMethod.both
+    syncSettings.syncMethod !== CalendarSyncMethod.webhook &&
+    syncSettings.syncMethod !== CalendarSyncMethod.both
   ) {
     return { success: true, renewed: false };
   }
@@ -149,7 +153,7 @@ export async function renewWebhookIfNeeded(): Promise<WebhookRenewalResult> {
   const threshold = new Date(now);
   threshold.setDate(threshold.getDate() + WEBHOOK_RENEWAL_THRESHOLD_DAYS);
 
-  if (settings.googleCalendarWebhookExpiration > threshold) {
+  if (webhookState.expiration > threshold) {
     // まだ更新不要
     return { success: true, renewed: false };
   }
@@ -157,12 +161,12 @@ export async function renewWebhookIfNeeded(): Promise<WebhookRenewalResult> {
   try {
     // 既存Webhookを停止（エラーは無視 - Google側で自動期限切れになる）
     if (
-      settings.googleCalendarWebhookChannelId &&
-      settings.googleCalendarWebhookResourceId
+      webhookState.channelId &&
+      webhookState.resourceId
     ) {
       await stopWebhookWatch(
-        settings.googleCalendarWebhookChannelId,
-        settings.googleCalendarWebhookResourceId,
+        webhookState.channelId,
+        webhookState.resourceId,
       ).catch((err: unknown) => {
         logError(normalizeError(err), {
           category: ErrorCategory.EXTERNAL_API,
@@ -192,14 +196,18 @@ export async function renewWebhookIfNeeded(): Promise<WebhookRenewalResult> {
       return { success: false, renewed: false, error: result.error };
     }
 
-    // 設定を更新
-    await prisma.settings.update({
-      where: { id: "singleton" },
-      data: {
-        googleCalendarWebhookChannelId: result.channelId,
-        googleCalendarWebhookResourceId: result.resourceId,
-        googleCalendarWebhookExpiration: result.expiration,
-      },
+    if (!result.channelId || !result.resourceId) {
+      return {
+        success: false,
+        renewed: false,
+        error: "Google Calendar webhook response is invalid",
+      };
+    }
+
+    await saveGoogleCalendarWebhook({
+      channelId: result.channelId,
+      resourceId: result.resourceId,
+      expiration: result.expiration,
     });
 
     return {

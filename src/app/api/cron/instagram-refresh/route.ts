@@ -14,9 +14,14 @@
 import { connection } from 'next/server'
 import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
-import { prisma } from '@/shared/lib/prisma'
+import {
+  getInstagramRefreshState,
+} from '@/shared/domain/instagram/queries'
+import {
+  refreshInstagramAccessToken,
+} from '@/shared/domain/instagram/commands'
 import { refreshLongLivedToken, getTokenExpiryDays } from '@/shared/lib/instagram'
-import { encrypt, safeDecrypt } from '@/shared/lib/crypto'
+import { safeDecrypt } from '@/shared/lib/crypto'
 import {
   logError,
   ErrorCategory,
@@ -82,17 +87,10 @@ export async function GET() {
     }
 
     // Instagram設定を取得
-    const settings = await prisma.settings.findFirst({
-      select: {
-        instagramAccessToken: true,
-        instagramTokenExpiresAt: true,
-        instagramUserId: true,
-        instagramUsername: true,
-      },
-    })
+    const settings = await getInstagramRefreshState()
 
     // トークンが設定されていない場合はスキップ
-    if (!settings?.instagramAccessToken || !settings.instagramTokenExpiresAt) {
+    if (!settings.encryptedAccessToken || !settings.tokenExpiresAt) {
       return NextResponse.json({
         success: true,
         message: 'No Instagram token configured',
@@ -101,7 +99,7 @@ export async function GET() {
     }
 
     // 有効期限までの残り日数を計算
-    const daysRemaining = getTokenExpiryDays(settings.instagramTokenExpiresAt)
+    const daysRemaining = getTokenExpiryDays(settings.tokenExpiresAt)
 
     // 残り日数が閾値以上ならスキップ
     if (daysRemaining > REFRESH_THRESHOLD_DAYS) {
@@ -114,7 +112,7 @@ export async function GET() {
     }
 
     // トークンを復号
-    const decryptedToken = safeDecrypt(settings.instagramAccessToken)
+    const decryptedToken = safeDecrypt(settings.encryptedAccessToken)
     if (!decryptedToken) {
       logError(new Error('Failed to decrypt Instagram access token'), {
         category: ErrorCategory.AUTHORIZATION,
@@ -139,13 +137,9 @@ export async function GET() {
     )
 
     // 新しいトークンを暗号化して保存
-    const encryptedToken = encrypt(refreshResult.accessToken)
-
-    await prisma.settings.updateMany({
-      data: {
-        instagramAccessToken: encryptedToken,
-        instagramTokenExpiresAt: newExpiresAt,
-      },
+    await refreshInstagramAccessToken({
+      accessToken: refreshResult.accessToken,
+      expiresAt: newExpiresAt,
     })
 
     const newDaysRemaining = getTokenExpiryDays(newExpiresAt)

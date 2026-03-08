@@ -32,10 +32,10 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { betterAuth } from "better-auth";
 import { createAuthMiddleware } from "better-auth/api";
-import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
-import { prisma, Role } from "./prisma";
-import { AuditAction } from "@/shared/generated/prisma/enums";
+import { createBetterAuthDatabaseAdapter } from "@/shared/db/better-auth-adapter";
+import { AuditAction, Role } from "@/shared/db/enums";
+import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { SESSION_CONFIG, getAppUrl } from "./constants";
 import { isRecord } from "./serialize";
 import {
@@ -56,13 +56,11 @@ async function logAuthEvent(
   metadata: Record<string, unknown>,
 ): Promise<void> {
   try {
-    await prisma.auditLog.create({
-      data: {
-        userId,
-        action,
-        resource: "auth",
-        metadata: JSON.parse(JSON.stringify(metadata)),
-      },
+    await createAuditLogRecord({
+      userId,
+      action,
+      resource: "auth",
+      metadata,
     });
   } catch (error) {
     // ログ記録失敗は無視（本番ではSentry等に送信推奨）
@@ -81,9 +79,7 @@ async function logAuthEvent(
  */
 function createAuth(credentials?: GoogleOAuthCredentials | null) {
   return betterAuth({
-    database: prismaAdapter(prisma, {
-      provider: "postgresql",
-    }),
+    database: createBetterAuthDatabaseAdapter(),
     session: {
       expiresIn: SESSION_CONFIG.expiresIn,
       updateAge: SESSION_CONFIG.updateAge,

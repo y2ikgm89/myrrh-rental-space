@@ -9,7 +9,7 @@
 
 import { describe, test, expect } from 'bun:test'
 import { z } from 'zod'
-import { Role } from '@/shared/generated/prisma/enums'
+import { Role } from '@/shared/db/enums'
 
 // user.ts 内で定義されているスキーマを再現
 type RoleValue = 'SUPER_ADMIN' | 'ADMIN' | 'EDITOR' | 'VIEWER' | 'USER'

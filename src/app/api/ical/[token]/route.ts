@@ -13,10 +13,14 @@
  */
 
 import { NextResponse } from 'next/server'
-import { prisma } from '@/shared/lib/prisma'
+import {
+  getICalFeedRuntimeSettings,
+  getICalReservations,
+  getICalTokenByValue,
+} from '@/shared/domain/ical/queries'
+import { markICalTokenUsed } from '@/shared/domain/ical/commands'
 import { generateICalFeed, type CalendarEvent } from '@/shared/lib/ical'
 import { format } from 'date-fns'
-import { ACTIVE_RESERVATION_STATUSES } from '@/shared/lib/validations/enums'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors/server'
 import { fireAndForget } from '@/shared/lib/async-utils'
 
@@ -27,25 +31,20 @@ import { fireAndForget } from '@/shared/lib/async-utils'
  * 外部カレンダーアプリ（TimeTree, Google Calendar等）から購読可能なiCalフィードを返す
  */
 export async function GET(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ token: string }> }
 ) {
   try {
     const { token } = await params
 
     // 設定確認（先に実行して不要なDB負荷を避ける）
-    const settings = await prisma.settings.findFirst()
-    if (!settings?.icalFeedEnabled) {
+    const settings = await getICalFeedRuntimeSettings()
+    if (!settings.enabled) {
       return new NextResponse('iCal feed is disabled', { status: 403 })
     }
 
     // トークン検証
-    const icalToken = await prisma.iCalToken.findUnique({
-      where: { token },
-      include: {
-        space: { select: { name: true } },
-      },
-    })
+    const icalToken = await getICalTokenByValue(token)
 
     if (!icalToken) {
       return new NextResponse('Invalid token', { status: 404 })
@@ -58,10 +57,7 @@ export async function GET(
 
     // 最終アクセス日時を更新（バックグラウンド）
     fireAndForget(
-      prisma.iCalToken.update({
-        where: { id: icalToken.id },
-        data: { lastUsedAt: new Date() },
-      }),
+      markICalTokenUsed(icalToken.id),
       {
         operation: 'updateICalTokenLastUsed',
         category: ErrorCategory.DATABASE,
@@ -77,19 +73,10 @@ export async function GET(
     rangeEnd.setMonth(rangeEnd.getMonth() + 3)
 
     // 範囲と重複する予約を取得（startTime < rangeEnd AND endTime > rangeStart）
-    const reservations = await prisma.reservation.findMany({
-      where: {
-        status: { in: [...ACTIVE_RESERVATION_STATUSES] },
-        startTime: { lt: rangeEnd },
-        endTime: { gt: rangeStart },
-        ...(icalToken.spaceId && { spaceId: icalToken.spaceId }),
-      },
-      include: {
-        space: { select: { name: true, address: true } },
-        customer: { select: { firstName: true, lastName: true } },
-      },
-      orderBy: { startTime: 'asc' },
-      take: 500, // 最大500件
+    const reservations = await getICalReservations({
+      rangeStart,
+      rangeEnd,
+      spaceId: icalToken.spaceId,
     })
 
     // カレンダーイベントに変換
@@ -99,31 +86,31 @@ export async function GET(
       const formattedEnd = format(r.endTime, 'HH:mm')
 
       // 顧客情報の表示（設定に応じて）
-      const customerInfo = settings.icalFeedIncludeCustomerInfo
-        ? `${r.customer.lastName} ${r.customer.firstName}様`
+      const customerInfo = settings.includeCustomerInfo
+        ? `${r.customerLastName} ${r.customerFirstName}様`
         : '予約済み'
 
       const description = [
         `予約ID: ${r.id.slice(0, 8).toUpperCase()}`,
         `日時: ${formattedDate} ${formattedStart} - ${formattedEnd}`,
-        settings.icalFeedIncludeCustomerInfo ? `お客様: ${customerInfo}` : null,
+        settings.includeCustomerInfo ? `お客様: ${customerInfo}` : null,
       ]
         .filter(Boolean)
         .join('\n')
 
       return {
         uid: `reservation-${r.id}@myrrh-rental-space`,
-        title: `【予約】${r.space.name}${settings.icalFeedIncludeCustomerInfo ? ` - ${customerInfo}` : ''}`,
+        title: `【予約】${r.spaceName}${settings.includeCustomerInfo ? ` - ${customerInfo}` : ''}`,
         description,
-        location: r.space.address ?? undefined,
+        location: r.spaceAddress ?? undefined,
         startTime: r.startTime,
         endTime: r.endTime,
       }
     })
 
     // カレンダー名
-    const calendarName = icalToken.space
-      ? `${icalToken.space.name} - 予約カレンダー`
+    const calendarName = icalToken.spaceName
+      ? `${icalToken.spaceName} - 予約カレンダー`
       : '予約カレンダー'
 
     // iCalフィード生成

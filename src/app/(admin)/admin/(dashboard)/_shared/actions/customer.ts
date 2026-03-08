@@ -1,58 +1,48 @@
 "use server";
 
-import { prisma } from "@/shared/lib/prisma";
 import { updateTag } from "next/cache";
-import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { z } from "zod";
+import { executeAdminMutation } from "@/admin/lib/admin-action";
+import { checkReadPermissionFor } from "@/admin/lib/permissions";
 import {
   createSuccess,
-  createFailure,
   type ActionResult,
 } from "@/admin/types/server-actions";
-import { createValidationError } from "@/shared/lib/action-helpers";
-import { withPermission } from "@/admin/lib/server-action-helpers";
-import type { CustomerWhereInput } from "@/shared/types/prisma";
-import { checkReadPermissionFor } from "@/admin/lib/permissions";
-
-// Types and schemas from centralized validation file
 import {
   customerFormSchema,
-  updateCustomerStatusSchema,
   updateCustomerNotesSchema,
+  updateCustomerStatusSchema,
   type CustomerFormInput,
-  type CustomerData,
-  type CustomerWithReservations,
-  type GetCustomersResult,
-  type CustomerFilters,
-  type CustomerPagination,
 } from "@/admin/lib/validations/customer";
-import { CustomerStatus } from "@/shared/lib/validations/enums";
-import { toPlainObject, toPlainArray } from "@/shared/lib/serialize";
-
-// Re-export types for consumers
-export type {
-  CustomerData,
-  CustomerWithReservations,
-  GetCustomersResult,
+import {
+  createCustomer as createCustomerCommand,
+  deleteCustomer as deleteCustomerCommand,
+  toggleCustomerActive as toggleCustomerActiveCommand,
+  updateCustomer as updateCustomerCommand,
+  updateCustomerNotes as updateCustomerNotesCommand,
+  updateCustomerStatus as updateCustomerStatusCommand,
+} from "@/shared/domain/customers/commands";
+import {
+  getCustomerById as getCustomerByIdQuery,
+  getCustomerStats as getCustomerStatsQuery,
+  getCustomers as getCustomersQuery,
+  searchCustomers as searchCustomersQuery,
+} from "@/shared/domain/customers/queries";
+import type {
   CustomerFilters,
   CustomerPagination,
-} from "@/admin/lib/validations/customer";
+  CustomerSearchResult,
+  CustomerStats,
+  CustomerWithReservations,
+  GetCustomersResult,
+} from "@/shared/domain/customers/types";
+import { createValidationError } from "@/shared/lib/action-helpers";
+import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { CustomerStatus } from "@/shared/lib/validations/enums";
 
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
-/**
- * 読み取り権限チェック（共通ヘルパー使用）
- */
 const checkReadPermission = checkReadPermissionFor("customer");
+const idSchema = z.string().uuid({ error: "顧客IDが不正です" });
 
-// =============================================================================
-// Actions
-// =============================================================================
-
-/**
- * 顧客一覧を取得
- */
 export async function getCustomers(
   filters: CustomerFilters = {},
   pagination: CustomerPagination = {},
@@ -61,137 +51,29 @@ export async function getCustomers(
     return { customers: [], total: 0, page: 1, limit: 10, totalPages: 0 };
   }
 
-  const { status, search, isActive } = filters;
-
-  const {
-    page = 1,
-    limit = 10,
-    sortBy = "createdAt",
-    sortOrder = "desc",
-  } = pagination;
-
-  // Where条件を構築
-  const where: CustomerWhereInput = {};
-
-  if (status && status !== "ALL") {
-    where.status = status;
-  }
-
-  if (typeof isActive === "boolean") {
-    where.isActive = isActive;
-  }
-
-  if (search) {
-    where.OR = [
-      { firstName: { contains: search, mode: "insensitive" } },
-      { lastName: { contains: search, mode: "insensitive" } },
-      { email: { contains: search, mode: "insensitive" } },
-      { phoneNumber: { contains: search, mode: "insensitive" } },
-    ];
-  }
-
-  // 総件数と顧客一覧を並列取得（N+1解消）
-  const [total, customers] = await prisma.$transaction([
-    prisma.customer.count({ where }),
-    prisma.customer.findMany({
-      where,
-      orderBy: {
-        [sortBy]: sortOrder,
-      },
-      skip: (page - 1) * limit,
-      take: limit,
-      select: {
-        id: true,
-        lastName: true,
-        firstName: true,
-        lastNameKana: true,
-        firstNameKana: true,
-        email: true,
-        phoneNumber: true,
-        address: true,
-        status: true,
-        notes: true,
-        totalReservations: true,
-        totalSpent: true,
-        lastReservationAt: true,
-        firstReservationAt: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    }),
-  ]);
-
-  const formattedCustomers: CustomerData[] = toPlainArray(customers);
-
-  return {
-    customers: formattedCustomers,
-    total,
-    page,
-    limit,
-    totalPages: Math.ceil(total / limit),
-  };
+  return getCustomersQuery(filters, pagination);
 }
 
-/**
- * 顧客を新規作成
- */
-export const createCustomer = withPermission<
-  [input: CustomerFormInput],
-  { id: string }
->(
-  "customer",
-  "create",
-)(async (_user, input): Promise<ActionResult<{ id: string }>> => {
+export async function createCustomer(
+  input: CustomerFormInput,
+): Promise<ActionResult<{ id: string }>> {
   const parsed = customerFormSchema.safeParse(input);
   if (!parsed.success) {
     return createValidationError(parsed.error);
   }
 
-  const {
-    lastName,
-    firstName,
-    lastNameKana,
-    firstNameKana,
-    email,
-    phoneNumber,
-    address,
-    notes,
-  } = parsed.data;
-
-  // メールアドレスの重複チェック
-  const existing = await prisma.customer.findUnique({
-    where: { email },
-    select: { id: true },
-  });
-
-  if (existing) {
-    return createFailure("このメールアドレスは既に登録されています");
-  }
-
-  const customer = await prisma.customer.create({
-    data: {
-      lastName,
-      firstName,
-      lastNameKana: lastNameKana || null,
-      firstNameKana: firstNameKana || null,
-      email,
-      phoneNumber: phoneNumber || null,
-      address: address || null,
-      notes: notes || null,
-      status: CustomerStatus.NEW,
-      isActive: true,
+  return executeAdminMutation({
+    resource: "customer",
+    action: "create",
+    execute: async () => createCustomerCommand(parsed.data),
+    success: (result) => createSuccess("顧客を作成しました", result),
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.CUSTOMERS);
     },
+    resolveAuditResourceId: (result) => result.id,
   });
+}
 
-  updateTag(CACHE_TAGS.CUSTOMERS);
-
-  return createSuccess("顧客を作成しました", { id: customer.id });
-});
-
-/**
- * 顧客詳細を取得（予約履歴付き）
- */
 export async function getCustomerById(
   id: string,
 ): Promise<CustomerWithReservations | null> {
@@ -199,282 +81,142 @@ export async function getCustomerById(
     return null;
   }
 
-  const customer = await prisma.customer.findUnique({
-    where: { id },
-    include: {
-      reservations: {
-        include: {
-          space: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-        },
-        orderBy: {
-          startTime: "desc",
-        },
-        take: 20,
-      },
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) {
+    return null;
+  }
+
+  return getCustomerByIdQuery(validated.data);
+}
+
+export async function updateCustomerStatus(
+  id: string,
+  status: CustomerStatus,
+): Promise<ActionResult<void>> {
+  const parsed = updateCustomerStatusSchema.safeParse({ id, status });
+  if (!parsed.success) {
+    return createValidationError(parsed.error);
+  }
+
+  return executeAdminMutation({
+    resource: "customer",
+    action: "update",
+    resourceId: parsed.data.id,
+    execute: async () => {
+      await updateCustomerStatusCommand(parsed.data.id, parsed.data.status);
     },
-  });
-
-  if (!customer) return null;
-
-  return toPlainObject({
-    ...customer,
-    reservations: customer.reservations.map((r) => ({
-      id: r.id,
-      startTime: r.startTime.toISOString(),
-      endTime: r.endTime.toISOString(),
-      status: r.status,
-      totalPrice: r.totalPrice,
-      space: r.space,
-    })),
+    success: () => createSuccess("ステータスを更新しました"),
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.CUSTOMERS);
+      updateTag(getCacheTag.customers.detail(parsed.data.id));
+    },
   });
 }
 
-/**
- * 顧客ステータスを更新
- */
-export const updateCustomerStatus = withPermission<
-  [id: string, status: CustomerStatus],
-  void
->(
-  "customer",
-  "update",
-)(async (_user, id, status): Promise<ActionResult<void>> => {
-  const parsed = updateCustomerStatusSchema.safeParse({ id, status });
-  if (!parsed.success) {
-    return createFailure("入力が不正です");
-  }
-
-  const customer = await prisma.customer.findUnique({
-    where: { id },
-    select: { id: true },
-  });
-
-  if (!customer) {
-    return createFailure("顧客が見つかりません");
-  }
-
-  await prisma.customer.update({
-    where: { id },
-    data: { status },
-  });
-
-  updateTag(CACHE_TAGS.CUSTOMERS);
-  updateTag(getCacheTag.customers.detail(id));
-
-  return createSuccess("ステータスを更新しました");
-});
-
-/**
- * 顧客メモを更新
- */
-export const updateCustomerNotes = withPermission<
-  [id: string, notes: string | null],
-  void
->(
-  "customer",
-  "update",
-)(async (_user, id, notes): Promise<ActionResult<void>> => {
+export async function updateCustomerNotes(
+  id: string,
+  notes: string | null,
+): Promise<ActionResult<void>> {
   const parsed = updateCustomerNotesSchema.safeParse({ id, notes });
   if (!parsed.success) {
-    return createFailure("入力が不正です");
+    return createValidationError(parsed.error);
   }
 
-  const customer = await prisma.customer.findUnique({
-    where: { id },
-    select: { id: true },
+  return executeAdminMutation({
+    resource: "customer",
+    action: "update",
+    resourceId: parsed.data.id,
+    execute: async () => {
+      await updateCustomerNotesCommand(parsed.data.id, parsed.data.notes);
+    },
+    success: () => createSuccess("メモを更新しました"),
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.CUSTOMERS);
+      updateTag(getCacheTag.customers.detail(parsed.data.id));
+    },
   });
+}
 
-  if (!customer) {
-    return createFailure("顧客が見つかりません");
+export async function toggleCustomerActive(
+  id: string,
+): Promise<ActionResult<void>> {
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) {
+    return createValidationError(validated.error);
   }
 
-  await prisma.customer.update({
-    where: { id },
-    data: { notes },
+  return executeAdminMutation({
+    resource: "customer",
+    action: "update",
+    resourceId: validated.data,
+    execute: async () => {
+      await toggleCustomerActiveCommand(validated.data);
+    },
+    success: () => createSuccess("アクティブ状態を変更しました"),
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.CUSTOMERS);
+      updateTag(getCacheTag.customers.detail(validated.data));
+    },
   });
+}
 
-  updateTag(CACHE_TAGS.CUSTOMERS);
-  updateTag(getCacheTag.customers.detail(id));
-
-  return createSuccess("メモを更新しました");
-});
-
-/**
- * 顧客のアクティブ状態を切り替え
- */
-export const toggleCustomerActive = withPermission<[id: string], void>(
-  "customer",
-  "update",
-)(async (_user, id): Promise<ActionResult<void>> => {
-  const customer = await prisma.customer.findUnique({
-    where: { id },
-    select: { id: true, isActive: true },
-  });
-
-  if (!customer) {
-    return createFailure("顧客が見つかりません");
+export async function updateCustomer(
+  id: string,
+  input: CustomerFormInput,
+): Promise<ActionResult<void>> {
+  const validatedId = idSchema.safeParse(id);
+  if (!validatedId.success) {
+    return createValidationError(validatedId.error);
   }
 
-  await prisma.customer.update({
-    where: { id },
-    data: { isActive: !customer.isActive },
-  });
-
-  updateTag(CACHE_TAGS.CUSTOMERS);
-  updateTag(getCacheTag.customers.detail(id));
-
-  return createSuccess("アクティブ状態を変更しました");
-});
-
-/**
- * 顧客情報を全フィールド更新
- */
-export const updateCustomer = withPermission<
-  [id: string, input: CustomerFormInput],
-  void
->(
-  "customer",
-  "update",
-)(async (_user, id, input): Promise<ActionResult<void>> => {
   const parsed = customerFormSchema.safeParse(input);
   if (!parsed.success) {
     return createValidationError(parsed.error);
   }
 
-  const {
-    lastName,
-    firstName,
-    lastNameKana,
-    firstNameKana,
-    email,
-    phoneNumber,
-    address,
-    notes,
-  } = parsed.data;
-
-  // 存在確認
-  const customer = await prisma.customer.findUnique({
-    where: { id },
-    select: { id: true },
-  });
-  if (!customer) return createFailure("顧客が見つかりません");
-
-  // メールアドレスの重複チェック（自分自身を除外）
-  const emailConflict = await prisma.customer.findFirst({
-    where: { email, NOT: { id } },
-    select: { id: true },
-  });
-  if (emailConflict)
-    return createFailure("このメールアドレスは既に登録されています");
-
-  await prisma.customer.update({
-    where: { id },
-    data: {
-      lastName,
-      firstName,
-      lastNameKana: lastNameKana || null,
-      firstNameKana: firstNameKana || null,
-      email,
-      phoneNumber: phoneNumber || null,
-      address: address || null,
-      notes: notes || null,
+  return executeAdminMutation({
+    resource: "customer",
+    action: "update",
+    resourceId: validatedId.data,
+    execute: async () => {
+      await updateCustomerCommand(validatedId.data, parsed.data);
+    },
+    success: () => createSuccess("顧客情報を更新しました"),
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.CUSTOMERS);
+      updateTag(getCacheTag.customers.detail(validatedId.data));
     },
   });
+}
 
-  updateTag(CACHE_TAGS.CUSTOMERS);
-  updateTag(getCacheTag.customers.detail(id));
-
-  return createSuccess("顧客情報を更新しました");
-});
-
-/**
- * 顧客統計情報を取得
- *
- * 最適化: 6つのCOUNTクエリをgroupByで1クエリに統合
- */
-export async function getCustomerStats(): Promise<{
-  total: number;
-  new: number;
-  regular: number;
-  vip: number;
-  inactive: number;
-  blacklist: number;
-}> {
+export async function getCustomerStats(): Promise<CustomerStats> {
   if (!(await checkReadPermission())) {
     return { total: 0, new: 0, regular: 0, vip: 0, inactive: 0, blacklist: 0 };
   }
 
-  // groupByで1クエリに統合（6クエリ→1クエリ）
-  const stats = await prisma.customer.groupBy({
-    by: ["status"],
-    _count: true,
-  });
-
-  // ステータス別カウントをマップに変換
-  const statusCounts = new Map(stats.map((s) => [s.status, s._count]));
-
-  const total = stats.reduce((sum, s) => sum + s._count, 0);
-
-  return {
-    total,
-    new: statusCounts.get("NEW") ?? 0,
-    regular: statusCounts.get("REGULAR") ?? 0,
-    vip: statusCounts.get("VIP") ?? 0,
-    inactive: statusCounts.get("INACTIVE") ?? 0,
-    blacklist: statusCounts.get("BLACKLIST") ?? 0,
-  };
+  return getCustomerStatsQuery();
 }
 
-/**
- * 顧客を削除
- */
-export const deleteCustomer = withPermission<[id: string], void>(
-  "customer",
-  "delete",
-)(async (_user, id): Promise<ActionResult<void>> => {
-  const customer = await prisma.customer.findUnique({
-    where: { id },
-    select: { id: true },
-  });
-
-  if (!customer) {
-    return createFailure("顧客が見つかりません");
+export async function deleteCustomer(id: string): Promise<ActionResult<void>> {
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) {
+    return createValidationError(validated.error);
   }
 
-  await prisma.customer.delete({ where: { id } });
+  return executeAdminMutation({
+    resource: "customer",
+    action: "delete",
+    resourceId: validated.data,
+    execute: async () => {
+      await deleteCustomerCommand(validated.data);
+    },
+    success: () => createSuccess("顧客を削除しました"),
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.CUSTOMERS);
+    },
+  });
+}
 
-  updateTag(CACHE_TAGS.CUSTOMERS);
-
-  return createSuccess("顧客を削除しました");
-});
-
-// =============================================================================
-// Search for Reservation Form
-// =============================================================================
-
-/**
- * 顧客検索結果の型
- */
-export type CustomerSearchResult = {
-  id: string;
-  lastName: string;
-  firstName: string;
-  email: string;
-  phoneNumber: string | null;
-  status: CustomerStatus;
-};
-
-/**
- * 予約フォーム用顧客検索
- *
- * 名前・メール・電話番号で顧客を検索し、予約フォームの顧客選択に使用。
- * 最大10件を返す。
- */
 export async function searchCustomers(
   query: string,
 ): Promise<CustomerSearchResult[]> {
@@ -482,33 +224,5 @@ export async function searchCustomers(
     return [];
   }
 
-  if (!query || query.trim().length < 2) {
-    return [];
-  }
-
-  const searchTerm = query.trim();
-
-  const customers = await prisma.customer.findMany({
-    where: {
-      isActive: true,
-      OR: [
-        { firstName: { contains: searchTerm, mode: "insensitive" } },
-        { lastName: { contains: searchTerm, mode: "insensitive" } },
-        { email: { contains: searchTerm, mode: "insensitive" } },
-        { phoneNumber: { contains: searchTerm, mode: "insensitive" } },
-      ],
-    },
-    select: {
-      id: true,
-      lastName: true,
-      firstName: true,
-      email: true,
-      phoneNumber: true,
-      status: true,
-    },
-    orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
-    take: 10,
-  });
-
-  return toPlainArray(customers);
+  return searchCustomersQuery(query);
 }

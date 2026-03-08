@@ -1,19 +1,12 @@
 "use server";
 
-import { prisma } from "@/shared/lib/prisma";
 import { updateTag } from "next/cache";
-import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
-import { createSuccess, createFailure } from "@/admin/types/server-actions";
-import { createValidationError } from "@/shared/lib/action-helpers";
-import { withPermission } from "@/admin/lib/server-action-helpers";
-import { PostStatus } from "@/shared/generated/prisma/enums";
-import { purgePostCache } from "@/shared/lib/cloudflare";
-import { fireAndForget } from "@/shared/lib/async-utils";
-import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
+import { z } from "zod";
+import { executeAdminMutation } from "@/admin/lib/admin-action";
 import {
-  checkSlugAvailability,
-  getSlugErrorMessage,
-} from "@/shared/lib/slug-validation";
+  createSuccess,
+  type ActionResult,
+} from "@/admin/types/server-actions";
 import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
 import {
   createPostSchema,
@@ -25,674 +18,449 @@ import {
   type PostCategoryInput,
   type PostTagInput,
 } from "@/admin/lib/validations/post";
+import { createValidationError } from "@/shared/lib/action-helpers";
+import {
+  createPost as createPostCommand,
+  createPostBackup as createPostBackupCommand,
+  createPostCategory as createPostCategoryCommand,
+  createPostTag as createPostTagCommand,
+  deletePost as deletePostCommand,
+  deletePostCategory as deletePostCategoryCommand,
+  deletePostTag as deletePostTagCommand,
+  publishPost as publishPostCommand,
+  restorePostVersion as restorePostVersionCommand,
+  unpublishPost as unpublishPostCommand,
+  updatePost as updatePostCommand,
+  updatePostCategory as updatePostCategoryCommand,
+  updatePostCategoryOrder as updatePostCategoryOrderCommand,
+  updatePostTag as updatePostTagCommand,
+} from "@/shared/domain/posts/commands";
+import { fireAndForget } from "@/shared/lib/async-utils";
+import { purgePostCache } from "@/shared/lib/cloudflare";
+import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
 
-// =============================================================================
-// Post Mutations
-// =============================================================================
-
-/**
- * 投稿記事を作成
- */
-export const createPost = withPermission<[CreatePostInput], { id: string }>(
-  "post",
-  "create",
-)(async (user, data) => {
-  const parsed = createPostSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationError(parsed.error);
-  }
-
-  // スラッグの使用可能チェック（予約パス＋全コンテンツタイプ横断）
-  const slugCheck = await checkSlugAvailability(parsed.data.slug, {
-    currentType: "post",
-  });
-  if (!slugCheck.available) {
-    return createFailure(getSlugErrorMessage(slugCheck.reason));
-  }
-
-  const { tags, contentJson, ...postData } = parsed.data;
-
-  // JSON → HTML 変換（空コンテンツの場合はスキップ）
-  const contentHtml = contentJson
-    ? await renderEditorStateToHtmlLazy(contentJson)
-    : "";
-
-  const post = await prisma.post.create({
-    data: {
-      ...postData,
-      contentJson: contentJson ? JSON.parse(contentJson) : undefined,
-      contentHtml,
-      status: PostStatus.DRAFT,
-      authorId: user.id,
-      postTags: {
-        create: tags.map((tagId) => ({ tagId })),
-      },
-    },
-  });
-
-  updateTag(CACHE_TAGS.POSTS);
-
-  // Cloudflare CDN キャッシュパージ
-  fireAndForget(purgePostCache(post.slug), {
-    operation: "purgePostCache",
-    category: ErrorCategory.EXTERNAL_API,
-    severity: ErrorSeverity.LOW,
-  });
-
-  return createSuccess("投稿記事を作成しました", { id: post.id });
+const idSchema = z.string().uuid({ error: "投稿IDが不正です" });
+const versionSchema = z.object({
+  postId: z.string().uuid({ error: "投稿IDが不正です" }),
+  version: z.number().int().positive({ error: "バージョンが不正です" }),
 });
+const postCategoryOrderSchema = z.array(
+  z.object({
+    id: z.string().uuid({ error: "カテゴリIDが不正です" }),
+    order: z.number().int().min(0, { error: "順序が不正です" }),
+  }),
+);
 
-/**
- * 投稿記事を更新
- */
-export const updatePost = withPermission<[string, UpdatePostInput], void>(
-  "post",
-  "update",
-)(async (user, id, data) => {
-  const parsed = updatePostSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationError(parsed.error);
-  }
+function purgePostCaches(...slugs: Array<string | undefined>): void {
+  const uniqueSlugs = [...new Set(slugs.filter((slug): slug is string => Boolean(slug)))];
 
-  const existingPost = await prisma.post.findUnique({
-    where: { id },
-    select: { id: true, slug: true },
-  });
-
-  if (!existingPost) {
-    return createFailure("投稿記事が見つかりません");
-  }
-
-  // スラッグの使用可能チェック（予約パス＋全コンテンツタイプ横断、自分自身は除外）
-  const slugCheck = await checkSlugAvailability(parsed.data.slug, {
-    currentType: "post",
-    currentId: id,
-  });
-  if (!slugCheck.available) {
-    return createFailure(getSlugErrorMessage(slugCheck.reason));
-  }
-
-  const { contentWidth, contentWidthCustom, tags, contentJson, ...rest } =
-    parsed.data;
-
-  // JSON → HTML 変換
-  const contentHtml = await renderEditorStateToHtmlLazy(contentJson);
-
-  // 旧 slug でのキャッシュ無効化のため、更新前の slug を保持
-  const oldSlug = existingPost.slug;
-
-  await prisma.post.update({
-    where: { id },
-    data: {
-      ...rest,
-      contentJson: JSON.parse(contentJson),
-      contentHtml,
-      contentWidth: contentWidth ?? null,
-      contentWidthCustom: contentWidthCustom ?? null,
-      postTags: {
-        deleteMany: {},
-        create: tags.map((tagId) => ({ tagId })),
-      },
-    },
-  });
-
-  updateTag(CACHE_TAGS.POSTS);
-  // slug 変更時は両方を無効化
-  updateTag(getCacheTag.posts.detail(oldSlug));
-  if (parsed.data.slug !== oldSlug) {
-    updateTag(getCacheTag.posts.detail(parsed.data.slug));
-  }
-
-  // Cloudflare CDN キャッシュパージ
-  fireAndForget(purgePostCache(oldSlug), {
-    operation: "purgePostCache",
-    category: ErrorCategory.EXTERNAL_API,
-    severity: ErrorSeverity.LOW,
-  });
-  if (parsed.data.slug !== oldSlug) {
-    fireAndForget(purgePostCache(parsed.data.slug), {
+  for (const slug of uniqueSlugs) {
+    fireAndForget(purgePostCache(slug), {
       operation: "purgePostCache",
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.LOW,
     });
   }
+}
 
-  return createSuccess("投稿記事を保存しました");
-});
-
-/**
- * 投稿記事を削除
- */
-export const deletePost = withPermission<[string], void>(
-  "post",
-  "delete",
-)(async (user, id) => {
-  const post = await prisma.post.findUnique({
-    where: { id },
-    select: { id: true, slug: true },
-  });
-
-  if (!post) {
-    return createFailure("投稿記事が見つかりません");
-  }
-
-  await prisma.post.delete({
-    where: { id },
-  });
-
-  updateTag(CACHE_TAGS.POSTS);
-  updateTag(getCacheTag.posts.detail(post.slug));
-
-  // Cloudflare CDN キャッシュパージ
-  fireAndForget(purgePostCache(post.slug), {
-    operation: "purgePostCache",
-    category: ErrorCategory.EXTERNAL_API,
-    severity: ErrorSeverity.LOW,
-  });
-
-  return createSuccess("投稿記事を削除しました");
-});
-
-/**
- * 投稿記事を公開（バージョン自動作成）
- */
-export const publishPost = withPermission<[string], void>(
-  "post",
-  "publish",
-)(async (user, id) => {
-  // 投稿データと最新バージョン番号を並列取得
-  const [post, latestVersion] = await Promise.all([
-    prisma.post.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        slug: true,
-        publishedAt: true,
-        contentHtml: true,
-        contentJson: true,
-      },
-    }),
-    prisma.postVersion.findFirst({
-      where: { postId: id },
-      orderBy: { version: "desc" },
-      select: { version: true },
-    }),
-  ]);
-
-  if (!post) {
-    return createFailure("投稿記事が見つかりません");
-  }
-
-  const nextVersion = (latestVersion?.version ?? 0) + 1;
-
-  // トランザクションで公開 + バージョン作成
-  await prisma.$transaction([
-    prisma.post.update({
-      where: { id },
-      data: {
-        status: PostStatus.PUBLISHED,
-        publishedAt: post.publishedAt ?? new Date(),
-      },
-    }),
-    prisma.postVersion.create({
-      data: {
-        postId: id,
-        version: nextVersion,
-        contentHtml: post.contentHtml,
-        contentJson: post.contentJson ?? undefined,
-        createdBy: user.id,
-      },
-    }),
-  ]);
-
-  updateTag(CACHE_TAGS.POSTS);
-  updateTag(getCacheTag.posts.detail(post.slug));
-
-  // Cloudflare CDN キャッシュパージ
-  fireAndForget(purgePostCache(post.slug), {
-    operation: "purgePostCache",
-    category: ErrorCategory.EXTERNAL_API,
-    severity: ErrorSeverity.LOW,
-  });
-
-  return createSuccess(`公開しました（バージョン ${nextVersion}）`);
-});
-
-/**
- * 投稿記事を非公開（下書きに戻す）
- */
-export const unpublishPost = withPermission<[string], void>(
-  "post",
-  "publish",
-)(async (user, id) => {
-  const post = await prisma.post.findUnique({
-    where: { id },
-    select: { id: true, slug: true },
-  });
-
-  if (!post) {
-    return createFailure("投稿記事が見つかりません");
-  }
-
-  await prisma.post.update({
-    where: { id },
-    data: {
-      status: PostStatus.DRAFT,
-    },
-  });
-
-  updateTag(CACHE_TAGS.POSTS);
-  updateTag(getCacheTag.posts.detail(post.slug));
-
-  // Cloudflare CDN キャッシュパージ
-  fireAndForget(purgePostCache(post.slug), {
-    operation: "purgePostCache",
-    category: ErrorCategory.EXTERNAL_API,
-    severity: ErrorSeverity.LOW,
-  });
-
-  return createSuccess("下書きに戻しました");
-});
-
-/**
- * バックアップを作成（バージョン手動作成）
- */
-export const createPostBackup = withPermission<[string], { version: number }>(
-  "post",
-  "update",
-)(async (user, id) => {
-  // 投稿データと最新バージョン番号を並列取得
-  const [post, latestVersion] = await Promise.all([
-    prisma.post.findUnique({
-      where: { id },
-      select: { id: true, contentHtml: true, contentJson: true },
-    }),
-    prisma.postVersion.findFirst({
-      where: { postId: id },
-      orderBy: { version: "desc" },
-      select: { version: true },
-    }),
-  ]);
-
-  if (!post) {
-    return createFailure("投稿記事が見つかりません");
-  }
-
-  const nextVersion = (latestVersion?.version ?? 0) + 1;
-
-  await prisma.postVersion.create({
-    data: {
-      postId: id,
-      version: nextVersion,
-      contentHtml: post.contentHtml,
-      contentJson: post.contentJson ?? undefined,
-      createdBy: user.id,
-    },
-  });
-
-  return createSuccess(
-    `バックアップを作成しました（バージョン ${nextVersion}）`,
-    { version: nextVersion },
-  );
-});
-
-/**
- * バージョンを復元
- */
-export const restorePostVersion = withPermission<[string, number], void>(
-  "post",
-  "update",
-)(async (user, postId, version) => {
-  const [versionData, post] = await Promise.all([
-    prisma.postVersion.findUnique({
-      where: {
-        postId_version: { postId, version },
-      },
-      select: { contentHtml: true, contentJson: true },
-    }),
-    prisma.post.findUnique({
-      where: { id: postId },
-      select: { slug: true },
-    }),
-  ]);
-
-  if (!versionData) {
-    return createFailure("バージョンが見つかりません");
-  }
-
-  if (!post) {
-    return createFailure("投稿記事が見つかりません");
-  }
-
-  await prisma.post.update({
-    where: { id: postId },
-    data: {
-      contentHtml: versionData.contentHtml,
-      contentJson: versionData.contentJson ?? undefined,
-      status: PostStatus.DRAFT,
-    },
-  });
-
-  updateTag(CACHE_TAGS.POSTS);
-  updateTag(getCacheTag.posts.detail(post.slug));
-
-  // Cloudflare CDN キャッシュパージ
-  fireAndForget(purgePostCache(post.slug), {
-    operation: "purgePostCache",
-    category: ErrorCategory.EXTERNAL_API,
-    severity: ErrorSeverity.LOW,
-  });
-
-  return createSuccess(`バージョン ${version} を復元しました（下書き状態）`);
-});
-
-// =============================================================================
-// Post Category Mutations
-// =============================================================================
-
-/**
- * カテゴリを作成
- */
-export const createPostCategory = withPermission<
-  [PostCategoryInput],
-  { id: string }
->(
-  "post",
-  "create",
-)(async (user, data) => {
-  const parsed = postCategorySchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationError(parsed.error);
-  }
-
-  // スラッグの重複チェック
-  const existingCategory = await prisma.postCategory.findUnique({
-    where: { slug: parsed.data.slug },
-    select: { id: true },
-  });
-  if (existingCategory) {
-    return createFailure("このスラッグは既に使用されています");
-  }
-
-  const category = await prisma.postCategory.create({
-    data: parsed.data,
-  });
-
-  // カテゴリ変更時は投稿一覧のキャッシュも無効化
-  updateTag(CACHE_TAGS.POSTS);
-
-  // Cloudflare CDN キャッシュパージ（カテゴリ一覧に影響）
+function purgePostArchive(): void {
   fireAndForget(purgePostCache(), {
     operation: "purgePostCache",
     category: ErrorCategory.EXTERNAL_API,
     severity: ErrorSeverity.LOW,
   });
+}
 
-  return createSuccess("カテゴリを作成しました", { id: category.id });
-});
-
-/**
- * カテゴリを更新
- */
-export const updatePostCategory = withPermission<
-  [string, PostCategoryInput],
-  void
->(
-  "post",
-  "update",
-)(async (user, id, data) => {
-  const parsed = postCategorySchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationError(parsed.error);
-  }
-
-  // 既存確認とスラッグ重複チェックを並列実行
-  const [existingCategory, duplicateSlug] = await Promise.all([
-    prisma.postCategory.findUnique({
-      where: { id },
-      select: { id: true },
-    }),
-    prisma.postCategory.findFirst({
-      where: {
-        slug: parsed.data.slug,
-        id: { not: id },
-      },
-      select: { id: true },
-    }),
-  ]);
-
-  if (!existingCategory) {
-    return createFailure("カテゴリが見つかりません");
-  }
-  if (duplicateSlug) {
-    return createFailure("このスラッグは既に使用されています");
-  }
-
-  await prisma.postCategory.update({
-    where: { id },
-    data: parsed.data,
-  });
-
-  // カテゴリ変更時は投稿一覧のキャッシュも無効化
+function invalidatePostCollectionCaches(): void {
   updateTag(CACHE_TAGS.POSTS);
+}
 
-  // Cloudflare CDN キャッシュパージ（カテゴリ一覧に影響）
-  fireAndForget(purgePostCache(), {
-    operation: "purgePostCache",
-    category: ErrorCategory.EXTERNAL_API,
-    severity: ErrorSeverity.LOW,
-  });
-
-  return createSuccess("カテゴリを更新しました");
-});
-
-/**
- * カテゴリを削除
- */
-export const deletePostCategory = withPermission<[string], void>(
-  "post",
-  "delete",
-)(async (user, id) => {
-  const category = await prisma.postCategory.findUnique({
-    where: { id },
-    include: {
-      _count: {
-        select: { posts: true },
-      },
-    },
-  });
-
-  if (!category) {
-    return createFailure("カテゴリが見つかりません");
-  }
-
-  if (category._count.posts > 0) {
-    return createFailure(
-      "このカテゴリには記事が紐づいているため削除できません",
-    );
-  }
-
-  await prisma.postCategory.delete({
-    where: { id },
-  });
-
-  // カテゴリ変更時は投稿一覧のキャッシュも無効化
+function invalidatePostCategoryCaches(): void {
   updateTag(CACHE_TAGS.POSTS);
+  updateTag(CACHE_TAGS.POST_CATEGORIES);
+}
 
-  // Cloudflare CDN キャッシュパージ（カテゴリ一覧に影響）
-  fireAndForget(purgePostCache(), {
-    operation: "purgePostCache",
-    category: ErrorCategory.EXTERNAL_API,
-    severity: ErrorSeverity.LOW,
-  });
-
-  return createSuccess("カテゴリを削除しました");
-});
-
-/**
- * 投稿カテゴリの順序を更新
- */
-export const updatePostCategoryOrder = withPermission<
-  [{ id: string; order: number }[]],
-  void
->(
-  "post",
-  "update",
-)(async (user, items) => {
-  await prisma.$transaction(
-    items.map((item) =>
-      prisma.postCategory.update({
-        where: { id: item.id },
-        data: { order: item.order },
-      }),
-    ),
-  );
-
-  // カテゴリ順序変更時は投稿一覧のキャッシュも無効化
-  updateTag(CACHE_TAGS.POSTS);
-
-  // Cloudflare CDN キャッシュパージ（カテゴリ一覧に影響）
-  fireAndForget(purgePostCache(), {
-    operation: "purgePostCache",
-    category: ErrorCategory.EXTERNAL_API,
-    severity: ErrorSeverity.LOW,
-  });
-
-  return createSuccess("順序を更新しました");
-});
-
-// =============================================================================
-// Post Tag Mutations
-// =============================================================================
-
-/**
- * タグを作成
- */
-export const createPostTag = withPermission<[PostTagInput], { id: string }>(
-  "post",
-  "create",
-)(async (user, data) => {
-  const parsed = postTagSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationError(parsed.error);
-  }
-
-  // 名前とスラッグの重複チェック（並列実行）
-  const [existingName, existingSlug] = await Promise.all([
-    prisma.postTag.findUnique({
-      where: { name: parsed.data.name },
-      select: { id: true },
-    }),
-    prisma.postTag.findUnique({
-      where: { slug: parsed.data.slug },
-      select: { id: true },
-    }),
-  ]);
-  if (existingName) {
-    return createFailure("このタグ名は既に使用されています");
-  }
-  if (existingSlug) {
-    return createFailure("このスラッグは既に使用されています");
-  }
-
-  const tag = await prisma.postTag.create({
-    data: parsed.data,
-  });
-
-  updateTag(CACHE_TAGS.POST_TAGS);
-
-  return createSuccess("タグを作成しました", { id: tag.id });
-});
-
-/**
- * タグを更新
- */
-export const updatePostTag = withPermission<[string, PostTagInput], void>(
-  "post",
-  "update",
-)(async (user, id, data) => {
-  const parsed = postTagSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationError(parsed.error);
-  }
-
-  // 既存タグと重複チェックを並列実行
-  const [existingTag, duplicates] = await Promise.all([
-    prisma.postTag.findUnique({
-      where: { id },
-      select: { id: true },
-    }),
-    // 名前またはスラッグの重複を一度に検索
-    prisma.postTag.findFirst({
-      where: {
-        id: { not: id },
-        OR: [{ name: parsed.data.name }, { slug: parsed.data.slug }],
-      },
-      select: { name: true, slug: true },
-    }),
-  ]);
-
-  if (!existingTag) {
-    return createFailure("タグが見つかりません");
-  }
-
-  // 重複エラーの詳細メッセージ
-  if (duplicates) {
-    if (duplicates.name === parsed.data.name) {
-      return createFailure("このタグ名は既に使用されています");
-    }
-    return createFailure("このスラッグは既に使用されています");
-  }
-
-  // リレーションベースのため、タグレコードの更新のみで済む
-  await prisma.postTag.update({
-    where: { id },
-    data: parsed.data,
-  });
-
-  // タグと関連記事のキャッシュを無効化
+function invalidatePostTagCaches(): void {
   updateTag(CACHE_TAGS.POSTS);
   updateTag(CACHE_TAGS.POST_TAGS);
+}
 
-  // Cloudflare CDN キャッシュパージ（タグ一覧に影響）
-  fireAndForget(purgePostCache(), {
-    operation: "purgePostCache",
-    category: ErrorCategory.EXTERNAL_API,
-    severity: ErrorSeverity.LOW,
+export async function createPost(
+  input: CreatePostInput,
+): Promise<ActionResult<{ id: string }>> {
+  const parsed = createPostSchema.safeParse(input);
+  if (!parsed.success) {
+    return createValidationError(parsed.error);
+  }
+
+  const contentHtml = parsed.data.contentJson
+    ? await renderEditorStateToHtmlLazy(parsed.data.contentJson)
+    : "";
+  let createdPostSlug: string | null = null;
+
+  return executeAdminMutation({
+    resource: "post",
+    action: "create",
+    execute: async (user) => {
+      const result = await createPostCommand({
+        ...parsed.data,
+        contentHtml,
+        authorId: user.id,
+      });
+      createdPostSlug = result.slug;
+      return { id: result.id };
+    },
+    success: (result) => createSuccess("投稿記事を作成しました", result),
+    afterSuccess: () => {
+      invalidatePostCollectionCaches();
+      purgePostCaches(createdPostSlug ?? undefined);
+    },
+    resolveAuditResourceId: (result) => result.id,
   });
+}
 
-  return createSuccess("タグを更新しました");
-});
+export async function updatePost(
+  id: string,
+  input: UpdatePostInput,
+): Promise<ActionResult<void>> {
+  const validatedId = idSchema.safeParse(id);
+  if (!validatedId.success) {
+    return createValidationError(validatedId.error);
+  }
 
-/**
- * タグを削除
- */
-export const deletePostTag = withPermission<[string], void>(
-  "post",
-  "delete",
-)(async (user, id) => {
-  const tag = await prisma.postTag.findUnique({
-    where: { id },
-    include: {
-      _count: {
-        select: { posts: true },
-      },
+  const parsed = updatePostSchema.safeParse(input);
+  if (!parsed.success) {
+    return createValidationError(parsed.error);
+  }
+
+  const contentHtml = await renderEditorStateToHtmlLazy(parsed.data.contentJson);
+  let updatedPost: { oldSlug: string; slug: string } | null = null;
+
+  return executeAdminMutation({
+    resource: "post",
+    action: "update",
+    resourceId: validatedId.data,
+    execute: async () => {
+      updatedPost = await updatePostCommand(validatedId.data, {
+        ...parsed.data,
+        contentHtml,
+        contentWidth: parsed.data.contentWidth ?? null,
+        contentWidthCustom: parsed.data.contentWidthCustom ?? null,
+      });
+    },
+    success: () => createSuccess("投稿記事を保存しました"),
+    afterSuccess: () => {
+      if (!updatedPost) {
+        return;
+      }
+
+      invalidatePostCollectionCaches();
+      updateTag(getCacheTag.posts.detail(updatedPost.oldSlug));
+      if (updatedPost.slug !== updatedPost.oldSlug) {
+        updateTag(getCacheTag.posts.detail(updatedPost.slug));
+      }
+      purgePostCaches(updatedPost.oldSlug, updatedPost.slug);
     },
   });
+}
 
-  if (!tag) {
-    return createFailure("タグが見つかりません");
+export async function deletePost(id: string): Promise<ActionResult<void>> {
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) {
+    return createValidationError(validated.error);
   }
 
-  if (tag._count.posts > 0) {
-    return createFailure("このタグは記事で使用されているため削除できません");
-  }
+  let deletedPostSlug: string | null = null;
 
-  await prisma.postTag.delete({
-    where: { id },
+  return executeAdminMutation({
+    resource: "post",
+    action: "delete",
+    resourceId: validated.data,
+    execute: async () => {
+      const result = await deletePostCommand(validated.data);
+      deletedPostSlug = result.slug;
+    },
+    success: () => createSuccess("投稿記事を削除しました"),
+    afterSuccess: () => {
+      if (!deletedPostSlug) {
+        return;
+      }
+
+      invalidatePostCollectionCaches();
+      updateTag(getCacheTag.posts.detail(deletedPostSlug));
+      purgePostCaches(deletedPostSlug);
+    },
   });
+}
 
-  updateTag(CACHE_TAGS.POST_TAGS);
+export async function publishPost(id: string): Promise<ActionResult<void>> {
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) {
+    return createValidationError(validated.error);
+  }
 
-  return createSuccess("タグを削除しました");
-});
+  let publishedPost: { slug: string; version: number } | null = null;
+
+  return executeAdminMutation({
+    resource: "post",
+    action: "publish",
+    resourceId: validated.data,
+    execute: async (user) => {
+      publishedPost = await publishPostCommand(validated.data, user.id);
+    },
+    success: () =>
+      createSuccess(
+        `公開しました（バージョン ${publishedPost?.version ?? 0}）`,
+      ),
+    afterSuccess: () => {
+      if (!publishedPost) {
+        return;
+      }
+
+      invalidatePostCollectionCaches();
+      updateTag(getCacheTag.posts.detail(publishedPost.slug));
+      purgePostCaches(publishedPost.slug);
+    },
+  });
+}
+
+export async function unpublishPost(id: string): Promise<ActionResult<void>> {
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) {
+    return createValidationError(validated.error);
+  }
+
+  let unpublishedPostSlug: string | null = null;
+
+  return executeAdminMutation({
+    resource: "post",
+    action: "publish",
+    resourceId: validated.data,
+    execute: async () => {
+      const result = await unpublishPostCommand(validated.data);
+      unpublishedPostSlug = result.slug;
+    },
+    success: () => createSuccess("下書きに戻しました"),
+    afterSuccess: () => {
+      if (!unpublishedPostSlug) {
+        return;
+      }
+
+      invalidatePostCollectionCaches();
+      updateTag(getCacheTag.posts.detail(unpublishedPostSlug));
+      purgePostCaches(unpublishedPostSlug);
+    },
+  });
+}
+
+export async function createPostBackup(
+  id: string,
+): Promise<ActionResult<{ version: number }>> {
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) {
+    return createValidationError(validated.error);
+  }
+
+  return executeAdminMutation({
+    resource: "post",
+    action: "update",
+    resourceId: validated.data,
+    execute: async (user) => createPostBackupCommand(validated.data, user.id),
+    success: (result) =>
+      createSuccess(
+        `バックアップを作成しました（バージョン ${result.version}）`,
+        { version: result.version },
+      ),
+  });
+}
+
+export async function restorePostVersion(
+  postId: string,
+  version: number,
+): Promise<ActionResult<void>> {
+  const parsed = versionSchema.safeParse({ postId, version });
+  if (!parsed.success) {
+    return createValidationError(parsed.error);
+  }
+
+  let restoredPostSlug: string | null = null;
+
+  return executeAdminMutation({
+    resource: "post",
+    action: "update",
+    resourceId: parsed.data.postId,
+    execute: async () => {
+      const result = await restorePostVersionCommand(
+        parsed.data.postId,
+        parsed.data.version,
+      );
+      restoredPostSlug = result.slug;
+    },
+    success: () =>
+      createSuccess(
+        `バージョン ${parsed.data.version} を復元しました（下書き状態）`,
+      ),
+    afterSuccess: () => {
+      if (!restoredPostSlug) {
+        return;
+      }
+
+      invalidatePostCollectionCaches();
+      updateTag(getCacheTag.posts.detail(restoredPostSlug));
+      purgePostCaches(restoredPostSlug);
+    },
+  });
+}
+
+export async function createPostCategory(
+  input: PostCategoryInput,
+): Promise<ActionResult<{ id: string }>> {
+  const parsed = postCategorySchema.safeParse(input);
+  if (!parsed.success) {
+    return createValidationError(parsed.error);
+  }
+
+  return executeAdminMutation({
+    resource: "post",
+    action: "create",
+    execute: async () => createPostCategoryCommand(parsed.data),
+    success: (result) => createSuccess("カテゴリを作成しました", result),
+    afterSuccess: () => {
+      invalidatePostCategoryCaches();
+      purgePostArchive();
+    },
+    resolveAuditResourceId: (result) => result.id,
+  });
+}
+
+export async function updatePostCategory(
+  id: string,
+  input: PostCategoryInput,
+): Promise<ActionResult<void>> {
+  const validatedId = idSchema.safeParse(id);
+  if (!validatedId.success) {
+    return createValidationError(validatedId.error);
+  }
+
+  const parsed = postCategorySchema.safeParse(input);
+  if (!parsed.success) {
+    return createValidationError(parsed.error);
+  }
+
+  return executeAdminMutation({
+    resource: "post",
+    action: "update",
+    resourceId: validatedId.data,
+    execute: async () => updatePostCategoryCommand(validatedId.data, parsed.data),
+    success: () => createSuccess("カテゴリを更新しました"),
+    afterSuccess: () => {
+      invalidatePostCategoryCaches();
+      purgePostArchive();
+    },
+  });
+}
+
+export async function deletePostCategory(id: string): Promise<ActionResult<void>> {
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) {
+    return createValidationError(validated.error);
+  }
+
+  return executeAdminMutation({
+    resource: "post",
+    action: "delete",
+    resourceId: validated.data,
+    execute: async () => deletePostCategoryCommand(validated.data),
+    success: () => createSuccess("カテゴリを削除しました"),
+    afterSuccess: () => {
+      invalidatePostCategoryCaches();
+      purgePostArchive();
+    },
+  });
+}
+
+export async function updatePostCategoryOrder(
+  items: { id: string; order: number }[],
+): Promise<ActionResult<void>> {
+  const parsed = postCategoryOrderSchema.safeParse(items);
+  if (!parsed.success) {
+    return createValidationError(parsed.error);
+  }
+
+  return executeAdminMutation({
+    resource: "post",
+    action: "update",
+    execute: async () => updatePostCategoryOrderCommand(parsed.data),
+    success: () => createSuccess("順序を更新しました"),
+    afterSuccess: () => {
+      invalidatePostCategoryCaches();
+      purgePostArchive();
+    },
+  });
+}
+
+export async function createPostTag(
+  input: PostTagInput,
+): Promise<ActionResult<{ id: string }>> {
+  const parsed = postTagSchema.safeParse(input);
+  if (!parsed.success) {
+    return createValidationError(parsed.error);
+  }
+
+  return executeAdminMutation({
+    resource: "post",
+    action: "create",
+    execute: async () => createPostTagCommand(parsed.data),
+    success: (result) => createSuccess("タグを作成しました", result),
+    afterSuccess: () => {
+      invalidatePostTagCaches();
+    },
+    resolveAuditResourceId: (result) => result.id,
+  });
+}
+
+export async function updatePostTag(
+  id: string,
+  input: PostTagInput,
+): Promise<ActionResult<void>> {
+  const validatedId = idSchema.safeParse(id);
+  if (!validatedId.success) {
+    return createValidationError(validatedId.error);
+  }
+
+  const parsed = postTagSchema.safeParse(input);
+  if (!parsed.success) {
+    return createValidationError(parsed.error);
+  }
+
+  return executeAdminMutation({
+    resource: "post",
+    action: "update",
+    resourceId: validatedId.data,
+    execute: async () => updatePostTagCommand(validatedId.data, parsed.data),
+    success: () => createSuccess("タグを更新しました"),
+    afterSuccess: () => {
+      invalidatePostTagCaches();
+      purgePostArchive();
+    },
+  });
+}
+
+export async function deletePostTag(id: string): Promise<ActionResult<void>> {
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) {
+    return createValidationError(validated.error);
+  }
+
+  return executeAdminMutation({
+    resource: "post",
+    action: "delete",
+    resourceId: validated.data,
+    execute: async () => deletePostTagCommand(validated.data),
+    success: () => createSuccess("タグを削除しました"),
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.POST_TAGS);
+    },
+  });
+}

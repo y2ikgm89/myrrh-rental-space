@@ -1,6 +1,6 @@
 import type { UseFormRegister, UseFormSetValue, FieldErrors, Control } from 'react-hook-form'
-import type { AnnouncementBarData } from '@/admin/actions/announcement-bar'
-import { AnnouncementBarAnimation, AnnouncementBarDesignStyle, type AnnouncementBarType } from '@/shared/generated/prisma/enums'
+import type { AnnouncementBarData } from '@/shared/domain/settings/announcement-bar'
+import { AnnouncementBarAnimation, AnnouncementBarDesignStyle, type AnnouncementBarType } from '@/shared/db/enums'
 
 // =============================================================================
 // Constants

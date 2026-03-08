@@ -201,7 +201,7 @@ revalidatePath('/admin', 'layout')
 ```typescript
 'use server'
 
-import { prisma } from '@/shared/lib/prisma'
+import { prisma } from '@/shared/db/prisma'
 import { updateTag } from 'next/cache'
 import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
 import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
@@ -324,7 +324,7 @@ if (!validated.success) {
 
 ```typescript
 import { cacheLife, cacheTag } from 'next/cache'
-import { prisma } from '@/shared/lib/prisma'
+import { prisma } from '@/shared/db/prisma'
 import { CACHE_TAGS, CACHE_LIFE } from '@/shared/lib/constants'
 import { safeFetch, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
 import { toPlainObject } from '@/shared/lib/serialize'

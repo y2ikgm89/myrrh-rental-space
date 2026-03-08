@@ -6,7 +6,6 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import { updateCustomer } from '@/admin/actions/customer'
-import type { CustomerWithReservations } from '@/admin/actions/customer'
 import {
   customerFormSchema,
   type CustomerFormData,
@@ -18,6 +17,7 @@ import {
   Label,
   Textarea,
 } from '@/admin/components/ui'
+import type { CustomerWithReservations } from '@/shared/domain/customers/types'
 import { cn } from '@/shared/lib/utils'
 import { useKanaInput } from '@/admin/hooks'
 

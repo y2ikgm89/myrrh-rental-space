@@ -16,7 +16,7 @@ import {
   SelectValue,
   Switch,
 } from '@/admin/components/ui'
-import { AnnouncementBarDesignStyle } from '@/shared/generated/prisma/enums'
+import { AnnouncementBarDesignStyle } from '@/shared/db/enums'
 import { isValidAnnouncementBarAnimation, isValidAnnouncementBarDesignStyle } from '@/shared/lib/validations/enums'
 import { DesignPreview } from './DesignPreview'
 import {

@@ -1,689 +1,402 @@
 "use server";
 
-import { prisma } from "@/shared/lib/prisma";
 import { updateTag } from "next/cache";
-import { CACHE_TAGS } from "@/shared/lib/constants";
-import { createSuccess, createFailure } from "@/admin/types/server-actions";
-import { createValidationError } from "@/shared/lib/action-helpers";
-import { withPermission } from "@/admin/lib/server-action-helpers";
-import { encrypt } from "@/shared/lib/crypto";
+import { z } from "zod";
+import { executeAdminMutation } from "@/admin/lib/admin-action";
 import {
-  resendSettingsSchema,
-  turnstileSettingsSchema,
-  googleMapsSettingsSchema,
-  cloudflareSettingsSchema,
-  customApiKeySchema,
-  googleOAuthSettingsSchema,
-  type ResendSettingsInput,
-  type TurnstileSettingsInput,
-  type GoogleMapsSettingsInput,
-  type CloudflareSettingsInput,
-  type CustomApiKeyInput,
-  type GoogleOAuthSettingsInput,
-} from "@/admin/lib/validations/api-keys";
+  createSuccess,
+  type ActionResult,
+} from "@/admin/types/server-actions";
 import {
+  testCloudflareConnection,
+  testGoogleMapsConnection,
+  testGoogleOAuthConnection,
   testResendConnection,
   testTurnstileConnection,
-  testGoogleMapsConnection,
-  testCloudflareConnection,
-  testGoogleOAuthConnection,
 } from "@/admin/lib/api-keys";
-import { resetAuthInstance } from "@/shared/lib/auth";
-import { parseCustomApiKeysMap } from "./helpers";
+import {
+  cloudflareSettingsSchema,
+  customApiKeySchema,
+  googleMapsSettingsSchema,
+  googleOAuthSettingsSchema,
+  resendSettingsSchema,
+  turnstileSettingsSchema,
+  type CloudflareSettingsInput,
+  type CustomApiKeyInput,
+  type GoogleMapsSettingsInput,
+  type GoogleOAuthSettingsInput,
+  type ResendSettingsInput,
+  type TurnstileSettingsInput,
+} from "@/admin/lib/validations/api-keys";
+import { createValidationError } from "@/shared/lib/action-helpers";
+import {
+  addCustomApiKey as addCustomApiKeyCommand,
+  clearCloudflareSettings as clearCloudflareSettingsCommand,
+  clearGoogleMapsSettings as clearGoogleMapsSettingsCommand,
+  clearGoogleOAuthSettings as clearGoogleOAuthSettingsCommand,
+  clearResendSettings as clearResendSettingsCommand,
+  clearTurnstileSettings as clearTurnstileSettingsCommand,
+  deleteCustomApiKey as deleteCustomApiKeyCommand,
+  recordCloudflareConnectionStatus,
+  recordGoogleMapsConnectionStatus,
+  recordGoogleOAuthConnectionStatus,
+  recordResendConnectionStatus,
+  recordTurnstileConnectionStatus,
+  updateCloudflareSettings as updateCloudflareSettingsCommand,
+  updateGoogleMapsSettings as updateGoogleMapsSettingsCommand,
+  updateGoogleOAuthSettings as updateGoogleOAuthSettingsCommand,
+  updateResendSettings as updateResendSettingsCommand,
+  updateTurnstileSettings as updateTurnstileSettingsCommand,
+} from "@/shared/domain/settings/api-key-commands";
+import { DomainError } from "@/shared/domain/domain-error";
+import { CACHE_TAGS } from "@/shared/lib/constants";
 
-// =============================================================================
-// UPDATE Actions - Resend
-// =============================================================================
+const apiKeyIdSchema = z.string().min(1, { error: "APIキーIDが不正です" });
 
-/**
- * Resend設定を更新
- */
-export const updateResendSettings = withPermission<[ResendSettingsInput]>(
-  "settings",
-  "update",
-)(async (_user, data) => {
-  const parsed = resendSettingsSchema.safeParse(data);
+function refreshSettingsCache(): void {
+  updateTag(CACHE_TAGS.SETTINGS);
+}
+
+export async function updateResendSettings(
+  input: ResendSettingsInput,
+): Promise<ActionResult<void>> {
+  const parsed = resendSettingsSchema.safeParse(input);
   if (!parsed.success) {
     return createValidationError(parsed.error);
   }
 
-  const updateData: Record<string, unknown> = {};
-
-  if (parsed.data.resendApiKey) {
-    try {
-      updateData["resendApiKey"] = encrypt(parsed.data.resendApiKey);
-    } catch {
-      return createFailure("APIキーの暗号化に失敗しました");
-    }
-  }
-
-  await prisma.settings.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", ...updateData },
-    update: updateData,
-  });
-
-  updateTag(CACHE_TAGS.SETTINGS);
-  return createSuccess("Resend設定を更新しました");
-});
-
-/**
- * Resend接続テスト
- */
-export const testResendConnectionAction = withPermission<
-  [string],
-  { message: string }
->(
-  "settings",
-  "update",
-)(async (_user, apiKey) => {
-  const result = await testResendConnection(apiKey);
-
-  if (result.success) {
-    await prisma.settings.upsert({
-      where: { id: "singleton" },
-      create: {
-        id: "singleton",
-        resendLastTestedAt: new Date(),
-        resendConnectionStatus: "connected",
-      },
-      update: {
-        resendLastTestedAt: new Date(),
-        resendConnectionStatus: "connected",
-      },
-    });
-
-    updateTag(CACHE_TAGS.SETTINGS);
-    return createSuccess(result.message || "接続に成功しました", {
-      message: result.message || "",
-    });
-  }
-
-  // エラー時もステータス更新
-  await prisma.settings.upsert({
-    where: { id: "singleton" },
-    create: {
-      id: "singleton",
-      resendLastTestedAt: new Date(),
-      resendConnectionStatus: "error",
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      await updateResendSettingsCommand(parsed.data);
     },
-    update: {
-      resendLastTestedAt: new Date(),
-      resendConnectionStatus: "error",
-    },
+    success: () => createSuccess("Resend設定を更新しました"),
+    afterSuccess: refreshSettingsCache,
   });
+}
 
-  updateTag(CACHE_TAGS.SETTINGS);
-  return createFailure(result.error || "接続テストに失敗しました");
-});
+export async function testResendConnectionAction(
+  apiKey: string,
+): Promise<ActionResult<{ message: string }>> {
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      const result = await testResendConnection(apiKey);
+      await recordResendConnectionStatus(result.success ? "connected" : "error");
+      refreshSettingsCache();
 
-/**
- * Resendキーをクリア
- */
-export const clearResendKeys = withPermission<[]>(
-  "settings",
-  "update",
-)(async () => {
-  await prisma.settings.update({
-    where: { id: "singleton" },
-    data: {
-      resendApiKey: null,
-      resendLastTestedAt: null,
-      resendConnectionStatus: null,
+      if (!result.success) {
+        throw new DomainError(
+          result.error || "接続テストに失敗しました",
+          "VALIDATION",
+        );
+      }
+
+      return { message: result.message || "" };
     },
+    success: (result) =>
+      createSuccess(result.message || "接続に成功しました", result),
   });
+}
 
-  updateTag(CACHE_TAGS.SETTINGS);
-  return createSuccess("Resendキーをクリアしました");
-});
+export async function clearResendKeys(): Promise<ActionResult<void>> {
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      await clearResendSettingsCommand();
+    },
+    success: () => createSuccess("Resendキーをクリアしました"),
+    afterSuccess: refreshSettingsCache,
+  });
+}
 
-// =============================================================================
-// UPDATE Actions - Turnstile
-// =============================================================================
-
-/**
- * Turnstile設定を更新
- */
-export const updateTurnstileSettings = withPermission<[TurnstileSettingsInput]>(
-  "settings",
-  "update",
-)(async (_user, data) => {
-  const parsed = turnstileSettingsSchema.safeParse(data);
+export async function updateTurnstileSettings(
+  input: TurnstileSettingsInput,
+): Promise<ActionResult<void>> {
+  const parsed = turnstileSettingsSchema.safeParse(input);
   if (!parsed.success) {
     return createValidationError(parsed.error);
   }
 
-  const updateData: Record<string, unknown> = {};
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      await updateTurnstileSettingsCommand(parsed.data);
+    },
+    success: () => createSuccess("Turnstile設定を更新しました"),
+    afterSuccess: refreshSettingsCache,
+  });
+}
 
-  if (parsed.data.turnstileSiteKey !== undefined) {
-    updateData["turnstileSiteKey"] = parsed.data.turnstileSiteKey;
-  }
-
-  if (parsed.data.turnstileSecretKey) {
-    try {
-      updateData["turnstileSecretKey"] = encrypt(
-        parsed.data.turnstileSecretKey,
+export async function testTurnstileConnectionAction(
+  siteKey: string,
+  secretKey: string,
+): Promise<ActionResult<{ message: string; note?: string }>> {
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      const result = await testTurnstileConnection(siteKey, secretKey);
+      await recordTurnstileConnectionStatus(
+        result.success ? "connected" : "error",
       );
-    } catch {
-      return createFailure("シークレットキーの暗号化に失敗しました");
-    }
-  }
+      refreshSettingsCache();
 
-  await prisma.settings.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", ...updateData },
-    update: updateData,
-  });
+      if (!result.success) {
+        throw new DomainError(
+          result.error || "接続テストに失敗しました",
+          "VALIDATION",
+        );
+      }
 
-  updateTag(CACHE_TAGS.SETTINGS);
-  return createSuccess("Turnstile設定を更新しました");
-});
-
-/**
- * Turnstile接続テスト
- */
-export const testTurnstileConnectionAction = withPermission<
-  [string, string],
-  { message: string; note?: string }
->(
-  "settings",
-  "update",
-)(async (_user, siteKey, secretKey) => {
-  const result = await testTurnstileConnection(siteKey, secretKey);
-
-  if (result.success) {
-    await prisma.settings.upsert({
-      where: { id: "singleton" },
-      create: {
-        id: "singleton",
-        turnstileLastTestedAt: new Date(),
-        turnstileConnectionStatus: "connected",
-      },
-      update: {
-        turnstileLastTestedAt: new Date(),
-        turnstileConnectionStatus: "connected",
-      },
-    });
-
-    updateTag(CACHE_TAGS.SETTINGS);
-    return createSuccess(result.message || "検証に成功しました", {
-      message: result.message || "",
-      note:
-        typeof result.metadata?.["note"] === "string"
-          ? result.metadata?.["note"]
-          : undefined,
-    });
-  }
-
-  // エラー時もステータス更新
-  await prisma.settings.upsert({
-    where: { id: "singleton" },
-    create: {
-      id: "singleton",
-      turnstileLastTestedAt: new Date(),
-      turnstileConnectionStatus: "error",
+      return {
+        message: result.message || "",
+        note:
+          typeof result.metadata?.["note"] === "string"
+            ? result.metadata["note"]
+            : undefined,
+      };
     },
-    update: {
-      turnstileLastTestedAt: new Date(),
-      turnstileConnectionStatus: "error",
-    },
+    success: (result) =>
+      createSuccess(result.message || "検証に成功しました", result),
   });
+}
 
-  updateTag(CACHE_TAGS.SETTINGS);
-  return createFailure(result.error || "接続テストに失敗しました");
-});
-
-/**
- * Turnstileキーをクリア
- */
-export const clearTurnstileKeys = withPermission<[]>(
-  "settings",
-  "update",
-)(async () => {
-  await prisma.settings.update({
-    where: { id: "singleton" },
-    data: {
-      turnstileSiteKey: null,
-      turnstileSecretKey: null,
-      turnstileLastTestedAt: null,
-      turnstileConnectionStatus: null,
+export async function clearTurnstileKeys(): Promise<ActionResult<void>> {
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      await clearTurnstileSettingsCommand();
     },
+    success: () => createSuccess("Turnstileキーをクリアしました"),
+    afterSuccess: refreshSettingsCache,
   });
+}
 
-  updateTag(CACHE_TAGS.SETTINGS);
-  return createSuccess("Turnstileキーをクリアしました");
-});
-
-// =============================================================================
-// UPDATE Actions - Google Maps
-// =============================================================================
-
-/**
- * Google Maps設定を更新
- */
-export const updateGoogleMapsSettings = withPermission<
-  [GoogleMapsSettingsInput]
->(
-  "settings",
-  "update",
-)(async (_user, data) => {
-  const parsed = googleMapsSettingsSchema.safeParse(data);
+export async function updateGoogleMapsSettings(
+  input: GoogleMapsSettingsInput,
+): Promise<ActionResult<void>> {
+  const parsed = googleMapsSettingsSchema.safeParse(input);
   if (!parsed.success) {
     return createValidationError(parsed.error);
   }
 
-  const updateData: Record<string, unknown> = {};
-
-  if (parsed.data.googleMapsApiKey) {
-    try {
-      updateData["googleMapsApiKey"] = encrypt(parsed.data.googleMapsApiKey);
-    } catch {
-      return createFailure("APIキーの暗号化に失敗しました");
-    }
-  }
-
-  await prisma.settings.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", ...updateData },
-    update: updateData,
-  });
-
-  updateTag(CACHE_TAGS.SETTINGS);
-  return createSuccess("Google Maps設定を更新しました");
-});
-
-/**
- * Google Maps接続テスト
- */
-export const testGoogleMapsConnectionAction = withPermission<
-  [string],
-  { message: string }
->(
-  "settings",
-  "update",
-)(async (_user, apiKey) => {
-  const result = await testGoogleMapsConnection(apiKey);
-
-  if (result.success) {
-    await prisma.settings.upsert({
-      where: { id: "singleton" },
-      create: {
-        id: "singleton",
-        googleMapsLastTestedAt: new Date(),
-        googleMapsConnectionStatus: "connected",
-      },
-      update: {
-        googleMapsLastTestedAt: new Date(),
-        googleMapsConnectionStatus: "connected",
-      },
-    });
-
-    updateTag(CACHE_TAGS.SETTINGS);
-    return createSuccess(result.message || "接続に成功しました", {
-      message: result.message || "",
-    });
-  }
-
-  // エラー時もステータス更新
-  await prisma.settings.upsert({
-    where: { id: "singleton" },
-    create: {
-      id: "singleton",
-      googleMapsLastTestedAt: new Date(),
-      googleMapsConnectionStatus: "error",
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      await updateGoogleMapsSettingsCommand(parsed.data);
     },
-    update: {
-      googleMapsLastTestedAt: new Date(),
-      googleMapsConnectionStatus: "error",
-    },
+    success: () => createSuccess("Google Maps設定を更新しました"),
+    afterSuccess: refreshSettingsCache,
   });
+}
 
-  updateTag(CACHE_TAGS.SETTINGS);
-  return createFailure(result.error || "接続テストに失敗しました");
-});
-
-/**
- * Google Mapsキーをクリア
- */
-export const clearGoogleMapsKeys = withPermission<[]>(
-  "settings",
-  "update",
-)(async () => {
-  await prisma.settings.update({
-    where: { id: "singleton" },
-    data: {
-      googleMapsApiKey: null,
-      googleMapsLastTestedAt: null,
-      googleMapsConnectionStatus: null,
-    },
-  });
-
-  updateTag(CACHE_TAGS.SETTINGS);
-  return createSuccess("Google Mapsキーをクリアしました");
-});
-
-// =============================================================================
-// UPDATE Actions - Cloudflare CDN
-// =============================================================================
-
-/**
- * Cloudflare設定を更新
- */
-export const updateCloudflareSettings = withPermission<
-  [CloudflareSettingsInput]
->(
-  "settings",
-  "update",
-)(async (_user, data) => {
-  const parsed = cloudflareSettingsSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationError(parsed.error);
-  }
-
-  const updateData: Record<string, unknown> = {};
-
-  if (parsed.data.cloudflareZoneId !== undefined) {
-    updateData["cloudflareZoneId"] = parsed.data.cloudflareZoneId;
-  }
-
-  if (parsed.data.cloudflareApiToken) {
-    try {
-      updateData["cloudflareApiToken"] = encrypt(
-        parsed.data.cloudflareApiToken,
+export async function testGoogleMapsConnectionAction(
+  apiKey: string,
+): Promise<ActionResult<{ message: string }>> {
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      const result = await testGoogleMapsConnection(apiKey);
+      await recordGoogleMapsConnectionStatus(
+        result.success ? "connected" : "error",
       );
-    } catch {
-      return createFailure("API Tokenの暗号化に失敗しました");
-    }
-  }
+      refreshSettingsCache();
 
-  await prisma.settings.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", ...updateData },
-    update: updateData,
-  });
+      if (!result.success) {
+        throw new DomainError(
+          result.error || "接続テストに失敗しました",
+          "VALIDATION",
+        );
+      }
 
-  updateTag(CACHE_TAGS.SETTINGS);
-  return createSuccess("Cloudflare設定を更新しました");
-});
-
-/**
- * Cloudflare接続テスト
- */
-export const testCloudflareConnectionAction = withPermission<
-  [string, string],
-  { message: string; zoneName?: string; plan?: string }
->(
-  "settings",
-  "update",
-)(async (_user, zoneId, apiToken) => {
-  const result = await testCloudflareConnection(zoneId, apiToken);
-
-  if (result.success) {
-    await prisma.settings.upsert({
-      where: { id: "singleton" },
-      create: {
-        id: "singleton",
-        cloudflareLastTestedAt: new Date(),
-        cloudflareConnectionStatus: "connected",
-      },
-      update: {
-        cloudflareLastTestedAt: new Date(),
-        cloudflareConnectionStatus: "connected",
-      },
-    });
-
-    updateTag(CACHE_TAGS.SETTINGS);
-    return createSuccess(result.message || "接続に成功しました", {
-      message: result.message || "",
-      zoneName:
-        typeof result.metadata?.["zoneName"] === "string"
-          ? result.metadata?.["zoneName"]
-          : undefined,
-      plan:
-        typeof result.metadata?.["plan"] === "string"
-          ? result.metadata?.["plan"]
-          : undefined,
-    });
-  }
-
-  // エラー時もステータス更新
-  await prisma.settings.upsert({
-    where: { id: "singleton" },
-    create: {
-      id: "singleton",
-      cloudflareLastTestedAt: new Date(),
-      cloudflareConnectionStatus: "error",
+      return { message: result.message || "" };
     },
-    update: {
-      cloudflareLastTestedAt: new Date(),
-      cloudflareConnectionStatus: "error",
-    },
+    success: (result) =>
+      createSuccess(result.message || "接続に成功しました", result),
   });
+}
 
-  updateTag(CACHE_TAGS.SETTINGS);
-  return createFailure(result.error || "接続テストに失敗しました");
-});
-
-/**
- * Cloudflareキーをクリア
- */
-export const clearCloudflareKeys = withPermission<[]>(
-  "settings",
-  "update",
-)(async () => {
-  await prisma.settings.update({
-    where: { id: "singleton" },
-    data: {
-      cloudflareZoneId: null,
-      cloudflareApiToken: null,
-      cloudflareLastTestedAt: null,
-      cloudflareConnectionStatus: null,
+export async function clearGoogleMapsKeys(): Promise<ActionResult<void>> {
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      await clearGoogleMapsSettingsCommand();
     },
+    success: () => createSuccess("Google Mapsキーをクリアしました"),
+    afterSuccess: refreshSettingsCache,
   });
+}
 
-  updateTag(CACHE_TAGS.SETTINGS);
-  return createSuccess("Cloudflare設定をクリアしました");
-});
-
-// =============================================================================
-// UPDATE Actions - Custom API Keys
-// =============================================================================
-
-/**
- * カスタムAPIキーを追加
- */
-export const addCustomApiKey = withPermission<[CustomApiKeyInput]>(
-  "settings",
-  "update",
-)(async (_user, data) => {
-  const parsed = customApiKeySchema.safeParse(data);
+export async function updateCloudflareSettings(
+  input: CloudflareSettingsInput,
+): Promise<ActionResult<void>> {
+  const parsed = cloudflareSettingsSchema.safeParse(input);
   if (!parsed.success) {
     return createValidationError(parsed.error);
   }
 
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: { customApiKeys: true },
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      await updateCloudflareSettingsCommand(parsed.data);
+    },
+    success: () => createSuccess("Cloudflare設定を更新しました"),
+    afterSuccess: refreshSettingsCache,
   });
+}
 
-  const existing = parseCustomApiKeysMap(settings?.customApiKeys);
-  const id = crypto.randomUUID();
-  const now = new Date().toISOString();
-
-  let encryptedKeyValue: string;
-  try {
-    encryptedKeyValue = encrypt(parsed.data.keyValue);
-  } catch {
-    return createFailure("APIキーの暗号化に失敗しました");
-  }
-
-  const newKey = {
-    name: parsed.data.name,
-    keyName: parsed.data.keyName,
-    keyValue: encryptedKeyValue,
-    description: parsed.data.description,
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  const updated = { ...existing, [id]: newKey };
-
-  await prisma.settings.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", customApiKeys: updated },
-    update: { customApiKeys: updated },
-  });
-
-  updateTag(CACHE_TAGS.SETTINGS);
-  return createSuccess("APIキーを追加しました");
-});
-
-/**
- * カスタムAPIキーを削除
- */
-export const deleteCustomApiKey = withPermission<[string]>(
-  "settings",
-  "update",
-)(async (_user, id) => {
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: { customApiKeys: true },
-  });
-
-  const existing = parseCustomApiKeysMap(settings?.customApiKeys);
-
-  if (!existing[id]) {
-    return createFailure("指定されたAPIキーが見つかりません");
-  }
-
-  delete existing[id];
-
-  await prisma.settings.update({
-    where: { id: "singleton" },
-    data: { customApiKeys: existing },
-  });
-
-  updateTag(CACHE_TAGS.SETTINGS);
-  return createSuccess("APIキーを削除しました");
-});
-
-// =============================================================================
-// Google OAuth (ログイン & カレンダー共通)
-// =============================================================================
-
-/**
- * Google OAuth設定を更新
- */
-export const updateGoogleOAuthSettings = withPermission<
-  [GoogleOAuthSettingsInput]
->(
-  "settings",
-  "update",
-)(async (_user, data) => {
-  const parsed = googleOAuthSettingsSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationError(parsed.error);
-  }
-
-  const updateData: Record<string, unknown> = {};
-
-  if (parsed.data.googleOAuthClientId !== undefined) {
-    updateData["googleOAuthClientId"] = parsed.data.googleOAuthClientId;
-  }
-
-  if (parsed.data.googleOAuthClientSecret) {
-    try {
-      updateData["googleOAuthClientSecret"] = encrypt(
-        parsed.data.googleOAuthClientSecret,
+export async function testCloudflareConnectionAction(
+  zoneId: string,
+  apiToken: string,
+): Promise<ActionResult<{ message: string; zoneName?: string; plan?: string }>> {
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      const result = await testCloudflareConnection(zoneId, apiToken);
+      await recordCloudflareConnectionStatus(
+        result.success ? "connected" : "error",
       );
-    } catch {
-      return createFailure("Client Secretの暗号化に失敗しました");
-    }
+      refreshSettingsCache();
+
+      if (!result.success) {
+        throw new DomainError(
+          result.error || "接続テストに失敗しました",
+          "VALIDATION",
+        );
+      }
+
+      return {
+        message: result.message || "",
+        zoneName:
+          typeof result.metadata?.["zoneName"] === "string"
+            ? result.metadata["zoneName"]
+            : undefined,
+        plan:
+          typeof result.metadata?.["plan"] === "string"
+            ? result.metadata["plan"]
+            : undefined,
+      };
+    },
+    success: (result) =>
+      createSuccess(result.message || "接続に成功しました", result),
+  });
+}
+
+export async function clearCloudflareKeys(): Promise<ActionResult<void>> {
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      await clearCloudflareSettingsCommand();
+    },
+    success: () => createSuccess("Cloudflare設定をクリアしました"),
+    afterSuccess: refreshSettingsCache,
+  });
+}
+
+export async function addCustomApiKey(
+  input: CustomApiKeyInput,
+): Promise<ActionResult<{ id: string }>> {
+  const parsed = customApiKeySchema.safeParse(input);
+  if (!parsed.success) {
+    return createValidationError(parsed.error);
   }
 
-  await prisma.settings.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", ...updateData },
-    update: updateData,
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => addCustomApiKeyCommand(parsed.data),
+    success: (result) => createSuccess("APIキーを追加しました", result),
+    afterSuccess: refreshSettingsCache,
+    resolveAuditResourceId: (result) => result.id,
   });
+}
 
-  // Auth インスタンスを再構築させる
-  resetAuthInstance();
-
-  updateTag(CACHE_TAGS.SETTINGS);
-  return createSuccess("Google OAuth設定を更新しました");
-});
-
-/**
- * Google OAuth接続テスト
- */
-export const testGoogleOAuthConnectionAction = withPermission<
-  [string, string],
-  { message: string }
->(
-  "settings",
-  "update",
-)(async (_user, clientId, clientSecret) => {
-  const result = await testGoogleOAuthConnection(clientId, clientSecret);
-
-  if (result.success) {
-    await prisma.settings.upsert({
-      where: { id: "singleton" },
-      create: {
-        id: "singleton",
-        googleOAuthLastTestedAt: new Date(),
-        googleOAuthConnectionStatus: "connected",
-      },
-      update: {
-        googleOAuthLastTestedAt: new Date(),
-        googleOAuthConnectionStatus: "connected",
-      },
-    });
-
-    updateTag(CACHE_TAGS.SETTINGS);
-    return createSuccess(result.message || "接続に成功しました", {
-      message: result.message || "",
-    });
+export async function deleteCustomApiKey(
+  id: string,
+): Promise<ActionResult<void>> {
+  const validated = apiKeyIdSchema.safeParse(id);
+  if (!validated.success) {
+    return createValidationError(validated.error);
   }
 
-  // エラー時もステータス更新
-  await prisma.settings.upsert({
-    where: { id: "singleton" },
-    create: {
-      id: "singleton",
-      googleOAuthLastTestedAt: new Date(),
-      googleOAuthConnectionStatus: "error",
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      await deleteCustomApiKeyCommand(validated.data);
     },
-    update: {
-      googleOAuthLastTestedAt: new Date(),
-      googleOAuthConnectionStatus: "error",
-    },
+    success: () => createSuccess("APIキーを削除しました"),
+    afterSuccess: refreshSettingsCache,
   });
+}
 
-  updateTag(CACHE_TAGS.SETTINGS);
-  return createFailure(result.error || "接続テストに失敗しました");
-});
+export async function updateGoogleOAuthSettings(
+  input: GoogleOAuthSettingsInput,
+): Promise<ActionResult<void>> {
+  const parsed = googleOAuthSettingsSchema.safeParse(input);
+  if (!parsed.success) {
+    return createValidationError(parsed.error);
+  }
 
-/**
- * Google OAuth設定をクリア
- */
-export const clearGoogleOAuthKeys = withPermission<[]>(
-  "settings",
-  "update",
-)(async () => {
-  await prisma.settings.update({
-    where: { id: "singleton" },
-    data: {
-      googleOAuthClientId: null,
-      googleOAuthClientSecret: null,
-      googleOAuthLastTestedAt: null,
-      googleOAuthConnectionStatus: null,
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      await updateGoogleOAuthSettingsCommand(parsed.data);
     },
+    success: () => createSuccess("Google OAuth設定を更新しました"),
+    afterSuccess: refreshSettingsCache,
   });
+}
 
-  // Auth インスタンスを再構築させる（環境変数フォールバックに戻る）
-  resetAuthInstance();
+export async function testGoogleOAuthConnectionAction(
+  clientId: string,
+  clientSecret: string,
+): Promise<ActionResult<{ message: string }>> {
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      const result = await testGoogleOAuthConnection(clientId, clientSecret);
+      await recordGoogleOAuthConnectionStatus(
+        result.success ? "connected" : "error",
+      );
+      refreshSettingsCache();
 
-  updateTag(CACHE_TAGS.SETTINGS);
-  return createSuccess("Google OAuth設定をクリアしました");
-});
+      if (!result.success) {
+        throw new DomainError(
+          result.error || "接続テストに失敗しました",
+          "VALIDATION",
+        );
+      }
+
+      return { message: result.message || "" };
+    },
+    success: (result) =>
+      createSuccess(result.message || "接続に成功しました", result),
+  });
+}
+
+export async function clearGoogleOAuthKeys(): Promise<ActionResult<void>> {
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      await clearGoogleOAuthSettingsCommand();
+    },
+    success: () => createSuccess("Google OAuth設定をクリアしました"),
+    afterSuccess: refreshSettingsCache,
+  });
+}

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ヘルスチェックAPI
  *
  * Cloud Run / Load Balancerからのヘルスチェックリクエストに応答します。
@@ -8,7 +8,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { prisma } from "@/shared/lib/prisma";
+import { runDatabaseHealthCheck } from "@/shared/domain/system/queries";
 import {
   logError,
   ErrorCategory,
@@ -25,7 +25,7 @@ export async function GET() {
 
   try {
     // Database connectivity check
-    await prisma.$queryRaw`SELECT 1`;
+    await runDatabaseHealthCheck();
 
     const responseTime = Date.now() - startTime;
 

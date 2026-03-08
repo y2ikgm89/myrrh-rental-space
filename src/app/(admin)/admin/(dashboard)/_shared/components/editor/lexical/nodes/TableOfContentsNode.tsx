@@ -204,7 +204,7 @@ export class TableOfContentsNode extends DecoratorNode<ReactElement> {
   }
 
   override decorate(): ReactElement {
-    return <TableOfContentsComponent nodeKey={this.__key} />;
+    return <TableOfContentsComponent nodeKey={this.getKey()} />;
   }
 
   override isInline(): false {

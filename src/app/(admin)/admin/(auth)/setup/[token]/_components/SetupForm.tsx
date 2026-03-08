@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 import { setupPassword } from "@/admin/actions/staff-invitation";
 import { signIn } from "@/shared/lib/auth-client";
 import { isActionFailure } from "@/admin/types/server-actions";
-import type { InvitationData } from "@/admin/lib/validations/staff-invitation";
+import type { InvitationData } from "@/shared/domain/staff-invitations/types";
 
 type Props = {
   invitation: InvitationData;

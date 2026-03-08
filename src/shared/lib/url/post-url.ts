@@ -7,7 +7,7 @@
  * @module shared/lib/url/post-url
  */
 
-import { PostPermalinkStructure } from '@/shared/generated/prisma/enums'
+import { PostPermalinkStructure } from '@/shared/db/enums'
 
 // =============================================================================
 // Types
@@ -261,6 +261,11 @@ const RESERVED_PATHS = new Set([
   'spaces',
   'terms',
   'privacy',
+  'posts',
+  'p',
+  'category',
+  'tag',
+  'preview',
   'api',
   'admin',
   '_next',

@@ -1,15 +1,15 @@
 /**
  * JSON-LD構造化データ設定
  *
- * Settings DBから取得した設定を基にJSON-LD用データを生成
- * Next.js 16 use cache ディレクティブによる明示的キャッシュ制御
+ * Settings / navigation domain から取得した設定を基にJSON-LD用データを生成
  */
 
-import { cacheLife, cacheTag } from 'next/cache'
-import { prisma } from '@/shared/lib/prisma'
-import { safeFetch, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors/server'
-import { getBaseUrl, SITE_DEFAULTS, CACHE_TAGS, CACHE_LIFE } from '@/shared/lib/constants'
-import { isRecord, toPlainObject } from '@/shared/lib/serialize'
+import { getBaseUrl, SITE_DEFAULTS } from '@/shared/lib/constants'
+import {
+  getOrganizationSettings,
+  getSocialLinkUrls,
+} from '@/shared/domain/settings/queries'
+import { isRecord } from '@/shared/lib/serialize'
 
 const BASE_URL = getBaseUrl()
 
@@ -95,55 +95,6 @@ export interface LocalBusinessJsonLdData {
 export interface GraphJsonLdData {
   localBusiness: LocalBusinessJsonLdData
   webSite: WebSiteJsonLdData
-}
-
-// =============================================================================
-// Data Fetching
-// =============================================================================
-
-/**
- * JSON-LD用組織設定を取得
- * キャッシュ: 1時間、設定更新時に無効化
- */
-async function getOrganizationSettings() {
-  'use cache'
-  cacheLife(CACHE_LIFE.STATIC_SETTINGS)
-  cacheTag(CACHE_TAGS.ORGANIZATION_SETTINGS, CACHE_TAGS.SETTINGS)
-
-  const result = await safeFetch({
-    fetch: () =>
-      prisma.settings.findUnique({
-        where: { id: 'singleton' },
-        select: {
-          siteName: true,
-          siteDescription: true,
-          businessName: true,
-          businessDescription: true,
-          headerLogoUrl: true,
-          phoneNumber: true,
-          email: true,
-          postalCode: true,
-          prefecture: true,
-          city: true,
-          streetAddress: true,
-          buildingName: true,
-          // MEO fields
-          businessHours: true,
-          specialHolidays: true,
-          latitude: true,
-          longitude: true,
-          priceRange: true,
-          businessAttributes: true,
-          paymentAccepted: true,
-          establishedDate: true,
-        },
-      }),
-    fallback: null,
-    category: ErrorCategory.DATABASE,
-    severity: ErrorSeverity.LOW,
-    operationName: 'getOrganizationSettings',
-  })
-  return toPlainObject(result)
 }
 
 // =============================================================================
@@ -340,30 +291,6 @@ function convertToAmenityFeatures(
   }
 
   return features.length > 0 ? features : undefined
-}
-
-/**
- * sameAs用のSocialLink URLを取得
- */
-async function getSocialLinkUrls(): Promise<string[]> {
-  'use cache'
-  cacheLife(CACHE_LIFE.STATIC_SETTINGS)
-  cacheTag(CACHE_TAGS.SOCIAL_LINKS, CACHE_TAGS.SETTINGS)
-
-  const links = await safeFetch({
-    fetch: () =>
-      prisma.socialLink.findMany({
-        where: { isActive: true },
-        select: { url: true },
-        orderBy: { order: 'asc' },
-      }),
-    fallback: [],
-    category: ErrorCategory.DATABASE,
-    severity: ErrorSeverity.LOW,
-    operationName: 'getSocialLinkUrls',
-  })
-
-  return links.map((link) => link.url)
 }
 
 /**

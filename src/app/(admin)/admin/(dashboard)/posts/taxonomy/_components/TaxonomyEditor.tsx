@@ -32,7 +32,7 @@ import {
 } from '@/admin/components/ui'
 import { useSingleMediaPicker } from '@/admin/hooks/use-media-picker'
 import { updatePostCategory, updatePostTag, deletePostCategory, deletePostTag } from '@/admin/actions/post'
-import type { PostCategoryData, PostTagData } from '@/admin/lib/validations/post'
+import type { PostCategoryData, PostTagData } from '@/shared/domain/posts/types'
 import type { SelectedMedia } from '@/admin/types/media-picker'
 import { generateSlug } from '@/shared/lib/utils'
 

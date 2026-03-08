@@ -30,9 +30,13 @@ import {
   postConfig,
 } from '@/admin/components/editor/inline'
 import { createPostCategory, createPostTag } from '@/admin/actions/post'
+import type {
+  PostCategoryData,
+  PostData,
+  PostTagData,
+} from '@/shared/domain/posts/types'
 import { generateSlug } from '@/shared/lib/utils'
 import { isValidPostStatus } from '@/shared/lib/validations/enums'
-import type { PostData, PostCategoryData, PostTagData } from '@/admin/lib/validations/post'
 import type { ContentWidth } from '@/shared/types'
 
 // =============================================================================

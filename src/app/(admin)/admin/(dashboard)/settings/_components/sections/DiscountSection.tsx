@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from '@/admin/components/ui'
 import { updateDiscountSettings, type DiscountSettingsData } from '@/admin/actions/settings'
-import { DiscountCombinationMode } from '@/shared/generated/prisma/enums'
+import { DiscountCombinationMode } from '@/shared/db/enums'
 import { useRefreshOnSuccess } from '../hooks'
 
 interface DiscountSectionProps {

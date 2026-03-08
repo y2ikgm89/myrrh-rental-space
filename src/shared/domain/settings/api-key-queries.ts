@@ -1,0 +1,242 @@
+import "server-only";
+
+import { prisma } from "@/shared/db/prisma";
+import {
+  maskCloudflareToken,
+  maskGoogleMapsKey,
+  maskGoogleOAuthSecret,
+  maskResendKey,
+  maskTurnstileKey,
+} from "@/shared/lib/api-keys";
+import { safeDecrypt } from "@/shared/lib/crypto";
+import type {
+  CloudflareConfig,
+  CustomApiKeyData,
+  GoogleMapsConfig,
+  GoogleOAuthConfig,
+  ResendConfig,
+  TurnstileConfig,
+} from "@/shared/types/api-keys";
+import {
+  parseConnectionStatus,
+  parseCustomApiKeysMap,
+} from "@/shared/domain/settings/api-key-helpers";
+
+async function getApiKeySettings() {
+  return prisma.settings.findUnique({
+    where: { id: "singleton" },
+  });
+}
+
+export async function getResendConfig(): Promise<ResendConfig> {
+  const settings = await prisma.settings.findUnique({
+    where: { id: "singleton" },
+    select: {
+      resendApiKey: true,
+      resendLastTestedAt: true,
+      resendConnectionStatus: true,
+    },
+  });
+
+  return {
+    apiKeyMasked: settings?.resendApiKey
+      ? maskResendKey(safeDecrypt(settings.resendApiKey) || "****")
+      : null,
+    lastTestedAt: settings?.resendLastTestedAt || null,
+    connectionStatus: parseConnectionStatus(settings?.resendConnectionStatus),
+  };
+}
+
+export async function getTurnstileConfig(): Promise<TurnstileConfig> {
+  const settings = await prisma.settings.findUnique({
+    where: { id: "singleton" },
+    select: {
+      turnstileSiteKey: true,
+      turnstileSecretKey: true,
+      turnstileLastTestedAt: true,
+      turnstileConnectionStatus: true,
+    },
+  });
+
+  return {
+    siteKey: settings?.turnstileSiteKey || null,
+    secretKeyMasked: settings?.turnstileSecretKey
+      ? maskTurnstileKey(safeDecrypt(settings.turnstileSecretKey) || "****")
+      : null,
+    lastTestedAt: settings?.turnstileLastTestedAt || null,
+    connectionStatus: parseConnectionStatus(
+      settings?.turnstileConnectionStatus,
+    ),
+  };
+}
+
+export async function getDecryptedTurnstileSecretKey(): Promise<string | null> {
+  const settings = await prisma.settings.findUnique({
+    where: { id: "singleton" },
+    select: {
+      turnstileSecretKey: true,
+    },
+  });
+
+  if (!settings?.turnstileSecretKey) {
+    return null;
+  }
+
+  return safeDecrypt(settings.turnstileSecretKey);
+}
+
+export async function getGoogleMapsConfig(): Promise<GoogleMapsConfig> {
+  const settings = await prisma.settings.findUnique({
+    where: { id: "singleton" },
+    select: {
+      googleMapsApiKey: true,
+      googleMapsLastTestedAt: true,
+      googleMapsConnectionStatus: true,
+    },
+  });
+
+  return {
+    apiKeyMasked: settings?.googleMapsApiKey
+      ? maskGoogleMapsKey(safeDecrypt(settings.googleMapsApiKey) || "****")
+      : null,
+    lastTestedAt: settings?.googleMapsLastTestedAt || null,
+    connectionStatus: parseConnectionStatus(
+      settings?.googleMapsConnectionStatus,
+    ),
+  };
+}
+
+export async function getCloudflareConfig(): Promise<CloudflareConfig> {
+  const settings = await prisma.settings.findUnique({
+    where: { id: "singleton" },
+    select: {
+      cloudflareZoneId: true,
+      cloudflareApiToken: true,
+      cloudflareLastTestedAt: true,
+      cloudflareConnectionStatus: true,
+    },
+  });
+
+  return {
+    zoneId: settings?.cloudflareZoneId || null,
+    apiTokenMasked: settings?.cloudflareApiToken
+      ? maskCloudflareToken(safeDecrypt(settings.cloudflareApiToken) || "****")
+      : null,
+    lastTestedAt: settings?.cloudflareLastTestedAt || null,
+    connectionStatus: parseConnectionStatus(
+      settings?.cloudflareConnectionStatus,
+    ),
+  };
+}
+
+export async function getDecryptedCloudflareCredentials(): Promise<{
+  zoneId: string;
+  apiToken: string;
+} | null> {
+  const settings = await prisma.settings.findUnique({
+    where: { id: "singleton" },
+    select: {
+      cloudflareZoneId: true,
+      cloudflareApiToken: true,
+    },
+  });
+
+  if (!settings?.cloudflareZoneId || !settings.cloudflareApiToken) {
+    return null;
+  }
+
+  const apiToken = safeDecrypt(settings.cloudflareApiToken);
+  if (!apiToken) {
+    return null;
+  }
+
+  return {
+    zoneId: settings.cloudflareZoneId,
+    apiToken,
+  };
+}
+
+export async function getCustomApiKeys(): Promise<CustomApiKeyData[]> {
+  const settings = await getApiKeySettings();
+
+  if (!settings?.customApiKeys || typeof settings.customApiKeys !== "object") {
+    return [];
+  }
+
+  const keysMap = parseCustomApiKeysMap(settings.customApiKeys);
+  return Object.entries(keysMap).map(([id, data]) => ({
+    id,
+    name: data.name,
+    keyName: data.keyName,
+    description: data.description,
+    lastTestedAt: data.lastTestedAt ? new Date(data.lastTestedAt) : undefined,
+    connectionStatus: data.connectionStatus,
+    createdAt: new Date(data.createdAt),
+    updatedAt: new Date(data.updatedAt),
+  }));
+}
+
+export async function getCustomApiKeyValue(id: string): Promise<string | null> {
+  const settings = await getApiKeySettings();
+  const keysMap = settings?.customApiKeys
+    ? parseCustomApiKeysMap(settings.customApiKeys)
+    : null;
+
+  if (!keysMap || !keysMap[id]) {
+    return null;
+  }
+
+  return safeDecrypt(keysMap[id].keyValue);
+}
+
+export async function getGoogleOAuthConfig(): Promise<GoogleOAuthConfig> {
+  const settings = await prisma.settings.findUnique({
+    where: { id: "singleton" },
+    select: {
+      googleOAuthClientId: true,
+      googleOAuthClientSecret: true,
+      googleOAuthLastTestedAt: true,
+      googleOAuthConnectionStatus: true,
+    },
+  });
+
+  return {
+    clientId: settings?.googleOAuthClientId || null,
+    clientSecretMasked: settings?.googleOAuthClientSecret
+      ? maskGoogleOAuthSecret(
+          safeDecrypt(settings.googleOAuthClientSecret) || "****",
+        )
+      : null,
+    lastTestedAt: settings?.googleOAuthLastTestedAt || null,
+    connectionStatus: parseConnectionStatus(
+      settings?.googleOAuthConnectionStatus,
+    ),
+  };
+}
+
+export async function getDecryptedGoogleOAuthCredentials(): Promise<{
+  clientId: string;
+  clientSecret: string;
+} | null> {
+  const settings = await prisma.settings.findUnique({
+    where: { id: "singleton" },
+    select: {
+      googleOAuthClientId: true,
+      googleOAuthClientSecret: true,
+    },
+  });
+
+  if (!settings?.googleOAuthClientId || !settings.googleOAuthClientSecret) {
+    return null;
+  }
+
+  const clientSecret = safeDecrypt(settings.googleOAuthClientSecret);
+  if (!clientSecret) {
+    return null;
+  }
+
+  return {
+    clientId: settings.googleOAuthClientId,
+    clientSecret,
+  };
+}

@@ -5,8 +5,8 @@
  * 各ページに適したセクションタイプとconfigを定義。
  */
 
-import { SectionType } from '@/shared/generated/prisma/enums'
-import type { Prisma } from '@/shared/generated/prisma/client'
+import { SectionType } from '@/shared/db/enums'
+import type { Prisma } from '@/shared/db/prisma'
 
 export type DefaultSectionDef = {
   type: SectionType

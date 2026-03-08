@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ActionDropdown, ActionDropdownItem, ActionDropdownSeparator } from '@/admin/components/ActionDropdown'
 import { DeleteConfirmDialog } from '@/admin/components/DeleteConfirmDialog'
 import { deleteInvitation, resendInvitation } from '@/admin/actions/staff-invitation'
-import type { InvitationData } from '@/admin/lib/validations/staff-invitation'
+import type { InvitationData } from '@/shared/domain/staff-invitations/types'
 
 type Props = {
   invitation: InvitationData

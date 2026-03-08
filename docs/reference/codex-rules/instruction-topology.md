@@ -60,6 +60,7 @@ Codex では、指示を 1 つの巨大ファイルに集約するより、役�
 - プロジェクト全体ポリシーの重複
 - 関係の薄い複数ワークフロー
 - 既に repo で満たしている環境セットアップ
+- 長い API リファレンスや variant 一覧
 
 ## Skill 作成基準
 
@@ -81,6 +82,8 @@ Codex では、指示を 1 つの巨大ファイルに集約するより、役�
 - frontmatter は `name` と `description` のみ
 - `description` には発火条件と境界を書く
 - 手順は短く、分岐は必要最小限にする
+- `SKILL.md` 本体は lean に保ち、詳細は `reference/` か `docs/reference/` へ逃がす
+- 追加 workflow と監査 / modernize workflow は分ける
 - コマンド例はこの repo のパスと環境に合わせる
 - 追加の知識は `reference/` に分離し、`SKILL.md` 本体を肥大化させない
 

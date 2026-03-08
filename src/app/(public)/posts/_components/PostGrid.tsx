@@ -10,6 +10,7 @@ import { formatSerializedDate } from "@/shared/lib/serialize";
 interface PostCardData {
   id: string;
   slug: string;
+  url: string;
   title: string;
   excerpt: string;
   thumbnailUrl: string;
@@ -38,7 +39,7 @@ export function PostGrid({ posts }: PostGridProps): ReactElement {
       {posts.map((post, index) => (
         <ScrollReveal key={post.id} delay={0.1 * Math.min(index, 5)}>
           <Link
-            href={`/posts/${post.slug}`}
+            href={post.url}
             className="group block overflow-hidden rounded-lg border border-border bg-card transition-shadow hover:shadow-lg"
           >
             <div className="relative aspect-[4/3] overflow-hidden">

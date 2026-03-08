@@ -15,8 +15,10 @@
  */
 
 import 'server-only'
-import { prisma } from './prisma'
-import { decrypt, isEncrypted } from './crypto'
+import {
+  getDecryptedTurnstileSecretKey,
+  getTurnstileConfig,
+} from '@/shared/domain/settings/api-key-queries'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from './errors/server'
 
 type TurnstileVerifyResponse = {
@@ -30,36 +32,11 @@ type TurnstileVerifyResponse = {
  * DBからTurnstile Secret Keyを取得
  */
 async function getTurnstileSecretKey(): Promise<string | null> {
-  const settings = await prisma.settings.findUnique({
-    where: { id: 'singleton' },
-    select: { turnstileSecretKey: true },
-  })
-
-  if (!settings?.turnstileSecretKey) {
+  const secretKey = await getDecryptedTurnstileSecretKey()
+  if (!secretKey) {
     return null
   }
-
-  // 暗号化フォーマットの検証
-  if (!isEncrypted(settings.turnstileSecretKey)) {
-    logError(new Error('Invalid encrypted format for Turnstile secret key'), {
-      category: ErrorCategory.VALIDATION,
-      severity: ErrorSeverity.HIGH,
-      context: { operation: 'getTurnstileSecretKey' },
-    })
-    return null
-  }
-
-  // 復号化（失敗時はnullを返す）
-  try {
-    return decrypt(settings.turnstileSecretKey)
-  } catch (error) {
-    logError(normalizeError(error), {
-      category: ErrorCategory.UNKNOWN,
-      severity: ErrorSeverity.HIGH,
-      context: { operation: 'getTurnstileSecretKey' },
-    })
-    return null
-  }
+  return secretKey
 }
 
 /**
@@ -135,13 +112,6 @@ export async function verifyTurnstileToken(token: string): Promise<boolean> {
  * Turnstileが有効かどうかをチェック（DBベース）
  */
 export async function isTurnstileEnabled(): Promise<boolean> {
-  const settings = await prisma.settings.findUnique({
-    where: { id: 'singleton' },
-    select: {
-      turnstileSiteKey: true,
-      turnstileSecretKey: true,
-    },
-  })
-
-  return Boolean(settings?.turnstileSiteKey && settings?.turnstileSecretKey)
+  const config = await getTurnstileConfig()
+  return Boolean(config.siteKey && config.secretKeyMasked)
 }

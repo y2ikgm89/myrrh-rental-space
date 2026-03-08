@@ -7,7 +7,7 @@
  */
 
 import { TaxonomyEditor } from '../../taxonomy/_components/TaxonomyEditor'
-import type { PostTagData } from '@/admin/lib/validations/post'
+import type { PostTagData } from '@/shared/domain/posts/types'
 
 type TagEditorProps = {
   tag: PostTagData

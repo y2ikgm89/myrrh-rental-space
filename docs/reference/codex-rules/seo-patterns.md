@@ -439,4 +439,4 @@ export async function generateMetadata({ params }: Props) {
 | `@/public/lib/seo/index.ts` | SEOライブラリ barrel export |
 | `@/public/lib/page-metadata.ts` | `generatePageMetadata(slug)`, `getPageSeo(slug)`, `getDefaultPageSeo(slug)` |
 | `@/public/data/business.ts` | `getBusinessInfo()` — コンポーネント向けビジネス情報 |
-| `@/shared/lib/settings/public.ts` | `getPublicBusinessSettings()` — 公開設定取得（NAP含む） |
+| `@/shared/domain/settings/queries.ts` | `getPublicBusinessSettings()` — 公開設定取得（NAP含む） |

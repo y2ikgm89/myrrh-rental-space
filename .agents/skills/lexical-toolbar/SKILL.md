@@ -1,6 +1,6 @@
 ---
 name: lexical-toolbar
-description: 管理画面の Lexical toolbar に新しい操作を足すときに使う。button 配置、command 接続、dialog 連携、active state を一緒に揃える。
+description: 管理画面の Lexical toolbar に新しい操作を足すときに使う。button 配置、command 接続、dialog 連携、active state を一緒に揃える。既存 toolbar の監査やモダナイズが主目的なら lexical-audit を使う。
 ---
 
 # lexical-toolbar
@@ -37,6 +37,7 @@ plugin や node を伴う場合でも、主目的が toolbar 操作の追加な�
 - button には `type=\"button\"` を付ける
 - icon size と button size を既存規約に合わせる
 - tooltip/title を省略しない
+- 既に state を変更する command は `editor.update()` で包まず `dispatchCommand()` を直接使う
 - toolbar だけ追加して backend/plugin 接続を置き忘れない
 
 ## Done

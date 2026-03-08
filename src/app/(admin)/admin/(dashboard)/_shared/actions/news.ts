@@ -1,570 +1,342 @@
 "use server";
 
-import { prisma } from "@/shared/lib/prisma";
 import { updateTag } from "next/cache";
-import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
-import { createSuccess, createFailure } from "@/admin/types/server-actions";
-import { createValidationError } from "@/shared/lib/action-helpers";
-import { withPermission } from "@/admin/lib/server-action-helpers";
-import type { NewsWhereInput } from "@/shared/types/prisma";
+import { z } from "zod";
+import { executeAdminMutation } from "@/admin/lib/admin-action";
 import { checkReadPermissionFor } from "@/admin/lib/permissions";
-import { purgeNewsCache } from "@/shared/lib/cloudflare";
-import { fireAndForget } from "@/shared/lib/async-utils";
-import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
-import {
-  checkSlugAvailability,
-  getSlugErrorMessage,
-} from "@/shared/lib/slug-validation";
 import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
-import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
-
-// Types and schemas from centralized validation file
+import {
+  createSuccess,
+  type ActionResult,
+} from "@/admin/types/server-actions";
+import {
+  getNewsById as getNewsByIdQuery,
+  getNewsList as getNewsListQuery,
+  getNewsVersions as getNewsVersionsQuery,
+} from "@/shared/domain/news/admin-queries";
+import {
+  createNews as createNewsCommand,
+  createNewsBackup as createNewsBackupCommand,
+  deleteNews as deleteNewsCommand,
+  publishNews as publishNewsCommand,
+  restoreNewsVersion as restoreNewsVersionCommand,
+  unpublishNews as unpublishNewsCommand,
+  updateNews as updateNewsCommand,
+} from "@/shared/domain/news/commands";
+import type {
+  GetNewsListResult,
+  NewsData,
+  NewsFilters,
+  NewsPagination,
+  NewsVersionData,
+} from "@/shared/domain/news/types";
+import { createValidationError } from "@/shared/lib/action-helpers";
+import { fireAndForget } from "@/shared/lib/async-utils";
+import { purgeNewsCache } from "@/shared/lib/cloudflare";
+import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
 import {
   createNewsSchema,
   updateNewsSchema,
-  type NewsData,
-  type NewsVersionData,
-  type GetNewsListResult,
-  type NewsFilters,
-  type NewsPagination,
   type CreateNewsInput,
   type UpdateNewsInput,
 } from "@/admin/lib/validations/news";
 
-// Re-export types for consumers
+export type { CreateNewsInput, UpdateNewsInput } from "@/admin/lib/validations/news";
 export type {
-  NewsData,
-  NewsVersionData,
   GetNewsListResult,
+  NewsData,
   NewsFilters,
   NewsPagination,
-  CreateNewsInput,
-  UpdateNewsInput,
-} from "@/admin/lib/validations/news";
-
-// =============================================================================
-// Helper Functions
-// =============================================================================
+  NewsVersionData,
+} from "@/shared/domain/news/types";
 
 const checkReadPermission = checkReadPermissionFor("news");
+const idSchema = z.string().uuid({ error: "お知らせIDが不正です" });
+const versionSchema = z.object({
+  newsId: z.string().uuid({ error: "お知らせIDが不正です" }),
+  version: z.number().int().positive({ error: "バージョンが不正です" }),
+});
 
-// =============================================================================
-// Actions
-// =============================================================================
+function purgeNewsCaches(...slugs: Array<string | undefined>): void {
+  const uniqueSlugs = [
+    ...new Set(slugs.filter((slug): slug is string => Boolean(slug))),
+  ];
 
-/**
- * お知らせ一覧を取得
- */
+  for (const slug of uniqueSlugs) {
+    fireAndForget(purgeNewsCache(slug), {
+      operation: "purgeNewsCache",
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.LOW,
+    });
+  }
+}
+
+function invalidateNewsCollectionCaches(): void {
+  updateTag(CACHE_TAGS.NEWS);
+}
+
 export async function getNewsList(
   filters: NewsFilters = {},
   pagination: NewsPagination = {},
 ): Promise<GetNewsListResult> {
-  const hasPermission = await checkReadPermission();
-  if (!hasPermission) {
+  if (!(await checkReadPermission())) {
     return { news: [], total: 0, page: 1, limit: 10, totalPages: 0 };
   }
 
-  const { status, search } = filters;
-
-  const {
-    page = 1,
-    limit = 10,
-    sortBy = "createdAt",
-    sortOrder = "desc",
-  } = pagination;
-
-  // Where条件を構築
-  const where: NewsWhereInput = {};
-
-  if (status === "PUBLISHED") {
-    where.isPublished = true;
-  } else if (status === "DRAFT") {
-    where.isPublished = false;
-  }
-
-  if (search) {
-    where.OR = [
-      { title: { contains: search, mode: "insensitive" } },
-      { contentHtml: { contains: search, mode: "insensitive" } },
-    ];
-  }
-
-  // 総件数とお知らせ一覧を並列取得（N+1解消）
-  const [total, news] = await prisma.$transaction([
-    prisma.news.count({ where }),
-    prisma.news.findMany({
-      where,
-      select: {
-        id: true,
-        slug: true,
-        title: true,
-        contentHtml: true,
-        contentJson: true,
-        isPublished: true,
-        publishedAt: true,
-        createdAt: true,
-        updatedAt: true,
-        contentWidth: true,
-        contentWidthCustom: true,
-        metaDescription: true,
-        metaKeywords: true,
-        ogpTitle: true,
-        ogpDescription: true,
-        ogpImageUrl: true,
-      },
-      orderBy: {
-        [sortBy]: sortOrder,
-      },
-      skip: (page - 1) * limit,
-      take: limit,
-    }),
-  ]);
-
-  return {
-    news: toPlainArray(news),
-    total,
-    page,
-    limit,
-    totalPages: Math.ceil(total / limit),
-  };
+  return getNewsListQuery(filters, pagination);
 }
 
-/**
- * お知らせ詳細を取得
- */
 export async function getNewsById(id: string): Promise<NewsData | null> {
-  const hasPermission = await checkReadPermission();
-  if (!hasPermission) {
+  if (!(await checkReadPermission())) {
     return null;
   }
 
-  const news = await prisma.news.findUnique({
-    where: { id },
-  });
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) {
+    return null;
+  }
 
-  if (!news) return null;
-
-  return toPlainObject(news);
+  return getNewsByIdQuery(validated.data);
 }
 
-/**
- * お知らせを作成
- */
-export const createNews = withPermission<[CreateNewsInput], { id: string }>(
-  "news",
-  "create",
-)(async (_user, data) => {
-  const parsed = createNewsSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationError(parsed.error);
-  }
-
-  const { slug, title, contentJson } = parsed.data;
-
-  // スラッグの使用可能チェック（予約パス＋全コンテンツタイプ横断）
-  const slugCheck = await checkSlugAvailability(slug, {
-    currentType: "news",
-  });
-  if (!slugCheck.available) {
-    return createFailure(getSlugErrorMessage(slugCheck.reason));
-  }
-
-  // JSON → HTML 変換（空コンテンツの場合はスキップ）
-  const contentHtml = contentJson
-    ? await renderEditorStateToHtmlLazy(contentJson)
-    : "";
-
-  const news = await prisma.news.create({
-    data: {
-      slug,
-      title,
-      contentJson: contentJson ? JSON.parse(contentJson) : undefined,
-      contentHtml,
-      isPublished: false,
-    },
-  });
-
-  updateTag(CACHE_TAGS.NEWS);
-
-  // Cloudflare CDN キャッシュパージ
-  fireAndForget(purgeNewsCache(news.id), {
-    operation: "purgeNewsCache",
-    category: ErrorCategory.EXTERNAL_API,
-    severity: ErrorSeverity.LOW,
-  });
-
-  return createSuccess("お知らせを作成しました", { id: news.id });
-});
-
-/**
- * お知らせを更新
- */
-export const updateNews = withPermission<[string, UpdateNewsInput], void>(
-  "news",
-  "update",
-)(async (_user, id, data) => {
-  const parsed = updateNewsSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationError(parsed.error);
-  }
-
-  const existingNews = await prisma.news.findUnique({
-    where: { id },
-    select: { id: true },
-  });
-
-  if (!existingNews) {
-    return createFailure("お知らせが見つかりません");
-  }
-
-  const {
-    slug,
-    title,
-    contentJson,
-    contentWidth,
-    contentWidthCustom,
-    metaDescription,
-    metaKeywords,
-    ogpTitle,
-    ogpDescription,
-    ogpImageUrl,
-  } = parsed.data;
-
-  // スラッグの使用可能チェック（予約パス＋全コンテンツタイプ横断、自分自身は除外）
-  const slugCheck = await checkSlugAvailability(slug, {
-    currentType: "news",
-    currentId: id,
-  });
-  if (!slugCheck.available) {
-    return createFailure(getSlugErrorMessage(slugCheck.reason));
-  }
-
-  // JSON → HTML 変換
-  const contentHtml = await renderEditorStateToHtmlLazy(contentJson);
-
-  await prisma.news.update({
-    where: { id },
-    data: {
-      slug,
-      title,
-      contentJson: JSON.parse(contentJson),
-      contentHtml,
-      contentWidth: contentWidth ?? null,
-      contentWidthCustom: contentWidthCustom ?? null,
-      // SEO フィールド
-      metaDescription: metaDescription ?? null,
-      metaKeywords: metaKeywords ?? null,
-      // OGP フィールド
-      ogpTitle: ogpTitle ?? null,
-      ogpDescription: ogpDescription ?? null,
-      ogpImageUrl: ogpImageUrl ?? null,
-    },
-  });
-
-  updateTag(CACHE_TAGS.NEWS);
-  updateTag(getCacheTag.news.detail(id));
-
-  // Cloudflare CDN キャッシュパージ
-  fireAndForget(purgeNewsCache(id), {
-    operation: "purgeNewsCache",
-    category: ErrorCategory.EXTERNAL_API,
-    severity: ErrorSeverity.LOW,
-  });
-
-  return createSuccess("お知らせを保存しました");
-});
-
-/**
- * お知らせを削除
- */
-export const deleteNews = withPermission<[string], void>(
-  "news",
-  "delete",
-)(async (_user, id) => {
-  const news = await prisma.news.findUnique({
-    where: { id },
-    select: { id: true },
-  });
-
-  if (!news) {
-    return createFailure("お知らせが見つかりません");
-  }
-
-  await prisma.news.delete({
-    where: { id },
-  });
-
-  updateTag(CACHE_TAGS.NEWS);
-
-  // Cloudflare CDN キャッシュパージ
-  fireAndForget(purgeNewsCache(id), {
-    operation: "purgeNewsCache",
-    category: ErrorCategory.EXTERNAL_API,
-    severity: ErrorSeverity.LOW,
-  });
-
-  return createSuccess("お知らせを削除しました");
-});
-
-/**
- * お知らせを公開（バージョン自動作成）
- */
-export const publishNews = withPermission<[string], void>(
-  "news",
-  "publish",
-)(async (user, id) => {
-  // お知らせデータと最新バージョン番号を並列取得
-  const [news, latestVersion] = await Promise.all([
-    prisma.news.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        publishedAt: true,
-        contentHtml: true,
-        contentJson: true,
-      },
-    }),
-    prisma.newsVersion.findFirst({
-      where: { newsId: id },
-      orderBy: { version: "desc" },
-      select: { version: true },
-    }),
-  ]);
-
-  if (!news) {
-    return createFailure("お知らせが見つかりません");
-  }
-
-  const nextVersion = (latestVersion?.version ?? 0) + 1;
-
-  // トランザクションで公開 + バージョン作成
-  await prisma.$transaction([
-    prisma.news.update({
-      where: { id },
-      data: {
-        isPublished: true,
-        publishedAt: news.publishedAt ?? new Date(),
-      },
-    }),
-    prisma.newsVersion.create({
-      data: {
-        newsId: id,
-        version: nextVersion,
-        contentHtml: news.contentHtml,
-        contentJson: news.contentJson ?? undefined,
-        createdBy: user.id,
-      },
-    }),
-  ]);
-
-  updateTag(CACHE_TAGS.NEWS);
-  updateTag(getCacheTag.news.detail(id));
-
-  // Cloudflare CDN キャッシュパージ
-  fireAndForget(purgeNewsCache(id), {
-    operation: "purgeNewsCache",
-    category: ErrorCategory.EXTERNAL_API,
-    severity: ErrorSeverity.LOW,
-  });
-
-  return createSuccess(`公開しました（バージョン ${nextVersion}）`);
-});
-
-/**
- * お知らせを非公開（下書きに戻す）
- */
-export const unpublishNews = withPermission<[string], void>(
-  "news",
-  "publish",
-)(async (_user, id) => {
-  const news = await prisma.news.findUnique({
-    where: { id },
-    select: { id: true },
-  });
-
-  if (!news) {
-    return createFailure("お知らせが見つかりません");
-  }
-
-  await prisma.news.update({
-    where: { id },
-    data: {
-      isPublished: false,
-    },
-  });
-
-  updateTag(CACHE_TAGS.NEWS);
-  updateTag(getCacheTag.news.detail(id));
-
-  // Cloudflare CDN キャッシュパージ
-  fireAndForget(purgeNewsCache(id), {
-    operation: "purgeNewsCache",
-    category: ErrorCategory.EXTERNAL_API,
-    severity: ErrorSeverity.LOW,
-  });
-
-  return createSuccess("下書きに戻しました");
-});
-
-/**
- * バックアップを作成（バージョン手動作成）
- */
-export const createNewsBackup = withPermission<[string], { version: number }>(
-  "news",
-  "update",
-)(async (user, id) => {
-  // お知らせデータと最新バージョン番号を並列取得
-  const [news, latestVersion] = await Promise.all([
-    prisma.news.findUnique({
-      where: { id },
-      select: { id: true, contentHtml: true, contentJson: true },
-    }),
-    prisma.newsVersion.findFirst({
-      where: { newsId: id },
-      orderBy: { version: "desc" },
-      select: { version: true },
-    }),
-  ]);
-
-  if (!news) {
-    return createFailure("お知らせが見つかりません");
-  }
-
-  const nextVersion = (latestVersion?.version ?? 0) + 1;
-
-  await prisma.newsVersion.create({
-    data: {
-      newsId: id,
-      version: nextVersion,
-      contentHtml: news.contentHtml,
-      contentJson: news.contentJson ?? undefined,
-      createdBy: user.id,
-    },
-  });
-
-  return createSuccess(
-    `バックアップを作成しました（バージョン ${nextVersion}）`,
-    { version: nextVersion },
-  );
-});
-
-/**
- * バージョン履歴を取得
- */
 export async function getNewsVersions(
   newsId: string,
 ): Promise<NewsVersionData[]> {
-  const hasPermission = await checkReadPermission();
-  if (!hasPermission) {
+  if (!(await checkReadPermission())) {
     return [];
   }
 
-  const versions = await prisma.newsVersion.findMany({
-    where: { newsId },
-    select: {
-      id: true,
-      newsId: true,
-      version: true,
-      contentHtml: true,
-      contentJson: true,
-      createdAt: true,
-      createdBy: true,
-    },
-    orderBy: { version: "desc" },
-  });
-
-  return toPlainArray(versions);
-}
-
-/**
- * バージョンを復元
- */
-export const restoreNewsVersion = withPermission<[string, number], void>(
-  "news",
-  "update",
-)(async (_user, newsId, version) => {
-  const versionData = await prisma.newsVersion.findUnique({
-    where: {
-      newsId_version: { newsId, version },
-    },
-    select: { contentHtml: true, contentJson: true },
-  });
-
-  if (!versionData) {
-    return createFailure("バージョンが見つかりません");
+  const validated = idSchema.safeParse(newsId);
+  if (!validated.success) {
+    return [];
   }
 
-  await prisma.news.update({
-    where: { id: newsId },
-    data: {
-      contentHtml: versionData.contentHtml,
-      contentJson: versionData.contentJson ?? undefined,
-      isPublished: false,
+  return getNewsVersionsQuery(validated.data);
+}
+
+export async function createNews(
+  input: CreateNewsInput,
+): Promise<ActionResult<{ id: string }>> {
+  const parsed = createNewsSchema.safeParse(input);
+  if (!parsed.success) {
+    return createValidationError(parsed.error);
+  }
+
+  const contentHtml = parsed.data.contentJson
+    ? await renderEditorStateToHtmlLazy(parsed.data.contentJson)
+    : "";
+  let createdNewsSlug: string | null = null;
+
+  return executeAdminMutation({
+    resource: "news",
+    action: "create",
+    execute: async () => {
+      const result = await createNewsCommand({
+        ...parsed.data,
+        contentHtml,
+      });
+      createdNewsSlug = result.slug;
+      return { id: result.id };
+    },
+    success: (result) => createSuccess("お知らせを作成しました", result),
+    afterSuccess: () => {
+      invalidateNewsCollectionCaches();
+      purgeNewsCaches(createdNewsSlug ?? undefined);
+    },
+    resolveAuditResourceId: (result) => result.id,
+  });
+}
+
+export async function updateNews(
+  id: string,
+  input: UpdateNewsInput,
+): Promise<ActionResult<void>> {
+  const validatedId = idSchema.safeParse(id);
+  if (!validatedId.success) {
+    return createValidationError(validatedId.error);
+  }
+
+  const parsed = updateNewsSchema.safeParse(input);
+  if (!parsed.success) {
+    return createValidationError(parsed.error);
+  }
+
+  const contentHtml = await renderEditorStateToHtmlLazy(parsed.data.contentJson);
+  let updatedNews: { oldSlug: string; slug: string } | null = null;
+
+  return executeAdminMutation({
+    resource: "news",
+    action: "update",
+    resourceId: validatedId.data,
+    execute: async () => {
+      updatedNews = await updateNewsCommand(validatedId.data, {
+        ...parsed.data,
+        contentHtml,
+        contentWidth: parsed.data.contentWidth ?? null,
+        contentWidthCustom: parsed.data.contentWidthCustom ?? null,
+      });
+    },
+    success: () => createSuccess("お知らせを保存しました"),
+    afterSuccess: () => {
+      if (!updatedNews) {
+        return;
+      }
+
+      invalidateNewsCollectionCaches();
+      updateTag(getCacheTag.news.detail(updatedNews.oldSlug));
+      if (updatedNews.slug !== updatedNews.oldSlug) {
+        updateTag(getCacheTag.news.detail(updatedNews.slug));
+      }
+      purgeNewsCaches(updatedNews.oldSlug, updatedNews.slug);
     },
   });
+}
 
-  updateTag(CACHE_TAGS.NEWS);
-  updateTag(getCacheTag.news.detail(newsId));
+export async function deleteNews(id: string): Promise<ActionResult<void>> {
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) {
+    return createValidationError(validated.error);
+  }
 
-  // Cloudflare CDN キャッシュパージ
-  fireAndForget(purgeNewsCache(newsId), {
-    operation: "purgeNewsCache",
-    category: ErrorCategory.EXTERNAL_API,
-    severity: ErrorSeverity.LOW,
+  let deletedNewsSlug: string | null = null;
+
+  return executeAdminMutation({
+    resource: "news",
+    action: "delete",
+    resourceId: validated.data,
+    execute: async () => {
+      const result = await deleteNewsCommand(validated.data);
+      deletedNewsSlug = result.slug;
+    },
+    success: () => createSuccess("お知らせを削除しました"),
+    afterSuccess: () => {
+      if (!deletedNewsSlug) {
+        return;
+      }
+
+      invalidateNewsCollectionCaches();
+      updateTag(getCacheTag.news.detail(deletedNewsSlug));
+      purgeNewsCaches(deletedNewsSlug);
+    },
   });
+}
 
-  return createSuccess(`バージョン ${version} を復元しました（下書き状態）`);
-});
+export async function publishNews(id: string): Promise<ActionResult<void>> {
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) {
+    return createValidationError(validated.error);
+  }
 
-// =============================================================================
-// Public Functions (認証不要)
-// =============================================================================
+  let publishedNews: { slug: string; version: number } | null = null;
 
-export type PublicNews = {
-  id: string;
-  slug: string;
-  title: string;
-  publishedAt: Date;
-};
-
-export type GetPublishedNewsListOptions = {
-  take?: number;
-};
-
-/**
- * 公開済みお知らせ一覧を取得（認証不要）
- * ホームページや公開一覧ページで使用
- */
-export async function getPublishedNewsList(
-  options: GetPublishedNewsListOptions = {},
-): Promise<PublicNews[]> {
-  const { take = 5 } = options;
-
-  const newsItems = await prisma.news.findMany({
-    where: {
-      isPublished: true,
-      publishedAt: { not: null },
+  return executeAdminMutation({
+    resource: "news",
+    action: "publish",
+    resourceId: validated.data,
+    execute: async (user) => {
+      publishedNews = await publishNewsCommand(validated.data, user.id);
     },
-    select: {
-      id: true,
-      slug: true,
-      title: true,
-      publishedAt: true,
+    success: () =>
+      createSuccess(
+        `公開しました（バージョン ${publishedNews?.version ?? 0}）`,
+      ),
+    afterSuccess: () => {
+      if (!publishedNews) {
+        return;
+      }
+
+      invalidateNewsCollectionCaches();
+      updateTag(getCacheTag.news.detail(publishedNews.slug));
+      purgeNewsCaches(publishedNews.slug);
     },
-    orderBy: {
-      publishedAt: "desc",
-    },
-    take,
   });
+}
 
-  return toPlainArray(
-    newsItems
-      .filter((item) => item.publishedAt && item.publishedAt <= new Date())
-      .map((item) => ({
-        id: item.id,
-        slug: item.slug,
-        title: item.title,
-        publishedAt: item.publishedAt!,
-      })),
-  );
+export async function unpublishNews(id: string): Promise<ActionResult<void>> {
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) {
+    return createValidationError(validated.error);
+  }
+
+  let unpublishedNewsSlug: string | null = null;
+
+  return executeAdminMutation({
+    resource: "news",
+    action: "publish",
+    resourceId: validated.data,
+    execute: async () => {
+      const result = await unpublishNewsCommand(validated.data);
+      unpublishedNewsSlug = result.slug;
+    },
+    success: () => createSuccess("下書きに戻しました"),
+    afterSuccess: () => {
+      if (!unpublishedNewsSlug) {
+        return;
+      }
+
+      invalidateNewsCollectionCaches();
+      updateTag(getCacheTag.news.detail(unpublishedNewsSlug));
+      purgeNewsCaches(unpublishedNewsSlug);
+    },
+  });
+}
+
+export async function createNewsBackup(
+  id: string,
+): Promise<ActionResult<{ version: number }>> {
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) {
+    return createValidationError(validated.error);
+  }
+
+  return executeAdminMutation({
+    resource: "news",
+    action: "update",
+    resourceId: validated.data,
+    execute: async (user) => createNewsBackupCommand(validated.data, user.id),
+    success: (result) =>
+      createSuccess(
+        `バックアップを作成しました（バージョン ${result.version}）`,
+        { version: result.version },
+      ),
+  });
+}
+
+export async function restoreNewsVersion(
+  newsId: string,
+  version: number,
+): Promise<ActionResult<void>> {
+  const parsed = versionSchema.safeParse({ newsId, version });
+  if (!parsed.success) {
+    return createValidationError(parsed.error);
+  }
+
+  let restoredNewsSlug: string | null = null;
+
+  return executeAdminMutation({
+    resource: "news",
+    action: "update",
+    resourceId: parsed.data.newsId,
+    execute: async () => {
+      const result = await restoreNewsVersionCommand(
+        parsed.data.newsId,
+        parsed.data.version,
+      );
+      restoredNewsSlug = result.slug;
+    },
+    success: () =>
+      createSuccess(
+        `バージョン ${parsed.data.version} を復元しました（下書き状態）`,
+      ),
+    afterSuccess: () => {
+      if (!restoredNewsSlug) {
+        return;
+      }
+
+      invalidateNewsCollectionCaches();
+      updateTag(getCacheTag.news.detail(restoredNewsSlug));
+      purgeNewsCaches(restoredNewsSlug);
+    },
+  });
 }

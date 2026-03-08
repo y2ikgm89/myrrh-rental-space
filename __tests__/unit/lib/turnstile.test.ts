@@ -22,7 +22,7 @@ const mockPrismaClient = {
 }
 
 // prismaモジュールをモック
-mock.module('@/shared/lib/prisma', () => ({
+mock.module('@/shared/db/prisma', () => ({
   prisma: mockPrismaClient,
 }))
 

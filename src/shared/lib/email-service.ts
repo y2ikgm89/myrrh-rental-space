@@ -30,7 +30,10 @@ import { ReservationCancelledEmail } from "@/shared/emails/reservation-cancelled
 import { ContactConfirmationEmail } from "@/shared/emails/contact-confirmation";
 import { AdminNotificationEmail } from "@/shared/emails/admin-notification";
 import { StaffInvitationEmail } from "@/shared/emails/staff-invitation";
-import { prisma } from "./prisma";
+import {
+  getCalendarEmailSettings as getCalendarEmailSettingsQuery,
+  getNotificationEmailAddresses as getNotificationEmailAddressesQuery,
+} from "@/shared/domain/settings/queries";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import {
@@ -76,17 +79,7 @@ type StaffInvitationEmailData = {
 // =============================================================================
 
 async function getNotificationEmails(): Promise<string[]> {
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: { notificationEmailAddresses: true },
-  });
-
-  if (!settings?.notificationEmailAddresses) return [];
-
-  return settings.notificationEmailAddresses
-    .split(",")
-    .map((email) => email.trim())
-    .filter(Boolean);
+  return getNotificationEmailAddressesQuery();
 }
 
 function formatPrice(price: number | null): string {
@@ -108,18 +101,7 @@ async function getCalendarEmailSettings(): Promise<{
   icalAttachmentEnabled: boolean;
   addToCalendarLinksEnabled: boolean;
 }> {
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: {
-      icalAttachmentEnabled: true,
-      addToCalendarLinksEnabled: true,
-    },
-  });
-
-  return {
-    icalAttachmentEnabled: settings?.icalAttachmentEnabled ?? true,
-    addToCalendarLinksEnabled: settings?.addToCalendarLinksEnabled ?? true,
-  };
+  return getCalendarEmailSettingsQuery();
 }
 
 /**

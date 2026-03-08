@@ -9,7 +9,7 @@
 
 import { describe, test, expect } from 'bun:test'
 import { z } from 'zod'
-import { ReservationStatus } from '@/shared/generated/prisma/enums'
+import { ReservationStatus } from '@/shared/db/enums'
 
 // reservation.ts 内で定義されているスキーマを再現
 const updateStatusSchema = z.object({

@@ -12,7 +12,6 @@ import { format } from "date-fns";
 import {
   newsFormSchema,
   type NewsFormData,
-  type NewsData,
 } from "@/admin/lib/validations/news";
 import {
   createNews,
@@ -21,6 +20,7 @@ import {
   publishNews,
   unpublishNews,
 } from "@/admin/actions/news";
+import type { NewsData } from "@/shared/domain/news/types";
 import {
   isValidLayoutWidth,
   type LayoutWidth,

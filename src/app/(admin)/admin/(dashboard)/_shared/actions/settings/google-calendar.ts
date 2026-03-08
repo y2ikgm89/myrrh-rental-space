@@ -6,365 +6,312 @@
  * @module admin/actions/settings/google-calendar
  */
 
-import { prisma } from "@/shared/lib/prisma";
 import { updateTag } from "next/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
+import { createValidationError } from "@/shared/lib/action-helpers";
+import { checkReadPermissionFor } from "@/admin/lib/permissions";
+import { executeAdminMutation } from "@/admin/lib/admin-action";
 import {
   createSuccess,
-  createFailure,
   type ActionResult,
 } from "@/admin/types/server-actions";
-import { createValidationError } from "@/shared/lib/action-helpers";
-import { withPermission } from "@/admin/lib/server-action-helpers";
 import {
-  testServiceAccountConnection,
-  testOAuthConnection,
-  encryptServiceAccountJson,
-  isValidCalendarId,
-  getGoogleCalendarSettings,
+  getGoogleCalendarSettings as getGoogleCalendarSettingsQuery,
+  getGoogleCalendarWebhookState,
+} from "@/shared/domain/settings/admin-queries";
+import {
+  clearGoogleCalendarServiceAccount as clearGoogleCalendarServiceAccountCommand,
+  clearGoogleCalendarWebhook,
+  disconnectGoogleCalendarOAuth as disconnectGoogleCalendarOAuthCommand,
+  enableGoogleCalendarOAuth,
+  recordGoogleCalendarConnectionError,
+  recordGoogleCalendarConnectionSuccess,
+  saveGoogleCalendarWebhook,
+  updateGoogleCalendarSettings as updateGoogleCalendarSettingsCommand,
+  updateTwoWaySyncSettings as updateTwoWaySyncSettingsCommand,
+} from "@/shared/domain/settings/commands";
+import { DomainError } from "@/shared/domain/domain-error";
+import type { GoogleCalendarSettingsData } from "@/shared/domain/settings/types";
+import {
+  logError,
+  ErrorCategory,
+  ErrorSeverity,
+  normalizeError,
+} from "@/shared/lib/errors/server";
+import {
   setupWebhookWatch,
   stopWebhookWatch,
+  testOAuthConnection,
+  testServiceAccountConnection,
 } from "@/shared/lib/google-calendar";
 import { syncFromCalendar } from "@/shared/lib/calendar-sync";
-import { serverEnv } from "@/shared/lib/env/server";
 import { clientEnv } from "@/shared/lib/env/client";
+import { serverEnv } from "@/shared/lib/env/server";
 
 import {
+  googleCalendarConnectionTestSchema,
   googleCalendarSettingsSchema,
   twoWaySyncSettingsSchema,
+  type GoogleCalendarConnectionTestInput,
   type GoogleCalendarSettingsInput,
   type TwoWaySyncSettingsInput,
 } from "./schemas";
 
-// =============================================================================
-// Actions
-// =============================================================================
+const checkReadPermission = checkReadPermissionFor("settings");
 
-/**
- * Google Calendar設定を更新
- */
-export const updateGoogleCalendarSettings = withPermission<
-  [data: GoogleCalendarSettingsInput],
-  void
->(
-  "settings",
-  "update",
-)(async (_user, data): Promise<ActionResult<void>> => {
+function invalidateSettingsCache(): void {
+  updateTag(CACHE_TAGS.SETTINGS);
+}
+
+function invalidateCalendarSyncCache(): void {
+  updateTag(CACHE_TAGS.SETTINGS);
+  updateTag(CACHE_TAGS.RESERVATIONS);
+}
+
+export async function updateGoogleCalendarSettings(
+  data: GoogleCalendarSettingsInput,
+): Promise<ActionResult<void>> {
   const parsed = googleCalendarSettingsSchema.safeParse(data);
   if (!parsed.success) {
     return createValidationError(parsed.error);
   }
 
-  // カレンダーIDのバリデーション
-  if (
-    parsed.data.googleCalendarId &&
-    !isValidCalendarId(parsed.data.googleCalendarId)
-  ) {
-    return createFailure("カレンダーIDの形式が無効です");
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      await updateGoogleCalendarSettingsCommand(parsed.data);
+    },
+    success: () => createSuccess("Google Calendar設定を更新しました"),
+    afterSuccess: invalidateSettingsCache,
+  });
+}
+
+export async function testGoogleCalendarConnectionAction(
+  params: GoogleCalendarConnectionTestInput,
+): Promise<ActionResult<{ calendarName: string; accountEmail: string }>> {
+  const parsed = googleCalendarConnectionTestSchema.safeParse(params);
+  if (!parsed.success) {
+    return createValidationError(parsed.error);
   }
 
-  const updateData: Record<string, unknown> = {
-    googleCalendarEnabled: parsed.data.googleCalendarEnabled,
-    googleCalendarId: parsed.data.googleCalendarId || null,
-    icalAttachmentEnabled: parsed.data.icalAttachmentEnabled,
-    addToCalendarLinksEnabled: parsed.data.addToCalendarLinksEnabled,
-  };
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      const result = await testServiceAccountConnection(parsed.data);
+      if (!result.success) {
+        try {
+          await recordGoogleCalendarConnectionError();
+        } catch (error) {
+          logError(normalizeError(error), {
+            category: ErrorCategory.DATABASE,
+            severity: ErrorSeverity.MEDIUM,
+            context: { operation: "testGoogleCalendarConnectionAction:error" },
+          });
+        }
 
-  // サービスアカウントJSONが入力された場合のみ更新（暗号化して保存）
-  if (parsed.data.serviceAccountJson) {
-    try {
-      // JSONとして有効か確認
-      JSON.parse(parsed.data.serviceAccountJson);
-      updateData["googleCalendarServiceAccountJson"] =
-        encryptServiceAccountJson(parsed.data.serviceAccountJson);
-    } catch {
-      return createFailure("サービスアカウントJSONの形式が無効です");
-    }
+        throw new DomainError(
+          result.error ?? "接続テストに失敗しました",
+          "VALIDATION",
+        );
+      }
+
+      try {
+        await recordGoogleCalendarConnectionSuccess();
+      } catch (error) {
+        logError(normalizeError(error), {
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.MEDIUM,
+          context: {
+            operation: "testGoogleCalendarConnectionAction:success",
+          },
+        });
+      }
+
+      return {
+        calendarName: result.calendarName ?? "",
+        accountEmail: result.accountEmail ?? "",
+      };
+    },
+    success: (result) => createSuccess("接続テストに成功しました", result),
+    afterSuccess: invalidateSettingsCache,
+  });
+}
+
+export async function testGoogleCalendarOAuthAction(): Promise<
+  ActionResult<{ calendarName: string }>
+> {
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async (user) => {
+      const result = await testOAuthConnection(user.id);
+      if (!result.success) {
+        throw new DomainError(
+          result.error ?? "OAuth接続テストに失敗しました",
+          "VALIDATION",
+        );
+      }
+
+      await enableGoogleCalendarOAuth();
+
+      return {
+        calendarName: result.calendarName ?? "",
+      };
+    },
+    success: (result) =>
+      createSuccess("OAuth接続テストに成功しました", result),
+    afterSuccess: invalidateSettingsCache,
+  });
+}
+
+export async function clearGoogleCalendarServiceAccount(): Promise<ActionResult<void>> {
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      await clearGoogleCalendarServiceAccountCommand();
+    },
+    success: () => createSuccess("サービスアカウント認証情報をクリアしました"),
+    afterSuccess: invalidateSettingsCache,
+  });
+}
+
+export async function disconnectGoogleCalendarOAuth(): Promise<ActionResult<void>> {
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async (user) => {
+      await disconnectGoogleCalendarOAuthCommand(user.id);
+    },
+    success: () => createSuccess("Google Calendar OAuth連携を解除しました"),
+    afterSuccess: invalidateSettingsCache,
+  });
+}
+
+export async function getGoogleCalendarSettings(): Promise<GoogleCalendarSettingsData | null> {
+  if (!(await checkReadPermission())) {
+    return null;
   }
 
-  await prisma.settings.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", ...updateData },
-    update: updateData,
-  });
+  return getGoogleCalendarSettingsQuery();
+}
 
-  updateTag(CACHE_TAGS.SETTINGS);
-
-  return createSuccess("Google Calendar設定を更新しました");
-});
-
-/**
- * サービスアカウント接続テスト
- */
-export const testGoogleCalendarConnectionAction = withPermission<
-  [params: { serviceAccountJson: string; calendarId: string }],
-  { calendarName: string; accountEmail: string }
->(
-  "settings",
-  "update",
-)(async (_user, params) => {
-  if (!isValidCalendarId(params.calendarId)) {
-    return createFailure("カレンダーIDの形式が無効です");
-  }
-
-  const result = await testServiceAccountConnection({
-    serviceAccountJson: params.serviceAccountJson,
-    calendarId: params.calendarId,
-  });
-
-  if (!result.success) {
-    await prisma.settings.update({
-      where: { id: "singleton" },
-      data: { googleCalendarConnectionStatus: "error" },
-    });
-    return createFailure(result.error ?? "接続テストに失敗しました");
-  }
-
-  await prisma.settings.upsert({
-    where: { id: "singleton" },
-    create: {
-      id: "singleton",
-      googleCalendarLastTestedAt: new Date(),
-      googleCalendarConnectionStatus: "connected",
-    },
-    update: {
-      googleCalendarLastTestedAt: new Date(),
-      googleCalendarConnectionStatus: "connected",
-    },
-  });
-
-  updateTag(CACHE_TAGS.SETTINGS);
-
-  return createSuccess("接続テストに成功しました", {
-    calendarName: result.calendarName ?? "",
-    accountEmail: result.accountEmail ?? "",
-  });
-});
-
-/**
- * OAuth接続テスト（管理者の個人カレンダー）
- */
-export const testGoogleCalendarOAuthAction = withPermission<
-  [],
-  { calendarName: string }
->(
-  "settings",
-  "update",
-)(async (user) => {
-  const result = await testOAuthConnection(user.id);
-
-  if (!result.success) {
-    return createFailure(result.error ?? "OAuth接続テストに失敗しました");
-  }
-
-  await prisma.settings.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", googleCalendarOAuthEnabled: true },
-    update: { googleCalendarOAuthEnabled: true },
-  });
-
-  updateTag(CACHE_TAGS.SETTINGS);
-
-  return createSuccess("OAuth接続テストに成功しました", {
-    calendarName: result.calendarName ?? "",
-  });
-});
-
-/**
- * Google Calendarサービスアカウント認証情報をクリア
- */
-export const clearGoogleCalendarServiceAccount = withPermission<[], void>(
-  "settings",
-  "update",
-)(async (): Promise<ActionResult<void>> => {
-  await prisma.settings.update({
-    where: { id: "singleton" },
-    data: {
-      googleCalendarServiceAccountJson: null,
-      googleCalendarConnectionStatus: null,
-      googleCalendarLastTestedAt: null,
-    },
-  });
-
-  updateTag(CACHE_TAGS.SETTINGS);
-
-  return createSuccess("サービスアカウント認証情報をクリアしました");
-});
-
-/**
- * Google Calendar OAuth連携を解除
- */
-export const disconnectGoogleCalendarOAuth = withPermission<[], void>(
-  "settings",
-  "update",
-)(async (user): Promise<ActionResult<void>> => {
-  // Accountテーブルからトークンを削除
-  await prisma.account.deleteMany({
-    where: {
-      userId: user.id,
-      providerId: "google",
-    },
-  });
-
-  // OAuth有効フラグをオフ
-  await prisma.settings.update({
-    where: { id: "singleton" },
-    data: {
-      googleCalendarOAuthEnabled: false,
-    },
-  });
-
-  updateTag(CACHE_TAGS.SETTINGS);
-
-  return createSuccess("Google Calendar OAuth連携を解除しました");
-});
-
-/**
- * Google Calendar設定を取得（公開用）
- */
-export { getGoogleCalendarSettings };
-
-// =============================================================================
-// Two-Way Sync Actions
-// =============================================================================
-
-/**
- * 双方向同期設定を更新
- */
-export const updateTwoWaySyncSettings = withPermission<
-  [data: TwoWaySyncSettingsInput],
-  void
->(
-  "settings",
-  "update",
-)(async (_user, data): Promise<ActionResult<void>> => {
+export async function updateTwoWaySyncSettings(
+  data: TwoWaySyncSettingsInput,
+): Promise<ActionResult<void>> {
   const parsed = twoWaySyncSettingsSchema.safeParse(data);
   if (!parsed.success) {
     return createValidationError(parsed.error);
   }
 
-  await prisma.settings.upsert({
-    where: { id: "singleton" },
-    create: {
-      id: "singleton",
-      googleCalendarTwoWaySyncEnabled: parsed.data.enabled,
-      googleCalendarSyncMethod: parsed.data.syncMethod,
-      googleCalendarPollingIntervalMin: parsed.data.pollingIntervalMin,
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      await updateTwoWaySyncSettingsCommand(parsed.data);
     },
-    update: {
-      googleCalendarTwoWaySyncEnabled: parsed.data.enabled,
-      googleCalendarSyncMethod: parsed.data.syncMethod,
-      googleCalendarPollingIntervalMin: parsed.data.pollingIntervalMin,
+    success: () => createSuccess("双方向同期設定を更新しました"),
+    afterSuccess: invalidateSettingsCache,
+  });
+}
+
+export async function setupCalendarWebhook(): Promise<
+  ActionResult<{ expiration: Date | undefined }>
+> {
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      const baseUrl = clientEnv.NEXT_PUBLIC_APP_URL ?? serverEnv.BETTER_AUTH_URL;
+      if (!baseUrl) {
+        throw new DomainError("APP_URLが設定されていません", "VALIDATION");
+      }
+
+      const normalizedBaseUrl = baseUrl.startsWith("http")
+        ? baseUrl
+        : `https://${baseUrl}`;
+      const webhookUrl = `${normalizedBaseUrl}/api/webhooks/google-calendar`;
+
+      const result = await setupWebhookWatch(webhookUrl);
+      if (!result.success || !result.channelId || !result.resourceId) {
+        throw new DomainError(
+          result.error ?? "Webhook設定に失敗しました",
+          "VALIDATION",
+        );
+      }
+
+      await saveGoogleCalendarWebhook({
+        channelId: result.channelId,
+        resourceId: result.resourceId,
+        expiration: result.expiration,
+      });
+
+      return { expiration: result.expiration };
     },
+    success: ({ expiration }) =>
+      createSuccess("Webhookを設定しました", { expiration }),
+    afterSuccess: invalidateSettingsCache,
   });
+}
 
-  updateTag(CACHE_TAGS.SETTINGS);
+export async function stopCalendarWebhook(): Promise<ActionResult<void>> {
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      const webhookState = await getGoogleCalendarWebhookState();
+      if (!webhookState.channelId || !webhookState.resourceId) {
+        throw new DomainError("Webhookが設定されていません", "VALIDATION");
+      }
 
-  return createSuccess("双方向同期設定を更新しました");
-});
+      const result = await stopWebhookWatch(
+        webhookState.channelId,
+        webhookState.resourceId,
+      );
+      if (!result.success) {
+        throw new DomainError(
+          result.error ?? "Webhook停止に失敗しました",
+          "VALIDATION",
+        );
+      }
 
-/**
- * Webhookを設定
- */
-export const setupCalendarWebhook = withPermission<
-  [],
-  { expiration: Date | undefined }
->(
-  "settings",
-  "update",
-)(async () => {
-  const baseUrl = clientEnv.NEXT_PUBLIC_APP_URL ?? serverEnv.BETTER_AUTH_URL;
-  if (!baseUrl) {
-    return createFailure("APP_URLが設定されていません");
-  }
-
-  const webhookUrl = `${baseUrl.startsWith("http") ? baseUrl : `https://${baseUrl}`}/api/webhooks/google-calendar`;
-  const result = await setupWebhookWatch(webhookUrl);
-
-  if (!result.success || !result.channelId || !result.resourceId) {
-    return createFailure(result.error ?? "Webhook設定に失敗しました");
-  }
-
-  await prisma.settings.update({
-    where: { id: "singleton" },
-    data: {
-      googleCalendarWebhookChannelId: result.channelId,
-      googleCalendarWebhookResourceId: result.resourceId,
-      googleCalendarWebhookExpiration: result.expiration,
+      await clearGoogleCalendarWebhook();
     },
+    success: () => createSuccess("Webhookを停止しました"),
+    afterSuccess: invalidateSettingsCache,
   });
+}
 
-  updateTag(CACHE_TAGS.SETTINGS);
+export async function triggerManualSync(): Promise<
+  ActionResult<{
+    processed: number;
+    deleted: number;
+    updated: number;
+    errors: string[];
+  }>
+> {
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      const result = await syncFromCalendar();
+      if (!result.success) {
+        throw new DomainError(
+          result.errors[0] ?? "同期に失敗しました",
+          "UNEXPECTED",
+        );
+      }
 
-  return createSuccess("Webhookを設定しました", {
-    expiration: result.expiration,
-  });
-});
-
-/**
- * Webhookを停止
- */
-export const stopCalendarWebhook = withPermission<[], void>(
-  "settings",
-  "update",
-)(async () => {
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: {
-      googleCalendarWebhookChannelId: true,
-      googleCalendarWebhookResourceId: true,
+      return {
+        processed: result.processed,
+        deleted: result.deleted,
+        updated: result.updated,
+        errors: result.errors,
+      };
     },
+    success: (result) => createSuccess("同期が完了しました", result),
+    afterSuccess: invalidateCalendarSyncCache,
   });
-
-  if (
-    !settings?.googleCalendarWebhookChannelId ||
-    !settings.googleCalendarWebhookResourceId
-  ) {
-    return createFailure("Webhookが設定されていません");
-  }
-
-  const result = await stopWebhookWatch(
-    settings.googleCalendarWebhookChannelId,
-    settings.googleCalendarWebhookResourceId,
-  );
-
-  if (!result.success) {
-    return createFailure(result.error ?? "Webhook停止に失敗しました");
-  }
-
-  await prisma.settings.update({
-    where: { id: "singleton" },
-    data: {
-      googleCalendarWebhookChannelId: null,
-      googleCalendarWebhookResourceId: null,
-      googleCalendarWebhookExpiration: null,
-    },
-  });
-
-  updateTag(CACHE_TAGS.SETTINGS);
-
-  return createSuccess("Webhookを停止しました");
-});
-
-/**
- * 手動で同期を実行
- */
-export const triggerManualSync = withPermission<
-  [],
-  { processed: number; deleted: number; updated: number; errors: string[] }
->(
-  "settings",
-  "update",
-)(async () => {
-  const result = await syncFromCalendar();
-
-  updateTag(CACHE_TAGS.SETTINGS);
-  updateTag(CACHE_TAGS.RESERVATIONS);
-
-  return createSuccess("同期が完了しました", {
-    processed: result.processed,
-    deleted: result.deleted,
-    updated: result.updated,
-    errors: result.errors,
-  });
-});
+}

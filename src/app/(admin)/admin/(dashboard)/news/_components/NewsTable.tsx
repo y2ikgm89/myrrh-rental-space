@@ -10,7 +10,7 @@ import { EmptyState } from "@/admin/components/EmptyState";
 import { NewsStatusBadge } from "@/admin/components/status-badges";
 import { NewsActionCell } from "./NewsActionCell";
 import { formatDateTimeShort } from "@/shared/lib/utils";
-import type { NewsData } from "@/admin/actions/news";
+import type { NewsData } from "@/shared/domain/news/types";
 
 // =============================================================================
 // Types

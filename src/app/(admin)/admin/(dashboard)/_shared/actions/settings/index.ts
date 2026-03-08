@@ -145,7 +145,7 @@ export {
   updateDiscountSettings,
 } from './discount'
 
-export type { DiscountSettingsData } from './discount'
+export type { DiscountSettingsData } from '@/shared/domain/settings/types'
 export type { DurationDiscountRuleInput as DurationDiscountRule } from './schemas'
 
 // =============================================================================
@@ -158,7 +158,7 @@ export {
   getPublicTaxSettings,
 } from './tax'
 
-export type { TaxSettingsData } from './tax'
+export type { TaxSettingsData } from '@/shared/domain/settings/types'
 export type { TaxSettingsInput } from './schemas'
 
 // =============================================================================
@@ -173,5 +173,5 @@ export {
 
 export { DEFAULT_ROBOTS_TXT } from './robots-txt-constants'
 
-export type { RobotsTxtData } from './robots-txt'
+export type { RobotsTxtData } from '@/shared/domain/settings/types'
 export type { RobotsTxtSettingsInput } from './schemas'

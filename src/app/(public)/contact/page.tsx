@@ -10,11 +10,10 @@
 import type { Metadata } from 'next'
 import type { ReactElement } from 'react'
 import { Suspense } from 'react'
-import { connection } from 'next/server'
 import { ScrollReveal } from '@/public/components/animations/ScrollReveal'
 import { BreadcrumbJsonLd } from '@/public/components/seo/JsonLd'
 import { generatePageMetadata } from '@/public/lib/page-metadata'
-import { getPageSectionsWithFallback } from '@/public/actions/section'
+import { getPageSectionsWithFallback } from '@/shared/domain/sections/queries'
 import { SectionRenderer } from '@/public/components/sections/SectionRenderer'
 import { ContactForm } from './_components/ContactForm'
 import { BusinessInfo } from './_components/BusinessInfo'
@@ -24,8 +23,6 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function ContactPage(): Promise<ReactElement> {
-  await connection()
-
   const sections = await getPageSectionsWithFallback('contact')
 
   return (

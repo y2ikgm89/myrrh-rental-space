@@ -1,53 +1,19 @@
 /**
- * お知らせバー管理 Server Action 統合テスト
+ * お知らせバー管理 domain 統合テスト
  *
- * src/app/(admin)/admin/(dashboard)/_shared/actions/announcement-bar.ts のテスト
+ * source of truth:
+ * - src/shared/domain/settings/announcement-bar.ts
  *
- * 注: Server Actionsの直接テストは複雑なため、
- *     バリデーションスキーマ + 型構造をテスト
+ * 注: write action は thin adapter 化したため、
+ *     domain schema + 型構造を直接テストする
  */
 
 import { describe, test, expect } from 'bun:test'
-import { z } from 'zod'
-import { AnnouncementBarType } from '@/shared/generated/prisma/enums'
-
-// announcement-bar.ts 内で定義されているスキーマを再現
-const announcementBarSchema = z.object({
-  message: z
-    .string()
-    .min(1, { error: 'メッセージは必須です' })
-    .max(200, { error: 'メッセージは200文字以内で入力してください' }),
-  type: z.enum(AnnouncementBarType).default('info'),
-  linkUrl: z
-    .string()
-    .url({ error: '有効なURLを入力してください' })
-    .or(z.literal(''))
-    .nullable()
-    .optional(),
-  linkText: z
-    .string()
-    .max(50, { error: 'リンクテキストは50文字以内' })
-    .nullable()
-    .optional(),
-  bgColor: z
-    .string()
-    .regex(/^#[0-9A-Fa-f]{6}$/, { error: '有効な色コードを入力してください' })
-    .transform((v) => v.toLowerCase())
-    .or(z.literal(''))
-    .nullable()
-    .optional(),
-  textColor: z
-    .string()
-    .regex(/^#[0-9A-Fa-f]{6}$/, { error: '有効な色コードを入力してください' })
-    .transform((v) => v.toLowerCase())
-    .or(z.literal(''))
-    .nullable()
-    .optional(),
-  isActive: z.boolean().default(true),
-  priority: z.number().int().min(0).max(100).default(0),
-  startAt: z.string().nullable().optional(),
-  endAt: z.string().nullable().optional(),
-})
+import { AnnouncementBarType } from '@/shared/db/enums'
+import {
+  announcementBarInputSchema as announcementBarSchema,
+  type AnnouncementBarData,
+} from '@/shared/domain/settings/announcement-bar'
 
 // 有効なお知らせバー作成データ
 const VALID_ANNOUNCEMENT_INPUT = {
@@ -390,26 +356,10 @@ describe('AnnouncementBar Admin Action Integration', () => {
 
   describe('AnnouncementBarData型テスト', () => {
     test('AnnouncementBarData型の構造', () => {
-      type AnnouncementBarData = {
-        id: string
-        message: string
-        type: string
-        linkUrl: string | null
-        linkText: string | null
-        bgColor: string | null
-        textColor: string | null
-        isActive: boolean
-        priority: number
-        startAt: Date | null
-        endAt: Date | null
-        createdAt: Date
-        updatedAt: Date
-      }
-
       const bar: AnnouncementBarData = {
         id: '550e8400-e29b-41d4-a716-446655440000',
         message: 'キャンペーン実施中',
-        type: 'promo',
+        type: AnnouncementBarType.promo,
         linkUrl: 'https://example.com',
         linkText: '詳しくはこちら',
         bgColor: '#ff5733',

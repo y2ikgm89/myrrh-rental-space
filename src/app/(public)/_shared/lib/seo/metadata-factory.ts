@@ -1,30 +1,19 @@
 /**
  * SEOメタデータ生成ファクトリ
  *
- * Settings DBから取得した設定を基にNext.jsメタデータを生成
- * Next.js 16 use cache ディレクティブによる明示的キャッシュ制御
+ * Settings domain から取得した設定を基にNext.jsメタデータを生成
  */
 
-import { cacheLife, cacheTag } from 'next/cache'
 import type { Metadata } from 'next'
-import { prisma } from '@/shared/lib/prisma'
-import { safeFetch, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors/server'
-import { toPlainObject } from '@/shared/lib/serialize'
-import { SITE_DEFAULTS, CACHE_TAGS, CACHE_LIFE } from '@/shared/lib/constants'
+import { SITE_DEFAULTS } from '@/shared/lib/constants'
+import {
+  getSeoSettings,
+  type SeoSettings,
+} from '@/shared/domain/settings/queries'
 
 // =============================================================================
 // Types
 // =============================================================================
-
-export interface SeoSettings {
-  siteName: string | null
-  siteDescription: string | null
-  defaultOgpImageUrl: string | null
-  defaultMetaDescription: string | null
-  defaultMetaKeywords: string | null
-  defaultOgpTitle: string | null
-  defaultOgpDescription: string | null
-}
 
 export interface ArticleMetadata {
   title: string
@@ -35,44 +24,7 @@ export interface ArticleMetadata {
   metaKeywords?: string | null
 }
 
-// =============================================================================
-// Data Fetching
-// =============================================================================
-
-/**
- * SEO設定を取得
- * キャッシュ: 1時間、設定更新時に無効化
- */
-export async function getSeoSettings(): Promise<SeoSettings | null> {
-  'use cache'
-  cacheLife(CACHE_LIFE.METADATA)
-  cacheTag(CACHE_TAGS.SEO_SETTINGS, CACHE_TAGS.SETTINGS)
-
-  const result = await safeFetch({
-    fetch: () =>
-      prisma.settings.findUnique({
-        where: { id: 'singleton' },
-        select: {
-          siteName: true,
-          siteDescription: true,
-          defaultOgpImageUrl: true,
-          defaultMetaDescription: true,
-          defaultMetaKeywords: true,
-          defaultOgpTitle: true,
-          defaultOgpDescription: true,
-        },
-      }),
-    fallback: null,
-    category: ErrorCategory.DATABASE,
-    severity: ErrorSeverity.LOW,
-    operationName: 'getSeoSettings',
-  })
-  return toPlainObject(result)
-}
-
-// =============================================================================
-// Metadata Generators
-// =============================================================================
+export { getSeoSettings, type SeoSettings }
 
 /**
  * 記事ページメタデータ生成（ブログ・ニュース共通）

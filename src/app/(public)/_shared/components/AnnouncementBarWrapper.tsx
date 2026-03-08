@@ -8,12 +8,13 @@
 
 import dynamic from 'next/dynamic'
 import {
-  getActiveAnnouncementBarsCached,
-  getAnnouncementBarCarouselSettingsCached,
-} from '@/shared/lib/settings'
+  getActiveAnnouncementBars,
+  getAnnouncementBarCarouselSettings,
+} from '@/shared/domain/settings/announcement-bar'
 import type { CarouselSettings } from './AnnouncementBarCarousel'
 import type { ReactElement } from 'react'
 import { validateAnimation, validateDesignStyle } from '@/shared/lib/announcement-bar-utils'
+import { toISOString } from '@/shared/lib/serialize'
 
 const AnnouncementBarCarousel = dynamic(
   () => import('./AnnouncementBarCarousel').then((mod) => mod.AnnouncementBarCarousel),
@@ -22,8 +23,8 @@ const AnnouncementBarCarousel = dynamic(
 
 export async function AnnouncementBarWrapper(): Promise<ReactElement | null> {
   const [bars, dbSettings] = await Promise.all([
-    getActiveAnnouncementBarsCached(),
-    getAnnouncementBarCarouselSettingsCached(),
+    getActiveAnnouncementBars(),
+    getAnnouncementBarCarouselSettings(),
   ])
 
   if (bars.length === 0) {
@@ -63,8 +64,8 @@ export async function AnnouncementBarWrapper(): Promise<ReactElement | null> {
         linkText: bar.linkText,
         bgColor: bar.bgColor,
         textColor: bar.textColor,
-        startAt: bar.startAt?.toISOString() ?? null,
-        endAt: bar.endAt?.toISOString() ?? null,
+        startAt: toISOString(bar.startAt) ?? null,
+        endAt: toISOString(bar.endAt) ?? null,
       }))}
       settings={settings}
     />

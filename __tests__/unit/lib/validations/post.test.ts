@@ -7,7 +7,7 @@ import {
   postTagSchema,
 } from '@/admin/lib/validations/post'
 import { LayoutWidth } from '@/shared/types/prisma'
-import { PostStatus } from '@/shared/generated/prisma/enums'
+import { PostStatus } from '@/shared/db/enums'
 
 // 有効なLexical EditorState JSON（lexicalJsonSchema準拠）
 const VALID_LEXICAL_JSON = '{"root":{"children":[],"direction":null,"format":"","indent":0,"type":"root","version":1}}'

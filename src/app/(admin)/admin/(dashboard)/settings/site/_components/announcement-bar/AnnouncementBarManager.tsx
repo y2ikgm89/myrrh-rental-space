@@ -19,7 +19,10 @@ import {
   deleteAnnouncementBar,
   toggleAnnouncementBarActive,
 } from '@/admin/actions/announcement-bar'
-import type { AnnouncementBarData, AnnouncementBarInput } from '@/admin/actions/announcement-bar'
+import type {
+  AnnouncementBarData,
+  AnnouncementBarInput,
+} from '@/shared/domain/settings/announcement-bar'
 import {
   updateAnnouncementBarCarouselSettings,
   type AnnouncementBarCarouselSettingsInput,
@@ -28,7 +31,7 @@ import {
   validateAnimation,
   validateDesignStyle,
 } from '@/shared/lib/announcement-bar-utils'
-import { AnnouncementBarAnimation, AnnouncementBarDesignStyle, AnnouncementBarType } from '@/shared/generated/prisma/enums'
+import { AnnouncementBarAnimation, AnnouncementBarDesignStyle, AnnouncementBarType } from '@/shared/db/enums'
 import { isValidAnnouncementBarType } from '@/shared/lib/validations/enums'
 import { BarList } from './BarList'
 import { BarDialog, DeleteDialog } from './BarDialog'

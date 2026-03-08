@@ -9,7 +9,7 @@
 
 import { describe, test, expect } from 'bun:test'
 import { z } from 'zod'
-import { LayoutWidth } from '@/shared/types/prisma'
+import { LayoutWidth } from '@/shared/db/enums'
 
 // news.ts 内で定義されているスキーマを再現
 const createNewsSchema = z.object({

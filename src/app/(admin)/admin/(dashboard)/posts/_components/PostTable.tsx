@@ -11,7 +11,7 @@ import { EmptyState } from "@/admin/components/EmptyState";
 import { PostStatusBadge } from "@/admin/components/status-badges";
 import { PostActionCell } from "./PostActionCell";
 import { formatDateTimeShort } from "@/shared/lib/utils";
-import type { PostListData } from "@/admin/lib/validations/post";
+import type { PostListData } from "@/shared/domain/posts/types";
 
 // =============================================================================
 // Types

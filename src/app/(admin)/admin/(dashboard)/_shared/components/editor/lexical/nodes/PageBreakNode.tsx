@@ -151,7 +151,7 @@ export class PageBreakNode extends DecoratorNode<ReactElement> {
   }
 
   override decorate(): ReactElement {
-    return <PageBreakComponent nodeKey={this.__key} />
+    return <PageBreakComponent nodeKey={this.getKey()} />
   }
 }
 

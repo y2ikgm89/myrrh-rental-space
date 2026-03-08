@@ -12,22 +12,18 @@
 
 import type { Metadata } from 'next'
 import type { ReactElement } from 'react'
-import { connection } from 'next/server'
+import { ExperienceShell } from '@/public/components/effects/ExperienceShell'
 import { WebSiteJsonLd } from '@/public/components/seo/JsonLd'
 import { getWebSiteJsonLdData } from '@/public/lib/seo'
 import { generatePageMetadata } from '@/public/lib/page-metadata'
-import { getHomepageSections } from '@/public/actions/section'
+import { getHomepageSections } from '@/shared/domain/sections/queries'
 import { SectionRenderer } from './_shared/components/sections/SectionRenderer'
 
 export async function generateMetadata(): Promise<Metadata> {
-  await connection()
-
   return generatePageMetadata('home')
 }
 
 export default async function HomePage(): Promise<ReactElement> {
-  await connection()
-
   const [webSiteData, sections] = await Promise.all([
     getWebSiteJsonLdData(),
     getHomepageSections(),
@@ -40,9 +36,11 @@ export default async function HomePage(): Promise<ReactElement> {
         description={webSiteData.description}
         url={webSiteData.url}
       />
-      {sections.map((section) => (
-        <SectionRenderer key={section.id} section={section} />
-      ))}
+      <ExperienceShell>
+        {sections.map((section) => (
+          <SectionRenderer key={section.id} section={section} />
+        ))}
+      </ExperienceShell>
     </>
   )
 }

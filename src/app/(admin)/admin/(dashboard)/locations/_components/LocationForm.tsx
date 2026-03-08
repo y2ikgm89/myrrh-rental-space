@@ -40,9 +40,9 @@ import {
   locationFormSchema,
   defaultLocationFormValues,
   type LocationFormInput,
-  type LocationWithStats,
 } from "@/admin/lib/validations/location";
 import { createLocation, updateLocation } from "@/admin/actions/location";
+import type { LocationWithStats } from "@/shared/domain/locations/types";
 import { cn } from "@/shared/lib/utils";
 import {
   useSingleMediaPicker,

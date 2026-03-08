@@ -26,7 +26,7 @@ import {
 import { sendWebhookRenewalNotification } from '@/shared/lib/email-service'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors/server'
 import { fireAndForget } from '@/shared/lib/async-utils'
-import { CalendarSyncMethod } from '@/shared/generated/prisma/enums'
+import { CalendarSyncMethod } from '@/shared/db/enums'
 import { serverEnv } from '@/shared/lib/env/server'
 
 /**

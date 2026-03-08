@@ -11,7 +11,7 @@
  */
 
 import { describe, test, expect, mock, beforeEach } from 'bun:test'
-import { Role, AuditAction } from '@/shared/generated/prisma/enums'
+import { Role, AuditAction } from '@/shared/db/enums'
 import type { MockUser, MockSession } from '../../mocks/auth'
 import { createMockUser, createMockSession } from '../../mocks/auth'
 import type { ActionResult } from '@/shared/types/server-actions'

@@ -38,18 +38,6 @@ export const NewsPreviewDataSchema = z.object({
 });
 
 /**
- * ページプレビューデータスキーマ
- *
- * Note: content は廃止（セクションシステムに移行済み）
- */
-export const PagePreviewDataSchema = z.object({
-  title: z.string(),
-  slug: z.string(),
-  description: z.string().nullable(),
-  showSidebar: z.boolean(),
-});
-
-/**
  * プレビューデータコンテナのベーススキーマ
  */
 const PreviewDataBaseSchema = z.object({
@@ -70,18 +58,12 @@ export const NewsPreviewContainerSchema = PreviewDataBaseSchema.extend({
   data: NewsPreviewDataSchema,
 });
 
-export const PagePreviewContainerSchema = PreviewDataBaseSchema.extend({
-  contentType: z.literal("page"),
-  data: PagePreviewDataSchema,
-});
-
 /**
  * プレビューデータのunionスキーマ
  */
 export const PreviewContainerSchema = z.discriminatedUnion("contentType", [
   PostPreviewContainerSchema,
   NewsPreviewContainerSchema,
-  PagePreviewContainerSchema,
 ]);
 
 // =============================================================================
@@ -115,18 +97,6 @@ export type NewsPreviewData = {
   publishedAt: string | null;
 };
 
-/**
- * ページプレビューデータ
- *
- * Note: content は廃止（セクションシステムに移行済み）
- */
-export type PagePreviewData = {
-  title: string;
-  slug: string;
-  description: string | null;
-  showSidebar: boolean;
-};
-
 // =============================================================================
 // Preview Container Type
 // =============================================================================
@@ -142,7 +112,7 @@ export type PreviewData<T> = {
   /** 保存時刻（ミリ秒） */
   timestamp: number;
   /** コンテンツタイプ */
-  contentType: "post" | "news" | "page";
+  contentType: "post" | "news";
   /** 実際のプレビューデータ */
   data: T;
 };
@@ -169,7 +139,7 @@ export const PREVIEW_STORAGE_PREFIX = "preview-";
  * @returns ストレージキー
  */
 export function getPreviewStorageKey(
-  contentType: "post" | "news" | "page",
+  contentType: "post" | "news",
   identifier: string,
 ): string {
   return `${PREVIEW_STORAGE_PREFIX}${contentType}-${identifier}`;

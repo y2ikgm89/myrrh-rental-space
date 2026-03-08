@@ -12,46 +12,20 @@
  */
 
 import { Suspense } from "react";
-import { connection } from "next/server";
-import { cacheLife, cacheTag } from "next/cache";
-import { CACHE_TAGS, CACHE_LIFE } from "@/shared/lib/constants";
 import { AdminLayoutProvider } from "@/admin/contexts/admin-layout-context";
 import { ConfirmProvider } from "@/admin/contexts/confirm-context";
 import { ResponsiveSidebar } from "./_components/ResponsiveSidebar";
 import { MainContent } from "./_components/MainContent";
 import { TopBar } from "./_components/TopBar";
 import { UserInfo, UserInfoSkeleton } from "./_components/UserInfo";
-import { prisma } from "@/shared/lib/prisma";
+import { getAdminBrandingSettings } from "@/shared/domain/settings/queries";
 import type { ReactElement, ReactNode } from "react";
-
-async function getAdminBrandingSettings() {
-  "use cache";
-  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
-  cacheTag(CACHE_TAGS.SETTINGS);
-
-  const settings = await prisma.settings.findFirst({
-    select: {
-      siteName: true,
-      headerLogoUrl: true,
-      useHeaderLogo: true,
-    },
-  });
-
-  return {
-    siteName: settings?.siteName ?? null,
-    headerLogoUrl: settings?.headerLogoUrl ?? null,
-    useHeaderLogo: settings?.useHeaderLogo ?? true,
-  };
-}
 
 export default async function DashboardLayout({
   children,
 }: {
   children: ReactNode;
 }): Promise<ReactElement> {
-  // Opt into dynamic rendering for Next.js 16 PPR (connection() is official for new Date())
-  await connection();
-
   const brandingSettings = await getAdminBrandingSettings();
 
   return (

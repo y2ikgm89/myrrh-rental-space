@@ -28,7 +28,7 @@ import {
   useContentWidthStyles,
   newsConfig,
 } from '@/admin/components/editor/inline'
-import type { NewsData } from '@/admin/lib/validations/news'
+import type { NewsData } from '@/shared/domain/news/types'
 import type { ContentWidth } from '@/shared/types'
 
 // =============================================================================

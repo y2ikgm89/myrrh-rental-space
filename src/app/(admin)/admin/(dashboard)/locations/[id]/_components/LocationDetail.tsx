@@ -15,7 +15,7 @@ import {
 import { DetailSection } from "@/admin/components/DetailSection";
 import { DetailField } from "@/admin/components/DetailField";
 import { toggleLocationPublish } from "@/admin/actions/location";
-import type { LocationWithStats } from "@/admin/lib/validations/location";
+import type { LocationWithStats } from "@/shared/domain/locations/types";
 import { formatDateTimeShort } from "@/shared/lib/utils";
 
 type LocationDetailProps = {

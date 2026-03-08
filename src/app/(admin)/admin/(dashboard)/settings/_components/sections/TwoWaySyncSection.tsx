@@ -42,7 +42,7 @@ import {
   AlertCircle,
   CheckCircle2,
 } from "lucide-react";
-import { CalendarSyncMethod } from "@/shared/generated/prisma/enums";
+import { CalendarSyncMethod } from "@/shared/db/enums";
 import { useRefreshOnSuccess } from "../hooks";
 import { formatDateTimeShort } from "@/shared/lib/utils";
 

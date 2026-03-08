@@ -10,7 +10,7 @@ import {
   PublishSwitch,
 } from "@/admin/components/ui";
 import { toggleLocationPublish } from "@/admin/actions/location";
-import type { LocationWithStats } from "@/admin/lib/validations/location";
+import type { LocationWithStats } from "@/shared/domain/locations/types";
 import { EmptyState } from "@/admin/components/EmptyState";
 import { LocationActionCell } from "./LocationActionCell";
 

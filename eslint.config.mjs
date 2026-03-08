@@ -84,6 +84,67 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+  {
+    name: "prisma-import-boundaries",
+    files: ["**/*.ts", "**/*.tsx"],
+    ignores: ["src/shared/db/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@/shared/lib/prisma",
+              message:
+                "Prisma は '@/shared/db' または '@/shared/db/prisma' を使ってください。",
+            },
+          ],
+          patterns: [
+            {
+              group: ["@generated/prisma", "@generated/prisma/*"],
+              message:
+                "generated Prisma への直接 import は禁止です。'@/shared/db/*' を経由してください。",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    name: "public-app-boundaries",
+    files: ["src/app/(public)/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@/shared/db",
+              message:
+                "public app layer は shared/db ではなく shared/domain を経由してください。",
+            },
+            {
+              name: "@/shared/db/prisma",
+              message:
+                "public app layer は Prisma facade を直接参照せず shared/domain を経由してください。",
+            },
+            {
+              name: "@/shared/lib/prisma",
+              message:
+                "legacy prisma shim は使用禁止です。shared/domain を経由してください。",
+            },
+          ],
+          patterns: [
+            {
+              group: ["@generated/prisma", "@generated/prisma/*"],
+              message:
+                "public app layer から generated Prisma を直接 import しないでください。",
+            },
+          ],
+        },
+      ],
+    },
+  },
 
   // ファイル固有設定
   {
@@ -116,7 +177,7 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    "src/shared/generated/**",
+    "generated/**",
     "__tests__/**",
     ".worktrees/**",
   ]),

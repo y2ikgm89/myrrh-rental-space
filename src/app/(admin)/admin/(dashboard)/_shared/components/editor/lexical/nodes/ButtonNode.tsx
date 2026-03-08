@@ -271,7 +271,7 @@ export class ButtonNode extends DecoratorNode<ReactElement> {
         size={$getState(this, buttonSizeState)}
         alignment={$getState(this, buttonAlignmentState)}
         openInNewTab={$getState(this, buttonOpenInNewTabState)}
-        nodeKey={this.__key}
+        nodeKey={this.getKey()}
       />
     );
   }

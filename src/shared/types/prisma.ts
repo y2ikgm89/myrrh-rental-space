@@ -4,10 +4,10 @@
  * タイポ防止とIDE補完を有効にするための型定義
  */
 
-import type { Prisma } from '@/shared/generated/prisma/client'
+import type { Prisma } from '@/shared/db/prisma'
 
 // Re-export LayoutWidth from Prisma generated enums
-export { LayoutWidth } from '@/shared/generated/prisma/enums'
+export { LayoutWidth } from '@/shared/db/enums'
 
 /**
  * Where Input Types

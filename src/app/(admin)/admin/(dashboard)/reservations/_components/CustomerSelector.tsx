@@ -2,11 +2,9 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Search, User, Mail, Phone, Plus, X } from "lucide-react";
-import {
-  searchCustomers,
-  type CustomerSearchResult,
-} from "@/admin/actions/customer";
+import { searchCustomers } from "@/admin/actions/customer";
 import { Input, Button, Label, Card, CardContent } from "@/admin/components/ui";
+import type { CustomerSearchResult } from "@/shared/domain/customers/types";
 import { logger } from "@/shared/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
 

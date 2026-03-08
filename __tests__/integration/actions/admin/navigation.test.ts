@@ -1,58 +1,24 @@
 /**
- * ナビゲーション管理Server Action統合テスト
+ * ナビゲーション管理 domain 統合テスト
  *
- * src/actions/admin/navigation.ts のテスト
+ * source of truth:
+ * - src/shared/domain/navigation/commands.ts
+ * - src/shared/domain/navigation/queries.ts
  *
- * 注: Server Actionsの直接テストは複雑なため、
- *     バリデーションスキーマ + 型構造をテスト
+ * 注: write action は thin adapter 化したため、
+ *     domain schema + 型構造を直接テストする
  */
 
 import { describe, test, expect } from 'bun:test'
-import { z } from 'zod'
-
-// =============================================================================
-// Enum再現（prisma generated）
-// =============================================================================
-
-const NavigationType = {
-  HEADER_DESKTOP: 'HEADER_DESKTOP',
-  HEADER_MOBILE: 'HEADER_MOBILE',
-  FOOTER: 'FOOTER',
-} as const
-
-const SocialPlatform = {
-  TWITTER: 'TWITTER',
-  FACEBOOK: 'FACEBOOK',
-  INSTAGRAM: 'INSTAGRAM',
-  YOUTUBE: 'YOUTUBE',
-  LINE: 'LINE',
-  TIKTOK: 'TIKTOK',
-  OTHER: 'OTHER',
-} as const
-
-// =============================================================================
-// navigation.ts内で使用されているスキーマを再現
-// =============================================================================
-
-const navigationItemSchema = z.object({
-  type: z.enum(['HEADER_DESKTOP', 'HEADER_MOBILE', 'FOOTER']),
-  parentId: z.string().uuid().nullable().optional(),
-  label: z.string().min(1, { error: 'ラベルは必須です' }).max(50, { error: 'ラベルは50文字以内' }),
-  url: z.string().min(1, { error: 'URLは必須です' }).max(500),
-  isExternal: z.boolean().default(false),
-  order: z.number().int().min(0),
-  isActive: z.boolean().default(true),
-})
-
-const socialLinkSchema = z.object({
-  platform: z.enum(['TWITTER', 'FACEBOOK', 'INSTAGRAM', 'YOUTUBE', 'LINE', 'TIKTOK', 'OTHER']),
-  url: z.string().min(1, { error: 'URLは必須です' }).url({ error: '有効なURLを入力してください' }),
-  iconUrl: z.string().nullable().optional(),
-  order: z.number().int().min(0),
-  isActive: z.boolean().default(true),
-  showOnDesktop: z.boolean().default(true),
-  showOnMobile: z.boolean().default(true),
-})
+import { NavigationType, SocialPlatform } from '@/shared/db/enums'
+import {
+  navigationItemInputSchema as navigationItemSchema,
+  socialLinkInputSchema as socialLinkSchema,
+} from '@/shared/domain/navigation/commands'
+import type {
+  NavigationItemData,
+  SocialLinkData,
+} from '@/shared/domain/navigation/queries'
 
 // =============================================================================
 // テストデータ
@@ -517,23 +483,9 @@ describe('Navigation Admin Action Integration', () => {
 
   describe('NavigationItemData型テスト', () => {
     test('NavigationItemData型の構造（ルートメニュー）', () => {
-      type NavigationItemData = {
-        id: string
-        type: string
-        parentId: string | null
-        label: string
-        url: string
-        isExternal: boolean
-        order: number
-        isActive: boolean
-        createdAt: Date
-        updatedAt: Date
-        children: NavigationItemData[]
-      }
-
       const rootItem: NavigationItemData = {
         id: VALID_UUID,
-        type: 'HEADER_DESKTOP',
+        type: NavigationType.HEADER_DESKTOP,
         parentId: null,
         label: 'スペース',
         url: '/spaces',
@@ -545,7 +497,7 @@ describe('Navigation Admin Action Integration', () => {
         children: [
           {
             id: '550e8400-e29b-41d4-a716-446655440001',
-            type: 'HEADER_DESKTOP',
+            type: NavigationType.HEADER_DESKTOP,
             parentId: VALID_UUID,
             label: '会議室',
             url: '/spaces/conference',
@@ -569,22 +521,9 @@ describe('Navigation Admin Action Integration', () => {
 
   describe('SocialLinkData型テスト', () => {
     test('SocialLinkData型の構造', () => {
-      type SocialLinkData = {
-        id: string
-        platform: string
-        url: string
-        iconUrl: string | null
-        order: number
-        isActive: boolean
-        showOnDesktop: boolean
-        showOnMobile: boolean
-        createdAt: Date
-        updatedAt: Date
-      }
-
       const link: SocialLinkData = {
         id: VALID_UUID,
-        platform: 'INSTAGRAM',
+        platform: SocialPlatform.INSTAGRAM,
         url: 'https://www.instagram.com/example/',
         iconUrl: null,
         order: 0,

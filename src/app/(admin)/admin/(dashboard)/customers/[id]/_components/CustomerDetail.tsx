@@ -40,7 +40,7 @@ import {
   updateCustomerNotes,
   toggleCustomerActive,
 } from "@/admin/actions/customer";
-import type { CustomerWithReservations } from "@/admin/actions/customer";
+import type { CustomerWithReservations } from "@/shared/domain/customers/types";
 import {
   isValidCustomerStatus,
   type CustomerStatus,

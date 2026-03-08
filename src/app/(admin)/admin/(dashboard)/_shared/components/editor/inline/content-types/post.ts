@@ -9,11 +9,10 @@
  */
 
 import { format } from "date-fns";
-import { PostStatus } from "@/shared/generated/prisma/enums";
+import { PostStatus } from "@/shared/db/enums";
 import {
   postFormSchema,
   type PostFormData,
-  type PostData,
 } from "@/admin/lib/validations/post";
 import {
   createPost,
@@ -22,6 +21,7 @@ import {
   publishPost,
   unpublishPost,
 } from "@/admin/actions/post";
+import type { PostData } from "@/shared/domain/posts/types";
 import { isValidLayoutWidth } from "@/shared/lib/validations/enums";
 import type { PostPreviewData } from "@/shared/types";
 import {

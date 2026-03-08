@@ -27,8 +27,11 @@ import {
   deleteSocialLink,
   updateSocialLinkOrder,
 } from '@/admin/actions/navigation'
-import type { NavigationItemInput, SocialLinkInput } from '@/admin/actions/navigation'
-import type { NavigationType } from '@/shared/generated/prisma/enums'
+import type {
+  NavigationItemInput,
+  SocialLinkInput,
+} from '@/shared/domain/navigation/commands'
+import type { NavigationType } from '@/shared/db/enums'
 import type { NavigationItemData, SocialLinkData, NavFormData, SocialFormData } from './types'
 import { useNavigationForm, useSocialForm, flattenNavItems } from './hooks/use-navigation-form'
 import { NavigationList, SocialLinkList } from './NavigationList'

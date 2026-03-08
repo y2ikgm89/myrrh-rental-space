@@ -11,10 +11,10 @@
  */
 
 import type { MetadataRoute } from 'next'
-import { prisma } from '@/shared/lib/prisma'
-import { PostStatus } from '@/shared/generated/prisma/enums'
+import { getSitemapContentData } from '@/shared/domain/sitemap/queries'
 import { getBaseUrl } from '@/shared/lib/constants'
-import { getPostUrlPrefix } from '@/shared/lib/settings/public'
+import { buildPostCanonicalPath } from '@/shared/domain/posts/routing'
+import { getPermalinkSettings } from '@/shared/domain/settings/queries'
 
 // =============================================================================
 // Types
@@ -50,59 +50,11 @@ const STATIC_PAGES = [
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // 設定と全データを並列取得
-  const [
-    postPrefix,
-    spaces,
-    news,
-    posts,
-    postCategories,
-    postTags,
-    customPages,
-  ] = await Promise.all([
-    // 投稿URLプレフィックス設定
-    getPostUrlPrefix(),
-    // 公開中のスペース
-    prisma.space.findMany({
-      where: { isPublished: true, isActive: true },
-      select: { slug: true, updatedAt: true },
-      orderBy: { updatedAt: 'desc' },
-    }),
-    // 公開中のお知らせ
-    prisma.news.findMany({
-      where: { isPublished: true },
-      select: { slug: true, updatedAt: true },
-      orderBy: { updatedAt: 'desc' },
-    }),
-    // 公開中の投稿
-    prisma.post.findMany({
-      where: { status: PostStatus.PUBLISHED },
-      select: { slug: true, updatedAt: true },
-      orderBy: { updatedAt: 'desc' },
-    }),
-    // 投稿カテゴリ（投稿が1件以上あるもの）
-    prisma.postCategory.findMany({
-      where: {
-        posts: { some: { status: PostStatus.PUBLISHED } },
-      },
-      select: { slug: true, updatedAt: true },
-      orderBy: { updatedAt: 'desc' },
-    }),
-    // 投稿タグ（全て - タグページは常に存在する）
-    prisma.postTag.findMany({
-      select: { slug: true, updatedAt: true },
-      orderBy: { updatedAt: 'desc' },
-    }),
-    // 公開中のカスタムページ（システムページ以外）
-    prisma.page.findMany({
-      where: {
-        isPublished: true,
-        isActive: true,
-        isSystemPage: false,
-      },
-      select: { slug: true, updatedAt: true },
-      orderBy: { updatedAt: 'desc' },
-    }),
+  const [permalinkSettings, content] = await Promise.all([
+    getPermalinkSettings(),
+    getSitemapContentData(),
   ])
+  const { spaces, news, posts, customPages } = content
 
   // 各コンテンツタイプの最新更新日を取得
   const latestSpaceUpdate = spaces[0]?.updatedAt ?? new Date()
@@ -132,13 +84,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     url: `${BASE_URL}/news`,
     lastModified: latestNewsUpdate,
   })
-  // 投稿一覧ページ（プレフィックスが有効な場合のみ）
-  if (postPrefix) {
-    entries.push({
-      url: `${BASE_URL}${postPrefix}`,
-      lastModified: latestPostUpdate,
-    })
-  }
+  entries.push({
+    url: `${BASE_URL}/posts`,
+    lastModified: latestPostUpdate,
+  })
 
   // ==========================================================================
   // 3. スペース詳細ページ
@@ -165,33 +114,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // ==========================================================================
   for (const post of posts) {
     entries.push({
-      url: `${BASE_URL}${postPrefix}/${post.slug}`,
+      url: `${BASE_URL}${buildPostCanonicalPath(post, permalinkSettings ?? undefined)}`,
       lastModified: post.updatedAt,
     })
   }
 
   // ==========================================================================
-  // 6. 投稿カテゴリページ
-  // ==========================================================================
-  for (const category of postCategories) {
-    entries.push({
-      url: `${BASE_URL}${postPrefix}/category/${category.slug}`,
-      lastModified: category.updatedAt,
-    })
-  }
-
-  // ==========================================================================
-  // 7. 投稿タグページ
-  // ==========================================================================
-  for (const tag of postTags) {
-    entries.push({
-      url: `${BASE_URL}${postPrefix}/tag/${tag.slug}`,
-      lastModified: tag.updatedAt,
-    })
-  }
-
-  // ==========================================================================
-  // 8. カスタムページ
+  // 6. カスタムページ
   // ==========================================================================
   for (const page of customPages) {
     entries.push({

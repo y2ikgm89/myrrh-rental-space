@@ -2,7 +2,7 @@
 
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import type { NavigationType } from '@/shared/generated/prisma/enums'
+import type { NavigationType } from '@/shared/db/enums'
 import {
   type NavFormData,
   type SocialFormData,

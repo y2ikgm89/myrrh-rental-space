@@ -12,8 +12,7 @@ import type { NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import { serverEnv } from "@/shared/lib/env/server";
 import { clientEnv } from "@/shared/lib/env/client";
-import { prisma } from "@/shared/lib/prisma";
-import { encrypt } from "@/shared/lib/crypto";
+import { connectInstagramOAuthAccount } from "@/shared/domain/instagram/commands";
 import {
   exchangeCodeForToken,
   exchangeForLongLivedToken,
@@ -105,30 +104,12 @@ export async function GET(request: NextRequest) {
     // ユーザー情報取得
     const userInfo = await fetchInstagramUserInfo(longLivedToken);
 
-    // トークン暗号化
-    const encryptedToken = encrypt(longLivedToken, { purpose: "instagram" });
-
-    // 有効期限を計算（秒単位 -> Date）
-    const expiresAt = new Date(Date.now() + expiresIn * 1000);
-
-    // 設定を保存
-    await prisma.settings.upsert({
-      where: { id: "singleton" },
-      update: {
-        instagramAccessToken: encryptedToken,
-        instagramTokenExpiresAt: expiresAt,
-        instagramUserId: userId,
-        instagramUsername: userInfo.username,
-        instagramAccountType: userInfo.accountType,
-      },
-      create: {
-        id: "singleton",
-        instagramAccessToken: encryptedToken,
-        instagramTokenExpiresAt: expiresAt,
-        instagramUserId: userId,
-        instagramUsername: userInfo.username,
-        instagramAccountType: userInfo.accountType,
-      },
+    await connectInstagramOAuthAccount({
+      accessToken: longLivedToken,
+      expiresIn,
+      userId,
+      username: userInfo.username,
+      accountType: userInfo.accountType,
     });
 
     return redirectToSettings({

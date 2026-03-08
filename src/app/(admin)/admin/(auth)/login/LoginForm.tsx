@@ -7,15 +7,14 @@
  */
 
 import { useState, useEffect, type FormEvent, type ReactElement } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { signIn } from '@/shared/lib/auth-client'
-import { credentialsSchema, loginTokenSchema } from '@/admin/lib/validations/auth'
+import { credentialsSchema } from '@/admin/lib/validations/auth'
 
 const STORAGE_KEY = 'myrrh_admin_email'
 
 export function LoginForm(): ReactElement {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(false)
@@ -66,14 +65,7 @@ export function LoginForm(): ReactElement {
           localStorage.removeItem(STORAGE_KEY)
         }
 
-        // ログイン成功後、URLパラメータのトークンを保持してリダイレクト
-        // これにより、proxy.tsでトークンの有効期限を延長できる
-        const token = searchParams.get('token')
-        const parsedToken = loginTokenSchema.safeParse(token)
-        const redirectUrl = parsedToken.success
-          ? `/admin?token=${parsedToken.data}`
-          : '/admin'
-        router.push(redirectUrl)
+        router.push('/admin')
         router.refresh()
       }
     } catch {

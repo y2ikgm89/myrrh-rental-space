@@ -3,7 +3,7 @@ import {
   newCustomerSchema,
   adminReservationSchema,
 } from '@/admin/lib/validations/admin-reservation'
-import { ReservationStatus } from '@/shared/generated/prisma/enums'
+import { ReservationStatus } from '@/shared/db/enums'
 
 describe('newCustomerSchema', () => {
   const validCustomerData = {

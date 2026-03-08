@@ -18,7 +18,7 @@
 
 import 'dotenv/config'
 import { PrismaPg } from '@prisma/adapter-pg'
-import { PrismaClient, Prisma, Role } from '../src/shared/generated/prisma/client'
+import { PrismaClient, Prisma, Role } from '../generated/prisma/client'
 import { hashPassword } from 'better-auth/crypto'
 import { syncPermissionsToDb } from '../src/app/(admin)/admin/(dashboard)/_shared/lib/permissions'
 

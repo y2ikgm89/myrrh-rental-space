@@ -7,7 +7,7 @@
  */
 
 import { z } from 'zod'
-import { SectionType } from '@/shared/generated/prisma/enums'
+import { SectionType } from '@/shared/db/enums'
 import {
   createSafeUrlSchema,
   createCtaSchemas,

@@ -24,7 +24,7 @@ import {
 } from '@/admin/components/ui'
 import { updateTaxSettings, type TaxSettingsData } from '@/admin/actions/settings'
 import { useRefreshOnSuccess } from '../hooks'
-import { TaxDisplayMode, TaxInputMode } from '@/shared/generated/prisma/enums'
+import { TaxDisplayMode, TaxInputMode } from '@/shared/db/enums'
 
 interface TaxSectionProps {
   settings: TaxSettingsData

@@ -10,8 +10,18 @@
 import 'server-only'
 
 import { cacheLife, cacheTag } from 'next/cache'
-import { prisma, Role } from '@/shared/lib/prisma'
+import { Role } from '@/shared/db/enums'
 import { getSession, getRoleFromSession, type User } from '@/shared/lib/auth'
+import {
+  assignPermissionToRole,
+  upsertPermissionDefinition,
+} from '@/shared/domain/permissions/commands'
+import {
+  checkRolePermissionRecord,
+  findPermissionId,
+  getAssignedPageIdsForUser,
+  getRolePermissionRecords,
+} from '@/shared/domain/permissions/queries'
 import { logPermissionDenied } from '@/admin/lib/audit'
 import { entriesOf } from '@/shared/lib/serialize'
 import { logError, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors/server'
@@ -266,11 +276,7 @@ export async function userHasResourceAccess(
   }
 
   // DBからページ割り当てを取得
-  const assignments = await prisma.userPageAssignment.findMany({
-    where: { userId: user.id },
-    select: { pageId: true },
-  })
-  const assignedPageIds = assignments.map((a) => a.pageId)
+  const assignedPageIds = await getAssignedPageIdsForUser(user.id)
   return assignedPageIds.includes(resourceId)
 }
 
@@ -390,14 +396,10 @@ export async function syncPermissionsToDb(): Promise<void> {
     }
 
     const { resource, action } = parsed
-    await prisma.permission.upsert({
-      where: { resource_action: { resource, action } },
-      create: {
-        resource,
-        action,
-        description: `${RESOURCE_LABELS[resource]}の${ACTION_LABELS[action]}`,
-      },
-      update: {},
+    await upsertPermissionDefinition({
+      resource,
+      action,
+      description: `${RESOURCE_LABELS[resource]}の${ACTION_LABELS[action]}`,
     })
   }
 
@@ -416,18 +418,9 @@ export async function syncPermissionsToDb(): Promise<void> {
       }
 
       const { resource, action } = parsed
-      const permission = await prisma.permission.findUnique({
-        where: { resource_action: { resource, action } },
-      })
-      if (permission) {
-        await prisma.rolePermission.upsert({
-          where: { role_permissionId: { role, permissionId: permission.id } },
-          create: {
-            role,
-            permissionId: permission.id,
-          },
-          update: {},
-        })
+      const permissionId = await findPermissionId(resource, action)
+      if (permissionId) {
+        await assignPermissionToRole(role, permissionId)
       }
     }
   }
@@ -450,15 +443,7 @@ export async function checkPermissionFromDb(
   cacheLife(CACHE_LIFE.STATIC_SETTINGS)
   cacheTag(CACHE_TAGS.PERMISSIONS)
 
-  const permission = await prisma.permission.findUnique({
-    where: { resource_action: { resource, action } },
-    include: {
-      rolePermissions: {
-        where: { role },
-      },
-    },
-  })
-  return (permission?.rolePermissions.length ?? 0) > 0
+  return checkRolePermissionRecord(role, resource, action)
 }
 
 /**
@@ -471,12 +456,9 @@ export async function getUserPermissions(role: Role): Promise<PermissionKey[]> {
   cacheLife(CACHE_LIFE.STATIC_SETTINGS)
   cacheTag(CACHE_TAGS.PERMISSIONS)
 
-  const rolePermissions = await prisma.rolePermission.findMany({
-    where: { role },
-    include: { permission: true },
-  })
-  return rolePermissions.flatMap((rp) => {
-    const { resource, action } = rp.permission
+  const rolePermissions = await getRolePermissionRecords(role)
+  return rolePermissions.flatMap((permission) => {
+    const { resource, action } = permission
     if (!isValidResource(resource) || !isValidAction(action)) return []
     const key: PermissionKey = `${resource}:${action}`
     return [key]

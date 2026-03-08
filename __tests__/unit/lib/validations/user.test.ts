@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'bun:test'
 import { createUserSchema, updateUserSchema } from '@/admin/lib/validations/user'
-import { Role } from '@/shared/generated/prisma/enums'
+import { Role } from '@/shared/db/enums'
 
 describe('createUserSchema', () => {
   const validUserData = {

@@ -24,6 +24,8 @@ repo 全体ルールは `AGENTS.md`、詳細ルールは `docs/reference/codex-r
 - frontmatter は `name` と `description` のみ
 - `description` は発火条件と境界を書く
 - 1 skill に unrelated な複数ワークフローを混ぜない
+- `SKILL.md` 本体は短く保ち、詳細な API メモや長い例は `reference/` へ逃がす
+- 監査 / modernize 系 workflow は追加系 workflow と分離し、必要なら別 skill にする
 - `AGENTS.md` のポリシーをコピーしない
 - `.claude/*` や Codex 非対応 API を参照しない
 - 既に repo で満たしているインストール手順は書かない
@@ -41,6 +43,7 @@ repo 全体ルールは `AGENTS.md`、詳細ルールは `docs/reference/codex-r
 - `lexical-node`: カスタム Lexical ノードを作る
 - `lexical-plugin`: カスタム Lexical プラグインを作る
 - `lexical-toolbar`: Lexical ツールバーを拡張する
+- `lexical-audit`: Lexical 実装を監査し、deprecated / private API を除去して現行推奨へ寄せる
 
 ## 追加判断
 
@@ -49,6 +52,7 @@ repo 全体ルールは `AGENTS.md`、詳細ルールは `docs/reference/codex-r
 - 同じ依頼が繰り返し来るか
 - 実行順序を固定したいか
 - 既存 skill に自然に統合できないか
+- 追加実装と監査 / cleanup を 1 skill に混ぜていないか
 - ルール文書だけで十分ではないか
 
 ## メンテナンス
@@ -58,3 +62,4 @@ skill を変更したら次も確認する。
 - 参照先が `docs/reference/codex-rules/` に揃っているか
 - `scripts/` や `reference/` の相対パスが正しいか
 - DoD がこの repo の検証コマンドに合っているか
+- 追加 skill が既存 skill の責務を侵食していないか

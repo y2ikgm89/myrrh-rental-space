@@ -20,7 +20,7 @@ import {
   Switch,
 } from '@/admin/components/ui'
 import { updatePermalinkSettings } from '@/admin/actions/settings'
-import { PostPermalinkStructure } from '@/shared/generated/prisma/enums'
+import { PostPermalinkStructure } from '@/shared/db/enums'
 import { isValidPostPermalinkStructure, getValidPostPermalinkStructure } from '@/shared/lib/validations/enums'
 import type { SelectionBoxOption } from '@/admin/components/ui'
 

@@ -5,7 +5,7 @@ import {
   getStripedStyle,
 } from '@/shared/lib/announcement-bar-utils'
 import { cn } from '@/shared/lib/utils'
-import { AnnouncementBarDesignStyle } from '@/shared/generated/prisma/enums'
+import { AnnouncementBarDesignStyle } from '@/shared/db/enums'
 import type { DesignPreviewProps } from './types'
 
 export function DesignPreview({

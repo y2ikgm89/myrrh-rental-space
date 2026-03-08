@@ -7,7 +7,7 @@ import {
   ErrorSeverity,
   normalizeError,
 } from "@/shared/lib/errors/server";
-import { prisma } from "@/shared/lib/prisma";
+import { getGoogleCalendarSettings } from "@/shared/domain/settings/admin-queries";
 import type { CalendarChange, SyncChangesResult } from "./types";
 import { formatGoogleApiError } from "./helpers";
 import { getServiceAccountClient } from "./service-account";
@@ -29,12 +29,9 @@ export async function fetchCalendarChanges(
     };
   }
 
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: { googleCalendarId: true },
-  });
+  const settings = await getGoogleCalendarSettings();
 
-  if (!settings?.googleCalendarId) {
+  if (!settings.calendarId) {
     return {
       success: false,
       changes: [],
@@ -56,7 +53,7 @@ export async function fetchCalendarChanges(
 
     do {
       const params: calendar_v3.Params$Resource$Events$List = {
-        calendarId: settings.googleCalendarId,
+        calendarId: settings.calendarId,
         maxResults: 250,
         singleEvents: true,
         showDeleted: true, // 削除されたイベントも取得

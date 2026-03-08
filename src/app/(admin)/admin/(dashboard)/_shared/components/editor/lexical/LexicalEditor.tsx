@@ -9,7 +9,7 @@
 
 'use client'
 
-import { useEffect, useEffectEvent, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useState } from 'react'
 import { LexicalComposer } from '@lexical/react/LexicalComposer'
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin'
 import { ContentEditable } from '@lexical/react/LexicalContentEditable'
@@ -88,7 +88,6 @@ function EditorInner({
   autoSaveKey,
   characterLimit,
 }: LexicalEditorProps) {
-  const editorRef = useRef<LexicalEditorType | null>(null)
   const [contentWrapperRef, setContentWrapperRef] = useState<HTMLDivElement | null>(null)
   const [contentWidthRef, setContentWidthRef] = useState<HTMLDivElement | null>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -157,13 +156,14 @@ function EditorInner({
             <RichTextPlugin
               contentEditable={
                 <ContentEditable
+                  aria-placeholder={placeholder}
+                  placeholder={
+                    <div className="pointer-events-none absolute top-6 left-10 text-muted-foreground">
+                      {placeholder}
+                    </div>
+                  }
                   className={`outline-none pl-10 pr-6 py-6 min-h-full ${className ?? ''}`}
                 />
-              }
-              placeholder={
-                <div className="pointer-events-none absolute top-6 left-10 text-muted-foreground">
-                  {placeholder}
-                </div>
               }
               ErrorBoundary={LexicalErrorBoundary}
             />
@@ -185,9 +185,7 @@ function EditorInner({
 
         {/* カスタムプラグイン */}
         {/* contentJson がない場合のみ HTML フォールバック初期化 */}
-        {!contentJson && (
-          <HtmlInitializerPlugin content={contentHtml} editorRef={editorRef} />
-        )}
+        {!contentJson && <HtmlInitializerPlugin content={contentHtml} />}
         <DisablePlugin disabled={disabled} />
         <DraggableBlockPlugin anchorElem={contentWidthRef} />
         <TableActionMenuPlugin anchorElem={contentWidthRef} />

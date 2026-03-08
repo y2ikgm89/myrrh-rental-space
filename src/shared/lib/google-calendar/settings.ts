@@ -7,8 +7,10 @@ import {
   ErrorSeverity,
   normalizeError,
 } from "@/shared/lib/errors/server";
-import { prisma } from "@/shared/lib/prisma";
-import { CalendarSyncMethod } from "@/shared/generated/prisma/enums";
+import {
+  getGoogleCalendarSettings as getGoogleCalendarSettingsQuery,
+  getTwoWaySyncSettings as getTwoWaySyncSettingsQuery,
+} from "@/shared/domain/settings/admin-queries";
 import type {
   GoogleCalendarSettings,
   TwoWaySyncSettings,
@@ -67,30 +69,7 @@ export async function testServiceAccountConnection(params: {
  * Google Calendar設定を取得
  */
 export async function getGoogleCalendarSettings(): Promise<GoogleCalendarSettings> {
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: {
-      googleCalendarEnabled: true,
-      googleCalendarId: true,
-      googleCalendarConnectionStatus: true,
-      googleCalendarLastTestedAt: true,
-      googleCalendarOAuthEnabled: true,
-    },
-  });
-
-  const connectionStatus = settings?.googleCalendarConnectionStatus;
-  const validStatus =
-    connectionStatus === "connected" || connectionStatus === "error"
-      ? connectionStatus
-      : null;
-
-  return {
-    enabled: settings?.googleCalendarEnabled ?? false,
-    calendarId: settings?.googleCalendarId ?? null,
-    connectionStatus: validStatus,
-    lastTestedAt: settings?.googleCalendarLastTestedAt ?? null,
-    oauthEnabled: settings?.googleCalendarOAuthEnabled ?? false,
-  };
+  return getGoogleCalendarSettingsQuery();
 }
 
 /**
@@ -105,32 +84,7 @@ export async function isGoogleCalendarEnabled(): Promise<boolean> {
  * 双方向同期設定を取得
  */
 export async function getTwoWaySyncSettings(): Promise<TwoWaySyncSettings> {
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: {
-      googleCalendarTwoWaySyncEnabled: true,
-      googleCalendarSyncMethod: true,
-      googleCalendarPollingIntervalMin: true,
-      googleCalendarLastSyncedAt: true,
-      googleCalendarWebhookExpiration: true,
-    },
-  });
-
-  const syncMethod = settings?.googleCalendarSyncMethod;
-  const validMethod =
-    syncMethod === CalendarSyncMethod.polling ||
-    syncMethod === CalendarSyncMethod.webhook ||
-    syncMethod === CalendarSyncMethod.both
-      ? syncMethod
-      : CalendarSyncMethod.polling;
-
-  return {
-    enabled: settings?.googleCalendarTwoWaySyncEnabled ?? false,
-    syncMethod: validMethod,
-    pollingIntervalMin: settings?.googleCalendarPollingIntervalMin ?? 5,
-    lastSyncedAt: settings?.googleCalendarLastSyncedAt ?? null,
-    webhookExpiration: settings?.googleCalendarWebhookExpiration ?? null,
-  };
+  return getTwoWaySyncSettingsQuery();
 }
 
 /**

@@ -9,7 +9,7 @@ import {
   normalizeError,
 } from "@/shared/lib/errors/server";
 import { safeDecrypt, encryptApiKey } from "@/shared/lib/crypto";
-import { prisma } from "@/shared/lib/prisma";
+import { getGoogleCalendarServiceAccountConfig } from "@/shared/domain/settings/admin-queries";
 
 const serviceAccountCredentialsSchema = z
   .object({
@@ -35,22 +35,16 @@ export function parseServiceAccountCredentials(
  * サービスアカウントのGoogle Calendar APIクライアントを取得
  */
 export async function getServiceAccountClient(): Promise<calendar_v3.Calendar | null> {
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: {
-      googleCalendarEnabled: true,
-      googleCalendarServiceAccountJson: true,
-    },
-  });
+  const settings = await getGoogleCalendarServiceAccountConfig();
 
   if (
-    !settings?.googleCalendarEnabled ||
-    !settings.googleCalendarServiceAccountJson
+    !settings.enabled ||
+    !settings.encryptedServiceAccountJson
   ) {
     return null;
   }
 
-  const decryptedJson = safeDecrypt(settings.googleCalendarServiceAccountJson);
+  const decryptedJson = safeDecrypt(settings.encryptedServiceAccountJson);
   if (!decryptedJson) {
     logError(new Error("Failed to decrypt service account credentials"), {
       category: ErrorCategory.UNKNOWN,

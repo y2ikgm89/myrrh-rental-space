@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { getPublicRobotsTxtSettings } from '@/shared/lib/settings/public'
-import { DEFAULT_ROBOTS_TXT } from '@/admin/actions/settings/robots-txt-constants'
+import { getPublicRobotsTxtSettings } from '@/shared/domain/settings/queries'
+import { DEFAULT_ROBOTS_TXT } from "@/shared/domain/settings/robots-txt";
 
 const RESPONSE_HEADERS = {
   'Content-Type': 'text/plain',

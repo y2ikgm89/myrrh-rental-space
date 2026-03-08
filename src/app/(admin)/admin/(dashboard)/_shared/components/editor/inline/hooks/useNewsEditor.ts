@@ -14,7 +14,6 @@ import { toast } from "sonner";
 import {
   newsFormSchema,
   type NewsFormData,
-  type NewsData,
 } from "@/admin/lib/validations/news";
 import {
   createNews,
@@ -25,6 +24,7 @@ import {
 } from "@/admin/actions/news";
 import { generatePreviewHtml } from "@/admin/actions/preview";
 import { createPreviewHandlers } from "@/admin/hooks";
+import type { NewsData } from "@/shared/domain/news/types";
 import { logger } from "@/shared/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
 import type { NewsPreviewData } from "@/shared/types";

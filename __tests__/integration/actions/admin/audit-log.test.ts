@@ -6,17 +6,27 @@
 
 import { describe, test, expect } from "bun:test";
 import { z } from "zod";
-import { AuditAction } from "@/shared/generated/prisma/enums";
+import { AuditAction } from "@/shared/db/enums";
 
 // audit-log.ts 内の filtersSchema を再現
 const filtersSchema = z.object({
   page: z.number().int().positive().optional().default(1),
   perPage: z.number().int().positive().max(100).optional().default(50),
-  action: z.enum(AuditAction).or(z.literal("ALL")).optional(),
-  resource: z.string().optional(),
-  userId: z.string().uuid().optional(),
-  dateFrom: z.string().optional(),
-  dateTo: z.string().optional(),
+  action: z.enum(AuditAction).or(z.literal("ALL")).optional().default("ALL"),
+  resource: z.string().optional().default(""),
+  userId: z.string().uuid().optional().default(""),
+  dateFrom: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .or(z.literal(""))
+    .optional()
+    .default(""),
+  dateTo: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .or(z.literal(""))
+    .optional()
+    .default(""),
 });
 
 // parseAuditLogMetadata ロジックを再現
@@ -58,6 +68,7 @@ describe("Audit Log Admin Action Integration", () => {
       if (result.success) {
         expect(result.data.page).toBe(1);
         expect(result.data.perPage).toBe(50);
+        expect(result.data.action).toBe("ALL");
       }
     });
 
@@ -158,11 +169,17 @@ describe("Audit Log Admin Action Integration", () => {
         ).toBe(true);
       });
 
-      test("任意の文字列も許可（変換は呼び出し側）", () => {
+      test("空文字は許可", () => {
+        expect(filtersSchema.safeParse({ dateFrom: "", dateTo: "" }).success).toBe(
+          true,
+        );
+      });
+
+      test("YYYY-MM-DD 以外はエラー", () => {
         expect(
           filtersSchema.safeParse({ dateFrom: "2026-01-01T00:00:00.000Z" })
             .success,
-        ).toBe(true);
+        ).toBe(false);
       });
     });
   });

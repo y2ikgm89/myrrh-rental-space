@@ -1,84 +1,52 @@
-'use server'
+"use server";
 
-/**
- * Instagram Server Actions
- *
- * Instagram連携の設定・管理用Server Actions
- */
-
-import { prisma } from '@/shared/lib/prisma'
-import { updateTag } from 'next/cache'
-import { CACHE_TAGS } from '@/shared/lib/constants'
-import { createSuccess, createFailure } from '@/admin/types/server-actions'
-import { createValidationError } from '@/shared/lib/action-helpers'
-import { withPermission } from '@/admin/lib/server-action-helpers'
-import { encrypt, safeDecrypt } from '@/shared/lib/crypto'
-import { checkReadPermissionFor } from '@/admin/lib/permissions'
+import { updateTag } from "next/cache";
+import { z } from "zod";
+import { executeAdminMutation } from "@/admin/lib/admin-action";
+import { checkReadPermissionFor } from "@/admin/lib/permissions";
+import {
+  createSuccess,
+  createFailure,
+  type ActionResult,
+} from "@/admin/types/server-actions";
+import {
+  addInstagramPost as addInstagramPostCommand,
+  disconnectInstagram as disconnectInstagramCommand,
+  removeInstagramPost as removeInstagramPostCommand,
+  reorderInstagramPosts as reorderInstagramPostsCommand,
+  saveInstagramToken as saveInstagramTokenCommand,
+  updateInstagramSettings as updateInstagramSettingsCommand,
+} from "@/shared/domain/instagram/commands";
+import {
+  getDecryptedInstagramToken as getDecryptedInstagramTokenQuery,
+  getInstagramConfig as getInstagramConfigQuery,
+  getInstagramPosts as getInstagramPostsQuery,
+} from "@/shared/domain/instagram/queries";
+import type {
+  InstagramConfig,
+  InstagramPostData,
+} from "@/shared/domain/instagram/types";
+import { createValidationError } from "@/shared/lib/action-helpers";
+import { CACHE_TAGS } from "@/shared/lib/constants";
 import {
   instagramSettingsSchema,
   instagramTokenSchema,
   instagramPostUrlSchema,
-  extractInstagramShortcode,
   type InstagramSettingsInput,
-} from '@/shared/lib/validations/instagram'
-import {
-  testInstagramConnection,
-  getTokenExpiryDays,
-  shouldRefreshToken,
-} from '@/shared/lib/instagram'
-import { InstagramFeedLayout, InstagramMediaType } from '@/shared/generated/prisma/enums'
-import { getValidInstagramFeedLayout } from '@/shared/lib/validations/enums'
+} from "@/shared/lib/validations/instagram";
+import { testInstagramConnection } from "@/shared/lib/instagram";
 
-// =============================================================================
-// Types
-// =============================================================================
+export type { InstagramSettingsInput } from "@/shared/lib/validations/instagram";
+export type { InstagramConfig, InstagramPostData } from "@/shared/domain/instagram/types";
 
-export type InstagramConfig = {
-  isConnected: boolean
-  username: string | null
-  accountType: string | null
-  tokenExpiresAt: Date | null
-  tokenExpiryDays: number | null
-  shouldRefreshToken: boolean
-  feedEnabled: boolean
-  feedLayout: InstagramFeedLayout
-  feedColumns: number
-  feedMaxItems: number
-  showCaption: boolean
-  showViewAll: boolean
+const checkReadPermission = checkReadPermissionFor("settings");
+const idSchema = z.string().uuid({ error: "IDが不正です" });
+const orderedIdsSchema = z.array(z.string().uuid({ error: "IDが不正です" }));
+
+function invalidateInstagramCaches(): void {
+  updateTag(CACHE_TAGS.SETTINGS);
 }
 
-export type InstagramPostData = {
-  id: string
-  postId: string
-  postUrl: string
-  mediaUrl: string | null
-  caption: string | null
-  sortOrder: number
-  createdAt: Date
-}
-
-// =============================================================================
-// Helpers
-// =============================================================================
-
-const checkReadPermission = checkReadPermissionFor('settings')
-
-function getMetadataString(
-  metadata: Record<string, unknown> | undefined,
-  key: string,
-): string | undefined {
-  const value = metadata?.[key]
-  return typeof value === 'string' ? value : undefined
-}
-
-// =============================================================================
-// GET Actions
-// =============================================================================
-
-/**
- * Instagram設定を取得
- */
 export async function getInstagramConfig(): Promise<InstagramConfig> {
   if (!(await checkReadPermission())) {
     return {
@@ -89,358 +57,165 @@ export async function getInstagramConfig(): Promise<InstagramConfig> {
       tokenExpiryDays: null,
       shouldRefreshToken: false,
       feedEnabled: false,
-      feedLayout: InstagramFeedLayout.grid,
+      feedLayout: "grid",
       feedColumns: 4,
       feedMaxItems: 8,
       showCaption: false,
       showViewAll: true,
-    }
+    };
   }
 
-  const settings = await prisma.settings.findUnique({
-    where: { id: 'singleton' },
-    select: {
-      instagramAccessToken: true,
-      instagramTokenExpiresAt: true,
-      instagramUserId: true,
-      instagramUsername: true,
-      instagramAccountType: true,
-      instagramFeedEnabled: true,
-      instagramFeedLayout: true,
-      instagramFeedColumns: true,
-      instagramFeedMaxItems: true,
-      instagramShowCaption: true,
-      instagramShowViewAll: true,
-    },
-  })
-
-  const isConnected = Boolean(
-    settings?.instagramAccessToken && settings?.instagramUserId
-  )
-
-  const tokenExpiresAt = settings?.instagramTokenExpiresAt || null
-  const tokenExpiryDays = tokenExpiresAt
-    ? getTokenExpiryDays(tokenExpiresAt)
-    : null
-  const needsRefresh = tokenExpiresAt
-    ? shouldRefreshToken(tokenExpiresAt)
-    : false
-
-  return {
-    isConnected,
-    username: settings?.instagramUsername || null,
-    accountType: settings?.instagramAccountType || null,
-    tokenExpiresAt,
-    tokenExpiryDays,
-    shouldRefreshToken: needsRefresh,
-    feedEnabled: settings?.instagramFeedEnabled ?? false,
-    feedLayout: getValidInstagramFeedLayout(settings?.instagramFeedLayout),
-    feedColumns: settings?.instagramFeedColumns ?? 4,
-    feedMaxItems: settings?.instagramFeedMaxItems ?? 8,
-    showCaption: settings?.instagramShowCaption ?? false,
-    showViewAll: settings?.instagramShowViewAll ?? true,
-  }
+  return getInstagramConfigQuery();
 }
 
-/**
- * 手動選択されたInstagram投稿を取得
- */
 export async function getInstagramPosts(): Promise<InstagramPostData[]> {
-  if (!(await checkReadPermission())) return []
+  if (!(await checkReadPermission())) {
+    return [];
+  }
 
-  const posts = await prisma.instagramPost.findMany({
-    orderBy: { sortOrder: 'asc' },
-    select: {
-      id: true,
-      postId: true,
-      postUrl: true,
-      mediaUrl: true,
-      caption: true,
-      sortOrder: true,
-      createdAt: true,
-    },
-  })
-
-  return posts
+  return getInstagramPostsQuery();
 }
 
-// =============================================================================
-// UPDATE Actions - Settings
-// =============================================================================
-
-/**
- * Instagram表示設定を更新
- */
-export const updateInstagramSettings = withPermission<[InstagramSettingsInput], void>(
-  'settings',
-  'update'
-)(async (_user, data) => {
-    const parsed = instagramSettingsSchema.safeParse(data)
-    if (!parsed.success) {
-      return createValidationError(parsed.error)
-    }
-
-    await prisma.settings.upsert({
-      where: { id: 'singleton' },
-      create: {
-        id: 'singleton',
-        instagramFeedEnabled: parsed.data.feedEnabled,
-        instagramFeedLayout: parsed.data.feedLayout,
-        instagramFeedColumns: parsed.data.feedColumns,
-        instagramFeedMaxItems: parsed.data.feedMaxItems,
-        instagramShowCaption: parsed.data.showCaption,
-        instagramShowViewAll: parsed.data.showViewAll,
-      },
-      update: {
-        instagramFeedEnabled: parsed.data.feedEnabled,
-        instagramFeedLayout: parsed.data.feedLayout,
-        instagramFeedColumns: parsed.data.feedColumns,
-        instagramFeedMaxItems: parsed.data.feedMaxItems,
-        instagramShowCaption: parsed.data.showCaption,
-        instagramShowViewAll: parsed.data.showViewAll,
-      },
-    })
-
-    updateTag(CACHE_TAGS.SETTINGS)
-    return createSuccess('Instagram設定を更新しました')
+export async function updateInstagramSettings(
+  data: InstagramSettingsInput,
+): Promise<ActionResult<void>> {
+  const parsed = instagramSettingsSchema.safeParse(data);
+  if (!parsed.success) {
+    return createValidationError(parsed.error);
   }
-)
 
-// =============================================================================
-// Token Management Actions
-// =============================================================================
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => updateInstagramSettingsCommand(parsed.data),
+    success: () => createSuccess("Instagram設定を更新しました"),
+    afterSuccess: () => {
+      invalidateInstagramCaches();
+    },
+  });
+}
 
-/**
- * 手動でアクセストークンを保存
- */
-export const saveManualToken = withPermission<[string], { username: string | undefined }>(
-  'settings',
-  'update'
-)(async (_user, token) => {
-    const parsed = instagramTokenSchema.safeParse(token)
-    if (!parsed.success) {
-      return createValidationError(parsed.error)
-    }
-
-    // トークンをテストしてユーザー情報を取得
-    const testResult = await testInstagramConnection(parsed.data)
-    if (!testResult.success) {
-      return createFailure(testResult.error || '接続テストに失敗しました')
-    }
-
-    const metadata = testResult.metadata
-    const userId = getMetadataString(metadata, 'userId')
-    const username = getMetadataString(metadata, 'username')
-    const accountType = getMetadataString(metadata, 'accountType')
-
-    // トークンを暗号化
-    let encryptedToken: string
-    try {
-      encryptedToken = encrypt(parsed.data, { purpose: 'instagram' })
-    } catch {
-      return createFailure('トークンの暗号化に失敗しました')
-    }
-
-    // 60日後の有効期限（長期トークンのデフォルト）
-    const expiresAt = new Date()
-    expiresAt.setDate(expiresAt.getDate() + 60)
-
-    await prisma.settings.upsert({
-      where: { id: 'singleton' },
-      create: {
-        id: 'singleton',
-        instagramAccessToken: encryptedToken,
-        instagramTokenExpiresAt: expiresAt,
-        instagramUserId: userId || null,
-        instagramUsername: username || null,
-        instagramAccountType: accountType || null,
-      },
-      update: {
-        instagramAccessToken: encryptedToken,
-        instagramTokenExpiresAt: expiresAt,
-        instagramUserId: userId || null,
-        instagramUsername: username || null,
-        instagramAccountType: accountType || null,
-      },
-    })
-
-    updateTag(CACHE_TAGS.SETTINGS)
-    return createSuccess('Instagramトークンを保存しました', {
-      username,
-    })
+export async function saveManualToken(
+  token: string,
+): Promise<ActionResult<{ username: string | undefined }>> {
+  const parsed = instagramTokenSchema.safeParse(token);
+  if (!parsed.success) {
+    return createValidationError(parsed.error);
   }
-)
 
-/**
- * Instagram接続をテスト
- */
-export const testInstagramConnectionAction = withPermission<
-  [string],
-  { username: string | undefined; message: string }
->('settings', 'update')(async (_user, token) => {
-    const parsed = instagramTokenSchema.safeParse(token)
-    if (!parsed.success) {
-      return createValidationError(parsed.error)
-    }
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => saveInstagramTokenCommand(parsed.data),
+    success: (result) =>
+      createSuccess("Instagramトークンを保存しました", result),
+  afterSuccess: () => {
+      invalidateInstagramCaches();
+    },
+  });
+}
 
-    const result = await testInstagramConnection(parsed.data)
-
-    if (result.success) {
-      const username = getMetadataString(result.metadata, 'username')
-      return createSuccess(result.message || '接続テストに成功しました', {
-        username,
-        message: result.message || '',
-      })
-    }
-
-    return createFailure(result.error || '接続テストに失敗しました')
+export async function testInstagramConnectionAction(
+  token: string,
+): Promise<ActionResult<{ username: string | undefined; message: string }>> {
+  const parsed = instagramTokenSchema.safeParse(token);
+  if (!parsed.success) {
+    return createValidationError(parsed.error);
   }
-)
 
-/**
- * Instagram連携を解除
- */
-export const disconnectInstagram = withPermission<[], void>(
-  'settings',
-  'update'
-)(async () => {
-    await prisma.settings.update({
-      where: { id: 'singleton' },
-      data: {
-        instagramAccessToken: null,
-        instagramTokenExpiresAt: null,
-        instagramUserId: null,
-        instagramUsername: null,
-        instagramAccountType: null,
-      },
-    })
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      const result = await testInstagramConnection(parsed.data);
+      if (!result.success) {
+        throw new Error(result.error || "接続テストに失敗しました");
+      }
 
-    // キャッシュされた投稿も削除
-    await prisma.instagramPost.deleteMany({})
+      const username =
+        typeof result.metadata?.["username"] === "string"
+          ? result.metadata["username"]
+          : undefined;
+      const message = result.message || "接続テストに成功しました";
 
-    updateTag(CACHE_TAGS.SETTINGS)
-    return createSuccess('Instagram連携を解除しました')
+      return { username, message };
+    },
+    success: (result) => createSuccess(result.message, result),
+  }).catch(() => createFailure("接続テストに失敗しました"));
+}
+
+export async function disconnectInstagram(): Promise<ActionResult<void>> {
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => disconnectInstagramCommand(),
+    success: () => createSuccess("Instagram連携を解除しました"),
+    afterSuccess: () => {
+      invalidateInstagramCaches();
+    },
+  });
+}
+
+export async function addInstagramPost(url: string): Promise<ActionResult<void>> {
+  const parsed = instagramPostUrlSchema.safeParse(url);
+  if (!parsed.success) {
+    return createValidationError(parsed.error);
   }
-)
 
-// =============================================================================
-// Manual Post Management Actions
-// =============================================================================
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => addInstagramPostCommand(parsed.data),
+    success: () => createSuccess("Instagram投稿を追加しました"),
+    afterSuccess: () => {
+      invalidateInstagramCaches();
+    },
+  });
+}
 
-/**
- * Instagram投稿を手動追加
- */
-export const addInstagramPost = withPermission<[string], void>(
-  'settings',
-  'update'
-)(async (_user, url) => {
-    const parsed = instagramPostUrlSchema.safeParse(url)
-    if (!parsed.success) {
-      return createValidationError(parsed.error)
-    }
-
-    const shortcode = extractInstagramShortcode(parsed.data)
-    if (!shortcode) {
-      return createFailure('Instagram投稿URLからIDを抽出できませんでした')
-    }
-
-    // 既存チェック
-    const existing = await prisma.instagramPost.findUnique({
-      where: { postId: shortcode },
-    })
-    if (existing) {
-      return createFailure('この投稿は既に追加されています')
-    }
-
-    // 現在の最大sortOrderを取得
-    const maxOrderResult = await prisma.instagramPost.aggregate({
-      _max: { sortOrder: true },
-    })
-    const nextOrder = (maxOrderResult._max?.sortOrder ?? -1) + 1
-
-    await prisma.instagramPost.create({
-      data: {
-        postId: shortcode,
-        postUrl: parsed.data,
-        mediaType: InstagramMediaType.IMAGE, // デフォルト値、oEmbed取得時に更新
-        permalink: parsed.data,
-        sortOrder: nextOrder,
-      },
-    })
-
-    updateTag(CACHE_TAGS.SETTINGS)
-    return createSuccess('Instagram投稿を追加しました')
+export async function removeInstagramPost(
+  id: string,
+): Promise<ActionResult<void>> {
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) {
+    return createValidationError(validated.error);
   }
-)
 
-/**
- * Instagram投稿を削除
- */
-export const removeInstagramPost = withPermission<[string], void>(
-  'settings',
-  'update'
-)(async (_user, id) => {
-    const post = await prisma.instagramPost.findUnique({
-      where: { id },
-    })
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    resourceId: validated.data,
+    execute: async () => removeInstagramPostCommand(validated.data),
+    success: () => createSuccess("Instagram投稿を削除しました"),
+    afterSuccess: () => {
+      invalidateInstagramCaches();
+    },
+  });
+}
 
-    if (!post) {
-      return createFailure('指定された投稿が見つかりません')
-    }
-
-    await prisma.instagramPost.delete({
-      where: { id },
-    })
-
-    updateTag(CACHE_TAGS.SETTINGS)
-    return createSuccess('Instagram投稿を削除しました')
+export async function reorderInstagramPosts(
+  ids: string[],
+): Promise<ActionResult<void>> {
+  const parsed = orderedIdsSchema.safeParse(ids);
+  if (!parsed.success) {
+    return createValidationError(parsed.error);
   }
-)
 
-/**
- * Instagram投稿の並び順を更新
- */
-export const reorderInstagramPosts = withPermission<[string[]], void>(
-  'settings',
-  'update'
-)(async (_user, ids) => {
-    if (!Array.isArray(ids) || ids.length === 0) {
-      return createFailure('並び順のIDリストが必要です')
-    }
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => reorderInstagramPostsCommand(parsed.data),
+    success: () => createSuccess("並び順を更新しました"),
+    afterSuccess: () => {
+      invalidateInstagramCaches();
+    },
+  });
+}
 
-    // トランザクションで一括更新
-    await prisma.$transaction(
-      ids.map((id, index) =>
-        prisma.instagramPost.update({
-          where: { id },
-          data: { sortOrder: index },
-        })
-      )
-    )
-
-    updateTag(CACHE_TAGS.SETTINGS)
-    return createSuccess('並び順を更新しました')
-  }
-)
-
-// =============================================================================
-// Internal Helpers
-// =============================================================================
-
-/**
- * 保存されたアクセストークンを復号化して取得（内部使用）
- */
 export async function getDecryptedInstagramToken(): Promise<string | null> {
-  if (!(await checkReadPermission())) return null
-
-  const settings = await prisma.settings.findUnique({
-    where: { id: 'singleton' },
-    select: { instagramAccessToken: true },
-  })
-
-  if (!settings?.instagramAccessToken) {
-    return null
+  if (!(await checkReadPermission())) {
+    return null;
   }
 
-  return safeDecrypt(settings.instagramAccessToken)
+  return getDecryptedInstagramTokenQuery();
 }

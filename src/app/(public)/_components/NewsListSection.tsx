@@ -28,6 +28,7 @@ import type { SectionDesign } from "@/shared/lib/validations/section-design";
 export interface NewsData {
   readonly id: string;
   readonly slug: string;
+  readonly url: string;
   readonly title: string;
   readonly publishedAt: string | null;
 }
@@ -119,7 +120,7 @@ export function NewsListSection({
           isCard ? (
             <Link
               key={item.id}
-              href={`/news/${item.slug}`}
+              href={item.url}
               data-news-item=""
               className="group rounded-lg border border-border bg-card p-5 transition-shadow duration-300 hover:shadow-lg"
             >
@@ -136,7 +137,7 @@ export function NewsListSection({
           ) : (
             <Link
               key={item.id}
-              href={`/news/${item.slug}`}
+              href={item.url}
               data-news-item=""
               className="group flex items-baseline gap-4 py-4 transition-colors first:pt-0 last:pb-0"
             >

@@ -7,8 +7,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   createCoupon,
   updateCoupon,
-  type CouponData,
 } from "@/admin/actions/coupon";
+import type { CouponData } from "@/shared/domain/coupons/types";
 import {
   couponFormSchema,
   type CouponFormInput,

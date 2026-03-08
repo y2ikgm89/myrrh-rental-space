@@ -4,7 +4,7 @@
  * NewsPreviewContent — お知らせプレビュークライアントコンポーネント
  *
  * sessionStorage からプレビューデータを読み取り表示する。
- * ?preview=true クエリ付きの /news/[slug] ページで使用。
+ * /news/preview/[slug] ページで使用。
  * dynamic({ ssr: false }) 経由でのみ利用されるため SSR は行われない。
  */
 

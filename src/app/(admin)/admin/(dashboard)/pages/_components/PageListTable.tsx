@@ -20,9 +20,9 @@ import {
 import { Badge } from "@/admin/components/ui/badge";
 import { Pagination } from "@/admin/components/ui/Pagination";
 import { formatDateTimeShort } from "@/shared/lib/utils";
+import type { PageData } from "@/shared/domain/pages/types";
 import { PageActions } from "./PageActions";
 import { BulkActions } from "./BulkActions";
-import type { PageModel as PageData } from "@/shared/generated/prisma/models/Page";
 
 interface PageListTableProps {
   pages: PageData[];

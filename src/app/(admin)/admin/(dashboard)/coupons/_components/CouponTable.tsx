@@ -11,8 +11,8 @@ import {
   CouponTypeBadge,
   CouponStatusBadge,
 } from "@/admin/components/status-badges";
+import type { CouponData } from "@/shared/domain/coupons/types";
 import { formatDateShort, formatPrice } from "@/shared/lib/utils";
-import type { CouponData } from "@/admin/actions/coupon";
 import { CouponActionCell } from "./CouponActionCell";
 
 // =============================================================================

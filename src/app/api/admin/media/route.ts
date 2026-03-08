@@ -9,13 +9,12 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSession, getSessionUser } from "@/shared/lib/auth";
-import { prisma, Prisma } from "@/shared/lib/prisma";
-import { MediaType, MediaUsage } from "@/shared/generated/prisma/client";
-import { STORAGE_BUCKETS } from "@/shared/lib/supabase";
-import { uploadFile } from "@/shared/lib/storage";
+import { getMediaListQuery } from "@/shared/domain/media/queries";
+import { uploadMediaCommand } from "@/shared/domain/media/commands";
 import { canAccessAdmin, hasPermission } from "@/admin/lib/permissions";
-import { parseStringArray } from "@/shared/lib/json-validators";
 import {
+  MediaType,
+  MediaUsage,
   isValidMediaType,
   isValidMediaUsage,
 } from "@/shared/lib/validations/enums";
@@ -25,33 +24,6 @@ import {
   ErrorCategory,
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
-
-type MediaWithUploader = Prisma.MediaGetPayload<{
-  include: { uploader: { select: { id: true; name: true } } };
-}>;
-
-function transformMedia(media: MediaWithUploader) {
-  return {
-    id: media.id,
-    filename: media.filename,
-    url: media.url,
-    mimeType: media.mimeType,
-    size: media.size,
-    width: media.width,
-    height: media.height,
-    type: media.type,
-    usage: media.usage,
-    alt: media.alt,
-    title: media.title,
-    description: media.description,
-    tags: parseStringArray(media.tags),
-    createdAt: media.createdAt,
-    updatedAt: media.updatedAt,
-    uploader: media.uploader
-      ? { id: media.uploader.id, name: media.uploader.name }
-      : null,
-  };
-}
 
 /**
  * GET /api/admin/media
@@ -78,41 +50,20 @@ export async function GET(request: NextRequest) {
     Math.max(1, parseInt(searchParams.get("limit") || "24", 10)),
   );
 
-  const skip = (page - 1) * limit;
-
-  const where: Prisma.MediaWhereInput = {
-    isActive: true,
-  };
-
-  if (type && isValidMediaType(type)) {
-    where.type = type;
-  }
-
-  if (search) {
-    where.OR = [
-      { filename: { contains: search, mode: "insensitive" } },
-      { title: { contains: search, mode: "insensitive" } },
-      { alt: { contains: search, mode: "insensitive" } },
-    ];
-  }
-
-  const [items, total] = await Promise.all([
-    prisma.media.findMany({
-      where,
-      skip,
-      take: limit,
-      orderBy: { createdAt: "desc" },
-      include: { uploader: { select: { id: true, name: true } } },
-    }),
-    prisma.media.count({ where }),
-  ]);
+  const result = await getMediaListQuery(
+    {
+      type: type && isValidMediaType(type) ? type : undefined,
+      search: search ?? undefined,
+    },
+    { page, limit },
+  );
 
   return NextResponse.json({
-    items: items.map(transformMedia),
-    total,
-    page,
-    limit,
-    totalPages: Math.ceil(total / limit),
+    items: result.items,
+    total: result.total,
+    page: result.page,
+    limit: result.limit,
+    totalPages: result.totalPages,
   });
 }
 
@@ -173,45 +124,23 @@ export async function POST(request: NextRequest) {
       usageStr && isValidMediaUsage(usageStr) ? usageStr : MediaUsage.GENERAL;
     const alt = formData.get("alt")?.toString() || null;
     const title = formData.get("title")?.toString() || null;
-
-    // Supabase Storageにアップロード
-    const result = await uploadFile(file, STORAGE_BUCKETS.MEDIA, {
+    const media = await uploadMediaCommand({
+      file,
       folder: usage.toLowerCase(),
-    });
-
-    if (!result.success || !result.url || !result.path) {
-      return NextResponse.json(
-        { error: result.error || "Upload failed" },
-        { status: 500 },
-      );
-    }
-
-    // DBにレコード作成
-    const media = await prisma.media.create({
-      data: {
-        filename: file.name,
-        storagePath: result.path,
-        url: result.url,
-        bucket: STORAGE_BUCKETS.MEDIA,
-        mimeType: file.type,
-        size: file.size,
-        width: null,
-        height: null,
-        type,
-        usage,
-        alt,
-        title,
-        description: null,
-        tags: [],
-        uploadedBy: user.id,
-      },
+      uploadedBy: user.id,
+      type,
+      usage,
+      alt,
+      title,
+      description: null,
+      tags: [],
     });
 
     return NextResponse.json({
       success: true,
       id: media.id,
       url: media.url,
-      filename: media.filename,
+      filename: file.name,
     });
   } catch (error) {
     logError(normalizeError(error), {

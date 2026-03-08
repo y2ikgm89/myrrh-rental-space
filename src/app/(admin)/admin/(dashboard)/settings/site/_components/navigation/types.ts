@@ -1,6 +1,9 @@
 import { z } from 'zod'
-import type { NavigationType, SocialPlatform } from '@/shared/generated/prisma/enums'
-import type { NavigationItemData, SocialLinkData } from '@/admin/actions/navigation'
+import type { NavigationType, SocialPlatform } from '@/shared/db/enums'
+import type {
+  NavigationItemData,
+  SocialLinkData,
+} from '@/shared/domain/navigation/queries'
 
 // =============================================================================
 // Navigation Form Types

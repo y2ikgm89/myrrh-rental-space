@@ -5,7 +5,7 @@
  * 新たな DB クエリは発行せず、既存キャッシュ済み関数を再利用。
  */
 
-import { getPublicBusinessSettings } from '@/shared/lib/settings/public'
+import { getPublicBusinessSettings } from '@/shared/domain/settings/queries'
 import { isRecord } from '@/shared/lib/serialize'
 
 export interface BusinessInfo {

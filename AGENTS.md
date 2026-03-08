@@ -244,8 +244,10 @@ bun run e2e
 - 1 skill = 1 workflow を原則とし、複数の unrelated task をまとめた巨大スキルは作らない
 - `description` には「いつ使うか」「何をしないか」が分かる境界を書く
 - skill には入力、手順、使用コマンド、完了条件だけを書く。一般論や重複ルールは `codex-rules` へ寄せる
+- `SKILL.md` 本体は短く保ち、詳細なバリアントや API メモは `reference/` か `docs/reference/` に逃がす
 - スクリプトやテンプレートを使う skill は、まず skill ディレクトリ直下の `scripts/` / `reference/` / `assets/` を再利用する
 - リポジトリ前提で既に満たしている環境構築手順や、Codex で使えない API / `.claude/*` 参照は書かない
+- 追加 workflow と監査 / modernize workflow は同じ skill に混ぜず、必要なら別 skill に分ける
 - 追加・改修方針の詳細は `.agents/skills/README.md` を参照する
 
 ### Codex delegation stance

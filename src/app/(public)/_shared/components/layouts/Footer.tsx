@@ -9,11 +9,11 @@
 import type { ReactElement } from 'react'
 import Link from 'next/link'
 import { ExternalLink } from 'lucide-react'
-import { connection } from 'next/server'
 import { getBusinessInfo } from '@/public/data/business'
-import { getFooterNavigation } from '@/public/lib/navigation'
+import { getFooterNavigation } from '@/shared/domain/navigation/queries'
 import { DAY_LABELS } from '@/public/lib/seo/json-ld-config'
 import { isRecord } from '@/shared/lib/serialize'
+import { CopyrightYear } from './CopyrightYear'
 
 // =============================================================================
 // Constants
@@ -100,12 +100,10 @@ function parseFooterHours(businessHours: unknown): FooterHoursDisplay[] {
 // =============================================================================
 
 export async function Footer(): Promise<ReactElement> {
-  await connection()
   const [info, footerNav] = await Promise.all([
     getBusinessInfo(),
     getFooterNavigation(),
   ])
-  const currentYear = new Date().getFullYear()
   const brandShort = (info.name.split(' ')[0] ?? 'MYRRH').toUpperCase()
   const hoursDisplay = parseFooterHours(info.businessHours)
 
@@ -272,7 +270,7 @@ export async function Footer(): Promise<ReactElement> {
 
         <div className="mt-12 border-t border-border pt-8">
           <p className="text-center text-xs text-muted-foreground">
-            &copy; {currentYear} {info.name}. All rights reserved.
+            &copy; <CopyrightYear /> {info.name}. All rights reserved.
           </p>
         </div>
       </div>

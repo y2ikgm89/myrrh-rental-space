@@ -1,869 +1,159 @@
 # システムアーキテクチャ
 
-> **Note**: このドキュメントにはシステム全体のアーキテクチャ設計と技術検証結果が記載されています。技術スタックの詳細については、[`CLAUDE.md`](../CLAUDE.md)を参照してください。
+最終更新: 2026-03-08
 
-## 実装方針
+## 概要
 
-**後方互換性を考慮しないクリーンな実装**: このプロジェクトは、最新の公式ベストプラクティスに準拠したクリーンでモダンな実装を優先します。古いバージョンや非推奨APIとの後方互換性は維持しません。すべての実装は、フレームワークとライブラリの最新の安定版を使用し、レガシーな回避策なしに公式推奨事項に従う必要があります。
-
----
-
-## システム概要
-
-レンタルスペース管理システムは、Next.js 16 App RouterをベースとしたフルスタックWebアプリケーションです。公開ページと管理画面の2つの主要なインターフェースを提供します。
-
----
-
-## アーキテクチャ図
-
-### システム全体アーキテクチャ
+このプロジェクトは Next.js 16 App Router を基盤にした、公開サイトと管理画面を同居させたレンタルスペース運営システムです。UI は route group 単位で完全分離し、業務ロジックは `src/shared/domain/*`、インフラは `src/shared/lib/*` / `src/shared/db/*` に閉じ込めます。
 
 ```mermaid
 graph TB
-    subgraph Client["クライアント（ブラウザ）"]
-        PublicPages["公開ページ<br/>SSG/ISR/SSR"]
-        AdminPages["管理画面<br/>SSR"]
-    end
+  Browser["Browser"]
+  Proxy["proxy.ts<br/>CSP / admin gate / coarse auth"]
+  PublicRoutes["Public Routes<br/>src/app/(public)"]
+  AdminRoutes["Admin Routes<br/>src/app/(admin)"]
+  Domain["src/shared/domain/*"]
+  DB["src/shared/db/*"]
+  Infra["src/shared/lib/*"]
+  PrismaGen["generated/prisma/*"]
+  Postgres["PostgreSQL (Supabase)"]
 
-    subgraph NextJS["Next.js 16 App Router"]
-        ServerComponents["Server Components"]
-        ClientComponents["Client Components"]
-        ServerActions["Server Actions"]
-        RouteHandlers["Route Handlers"]
-        Middleware["Middleware<br/>認証・認可"]
-    end
-
-    subgraph Auth["認証システム"]
-        BetterAuth["Better Auth"]
-        JWT["JWT Session"]
-        PrismaAdapter["Prisma Adapter"]
-    end
-
-    subgraph Database["データベース"]
-        SupabaseDB["Supabase PostgreSQL"]
-        Prisma["Prisma ORM"]
-        RLS["Row Level Security"]
-    end
-
-    subgraph Storage["ストレージ"]
-        SupabaseStorage["Supabase Storage<br/>画像・ファイル"]
-    end
-
-    subgraph Deployment["デプロイメント"]
-        CloudflareCDN["Cloudflare CDN<br/>キャッシュ・DDoS保護"]
-        CloudRun["Google Cloud Run"]
-        SecretManager["Secret Manager"]
-        ArtifactRegistry["Artifact Registry"]
-    end
-
-    Client --> CloudflareCDN
-    CloudflareCDN --> NextJS
-    NextJS --> Auth
-    NextJS --> Database
-    NextJS --> Storage
-    Auth --> Database
-    NextJS --> Deployment
-    Deployment --> CloudflareCDN
-    Deployment --> CloudRun
-    Deployment --> SecretManager
-    Deployment --> ArtifactRegistry
+  Browser --> Proxy
+  Proxy --> PublicRoutes
+  Proxy --> AdminRoutes
+  PublicRoutes --> Domain
+  AdminRoutes --> Domain
+  Domain --> DB
+  Domain --> Infra
+  DB --> PrismaGen
+  DB --> Postgres
 ```
 
-### データフロー図
+## 境界
+
+### 1. UI 境界
+
+- `src/app/(public)` は公開 UI 専用。デザイン、アニメーション、SEO、導線を担当する
+- `src/app/(admin)` は管理 UI 専用。業務オペレーションとエディタを担当する
+- Public ↔ Admin 間は Multiple Root Layouts によりフルリロード前提
 
-```mermaid
-sequenceDiagram
-    participant User as ユーザー
-    participant Browser as ブラウザ
-    participant NextJS as Next.js App
-    participant Middleware as Middleware
-    participant Auth as Better Auth
-    participant Prisma as Prisma ORM
-    participant DB as Supabase DB
-    participant Storage as Supabase Storage
+### 2. ドメイン境界
+
+- `src/shared/domain/settings`
+- `src/shared/domain/navigation`
+- `src/shared/domain/dashboard`
+- `src/shared/domain/audit-log`
+- `src/shared/domain/block-template`
+- `src/shared/domain/coupons`
+- `src/shared/domain/customers`
+- `src/shared/domain/faq`
+- `src/shared/domain/instagram`
+- `src/shared/domain/inquiries`
+- `src/shared/domain/locations`
+- `src/shared/domain/pages`
+- `src/shared/domain/post-comments`
+- `src/shared/domain/sections`
+- `src/shared/domain/posts`
+- `src/shared/domain/news`
+- `src/shared/domain/editor-comments`
+- `src/shared/domain/media`
+- `src/shared/domain/reservations`
+- `src/shared/domain/spaces`
+- `src/shared/domain/staff-invitations`
+- `src/shared/domain/space-categories`
+- `src/shared/domain/terms`
+- `src/shared/domain/users`
+
+現時点では公開ルーティングと公開データ取得の中核を domain に移設済み。`src/app/(public)` からの Prisma 直参照は禁止し、公開側の DB query wrapper は残さない。`settings` context は `queries.ts`, `admin-queries.ts`, `api-key-queries.ts`, `api-key-commands.ts`, `commands.ts`, `announcement-bar.ts`, `types.ts`, `robots-txt.ts` に分割済みで、Google Calendar 設定・Webhook 状態・双方向同期設定・iCal トークン/フィード設定、Analytics 設定、管理画面 branding 取得も同境界に収容する。`navigation` context は `queries.ts` と `commands.ts` に分割済み。`pages` と `sections` は `queries.ts`, `admin-queries.ts`, `commands.ts`, `system-pages.ts`, `types.ts` に分割済みで、公開取得・管理一覧・system page bootstrap・homepage/page section 編集を同境界へ収容する。`posts` context も `queries.ts`, `admin-queries.ts`, `commands.ts`, `routing.ts`, `types.ts` に分割済みで、公開取得・管理一覧・publish/versioning・taxonomy 管理を同境界へ収容する。`news` context も `queries.ts`, `admin-queries.ts`, `commands.ts`, `types.ts` に分割済みで、公開取得・管理一覧・publish/versioning を同境界へ収容する。`faq` context も `queries.ts`, `commands.ts`, `types.ts` に分割済みで、カテゴリ/項目の管理一覧・状態変更・並び替えを同境界へ収容する。`instagram` context も `queries.ts`, `commands.ts`, `types.ts` に分割済みで、接続設定・手動投稿・OAuth callback・token refresh を同境界へ収容する。`spaces`, `reservations`, `media`, `editor-comments` も query/command 境界へ移設済みで、一覧・詳細・作成更新・storage / calendar / comment thread 操作を同境界へ収容する。管理画面の read/write は `dashboard`, `audit-log`, `block-template`, `post-comments`, `posts`, `news`, `faq`, `terms`, `inquiries`, `instagram`, `locations`, `space-categories`, `customers`, `coupons`, `users`, `staff-invitations`, `settings/api-keys`, `pages`, `sections`, `spaces`, `reservations`, `media`, `editor-comments` まで domain 正本へ移設済み。`app` 層は generated Prisma model / client type を直接参照せず、必要な read model は `shared/domain/*/types.ts` を正本にする。加えて `app/api/*`, admin lib, calendar / iCal / sitemap / bootstrap helper も domain query/command を正本にしたため、`src/shared/domain/*` と `src/shared/db/*` の外に Prisma 直 import を残さない。Better Auth の Prisma adapter も `src/shared/db/better-auth-adapter.ts` に隔離し、`shared/lib/auth.ts` は DB client を直接握らない。
+現時点では公開ルーティングと公開データ取得の中核を domain に移設済み。`src/app/(public)` からの Prisma 直参照は禁止し、公開側の DB query wrapper は残さない。`settings` context は `queries.ts`, `admin-queries.ts`, `api-key-queries.ts`, `api-key-commands.ts`, `commands.ts`, `announcement-bar.ts`, `types.ts`, `robots-txt.ts` に分割済みで、Google Calendar 設定・Webhook 状態・双方向同期設定・iCal トークン/フィード設定、Analytics 設定、管理画面 branding 取得も同境界に収容する。`navigation` context は `queries.ts` と `commands.ts` に分割済み。`pages` と `sections` は `queries.ts`, `admin-queries.ts`, `commands.ts`, `system-pages.ts`, `types.ts` に分割済みで、公開取得・管理一覧・system page bootstrap・homepage/page section 編集を同境界へ収容する。`posts` context も `queries.ts`, `admin-queries.ts`, `commands.ts`, `routing.ts`, `types.ts` に分割済みで、公開取得・管理一覧・publish/versioning・taxonomy 管理を同境界へ収容する。`news` context も `queries.ts`, `admin-queries.ts`, `commands.ts`, `types.ts` に分割済みで、公開取得・管理一覧・publish/versioning を同境界へ収容する。`faq` context も `queries.ts`, `commands.ts`, `types.ts` に分割済みで、カテゴリ/項目の管理一覧・状態変更・並び替えを同境界へ収容する。`instagram` context も `queries.ts`, `commands.ts`, `types.ts` に分割済みで、接続設定・手動投稿・OAuth callback・token refresh を同境界へ収容する。`spaces`, `reservations`, `media`, `editor-comments` も query/command 境界へ移設済みで、一覧・詳細・作成更新・storage / calendar / comment thread 操作を同境界へ収容する。管理画面の read/write は `dashboard`, `audit-log`, `block-template`, `post-comments`, `posts`, `news`, `faq`, `terms`, `inquiries`, `instagram`, `locations`, `space-categories`, `customers`, `coupons`, `users`, `staff-invitations`, `settings/api-keys`, `pages`, `sections`, `spaces`, `reservations`, `media`, `editor-comments` まで domain 正本へ移設済み。`app` 層は generated Prisma model / client type を直接参照せず、必要な read model は `shared/domain/*/types.ts` を正本にする。加えて `app/api/*`, admin lib, calendar / iCal / sitemap / bootstrap helper も domain query/command を正本にしたため、`src/shared/domain/*` と `src/shared/db/*` の外に Prisma 直 import を残さない。Better Auth の Prisma adapter も `src/shared/db/better-auth-adapter.ts` に隔離し、`shared/lib/auth.ts` は DB client を直接握らない。
+
+### 3. DB 境界
+
+- `src/shared/db/*` が Prisma の唯一の公開窓口
+- `src/shared/db/prisma.ts`, `src/shared/db/enums.ts`, `src/shared/db/better-auth-adapter.ts` だけを公開境界とし、barrel / model shim は置かない
+- Prisma 生成物は `generated/prisma/*` に配置し、`src/` 配下へ置かない
+- アプリ本体から `@generated/prisma/*` を直接 import しない
+
+## ルーティングポリシー
+
+### 公開ページ
+
+- 固定ページ: `/`, `/about`, `/contact`, `/faq`, `/privacy`, `/reservation`, `/spaces`, `/terms`
+- ニュース:
+  - 一覧 `/news`
+  - 詳細 `/news/[slug]`
+  - preview `/news/preview/[slug]`
+- 投稿:
+  - 一覧 `/posts`
+  - 詳細 `/posts/[...segments]`
+  - preview `/posts/preview/[slug]`
+- カスタムページ:
+  - `src/app/(public)/[...segments]/page.tsx`
+  - 1 segment は `custom page` を優先
+  - 投稿 prefix 無効時のみ、custom page で解決できないパスを投稿詳細へ fallback
+
+### 投稿 permalink 解決
+
+`src/shared/domain/posts/routing.ts` が以下を解決する。
+
+- `post_name`: `/posts/[slug]` または `/{slug}`
+- `category_name`: `/posts/[category]/[slug]` または `/{category}/{slug}`
+- `date_name`: `/posts/[year]/[month]/[slug]` または `/{year}/{month}/{slug}`
+
+canonical URL は常に現在の permalink 設定から再生成する。代替経路で表示されても canonical は設定値へ収束させる。
+
+### proxy の責務
+
+`src/proxy.ts` は次だけを担当する。
+
+- CSP nonce と共通セキュリティヘッダー
+- API rate limit と cron secret 検証
+- `/admin/login` の coarse gate
+- `/admin/*` の coarse auth
+
+公開 permalink rewrite や Prisma 参照は持たない。
+`/admin/login` gate は `ADMIN_LOGIN_TOKEN` を鍵にした署名付き token を stateless に検証する。
+
+## レンダリング戦略
+
+### 公開 shell
+
+- `src/app/(public)/layout.tsx` は Header / Footer / SEO / Cookie Consent / Analytics / a11y だけを持つ
+- blanket な `connection()` は使わない
+- 年表示のような時刻依存 UI は leaf component へ分離する
+
+### ExperienceShell
+
+- Lenis、Scroll orchestration、VisualEffectsProvider、PerformanceMonitor は `ExperienceShell` に集約
+- グローバル layout では読み込まず、演出が必要なページだけ opt-in する
+- 現在はホームページが opt-in 済み
+
+### Preview
+
+- 通常詳細ページに query-string preview 分岐は持たない
+- preview は `posts` / `news` の専用 route でのみ描画し、常に `noindex`
 
-    User->>Browser: ページアクセス
-    Browser->>NextJS: HTTPリクエスト
-    NextJS->>Middleware: ルートチェック
-    
-    alt 管理画面
-        Middleware->>Auth: 認証チェック
-        Auth->>Prisma: セッション検証
-        Prisma->>DB: クエリ実行
-        DB-->>Prisma: セッション情報
-        Prisma-->>Auth: 認証結果
-        Auth-->>Middleware: 認証状態
-    end
-    
-    Middleware-->>NextJS: リクエスト許可
-    NextJS->>Prisma: データ取得
-    Prisma->>DB: クエリ実行
-    DB-->>Prisma: データ
-    Prisma-->>NextJS: データ
-    NextJS->>Storage: 画像取得（必要時）
-    Storage-->>NextJS: 画像URL
-    NextJS-->>Browser: HTMLレスポンス
-    Browser-->>User: ページ表示
-```
+## データ取得とキャッシュ
 
-### 認証フロー図
+- 読み取りは `'use cache'` + `cacheLife()` + `cacheTag()` を基本とする
+- 投稿 URL を返す query は `CACHE_TAGS.PERMALINK` も付与し、permalink 設定変更で無効化できるようにする
+- 更新直後の read-your-own-writes が必要な箇所は `updateTag()`
+- 遅延再検証でよい箇所は `revalidateTag()`
 
-```mermaid
-sequenceDiagram
-    participant User as ユーザー
-    participant Client as Client Component
-    participant ServerAction as Server Action
-    participant Auth as Better Auth
-    participant Prisma as Prisma
-    participant DB as Database
+## 管理画面の方針
 
-    User->>Client: ログイン情報入力
-    Client->>ServerAction: ログインリクエスト
-    ServerAction->>Auth: 認証処理
-    Auth->>Prisma: ユーザー検証
-    Prisma->>DB: クエリ実行
-    DB-->>Prisma: ユーザー情報
-    Prisma-->>Auth: 認証結果
-    Auth->>Auth: JWT生成
-    Auth-->>ServerAction: セッション作成
-    ServerAction-->>Client: 認証成功
-    Client-->>User: ダッシュボードへリダイレクト
-```
+- 管理画面は引き続き route group 内に UI を保持する
+- write 系 Server Action は `権限確認 + Zod 入力検証 + domain command 呼び出し + cache invalidation` の thin adapter を正本にする
+- `navigation`, `announcementBar`, `blockTemplate`, `customers`, `coupons`, `faq`, `ical-tokens`, `inquiries`, `instagram`, `locations`, `news`, `post-comments`, `posts`, `space-categories`, `staff-invitations`, `terms`, `users`, `settings/api-keys`, `settings/basic`, `settings/business`, `settings/email`, `settings/other`, `settings/discount`, `settings/tax`, `settings/robots-txt`, `settings/google-calendar`, `settings/stripe` は `executeAdminMutation()` + domain command へ移行済み
+- `dashboard`, `audit-log` の read 系は admin action から Prisma を外し、domain query を正本にする
+- それ以外の admin action は同パターンへ段階的に移行する
 
-### デプロイメントアーキテクチャ
+## 静的検証ルール
 
-```mermaid
-graph TB
-    subgraph Dev["開発環境"]
-        LocalDev["ローカル開発<br/>Bun + Next.js"]
-        DockerPostgres["PostgreSQL<br/>Docker Desktop"]
-        DevSupabase["Supabase<br/>開発用プロジェクト<br/>Storage/Realtime用"]
-    end
-
-    subgraph CI["CI/CD"]
-        GitHub["GitHub Actions"]
-        Build["ビルド・テスト"]
-        Docker["Dockerイメージ作成"]
-    end
-
-    subgraph CDN["CDN"]
-        Cloudflare["Cloudflare CDN<br/>キャッシュ・DDoS保護"]
-    end
-
-    subgraph GCP["Google Cloud Platform"]
-        ArtifactRegistry["Artifact Registry<br/>Dockerイメージ"]
-        CloudRun["Cloud Run<br/>Next.js App"]
-        SecretManager["Secret Manager<br/>環境変数"]
-    end
-
-    subgraph Supabase["Supabase"]
-        ProductionDB["PostgreSQL<br/>本番DB"]
-        ProductionStorage["Storage<br/>本番ストレージ"]
-    end
-
-    LocalDev --> DockerPostgres
-    LocalDev --> DevSupabase
-    LocalDev --> GitHub
-    GitHub --> Build
-    Build --> Docker
-    Docker --> ArtifactRegistry
-    ArtifactRegistry --> CloudRun
-    SecretManager --> CloudRun
-    CloudRun --> ProductionDB
-    CloudRun --> ProductionStorage
-    Cloudflare --> CloudRun
-```
-
----
-
-## 技術スタック
-
-> **Note**: 技術スタックの詳細なバージョン情報とセットアップ手順については、[`CLAUDE.md`](../CLAUDE.md)の「Technical stack」セクションを参照してください。
-
-### フロントエンド
-
-- **Next.js 16.1.4**: App Router、Server Components、SSR/SSG/ISR（CVE-2025-55182修正版）
-- **React 19.2.3**: UIライブラリ（CVE-2025-55182修正版）
-- **TypeScript 5.9.3**: 型安全性
-- **Tailwind CSS 4.1.18**: スタイリング
-- **GSAP / Framer Motion**: アニメーション
-- **Three.js / Pixi.js**: 3D/2Dグラフィックス
-
-### バックエンド
-
-- **Next.js Server Actions**: サーバーサイドロジック
-- **Next.js Route Handlers**: APIエンドポイント
-- **Prisma 7.4.0**: ORM
-- **Zod 4.3.5**: スキーマバリデーション
-
-### データベース
-
-- **Supabase PostgreSQL**: リレーショナルデータベース
-- **Prisma ORM**: データベースアクセス層
-- **Row Level Security (RLS)**: データベースレベルセキュリティ
-
-### 認証
-
-- **Better Auth**: 認証システム
-- **Cookie-based Session**: セッション管理（scrypt ハッシュ）
-- **Prisma Adapter**: データベース統合
-
-### ストレージ
-
-- **Supabase Storage**: 画像・ファイル保存
-- **Supabase CDN**: 画像配信（Supabase Storage内蔵）
-
-### 決済
-
-- **Stripe**: オンライン決済プラットフォーム
-- **暗号化**: AES-256-GCM でシークレットキーを暗号化してDB保存
-- **環境変数優先**: `STRIPE_SECRET_KEY` 設定時はDB設定より優先
-
-```mermaid
-graph LR
-    subgraph Admin["管理画面"]
-        Settings["設定画面"]
-    end
-
-    subgraph Backend["バックエンド"]
-        Actions["Server Actions"]
-        Crypto["crypto.ts<br/>AES-256-GCM"]
-    end
-
-    subgraph External["外部サービス"]
-        StripeAPI["Stripe API"]
-    end
-
-    subgraph Storage["データ保存"]
-        EnvVar["環境変数<br/>STRIPE_SECRET_KEY"]
-        DB["Database<br/>暗号化キー"]
-    end
-
-    Settings -->|設定更新| Actions
-    Actions -->|暗号化| Crypto
-    Crypto -->|保存| DB
-    Actions -->|接続テスト| StripeAPI
-    EnvVar -.->|優先| Actions
-```
-
-### デプロイメント
-
-- **Cloudflare CDN**: グローバルCDN、DDoS保護、キャッシュ最適化（推奨）
-- **Google Cloud Run**: アプリケーション実行環境
-- **Artifact Registry**: Dockerイメージレジストリ
-- **Secret Manager**: 機密情報管理
-- **GitHub Actions / Cloud Build**: CI/CD
-
----
-
-## 技術検証結果
-
-### 互換性検証
-
-#### ✅ 検証済み・動作確認済み
-
-| 技術 | 状態 | 備考 |
-|------|------|------|
-| Next.js 16.1.4 + React 19.2.3 | ✅ | 最新安定版（CVE-2025-55182修正済み） |
-| Prisma 7.4.0 + Supabase | ✅ | 完全互換、接続プーリング推奨 |
-| Bun 1.3.9 | ✅ | フルBunで実行可能（開発・本番） |
-| Zod 4.3.5 | ✅ | 完全互換 |
-| Tailwind CSS 4.1.18 | ✅ | 完全互換 |
-| Three.js / Pixi.js | ✅ | 動的インポートで使用可能 |
-| GSAP / Framer Motion | ✅ | 使用可能 |
-| Turbopack | ✅ | Next.js 16でデフォルト有効 |
-
-#### ⚠️ 注意が必要な点
-
-**1. Prisma 7とDriver Adapters**
-- Prisma 7では、データベース接続にdriver adaptersが**必須**
-- PostgreSQLの場合は`@prisma/adapter-pg`を使用
-- 接続プーリングはNode.js driver（`pg`）で管理
-- PrismaはEdge Runtimeをサポートしていない
-- Next.js API Routes/Server Actionsは`runtime = "nodejs"`を指定（またはデフォルト）
-- BunランタイムはNode.js互換性があるため、Prismaと互換
-- 詳細は[`PRISMA_7.md`](./PRISMA_7.md)と[`BEST_PRACTICES.md`](./BEST_PRACTICES.md)を参照
-
-**2. Better AuthとPrisma**
-- Better Auth のビルトイン Prisma Adapter を使用
-- Prisma 7.2 と完全互換
-- Cookie-based セッション管理（scrypt ハッシュ）
-
-**3. Three.js/Pixi.jsのSSR**
-- SSR/SSG時は動的インポートでクライアントサイドのみロード
-- 詳細は[`PROJECT_STRUCTURE.md`](./PROJECT_STRUCTURE.md)を参照
-
-**4. Supabase RealtimeとPrisma**
-- RealtimeサブスクリプションはSupabase Clientを直接使用
-- Prismaクエリと併用可能
-
-### セキュリティ検証
-
-#### 重大なセキュリティ脆弱性（CVE-2025-55182）
-
-- **影響範囲**: React 19.0-19.2.0、Next.js 15.x-16.0.6
-- **深刻度**: 重大（認証されていないリモートコード実行が可能）
-- **必須対応**:
-  - React 19.2.1以上にアップグレード（最新安定版: 19.2.3）
-  - Next.js 16.0.7以上にアップグレード（最新安定版: 16.1.4）
-- **詳細**: React Server Componentsの脆弱性により、サーバー上でリモートコード実行が可能
-
-詳細は[`README.md`](./README.md)を参照してください。
-
-### デプロイ検証
-
-#### Google Cloud Run
-
-- **ランタイム**: Bun 1.3.9（Dockerイメージ内で実行）
-- **ベースイメージ**: `oven/bun:1.3.9`
-- **ビルド**: `bun run build`（Dockerイメージ内で実行）
-- **環境変数**: Secret Managerから注入
-- **スケーリング**: 自動スケーリング設定
-
-詳細は[`DEPLOYMENT.md`](./DEPLOYMENT.md)と[`DOCKER.md`](./DOCKER.md)を参照してください。
-
-#### Supabase
-
-- **データベース**: PostgreSQL（マネージド）
-- **Storage**: 画像・ファイル保存
-- **Realtime**: WebSocket接続
-- **Edge Functions**: 必要に応じて（メール送信等）
-
-### リスクと対策
-
-| リスク | 影響度 | 対策 | 状態 |
-|--------|--------|------|------|
-| React/Next.js セキュリティ脆弱性（CVE-2025-55182） | **重大** | React 19.2.3、Next.js 16.1.4に即座にアップグレード | ✅ 対策済み |
-| Prisma Edge Runtime非対応 | 高 | Node.js Runtimeを明示的に指定 | ✅ 対策済み |
-| Better AuthとPrismaの互換性 | 低 | Better Auth ビルトイン Adapter 使用 | ✅ 対策済み |
-| Three.js/Pixi.jsのSSR問題 | 中 | 動的インポートでクライアントサイドのみ | ✅ 対策済み |
-| Supabase接続プーリング | 低 | 適切な接続URL設定 | ✅ 対策済み |
-| Cloud RunでのBun実行 | 低 | Dockerイメージ内でBunを使用 | ✅ 実装済み |
-
----
-
-## アーキテクチャパターン
-
-### Next.js コロケーションパターン (Plan 050)
-
-**管理画面と公開ページは完全に別物。UI は完全分離、ロジック/データは共有。**
-
-```
-src/
-├── app/
-│   ├── (public)/                          # 公開ページルーティング
-│   │   └── _shared/                       # 公開ページ専用コード
-│   │       ├── components/                # UI コンポーネント
-│   │       ├── actions/                   # Server Actions
-│   │       ├── lib/                       # ユーティリティ
-│   │       └── types/                     # 型定義
-│   │
-│   ├── (admin)/admin/(dashboard)/         # 管理画面ルーティング
-│   │   └── _shared/                       # 管理画面専用コード
-│   │       ├── components/                # UI コンポーネント (shadcn/ui)
-│   │       ├── actions/                   # Server Actions
-│   │       ├── hooks/                     # カスタムフック
-│   │       ├── contexts/                  # コンテキスト
-│   │       ├── lib/                       # ユーティリティ
-│   │       └── types/                     # 型定義
-│   │
-│   └── api/                               # API Routes（共有）
-│
-└── shared/                                # 共有コード
-    ├── lib/                               # ユーティリティ（prisma, auth, utils）
-    └── types/                             # 型定義
-
-パスエイリアス:
-- @/admin/*  → src/app/(admin)/admin/(dashboard)/_shared/*
-- @/public/* → src/app/(public)/_shared/*
-- @/shared/* → src/shared/*
-```
-
-#### UI ライブラリ構成
-
-| 領域 | UI ライブラリ | バリアント管理 | スタイリング |
-|------|-------------|---------------|-------------|
-| 管理画面 | shadcn/ui | CVA（shadcn 内蔵） | clsx + tailwind-merge |
-| 公開ページ | カスタム | tailwind-variants (tv) | clsx + tailwind-merge |
-
-> **Note**: shadcn/ui は内部で [CVA (class-variance-authority)](https://cva.style/docs) を使用。
-> 管理画面に tailwind-variants は不要（CVA と機能が重複するため）。
-
-#### 共有するもの（ロジック層）
-
-- **データベース**: Prisma Client (`src/lib/prisma.ts`)
-- **認証**: Better Auth (`src/shared/lib/auth.ts`)
-- **Server Actions**: `src/actions/` 配下
-- **型定義**: `src/types/` 配下
-- **バリデーション**: Zod スキーマ (`src/lib/validations/`)
-- **ユーティリティ**: `src/lib/utils.ts` (cn 関数)
-
-#### 共有しないもの（UI 層）
-
-- UI コンポーネント（Button, Input, Card 等）
-- レイアウトコンポーネント
-- ページセクション
-
-### Server Components 優先アーキテクチャ
-
-- **デフォルト**: すべてのコンポーネントは Server Component
-- **Client Component**: インタラクティブ要素のみ `'use client'` を使用
-- **利点**:
-  - クライアント側 JavaScript バンドルサイズの削減
-  - SEO 最適化
-  - サーバーサイドでの直接データベースアクセス
-
-### レンダリング戦略
-
-- **SSG (Static Site Generation)**: 静的コンテンツ（プライバシーポリシーなど）
-- **ISR (Incremental Static Regeneration)**: 半静的コンテンツ（スペース詳細、お知らせ）
-- **SSR (Server-Side Rendering)**: 動的コンテンツ（予約ページ、管理画面）
-- **PPR (Partial Prerendering) / Cache Components**: 静的コンテンツと動的コンテンツを同じルート内で組み合わせ（Next.js 16の`cacheComponents`設定で有効化、`"use cache"`ディレクティブで明示的なキャッシュ制御）
-- **CSR (Client-Side Rendering)**: クライアントサイドのみでレンダリング（`'use client'`ディレクティブ + `dynamic`インポートで`ssr: false`を指定）
-
-### データフェッチング（2026年最新パターン）
-
-| 領域 | 技術 | パターン |
-|------|------|----------|
-| データ取得 | Server Components | async コンポーネントで直接 Prisma |
-| データ変更 | Server Actions | `'use server'` + `revalidatePath` |
-| 認証 | Better Auth | `proxy.ts` + `verifySession()` |
-| SEO | Metadata API | `generateMetadata` + `sitemap.ts` |
-| フォーム | React 19 | `useActionState` + `useFormStatus` |
-| バリデーション | Zod 4 | Server/Client 共通スキーマ |
-
-#### Server Components でのデータ取得
-
-```tsx
-// app/(public)/spaces/page.tsx
-export default async function SpacesPage() {
-  const spaces = await prisma.space.findMany({
-    where: { isPublished: true },
-    orderBy: { createdAt: 'desc' },
-  })
-
-  return <SpaceList spaces={spaces} />
-}
-```
-
-#### Server Actions でのデータ変更
-
-```tsx
-// actions/reservation.ts
-'use server'
-
-export async function createReservation(formData: FormData) {
-  const data = reservationSchema.parse(Object.fromEntries(formData))
-  await prisma.reservation.create({ data })
-  revalidatePath('/admin/reservations')
-  return { success: true }
-}
-```
-
-#### React 19 フォームパターン
-
-```tsx
-'use client'
-
-import { useActionState } from 'react'
-import { createReservation } from '@/actions/reservation'
-
-function ReservationForm() {
-  const [state, formAction, isPending] = useActionState(createReservation, null)
-
-  return (
-    <form action={formAction}>
-      {/* フォームフィールド */}
-      <button type="submit" disabled={isPending}>
-        {isPending ? '送信中...' : '予約する'}
-      </button>
-    </form>
-  )
-}
-```
-
-- **Route Handlers**: 外部 API 連携、Webhook 受信
-- **並列フェッチング**: `Promise.all` で複数のデータを並列取得
-
-### キャッシュ戦略
-
-詳細は [`CACHING.md`](./CACHING.md) を参照してください。
-
-#### キャッシュ階層
-
-キャッシュ戦略を5つの階層に分類します：
-
-- **L1: 静的コンテンツ** (`revalidate: false`)
-  - プライバシーポリシー、利用規約など
-  - ビルド時に生成、手動無効化まで有効
-- **L2: ISR** (`'use cache'` + `cacheLife('hours')`)
-  - ブログ記事、お知らせ、スペース詳細
-  - 時間ベースの再生成
-- **L3: タグベースキャッシュ** (`'use cache'` + `cacheLife` + `cacheTag`)
-  - スペース一覧、ブログ一覧
-  - タグベースの無効化に対応
-- **L4: 動的コンテンツ** (`<Suspense>`)
-  - 予約ページ、管理画面
-  - ストリーミングで動的データを表示
-- **L5: 非決定的操作** (`connection()`)
-  - Date.now()、Math.random() 等
-  - リクエスト時レンダリングをシグナル
-
-#### キャッシングAPI（Next.js 16）
-
-- **`'use cache'` ディレクティブ**: 明示的キャッシュ制御（**推奨**）
-- **`cacheLife()`**: キャッシュ期間の指定（`'seconds'`, `'minutes'`, `'hours'`, `'days'`, `'weeks'`, `'max'`）
-- **`cacheTag()`**: 無効化用タグの設定
-- **`connection()`**: 非決定的操作のシグナル（リクエスト時レンダリング）
-- **`<Suspense>`**: 動的コンテンツのストリーミング
-- **On-demand Revalidation**:
-  - `revalidatePath`: 特定のパスのキャッシュを無効化
-  - `revalidateTag`: タグベースでキャッシュを無効化
-
-> **Note**: `unstable_cache` と `unstable_noStore` は非推奨です。`'use cache'` と `connection()` を使用してください。
-
-#### stale-while-revalidate semantics
-
-`revalidateTag`の第2引数に`'max'`を指定することで、stale-while-revalidate semanticsが適用されます。古いコンテンツを即座に表示し、バックグラウンドで新しいデータを取得することで、ユーザー体験とパフォーマンスの両立を実現します。
-
----
-
-## セキュリティアーキテクチャ
-
-> **Note**: セキュリティの詳細なポリシーとベストプラクティスについては、[`README.md`](./README.md)を参照してください。
-
-### 認証・認可
-
-- **Middleware**: ルートレベルの保護
-- **Server Actions**: 関数レベルの権限チェック
-- **RLS**: データベースレベルのセキュリティ
-- **Better Auth**: モダンな認証ライブラリを使用
-
-### データ保護
-
-- **入力検証**: Zodスキーマでクライアント・サーバー両方で検証
-- **SQLインジェクション対策**: Prisma ORM（パラメータ化クエリ）
-- **XSS対策**: React自動エスケープ
-- **CSRF対策**: Better Auth 内蔵機能
-
-### 環境変数管理
-
-- **開発**: `.env.local`（Gitにコミットしない）
-- **本番**: Google Secret Manager
-- **機密情報**: ハードコード禁止
-
----
-
-## React 19の最新機能活用
-
-> **Note**: React 19の最新機能の詳細な実装ガイドラインについては、[`BEST_PRACTICES.md`](./BEST_PRACTICES.md)と[`../plans/001-architecture-improvements.md`](./../plans/001-architecture-improvements.md)を参照してください。
-
-### Promiseを直接Client Componentに渡すパターン
-
-React 19では、Server ComponentでPromiseを作成し、それを直接Client Componentに渡して`use()`フックで解決できます。これにより、重要でないデータの遅延読み込みが可能になり、パフォーマンスが向上します。
-
-**適用範囲**:
-- ブログ記事のコメント表示
-- 予約ページの空き状況表示
-- 管理画面の統計情報表示
-- その他、重要でないデータの遅延読み込みが必要な箇所
-
-**実装例**:
-
-```typescript
-// Server Component
-async function PostPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params // Next.js 16ではparamsはPromise
-
-  // 重要なデータはawaitで取得
-  const post = await prisma.post.findUnique({
-    where: { slug }
-  })
-
-  if (!post) {
-    notFound()
-  }
-
-  // Promiseを直接渡す（Client Componentでawait）
-  const commentsPromise = prisma.comment.findMany({
-    where: { postId: post.id }
-  })
-
-  return (
-    <article>
-      <h1>{post.title}</h1>
-      <PostContent content={post.content} />
-      <Suspense fallback={<CommentsLoading />}>
-        <Comments commentsPromise={commentsPromise} />
-      </Suspense>
-    </article>
-  )
-}
-
-// Client Component
-'use client'
-import { use } from 'react'
-
-function Comments({ commentsPromise }: { commentsPromise: Promise<Comment[]> }) {
-  const comments = use(commentsPromise)
-  return (
-    <div>
-      {comments.map(comment => (
-        <CommentItem key={comment.id} comment={comment} />
-      ))}
-    </div>
-  )
-}
-```
-
-### Server Componentsでの直接データフェッチング
-
-Server Componentsでは`await`を直接使用してデータを取得します。`useEffect`でのデータフェッチングは排除し、データフェッチングとUIを同一コンポーネントに配置（co-location）します。
-
----
-
-## Suspense境界の最適化
-
-> **Note**: Suspense境界の最適化の詳細な実装ガイドラインについては、[`BEST_PRACTICES.md`](./BEST_PRACTICES.md)と[`../plans/001-architecture-improvements.md`](./../plans/001-architecture-improvements.md)を参照してください。
-
-### 粒度の細かいSuspense境界
-
-ページ全体ではなく、データフェッチング単位でSuspense境界を設定します。各データフェッチングに適切なfallback UIを提供し、並列データフェッチングを`Promise.all`と組み合わせます。
-
-**実装例**:
-
-```typescript
-export default async function DashboardPage() {
-  return (
-    <div>
-      <h1>ダッシュボード</h1>
-      <Suspense fallback={<StatsSkeleton />}>
-        <Stats />
-      </Suspense>
-      <Suspense fallback={<ReservationsSkeleton />}>
-        <RecentReservations />
-      </Suspense>
-      <Suspense fallback={<UsersSkeleton />}>
-        <RecentUsers />
-      </Suspense>
-    </div>
-  )
-}
-```
-
-### Streaming SSRの最適化
-
-重要でないデータは後からストリーミングし、重要なデータ（メタデータ、基本情報）は優先的にレンダリングします。ユーザー体験を損なわない範囲でストリーミングを実装します。
-
-**ストリーミングの優先順位**:
-- **最優先**: ページの基本構造、メタデータ
-- **高優先**: 主要コンテンツ
-- **中優先**: 補助的なコンテンツ
-- **低優先**: 統計情報、関連コンテンツ
-
----
-
-## エラーバウンダリの体系化
-
-> **Note**: エラーバウンダリの詳細な実装ガイドラインについては、[`BEST_PRACTICES.md`](./BEST_PRACTICES.md)と[`../plans/001-architecture-improvements.md`](./../plans/001-architecture-improvements.md)を参照してください。
-
-### 階層的なエラーバウンダリ
-
-エラーバウンダリを階層的に実装します：
-
-- **ルートレベル**: アプリケーション全体のエラー（`app/error.tsx`）
-- **ページレベル**: ページ固有のエラー（`app/[route]/error.tsx`）
-- **コンポーネントレベル**: コンポーネント固有のエラー（必要に応じて）
-
-**実装例**:
-
-```typescript
-// app/error.tsx (ルートレベル)
-'use client'
-import { useEffect } from 'react'
-import { ErrorBoundary } from '@/components/ErrorBoundary'
-
-export default function Error({
-  error,
-  reset,
-}: {
-  error: Error & { digest?: string }
-  reset: () => void
-}) {
-  useEffect(() => {
-    // エラーログを記録
-    console.error('Root error:', error)
-  }, [error])
-
-  return <ErrorBoundary error={error} reset={reset} />
-}
-```
-
-### エラーハンドリングの統一
-
-Server Actionsでのエラーハンドリングを統一し、エラーレスポンス形式を標準化します。エラーログの一元管理を行い、エラーメッセージの表示方法を統一します。
-
----
-
-## パフォーマンス最適化
-
-### パフォーマンス要件
-
-**Web Vitals目標値**:
-- **First Contentful Paint (FCP)**: < 1.8秒
-- **Largest Contentful Paint (LCP)**: < 2.5秒
-- **Cumulative Layout Shift (CLS)**: < 0.1
-- **First Input Delay (FID)**: < 100ms
-- **Time to First Byte (TTFB)**: < 800ms
-
-**バンドルサイズ目標**:
-- **初期バンドルサイズ**: < 200KB (gzipped)
-- **各ルートのバンドルサイズ**: < 100KB (gzipped)
-
-### レンダリング最適化
-
-- Server Componentsでクライアント側JavaScript削減
-- 適切なレンダリング戦略の選択
-- 画像最適化（Next.js Image Component）
-- Suspense境界の最適化（粒度の細かいSuspense境界）
-
-### データベース最適化
-
-- 適切なインデックス設定（詳細は[`DATABASE_DESIGN.md`](./DATABASE_DESIGN.md)を参照）
-- Prisma `select`で必要なフィールドのみ取得
-- 接続プーリング（Supabase接続プーリングURLを使用）
-- N+1問題の回避（`include`の適切な使用）
-
-### バンドルサイズ最適化
-
-- 動的インポート（Three.js、Pixi.js）
-- ルートベースのコード分割
-- Tree-shaking
-- **Turbopack**: Next.js 16ではTurbopackがデフォルトのバンドラーとして使用され、ビルド時間が2-5倍短縮され、バンドルサイズも最適化される。詳細は [`TURBOPACK_REQUIREMENTS.md`](../guides/turbopack.md) を参照
-
-### 画像最適化
-
-- Next.js Image Componentを使用
-- Supabase Storageと統合
-- WebP形式への自動変換
-- レスポンシブ画像の提供
-
----
-
-## スケーラビリティ
-
-### 水平スケーリング
-
-- Google Cloud Runの自動スケーリング
-- ステートレスアーキテクチャ
-- データベース接続プーリング
-
-### モニタリングとオブザーバビリティ
-
-> **Note**: モニタリングとオブザーバビリティの詳細な実装ガイドラインについては、[`../plans/001-architecture-improvements.md`](./../plans/001-architecture-improvements.md)を参照してください。
-
-#### エラートラッキング
-
-- Sentryまたは類似サービスの統合
-- Server Componentsでのエラートラッキング
-- Client Componentsでのエラートラッキング
-- エラーコンテキストの収集
-
-#### パフォーマンスモニタリング
-
-- Next.js Analyticsの統合
-- Web Vitalsの計測
-- データベースクエリパフォーマンスの監視
-- サーバーレスポンスタイムの監視
-
-#### ログ戦略
-
-- 構造化ログの採用（JSON形式）
-- ログレベルの明確化（error, warn, info, debug）
-- 本番環境でのログ出力の最適化
-- ログの集約と分析
-
----
-
-## 推奨実装順序
-
-1. **フェーズ1**: プロジェクトセットアップ
-   - Next.js + TypeScript + Tailwind CSS
-   - Prisma + Supabase接続
-   - 基本認証（Better Auth）
-
-2. **フェーズ2**: データベース設計
-   - Prismaスキーマ作成
-   - マイグレーション実行
-   - シードデータ投入
-
-3. **フェーズ3**: 公開ページ（基本機能）
-   - ホームページ（シンプル版）
-   - スペース詳細ページ
-   - 予約ページ（基本フォーム）
-
-4. **フェーズ4**: 管理画面
-   - 認証保護
-   - ダッシュボード
-   - CRUD操作
-
-5. **フェーズ5**: デザイン強化
-   - Three.js/Pixi.js統合
-   - GSAP/Motionアニメーション
-   - UI/UX改善
-
-6. **フェーズ6**: デプロイ・最適化
-   - Cloud Runデプロイ
-   - パフォーマンス最適化
-   - セキュリティ監査
-
-詳細は[`FEATURE_REQUIREMENTS.md`](../requirements/README.md)を参照してください。
-
----
-
-## 参考資料
-
-### プロジェクトドキュメント
-
-- [`CLAUDE.md`](../CLAUDE.md) - プロジェクト全体の仕様書（技術スタック詳細）
-- [`FEATURE_REQUIREMENTS.md`](../requirements/README.md) - 機能要件
-- [`DATABASE_DESIGN.md`](./DATABASE_DESIGN.md) - データベース設計
-- [`API.md`](./API.md) - API仕様
-- [`PROJECT_STRUCTURE.md`](./PROJECT_STRUCTURE.md) - プロジェクト構造
-- [`DEPLOYMENT.md`](./DEPLOYMENT.md) - デプロイメント手順
-- [`DOCKER.md`](./DOCKER.md) - Docker設定ガイド
-- [`README.md`](./README.md) - セキュリティポリシー
-- [`BUN_RUNTIME.md`](./BUN_RUNTIME.md) - Bunランタイムガイド
-- [`TURBOPACK_REQUIREMENTS.md`](../guides/turbopack.md) - Turbopack要件定義
-- [`CLOUDFLARE_CDN.md`](./CLOUDFLARE_CDN.md) - Cloudflare CDN統合ガイド
-- [`BEST_PRACTICES.md`](./BEST_PRACTICES.md) - ベストプラクティスガイド
-- [`CACHING.md`](./CACHING.md) - キャッシング戦略ガイド
-- [`../plans/001-architecture-improvements.md`](./../plans/001-architecture-improvements.md) - アーキテクチャ改善要件定義
-
-### 外部リソース
-
-- [Next.js 16 Documentation](https://nextjs.org/docs)
-- [Prisma Documentation](https://www.prisma.io/docs)
-- [Better Auth Documentation](https://www.better-auth.com)
-- [Supabase Documentation](https://supabase.com/docs)
-- [Google Cloud Run Documentation](https://cloud.google.com/run/docs)
-
----
-
-## 更新履歴
-
-- **2026-01-23**: バージョン更新、コロケーションパターン反映
-  - Next.js 16.1.4、Prisma 7.3.0、Better Auth 1.4.17、Bun 1.3.9
-  - プロジェクト構造をPlan 050のコロケーションパターンに更新
-  - CVE-2025-55182対策を「対策済み」に更新
-- **2026-01-12**: Next.js 16 cacheComponents対応
-  - キャッシュ階層を5階層に拡張（L5: 非決定的操作を追加）
-  - `'use cache'` ディレクティブを推奨パターンとして追加
-  - `connection()` の使用方法を追加
-  - `unstable_cache` と `unstable_noStore` を非推奨として明記
-- **2026-01-10**: 旧AGENTS.md → CLAUDE.md への参照変更
-- **2026-01-08**: Context7で取得した最新情報に基づき、以下の更新を実施
-  - 最新キャッシングAPIの反映（`revalidateTag`の`profile`パラメータ、`updateTag`、`refresh`の詳細な説明）
-  - Prisma 7のdriver adaptersの説明を追加（必須性、`@prisma/adapter-pg`の使用、接続プーリング設定）
-  - React 19の`use()`フックのPromiseパターンを確認
-- **2026-01-08**: Next.js 16の非同期paramsパターンに全コード例を修正（`Promise<{ slug: string }>`形式、`await params`使用）
+- `proxy.ts` に Prisma import を置かない
+- `src/shared/db/*` の外で `@generated/prisma/*` を import しない
+- `@/shared/lib/prisma` の legacy shim import を残さない
+- `src/shared/domain/*` と `src/shared/db/*` の外で `@/shared/db/prisma` を import しない
+- `src/shared/db/index.ts`, `src/shared/db/client.ts`, `src/shared/db/models/*` のような互換 shim を再導入しない
+- `src/app/*` から `@/shared/db/client` と `@/shared/db/models/*` を import しない
+- `bun run validate`, `bun test`, `bun run build` を通す

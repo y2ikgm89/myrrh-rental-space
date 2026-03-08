@@ -9,7 +9,6 @@ import { getPosts, getPostCategories, getPostTags } from "@/admin/actions/post";
 import {
   getAdminComments,
   getCommentStats,
-  type CommentFilters as CommentFiltersType,
 } from "@/admin/actions/post-comment";
 import { PostFilters } from "./_components/PostFilters";
 import { PostTable } from "./_components/PostTable";
@@ -24,6 +23,7 @@ import { LoadingState } from "@/admin/components/LoadingState";
 import { parsePostStatusFilter } from "@/shared/lib/validations/enums";
 import { createTypeGuard } from "@/shared/lib/serialize";
 import { loadAdminPostSearchParams } from "@/shared/lib/nuqs";
+import type { CommentFilters as CommentFiltersType } from "@/shared/domain/post-comments/types";
 import type { Metadata } from "next";
 import { connection } from "next/server";
 

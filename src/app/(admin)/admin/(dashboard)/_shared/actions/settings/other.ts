@@ -1,4 +1,4 @@
-'use server'
+"use server";
 
 /**
  * その他の設定 Server Actions
@@ -12,15 +12,39 @@
  * @module admin/actions/settings/other
  */
 
-import { prisma } from '@/shared/lib/prisma'
-import { updateTag } from 'next/cache'
-import { CACHE_TAGS } from '@/shared/lib/constants'
-import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
-import { createValidationError } from '@/shared/lib/action-helpers'
-import { withPermission } from '@/admin/lib/server-action-helpers'
-import { sidebarSettingsSchema } from '@/shared/lib/validations/sidebar'
-import { TermsType, TermsStatus, AnnouncementBarAnimation, AnnouncementBarDesignStyle, PostPermalinkStructure } from '@/shared/generated/prisma/enums'
+import { updateTag } from "next/cache";
+import { CACHE_TAGS } from "@/shared/lib/constants";
+import { createValidationError } from "@/shared/lib/action-helpers";
+import { checkReadPermissionFor } from "@/admin/lib/permissions";
+import { executeAdminMutation } from "@/admin/lib/admin-action";
+import {
+  createSuccess,
+  type ActionResult,
+} from "@/admin/types/server-actions";
+import {
+  getAnnouncementBarCarouselSettings as getAnnouncementBarCarouselSettingsQuery,
+  updateAnnouncementBarCarouselSettings as updateAnnouncementBarCarouselSettingsCommand,
+} from "@/shared/domain/settings/announcement-bar";
+import {
+  getAdminPermalinkSettings as getAdminPermalinkSettingsQuery,
+  getCancellationPolicies as getCancellationPoliciesQuery,
+  getTermsAgreementSettings as getTermsAgreementSettingsQuery,
+} from "@/shared/domain/settings/admin-queries";
+import {
+  updateCookieConsentSettings as updateCookieConsentSettingsCommand,
+  updateHeaderSettings as updateHeaderSettingsCommand,
+  updateMaintenanceSettings as updateMaintenanceSettingsCommand,
+  updatePermalinkSettings as updatePermalinkSettingsCommand,
+  updateReservationSettings as updateReservationSettingsCommand,
+  updateSidebarSettings as updateSidebarSettingsCommand,
+  updateTermsAgreementSettings as updateTermsAgreementSettingsCommand,
+} from "@/shared/domain/settings/commands";
+import type {
+  CancellationPolicyOption,
+  TermsAgreementSettingsData,
+} from "@/shared/domain/settings/types";
 
+import { sidebarSettingsSchema } from "@/shared/lib/validations/sidebar";
 import {
   maintenanceSettingsSchema,
   cookieConsentSettingsSchema,
@@ -37,390 +61,213 @@ import {
   type PermalinkSettingsInput,
   type HeaderSettingsInput,
   type SidebarSettingsInput,
-} from './schemas'
+} from "./schemas";
 
-// =============================================================================
-// Maintenance Actions
-// =============================================================================
+const checkReadPermission = checkReadPermissionFor("settings");
 
-/**
- * メンテナンス設定を更新
- */
-export const updateMaintenanceSettings = withPermission<[data: MaintenanceSettingsInput], void>(
-  'settings',
-  'update'
-)(async (_user, data): Promise<ActionResult<void>> => {
-  const parsed = maintenanceSettingsSchema.safeParse(data)
-  if (!parsed.success) {
-    return createValidationError(parsed.error)
-  }
-
-  await prisma.settings.upsert({
-    where: { id: 'singleton' },
-    create: { id: 'singleton', ...parsed.data },
-    update: parsed.data,
-  })
-
-  updateTag(CACHE_TAGS.SETTINGS)
-
-  return createSuccess('メンテナンス設定を更新しました')
-})
-
-// =============================================================================
-// Cookie Consent Actions
-// =============================================================================
-
-/**
- * Cookie同意設定を更新
- */
-export const updateCookieConsentSettings = withPermission<[data: CookieConsentSettingsInput], void>(
-  'settings',
-  'update'
-)(async (_user, data): Promise<ActionResult<void>> => {
-  const parsed = cookieConsentSettingsSchema.safeParse(data)
-  if (!parsed.success) {
-    return createValidationError(parsed.error)
-  }
-
-  await prisma.settings.upsert({
-    where: { id: 'singleton' },
-    create: { id: 'singleton', ...parsed.data },
-    update: parsed.data,
-  })
-
-  updateTag(CACHE_TAGS.SETTINGS)
-
-  return createSuccess('Cookie同意設定を更新しました')
-})
-
-// =============================================================================
-// Terms Agreement Actions
-// =============================================================================
-
-/**
- * 規約同意設定を取得（公開サイト用）
- */
-export async function getTermsAgreementSettings(): Promise<{
-  enabled: boolean
-  text: string | null
-  requireTerms: boolean
-  requirePrivacy: boolean
-}> {
-  const settings = await prisma.settings.findUnique({
-    where: { id: 'singleton' },
-    select: {
-      termsAgreementEnabled: true,
-      termsAgreementText: true,
-      requireTermsAgreement: true,
-      requirePrivacyAgreement: true,
-    },
-  })
-
-  if (!settings) {
-    return {
-      enabled: true,
-      text: null,
-      requireTerms: true,
-      requirePrivacy: true,
-    }
-  }
-
-  return {
-    enabled: settings.termsAgreementEnabled,
-    text: settings.termsAgreementText,
-    requireTerms: settings.requireTermsAgreement,
-    requirePrivacy: settings.requirePrivacyAgreement,
-  }
+function invalidateSettingsCache(): void {
+  updateTag(CACHE_TAGS.SETTINGS);
 }
 
-/**
- * 規約同意設定を更新（管理画面用）
- */
-export const updateTermsAgreementSettings = withPermission<[data: TermsAgreementSettingsInput], void>(
-  'settings',
-  'update'
-)(async (_user, data): Promise<ActionResult<void>> => {
-  const parsed = termsAgreementSettingsSchema.safeParse(data)
-  if (!parsed.success) {
-    return createValidationError(parsed.error)
+function invalidateReservationSettingsCache(): void {
+  updateTag(CACHE_TAGS.SETTINGS);
+  updateTag(CACHE_TAGS.RESERVATIONS);
+}
+
+function invalidateSidebarSettingsCache(): void {
+  updateTag(CACHE_TAGS.SETTINGS);
+  updateTag(CACHE_TAGS.POSTS);
+}
+
+function invalidatePermalinkCache(): void {
+  updateTag(CACHE_TAGS.SETTINGS);
+  updateTag(CACHE_TAGS.POSTS);
+}
+
+function invalidateLayoutCache(): void {
+  updateTag(CACHE_TAGS.SETTINGS);
+  updateTag(CACHE_TAGS.LAYOUT_SETTINGS);
+}
+
+export async function getTermsAgreementSettings(): Promise<TermsAgreementSettingsData | null> {
+  if (!(await checkReadPermission())) {
+    return null;
   }
 
-  await prisma.settings.upsert({
-    where: { id: 'singleton' },
-    create: { id: 'singleton', ...parsed.data },
-    update: parsed.data,
-  })
+  return getTermsAgreementSettingsQuery();
+}
 
-  updateTag(CACHE_TAGS.SETTINGS)
-  updateTag(CACHE_TAGS.RESERVATIONS)
-
-  return createSuccess('規約同意設定を更新しました')
-})
-
-// =============================================================================
-// Reservation Actions
-// =============================================================================
-
-/**
- * キャンセルポリシー（利用規約）一覧を取得
- * 予約設定画面でのセレクトボックス用
- * 公開済みバージョンがあるもののみ返す
- */
 export async function getCancellationPolicies(): Promise<
-  Array<{
-    id: string
-    title: string
-    updatedAt: Date
-  }>
+  CancellationPolicyOption[]
 > {
-  const terms = await prisma.terms.findMany({
-    where: {
-      type: TermsType.CANCELLATION,
-      isActive: true,
-      // 公開済みバージョンがあるもののみ
-      versions: {
-        some: {
-          status: TermsStatus.PUBLISHED,
-        },
-      },
-    },
-    select: {
-      id: true,
-      title: true,
-      updatedAt: true,
-    },
-    orderBy: { updatedAt: 'desc' },
-  })
+  if (!(await checkReadPermission())) {
+    return [];
+  }
 
-  return terms
+  return getCancellationPoliciesQuery();
 }
 
-/**
- * 予約設定を更新
- */
-export const updateReservationSettings = withPermission<[data: ReservationSettingsInput], void>(
-  'settings',
-  'update'
-)(async (_user, data): Promise<ActionResult<void>> => {
-  const parsed = reservationSettingsSchema.safeParse(data)
-  if (!parsed.success) {
-    return createValidationError(parsed.error)
-  }
-
-  // cancellationTermsIdが指定されている場合、有効なCANCELLATIONタイプか検証
-  if (parsed.data.cancellationTermsId) {
-    const termsExists = await prisma.terms.findFirst({
-      where: {
-        id: parsed.data.cancellationTermsId,
-        type: TermsType.CANCELLATION,
-        isActive: true,
-        versions: {
-          some: {
-            status: TermsStatus.PUBLISHED,
-          },
-        },
-      },
-    })
-    if (!termsExists) {
-      return createFailure('指定されたキャンセルポリシーが見つかりません。有効な公開済みポリシーを選択してください。')
-    }
-  }
-
-  await prisma.settings.upsert({
-    where: { id: 'singleton' },
-    create: { id: 'singleton', ...parsed.data },
-    update: parsed.data,
-  })
-
-  updateTag(CACHE_TAGS.SETTINGS)
-  updateTag(CACHE_TAGS.TERMS)
-
-  return createSuccess('予約設定を更新しました')
-})
-
-// =============================================================================
-// Sidebar Actions
-// =============================================================================
-
-/**
- * サイドバー設定を更新
- */
-export const updateSidebarSettings = withPermission<[data: SidebarSettingsInput], void>(
-  'settings',
-  'update'
-)(async (_user, data): Promise<ActionResult<void>> => {
-  const parsed = sidebarSettingsSchema.safeParse(data)
-  if (!parsed.success) {
-    return createValidationError(parsed.error)
-  }
-
-  await prisma.settings.upsert({
-    where: { id: 'singleton' },
-    create: {
-      id: 'singleton',
-      sidebarEnabled: parsed.data.sidebarEnabled,
-      sidebarWidgets: parsed.data.sidebarWidgets,
-      sidebarRecentCount: parsed.data.sidebarRecentCount,
-      sidebarPopularCount: parsed.data.sidebarPopularCount,
-    },
-    update: {
-      sidebarEnabled: parsed.data.sidebarEnabled,
-      sidebarWidgets: parsed.data.sidebarWidgets,
-      sidebarRecentCount: parsed.data.sidebarRecentCount,
-      sidebarPopularCount: parsed.data.sidebarPopularCount,
-    },
-  })
-
-  updateTag(CACHE_TAGS.SETTINGS)
-  updateTag(CACHE_TAGS.POSTS)
-
-  return createSuccess('サイドバー設定を更新しました')
-})
-
-// =============================================================================
-// Announcement Bar Carousel Actions
-// =============================================================================
-
-/**
- * お知らせバーカルーセル設定を取得（フロントエンド用）
- */
 export async function getAnnouncementBarCarouselSettings(): Promise<AnnouncementBarCarouselSettingsInput> {
-  const settings = await prisma.settings.findUnique({
-    where: { id: 'singleton' },
-    select: {
-      announcementBarAnimation: true,
-      announcementBarDuration: true,
-      announcementBarAutoPlay: true,
-      announcementBarPauseOnHover: true,
-      announcementBarShowArrows: true,
-      announcementBarShowIndicator: true,
-      announcementBarDesignStyle: true,
-      announcementBarBgColor: true,
-      announcementBarTextColor: true,
-      announcementBarStripeColor: true,
-      announcementBarStripeAnimation: true,
-      announcementBarGradientAnimation: true,
-      announcementBarGlassAnimation: true,
-      announcementBarSticky: true,
-    },
-  })
-
-  return {
-    announcementBarAnimation: settings?.announcementBarAnimation ?? AnnouncementBarAnimation.fade,
-    announcementBarDuration: settings?.announcementBarDuration ?? 5000,
-    announcementBarAutoPlay: settings?.announcementBarAutoPlay ?? true,
-    announcementBarPauseOnHover: settings?.announcementBarPauseOnHover ?? true,
-    announcementBarShowArrows: settings?.announcementBarShowArrows ?? true,
-    announcementBarShowIndicator: settings?.announcementBarShowIndicator ?? true,
-    announcementBarDesignStyle: settings?.announcementBarDesignStyle ?? AnnouncementBarDesignStyle.solid,
-    announcementBarBgColor: settings?.announcementBarBgColor ?? null,
-    announcementBarTextColor: settings?.announcementBarTextColor ?? null,
-    announcementBarStripeColor: settings?.announcementBarStripeColor ?? null,
-    announcementBarStripeAnimation: settings?.announcementBarStripeAnimation ?? false,
-    announcementBarGradientAnimation: settings?.announcementBarGradientAnimation ?? false,
-    announcementBarGlassAnimation: settings?.announcementBarGlassAnimation ?? false,
-    announcementBarSticky: settings?.announcementBarSticky ?? false,
-  }
+  return getAnnouncementBarCarouselSettingsQuery();
 }
 
-/**
- * お知らせバーカルーセル設定を更新
- */
-export const updateAnnouncementBarCarouselSettings = withPermission<[data: AnnouncementBarCarouselSettingsInput], void>(
-  'settings',
-  'update'
-)(async (_user, data): Promise<ActionResult<void>> => {
-  const parsed = announcementBarCarouselSettingsSchema.safeParse(data)
-  if (!parsed.success) {
-    return createValidationError(parsed.error)
-  }
-
-  await prisma.settings.upsert({
-    where: { id: 'singleton' },
-    create: { id: 'singleton', ...parsed.data },
-    update: parsed.data,
-  })
-
-  updateTag(CACHE_TAGS.SETTINGS)
-
-  return createSuccess('お知らせバーカルーセル設定を更新しました')
-})
-
-// =============================================================================
-// Permalink Actions
-// =============================================================================
-
-/**
- * パーマリンク設定を取得（公開サイト用）
- *
- * 全URLはルートレベルで生成されます。
- * - post-name: /slug
- * - date-name: /2026/01/slug
- * - category-name: /category/slug
- */
 export async function getPermalinkSettings(): Promise<{
-  postPermalinkStructure: string
+  postPermalinkStructure: string;
 }> {
-  const settings = await prisma.settings.findUnique({
-    where: { id: 'singleton' },
-    select: {
-      postPermalinkStructure: true,
-    },
-  })
-
-  return {
-    postPermalinkStructure: settings?.postPermalinkStructure ?? PostPermalinkStructure.post_name,
-  }
+  return getAdminPermalinkSettingsQuery();
 }
 
-/**
- * パーマリンク設定を更新（管理画面用）
- */
-export const updatePermalinkSettings = withPermission<[data: PermalinkSettingsInput], void>(
-  'settings',
-  'update'
-)(async (_user, data): Promise<ActionResult<void>> => {
-  const parsed = permalinkSettingsSchema.safeParse(data)
+export async function updateMaintenanceSettings(
+  data: MaintenanceSettingsInput,
+): Promise<ActionResult<void>> {
+  const parsed = maintenanceSettingsSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error)
+    return createValidationError(parsed.error);
   }
 
-  await prisma.settings.upsert({
-    where: { id: 'singleton' },
-    create: { id: 'singleton', ...parsed.data },
-    update: parsed.data,
-  })
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      await updateMaintenanceSettingsCommand(parsed.data);
+    },
+    success: () => createSuccess("メンテナンス設定を更新しました"),
+    afterSuccess: invalidateSettingsCache,
+  });
+}
 
-  updateTag(CACHE_TAGS.SETTINGS)
-  updateTag(CACHE_TAGS.POSTS)
-
-  return createSuccess('パーマリンク設定を更新しました')
-})
-
-// =============================================================================
-// Header Settings Actions
-// =============================================================================
-
-/**
- * ヘッダー設定を更新（スクロール動作 + 背景モード）
- */
-export const updateHeaderSettings = withPermission<[data: HeaderSettingsInput], void>(
-  'settings',
-  'update'
-)(async (_user, data): Promise<ActionResult<void>> => {
-  const parsed = headerSettingsSchema.safeParse(data)
+export async function updateCookieConsentSettings(
+  data: CookieConsentSettingsInput,
+): Promise<ActionResult<void>> {
+  const parsed = cookieConsentSettingsSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error)
+    return createValidationError(parsed.error);
   }
 
-  await prisma.settings.upsert({
-    where: { id: 'singleton' },
-    create: { id: 'singleton', ...parsed.data },
-    update: parsed.data,
-  })
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      await updateCookieConsentSettingsCommand(parsed.data);
+    },
+    success: () => createSuccess("Cookie同意設定を更新しました"),
+    afterSuccess: invalidateSettingsCache,
+  });
+}
 
-  updateTag(CACHE_TAGS.SETTINGS)
-  updateTag(CACHE_TAGS.LAYOUT_SETTINGS)
+export async function updateTermsAgreementSettings(
+  data: TermsAgreementSettingsInput,
+): Promise<ActionResult<void>> {
+  const parsed = termsAgreementSettingsSchema.safeParse(data);
+  if (!parsed.success) {
+    return createValidationError(parsed.error);
+  }
 
-  return createSuccess('ヘッダー設定を更新しました')
-})
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      await updateTermsAgreementSettingsCommand(parsed.data);
+    },
+    success: () => createSuccess("規約同意設定を更新しました"),
+    afterSuccess: invalidateReservationSettingsCache,
+  });
+}
+
+export async function updateReservationSettings(
+  data: ReservationSettingsInput,
+): Promise<ActionResult<void>> {
+  const parsed = reservationSettingsSchema.safeParse(data);
+  if (!parsed.success) {
+    return createValidationError(parsed.error);
+  }
+
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      await updateReservationSettingsCommand(parsed.data);
+    },
+    success: () => createSuccess("予約設定を更新しました"),
+    afterSuccess: () => {
+      invalidateSettingsCache();
+      updateTag(CACHE_TAGS.TERMS);
+    },
+  });
+}
+
+export async function updateSidebarSettings(
+  data: SidebarSettingsInput,
+): Promise<ActionResult<void>> {
+  const parsed = sidebarSettingsSchema.safeParse(data);
+  if (!parsed.success) {
+    return createValidationError(parsed.error);
+  }
+
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      await updateSidebarSettingsCommand(parsed.data);
+    },
+    success: () => createSuccess("サイドバー設定を更新しました"),
+    afterSuccess: invalidateSidebarSettingsCache,
+  });
+}
+
+export async function updateAnnouncementBarCarouselSettings(
+  data: AnnouncementBarCarouselSettingsInput,
+): Promise<ActionResult<void>> {
+  const parsed = announcementBarCarouselSettingsSchema.safeParse(data);
+  if (!parsed.success) {
+    return createValidationError(parsed.error);
+  }
+
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      await updateAnnouncementBarCarouselSettingsCommand(parsed.data);
+    },
+    success: () => createSuccess("お知らせバーカルーセル設定を更新しました"),
+    afterSuccess: invalidateSettingsCache,
+  });
+}
+
+export async function updatePermalinkSettings(
+  data: PermalinkSettingsInput,
+): Promise<ActionResult<void>> {
+  const parsed = permalinkSettingsSchema.safeParse(data);
+  if (!parsed.success) {
+    return createValidationError(parsed.error);
+  }
+
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      await updatePermalinkSettingsCommand(parsed.data);
+    },
+    success: () => createSuccess("パーマリンク設定を更新しました"),
+    afterSuccess: invalidatePermalinkCache,
+  });
+}
+
+export async function updateHeaderSettings(
+  data: HeaderSettingsInput,
+): Promise<ActionResult<void>> {
+  const parsed = headerSettingsSchema.safeParse(data);
+  if (!parsed.success) {
+    return createValidationError(parsed.error);
+  }
+
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      await updateHeaderSettingsCommand(parsed.data);
+    },
+    success: () => createSuccess("ヘッダー設定を更新しました"),
+    afterSuccess: invalidateLayoutCache,
+  });
+}

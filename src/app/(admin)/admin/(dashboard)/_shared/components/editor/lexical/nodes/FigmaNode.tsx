@@ -153,7 +153,7 @@ export class FigmaNode extends DecoratorNode<ReactElement> {
       <FigmaComponent
         embedUrl={$getState(this, figmaEmbedUrlState)}
         label={$getState(this, figmaLabelState)}
-        nodeKey={this.__key}
+        nodeKey={this.getKey()}
       />
     );
   }

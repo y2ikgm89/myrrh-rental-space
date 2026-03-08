@@ -6,7 +6,7 @@
  */
 
 import { mock } from 'bun:test'
-import { Role } from '@/shared/generated/prisma/enums'
+import { Role } from '@/shared/db/enums'
 
 // User型定義（Better Authのインターフェースに準拠）
 export interface MockUser {

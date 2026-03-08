@@ -7,8 +7,7 @@
 
 import 'server-only'
 import { z } from 'zod'
-import { prisma } from './prisma'
-import { safeDecrypt } from './crypto'
+import { getDecryptedCloudflareCredentials } from '@/shared/domain/settings/api-key-queries'
 import { logger } from './logger'
 import { getBaseUrl } from '@/shared/lib/constants'
 
@@ -42,32 +41,20 @@ async function getCloudflareCredentials(): Promise<{
   zoneId: string
   apiToken: string
 } | null> {
-  const settings = await prisma.settings.findUnique({
-    where: { id: 'singleton' },
-    select: {
-      cloudflareZoneId: true,
-      cloudflareApiToken: true,
-    },
-  })
-
-  if (!settings?.cloudflareZoneId || !settings?.cloudflareApiToken) {
+  const credentials = await getDecryptedCloudflareCredentials()
+  if (!credentials) {
     return null
   }
 
   // Zone IDの形式検証
-  if (!isValidZoneId(settings.cloudflareZoneId)) {
+  if (!isValidZoneId(credentials.zoneId)) {
     logger.warn('Invalid Cloudflare Zone ID format')
     return null
   }
 
-  const apiToken = safeDecrypt(settings.cloudflareApiToken)
-  if (!apiToken) {
-    return null
-  }
-
   return {
-    zoneId: settings.cloudflareZoneId,
-    apiToken,
+    zoneId: credentials.zoneId,
+    apiToken: credentials.apiToken,
   }
 }
 

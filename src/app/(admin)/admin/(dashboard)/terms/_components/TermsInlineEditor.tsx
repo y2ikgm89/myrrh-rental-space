@@ -63,8 +63,7 @@ import {
   applyBusinessInfo,
   type BusinessInfo,
 } from "@/shared/lib/terms-templates";
-import type { TermsType } from "@/shared/generated/prisma/client";
-import { TermsStatus } from "@/shared/generated/prisma/enums";
+import { TermsStatus, type TermsType } from "@/shared/db/enums";
 import type {
   TermsVersionDetail,
   TermsAgreementItem,

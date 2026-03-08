@@ -5,7 +5,7 @@
  */
 
 import { MessageCircle, Clock, Trash2 } from 'lucide-react'
-import type { CommentStats as Stats } from '@/admin/actions/post-comment'
+import type { CommentStats as Stats } from '@/shared/domain/post-comments/types'
 
 type Props = {
   stats: Stats

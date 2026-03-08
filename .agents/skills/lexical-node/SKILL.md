@@ -1,6 +1,6 @@
 ---
 name: lexical-node
-description: 管理画面の Lexical に新しいノード型を追加するときに使う。既存 node 構成、JSON/DOM 往復、editor 登録までを一連で揃える。
+description: 管理画面の Lexical に新しいノード型を追加するときに使う。NodeState API、JSON/DOM 往復、editor 登録までを一連で揃える。既存 node の監査や deprecated API 除去が主目的なら lexical-audit を使う。
 ---
 
 # lexical-node
@@ -27,18 +27,20 @@ description: 管理画面の Lexical に新しいノード型を追加すると�
 ## ワークフロー
 
 1. 既存 node のうち一番近い実装を選ぶ
-2. `nodes/${NodeName}Node.tsx` を追加する
-3. `Serialized*` 型、`importJSON` / `exportJSON`、必要なら `importDOM` / `exportDOM` を実装する
-4. factory 関数と type guard を追加する
-5. `nodes/index.ts` に export を追加する
-6. 必要なら `theme.ts` と node label / registry を更新する
-7. `LexicalEditor` 側の node registration を更新する
-8. 必要なら preview / renderer 側も追随させる
+2. file top-level に `createState()` を定義し、`parse` でデフォルトと入力検証を決める
+3. `nodes/${NodeName}Node.tsx` に `$config()` と `stateConfigs` を実装する
+4. 必要なら `importDOM` / `exportDOM` と `createDOM` / `updateDOM` を実装する
+5. factory 関数と type guard を追加する
+6. `nodes/index.ts` に export を追加する
+7. 必要なら `theme.ts` と node label / registry を更新する
+8. `LexicalEditor` 側の node registration と preview / renderer / inspector を追随させる
 
 ## ガードレール
 
 - props は JSON serializable に限定する
-- private field は `__` prefix を使う
+- `Serialized*` interface、`static getType()`、`static clone()`、手書き `importJSON()` / `exportJSON()` に戻らない
+- `__property`、getter / setter ラッパー、`getWritable()` / `getLatest()` ベースの旧パターンを増やさない
+- DecoratorNode で `nodeKey` を子へ渡す場合は `this.getKey()` を使う
 - 型アサーションに逃げない
 - 公開側で表示する node は DOM / JSON の往復を欠かさない
 - editor 登録だけして inspector や preview を置き忘れない
@@ -48,5 +50,6 @@ description: 管理画面の Lexical に新しいノード型を追加すると�
 - node 本体、factory、type guard を追加した
 - `nodes/index.ts` と editor registration を更新した
 - 必要な DOM / JSON 往復を実装した
+- preview / renderer / inspector の追随漏れがない
 - 関連テストまたは既存テスト影響を確認した
 - `bun run validate` を実行した

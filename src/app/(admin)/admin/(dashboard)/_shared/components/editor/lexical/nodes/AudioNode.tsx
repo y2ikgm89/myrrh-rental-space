@@ -150,7 +150,7 @@ export class AudioNode extends DecoratorNode<ReactElement> {
         url={$getState(this, audioUrlState)}
         title={$getState(this, audioTitleState)}
         artist={$getState(this, audioArtistState)}
-        nodeKey={this.__key}
+        nodeKey={this.getKey()}
       />
     );
   }

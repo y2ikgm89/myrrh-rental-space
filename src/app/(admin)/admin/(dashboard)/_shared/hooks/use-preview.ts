@@ -8,7 +8,6 @@ import { logger } from '@/shared/lib/logger'
 import {
   type PostPreviewData,
   type NewsPreviewData,
-  type PagePreviewData,
   type PreviewData,
   getPreviewStorageKey,
 } from '@/shared/types'
@@ -17,16 +16,15 @@ import {
 // Types
 // =============================================================================
 
-type ContentType = 'post' | 'news' | 'page'
+type ContentType = 'post' | 'news'
 
 type PreviewDataMap = {
   post: PostPreviewData
   news: NewsPreviewData
-  page: PagePreviewData
 }
 
 /** 任意のプレビューデータ型（統一エディター用） */
-type AnyPreviewData = PostPreviewData | NewsPreviewData | PagePreviewData
+type AnyPreviewData = PostPreviewData | NewsPreviewData
 
 // =============================================================================
 // Storage Functions
@@ -73,7 +71,7 @@ export function openPreview(
   basePath: string
 ): void {
   const previewSlug = identifier || 'preview-new'
-  const url = `${basePath}/${previewSlug}?preview=true`
+  const url = `${basePath}/preview/${previewSlug}`
   window.open(url, '_blank')
 }
 

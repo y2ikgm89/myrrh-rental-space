@@ -79,7 +79,7 @@ import {
   DiscountType,
   DurationDiscountOverride,
   TaxRateType,
-} from "@/shared/generated/prisma/enums";
+} from "@/shared/db/enums";
 import {
   SEOFields,
   OGPFields,

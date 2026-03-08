@@ -145,7 +145,7 @@ export class XNode extends DecoratorNode<ReactElement> {
     return (
       <XComponent
         tweetId={$getState(this, tweetIdState)}
-        nodeKey={this.__key}
+        nodeKey={this.getKey()}
       />
     );
   }

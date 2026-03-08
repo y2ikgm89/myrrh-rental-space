@@ -9,7 +9,7 @@ import {
 import { EmptyState } from "@/admin/components/EmptyState";
 import { InquiryStatusBadge } from "@/admin/components/status-badges";
 import { formatDateTimeShort } from "@/shared/lib/utils";
-import type { InquiryData } from "@/admin/actions/inquiry";
+import type { InquiryData } from "@/shared/domain/inquiries/types";
 import { InquiryActionCell } from "./InquiryActionCell";
 
 // =============================================================================

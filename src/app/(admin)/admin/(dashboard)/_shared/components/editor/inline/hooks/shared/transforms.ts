@@ -7,7 +7,7 @@
 
 import { format } from 'date-fns'
 import { isValidLayoutWidth } from '@/shared/lib/validations/enums'
-import type { LayoutWidth } from '@/shared/generated/prisma/client'
+import type { LayoutWidth } from '@/shared/db/enums'
 
 // =============================================================================
 // 日時変換

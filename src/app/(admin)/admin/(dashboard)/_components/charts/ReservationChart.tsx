@@ -18,7 +18,7 @@ import {
   Legend,
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/admin/components/ui'
-import type { ChartDataPoint } from '@/admin/actions/dashboard'
+import type { ChartDataPoint } from '@/shared/domain/dashboard/queries'
 
 type ReservationChartProps = {
   data: ChartDataPoint[]

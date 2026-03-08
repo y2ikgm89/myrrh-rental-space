@@ -1,91 +1,73 @@
-'use server'
+"use server";
 
-import { prisma } from '@/shared/lib/prisma'
-import { updateTag } from 'next/cache'
-import { CACHE_TAGS } from '@/shared/lib/constants'
-import { createSuccess, type ActionResult } from '@/admin/types/server-actions'
-import { createValidationError } from '@/shared/lib/action-helpers'
-import { withPermission } from '@/admin/lib/server-action-helpers'
-import { checkReadPermissionFor } from '@/admin/lib/permissions'
+import { updateTag } from "next/cache";
+import { CACHE_TAGS } from "@/shared/lib/constants";
+import { createValidationError } from "@/shared/lib/action-helpers";
+import { checkReadPermissionFor } from "@/admin/lib/permissions";
+import { executeAdminMutation } from "@/admin/lib/admin-action";
+import {
+  createSuccess,
+  type ActionResult,
+} from "@/admin/types/server-actions";
+import {
+  getRobotsTxtSettings as getRobotsTxtSettingsQuery,
+} from "@/shared/domain/settings/admin-queries";
+import {
+  resetRobotsTxtToDefault as resetRobotsTxtToDefaultCommand,
+  updateRobotsTxtSettings as updateRobotsTxtSettingsCommand,
+} from "@/shared/domain/settings/commands";
+import type { RobotsTxtData } from "@/shared/domain/settings/types";
+
 import {
   robotsTxtSettingsSchema,
-  checkRobotsTxtWarnings,
   type RobotsTxtSettingsInput,
-} from './schemas'
-import { DEFAULT_ROBOTS_TXT } from './robots-txt-constants'
+} from "./schemas";
 
-export interface RobotsTxtData {
-  robotsTxtEnabled: boolean
-  robotsTxtCustom: string | null
-  defaultRobotsTxt: string
-  warnings: string[]
+const checkReadPermission = checkReadPermissionFor("settings");
+
+function invalidateSettingsCache(): void {
+  updateTag(CACHE_TAGS.SETTINGS);
 }
-
-const checkReadPermission = checkReadPermissionFor('settings')
 
 export async function getRobotsTxtSettings(): Promise<RobotsTxtData | null> {
-  const hasAccess = await checkReadPermission()
-  if (!hasAccess) {
-    return null
+  if (!(await checkReadPermission())) {
+    return null;
   }
 
-  const settings = await prisma.settings.findUnique({
-    where: { id: 'singleton' },
-    select: {
-      robotsTxtEnabled: true,
-      robotsTxtCustom: true,
-    },
-  })
-
-  const robotsTxtCustom = settings?.robotsTxtCustom ?? null
-  const warnings = robotsTxtCustom ? checkRobotsTxtWarnings(robotsTxtCustom) : []
-
-  return {
-    robotsTxtEnabled: settings?.robotsTxtEnabled ?? false,
-    robotsTxtCustom,
-    defaultRobotsTxt: DEFAULT_ROBOTS_TXT,
-    warnings,
-  }
+  return getRobotsTxtSettingsQuery();
 }
 
-export const updateRobotsTxtSettings = withPermission<[data: RobotsTxtSettingsInput], { warnings: string[] }>(
-  'settings',
-  'update'
-)(async (_user, data): Promise<ActionResult<{ warnings: string[] }>> => {
-  const parsed = robotsTxtSettingsSchema.safeParse(data)
+export async function updateRobotsTxtSettings(
+  data: RobotsTxtSettingsInput,
+): Promise<ActionResult<{ warnings: string[] }>> {
+  const parsed = robotsTxtSettingsSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error)
+    return createValidationError(parsed.error);
   }
 
-  const { robotsTxtEnabled, robotsTxtCustom } = parsed.data
-  const warnings = robotsTxtCustom ? checkRobotsTxtWarnings(robotsTxtCustom) : []
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => updateRobotsTxtSettingsCommand(parsed.data),
+    success: ({ warnings }) => {
+      const message =
+        warnings.length > 0
+          ? `robots.txt設定を更新しました（警告: ${warnings.length}件）`
+          : "robots.txt設定を更新しました";
+      return createSuccess(message, { warnings });
+    },
+    afterSuccess: invalidateSettingsCache,
+  });
+}
 
-  await prisma.settings.upsert({
-    where: { id: 'singleton' },
-    create: { id: 'singleton', robotsTxtEnabled, robotsTxtCustom },
-    update: { robotsTxtEnabled, robotsTxtCustom },
-  })
-
-  updateTag(CACHE_TAGS.SETTINGS)
-
-  const message = warnings.length > 0
-    ? `robots.txt設定を更新しました（警告: ${warnings.length}件）`
-    : 'robots.txt設定を更新しました'
-
-  return createSuccess(message, { warnings })
-})
-
-export const resetRobotsTxtToDefault = withPermission<[], void>(
-  'settings',
-  'update'
-)(async (): Promise<ActionResult<void>> => {
-  await prisma.settings.upsert({
-    where: { id: 'singleton' },
-    create: { id: 'singleton', robotsTxtEnabled: false, robotsTxtCustom: null },
-    update: { robotsTxtEnabled: false, robotsTxtCustom: null },
-  })
-
-  updateTag(CACHE_TAGS.SETTINGS)
-
-  return createSuccess('robots.txt設定をデフォルトに戻しました')
-})
+export async function resetRobotsTxtToDefault(): Promise<ActionResult<void>> {
+  return executeAdminMutation({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      await resetRobotsTxtToDefaultCommand();
+    },
+    success: () => createSuccess("robots.txt設定をデフォルトに戻しました"),
+    afterSuccess: invalidateSettingsCache,
+  });
+}

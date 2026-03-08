@@ -3,7 +3,7 @@ import {
   createInvitationSchema,
   setupPasswordSchema,
 } from '@/admin/lib/validations/staff-invitation'
-import { Role } from '@/shared/generated/prisma/enums'
+import { Role } from '@/shared/db/enums'
 
 describe('createInvitationSchema', () => {
   const validInvitationData = {

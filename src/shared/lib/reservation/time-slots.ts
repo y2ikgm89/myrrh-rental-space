@@ -7,9 +7,11 @@
  * NOTE: 営業時間設定はDBのSettingsから取得し、複数時間帯に対応
  */
 
-import { prisma } from '@/shared/lib/prisma'
-import { ACTIVE_RESERVATION_STATUSES } from '@/shared/lib/validations/enums'
-import { parseBusinessHours, type BusinessHours } from '@/shared/lib/json-validators'
+import {
+  getBusinessHoursSettingsQuery,
+  getReservationsForDateQuery,
+} from '@/shared/domain/reservations/availability'
+import type { BusinessHours } from '@/shared/lib/json-validators'
 import { DEFAULT_BUSINESS_HOURS } from './constants'
 import type { TimeSlot } from './types'
 
@@ -23,13 +25,7 @@ const WEEKDAY_KEYS: readonly WeekdayKey[] = [
  * DBから営業時間設定を取得
  */
 async function getBusinessHoursSettings(): Promise<BusinessHours | null> {
-  const settings = await prisma.settings.findUnique({
-    where: { id: 'singleton' },
-    select: { businessHours: true },
-  })
-
-  if (!settings?.businessHours) return null
-  return parseBusinessHours(settings.businessHours)
+  return getBusinessHoursSettingsQuery()
 }
 
 /**
@@ -147,17 +143,7 @@ export async function getAvailableTimeSlots(
   const dateStart = new Date(`${date}T00:00:00`)
   const dateEnd = new Date(`${date}T23:59:59`)
 
-  const reservations = await prisma.reservation.findMany({
-    where: {
-      spaceId,
-      status: { in: [...ACTIVE_RESERVATION_STATUSES] },
-      startTime: { gte: dateStart, lte: dateEnd },
-    },
-    select: {
-      startTime: true,
-      endTime: true,
-    },
-  })
+  const reservations = await getReservationsForDateQuery(spaceId, dateStart, dateEnd)
 
   // 予約済みの時間枠を unavailable にマーク
   for (const reservation of reservations) {

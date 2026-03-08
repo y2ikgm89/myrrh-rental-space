@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Role } from "@/shared/generated/prisma/enums";
+import { Role } from "@/shared/db/enums";
 
 // =============================================================================
 // User Schemas
@@ -32,50 +32,3 @@ export const updateUserSchema = z.object({
 });
 
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;
-
-// =============================================================================
-// User Data Types
-// =============================================================================
-
-/**
- * ユーザーデータ型
- */
-export type UserData = {
-  id: string;
-  email: string;
-  name: string;
-  role: Role;
-  emailVerified: boolean;
-  image: string | null;
-  /** toISOString() 済み ISO 8601 文字列 */
-  createdAt: string;
-  /** toISOString() 済み ISO 8601 文字列 */
-  updatedAt: string;
-  _count: {
-    reservations: number;
-    posts: number;
-  };
-};
-
-/**
- * ユーザー一覧取得パラメータ型
- */
-export type UserListParams = {
-  page?: number;
-  perPage?: number;
-  search?: string;
-  role?: Role | "ALL";
-  sortBy?: "name" | "email" | "role" | "createdAt";
-  sortOrder?: "asc" | "desc";
-};
-
-/**
- * ユーザー一覧取得結果型
- */
-export type UserListResult = {
-  users: UserData[];
-  total: number;
-  page: number;
-  perPage: number;
-  totalPages: number;
-};

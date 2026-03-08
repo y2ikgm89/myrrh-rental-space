@@ -205,7 +205,7 @@ export class InlineImageNode extends DecoratorNode<ReactElement> {
         altText={$getState(this, inlineAltTextState)}
         position={$getState(this, inlinePositionState)}
         width={$getState(this, inlineWidthState)}
-        nodeKey={this.__key}
+        nodeKey={this.getKey()}
       />
     );
   }

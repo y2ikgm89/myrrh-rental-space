@@ -12,11 +12,10 @@ import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { PostStatus } from "@/shared/generated/prisma/enums";
+import { PostStatus } from "@/shared/db/enums";
 import {
   postFormSchema,
   type PostFormData,
-  type PostData,
 } from "@/admin/lib/validations/post";
 import {
   createPost,
@@ -27,6 +26,7 @@ import {
 } from "@/admin/actions/post";
 import { generatePreviewHtml } from "@/admin/actions/preview";
 import { createPreviewHandlers } from "@/admin/hooks";
+import type { PostData } from "@/shared/domain/posts/types";
 import { logger } from "@/shared/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
 import type { PostPreviewData } from "@/shared/types";

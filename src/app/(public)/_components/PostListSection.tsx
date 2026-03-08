@@ -33,6 +33,7 @@ import type { SectionDesign } from "@/shared/lib/validations/section-design";
 export interface PostData {
   readonly id: string;
   readonly slug: string;
+  readonly url: string;
   readonly title: string;
   readonly excerpt: string;
   readonly thumbnailUrl: string;
@@ -116,7 +117,7 @@ export function PostListSection({
         {posts.map((post) => (
           <Link
             key={post.id}
-            href={`/posts/${post.slug}`}
+            href={post.url}
             data-post-card=""
             className={`group overflow-hidden rounded-lg border border-border bg-card transition-shadow duration-300 hover:shadow-lg ${
               isList ? "flex" : ""

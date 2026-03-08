@@ -18,7 +18,7 @@ import {
   SelectValue,
   Switch,
 } from '@/admin/components/ui'
-import { AnnouncementBarType } from '@/shared/generated/prisma/enums'
+import { AnnouncementBarType } from '@/shared/db/enums'
 import { isValidAnnouncementBarType } from '@/shared/lib/validations/enums'
 import type { BarDialogProps, DeleteDialogProps } from './types'
 

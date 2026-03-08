@@ -5,7 +5,7 @@
  * permissions.ts はサーバー専用のため、Client Componentからはこちらを使用
  */
 
-import { Role } from '@/shared/generated/prisma/enums'
+import { Role } from '@/shared/db/enums'
 
 /**
  * EDITORロールかどうかを判定

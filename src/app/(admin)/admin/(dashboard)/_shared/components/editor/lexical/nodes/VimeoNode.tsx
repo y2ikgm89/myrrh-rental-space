@@ -143,7 +143,7 @@ export class VimeoNode extends DecoratorNode<ReactElement> {
     return (
       <VimeoComponent
         videoId={$getState(this, vimeoVideoIdState)}
-        nodeKey={this.__key}
+        nodeKey={this.getKey()}
       />
     );
   }

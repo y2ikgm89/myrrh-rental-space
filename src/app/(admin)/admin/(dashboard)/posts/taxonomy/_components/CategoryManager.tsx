@@ -56,7 +56,8 @@ import {
   deletePostCategory,
   updatePostCategoryOrder,
 } from '@/admin/actions/post'
-import type { PostCategoryData, PostCategoryInput } from '@/admin/lib/validations/post'
+import type { PostCategoryData } from '@/shared/domain/posts/types'
+import type { PostCategoryInput } from '@/admin/lib/validations/post'
 import { cn } from '@/shared/lib/utils'
 import { useCategoryFilters } from '../_hooks/use-taxonomy-filters'
 

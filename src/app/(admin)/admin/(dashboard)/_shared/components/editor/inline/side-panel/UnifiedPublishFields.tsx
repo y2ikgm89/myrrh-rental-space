@@ -8,7 +8,7 @@
  */
 
 import type { FieldValues, Path } from 'react-hook-form'
-import { PostStatus } from '@/shared/generated/prisma/enums'
+import { PostStatus } from '@/shared/db/enums'
 import {
   Input,
   Label,

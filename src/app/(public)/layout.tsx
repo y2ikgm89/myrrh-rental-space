@@ -18,7 +18,6 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactElement, ReactNode } from "react";
 import { Suspense } from "react";
-import { connection } from "next/server";
 import { headers } from "next/headers";
 import { Noto_Sans_JP, Noto_Serif_JP } from "next/font/google";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
@@ -32,23 +31,19 @@ import { CookieConsentBanner } from "@/public/components/CookieConsentBanner";
 import { AnnouncementBarWrapper } from "@/public/components/AnnouncementBarWrapper";
 import { SkipLink, AriaLiveRegion } from "@/public/components/a11y";
 import { AriaLiveProvider } from "@/shared/contexts";
-import { SmoothScrollProvider } from "@/public/components/providers/SmoothScrollProvider";
-import {
-  ScrollOrchestratorProvider,
-  VisualEffectsProvider,
-  PerformanceMonitor,
-} from "@/public/components/effects/core";
 import { GraphJsonLd } from "@/public/components/seo/JsonLd";
 import { getGraphJsonLdData } from "@/public/lib/seo";
-import { getHeaderNavigation } from "@/public/lib/navigation";
+import { getHeaderNavigation } from "@/shared/domain/navigation/queries";
 import { getBusinessInfo } from "@/public/data/business";
-import { getHeaderSettings } from "@/public/lib/header-settings";
-import type { HeaderSettings } from "@/public/lib/header-settings";
-import { HeaderBackgroundMode } from "@/shared/generated/prisma/enums";
+import {
+  getHeaderSettings,
+  type HeaderSettings,
+} from "@/shared/domain/settings/queries";
+import { HeaderBackgroundMode } from "@/shared/db/enums";
 import {
   getCookieConsentSettings,
   getMaintenanceSettings,
-} from "@/shared/lib/settings";
+} from "@/shared/domain/settings/queries";
 import { MaintenancePage } from "@/public/components/MaintenancePage";
 import { getAnalyticsConfig } from "@/shared/lib/analytics/config";
 import { SITE_DEFAULTS } from "@/shared/lib/constants";
@@ -181,8 +176,6 @@ export default async function PublicRootLayout({
 }: Readonly<{
   children: ReactNode;
 }>): Promise<ReactElement> {
-  await connection();
-
   // メンテナンスモードチェック: 有効時は通常レイアウトをスキップして専用画面を返す
   const maintenanceSettings = await getMaintenanceSettings();
   if (maintenanceSettings.maintenanceMode) {
@@ -215,53 +208,46 @@ export default async function PublicRootLayout({
         <Suspense fallback={null}>
           <StructuredDataContent />
         </Suspense>
-        <SmoothScrollProvider>
-          <ScrollOrchestratorProvider>
-            <VisualEffectsProvider>
-              {/* NuqsAdapter は内部で useSearchParams を使用するため Suspense でラップ（Next.js 16 PPR対応） */}
-              <Suspense fallback={null}>
-                <NuqsAdapter>
-                  <AriaLiveProvider>
-                    <div className="flex min-h-screen flex-col">
-                      {/* アクセシビリティ: スキップリンク（初回Tabで表示） */}
-                      <SkipLink />
+        {/* NuqsAdapter は内部で useSearchParams を使用するため Suspense でラップ（Next.js 16 PPR対応） */}
+        <Suspense fallback={null}>
+          <NuqsAdapter>
+            <AriaLiveProvider>
+              <div className="flex min-h-screen flex-col">
+                {/* アクセシビリティ: スキップリンク（初回Tabで表示） */}
+                <SkipLink />
 
-                      {/* キャッシュされたコンテンツ - 静的シェルに含まれる */}
-                      <AnnouncementBarWrapper />
-                      <Suspense fallback={null}>
-                        <HeaderWithData headerSettings={headerSettings} />
-                      </Suspense>
+                {/* キャッシュされたコンテンツ - 静的シェルに含まれる */}
+                <AnnouncementBarWrapper />
+                <Suspense fallback={null}>
+                  <HeaderWithData headerSettings={headerSettings} />
+                </Suspense>
 
-                      <main
-                        id="main-content"
-                        className="flex-1"
-                        {...(isTransparent && {
-                          "data-header-transparent": "",
-                          style: {
-                            marginTop: "calc(var(--header-height, 0px) * -1)",
-                          },
-                        })}
-                      >
-                        {children}
-                      </main>
+                <main
+                  id="main-content"
+                  className="flex-1"
+                  {...(isTransparent && {
+                    "data-header-transparent": "",
+                    style: {
+                      marginTop: "calc(var(--header-height, 0px) * -1)",
+                    },
+                  })}
+                >
+                  {children}
+                </main>
 
-                      <Footer />
+                <Footer />
 
-                      {/* 動的コンテンツ - リクエスト時にストリーミング */}
-                      <Suspense fallback={null}>
-                        <DynamicContent />
-                      </Suspense>
+                {/* 動的コンテンツ - リクエスト時にストリーミング */}
+                <Suspense fallback={null}>
+                  <DynamicContent />
+                </Suspense>
 
-                      {/* アクセシビリティ: スクリーンリーダー向け通知領域 */}
-                      <AriaLiveRegion />
-                    </div>
-                  </AriaLiveProvider>
-                </NuqsAdapter>
-              </Suspense>
-              <PerformanceMonitor />
-            </VisualEffectsProvider>
-          </ScrollOrchestratorProvider>
-        </SmoothScrollProvider>
+                {/* アクセシビリティ: スクリーンリーダー向け通知領域 */}
+                <AriaLiveRegion />
+              </div>
+            </AriaLiveProvider>
+          </NuqsAdapter>
+        </Suspense>
       </body>
     </html>
   );

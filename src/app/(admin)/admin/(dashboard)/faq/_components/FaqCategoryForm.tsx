@@ -17,9 +17,9 @@ import { useFormAction } from '@/admin/hooks'
 import {
   faqCategoryFormSchema,
   defaultFaqCategoryFormValues,
-  type FaqCategoryWithItems,
 } from '@/admin/lib/validations/faq'
 import { createFaqCategory, updateFaqCategory } from '@/admin/actions/faq'
+import type { FaqCategoryWithItems } from '@/shared/domain/faq/types'
 
 type FaqCategoryFormProps = {
   category?: FaqCategoryWithItems

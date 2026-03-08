@@ -6,7 +6,7 @@
  */
 
 import type { ReactElement } from 'react'
-import { SectionType } from '@/shared/generated/prisma/enums'
+import { SectionType } from '@/shared/db/enums'
 import {
   getHeroConfig,
   getHeroParallaxConfig,
@@ -27,13 +27,13 @@ import {
   getInstagramConfig,
   parseSectionDesign,
 } from '@/shared/lib/validations/section'
-import type { PublicSection } from '@/public/actions/section'
 import {
-  getShowcaseSpaces,
-  getPublishedNews,
-  getPublishedPosts,
   getPublishedFaqItems,
-} from '@/public/actions/section'
+  getShowcaseSpaces,
+  type PublicSection,
+} from '@/shared/domain/sections/queries'
+import { getPublishedNews } from '@/shared/domain/news/queries'
+import { getPublishedPosts } from '@/shared/domain/posts/queries'
 
 // v3 components
 import { HeroSection } from '../../../_components/HeroSection'
@@ -148,6 +148,7 @@ export async function SectionRenderer({
       const news: NewsData[] = rawNews.map((n) => ({
         id: n.id,
         slug: n.slug,
+        url: n.url,
         title: n.title,
         publishedAt: n.publishedAt,
       }))
@@ -160,11 +161,12 @@ export async function SectionRenderer({
       const posts: PostData[] = rawPosts.map((p) => ({
         id: p.id,
         slug: p.slug,
+        url: p.url,
         title: p.title,
         excerpt: p.excerpt,
         thumbnailUrl: p.thumbnailUrl,
         publishedAt: p.publishedAt,
-        categoryName: p.category.name,
+        categoryName: p.category?.name ?? null,
       }))
       return <PostListSection config={config} posts={posts} design={design} />
     }

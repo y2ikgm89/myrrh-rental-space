@@ -11,7 +11,7 @@ import {
 } from '@/admin/lib/calendar'
 import { getReservationStatusFilterOrAll } from '@/shared/lib/validations/enums'
 import { toDateString } from '@/shared/lib/serialize'
-import type { ReservationStatus } from '@/shared/generated/prisma/enums'
+import type { ReservationStatus } from '@/shared/db/enums'
 
 interface UseCalendarStateOptions {
   events: CalendarEvent[]

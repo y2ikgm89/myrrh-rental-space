@@ -162,7 +162,7 @@ export class InstagramNode extends DecoratorNode<ReactElement> {
     return (
       <InstagramComponent
         postId={$getState(this, postIdState)}
-        nodeKey={this.__key}
+        nodeKey={this.getKey()}
       />
     );
   }

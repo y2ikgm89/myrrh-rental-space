@@ -7,7 +7,7 @@ import {
   ErrorSeverity,
   normalizeError,
 } from "@/shared/lib/errors/server";
-import { prisma } from "@/shared/lib/prisma";
+import { getGoogleCalendarSettings } from "@/shared/domain/settings/admin-queries";
 import type { CalendarEventParams, CalendarEventResult } from "./types";
 import { formatGoogleApiError } from "./helpers";
 import { getServiceAccountClient } from "./service-account";
@@ -24,12 +24,9 @@ export async function createCalendarEvent(
     return { success: false, error: "Google Calendar is not configured" };
   }
 
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: { googleCalendarId: true },
-  });
+  const settings = await getGoogleCalendarSettings();
 
-  if (!settings?.googleCalendarId) {
+  if (!settings.calendarId) {
     return { success: false, error: "Calendar ID is not configured" };
   }
 
@@ -52,7 +49,7 @@ export async function createCalendarEvent(
     };
 
     const response = await client.events.insert({
-      calendarId: settings.googleCalendarId,
+      calendarId: settings.calendarId,
       requestBody: event,
       sendUpdates: "none",
     });
@@ -87,12 +84,9 @@ export async function updateCalendarEvent(
     return { success: false, error: "Google Calendar is not configured" };
   }
 
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: { googleCalendarId: true },
-  });
+  const settings = await getGoogleCalendarSettings();
 
-  if (!settings?.googleCalendarId) {
+  if (!settings.calendarId) {
     return { success: false, error: "Calendar ID is not configured" };
   }
 
@@ -112,7 +106,7 @@ export async function updateCalendarEvent(
     };
 
     const response = await client.events.update({
-      calendarId: settings.googleCalendarId,
+      calendarId: settings.calendarId,
       eventId,
       requestBody: event,
       sendUpdates: "none",
@@ -147,18 +141,15 @@ export async function deleteCalendarEvent(
     return { success: false, error: "Google Calendar is not configured" };
   }
 
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: { googleCalendarId: true },
-  });
+  const settings = await getGoogleCalendarSettings();
 
-  if (!settings?.googleCalendarId) {
+  if (!settings.calendarId) {
     return { success: false, error: "Calendar ID is not configured" };
   }
 
   try {
     await client.events.delete({
-      calendarId: settings.googleCalendarId,
+      calendarId: settings.calendarId,
       eventId,
       sendUpdates: "none",
     });
@@ -246,18 +237,15 @@ export async function getCalendarEvent(
     return { success: false, error: "Google Calendar is not configured" };
   }
 
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: { googleCalendarId: true },
-  });
+  const settings = await getGoogleCalendarSettings();
 
-  if (!settings?.googleCalendarId) {
+  if (!settings.calendarId) {
     return { success: false, error: "Calendar ID is not configured" };
   }
 
   try {
     const response = await client.events.get({
-      calendarId: settings.googleCalendarId,
+      calendarId: settings.calendarId,
       eventId,
     });
 

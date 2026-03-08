@@ -57,7 +57,7 @@ import {
   deleteFaqItem,
   toggleFaqItemPublished,
 } from "@/admin/actions/faq";
-import type { FaqItemWithCategory } from "@/admin/lib/validations/faq";
+import type { FaqItemWithCategory } from "@/shared/domain/faq/types";
 import {
   Button,
   Dialog,

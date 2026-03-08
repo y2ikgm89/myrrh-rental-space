@@ -37,8 +37,8 @@ import {
   TableRow,
 } from '@/admin/components/ui/table'
 import { getDeletedPagesList, restorePage, deletePagePermanently } from '@/admin/actions/page'
+import type { PageData } from '@/shared/domain/pages/types'
 import { formatDateTimeShort } from '@/shared/lib/utils'
-import type { PageModel as PageData } from '@/shared/generated/prisma/models/Page'
 
 export function DeletedPagesDialog() {
   const router = useRouter()

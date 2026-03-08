@@ -8,20 +8,17 @@
  */
 
 import { cacheLife, cacheTag } from 'next/cache'
-import { prisma } from '@/shared/lib/prisma'
+export type {
+  AnalyticsConfig,
+} from '@/shared/domain/settings/queries'
+import {
+  getAnalyticsConfig as getAnalyticsSettingsConfig,
+} from '@/shared/domain/settings/queries'
+import type {
+  AnalyticsConfig,
+} from '@/shared/domain/settings/queries'
 import { CACHE_TAGS, CACHE_LIFE } from '@/shared/lib/constants'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors/server'
-import { isValidAnalyticsType } from '@/shared/lib/validations/enums'
-import type { AnalyticsType } from '@/shared/generated/prisma/enums'
-
-export type AnalyticsConfig = {
-  analyticsType: AnalyticsType | null
-  googleAnalyticsId: string | null
-  googleTagManagerId: string | null
-  googleSearchConsoleId: string | null
-  bingWebmasterToolsId: string | null
-  gaPropertyId: string | null
-}
 
 /**
  * デフォルトのAnalytics設定（DB取得失敗時のフォールバック）
@@ -50,31 +47,7 @@ export async function getAnalyticsConfig(): Promise<AnalyticsConfig> {
   cacheTag(CACHE_TAGS.ANALYTICS_CONFIG, CACHE_TAGS.SETTINGS)
 
   try {
-    const settings = await prisma.settings.findUnique({
-      where: { id: 'singleton' },
-      select: {
-        analyticsType: true,
-        googleAnalyticsId: true,
-        googleTagManagerId: true,
-        googleSearchConsoleId: true,
-        bingWebmasterToolsId: true,
-        gaPropertyId: true,
-      },
-    })
-
-    if (!settings) {
-      return getDefaultAnalyticsConfig()
-    }
-
-    // プレーンオブジェクトとして返す（シリアライズ可能）
-    return {
-      analyticsType: isValidAnalyticsType(settings.analyticsType) ? settings.analyticsType : null,
-      googleAnalyticsId: settings.googleAnalyticsId ?? null,
-      googleTagManagerId: settings.googleTagManagerId ?? null,
-      googleSearchConsoleId: settings.googleSearchConsoleId ?? null,
-      bingWebmasterToolsId: settings.bingWebmasterToolsId ?? null,
-      gaPropertyId: settings.gaPropertyId ?? null,
-    }
+    return await getAnalyticsSettingsConfig()
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.DATABASE,

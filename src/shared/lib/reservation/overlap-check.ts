@@ -5,8 +5,7 @@
  * 管理画面・公開ページ両方で使用
  */
 
-import { prisma } from '@/shared/lib/prisma'
-import { ACTIVE_RESERVATION_STATUSES } from '@/shared/lib/validations/enums'
+import { checkReservationOverlapQuery } from '@/shared/domain/reservations/availability'
 import type { OverlapCheckParams, OverlapCheckResult, PrismaTransactionClient } from './types'
 
 /**
@@ -41,32 +40,5 @@ export async function checkReservationOverlap(
   params: OverlapCheckParams,
   tx?: PrismaTransactionClient
 ): Promise<OverlapCheckResult> {
-  const { spaceId, startTime, endTime, excludeReservationId } = params
-  const client = tx ?? prisma
-
-  const overlappingReservation = await client.reservation.findFirst({
-    where: {
-      spaceId,
-      status: { in: [...ACTIVE_RESERVATION_STATUSES] },
-      ...(excludeReservationId && { id: { not: excludeReservationId } }),
-      // 重複判定: 2つの時間範囲 [A, B) と [C, D) が重複する条件は A < D && C < B
-      // これは隣接スロット（例: 10:00-11:00 と 11:00-12:00）を重複として検出しない
-      AND: [{ startTime: { lt: endTime } }, { endTime: { gt: startTime } }],
-    },
-    select: {
-      id: true,
-      startTime: true,
-      endTime: true,
-      status: true,
-    },
-  })
-
-  if (overlappingReservation) {
-    return {
-      hasOverlap: true,
-      conflictingReservation: overlappingReservation,
-    }
-  }
-
-  return { hasOverlap: false }
+  return checkReservationOverlapQuery(params, tx)
 }

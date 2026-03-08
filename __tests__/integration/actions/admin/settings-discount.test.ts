@@ -15,7 +15,7 @@ import {
   DiscountCombinationMode,
   TaxDisplayMode,
   TaxInputMode,
-} from '@/shared/generated/prisma/enums'
+} from '@/shared/db/enums'
 
 // =============================================================================
 // スキーマ再現（schemas.ts から）

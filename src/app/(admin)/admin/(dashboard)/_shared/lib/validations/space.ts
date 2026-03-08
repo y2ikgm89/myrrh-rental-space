@@ -7,7 +7,7 @@ import {
   DiscountType,
   DurationDiscountOverride,
   TaxRateType,
-} from "@/shared/generated/prisma/enums";
+} from "@/shared/db/enums";
 
 /**
  * スペースフォーム用バリデーションスキーマ

@@ -1,7 +1,10 @@
-import { z } from 'zod'
-import { LayoutWidth } from '@/shared/types/prisma'
-import { seoOgpFieldsSchema, seoOgpFieldsFormSchema } from '@/shared/lib/validations/seo'
-import { lexicalJsonSchema } from '@/shared/lib/validations/lexical'
+import { z } from "zod";
+import { LayoutWidth } from "@/shared/db/enums";
+import {
+  seoOgpFieldsSchema,
+  seoOgpFieldsFormSchema,
+} from "@/shared/lib/validations/seo";
+import { lexicalJsonSchema } from "@/shared/lib/validations/lexical";
 
 // =============================================================================
 // News Schemas
@@ -12,20 +15,25 @@ import { lexicalJsonSchema } from '@/shared/lib/validations/lexical'
  */
 export const newsSlugSchema = z
   .string()
-  .min(1, { error: 'スラッグを入力してください' })
-  .max(100, { error: 'スラッグは100文字以内で入力してください' })
-  .regex(/^[a-z0-9-]+$/, { error: 'スラッグは小文字英数字とハイフンのみ使用可能です' })
+  .min(1, { error: "スラッグを入力してください" })
+  .max(100, { error: "スラッグは100文字以内で入力してください" })
+  .regex(/^[a-z0-9-]+$/, {
+    error: "スラッグは小文字英数字とハイフンのみ使用可能です",
+  });
 
 /**
  * お知らせ作成スキーマ
  */
 export const createNewsSchema = z.object({
   slug: newsSlugSchema,
-  title: z.string().min(1, { error: 'タイトルは必須です' }).max(200, { error: 'タイトルは200文字以内で入力してください' }),
-  contentJson: z.string().default(''),
-})
+  title: z
+    .string()
+    .min(1, { error: "タイトルは必須です" })
+    .max(200, { error: "タイトルは200文字以内で入力してください" }),
+  contentJson: z.string().default(""),
+});
 
-export type CreateNewsInput = z.infer<typeof createNewsSchema>
+export type CreateNewsInput = z.infer<typeof createNewsSchema>;
 
 /**
  * お知らせ更新スキーマ
@@ -33,14 +41,17 @@ export type CreateNewsInput = z.infer<typeof createNewsSchema>
 export const updateNewsSchema = z
   .object({
     slug: newsSlugSchema,
-    title: z.string().min(1, { error: 'タイトルは必須です' }).max(200, { error: 'タイトルは200文字以内で入力してください' }),
+    title: z
+      .string()
+      .min(1, { error: "タイトルは必須です" })
+      .max(200, { error: "タイトルは200文字以内で入力してください" }),
     contentJson: lexicalJsonSchema,
     contentWidth: z.enum(LayoutWidth).nullable().optional(),
     contentWidthCustom: z.number().int().min(320).max(1920).nullable().optional(),
   })
-  .merge(seoOgpFieldsSchema)
+  .merge(seoOgpFieldsSchema);
 
-export type UpdateNewsInput = z.infer<typeof updateNewsSchema>
+export type UpdateNewsInput = z.infer<typeof updateNewsSchema>;
 
 /**
  * お知らせフォームスキーマ（コンポーネント用）
@@ -49,82 +60,16 @@ export type UpdateNewsInput = z.infer<typeof updateNewsSchema>
 export const newsFormSchema = z
   .object({
     slug: newsSlugSchema,
-    title: z.string().min(1, { error: 'タイトルは必須です' }).max(200, { error: 'タイトルは200文字以内で入力してください' }),
-    contentJson: z.string().min(1, { error: '本文は必須です' }),
+    title: z
+      .string()
+      .min(1, { error: "タイトルは必須です" })
+      .max(200, { error: "タイトルは200文字以内で入力してください" }),
+    contentJson: z.string().min(1, { error: "本文は必須です" }),
     isPublished: z.boolean(),
     publishedAt: z.string().optional(),
     contentWidth: z.string().optional(),
     contentWidthCustom: z.string().optional(),
   })
-  .merge(seoOgpFieldsFormSchema)
+  .merge(seoOgpFieldsFormSchema);
 
-export type NewsFormData = z.infer<typeof newsFormSchema>
-
-// =============================================================================
-// News Data Types
-// =============================================================================
-
-/**
- * お知らせデータ型
- */
-export type NewsData = {
-  id: string
-  slug: string
-  title: string
-  contentHtml: string
-  contentJson: unknown
-  isPublished: boolean
-  publishedAt: Date | null
-  createdAt: Date
-  updatedAt: Date
-  contentWidth: LayoutWidth | null
-  contentWidthCustom: number | null
-  // SEO/OGP
-  metaDescription: string | null
-  metaKeywords: string | null
-  ogpTitle: string | null
-  ogpDescription: string | null
-  ogpImageUrl: string | null
-}
-
-/**
- * お知らせバージョンデータ型
- */
-export type NewsVersionData = {
-  id: string
-  newsId: string
-  version: number
-  contentHtml: string
-  contentJson: unknown
-  createdAt: Date
-  createdBy: string | null
-}
-
-/**
- * お知らせ一覧取得結果型
- */
-export type GetNewsListResult = {
-  news: NewsData[]
-  total: number
-  page: number
-  limit: number
-  totalPages: number
-}
-
-/**
- * お知らせフィルター型
- */
-export type NewsFilters = {
-  status?: 'ALL' | 'PUBLISHED' | 'DRAFT'
-  search?: string
-}
-
-/**
- * お知らせページネーション型
- */
-export type NewsPagination = {
-  page?: number
-  limit?: number
-  sortBy?: 'createdAt' | 'publishedAt'
-  sortOrder?: 'asc' | 'desc'
-}
+export type NewsFormData = z.infer<typeof newsFormSchema>;

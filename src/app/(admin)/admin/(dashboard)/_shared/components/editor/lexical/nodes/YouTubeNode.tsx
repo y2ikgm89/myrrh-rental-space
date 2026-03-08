@@ -132,7 +132,7 @@ export class YouTubeNode extends DecoratorNode<ReactElement> {
     return (
       <YouTubeComponent
         videoId={$getState(this, videoIdState)}
-        nodeKey={this.__key}
+        nodeKey={this.getKey()}
       />
     );
   }

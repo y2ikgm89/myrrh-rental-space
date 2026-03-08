@@ -27,8 +27,8 @@ import {
   getGradientAnimationStyle,
   getGlassShimmerStyle,
 } from "@/shared/lib/announcement-bar-utils";
-import { AnnouncementBarDesignStyle } from "@/shared/generated/prisma/enums";
-import type { AnnouncementBarAnimation } from "@/shared/generated/prisma/enums";
+import { AnnouncementBarDesignStyle } from "@/shared/db/enums";
+import type { AnnouncementBarAnimation } from "@/shared/db/enums";
 
 // =============================================================================
 // Types

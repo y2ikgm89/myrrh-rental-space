@@ -8,8 +8,14 @@ import "server-only";
  * admin/publicの両方で使用されるクーポン関連のServer Actions
  */
 
-import { prisma } from "@/shared/lib/prisma";
-import type { CouponType } from "@/shared/generated/prisma/enums";
+import {
+  decrementCouponUsage as decrementCouponUsageCommand,
+  incrementCouponUsage as incrementCouponUsageCommand,
+} from "@/shared/domain/coupons/commands";
+import {
+  validateCouponCodeQuery,
+  type ValidatedCouponData,
+} from "@/shared/domain/coupons/queries";
 import {
   createSuccess,
   createFailure,
@@ -24,15 +30,7 @@ import { logError, ErrorCategory, ErrorSeverity } from "@/shared/lib/errors/serv
 /**
  * クーポン検証成功結果
  */
-export interface ValidatedCoupon {
-  id: string;
-  code: string;
-  name: string;
-  type: CouponType;
-  discountValue: number;
-  maxDiscountAmount: number | null;
-  canCombineWithDurationDiscount: boolean;
-}
+export type ValidatedCoupon = ValidatedCouponData;
 
 // =============================================================================
 // Actions
@@ -65,56 +63,14 @@ export async function validateCouponCode(
   }
 
   try {
-    const coupon = await prisma.coupon.findUnique({
-      where: { code: normalizedCode },
-    });
+    const result = await validateCouponCodeQuery(normalizedCode, reservationAmount);
 
-    const now = new Date();
-    let isInvalid = false;
-    let minAmountError: string | null = null;
-
-    if (!coupon || !coupon.isActive) {
-      isInvalid = true;
-    }
-
-    if (coupon) {
-      if (coupon.validFrom > now) {
-        isInvalid = true;
-      }
-      if (coupon.validUntil && coupon.validUntil < now) {
-        isInvalid = true;
-      }
-      if (
-        coupon.usageLimit !== null &&
-        coupon.usageCount >= coupon.usageLimit
-      ) {
-        isInvalid = true;
-      }
-      if (reservationAmount !== undefined && coupon.minReservationAmount) {
-        if (reservationAmount < coupon.minReservationAmount) {
-          minAmountError = `このクーポンは¥${coupon.minReservationAmount.toLocaleString()}以上のご利用で適用できます`;
-        }
-      }
-    }
-
-    if (isInvalid || !coupon) {
-      return createFailure("無効なクーポンコードです");
-    }
-
-    if (minAmountError) {
-      return createFailure(minAmountError);
+    if (!result.valid) {
+      return createFailure(result.errorMessage);
     }
 
     return createSuccess("クーポンを適用しました", {
-      coupon: {
-        id: coupon.id,
-        code: coupon.code,
-        name: coupon.name,
-        type: coupon.type,
-        discountValue: coupon.discountValue,
-        maxDiscountAmount: coupon.maxDiscountAmount,
-        canCombineWithDurationDiscount: coupon.canCombineWithDurationDiscount,
-      },
+      coupon: result.coupon,
     });
   } catch (error) {
     logError(error, {
@@ -135,10 +91,7 @@ export async function validateCouponCode(
  */
 export async function incrementCouponUsage(couponId: string): Promise<void> {
   try {
-    await prisma.coupon.update({
-      where: { id: couponId },
-      data: { usageCount: { increment: 1 } },
-    });
+    await incrementCouponUsageCommand(couponId);
   } catch (error) {
     logError(error, {
       category: ErrorCategory.DATABASE,
@@ -159,10 +112,7 @@ export async function incrementCouponUsage(couponId: string): Promise<void> {
  */
 export async function decrementCouponUsage(couponId: string): Promise<void> {
   try {
-    await prisma.coupon.updateMany({
-      where: { id: couponId, usageCount: { gt: 0 } },
-      data: { usageCount: { decrement: 1 } },
-    });
+    await decrementCouponUsageCommand(couponId);
   } catch (error) {
     logError(error, {
       category: ErrorCategory.DATABASE,

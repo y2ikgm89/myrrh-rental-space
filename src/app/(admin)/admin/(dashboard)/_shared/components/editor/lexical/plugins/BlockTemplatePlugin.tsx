@@ -40,8 +40,8 @@ import {
   getBlockTemplates,
   getBlockTemplateById,
   deleteBlockTemplate,
-  type BlockTemplateListItem,
 } from '@/admin/actions/block-template'
+import type { BlockTemplateListItem } from '@/shared/domain/block-template/types'
 import { toast } from 'sonner'
 
 // =============================================================================

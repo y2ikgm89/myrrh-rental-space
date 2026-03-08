@@ -1,325 +1,194 @@
 'use server'
 
-import { prisma } from '@/shared/lib/prisma'
 import { updateTag } from 'next/cache'
+import { z } from 'zod'
+import { executeAdminMutation } from '@/admin/lib/admin-action'
+import { checkReadPermissionFor } from '@/admin/lib/permissions'
+import {
+  createSuccess,
+  createFailure,
+  type ActionResult,
+} from '@/admin/types/server-actions'
+import { createValidationError } from '@/shared/lib/action-helpers'
 import { CACHE_TAGS } from '@/shared/lib/constants'
-import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
-import { withPermission } from '@/admin/lib/server-action-helpers'
+import {
+  createSpaceCategory as createSpaceCategoryCommand,
+  deleteSpaceCategory as deleteSpaceCategoryCommand,
+  hardDeleteSpaceCategory as hardDeleteSpaceCategoryCommand,
+  updateSpaceCategory as updateSpaceCategoryCommand,
+  updateSpaceCategoryOrder as updateSpaceCategoryOrderCommand,
+} from '@/shared/domain/space-categories/commands'
+import {
+  getActiveSpaceCategories as getActiveSpaceCategoriesQuery,
+  getSpaceCategories as getSpaceCategoriesQuery,
+  getSpaceCategoryById as getSpaceCategoryByIdQuery,
+} from '@/shared/domain/space-categories/queries'
 import { spaceCategoryFormSchema } from '@/admin/lib/validations/space-category'
 import type {
+  GetSpaceCategoriesResult,
   SpaceCategoryFormInput,
   SpaceCategoryWithStats,
-  GetSpaceCategoriesResult,
 } from '@/admin/lib/validations/space-category'
-import { checkReadPermissionFor } from '@/admin/lib/permissions'
-import { createValidationError } from '@/shared/lib/action-helpers'
-
-// =============================================================================
-// Helper Functions
-// =============================================================================
 
 const checkReadPermission = checkReadPermissionFor('spaceCategory')
+const idSchema = z.string().uuid({ error: 'カテゴリーIDが不正です' })
+const categoryOrderSchema = z.array(
+  z.object({
+    id: z.string().uuid({ error: 'カテゴリーIDが不正です' }),
+    sortOrder: z.number().int().min(0, { error: '並び順が不正です' }),
+  })
+)
 
-// =============================================================================
-// Read Operations
-// =============================================================================
-
-/**
- * スペースカテゴリー一覧を取得
- */
 export async function getSpaceCategories(options?: {
   includeInactive?: boolean
   search?: string
 }): Promise<GetSpaceCategoriesResult> {
-  const hasPermissionResult = await checkReadPermission()
-  if (!hasPermissionResult) {
+  const hasPermission = await checkReadPermission()
+  if (!hasPermission) {
     return { categories: [], total: 0 }
   }
 
-  const { includeInactive = false, search } = options ?? {}
-
-  const where = {
-    ...(includeInactive ? {} : { isActive: true }),
-    ...(search
-      ? {
-          OR: [
-            { name: { contains: search, mode: 'insensitive' as const } },
-            { description: { contains: search, mode: 'insensitive' as const } },
-          ],
-        }
-      : {}),
-  }
-
-  const [categories, total] = await Promise.all([
-    prisma.spaceCategory.findMany({
-      where,
-      orderBy: { sortOrder: 'asc' },
-      include: {
-        _count: {
-          select: { spaces: true },
-        },
-      },
-    }),
-    prisma.spaceCategory.count({ where }),
-  ])
-
-  const formattedCategories: SpaceCategoryWithStats[] = categories.map((cat) => ({
-    id: cat.id,
-    name: cat.name,
-    description: cat.description,
-    icon: cat.icon,
-    color: cat.color,
-    sortOrder: cat.sortOrder,
-    isActive: cat.isActive,
-    createdAt: cat.createdAt,
-    updatedAt: cat.updatedAt,
-    _count: cat._count,
-  }))
-
-  return {
-    categories: formattedCategories,
-    total,
-  }
+  return getSpaceCategoriesQuery(options)
 }
 
-/**
- * スペースカテゴリーを1件取得
- */
-export async function getSpaceCategoryById(id: string): Promise<ActionResult<SpaceCategoryWithStats>> {
-  const hasPermissionResult = await checkReadPermission()
-  if (!hasPermissionResult) {
+export async function getSpaceCategoryById(
+  id: string
+): Promise<ActionResult<SpaceCategoryWithStats>> {
+  const hasPermission = await checkReadPermission()
+  if (!hasPermission) {
     return createFailure('権限がありません')
   }
 
-  const category = await prisma.spaceCategory.findUnique({
-    where: { id },
-    include: {
-      _count: {
-        select: { spaces: true },
-      },
-    },
-  })
+  const validated = idSchema.safeParse(id)
+  if (!validated.success) {
+    return createValidationError(validated.error)
+  }
 
+  const category = await getSpaceCategoryByIdQuery(validated.data)
   if (!category) {
     return createFailure('カテゴリーが見つかりません')
   }
 
-  const formatted: SpaceCategoryWithStats = {
-    id: category.id,
-    name: category.name,
-    description: category.description,
-    icon: category.icon,
-    color: category.color,
-    sortOrder: category.sortOrder,
-    isActive: category.isActive,
-    createdAt: category.createdAt,
-    updatedAt: category.updatedAt,
-    _count: category._count,
-  }
-
-  return createSuccess('取得しました', formatted)
+  return createSuccess('取得しました', category)
 }
 
-/**
- * アクティブなカテゴリー一覧を取得（セレクトボックス用）
- */
-export async function getActiveSpaceCategories(): Promise<ActionResult<{ id: string; name: string; icon: string | null; color: string | null }[]>> {
-  const hasPermissionResult = await checkReadPermission()
-  if (!hasPermissionResult) {
+export async function getActiveSpaceCategories(): Promise<
+  ActionResult<{ id: string; name: string; icon: string | null; color: string | null }[]>
+> {
+  const hasPermission = await checkReadPermission()
+  if (!hasPermission) {
     return createFailure('権限がありません')
   }
 
-  const categories = await prisma.spaceCategory.findMany({
-    where: { isActive: true },
-    orderBy: { sortOrder: 'asc' },
-    select: {
-      id: true,
-      name: true,
-      icon: true,
-      color: true,
-    },
-  })
-
+  const categories = await getActiveSpaceCategoriesQuery()
   return createSuccess('取得しました', categories)
 }
 
-// =============================================================================
-// Create Operations
-// =============================================================================
-
-/**
- * スペースカテゴリーを作成
- */
-export const createSpaceCategory = withPermission<[input: SpaceCategoryFormInput], { id: string }>(
-  'spaceCategory',
-  'create'
-)(async (_user, input): Promise<ActionResult<{ id: string }>> => {
+export async function createSpaceCategory(
+  input: SpaceCategoryFormInput
+): Promise<ActionResult<{ id: string }>> {
   const parsed = spaceCategoryFormSchema.safeParse(input)
-
   if (!parsed.success) {
     return createValidationError(parsed.error)
   }
 
-  const data = parsed.data
-
-  // 同名チェック
-  const existing = await prisma.spaceCategory.findFirst({
-    where: { name: data.name, isActive: true },
-    select: { id: true },
+  return executeAdminMutation({
+    resource: 'spaceCategory',
+    action: 'create',
+    execute: async () => createSpaceCategoryCommand(parsed.data),
+    success: (result) => createSuccess('カテゴリーを作成しました', result),
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.SPACE_CATEGORIES)
+    },
+    resolveAuditResourceId: (result) => result.id,
   })
-  if (existing) {
-    return createFailure('同じ名前のカテゴリーが既に存在します')
+}
+
+export async function updateSpaceCategory(
+  id: string,
+  input: SpaceCategoryFormInput
+): Promise<ActionResult<{ id: string }>> {
+  const validatedId = idSchema.safeParse(id)
+  if (!validatedId.success) {
+    return createValidationError(validatedId.error)
   }
 
-  const category = await prisma.spaceCategory.create({
-    data: {
-      name: data.name,
-      description: data.description || null,
-      icon: data.icon || null,
-      color: data.color || null,
-      sortOrder: data.sortOrder,
-    },
-  })
-
-  updateTag(CACHE_TAGS.SPACE_CATEGORIES)
-
-  return createSuccess('カテゴリーを作成しました', { id: category.id })
-})
-
-// =============================================================================
-// Update Operations
-// =============================================================================
-
-/**
- * スペースカテゴリーを更新
- */
-export const updateSpaceCategory = withPermission<[id: string, input: SpaceCategoryFormInput], { id: string }>(
-  'spaceCategory',
-  'update'
-)(async (_user, id, input): Promise<ActionResult<{ id: string }>> => {
   const parsed = spaceCategoryFormSchema.safeParse(input)
-
   if (!parsed.success) {
     return createValidationError(parsed.error)
   }
 
-  const existing = await prisma.spaceCategory.findUnique({
-    where: { id },
-    select: { id: true },
+  return executeAdminMutation({
+    resource: 'spaceCategory',
+    action: 'update',
+    resourceId: validatedId.data,
+    execute: async () => updateSpaceCategoryCommand(validatedId.data, parsed.data),
+    success: (result) => createSuccess('カテゴリーを更新しました', result),
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.SPACE_CATEGORIES)
+    },
+    resolveAuditResourceId: (result) => result.id,
   })
-  if (!existing) {
-    return createFailure('カテゴリーが見つかりません')
+}
+
+export async function updateSpaceCategoryOrder(
+  items: { id: string; sortOrder: number }[]
+): Promise<ActionResult<{ updated: number }>> {
+  const parsed = categoryOrderSchema.safeParse(items)
+  if (!parsed.success) {
+    return createValidationError(parsed.error)
   }
 
-  const data = parsed.data
-
-  // 同名チェック（自分以外）
-  const duplicate = await prisma.spaceCategory.findFirst({
-    where: { name: data.name, isActive: true, id: { not: id } },
-    select: { id: true },
-  })
-  if (duplicate) {
-    return createFailure('同じ名前のカテゴリーが既に存在します')
-  }
-
-  await prisma.spaceCategory.update({
-    where: { id },
-    data: {
-      name: data.name,
-      description: data.description || null,
-      icon: data.icon || null,
-      color: data.color || null,
-      sortOrder: data.sortOrder,
+  return executeAdminMutation({
+    resource: 'spaceCategory',
+    action: 'update',
+    execute: async () => updateSpaceCategoryOrderCommand(parsed.data),
+    success: (result) => createSuccess('並び順を更新しました', result),
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.SPACE_CATEGORIES)
     },
   })
+}
 
-  updateTag(CACHE_TAGS.SPACE_CATEGORIES)
+export async function deleteSpaceCategory(
+  id: string
+): Promise<ActionResult<{ id: string }>> {
+  const validated = idSchema.safeParse(id)
+  if (!validated.success) {
+    return createValidationError(validated.error)
+  }
 
-  return createSuccess('カテゴリーを更新しました', { id })
-})
-
-/**
- * カテゴリーの並び順を更新
- */
-export const updateSpaceCategoryOrder = withPermission<[items: { id: string; sortOrder: number }[]], { updated: number }>(
-  'spaceCategory',
-  'update'
-)(async (_user, items): Promise<ActionResult<{ updated: number }>> => {
-  await prisma.$transaction(
-    items.map((item) =>
-      prisma.spaceCategory.update({
-        where: { id: item.id },
-        data: { sortOrder: item.sortOrder },
-      })
-    )
-  )
-
-  updateTag(CACHE_TAGS.SPACE_CATEGORIES)
-
-  return createSuccess('並び順を更新しました', { updated: items.length })
-})
-
-// =============================================================================
-// Delete Operations
-// =============================================================================
-
-/**
- * スペースカテゴリーを削除（論理削除）
- */
-export const deleteSpaceCategory = withPermission<[id: string], { id: string }>(
-  'spaceCategory',
-  'delete'
-)(async (_user, id): Promise<ActionResult<{ id: string }>> => {
-  const existing = await prisma.spaceCategory.findUnique({
-    where: { id },
-    include: { _count: { select: { spaces: true } } },
+  return executeAdminMutation({
+    resource: 'spaceCategory',
+    action: 'delete',
+    resourceId: validated.data,
+    execute: async () => deleteSpaceCategoryCommand(validated.data),
+    success: (result) => createSuccess('カテゴリーを削除しました', result),
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.SPACE_CATEGORIES)
+    },
+    resolveAuditResourceId: (result) => result.id,
   })
+}
 
-  if (!existing) {
-    return createFailure('カテゴリーが見つかりません')
+export async function hardDeleteSpaceCategory(
+  id: string
+): Promise<ActionResult<{ id: string }>> {
+  const validated = idSchema.safeParse(id)
+  if (!validated.success) {
+    return createValidationError(validated.error)
   }
 
-  if (existing._count.spaces > 0) {
-    return createFailure(
-      `このカテゴリーには${existing._count.spaces}件のスペースが紐づいています。先にスペースのカテゴリーを変更してください。`
-    )
-  }
-
-  await prisma.spaceCategory.update({
-    where: { id },
-    data: { isActive: false },
+  return executeAdminMutation({
+    resource: 'spaceCategory',
+    action: 'delete',
+    resourceId: validated.data,
+    execute: async () => hardDeleteSpaceCategoryCommand(validated.data),
+    success: (result) =>
+      createSuccess('カテゴリーを完全に削除しました', result),
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.SPACE_CATEGORIES)
+    },
+    resolveAuditResourceId: (result) => result.id,
   })
-
-  updateTag(CACHE_TAGS.SPACE_CATEGORIES)
-
-  return createSuccess('カテゴリーを削除しました', { id })
-})
-
-/**
- * スペースカテゴリーを物理削除
- */
-export const hardDeleteSpaceCategory = withPermission<[id: string], { id: string }>(
-  'spaceCategory',
-  'delete'
-)(async (_user, id): Promise<ActionResult<{ id: string }>> => {
-  const existing = await prisma.spaceCategory.findUnique({
-    where: { id },
-    include: { _count: { select: { spaces: true } } },
-  })
-
-  if (!existing) {
-    return createFailure('カテゴリーが見つかりません')
-  }
-
-  if (existing._count.spaces > 0) {
-    return createFailure(
-      `このカテゴリーには${existing._count.spaces}件のスペースが紐づいています。`
-    )
-  }
-
-  await prisma.spaceCategory.delete({ where: { id } })
-
-  updateTag(CACHE_TAGS.SPACE_CATEGORIES)
-
-  return createSuccess('カテゴリーを完全に削除しました', { id })
-})
+}

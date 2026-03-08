@@ -11,11 +11,10 @@
 import type { Metadata } from 'next'
 import type { ReactElement } from 'react'
 import type { SearchParams } from 'nuqs/server'
-import { connection } from 'next/server'
 import { BreadcrumbJsonLd } from '@/public/components/seo/JsonLd'
 import { generatePageMetadata } from '@/public/lib/page-metadata'
-import { getPublishedNewsList } from '@/public/actions/news'
-import { getPageSectionsWithFallback } from '@/public/actions/section'
+import { getPublishedNewsList } from '@/shared/domain/news/queries'
+import { getPageSectionsWithFallback } from '@/shared/domain/sections/queries'
 import { SectionRenderer } from '@/public/components/sections/SectionRenderer'
 import { Pagination } from '@/public/components/Pagination'
 import { paginationSearchParams } from '@/public/lib/search-params'
@@ -32,8 +31,6 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function NewsPage({
   searchParams,
 }: PageProps): Promise<ReactElement> {
-  await connection()
-
   const [sections, { page }] = await Promise.all([
     getPageSectionsWithFallback('news'),
     paginationSearchParams.parse(searchParams),

@@ -65,6 +65,8 @@ export function CommentThread({
   const [isDeletePending, startDeleteTransition] = useTransition()
 
   const statusConfig = STATUS_CONFIG[thread.status]
+  const statusVariant = statusConfig?.variant ?? 'secondary'
+  const statusLabel = statusConfig?.label ?? '未解決'
   const timeAgo = formatDistanceToNow(new Date(thread.createdAt), {
     addSuffix: true,
     locale: ja,
@@ -120,8 +122,8 @@ export function CommentThread({
               </p>
               {/* メタ情報 */}
               <div className="flex items-center gap-2 mt-1">
-                <Badge variant={statusConfig.variant} className="text-xs">
-                  {statusConfig.label}
+                <Badge variant={statusVariant} className="text-xs">
+                  {statusLabel}
                 </Badge>
                 <span className="text-xs text-muted-foreground">
                   {thread.comments.length}件のコメント

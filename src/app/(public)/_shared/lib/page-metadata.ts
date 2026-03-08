@@ -9,25 +9,18 @@
  * - 'use cache' ディレクティブでキャッシュし、プリレンダリング時の動的データアクセスを回避
  */
 
-import { cacheLife, cacheTag } from 'next/cache'
 import type { Metadata } from 'next'
-import { prisma } from '@/shared/lib/prisma'
 import {
-  CACHE_TAGS,
-  CACHE_LIFE,
   getBaseUrl,
-  getCacheTag,
   SITE_DEFAULTS,
 } from '@/shared/lib/constants'
-import { safeFetch, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors/server'
-import { toPlainObject } from '@/shared/lib/serialize'
 import { getSeoSettings } from '@/public/lib/seo/metadata-factory'
 import {
   SYSTEM_PAGES,
   getSystemPageDefinition,
   type SystemPageDefinition,
 } from '@/shared/lib/validations/page'
-import { slugParamSchema } from '@/shared/lib/validations/params'
+import { getPageSeo } from '@/shared/domain/pages/queries'
 
 const BASE_URL = getBaseUrl()
 
@@ -42,41 +35,6 @@ export interface PageSeoData {
   ogpTitle: string | null
   ogpDescription: string | null
   ogpImageUrl: string | null
-}
-
-/**
- * ページのSEO/OGP設定を取得
- *
- * Next.js 16 PPR: 'use cache' でプリレンダリング対応
- */
-export async function getPageSeo(slug: string): Promise<PageSeoData | null> {
-  'use cache'
-  cacheLife(CACHE_LIFE.METADATA)
-  cacheTag(CACHE_TAGS.PAGE_SEO, getCacheTag.pageSeo.detail(slug))
-
-  if (!slugParamSchema.safeParse(slug).success) return null
-
-  const page = await safeFetch({
-    fetch: () =>
-      prisma.page.findUnique({
-        where: { slug },
-        select: {
-          title: true,
-          description: true,
-          metaDescription: true,
-          metaKeywords: true,
-          ogpTitle: true,
-          ogpDescription: true,
-          ogpImageUrl: true,
-        },
-      }),
-    fallback: null,
-    category: ErrorCategory.DATABASE,
-    severity: ErrorSeverity.LOW,
-    operationName: 'getPageSeo',
-  })
-
-  return toPlainObject(page)
 }
 
 /**

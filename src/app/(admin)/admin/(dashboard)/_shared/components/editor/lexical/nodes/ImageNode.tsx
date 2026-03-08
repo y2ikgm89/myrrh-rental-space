@@ -274,7 +274,7 @@ export class ImageNode extends DecoratorNode<ReactElement> {
         height={$getState(this, heightState)}
         alignment={$getState(this, alignmentState)}
         caption={$getState(this, captionState)}
-        nodeKey={this.__key}
+        nodeKey={this.getKey()}
       />
     );
   }

@@ -17,7 +17,7 @@ import {
   DiscountCombinationMode,
   TaxDisplayMode,
   TaxInputMode,
-} from '@/shared/generated/prisma/enums'
+} from '@/shared/db/enums'
 
 // =============================================================================
 // Basic Schemas
@@ -211,15 +211,37 @@ export type NotificationSettingsInput = z.infer<typeof notificationSettingsSchem
 // Google Calendar Schemas
 // =============================================================================
 
+const CALENDAR_ID_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+const optionalCalendarIdSchema = z.string().max(200).refine(
+  (value) => value === 'primary' || CALENDAR_ID_REGEX.test(value),
+  { error: 'カレンダーIDの形式が無効です' }
+)
+
+const requiredCalendarIdSchema = z.string().min(
+  1,
+  { error: 'カレンダーIDを入力してください' }
+).max(200).refine(
+  (value) => value === 'primary' || CALENDAR_ID_REGEX.test(value),
+  { error: 'カレンダーIDの形式が無効です' }
+)
+
 export const googleCalendarSettingsSchema = z.object({
   googleCalendarEnabled: z.boolean(),
-  googleCalendarId: z.string().max(200).nullable(),
+  googleCalendarId: optionalCalendarIdSchema.nullable(),
   serviceAccountJson: z.string().nullable(), // 新規入力時のみ
   icalAttachmentEnabled: z.boolean(),
   addToCalendarLinksEnabled: z.boolean(),
 })
 
 export type GoogleCalendarSettingsInput = z.infer<typeof googleCalendarSettingsSchema>
+
+export const googleCalendarConnectionTestSchema = z.object({
+  serviceAccountJson: z.string().min(1, { error: 'サービスアカウントJSONを入力してください' }),
+  calendarId: requiredCalendarIdSchema,
+})
+
+export type GoogleCalendarConnectionTestInput = z.infer<typeof googleCalendarConnectionTestSchema>
 
 export const twoWaySyncSettingsSchema = z.object({
   enabled: z.boolean(),

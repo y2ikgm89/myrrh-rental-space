@@ -1,9 +1,9 @@
 /**
- * 投稿 Public Action 統合テスト
+ * 投稿公開 query 統合テスト
  *
- * src/app/(public)/_shared/actions/post.ts のテスト
+ * 公開側の投稿取得オプションとバリデーションのテスト
  *
- * バリデーションとオプション処理のテスト
+ * 現在の source of truth は src/shared/domain/posts/queries.ts
  */
 
 import { describe, test, expect } from 'bun:test'
@@ -12,7 +12,7 @@ import { describe, test, expect } from 'bun:test'
 // GetPublishedPostsOptions Tests
 // =============================================================================
 
-describe('Post Public Action Integration', () => {
+describe('Post Public Query Integration', () => {
   describe('GetPublishedPostsOptions', () => {
     test('デフォルト値が正しく設定される', () => {
       const options: { take?: number; orderBy?: 'publishedAt' | 'viewCount'; categoryId?: string } = {}

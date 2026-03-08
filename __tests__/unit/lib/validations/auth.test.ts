@@ -86,12 +86,10 @@ describe('credentialsSchema', () => {
 })
 
 describe('loginTokenSchema', () => {
-  test('有効なトークン文字列は通過', () => {
+  test('署名付きトークン形式は通過', () => {
     const validTokens = [
-      'abc123',
-      'a',
-      'very-long-token-string-1234567890',
-      '日本語トークン',
+      'ZXhwaXJlcy5ub25jZQ.c2lnbmF0dXJl',
+      'abc-123_DEF.ghi-456_JKL',
     ]
 
     for (const token of validTokens) {
@@ -102,6 +100,16 @@ describe('loginTokenSchema', () => {
 
   test('空文字はエラー', () => {
     const result = loginTokenSchema.safeParse('')
+    expect(result.success).toBe(false)
+  })
+
+  test('区切りのない文字列はエラー', () => {
+    const result = loginTokenSchema.safeParse('plain-token')
+    expect(result.success).toBe(false)
+  })
+
+  test('base64url 以外の文字はエラー', () => {
+    const result = loginTokenSchema.safeParse('日本語.署名')
     expect(result.success).toBe(false)
   })
 
@@ -123,8 +131,8 @@ describe('loginTokenSchema', () => {
 
 describe('loginTokenResponseSchema', () => {
   const validResponse = {
-    token: 'abc123',
-    loginUrl: 'https://example.com/admin/login?token=abc123',
+    token: 'ZXhwaXJlcy5ub25jZQ.c2lnbmF0dXJl',
+    loginUrl: 'https://example.com/admin/login?token=ZXhwaXJlcy5ub25jZQ.c2lnbmF0dXJl',
     expiresAt: '2025-12-31T23:59:59Z',
   }
 

@@ -3,7 +3,7 @@
  */
 
 import { z } from 'zod'
-import { Role } from '@/shared/generated/prisma/enums'
+import { Role } from '@/shared/db/enums'
 
 // =============================================================================
 // Schemas
@@ -36,19 +36,6 @@ export const setupPasswordSchema = z.object({
 
 export type CreateInvitationInput = z.infer<typeof createInvitationSchema>
 export type SetupPasswordInput = z.infer<typeof setupPasswordSchema>
-
-/**
- * 招待データ型
- */
-export type InvitationData = {
-  id: string
-  email: string
-  role: Role
-  name: string | null
-  expiresAt: Date
-  usedAt: Date | null
-  createdAt: Date
-}
 
 // =============================================================================
 // Constants

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { BusinessHours } from "@/shared/lib/json-validators";
 
 /**
  * 場所（Location）バリデーションスキーマ
@@ -90,29 +89,4 @@ export const defaultLocationFormValues: LocationFormInput = {
   businessHours: null,
   sortOrder: 0,
   isPublished: false,
-};
-
-// 場所詳細型（スペース数を含む）
-export type LocationWithStats = {
-  id: string;
-  name: string;
-  description: string | null;
-  address: string;
-  access: string | null;
-  imageUrl: string;
-  imageUrls: string[];
-  businessHours: BusinessHours | null;
-  sortOrder: number;
-  isPublished: boolean;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-  _count: {
-    spaces: number;
-  };
-};
-
-export type GetLocationsResult = {
-  locations: LocationWithStats[];
-  total: number;
 };

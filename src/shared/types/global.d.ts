@@ -7,7 +7,7 @@
  * NOTE: auth は型推論のために auth.ts 内で declare global を使用
  */
 
-import type { PrismaClient } from '@/shared/generated/prisma/client'
+import type { PrismaClient } from '@/shared/db/prisma'
 
 /** gtag() の第1引数コマンド型 */
 type GtagCommand = 'config' | 'event' | 'get' | 'set' | 'consent' | 'js'

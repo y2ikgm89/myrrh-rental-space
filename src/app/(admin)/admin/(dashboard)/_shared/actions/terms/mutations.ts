@@ -1,496 +1,303 @@
 "use server";
 
-import { prisma } from "@/shared/lib/prisma";
 import { updateTag } from "next/cache";
-import { CACHE_TAGS } from "@/shared/lib/constants";
-import { TermsStatus } from "@/shared/generated/prisma/enums";
-import {
-  createTermsSchema,
-  updateTermsSchema,
-  createTermsVersionSchema,
-  updateTermsVersionSchema,
-  type CreateTermsInput,
-  type UpdateTermsInput,
-  type CreateTermsVersionInput,
-  type UpdateTermsVersionInput,
-} from "@/shared/lib/validations/terms";
+import { z } from "zod";
+import { executeAdminMutation } from "@/admin/lib/admin-action";
+import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
 import {
   createSuccess,
-  createFailure,
   type ActionResult,
 } from "@/admin/types/server-actions";
+import {
+  archiveTermsVersion as archiveTermsVersionCommand,
+  createTerms as createTermsCommand,
+  createTermsVersion as createTermsVersionCommand,
+  createTermsWithVersion as createTermsWithVersionCommand,
+  deleteTerms as deleteTermsCommand,
+  deleteTermsVersion as deleteTermsVersionCommand,
+  publishTermsVersion as publishTermsVersionCommand,
+  toggleTermsActive as toggleTermsActiveCommand,
+  updateTerms as updateTermsCommand,
+  updateTermsVersion as updateTermsVersionCommand,
+} from "@/shared/domain/terms/commands";
 import { createValidationError } from "@/shared/lib/action-helpers";
-import { withPermission } from "@/admin/lib/server-action-helpers";
-import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
-import { purgeTermsCache } from "@/shared/lib/cloudflare";
 import { fireAndForget } from "@/shared/lib/async-utils";
+import { purgeTermsCache } from "@/shared/lib/cloudflare";
+import { CACHE_TAGS } from "@/shared/lib/constants";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
+import { lexicalJsonSchema } from "@/shared/lib/validations/lexical";
+import {
+  createTermsSchema,
+  createTermsVersionSchema,
+  type CreateTermsInput,
+  type CreateTermsVersionInput,
+  type UpdateTermsInput,
+  type UpdateTermsVersionInput,
+  updateTermsSchema,
+  updateTermsVersionSchema,
+} from "@/shared/lib/validations/terms";
 
-// =============================================================================
-// Terms Mutations
-// =============================================================================
+const createTermsWithVersionSchema = createTermsSchema.extend({
+  contentJson: lexicalJsonSchema,
+});
 
-/**
- * 規約を作成
- */
-export const createTerms = withPermission<[CreateTermsInput], { id: string }>(
-  "terms",
-  "create",
-)(async (_user, input): Promise<ActionResult<{ id: string }>> => {
+const idSchema = z.string().uuid({ error: "IDが不正です" });
+const toggleTermsActiveSchema = z.object({
+  id: z.string().uuid({ error: "規約IDが不正です" }),
+  isActive: z.boolean(),
+});
+
+function invalidateTermsCache(): void {
+  updateTag(CACHE_TAGS.TERMS);
+  fireAndForget(purgeTermsCache(), {
+    operation: "purgeTermsCache",
+    category: ErrorCategory.EXTERNAL_API,
+    severity: ErrorSeverity.LOW,
+  });
+}
+
+export async function createTerms(
+  input: CreateTermsInput,
+): Promise<ActionResult<{ id: string }>> {
   const validation = createTermsSchema.safeParse(input);
   if (!validation.success) {
     return createValidationError(validation.error);
   }
 
-  // slug重複チェック
-  const existing = await prisma.terms.findUnique({
-    where: { slug: validation.data.slug },
-    select: { id: true },
+  return executeAdminMutation({
+    resource: "terms",
+    action: "create",
+    execute: async () => createTermsCommand(validation.data),
+    success: (result) => createSuccess("規約を作成しました", result),
+    afterSuccess: invalidateTermsCache,
+    resolveAuditResourceId: (result) => result.id,
   });
+}
 
-  if (existing) {
-    return createFailure("このスラッグは既に使用されています");
-  }
-
-  const terms = await prisma.terms.create({
-    data: validation.data,
-  });
-
-  updateTag(CACHE_TAGS.TERMS);
-
-  // Cloudflare CDN キャッシュパージ
-  fireAndForget(purgeTermsCache(), {
-    operation: "purgeTermsCache",
-    category: ErrorCategory.EXTERNAL_API,
-    severity: ErrorSeverity.LOW,
-  });
-
-  return createSuccess("規約を作成しました", { id: terms.id });
-});
-
-/**
- * 規約+バージョンを同時に作成（InlineEditor用）
- */
-export const createTermsWithVersion = withPermission<
-  [CreateTermsInput & { contentJson: string }],
-  { id: string; versionId: string }
->(
-  "terms",
-  "create",
-)(async (
-  user,
-  input,
-): Promise<ActionResult<{ id: string; versionId: string }>> => {
-  const { contentJson, ...termsInput } = input;
-
-  const validation = createTermsSchema.safeParse(termsInput);
+export async function createTermsWithVersion(
+  input: CreateTermsInput & { contentJson: string },
+): Promise<ActionResult<{ id: string; versionId: string }>> {
+  const validation = createTermsWithVersionSchema.safeParse(input);
   if (!validation.success) {
     return createValidationError(validation.error);
   }
 
-  if (!contentJson.trim()) {
-    return createFailure("コンテンツを入力してください");
+  const contentHtml = await renderEditorStateToHtmlLazy(
+    validation.data.contentJson,
+  );
+
+  return executeAdminMutation({
+    resource: "terms",
+    action: "create",
+    execute: async (user) =>
+      createTermsWithVersionCommand(
+        {
+          ...validation.data,
+          contentHtml,
+        },
+        user.id,
+      ),
+    success: (result) => createSuccess("規約を作成しました", result),
+    afterSuccess: invalidateTermsCache,
+    resolveAuditResourceId: (result) => result.id,
+  });
+}
+
+export async function updateTerms(
+  id: string,
+  input: UpdateTermsInput,
+): Promise<ActionResult<void>> {
+  const idValidation = idSchema.safeParse(id);
+  if (!idValidation.success) {
+    return createValidationError(idValidation.error);
   }
 
-  // slug重複チェック
-  const existing = await prisma.terms.findUnique({
-    where: { slug: validation.data.slug },
-    select: { id: true },
-  });
-
-  if (existing) {
-    return createFailure("このスラッグは既に使用されています");
-  }
-
-  // JSON → HTML 変換
-  const contentHtml = await renderEditorStateToHtmlLazy(contentJson);
-
-  // トランザクションで規約とバージョンを同時作成
-  const result = await prisma.$transaction(async (tx) => {
-    const terms = await tx.terms.create({
-      data: validation.data,
-    });
-
-    const version = await tx.termsVersion.create({
-      data: {
-        termsId: terms.id,
-        contentJson: JSON.parse(contentJson),
-        contentHtml,
-        version: 1,
-        status: TermsStatus.DRAFT,
-        createdBy: user.id,
-      },
-    });
-
-    return { id: terms.id, versionId: version.id };
-  });
-
-  updateTag(CACHE_TAGS.TERMS);
-
-  // Cloudflare CDN キャッシュパージ
-  fireAndForget(purgeTermsCache(), {
-    operation: "purgeTermsCache",
-    category: ErrorCategory.EXTERNAL_API,
-    severity: ErrorSeverity.LOW,
-  });
-
-  return createSuccess("規約を作成しました", result);
-});
-
-/**
- * 規約を更新
- */
-export const updateTerms = withPermission<[string, UpdateTermsInput]>(
-  "terms",
-  "update",
-)(async (_user, id, input): Promise<ActionResult<void>> => {
   const validation = updateTermsSchema.safeParse(input);
   if (!validation.success) {
     return createValidationError(validation.error);
   }
 
-  // slug重複チェック（自分以外）
-  if (validation.data.slug) {
-    const existing = await prisma.terms.findFirst({
-      where: {
-        slug: validation.data.slug,
-        id: { not: id },
-      },
-      select: { id: true },
-    });
+  return executeAdminMutation({
+    resource: "terms",
+    action: "update",
+    resourceId: idValidation.data,
+    execute: async () => {
+      await updateTermsCommand(idValidation.data, validation.data);
+    },
+    success: () => createSuccess("規約を更新しました"),
+    afterSuccess: invalidateTermsCache,
+  });
+}
 
-    if (existing) {
-      return createFailure("このスラッグは既に使用されています");
-    }
+export async function deleteTerms(id: string): Promise<ActionResult<void>> {
+  const validation = idSchema.safeParse(id);
+  if (!validation.success) {
+    return createValidationError(validation.error);
   }
 
-  await prisma.terms.update({
-    where: { id },
-    data: validation.data,
+  return executeAdminMutation({
+    resource: "terms",
+    action: "delete",
+    resourceId: validation.data,
+    execute: async () => {
+      await deleteTermsCommand(validation.data);
+    },
+    success: () => createSuccess("規約を削除しました"),
+    afterSuccess: invalidateTermsCache,
   });
+}
 
-  updateTag(CACHE_TAGS.TERMS);
-
-  // Cloudflare CDN キャッシュパージ
-  fireAndForget(purgeTermsCache(), {
-    operation: "purgeTermsCache",
-    category: ErrorCategory.EXTERNAL_API,
-    severity: ErrorSeverity.LOW,
-  });
-
-  return createSuccess("規約を更新しました");
-});
-
-/**
- * 規約を削除
- */
-export const deleteTerms = withPermission<[string]>(
-  "terms",
-  "delete",
-)(async (_user, id): Promise<ActionResult<void>> => {
-  // 使用中チェック
-  const spacesCount = await prisma.space.count({
-    where: { termsId: id },
-  });
-
-  if (spacesCount > 0) {
-    return createFailure(
-      `この規約は ${spacesCount} 件のスペースで使用されているため削除できません`,
-    );
+export async function toggleTermsActive(
+  id: string,
+  isActive: boolean,
+): Promise<ActionResult<void>> {
+  const validation = toggleTermsActiveSchema.safeParse({ id, isActive });
+  if (!validation.success) {
+    return createValidationError(validation.error);
   }
 
-  await prisma.terms.delete({ where: { id } });
-
-  updateTag(CACHE_TAGS.TERMS);
-
-  // Cloudflare CDN キャッシュパージ
-  fireAndForget(purgeTermsCache(), {
-    operation: "purgeTermsCache",
-    category: ErrorCategory.EXTERNAL_API,
-    severity: ErrorSeverity.LOW,
+  return executeAdminMutation({
+    resource: "terms",
+    action: "update",
+    resourceId: validation.data.id,
+    execute: async () => {
+      await toggleTermsActiveCommand(
+        validation.data.id,
+        validation.data.isActive,
+      );
+    },
+    success: () =>
+      createSuccess(
+        validation.data.isActive
+          ? "規約を有効にしました"
+          : "規約を無効にしました",
+      ),
+    afterSuccess: invalidateTermsCache,
   });
+}
 
-  return createSuccess("規約を削除しました");
-});
-
-/**
- * 規約の有効/無効を切り替え
- */
-export const toggleTermsActive = withPermission<[string, boolean]>(
-  "terms",
-  "update",
-)(async (_user, id, isActive): Promise<ActionResult<void>> => {
-  const terms = await prisma.terms.findUnique({
-    where: { id },
-    select: { id: true },
-  });
-
-  if (!terms) {
-    return createFailure("規約が見つかりません");
-  }
-
-  await prisma.terms.update({
-    where: { id },
-    data: { isActive },
-  });
-
-  updateTag(CACHE_TAGS.TERMS);
-
-  // Cloudflare CDN キャッシュパージ
-  fireAndForget(purgeTermsCache(), {
-    operation: "purgeTermsCache",
-    category: ErrorCategory.EXTERNAL_API,
-    severity: ErrorSeverity.LOW,
-  });
-
-  return createSuccess(
-    isActive ? "規約を有効にしました" : "規約を無効にしました",
-  );
-});
-
-// =============================================================================
-// Terms Version Mutations
-// =============================================================================
-
-/**
- * 新しいバージョンを作成（DRAFT）
- */
-export const createTermsVersion = withPermission<
-  [CreateTermsVersionInput],
-  { id: string; version: number }
->(
-  "terms",
-  "create",
-)(async (
-  user,
-  input,
-): Promise<ActionResult<{ id: string; version: number }>> => {
+export async function createTermsVersion(
+  input: CreateTermsVersionInput,
+): Promise<ActionResult<{ id: string; version: number }>> {
   const validation = createTermsVersionSchema.safeParse(input);
   if (!validation.success) {
     return createValidationError(validation.error);
   }
 
-  // DRAFT バージョンが既に存在する場合はエラー（1規約につき DRAFT は1つまで）
-  const existingDraft = await prisma.termsVersion.findFirst({
-    where: {
-      termsId: validation.data.termsId,
-      status: TermsStatus.DRAFT,
-    },
-    select: { id: true },
-  });
+  const contentHtml = await renderEditorStateToHtmlLazy(
+    validation.data.contentJson,
+  );
 
-  if (existingDraft) {
-    return createFailure(
-      "下書きが既に存在します。先に公開または削除してください。",
-    );
+  return executeAdminMutation({
+    resource: "terms",
+    action: "create",
+    resourceId: validation.data.termsId,
+    execute: async (user) =>
+      createTermsVersionCommand(
+        {
+          ...validation.data,
+          contentHtml,
+        },
+        user.id,
+      ),
+    success: (result) =>
+      createSuccess(`バージョン ${result.version} を作成しました`, result),
+    afterSuccess: invalidateTermsCache,
+    resolveAuditResourceId: (result) => result.id,
+  });
+}
+
+export async function updateTermsVersion(
+  versionId: string,
+  input: UpdateTermsVersionInput,
+): Promise<ActionResult<void>> {
+  const idValidation = idSchema.safeParse(versionId);
+  if (!idValidation.success) {
+    return createValidationError(idValidation.error);
   }
 
-  // 最新バージョン番号とHTML変換を並列取得
-  const [latestVersion, contentHtml] = await Promise.all([
-    prisma.termsVersion.findFirst({
-      where: { termsId: validation.data.termsId },
-      orderBy: { version: "desc" },
-      select: { version: true },
-    }),
-    renderEditorStateToHtmlLazy(validation.data.contentJson),
-  ]);
-
-  const nextVersion = (latestVersion?.version ?? 0) + 1;
-
-  const version = await prisma.termsVersion.create({
-    data: {
-      termsId: validation.data.termsId,
-      contentJson: JSON.parse(validation.data.contentJson),
-      contentHtml,
-      version: nextVersion,
-      status: TermsStatus.DRAFT,
-      createdBy: user.id,
-    },
-  });
-
-  updateTag(CACHE_TAGS.TERMS);
-
-  // Cloudflare CDN キャッシュパージ
-  fireAndForget(purgeTermsCache(), {
-    operation: "purgeTermsCache",
-    category: ErrorCategory.EXTERNAL_API,
-    severity: ErrorSeverity.LOW,
-  });
-
-  return createSuccess(`バージョン ${nextVersion} を作成しました`, {
-    id: version.id,
-    version: version.version,
-  });
-});
-
-/**
- * バージョンを更新（DRAFTのみ）
- */
-export const updateTermsVersion = withPermission<
-  [string, UpdateTermsVersionInput]
->(
-  "terms",
-  "update",
-)(async (_user, versionId, input): Promise<ActionResult<void>> => {
   const validation = updateTermsVersionSchema.safeParse(input);
   if (!validation.success) {
     return createValidationError(validation.error);
   }
 
-  const version = await prisma.termsVersion.findUnique({
-    where: { id: versionId },
-    select: { status: true },
-  });
-
-  if (!version) {
-    return createFailure("バージョンが見つかりません");
-  }
-
-  if (version.status !== TermsStatus.DRAFT) {
-    return createFailure("公開済みのバージョンは編集できません");
-  }
-
-  // JSON → HTML 変換
   const contentHtml = await renderEditorStateToHtmlLazy(
     validation.data.contentJson,
   );
 
-  await prisma.termsVersion.update({
-    where: { id: versionId },
-    data: {
-      contentJson: JSON.parse(validation.data.contentJson),
-      contentHtml,
+  return executeAdminMutation({
+    resource: "terms",
+    action: "update",
+    resourceId: idValidation.data,
+    execute: async () => {
+      await updateTermsVersionCommand(idValidation.data, {
+        ...validation.data,
+        contentHtml,
+      });
+    },
+    success: () => createSuccess("バージョンを更新しました"),
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.TERMS);
     },
   });
+}
 
-  updateTag(CACHE_TAGS.TERMS);
-
-  return createSuccess("バージョンを更新しました");
-});
-
-/**
- * バージョンを公開
- */
-export const publishTermsVersion = withPermission<[string]>(
-  "terms",
-  "update",
-)(async (user, versionId): Promise<ActionResult<void>> => {
-  const version = await prisma.termsVersion.findUnique({
-    where: { id: versionId },
-    select: { termsId: true, status: true },
-  });
-
-  if (!version) {
-    return createFailure("バージョンが見つかりません");
+export async function publishTermsVersion(
+  versionId: string,
+): Promise<ActionResult<void>> {
+  const validation = idSchema.safeParse(versionId);
+  if (!validation.success) {
+    return createValidationError(validation.error);
   }
 
-  if (version.status === TermsStatus.PUBLISHED) {
-    return createFailure("このバージョンは既に公開されています");
+  return executeAdminMutation({
+    resource: "terms",
+    action: "publish",
+    resourceId: validation.data,
+    execute: async (user) => {
+      await publishTermsVersionCommand(validation.data, user.id);
+    },
+    success: () => createSuccess("バージョンを公開しました"),
+    afterSuccess: invalidateTermsCache,
+  });
+}
+
+export async function archiveTermsVersion(
+  versionId: string,
+): Promise<ActionResult<void>> {
+  const validation = idSchema.safeParse(versionId);
+  if (!validation.success) {
+    return createValidationError(validation.error);
   }
 
-  await prisma.$transaction(async (tx) => {
-    // 既存の isCurrentVersion をすべて false に
-    await tx.termsVersion.updateMany({
-      where: {
-        termsId: version.termsId,
-        isCurrentVersion: true,
-      },
-      data: { isCurrentVersion: false },
-    });
-
-    // 対象バージョンを公開
-    await tx.termsVersion.update({
-      where: { id: versionId },
-      data: {
-        status: TermsStatus.PUBLISHED,
-        isCurrentVersion: true,
-        publishedAt: new Date(),
-        publishedBy: user.id,
-      },
-    });
+  return executeAdminMutation({
+    resource: "terms",
+    action: "update",
+    resourceId: validation.data,
+    execute: async () => {
+      await archiveTermsVersionCommand(validation.data);
+    },
+    success: () => createSuccess("バージョンをアーカイブしました"),
+    afterSuccess: invalidateTermsCache,
   });
+}
 
-  updateTag(CACHE_TAGS.TERMS);
-
-  // Cloudflare CDN キャッシュパージ
-  fireAndForget(purgeTermsCache(), {
-    operation: "purgeTermsCache",
-    category: ErrorCategory.EXTERNAL_API,
-    severity: ErrorSeverity.LOW,
-  });
-
-  return createSuccess("バージョンを公開しました");
-});
-
-/**
- * バージョンをアーカイブ
- */
-export const archiveTermsVersion = withPermission<[string]>(
-  "terms",
-  "update",
-)(async (_user, versionId): Promise<ActionResult<void>> => {
-  const version = await prisma.termsVersion.findUnique({
-    where: { id: versionId },
-    select: { isCurrentVersion: true },
-  });
-
-  if (!version) {
-    return createFailure("バージョンが見つかりません");
+export async function deleteTermsVersion(
+  versionId: string,
+): Promise<ActionResult<void>> {
+  const validation = idSchema.safeParse(versionId);
+  if (!validation.success) {
+    return createValidationError(validation.error);
   }
 
-  if (version.isCurrentVersion) {
-    return createFailure("現在有効なバージョンはアーカイブできません");
-  }
-
-  await prisma.termsVersion.update({
-    where: { id: versionId },
-    data: { status: TermsStatus.ARCHIVED },
+  return executeAdminMutation({
+    resource: "terms",
+    action: "delete",
+    resourceId: validation.data,
+    execute: async () => {
+      await deleteTermsVersionCommand(validation.data);
+    },
+    success: () => createSuccess("バージョンを削除しました"),
+    afterSuccess: invalidateTermsCache,
   });
-
-  updateTag(CACHE_TAGS.TERMS);
-
-  // Cloudflare CDN キャッシュパージ
-  fireAndForget(purgeTermsCache(), {
-    operation: "purgeTermsCache",
-    category: ErrorCategory.EXTERNAL_API,
-    severity: ErrorSeverity.LOW,
-  });
-
-  return createSuccess("バージョンをアーカイブしました");
-});
-
-/**
- * バージョンを削除（DRAFTのみ）
- */
-export const deleteTermsVersion = withPermission<[string]>(
-  "terms",
-  "delete",
-)(async (_user, versionId): Promise<ActionResult<void>> => {
-  const version = await prisma.termsVersion.findUnique({
-    where: { id: versionId },
-    select: { status: true },
-  });
-
-  if (!version) {
-    return createFailure("バージョンが見つかりません");
-  }
-
-  if (version.status !== TermsStatus.DRAFT) {
-    return createFailure(
-      "公開済みまたはアーカイブ済みのバージョンは削除できません",
-    );
-  }
-
-  await prisma.termsVersion.delete({ where: { id: versionId } });
-
-  updateTag(CACHE_TAGS.TERMS);
-
-  // Cloudflare CDN キャッシュパージ
-  fireAndForget(purgeTermsCache(), {
-    operation: "purgeTermsCache",
-    category: ErrorCategory.EXTERNAL_API,
-    severity: ErrorSeverity.LOW,
-  });
-
-  return createSuccess("バージョンを削除しました");
-});
+}

@@ -6,7 +6,7 @@
  * @module shared/lib/slug-validation
  */
 
-import { prisma } from '@/shared/lib/prisma'
+import { findSlugConflict } from '@/shared/domain/slugs/queries'
 
 // =============================================================================
 // Types
@@ -121,33 +121,17 @@ export async function checkSlugAvailability(
   }
 
   // 2. 全コンテンツタイプでの重複チェック
-  const [post, news, page, space] = await Promise.all([
-    currentType === 'post' && currentId
-      ? prisma.post.findFirst({ where: { slug: normalizedSlug, id: { not: currentId } }, select: { id: true } })
-      : prisma.post.findUnique({ where: { slug: normalizedSlug }, select: { id: true } }),
-    currentType === 'news' && currentId
-      ? prisma.news.findFirst({ where: { slug: normalizedSlug, id: { not: currentId } }, select: { id: true } })
-      : prisma.news.findUnique({ where: { slug: normalizedSlug }, select: { id: true } }),
-    currentType === 'page' && currentId
-      ? prisma.page.findFirst({ where: { slug: normalizedSlug, id: { not: currentId } }, select: { id: true } })
-      : prisma.page.findUnique({ where: { slug: normalizedSlug }, select: { id: true } }),
-    currentType === 'space' && currentId
-      ? prisma.space.findFirst({ where: { slug: normalizedSlug, id: { not: currentId } }, select: { id: true } })
-      : prisma.space.findUnique({ where: { slug: normalizedSlug }, select: { id: true } }),
-  ])
+  const conflict = await findSlugConflict(normalizedSlug, currentType, currentId)
 
-  // 衝突チェック（クエリで自分自身は既に除外済み）
-  if (post) {
-    return { available: false, reason: { type: 'conflict', contentType: 'post', id: post.id } }
-  }
-  if (news) {
-    return { available: false, reason: { type: 'conflict', contentType: 'news', id: news.id } }
-  }
-  if (page) {
-    return { available: false, reason: { type: 'conflict', contentType: 'page', id: page.id } }
-  }
-  if (space) {
-    return { available: false, reason: { type: 'conflict', contentType: 'space', id: space.id } }
+  if (conflict) {
+    return {
+      available: false,
+      reason: {
+        type: 'conflict',
+        contentType: conflict.contentType,
+        id: conflict.id,
+      },
+    }
   }
 
   return { available: true }

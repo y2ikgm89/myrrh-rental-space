@@ -4,7 +4,7 @@
  * PostPreviewContent — 投稿プレビュークライアントコンポーネント
  *
  * sessionStorage からプレビューデータを読み取り表示する。
- * ?preview=true クエリ付きの /posts/[slug] ページで使用。
+ * /posts/preview/[slug] ページで使用。
  * dynamic({ ssr: false }) 経由でのみ利用されるため SSR は行われない。
  */
 

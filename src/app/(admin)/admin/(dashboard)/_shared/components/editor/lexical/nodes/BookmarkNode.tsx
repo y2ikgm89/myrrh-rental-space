@@ -309,7 +309,7 @@ export class BookmarkNode extends DecoratorNode<ReactElement> {
         imageUrl={$getState(this, bookmarkImageUrlState)}
         faviconUrl={$getState(this, bookmarkFaviconUrlState)}
         siteName={$getState(this, bookmarkSiteNameState)}
-        nodeKey={this.__key}
+        nodeKey={this.getKey()}
       />
     );
   }

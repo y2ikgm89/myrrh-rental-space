@@ -195,7 +195,7 @@ export class SpotifyNode extends DecoratorNode<ReactElement> {
       <SpotifyComponent
         embedUrl={$getState(this, spotifyEmbedUrlState)}
         contentType={$getState(this, spotifyContentTypeState)}
-        nodeKey={this.__key}
+        nodeKey={this.getKey()}
       />
     );
   }

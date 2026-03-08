@@ -8,6 +8,7 @@ import { formatSerializedDate } from "@/shared/lib/serialize";
 interface NewsItemData {
   id: string;
   slug: string;
+  url: string;
   title: string;
   publishedAt: string | null;
 }
@@ -31,7 +32,7 @@ export function NewsList({ items }: NewsListProps): ReactElement {
         <li key={item.id}>
           <ScrollReveal delay={0.08 * Math.min(index, 8)}>
             <Link
-              href={`/news/${item.slug}`}
+              href={item.url}
               className="group flex items-baseline gap-4 py-5 transition-colors hover:bg-accent/30 md:gap-6 md:py-6"
             >
               <time

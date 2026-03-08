@@ -1,9 +1,9 @@
 /**
- * お知らせ Public Action 統合テスト
+ * お知らせ公開 query 統合テスト
  *
- * src/app/(public)/_shared/actions/news.ts のテスト
+ * 公開側のお知らせ取得オプションとフィルタリングロジックのテスト
  *
- * オプション処理とフィルタリングロジックのテスト
+ * 現在の source of truth は src/shared/domain/news/queries.ts
  */
 
 import { describe, test, expect } from 'bun:test'
@@ -12,7 +12,7 @@ import { describe, test, expect } from 'bun:test'
 // GetPublishedNewsListOptions Tests
 // =============================================================================
 
-describe('News Public Action Integration', () => {
+describe('News Public Query Integration', () => {
   describe('GetPublishedNewsListOptions', () => {
     test('デフォルト値が正しく設定される', () => {
       const options: { take?: number } = {}

@@ -9,7 +9,7 @@ import type {
   CouponType,
   Role,
   AuditAction,
-} from "@/shared/generated/prisma/enums";
+} from "@/shared/db/enums";
 
 // =============================================================================
 // Types

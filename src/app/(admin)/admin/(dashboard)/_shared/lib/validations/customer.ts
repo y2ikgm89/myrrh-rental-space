@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { CustomerStatus, ReservationStatus } from '@/shared/lib/validations/enums'
+import { CustomerStatus } from '@/shared/lib/validations/enums'
 
 // =============================================================================
 // Customer Schemas
@@ -49,77 +49,3 @@ export const updateCustomerNotesSchema = z.object({
 })
 
 export type UpdateCustomerNotesInput = z.infer<typeof updateCustomerNotesSchema>
-
-// =============================================================================
-// Server Action Types
-// =============================================================================
-
-/**
- * 顧客データ型
- */
-export type CustomerData = {
-  id: string
-  lastName: string
-  firstName: string
-  lastNameKana: string | null
-  firstNameKana: string | null
-  email: string
-  phoneNumber: string | null
-  address: string | null
-  status: CustomerStatus
-  notes: string | null
-  totalReservations: number
-  totalSpent: number | null
-  lastReservationAt: Date | null
-  firstReservationAt: Date | null
-  isActive: boolean
-  createdAt: Date
-  updatedAt: Date
-}
-
-/**
- * 予約情報付き顧客データ型
- */
-export type CustomerWithReservations = CustomerData & {
-  reservations: {
-    id: string
-    startTime: string
-    endTime: string
-    status: ReservationStatus
-    totalPrice: number | null
-    space: {
-      id: string
-      name: string
-    }
-  }[]
-}
-
-/**
- * 顧客一覧取得結果型
- */
-export type GetCustomersResult = {
-  customers: CustomerData[]
-  total: number
-  page: number
-  limit: number
-  totalPages: number
-}
-
-/**
- * 顧客フィルター型
- */
-export type CustomerFilters = {
-  status?: CustomerStatus | 'ALL'
-  search?: string
-  isActive?: boolean
-}
-
-/**
- * 顧客ページネーション型
- */
-export type CustomerPagination = {
-  page?: number
-  limit?: number
-  sortBy?: 'createdAt' | 'lastName' | 'totalReservations' | 'lastReservationAt'
-  sortOrder?: 'asc' | 'desc'
-}

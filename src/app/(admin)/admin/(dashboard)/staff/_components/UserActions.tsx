@@ -18,8 +18,9 @@ import {
   ActionDropdownSeparator,
 } from '@/admin/components/ActionDropdown'
 import { DeleteConfirmDialog } from '@/admin/components/DeleteConfirmDialog'
-import { deleteUser, updateUserRole, type UserData } from '@/admin/actions/user'
+import { deleteUser, updateUserRole } from '@/admin/actions/user'
 import { Role, isAdminRole } from '@/admin/lib/role-guards'
+import type { UserData } from '@/shared/domain/users/types'
 
 type Props = {
   user: UserData

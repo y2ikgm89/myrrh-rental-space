@@ -97,14 +97,14 @@ expect(fn.mock.results[0]).toEqual({ type: 'return', value: 'result' })
 import { mock } from 'bun:test'
 
 // NG: Vitest
-vi.mock('@/shared/lib/prisma', () => ({ ... }))
+vi.mock('@/shared/db', () => ({ ... }))
 
 // OK: Bun — 呼び出し順序が重要
 // 1. モック関数を先に定義（TDZ 回避）
 const mockFindUnique = mock<() => Promise<User | null>>(() => Promise.resolve(null))
 
 // 2. mock.module() でモジュールを差し替え（import より前）
-mock.module('@/shared/lib/prisma', () => ({
+mock.module('@/shared/db', () => ({
   prisma: {
     user: {
       findUnique: mockFindUnique,
@@ -267,7 +267,7 @@ const mockCreate = mock<() => Promise<Record<string, unknown>>>()
 mock.module('@/shared/lib/auth', () => ({
   getSession: () => mockGetSession(),
 }))
-mock.module('@/shared/lib/prisma', () => ({
+mock.module('@/shared/db', () => ({
   prisma: {
     post: {
       findUnique: mockFindUnique,

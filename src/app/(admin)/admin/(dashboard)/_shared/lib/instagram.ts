@@ -9,7 +9,7 @@ import { z } from 'zod'
 import type { ApiKeyTestResult } from '@/admin/types/api-keys'
 import { isValidInstagramToken } from '@/admin/lib/validations/instagram'
 import { maskApiKey } from '@/admin/lib/api-keys/helpers'
-import { InstagramMediaType } from '@/shared/generated/prisma/enums'
+import { InstagramMediaType } from '@/shared/db/enums'
 
 export type { InstagramMediaType }
 

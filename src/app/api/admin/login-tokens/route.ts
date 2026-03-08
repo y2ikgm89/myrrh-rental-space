@@ -1,8 +1,8 @@
 /**
- * ワンタイムログイントークン生成API
+ * 管理画面ログインゲート用トークン生成API
  *
- * 管理者がスタッフにログインURLを共有するためのワンタイムトークンを生成します。
- * トークンは30日間有効で、複数回使用可能です。
+ * 管理者がスタッフにログインURLを共有するための署名付きトークンを生成します。
+ * トークンは30日間有効で、Proxy で stateless に検証されます。
  *
  * ## 機能
  * - トークン生成（POST）
@@ -13,14 +13,15 @@
 
 import { NextResponse } from 'next/server'
 import { getSession, getRoleFromSession } from '@/shared/lib/auth'
-import { prisma } from '@/shared/lib/prisma'
+import { createAdminLoginTokenRecord } from '@/shared/domain/admin-login-tokens/commands'
+import { getActiveAdminLoginTokens } from '@/shared/domain/admin-login-tokens/queries'
 import { getAppUrl } from '@/shared/lib/constants'
-import { randomBytes } from 'crypto'
+import { createAdminGateToken } from '@/shared/lib/admin-login-gate'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors/server'
 import { isAdminRole, isSuperAdminRole } from '@/admin/lib/role-guards'
 
 /**
- * ワンタイムトークンを生成
+ * 署名付きログイントークンを生成
  */
 export async function POST(): Promise<NextResponse> {
   try {
@@ -34,20 +35,12 @@ export async function POST(): Promise<NextResponse> {
       )
     }
 
-    // 32バイトのランダムトークンを生成（Base64エンコード）
-    const token = randomBytes(32).toString('base64url')
+    const { token, expiresAt } = await createAdminGateToken()
 
-    // 有効期限: 30日後（有効期限内であれば複数回使用可能）
-    const expiresAt = new Date()
-    expiresAt.setDate(expiresAt.getDate() + 30)
-
-    // データベースに保存
-    const loginToken = await prisma.loginToken.create({
-      data: {
-        token,
-        createdBy: session.user.id,
-        expiresAt,
-      },
+    const loginToken = await createAdminLoginTokenRecord({
+      token,
+      createdBy: session.user.id,
+      expiresAt,
     })
 
     // ログインURLを生成
@@ -87,17 +80,7 @@ export async function GET(): Promise<NextResponse> {
     }
 
     // 有効期限が切れていないトークンを取得（有効期限内であれば複数回使用可能）
-    const tokens = await prisma.loginToken.findMany({
-      where: {
-        expiresAt: {
-          gt: new Date(),
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      take: 50, // 最新50件
-    })
+    const tokens = await getActiveAdminLoginTokens()
 
     return NextResponse.json({
       tokens: tokens.map((token) => ({

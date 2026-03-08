@@ -1,49 +1,19 @@
 /**
- * Next.js 16 Proxy（ルート保護）
+ * Next.js 16 Proxy
  *
- * Better Auth セッション検証とルート保護
- * Next.js 16 では middleware.ts ではなく proxy.ts を使用
- *
- * ログインページへのアクセスはシークレットトークンまたはワンタイムトークンで制限
- * 環境変数 ADMIN_LOGIN_TOKEN は本番環境で必須
+ * 認証前の admin gate と共通セキュリティヘッダーだけを担当する。
+ * 公開ルーティングの解決は route 側で行う。
  */
 
-import { NextResponse, type NextRequest } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
-import { prisma } from "@/shared/lib/prisma";
-import { loginTokenSchema } from "@/admin/lib/validations/auth";
-import { logger } from "@/shared/lib/logger";
-import { getErrorMessage } from "@/shared/lib/errors";
-import { apiRateLimiter, getClientIp } from "@/shared/lib/rate-limit";
+import { NextResponse, type NextRequest } from "next/server";
+import {
+  getAdminLoginToken,
+  verifyAdminGateToken,
+} from "@/shared/lib/admin-login-gate";
 import { serverEnv } from "@/shared/lib/env/server";
+import { apiRateLimiter, getClientIp } from "@/shared/lib/rate-limit";
 
-/**
- * ADMIN_LOGIN_TOKEN を取得
- *
- * 本番環境では必須（env/server.ts で検証済み）
- * 開発環境では未設定でもフォールバック値を使用
- */
-function getAdminLoginToken(): string {
-  const token = serverEnv.ADMIN_LOGIN_TOKEN;
-  if (token) return token;
-
-  // 開発環境でのフォールバック（本番では到達しない）
-  if (serverEnv.NODE_ENV === "development") {
-    return "dev-token-for-local-development-only";
-  }
-
-  // 本番環境では env/server.ts で既にエラーがスローされているはず
-  throw new Error("ADMIN_LOGIN_TOKEN is required in production");
-}
-
-// =============================================================================
-// CSP / Security Headers
-// =============================================================================
-
-/**
- * セキュリティヘッダー（CSP以外）
- * proxy.ts に一元化 — next.config.ts からは移動済み
- */
 const SECURITY_HEADERS: ReadonlyArray<readonly [string, string]> = [
   ["Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload"],
   ["X-Content-Type-Options", "nosniff"],
@@ -53,18 +23,6 @@ const SECURITY_HEADERS: ReadonlyArray<readonly [string, string]> = [
   ["X-DNS-Prefetch-Control", "on"],
 ];
 
-/**
- * CSP ヘッダー値をビルド（リクエスト毎に nonce を埋め込む）
- *
- * script-src: 'unsafe-inline' → 'nonce-${nonce}' + 'strict-dynamic'
- * - 'strict-dynamic': nonce 付きスクリプトから動的にロードされるスクリプトも許可（GTM/GA4 対応）
- * - 開発環境のみ 'unsafe-eval' を追加（HMR/devtools 用）
- *
- * style-src: 'unsafe-inline' を維持
- * - インライン style 属性（style={{ ... }}）は nonce で保護不可のため維持
- *
- * @see https://nextjs.org/docs/app/guides/content-security-policy
- */
 function buildCsp(nonce: string): string {
   const isDev = serverEnv.NODE_ENV === "development";
   return `
@@ -85,9 +43,6 @@ function buildCsp(nonce: string): string {
     .trim();
 }
 
-/**
- * セキュリティヘッダー（HSTS, X-Content-Type-Options, CSP 等）を response に適用
- */
 function applySecurityHeaders(headers: Headers, csp: string): void {
   for (const [key, value] of SECURITY_HEADERS) {
     headers.set(key, value);
@@ -95,228 +50,46 @@ function applySecurityHeaders(headers: Headers, csp: string): void {
   headers.set("Content-Security-Policy", csp);
 }
 
-// 投稿URLの予約済みサブパス
-const POST_RESERVED_SUBPATHS = new Set(["category", "tag"]);
+function createResponse(req: NextRequest, pathname: string): NextResponse {
+  const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
+  const cspValue = buildCsp(nonce);
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set("x-nonce", nonce);
+  requestHeaders.set("x-pathname", pathname);
+  requestHeaders.set("Content-Security-Policy", cspValue);
 
-// =============================================================================
-// URL Prefix Settings Cache
-// =============================================================================
-
-type PermalinkSettings = {
-  postUrlPrefixEnabled: boolean;
-};
-
-let settingsCache: PermalinkSettings | null = null;
-let settingsCacheTime = 0;
-const CACHE_TTL = 60 * 1000; // 1分
-
-/**
- * パーマリンク設定を取得（キャッシュ付き）
- */
-async function getPermalinkSettings(): Promise<PermalinkSettings> {
-  const now = Date.now();
-
-  // キャッシュが有効ならそれを返す
-  if (settingsCache && now - settingsCacheTime < CACHE_TTL) {
-    return settingsCache;
-  }
-
-  try {
-    const settings = await prisma.settings.findUnique({
-      where: { id: "singleton" },
-      select: { postUrlPrefixEnabled: true },
-    });
-
-    settingsCache = {
-      postUrlPrefixEnabled: settings?.postUrlPrefixEnabled ?? true,
-    };
-    settingsCacheTime = now;
-    return settingsCache;
-  } catch {
-    // エラー時はデフォルト値を使用
-    return { postUrlPrefixEnabled: true };
-  }
+  const response = NextResponse.next({
+    request: { headers: requestHeaders },
+  });
+  response.headers.set("x-pathname", pathname);
+  applySecurityHeaders(response.headers, cspValue);
+  return response;
 }
 
-// =============================================================================
-// Static Routes (excluded from prefix rewrite)
-// =============================================================================
-
-/**
- * 静的ルート（プレフィックスリライト対象外）
- */
-const STATIC_ROUTES = new Set([
-  "",
-  "about",
-  "contact",
-  "faq",
-  "news",
-  "reservation",
-  "spaces",
-  "terms",
-  "privacy",
-  "posts",
-  "p",
-  "admin",
-  "api",
-  "_next",
-  "sitemap.xml",
-  "robots.txt",
-  "favicon.ico",
-]);
-
-/**
- * 動的ルートのプレフィックス
- */
-const DYNAMIC_PREFIXES = [
-  "news/",
-  "spaces/",
-  "posts/",
-  "p/",
-  "admin/",
-  "api/",
-  "_next/",
-  "category/",
-  "tag/",
-];
+function createAdminGateRedirect(
+  req: NextRequest,
+  redirectUrl: string,
+  pathname: string,
+): NextResponse {
+  const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
+  const cspValue = buildCsp(nonce);
+  const response = NextResponse.redirect(new URL(redirectUrl, req.url));
+  response.cookies.set("admin-gate", "1", {
+    httpOnly: true,
+    secure: serverEnv.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 60 * 60,
+    path: "/admin",
+  });
+  response.headers.set("x-pathname", pathname);
+  applySecurityHeaders(response.headers, cspValue);
+  return response;
+}
 
 export async function proxy(req: NextRequest): Promise<NextResponse> {
   const { pathname, searchParams } = req.nextUrl;
 
-  // nonce 生成（リクエスト毎にユニーク）
-  // Buffer.from(uuid).toString('base64') は Next.js 16 公式推奨パターン
-  const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
-  const cspValue = buildCsp(nonce);
-
-  // パス名と nonce を Server Components に伝播し、セキュリティヘッダーを付与
-  const createResponse = () => {
-    const requestHeaders = new Headers(req.headers);
-    requestHeaders.set("x-nonce", nonce);
-    requestHeaders.set("x-pathname", pathname);
-    requestHeaders.set("Content-Security-Policy", cspValue);
-
-    const response = NextResponse.next({
-      request: { headers: requestHeaders },
-    });
-    response.headers.set("x-pathname", pathname);
-    applySecurityHeaders(response.headers, cspValue);
-    return response;
-  };
-
-  // ==========================================================================
-  // ルートレベルURLのリライト（プレフィックス無効時）
-  // ==========================================================================
-
-  // 静的ファイルとAPIはスキップ
-  const shouldCheckRootRewrite = !(
-    pathname.startsWith("/_next/") ||
-    pathname.startsWith("/api/") ||
-    pathname.includes(".")
-  );
-
-  if (shouldCheckRootRewrite) {
-    const segments = pathname.split("/").filter(Boolean);
-    const firstSegment = segments[0] ?? "";
-
-    // 静的ルートでも動的プレフィックスでもない場合
-    const isStaticRoute = STATIC_ROUTES.has(firstSegment);
-    const hasDynamicPrefix = DYNAMIC_PREFIXES.some((prefix) =>
-      pathname.startsWith(`/${prefix}`),
-    );
-
-    if (!isStaticRoute && !hasDynamicPrefix) {
-      // ルートレベルの未知のパス（例: /article-slug, /2026/01/article-slug）
-      const settings = await getPermalinkSettings();
-
-      if (!settings.postUrlPrefixEnabled) {
-        // プレフィックス無効時: /posts/ にリライト
-        const url = req.nextUrl.clone();
-        url.pathname = `/posts${pathname}`;
-        const requestHeaders = new Headers(req.headers);
-        requestHeaders.set("x-nonce", nonce);
-        requestHeaders.set("x-pathname", pathname);
-        requestHeaders.set("Content-Security-Policy", cspValue);
-        const response = NextResponse.rewrite(url, {
-          request: { headers: requestHeaders },
-        });
-        response.headers.set("x-pathname", pathname);
-        applySecurityHeaders(response.headers, cspValue);
-        return response;
-      }
-    }
-  }
-
-  // ==========================================================================
-  // 投稿URLのリライト処理（パーマリンク構造対応）
-  // ==========================================================================
-  if (pathname.startsWith("/posts/")) {
-    const segments = pathname.split("/").filter(Boolean);
-
-    // /posts/[slug] - 2セグメント: 既存ルートで処理
-    if (segments.length === 2) {
-      return createResponse();
-    }
-
-    // /posts/category/[slug] または /posts/tag/[slug]: 既存ルートで処理
-    const seg1 = segments[1];
-    if (segments.length === 3 && seg1 && POST_RESERVED_SUBPATHS.has(seg1)) {
-      return createResponse();
-    }
-
-    // category_name構造: /posts/[category]/[slug] → /posts/[slug]
-    // Note: POST_RESERVED_SUBPATHS は上で既にチェック済み
-    const seg2 = segments[2];
-    if (segments.length === 3 && seg2) {
-      const url = req.nextUrl.clone();
-      url.pathname = `/posts/${seg2}`;
-      const requestHeaders = new Headers(req.headers);
-      requestHeaders.set("x-nonce", nonce);
-      requestHeaders.set("x-pathname", pathname);
-      requestHeaders.set("Content-Security-Policy", cspValue);
-      const response = NextResponse.rewrite(url, {
-        request: { headers: requestHeaders },
-      });
-      response.headers.set("x-pathname", pathname);
-      applySecurityHeaders(response.headers, cspValue);
-      return response;
-    }
-
-    // date_name構造: /posts/[year]/[month]/[slug] → /posts/[slug]
-    if (segments.length === 4) {
-      const year = segments[1];
-      const month = segments[2];
-      const slug = segments[3];
-
-      if (
-        year &&
-        month &&
-        slug &&
-        /^\d{4}$/.test(year) &&
-        /^\d{1,2}$/.test(month) &&
-        parseInt(year, 10) >= 2000 &&
-        parseInt(year, 10) <= 2100 &&
-        parseInt(month, 10) >= 1 &&
-        parseInt(month, 10) <= 12
-      ) {
-        const url = req.nextUrl.clone();
-        url.pathname = `/posts/${slug}`;
-        const requestHeaders = new Headers(req.headers);
-        requestHeaders.set("x-nonce", nonce);
-        requestHeaders.set("x-pathname", pathname);
-        requestHeaders.set("Content-Security-Policy", cspValue);
-        const response = NextResponse.rewrite(url, {
-          request: { headers: requestHeaders },
-        });
-        response.headers.set("x-pathname", pathname);
-        applySecurityHeaders(response.headers, cspValue);
-        return response;
-      }
-    }
-  }
-
-  // API Routes の保護
   if (pathname.startsWith("/api")) {
-    // レート制限（Webhooks と CRON は除外）
     if (
       !pathname.startsWith("/api/webhooks") &&
       !pathname.startsWith("/api/cron")
@@ -341,7 +114,6 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
       }
     }
 
-    // CRON エンドポイント: CRON_SECRET 検証
     if (pathname.startsWith("/api/cron")) {
       const authHeader = req.headers.get("authorization");
       const cronSecret = serverEnv.CRON_SECRET;
@@ -351,134 +123,49 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
       }
     }
 
-    // Webhooks: シグネチャ検証はルートハンドラ内で実施
-    // ここではパススルー
-
-    return createResponse();
+    return createResponse(req, pathname);
   }
 
-  // 管理画面の保護
   if (pathname.startsWith("/admin")) {
-    // ログインページへのアクセス制限（シークレットトークンまたはワンタイムトークン必須）
     if (pathname === "/admin/login") {
-      // Cookie gate: admin-gate cookie があれば許可（URL にトークン不要）
       const adminGateCookie = req.cookies.get("admin-gate");
       if (adminGateCookie?.value === "1") {
-        return createResponse();
+        return createResponse(req, pathname);
       }
 
       const token = searchParams.get("token");
       if (!token) return new NextResponse(null, { status: 404 });
 
-      // トークン検証後: cookie をセットして token-free URL にリダイレクト
-      const setGateCookieAndRedirect = () => {
-        const cleanUrl = new URL(pathname, req.url);
-        // token 以外の searchParams を維持
-        searchParams.forEach((value, key) => {
-          if (key !== "token") cleanUrl.searchParams.set(key, value);
-        });
-        const response = NextResponse.redirect(cleanUrl);
-        response.cookies.set("admin-gate", "1", {
-          httpOnly: true,
-          secure: serverEnv.NODE_ENV === "production",
-          sameSite: "strict",
-          maxAge: 60 * 60, // 1時間
-          path: "/admin",
-        });
-        return response;
-      };
+      const isAllowed =
+        token === getAdminLoginToken() || (await verifyAdminGateToken(token));
 
-      if (token === getAdminLoginToken()) {
-        return setGateCookieAndRedirect();
-      }
-
-      // ワンタイムトークン検証（既存コード）
-      const parsedToken = loginTokenSchema.safeParse(token);
-      if (!parsedToken.success) {
+      if (!isAllowed) {
         return new NextResponse(null, { status: 404 });
       }
 
-      try {
-        const loginToken = await prisma.loginToken.findUnique({
-          where: { token: parsedToken.data },
-        });
-        if (loginToken && loginToken.expiresAt > new Date()) {
-          return setGateCookieAndRedirect();
-        }
-      } catch (error: unknown) {
-        logger.error("Error checking login token", {
-          error: getErrorMessage(error),
-        });
-      }
+      const cleanUrl = new URL(pathname, req.url);
+      searchParams.forEach((value, key) => {
+        if (key !== "token") cleanUrl.searchParams.set(key, value);
+      });
 
-      return new NextResponse(null, { status: 404 });
+      return createAdminGateRedirect(
+        req,
+        cleanUrl.pathname + cleanUrl.search,
+        pathname,
+      );
     }
 
-    // Better Auth セッションクッキーのチェック（高速な初期チェック）
     const sessionCookie = getSessionCookie(req);
-
-    // 未認証の場合はログインページへリダイレクト
-    // admin-gate cookie が有効なら /admin/login に token なしでアクセス可能
-    // cookie が切れた場合はユーザーが招待 URL を再度使用する
     if (!sessionCookie) {
-      const loginUrl = new URL("/admin/login", req.url);
-      return NextResponse.redirect(loginUrl);
-    }
-
-    // Note: ロールチェックはServer ComponentまたはServer Actionで実施
-    // proxy では Cookie の存在のみを確認（パフォーマンス優先）
-    // 詳細な検証は auth.api.getSession() を使用するページで実施
-
-    // ログイン成功後、URLパラメータにトークンがある場合は有効期限を延長
-    const token = searchParams.get("token");
-    if (token && token !== getAdminLoginToken()) {
-      const parsedToken = loginTokenSchema.safeParse(token);
-      if (!parsedToken.success) {
-        return createResponse();
-      }
-      try {
-        const loginToken = await prisma.loginToken.findUnique({
-          where: { token: parsedToken.data },
-        });
-
-        // トークンが存在し、有効期限内の場合、有効期限を延長
-        if (loginToken && loginToken.expiresAt > new Date()) {
-          const newExpiresAt = new Date();
-          newExpiresAt.setDate(newExpiresAt.getDate() + 30);
-
-          // 非同期で更新（レスポンスをブロックしない）
-          prisma.loginToken
-            .update({
-              where: { id: loginToken.id },
-              data: { expiresAt: newExpiresAt },
-            })
-            .catch((error: unknown) => {
-              logger.error("Error updating token expiration", {
-                error: getErrorMessage(error),
-              });
-            });
-        }
-      } catch (error: unknown) {
-        // エラーは無視（ログインは成功しているため）
-        logger.error("Error extending token expiration", {
-          error: getErrorMessage(error),
-        });
-      }
+      return NextResponse.redirect(new URL("/admin/login", req.url));
     }
   }
 
-  return createResponse();
+  return createResponse(req, pathname);
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public files (robots.txt, sitemap.xml, etc.)
-     */
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|eot)$).*)",
   ],
 };

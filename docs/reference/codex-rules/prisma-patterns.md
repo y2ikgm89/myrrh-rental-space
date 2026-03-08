@@ -15,7 +15,7 @@ Prisma 7 の `@map` enum は TypeScript 側で `as const` オブジェクトと�
 **文字列リテラルではなく enum 定数を使用すること**:
 
 ```typescript
-import { DiscountType, CalendarSyncMethod } from '@/shared/generated/prisma/client'
+import { DiscountType, CalendarSyncMethod } from '@/shared/db/enums'
 
 // NG: 文字列リテラル比較
 if (space.discountType === 'none') { ... }
@@ -73,7 +73,7 @@ export function isValidDiscountType(value: unknown): value is DiscountType {
 export type SpaceDiscountType = DiscountType
 
 // OK: Prisma enum を直接使用
-import { DiscountType } from '@/shared/generated/prisma/client'
+import { DiscountType } from '@/shared/db/enums'
 type Foo = { discountType: DiscountType }
 ```
 
@@ -216,10 +216,10 @@ const total = Number(totalRevenue._sum.totalPrice ?? 0)
 
 ### 対象モデルと型エクスポート
 
-`prisma.ts` から `ConvertDecimalFields<T>` 適用済みの型をエクスポート済み:
+`src/shared/db` から `ConvertDecimalFields<T>` 適用済みの型をエクスポート済み:
 
 ```typescript
-import type { Space, Reservation, Customer, Settings, Coupon } from '@/shared/lib/prisma'
+import type { Space, Reservation, Customer, Settings, Coupon } from '@/shared/db/prisma'
 
 // これらの型は Decimal が number に変換済み
 const space: Space = await prisma.space.findUniqueOrThrow({ where: { id } })
@@ -378,8 +378,9 @@ await prisma.$transaction(async (tx) => {
 
 | パス | 内容 |
 |------|------|
-| `@/shared/generated/prisma/client` | Prisma 生成クライアント・enum（自動生成、編集禁止） |
-| `@/shared/lib/prisma.ts` | Prisma シングルトン・`$extends`（Decimal 自動変換）・型エクスポート |
+| `@generated/prisma/client` | Prisma 生成クライアント・enum（自動生成、編集禁止） |
+| `@/shared/db/prisma.ts` | Prisma シングルトン・`$extends`（Decimal 自動変換）・型エクスポート |
+| `@/shared/db/enums.ts` | Prisma enum の公開窓口 |
 | `@/shared/lib/json-validators.ts` | JSON フィールド Zod スキーマ・型・パース関数 |
 | `@/shared/lib/serialize.ts` | `toPlainObject`、`toPlainArray`、`keysOf` |
 | `@/shared/lib/validations/enums.ts` | 全 enum 型ガード（`isValid*`）・デフォルト値取得（`getValid*`）・re-export |
