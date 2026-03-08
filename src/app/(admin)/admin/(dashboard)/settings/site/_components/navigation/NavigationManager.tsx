@@ -15,13 +15,12 @@ import {
   arrayMove,
   type DragEndEvent,
 } from '@/admin/components/ui'
+import { fetchAdminJson } from '@/admin/lib/admin-api-client'
 import {
-  getNavigationItems,
   createNavigationItem,
   updateNavigationItem,
   deleteNavigationItem,
   updateNavigationOrder,
-  getSocialLinks,
   createSocialLink,
   updateSocialLink,
   deleteSocialLink,
@@ -46,6 +45,17 @@ type NavigationManagerProps = {
   initialMobileItems: NavigationItemData[]
   initialFooterItems: NavigationItemData[]
   initialSocialLinks: SocialLinkData[]
+}
+
+async function fetchNavigationItems(
+  type: NavigationType
+): Promise<NavigationItemData[]> {
+  const searchParams = new URLSearchParams({ type })
+  return fetchAdminJson(`/admin/api/navigation?${searchParams.toString()}`)
+}
+
+async function fetchSocialLinks(): Promise<SocialLinkData[]> {
+  return fetchAdminJson('/admin/api/navigation/social-links')
 }
 
 // =============================================================================
@@ -91,10 +101,10 @@ export function NavigationManager({
   // Load Data
   const loadData = async () => {
     const [desktop, mobile, footer, social] = await Promise.all([
-      getNavigationItems('HEADER_DESKTOP'),
-      getNavigationItems('HEADER_MOBILE'),
-      getNavigationItems('FOOTER'),
-      getSocialLinks(),
+      fetchNavigationItems('HEADER_DESKTOP'),
+      fetchNavigationItems('HEADER_MOBILE'),
+      fetchNavigationItems('FOOTER'),
+      fetchSocialLinks(),
     ])
     setDesktopItems(desktop)
     setMobileItems(mobile)

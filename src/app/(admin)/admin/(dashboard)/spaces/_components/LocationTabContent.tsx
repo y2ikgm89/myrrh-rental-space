@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { getLocations } from "@/admin/actions/location";
+import { getLocations } from "@/admin/queries/location";
 import { LocationFilters } from "../../locations/_components/LocationFilters";
 import { LocationTable } from "../../locations/_components/LocationTable";
 import { LoadingState } from "@/admin/components/LoadingState";

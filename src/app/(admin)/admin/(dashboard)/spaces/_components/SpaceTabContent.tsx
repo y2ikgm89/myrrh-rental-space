@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { getSpaces } from "@/admin/actions/space";
+import { getSpaces } from "@/admin/queries/space";
 import { SpaceFilters } from "./SpaceFilters";
 import { SpaceTable } from "./SpaceTable";
 import { Pagination } from "@/admin/components/ui";

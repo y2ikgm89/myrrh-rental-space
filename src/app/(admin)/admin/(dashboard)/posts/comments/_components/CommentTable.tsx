@@ -30,7 +30,7 @@ import {
   restoreCommentAdmin,
 } from '@/admin/actions/post-comment'
 import type { AdminCommentData } from '@/shared/domain/post-comments/types'
-import { cn } from '@/shared/lib/utils'
+import { cn } from '@/shared/lib/cn'
 
 type Props = {
   comments: AdminCommentData[]

@@ -92,19 +92,19 @@ CMD ["bun", "server.js"]
 
 ### 設計のポイント
 
-| 項目 | 詳細 |
-|------|------|
-| **ベースイメージ** | `oven/bun:1.3.9-alpine`（軽量 + `base` ステージで共有） |
-| **libc6-compat** | bcrypt 等のネイティブモジュール互換に必要。deps + runner の両方 |
-| **Prisma generate** | deps ステージで実行。出力先: `src/shared/generated/prisma/` |
+| 項目                 | 詳細                                                                     |
+| -------------------- | ------------------------------------------------------------------------ |
+| **ベースイメージ**   | `oven/bun:1.3.9-alpine`（軽量 + `base` ステージで共有）                  |
+| **libc6-compat**     | bcrypt 等のネイティブモジュール互換に必要。deps + runner の両方          |
+| **Prisma generate**  | deps ステージで実行。出力先: `generated/prisma/`                         |
 | **generated コピー** | `.gitignore` で除外 → Cloud Build に含まれない → `COPY --from=deps` 必須 |
-| **STANDALONE** | `ENV STANDALONE=true` で `output: 'standalone'` を条件付き有効化 |
-| **validate** | builder で `bun run validate`（type-check + lint）を実行してからビルド |
-| **NEXT_PUBLIC_*** | Docker ARG でビルド時注入（クライアント JS インライン化） |
-| **Prisma WASM** | `node_modules/@prisma`（WASM ランタイムエンジン）を runner にコピー |
-| **ポート** | 8080（Cloud Run 標準） |
-| **起動コマンド** | `bun server.js`（standalone の server.js を直接実行） |
-| **非root** | `adduser --system nextjs` + `USER nextjs` |
+| **STANDALONE**       | `ENV STANDALONE=true` で `output: 'standalone'` を条件付き有効化         |
+| **validate**         | builder で `bun run validate`（type-check + lint）を実行してからビルド   |
+| **NEXT*PUBLIC*\***   | Docker ARG でビルド時注入（クライアント JS インライン化）                |
+| **Prisma WASM**      | `node_modules/@prisma`（WASM ランタイムエンジン）を runner にコピー      |
+| **ポート**           | 8080（Cloud Run 標準）                                                   |
+| **起動コマンド**     | `bun server.js`（standalone の server.js を直接実行）                    |
+| **非root**           | `adduser --system nextjs` + `USER nextjs`                                |
 
 ### なぜ STANDALONE 環境変数が必要か
 
@@ -180,7 +180,7 @@ COPY --from=deps /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=deps /app/src/shared/generated ./src/shared/generated
 ```
 
-### NEXT_PUBLIC_* がクライアントで undefined
+### NEXT*PUBLIC*\* がクライアントで undefined
 
 ビルド時に Docker ARG で注入が必要。ランタイム env var のみではクライアント JS にインライン化されない:
 

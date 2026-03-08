@@ -14,9 +14,9 @@
  * NODE_ENVベースの条件分岐は使用しない（ランタイムで判定）
  */
 
-import 'server-only'
-import { createEnv } from '@t3-oss/env-nextjs'
-import { z } from 'zod'
+import "server-only";
+import { createEnv } from "@t3-oss/env-nextjs";
+import { z } from "zod";
 
 /**
  * 本番環境かどうかを判定
@@ -29,8 +29,11 @@ import { z } from 'zod'
  * - SKIP_ENV_VALIDATION が未設定
  */
 export const isProduction = (): boolean => {
-  return process.env["NODE_ENV"] === 'production' && !process.env["SKIP_ENV_VALIDATION"]
-}
+  return (
+    process.env["NODE_ENV"] === "production" &&
+    !process.env["SKIP_ENV_VALIDATION"]
+  );
+};
 
 export const serverEnv = createEnv({
   server: {
@@ -49,7 +52,7 @@ export const serverEnv = createEnv({
     // Stripe
     STRIPE_SECRET_KEY: z.string().optional(),
 
-    // Google OAuth
+    // Google OAuth / Google Calendar OAuth
     GOOGLE_CLIENT_ID: z.string().optional(),
     GOOGLE_CLIENT_SECRET: z.string().optional(),
 
@@ -65,21 +68,21 @@ export const serverEnv = createEnv({
     // API キーの暗号化に使用
     ENCRYPTION_KEY: z
       .string()
-      .length(64, { error: 'ENCRYPTION_KEY must be exactly 64 characters' })
+      .length(64, { error: "ENCRYPTION_KEY must be exactly 64 characters" })
       .optional(),
 
     // Cron（本番必須 - ランタイム検証）
     // Cron エンドポイントの認証に使用
     CRON_SECRET: z
       .string()
-      .min(32, { error: 'CRON_SECRET must be at least 32 characters' })
+      .min(32, { error: "CRON_SECRET must be at least 32 characters" })
       .optional(),
 
     // Admin Login（本番必須 - ランタイム検証）
     // 管理画面ログインページへのアクセス制限
     ADMIN_LOGIN_TOKEN: z
       .string()
-      .min(32, { error: 'ADMIN_LOGIN_TOKEN must be at least 32 characters' })
+      .min(32, { error: "ADMIN_LOGIN_TOKEN must be at least 32 characters" })
       .optional(),
 
     // Database connection pool tuning
@@ -90,8 +93,8 @@ export const serverEnv = createEnv({
 
     // Node environment
     NODE_ENV: z
-      .enum(['development', 'production', 'test'])
-      .default('development'),
+      .enum(["development", "production", "test"])
+      .default("development"),
   },
   runtimeEnv: {
     DATABASE_URL: process.env["DATABASE_URL"],
@@ -111,14 +114,15 @@ export const serverEnv = createEnv({
     CRON_SECRET: process.env["CRON_SECRET"],
     ADMIN_LOGIN_TOKEN: process.env["ADMIN_LOGIN_TOKEN"],
     DATABASE_POOL_MAX: process.env["DATABASE_POOL_MAX"],
-    GOOGLE_APPLICATION_CREDENTIALS_JSON: process.env["GOOGLE_APPLICATION_CREDENTIALS_JSON"],
+    GOOGLE_APPLICATION_CREDENTIALS_JSON:
+      process.env["GOOGLE_APPLICATION_CREDENTIALS_JSON"],
     NODE_ENV: process.env["NODE_ENV"],
   },
   // ビルド時検証をスキップするオプション（CI環境用）
   skipValidation: !!process.env["SKIP_ENV_VALIDATION"],
   // 空文字列をundefinedとして扱う
   emptyStringAsUndefined: true,
-})
+});
 
 // =============================================================================
 // 本番環境必須チェック（アプリ起動時に実行）
@@ -131,40 +135,40 @@ export const serverEnv = createEnv({
  * 本番環境で必須変数が未設定の場合、即座にエラーをスロー
  */
 function validateProductionEnv(): void {
-  if (!isProduction()) return
+  if (!isProduction()) return;
 
   const requiredInProd = [
-    { name: 'ENCRYPTION_KEY', value: serverEnv.ENCRYPTION_KEY },
-    { name: 'CRON_SECRET', value: serverEnv.CRON_SECRET },
-    { name: 'ADMIN_LOGIN_TOKEN', value: serverEnv.ADMIN_LOGIN_TOKEN },
-    // GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET は DB 管理に移行（環境変数はフォールバック）
-  ]
+    { name: "ENCRYPTION_KEY", value: serverEnv.ENCRYPTION_KEY },
+    { name: "CRON_SECRET", value: serverEnv.CRON_SECRET },
+    { name: "ADMIN_LOGIN_TOKEN", value: serverEnv.ADMIN_LOGIN_TOKEN },
+    // Google OAuth は env / Secret Manager を正本とする
+  ];
 
   const missing = requiredInProd
     .filter(({ value }) => !value)
-    .map(({ name }) => name)
+    .map(({ name }) => name);
 
   if (missing.length > 0) {
     throw new Error(
-      `Missing required environment variables in production: ${missing.join(', ')}`
-    )
+      `Missing required environment variables in production: ${missing.join(", ")}`,
+    );
   }
 
   // ENCRYPTION_KEY の形式検証（64文字のhex = 32バイト）
-  const encryptionKey = serverEnv.ENCRYPTION_KEY
+  const encryptionKey = serverEnv.ENCRYPTION_KEY;
   if (encryptionKey) {
     if (encryptionKey.length !== 64) {
       throw new Error(
-        `ENCRYPTION_KEY must be exactly 64 hex characters (32 bytes). Current length: ${encryptionKey.length}. Generate with: openssl rand -hex 32`
-      )
+        `ENCRYPTION_KEY must be exactly 64 hex characters (32 bytes). Current length: ${encryptionKey.length}. Generate with: openssl rand -hex 32`,
+      );
     }
     if (!/^[0-9a-fA-F]+$/.test(encryptionKey)) {
       throw new Error(
-        'ENCRYPTION_KEY must contain only hexadecimal characters (0-9, a-f, A-F). Generate with: openssl rand -hex 32'
-      )
+        "ENCRYPTION_KEY must contain only hexadecimal characters (0-9, a-f, A-F). Generate with: openssl rand -hex 32",
+      );
     }
   }
 }
 
 // モジュール読み込み時に本番必須チェックを実行
-validateProductionEnv()
+validateProductionEnv();

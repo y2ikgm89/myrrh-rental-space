@@ -3,7 +3,6 @@
 import { updateTag } from "next/cache";
 import { z } from "zod";
 import { executeAdminMutation } from "@/admin/lib/admin-action";
-import { checkReadPermissionFor } from "@/admin/lib/permissions";
 import {
   createSuccess,
   createFailure,
@@ -17,15 +16,6 @@ import {
   saveInstagramToken as saveInstagramTokenCommand,
   updateInstagramSettings as updateInstagramSettingsCommand,
 } from "@/shared/domain/instagram/commands";
-import {
-  getDecryptedInstagramToken as getDecryptedInstagramTokenQuery,
-  getInstagramConfig as getInstagramConfigQuery,
-  getInstagramPosts as getInstagramPostsQuery,
-} from "@/shared/domain/instagram/queries";
-import type {
-  InstagramConfig,
-  InstagramPostData,
-} from "@/shared/domain/instagram/types";
 import { createValidationError } from "@/shared/lib/action-helpers";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import {
@@ -37,43 +27,16 @@ import {
 import { testInstagramConnection } from "@/shared/lib/instagram";
 
 export type { InstagramSettingsInput } from "@/shared/lib/validations/instagram";
-export type { InstagramConfig, InstagramPostData } from "@/shared/domain/instagram/types";
+export type {
+  InstagramConfig,
+  InstagramPostData,
+} from "@/shared/domain/instagram/types";
 
-const checkReadPermission = checkReadPermissionFor("settings");
 const idSchema = z.string().uuid({ error: "IDが不正です" });
 const orderedIdsSchema = z.array(z.string().uuid({ error: "IDが不正です" }));
 
 function invalidateInstagramCaches(): void {
   updateTag(CACHE_TAGS.SETTINGS);
-}
-
-export async function getInstagramConfig(): Promise<InstagramConfig> {
-  if (!(await checkReadPermission())) {
-    return {
-      isConnected: false,
-      username: null,
-      accountType: null,
-      tokenExpiresAt: null,
-      tokenExpiryDays: null,
-      shouldRefreshToken: false,
-      feedEnabled: false,
-      feedLayout: "grid",
-      feedColumns: 4,
-      feedMaxItems: 8,
-      showCaption: false,
-      showViewAll: true,
-    };
-  }
-
-  return getInstagramConfigQuery();
-}
-
-export async function getInstagramPosts(): Promise<InstagramPostData[]> {
-  if (!(await checkReadPermission())) {
-    return [];
-  }
-
-  return getInstagramPostsQuery();
 }
 
 export async function updateInstagramSettings(
@@ -210,12 +173,4 @@ export async function reorderInstagramPosts(
       invalidateInstagramCaches();
     },
   });
-}
-
-export async function getDecryptedInstagramToken(): Promise<string | null> {
-  if (!(await checkReadPermission())) {
-    return null;
-  }
-
-  return getDecryptedInstagramTokenQuery();
 }

@@ -4,7 +4,6 @@ import { prisma } from "@/shared/db/prisma";
 import {
   maskCloudflareToken,
   maskGoogleMapsKey,
-  maskGoogleOAuthSecret,
   maskResendKey,
   maskTurnstileKey,
 } from "@/shared/lib/api-keys";
@@ -13,7 +12,6 @@ import type {
   CloudflareConfig,
   CustomApiKeyData,
   GoogleMapsConfig,
-  GoogleOAuthConfig,
   ResendConfig,
   TurnstileConfig,
 } from "@/shared/types/api-keys";
@@ -187,56 +185,4 @@ export async function getCustomApiKeyValue(id: string): Promise<string | null> {
   }
 
   return safeDecrypt(keysMap[id].keyValue);
-}
-
-export async function getGoogleOAuthConfig(): Promise<GoogleOAuthConfig> {
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: {
-      googleOAuthClientId: true,
-      googleOAuthClientSecret: true,
-      googleOAuthLastTestedAt: true,
-      googleOAuthConnectionStatus: true,
-    },
-  });
-
-  return {
-    clientId: settings?.googleOAuthClientId || null,
-    clientSecretMasked: settings?.googleOAuthClientSecret
-      ? maskGoogleOAuthSecret(
-          safeDecrypt(settings.googleOAuthClientSecret) || "****",
-        )
-      : null,
-    lastTestedAt: settings?.googleOAuthLastTestedAt || null,
-    connectionStatus: parseConnectionStatus(
-      settings?.googleOAuthConnectionStatus,
-    ),
-  };
-}
-
-export async function getDecryptedGoogleOAuthCredentials(): Promise<{
-  clientId: string;
-  clientSecret: string;
-} | null> {
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: {
-      googleOAuthClientId: true,
-      googleOAuthClientSecret: true,
-    },
-  });
-
-  if (!settings?.googleOAuthClientId || !settings.googleOAuthClientSecret) {
-    return null;
-  }
-
-  const clientSecret = safeDecrypt(settings.googleOAuthClientSecret);
-  if (!clientSecret) {
-    return null;
-  }
-
-  return {
-    clientId: settings.googleOAuthClientId,
-    clientSecret,
-  };
 }

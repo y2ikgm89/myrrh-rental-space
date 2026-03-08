@@ -2,7 +2,7 @@
 
 import * as TooltipPrimitive from '@radix-ui/react-tooltip'
 import { tv } from 'tailwind-variants'
-import { cn } from '@/shared/lib/utils'
+import { cn } from '@/shared/lib/cn'
 import { Z_INDEX } from '@/admin/lib/styles/z-index'
 
 const tooltipContentVariants = tv({

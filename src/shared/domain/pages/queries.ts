@@ -32,18 +32,25 @@ export async function getPublicPage(slug: string) {
 
   if (!slugParamSchema.safeParse(slug).success) return null;
 
-  const page = await prisma.page.findUnique({
-    where: {
-      slug,
-      isPublished: true,
-      isActive: true,
-    },
-    select: {
-      id: true,
-      slug: true,
-      title: true,
-      description: true,
-    },
+  const page = await safeFetch({
+    fetch: () =>
+      prisma.page.findUnique({
+        where: {
+          slug,
+          isPublished: true,
+          isActive: true,
+        },
+        select: {
+          id: true,
+          slug: true,
+          title: true,
+          description: true,
+        },
+      }),
+    fallback: null,
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getPublicPage",
   });
 
   return toPlainObject(page);

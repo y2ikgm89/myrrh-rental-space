@@ -22,7 +22,7 @@ import {
   CSS,
   type DragEndEvent,
 } from '@/admin/components/ui/sortable'
-import { cn } from '@/shared/lib/utils'
+import { cn } from '@/shared/lib/cn'
 
 // =============================================================================
 // Types

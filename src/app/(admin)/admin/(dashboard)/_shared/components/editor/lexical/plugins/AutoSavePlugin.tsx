@@ -35,6 +35,10 @@ export function useAutoSaveStatus() {
 const LOCAL_DEBOUNCE_MS = 2000
 const SERVER_DEBOUNCE_MS = 10000
 
+function getDraftSavedAt(): string {
+  return String(Math.trunc(window.performance.timeOrigin + window.performance.now()))
+}
+
 export function AutoSavePlugin({
   onAutoSave,
   autoSaveKey,
@@ -72,7 +76,7 @@ export function AutoSavePlugin({
         localTimerRef.current = setTimeout(() => {
           try {
             localStorage.setItem(`lexical-draft:${autoSaveKey}`, json)
-            localStorage.setItem(`lexical-draft-time:${autoSaveKey}`, new Date().toISOString())
+            localStorage.setItem(`lexical-draft-time:${autoSaveKey}`, getDraftSavedAt())
           } catch {
             // QuotaExceeded等は無視
           }

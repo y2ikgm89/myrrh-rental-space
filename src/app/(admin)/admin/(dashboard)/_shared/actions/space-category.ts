@@ -3,10 +3,8 @@
 import { updateTag } from 'next/cache'
 import { z } from 'zod'
 import { executeAdminMutation } from '@/admin/lib/admin-action'
-import { checkReadPermissionFor } from '@/admin/lib/permissions'
 import {
   createSuccess,
-  createFailure,
   type ActionResult,
 } from '@/admin/types/server-actions'
 import { createValidationError } from '@/shared/lib/action-helpers'
@@ -18,19 +16,11 @@ import {
   updateSpaceCategory as updateSpaceCategoryCommand,
   updateSpaceCategoryOrder as updateSpaceCategoryOrderCommand,
 } from '@/shared/domain/space-categories/commands'
-import {
-  getActiveSpaceCategories as getActiveSpaceCategoriesQuery,
-  getSpaceCategories as getSpaceCategoriesQuery,
-  getSpaceCategoryById as getSpaceCategoryByIdQuery,
-} from '@/shared/domain/space-categories/queries'
 import { spaceCategoryFormSchema } from '@/admin/lib/validations/space-category'
 import type {
-  GetSpaceCategoriesResult,
   SpaceCategoryFormInput,
-  SpaceCategoryWithStats,
 } from '@/admin/lib/validations/space-category'
 
-const checkReadPermission = checkReadPermissionFor('spaceCategory')
 const idSchema = z.string().uuid({ error: 'カテゴリーIDが不正です' })
 const categoryOrderSchema = z.array(
   z.object({
@@ -38,51 +28,6 @@ const categoryOrderSchema = z.array(
     sortOrder: z.number().int().min(0, { error: '並び順が不正です' }),
   })
 )
-
-export async function getSpaceCategories(options?: {
-  includeInactive?: boolean
-  search?: string
-}): Promise<GetSpaceCategoriesResult> {
-  const hasPermission = await checkReadPermission()
-  if (!hasPermission) {
-    return { categories: [], total: 0 }
-  }
-
-  return getSpaceCategoriesQuery(options)
-}
-
-export async function getSpaceCategoryById(
-  id: string
-): Promise<ActionResult<SpaceCategoryWithStats>> {
-  const hasPermission = await checkReadPermission()
-  if (!hasPermission) {
-    return createFailure('権限がありません')
-  }
-
-  const validated = idSchema.safeParse(id)
-  if (!validated.success) {
-    return createValidationError(validated.error)
-  }
-
-  const category = await getSpaceCategoryByIdQuery(validated.data)
-  if (!category) {
-    return createFailure('カテゴリーが見つかりません')
-  }
-
-  return createSuccess('取得しました', category)
-}
-
-export async function getActiveSpaceCategories(): Promise<
-  ActionResult<{ id: string; name: string; icon: string | null; color: string | null }[]>
-> {
-  const hasPermission = await checkReadPermission()
-  if (!hasPermission) {
-    return createFailure('権限がありません')
-  }
-
-  const categories = await getActiveSpaceCategoriesQuery()
-  return createSuccess('取得しました', categories)
-}
 
 export async function createSpaceCategory(
   input: SpaceCategoryFormInput

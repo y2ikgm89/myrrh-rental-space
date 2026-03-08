@@ -6,13 +6,12 @@
  */
 
 import Link from 'next/link'
+import { notFound } from 'next/navigation'
 import { ArrowLeft, ExternalLink } from 'lucide-react'
-import { getInstagramConfig } from '@/admin/actions/instagram'
-import { ensureSystemPage } from '@/admin/actions/page'
-import { ensureHomepageSections } from '@/shared/lib/section-defaults'
+import { getInstagramConfig } from '@/admin/queries/instagram'
+import { getPageBySlug } from '@/admin/queries/page'
 import { Button, Badge, Breadcrumb } from '@/admin/components/ui'
 import { HomepageEditTabs } from './_components/HomepageEditTabs'
-import { connection } from 'next/server'
 import type { Metadata } from 'next'
 import type { ReactElement } from 'react'
 
@@ -21,14 +20,10 @@ export const metadata: Metadata = {
 }
 
 export default async function HomepageEditPage(): Promise<ReactElement> {
-  // ensureHomepageSections/ensureSystemPage は uncached DB 呼び出しのため connection() でオプトイン
-  await connection()
-
-  // ホームページ Page レコードを確保（SEO設定保存先）
-  const homePage = await ensureSystemPage('home')
-
-  // セクションが未作成なら自動初期化
-  await ensureHomepageSections()
+  const homePage = await getPageBySlug('home')
+  if (!homePage) {
+    notFound()
+  }
 
   // Instagram接続状態を取得
   const instagramConfig = await getInstagramConfig()
@@ -36,12 +31,12 @@ export default async function HomepageEditPage(): Promise<ReactElement> {
   // SEO用データ
   const pageSeoData = {
     slug: 'home',
-    title: homePage?.title ?? 'ホームページ',
-    metaDescription: homePage?.metaDescription ?? null,
-    metaKeywords: homePage?.metaKeywords ?? null,
-    ogpTitle: homePage?.ogpTitle ?? null,
-    ogpDescription: homePage?.ogpDescription ?? null,
-    ogpImageUrl: homePage?.ogpImageUrl ?? null,
+    title: homePage.title,
+    metaDescription: homePage.metaDescription,
+    metaKeywords: homePage.metaKeywords,
+    ogpTitle: homePage.ogpTitle,
+    ogpDescription: homePage.ogpDescription,
+    ogpImageUrl: homePage.ogpImageUrl,
   }
 
   return (
@@ -85,3 +80,4 @@ export default async function HomepageEditPage(): Promise<ReactElement> {
     </div>
   )
 }
+

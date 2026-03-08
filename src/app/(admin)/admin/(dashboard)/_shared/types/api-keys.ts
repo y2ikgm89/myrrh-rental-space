@@ -7,7 +7,6 @@ export type {
   CustomApiKeysMap,
   CustomApiKeyStored,
   GoogleMapsConfig,
-  GoogleOAuthConfig,
   ResendConfig,
   TurnstileConfig,
 } from "@/shared/types/api-keys";

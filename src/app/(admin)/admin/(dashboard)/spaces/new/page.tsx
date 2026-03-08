@@ -1,8 +1,7 @@
-import { connection } from "next/server";
-import { getActiveTermsForSelect } from "@/admin/actions/terms";
-import { getPublishedLocations } from "@/admin/actions/location";
-import { getActiveSpaceCategories } from "@/admin/actions/space-category";
-import { getTaxSettings } from "@/admin/actions/settings";
+import { getActiveTermsForSelect } from "@/admin/queries/terms";
+import { getPublishedLocations } from "@/admin/queries/location";
+import { getActiveSpaceCategories } from "@/admin/queries/space-category";
+import { getTaxSettings } from "@/admin/queries/settings";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { SpaceEditForm } from "../_components/SpaceEditForm";
 import type { Metadata } from "next";
@@ -12,8 +11,6 @@ export const metadata: Metadata = {
 };
 
 export default async function NewSpacePage() {
-  await connection();
-
   const [availableTerms, locationsResult, categoriesResult, taxSettings] =
     await Promise.all([
       getActiveTermsForSelect(),
@@ -45,3 +42,4 @@ export default async function NewSpacePage() {
     </AdminDetailLayout>
   );
 }
+

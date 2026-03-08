@@ -14,7 +14,6 @@ import {
   parseAsStringLiteral,
   type SearchParams,
 } from "nuqs/server";
-import { toDateString } from "@/shared/lib/serialize";
 
 // ============================================================
 // ページネーション
@@ -46,20 +45,6 @@ export const parseAsQuery = parseAsString.withDefault("");
 
 /** カンマ区切りの配列 */
 export const parseAsCommaSeparated = parseAsArrayOf(parseAsString, ",");
-
-// ============================================================
-// 日付
-// ============================================================
-
-/** ISO 日付文字列をパース */
-export const parseAsDate = createParser<Date>({
-  parse: (value) => {
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? null : date;
-  },
-  serialize: (date) => toDateString(date),
-  eq: (a, b) => a.getTime() === b.getTime(),
-});
 
 // ============================================================
 // ブール値

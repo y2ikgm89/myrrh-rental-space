@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
-import { connection } from 'next/server'
-import { getPostById, getPostCategories, getPostTags } from '@/admin/actions/post'
+import { headers } from "next/headers";
+import { getPostById, getPostCategories, getPostTags } from '@/admin/queries/post'
 import { PostEditor } from '../_components/PostEditor'
 import { getLayoutSettings } from '@/shared/domain/settings/queries'
 import { getValidLayoutWidth, LayoutWidth } from '@/shared/lib/validations/enums'
@@ -15,7 +15,7 @@ type PageProps = {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  await connection()
+  await headers();
   const { id } = await params
   const post = await getPostById(id)
 
@@ -31,7 +31,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function EditPostPage({ params }: PageProps) {
-  await connection()
   const { id } = await params
 
   const [post, categories, tags, settings] = await Promise.all([
@@ -60,3 +59,4 @@ export default async function EditPostPage({ params }: PageProps) {
     />
   )
 }
+

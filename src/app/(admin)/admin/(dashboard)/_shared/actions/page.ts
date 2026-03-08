@@ -7,18 +7,11 @@ import { createValidationError } from '@/shared/lib/action-helpers'
 import { fireAndForget } from '@/shared/lib/async-utils'
 import { purgePageCache } from '@/shared/lib/cloudflare'
 import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
-import { verifyAdminSession } from '@/shared/lib/auth'
 import { ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
 import {
-  checkSlugAvailability,
-  getSlugErrorMessage,
-} from '@/shared/lib/slug-validation'
-import {
   createPageCommand,
-  createPageIfNotExistsCommand,
   deletePageCommand,
   deletePagePermanentlyCommand,
-  ensureSystemPageCommand,
   restorePageCommand,
   togglePagePublishedCommand,
   updatePageCommand,
@@ -26,15 +19,6 @@ import {
   bulkDeletePagesCommand,
   bulkTogglePagePublishedCommand,
 } from '@/shared/domain/pages/commands'
-import {
-  getDeletedPagesListQuery,
-  getHomepageLastUpdatedQuery,
-  getPageBySlugQuery,
-  getPageForPublicQuery,
-  getPagesListQuery,
-  getSystemPagesListQuery,
-  type PageListQueryParams,
-} from '@/shared/domain/pages/admin-queries'
 import {
   createPageSchema,
   getSystemPageDefinition,
@@ -45,9 +29,6 @@ import {
   type UpdatePageInput,
   type UpdatePageSeoInput,
 } from '@/shared/lib/validations/page'
-import type { PageData, PageListResult } from '@/shared/domain/pages/types'
-
-export type PagesListParams = PageListQueryParams
 
 function purgePageCaches(...slugs: string[]): void {
   for (const slug of [...new Set(slugs)]) {
@@ -69,89 +50,6 @@ function invalidatePageTags(...slugs: string[]): void {
 function invalidatePageSeoTags(slug: string): void {
   updateTag(CACHE_TAGS.PAGE_SEO)
   updateTag(getCacheTag.pageSeo.detail(slug))
-}
-
-export async function getHomepageLastUpdated(): Promise<Date | null> {
-  await verifyAdminSession()
-  return getHomepageLastUpdatedQuery()
-}
-
-export async function getPagesList(
-  params: PagesListParams = {},
-): Promise<PageListResult> {
-  await verifyAdminSession()
-  return getPagesListQuery(params)
-}
-
-export async function getPageBySlug(slug: string): Promise<PageData | null> {
-  await verifyAdminSession()
-  return getPageBySlugQuery(slug)
-}
-
-export async function getPageForPublic(slug: string): Promise<PageData | null> {
-  return getPageForPublicQuery(slug)
-}
-
-export async function createPageIfNotExists(
-  slug: string,
-  title: string,
-): Promise<PageData | null> {
-  try {
-    await verifyAdminSession()
-    return await createPageIfNotExistsCommand(slug, title)
-  } catch {
-    return null
-  }
-}
-
-export async function ensureSystemPage(slug: string): Promise<PageData | null> {
-  try {
-    await verifyAdminSession()
-    const result = await ensureSystemPageCommand(slug)
-    if (!result) {
-      return null
-    }
-
-    if (result.created) {
-      updateTag(CACHE_TAGS.PAGES)
-      updateTag(getCacheTag.pages.detail(slug))
-    }
-
-    return result.page
-  } catch {
-    return null
-  }
-}
-
-export async function checkPageSlugAvailability(
-  slug: string,
-): Promise<{ available: boolean; message?: string }> {
-  try {
-    await verifyAdminSession()
-  } catch {
-    return { available: false, message: 'ログインが必要です' }
-  }
-
-  if (!slug || slug.length === 0) {
-    return { available: false }
-  }
-
-  const slugCheck = await checkSlugAvailability(slug, { currentType: 'page' })
-  if (!slugCheck.available) {
-    return { available: false, message: getSlugErrorMessage(slugCheck.reason) }
-  }
-
-  return { available: true }
-}
-
-export async function getDeletedPagesList(): Promise<PageData[]> {
-  await verifyAdminSession()
-  return getDeletedPagesListQuery()
-}
-
-export async function getSystemPagesList(): Promise<PageData[]> {
-  await verifyAdminSession()
-  return getSystemPagesListQuery()
 }
 
 export async function updatePage(slug: string, input: UpdatePageInput) {

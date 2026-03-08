@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation";
-import { connection } from "next/server";
+import { headers } from "next/headers";
 import { Pencil } from "lucide-react";
 import Link from "next/link";
-import { getCustomerById, deleteCustomer } from "@/admin/actions/customer";
+import { deleteCustomer } from "@/admin/actions/customer";
+import { getCustomerById } from "@/admin/queries/customer";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { DangerZone } from "@/admin/components/DangerZone";
 import { Button } from "@/admin/components/ui/button";
@@ -18,7 +19,7 @@ type PageProps = {
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
-  await connection();
+  await headers();
   const { id } = await params;
   const customer = await getCustomerById(id);
 
@@ -34,7 +35,6 @@ export async function generateMetadata({
 }
 
 export default async function CustomerDetailPage({ params }: PageProps) {
-  await connection();
   const { id } = await params;
   const customer = await getCustomerById(id);
 
@@ -66,3 +66,4 @@ export default async function CustomerDetailPage({ params }: PageProps) {
     </AdminDetailLayout>
   );
 }
+

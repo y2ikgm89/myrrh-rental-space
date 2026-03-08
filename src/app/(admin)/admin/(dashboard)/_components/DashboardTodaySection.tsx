@@ -2,7 +2,7 @@
  * 本日の予約セクション
  */
 
-import { getTodayReservations } from "@/admin/actions/dashboard";
+import { getTodayReservations } from "@/admin/queries/dashboard";
 import {
   Card,
   CardContent,

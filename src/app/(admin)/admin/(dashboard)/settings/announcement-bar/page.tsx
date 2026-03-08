@@ -9,9 +9,8 @@
  */
 
 import { Suspense } from 'react'
-import { connection } from 'next/server'
-import { getAnnouncementBars } from '@/admin/actions/announcement-bar'
-import { getAnnouncementBarCarouselSettings } from '@/admin/actions/settings'
+import { getAnnouncementBars } from '@/admin/queries/announcement-bar'
+import { getAnnouncementBarCarouselSettings } from '@/admin/queries/settings'
 import { SettingsLayout } from '../_components/SettingsLayout'
 import { AnnouncementBarManager } from '../site/_components/announcement-bar'
 import type { ReactElement } from 'react'
@@ -20,8 +19,6 @@ import type { ReactElement } from 'react'
  * 動的コンテンツ: お知らせバー管理
  */
 async function AnnouncementBarContent(): Promise<ReactElement> {
-  await connection()
-
   const [{ items: announcementBars }, carouselSettings] = await Promise.all([
     getAnnouncementBars(),
     getAnnouncementBarCarouselSettings(),
@@ -55,7 +52,7 @@ function AnnouncementBarLoading(): ReactElement {
   )
 }
 
-export default function AnnouncementBarPage(): ReactElement {
+export default async function AnnouncementBarPage(): Promise<ReactElement> {
   return (
     <SettingsLayout
       title="お知らせバー管理"
@@ -67,3 +64,6 @@ export default function AnnouncementBarPage(): ReactElement {
     </SettingsLayout>
   )
 }
+
+
+

@@ -12,35 +12,19 @@
 import { updateTag } from "next/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { createValidationError } from "@/shared/lib/action-helpers";
-import { checkReadPermissionFor } from "@/admin/lib/permissions";
 import { executeAdminMutation } from "@/admin/lib/admin-action";
 import {
   createSuccess,
   type ActionResult,
 } from "@/admin/types/server-actions";
 import {
-  getPublicTaxSettings as getPublicTaxSettingsQuery,
-  getTaxSettings as getTaxSettingsQuery,
-} from "@/shared/domain/settings/admin-queries";
-import {
   updateTaxSettings as updateTaxSettingsCommand,
 } from "@/shared/domain/settings/commands";
-import type { TaxSettingsData } from "@/shared/domain/settings/types";
 
 import { taxSettingsSchema, type TaxSettingsInput } from "./schemas";
 
-const checkReadPermission = checkReadPermissionFor("settings");
-
 function invalidateSettingsCache(): void {
   updateTag(CACHE_TAGS.SETTINGS);
-}
-
-export async function getTaxSettings(): Promise<TaxSettingsData> {
-  if (!(await checkReadPermission())) {
-    return getPublicTaxSettingsQuery();
-  }
-
-  return getTaxSettingsQuery();
 }
 
 export async function updateTaxSettings(
@@ -60,8 +44,4 @@ export async function updateTaxSettings(
     success: () => createSuccess("消費税設定を更新しました"),
     afterSuccess: invalidateSettingsCache,
   });
-}
-
-export async function getPublicTaxSettings(): Promise<TaxSettingsData> {
-  return getPublicTaxSettingsQuery();
 }

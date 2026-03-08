@@ -22,8 +22,8 @@ import {
   publishNews,
   unpublishNews,
 } from "@/admin/actions/news";
-import { generatePreviewHtml } from "@/admin/actions/preview";
 import { createPreviewHandlers } from "@/admin/hooks";
+import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import type { NewsData } from "@/shared/domain/news/types";
 import { logger } from "@/shared/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
@@ -49,6 +49,21 @@ type UseNewsEditorOptions = {
   news?: NewsData;
   mode: "create" | "edit";
 };
+
+async function fetchPreviewHtml(contentJson: string): Promise<string> {
+  const response = await fetchAdminJson<{ html: string }>("/admin/api/preview/html", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      contentJson,
+      resource: "news",
+    }),
+  });
+
+  return response.html;
+}
 
 // =============================================================================
 // Transforms (Type-safe)
@@ -248,14 +263,7 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
       const values = getValues();
       const identifier =
         mode === "create" ? "preview-new" : slug || "preview-new";
-      const contentHtml = await generatePreviewHtml(
-        values.contentJson || "",
-        "news",
-      );
-      if (contentHtml === null) {
-        toast.error("プレビューの生成に失敗しました");
-        return;
-      }
+      const contentHtml = await fetchPreviewHtml(values.contentJson || "");
       const previewData = toPreviewData(values, contentHtml);
       saveAndOpenPreview(identifier, previewData, "/news");
     } catch (error) {

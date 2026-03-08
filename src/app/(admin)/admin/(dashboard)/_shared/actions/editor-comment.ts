@@ -2,16 +2,10 @@
 
 import { z } from "zod";
 import { executeAdminMutation } from "@/admin/lib/admin-action";
-import { withPermission } from "@/admin/lib/server-action-helpers";
-import { createFailure, createSuccess } from "@/admin/types/server-actions";
+import { createSuccess } from "@/admin/types/server-actions";
 import type {
   AddCommentInput,
-  CommentableContentType,
   CreateThreadInput,
-  EditorCommentThread,
-  GetThreadsQuery,
-  MarkInfo,
-  ThreadListItem,
 } from "@/admin/types/editor-comment";
 import { isCommentableContentType } from "@/admin/types/editor-comment";
 import { createValidationError } from "@/shared/lib/action-helpers";
@@ -23,11 +17,6 @@ import {
   reopenThreadCommand,
   resolveThreadCommand,
 } from "@/shared/domain/editor-comments/commands";
-import {
-  getCommentThreadsQuery,
-  getMarkInfoListQuery,
-  getThreadDetailQuery,
-} from "@/shared/domain/editor-comments/queries";
 
 const createThreadSchema = z.object({
   markId: z.string().min(1, { error: "markId は必須です" }),
@@ -132,37 +121,3 @@ export const deleteComment = async (commentId: string) =>
     },
     success: () => createSuccess("コメントを削除しました"),
   });
-
-export const getCommentThreads = withPermission<
-  [GetThreadsQuery],
-  ThreadListItem[]
->("post", "read", { audit: false })(async (_user, query) => {
-  const { contentType, contentId, status } = query;
-  if (!isCommentableContentType(contentType)) {
-    return createFailure("無効なコンテンツタイプです");
-  }
-
-  return createSuccess(
-    "スレッド一覧を取得しました",
-    await getCommentThreadsQuery({ contentType, contentId, status }),
-  );
-});
-
-export const getThreadDetail = withPermission<[string], EditorCommentThread>(
-  "post",
-  "read",
-  { audit: false },
-)(async (_user, threadId) => {
-  const thread = await getThreadDetailQuery(threadId);
-  return createSuccess("スレッド詳細を取得しました", thread);
-});
-
-export const getMarkInfoList = withPermission<
-  [CommentableContentType, string],
-  MarkInfo[]
->("post", "read", { audit: false })(async (_user, contentType, contentId) => {
-  return createSuccess(
-    "マーク情報を取得しました",
-    await getMarkInfoListQuery(contentType, contentId),
-  );
-});

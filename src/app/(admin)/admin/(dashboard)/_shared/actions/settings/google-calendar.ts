@@ -9,14 +9,12 @@
 import { updateTag } from "next/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { createValidationError } from "@/shared/lib/action-helpers";
-import { checkReadPermissionFor } from "@/admin/lib/permissions";
 import { executeAdminMutation } from "@/admin/lib/admin-action";
 import {
   createSuccess,
   type ActionResult,
 } from "@/admin/types/server-actions";
 import {
-  getGoogleCalendarSettings as getGoogleCalendarSettingsQuery,
   getGoogleCalendarWebhookState,
 } from "@/shared/domain/settings/admin-queries";
 import {
@@ -31,7 +29,6 @@ import {
   updateTwoWaySyncSettings as updateTwoWaySyncSettingsCommand,
 } from "@/shared/domain/settings/commands";
 import { DomainError } from "@/shared/domain/domain-error";
-import type { GoogleCalendarSettingsData } from "@/shared/domain/settings/types";
 import {
   logError,
   ErrorCategory,
@@ -56,8 +53,6 @@ import {
   type GoogleCalendarSettingsInput,
   type TwoWaySyncSettingsInput,
 } from "./schemas";
-
-const checkReadPermission = checkReadPermissionFor("settings");
 
 function invalidateSettingsCache(): void {
   updateTag(CACHE_TAGS.SETTINGS);
@@ -188,14 +183,6 @@ export async function disconnectGoogleCalendarOAuth(): Promise<ActionResult<void
     success: () => createSuccess("Google Calendar OAuth連携を解除しました"),
     afterSuccess: invalidateSettingsCache,
   });
-}
-
-export async function getGoogleCalendarSettings(): Promise<GoogleCalendarSettingsData | null> {
-  if (!(await checkReadPermission())) {
-    return null;
-  }
-
-  return getGoogleCalendarSettingsQuery();
 }
 
 export async function updateTwoWaySyncSettings(

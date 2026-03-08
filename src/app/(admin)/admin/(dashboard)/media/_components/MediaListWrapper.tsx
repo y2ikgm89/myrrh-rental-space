@@ -2,7 +2,7 @@
  * メディアリストラッパー（Server Component）
  */
 
-import { getMediaList } from '@/admin/actions/media'
+import { getMediaList } from '@/admin/queries/media'
 import { MediaGrid } from './MediaGrid'
 import { MediaTable } from './MediaTable'
 import { Pagination } from '@/admin/components/ui'

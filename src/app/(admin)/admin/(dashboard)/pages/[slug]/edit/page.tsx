@@ -10,11 +10,9 @@
 
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { connection } from 'next/server'
+import { headers } from "next/headers";
 import { ArrowLeft, ExternalLink } from 'lucide-react'
-import { ensureSystemPage } from '@/admin/actions/page'
-import { getPageForEdit, getPageWithSections } from '@/admin/actions/page-section'
-import { isSystemPageSlug } from '@/shared/lib/validations/page'
+import { getPageForEdit, getPageWithSections } from '@/admin/queries/page-section'
 import { Button, Badge, Breadcrumb } from '@/admin/components/ui'
 import { SectionMasterDetail } from './_components/SectionMasterDetail'
 import { PublishToggle } from './_components/PublishToggle'
@@ -29,7 +27,7 @@ type PageProps = {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  await connection()
+  await headers();
   const { slug } = await params
   const page = await getPageWithSections(slug)
 
@@ -39,13 +37,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function EditPagePage({ params }: PageProps): Promise<ReactElement> {
-  await connection()
   const { slug } = await params
-
-  // システムページの場合、存在しなければ自動作成（セクションも保証）
-  if (isSystemPageSlug(slug)) {
-    await ensureSystemPage(slug)
-  }
 
   const page = await getPageForEdit(slug)
 
@@ -96,3 +88,4 @@ export default async function EditPagePage({ params }: PageProps): Promise<React
     </div>
   )
 }
+

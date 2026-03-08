@@ -69,7 +69,7 @@ const SETTINGS_CATEGORIES: SettingsCardProps[] = [
   },
 ]
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
@@ -87,3 +87,5 @@ export default function SettingsPage() {
     </div>
   )
 }
+
+

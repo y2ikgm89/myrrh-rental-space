@@ -12,6 +12,8 @@
  */
 
 import { Suspense } from "react";
+import { headers } from "next/headers";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { AdminLayoutProvider } from "@/admin/contexts/admin-layout-context";
 import { ConfirmProvider } from "@/admin/contexts/confirm-context";
 import { ResponsiveSidebar } from "./_components/ResponsiveSidebar";
@@ -20,40 +22,45 @@ import { TopBar } from "./_components/TopBar";
 import { UserInfo, UserInfoSkeleton } from "./_components/UserInfo";
 import { getAdminBrandingSettings } from "@/shared/domain/settings/queries";
 import type { ReactElement, ReactNode } from "react";
+import { requireAdminDashboardAccess } from "@/admin/queries/_helpers";
 
 export default async function DashboardLayout({
   children,
 }: {
   children: ReactNode;
 }): Promise<ReactElement> {
+  await headers();
+  await requireAdminDashboardAccess();
   const brandingSettings = await getAdminBrandingSettings();
 
   return (
     <AdminLayoutProvider>
       <ConfirmProvider>
-        <div className="min-h-screen bg-background">
-          {/* レスポンシブサイドバー */}
-          <ResponsiveSidebar
-            userInfo={
-              <Suspense fallback={<UserInfoSkeleton />}>
-                <UserInfo />
-              </Suspense>
-            }
-          />
+        <NuqsAdapter>
+          <div className="min-h-screen bg-background">
+            {/* レスポンシブサイドバー */}
+            <ResponsiveSidebar
+              userInfo={
+                <Suspense fallback={<UserInfoSkeleton />}>
+                  <UserInfo />
+                </Suspense>
+              }
+            />
 
-          {/* メインコンテンツエリア */}
-          <MainContent
-            topBar={
-              <TopBar
-                siteName={brandingSettings.siteName}
-                headerLogoUrl={brandingSettings.headerLogoUrl}
-                useHeaderLogo={brandingSettings.useHeaderLogo}
-              />
-            }
-          >
-            {children}
-          </MainContent>
-        </div>
+            {/* メインコンテンツエリア */}
+            <MainContent
+              topBar={
+                <TopBar
+                  siteName={brandingSettings.siteName}
+                  headerLogoUrl={brandingSettings.headerLogoUrl}
+                  useHeaderLogo={brandingSettings.useHeaderLogo}
+                />
+              }
+            >
+              {children}
+            </MainContent>
+          </div>
+        </NuqsAdapter>
       </ConfirmProvider>
     </AdminLayoutProvider>
   );

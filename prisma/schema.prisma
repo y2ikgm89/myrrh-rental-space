@@ -1198,14 +1198,6 @@ model Settings {
   customApiKeys Json? @default("{}")
 
   // ==============================================
-  // Google OAuth (ログイン & カレンダー共通)
-  // ==============================================
-  googleOAuthClientId         String?
-  googleOAuthClientSecret     String?   @db.Text // 暗号化保存
-  googleOAuthLastTestedAt     DateTime?
-  googleOAuthConnectionStatus String? // 'connected' | 'error'
-
-  // ==============================================
   // Google Calendar Integration
   // ==============================================
 
@@ -1320,38 +1312,6 @@ model ICalToken {
 // =============================================================================
 // RBAC: 権限管理
 // =============================================================================
-
-/// 権限定義（resource:action の組み合わせ）
-model Permission {
-  id          String   @id @default(uuid())
-  resource    String // 'space', 'blog', 'news', 'page', 'user', 'settings' 等
-  action      String // 'create', 'read', 'update', 'delete', 'publish' 等
-  description String? // 説明（UI表示用）
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  rolePermissions RolePermission[]
-
-  @@unique([resource, action])
-  @@index([resource])
-  @@map("permissions")
-}
-
-/// ロールと権限の紐付け
-model RolePermission {
-  id           String   @id @default(uuid())
-  role         Role
-  permissionId String
-  createdAt    DateTime @default(now())
-
-  // Relations
-  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-
-  @@unique([role, permissionId])
-  @@index([role])
-  @@map("role_permissions")
-}
 
 // =============================================================================
 // 監査ログ

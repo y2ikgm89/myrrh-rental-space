@@ -10,8 +10,7 @@
  */
 
 import { Suspense } from 'react'
-import { connection } from 'next/server'
-import { getSettings } from '@/admin/actions/settings'
+import { getSettings } from '@/admin/queries/settings'
 import { SettingsLayout } from '../_components/SettingsLayout'
 import { SettingsTabs } from '../_components/SettingsTabs'
 import {
@@ -30,8 +29,6 @@ import type { ReactElement } from 'react'
  * 動的コンテンツ: サイト設定
  */
 async function SiteSettingsContent(): Promise<ReactElement> {
-  await connection()
-
   const settings = await getSettings()
 
   if (!settings) {
@@ -119,10 +116,13 @@ function SiteSettingsLoading(): ReactElement {
   )
 }
 
-export default function SiteSettingsPage(): ReactElement {
+export default async function SiteSettingsPage(): Promise<ReactElement> {
   return (
     <Suspense fallback={<SiteSettingsLoading />}>
       <SiteSettingsContent />
     </Suspense>
   )
 }
+
+
+

@@ -6,7 +6,7 @@
 
 import type { Metadata } from "next";
 import type { ReactElement } from "react";
-import { validateInvitationToken } from "@/admin/actions/staff-invitation";
+import { validateInvitationToken } from "@/admin/queries/staff-invitation";
 import { isActionFailure } from "@/admin/types/server-actions";
 import { SetupForm } from "./_components/SetupForm";
 

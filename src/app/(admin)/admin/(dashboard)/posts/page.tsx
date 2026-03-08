@@ -5,11 +5,11 @@
  */
 
 import { Suspense } from "react";
-import { getPosts, getPostCategories, getPostTags } from "@/admin/actions/post";
+import { getPosts, getPostCategories, getPostTags } from "@/admin/queries/post";
 import {
   getAdminComments,
   getCommentStats,
-} from "@/admin/actions/post-comment";
+} from "@/admin/queries/post-comment";
 import { PostFilters } from "./_components/PostFilters";
 import { PostTable } from "./_components/PostTable";
 import { PostsManagementTabs } from "./_components/PostsManagementTabs";
@@ -25,7 +25,6 @@ import { createTypeGuard } from "@/shared/lib/serialize";
 import { loadAdminPostSearchParams } from "@/shared/lib/nuqs";
 import type { CommentFilters as CommentFiltersType } from "@/shared/domain/post-comments/types";
 import type { Metadata } from "next";
-import { connection } from "next/server";
 
 export const metadata: Metadata = {
   title: "投稿管理 | Myrrh Rental Space",
@@ -136,8 +135,6 @@ async function CommentList({ searchParams }: { searchParams: SearchParams }) {
 // ==============================================================================
 
 export default async function PostsPage({ searchParams }: PageProps) {
-  await connection();
-
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
@@ -186,3 +183,4 @@ export default async function PostsPage({ searchParams }: PageProps) {
     </div>
   );
 }
+

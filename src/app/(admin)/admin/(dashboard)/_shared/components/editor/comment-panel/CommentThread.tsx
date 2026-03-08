@@ -24,7 +24,7 @@ import {
   CollapsibleTrigger,
 } from '@/admin/components/ui/collapsible'
 import { Badge } from '@/admin/components/ui/badge'
-import { cn } from '@/shared/lib/utils'
+import { cn } from '@/shared/lib/cn'
 import type { EditorCommentThread, EditorCommentStatus } from '@/admin/types/editor-comment'
 import { CommentItem } from './CommentItem'
 import { CommentForm } from './CommentForm'

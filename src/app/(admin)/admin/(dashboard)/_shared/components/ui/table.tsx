@@ -1,4 +1,4 @@
-import { cn } from '@/shared/lib/utils'
+import { cn } from '@/shared/lib/cn'
 
 type TableProps = React.HTMLAttributes<HTMLTableElement> & {
   ref?: React.Ref<HTMLTableElement>

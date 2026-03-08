@@ -49,8 +49,8 @@ import {
 } from '@/admin/components/ui'
 import { DeleteConfirmDialog } from '@/admin/components/DeleteConfirmDialog'
 import { DragHandle } from '@/admin/components/ui/sortable'
+import { fetchAdminJson } from '@/admin/lib/admin-api-client'
 import {
-  getPostCategories,
   createPostCategory,
   updatePostCategory,
   deletePostCategory,
@@ -58,7 +58,7 @@ import {
 } from '@/admin/actions/post'
 import type { PostCategoryData } from '@/shared/domain/posts/types'
 import type { PostCategoryInput } from '@/admin/lib/validations/post'
-import { cn } from '@/shared/lib/utils'
+import { cn } from '@/shared/lib/cn'
 import { useCategoryFilters } from '../_hooks/use-taxonomy-filters'
 
 // =============================================================================
@@ -82,6 +82,10 @@ const categoryFormSchema = z.object({
   description: z.string().max(200).optional(),
   order: z.number().int().min(0),
 }) satisfies z.ZodType<CategoryFormData>
+
+async function fetchPostCategories(): Promise<PostCategoryData[]> {
+  return fetchAdminJson('/admin/api/post-categories')
+}
 
 // =============================================================================
 // Sortable Category Row
@@ -242,7 +246,7 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
         const result = await updatePostCategory(editingCategory.id, payload)
         if (result.success) {
           toast.success(result.message)
-          const newCategories = await getPostCategories()
+          const newCategories = await fetchPostCategories()
           startTransition(() => {
             setIsDialogOpen(false)
             setCategories(newCategories)
@@ -254,7 +258,7 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
         const result = await createPostCategory(payload)
         if (result.success) {
           toast.success(result.message)
-          const newCategories = await getPostCategories()
+          const newCategories = await fetchPostCategories()
           startTransition(() => {
             setIsDialogOpen(false)
             setCategories(newCategories)
@@ -271,7 +275,7 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
       const result = await deletePostCategory(id)
       if (result.success) {
         toast.success(result.message)
-        const newCategories = await getPostCategories()
+        const newCategories = await fetchPostCategories()
         startTransition(() => {
           setCategories(newCategories)
         })
@@ -299,7 +303,7 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
       const result = await updatePostCategoryOrder(updates)
       if (!result.success) {
         toast.error(result.error)
-        const newCategories = await getPostCategories()
+        const newCategories = await fetchPostCategories()
         startTransition(() => {
           setCategories(newCategories)
         })

@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
-import { connection } from 'next/server'
-import { getNewsById } from '@/admin/actions/news'
+import { headers } from "next/headers";
+import { getNewsById } from '@/admin/queries/news'
 import { NewsEditor } from '../_components/NewsEditor'
 import { getLayoutSettings } from '@/shared/domain/settings/queries'
 import { getValidLayoutWidth, LayoutWidth } from '@/shared/lib/validations/enums'
@@ -15,7 +15,7 @@ type PageProps = {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  await connection()
+  await headers();
   const { id } = await params
   const news = await getNewsById(id)
 
@@ -31,7 +31,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function EditNewsPage({ params }: PageProps) {
-  await connection()
   const { id } = await params
 
   const [news, settings] = await Promise.all([
@@ -50,3 +49,4 @@ export default async function EditNewsPage({ params }: PageProps) {
 
   return <NewsEditor news={news} mode="edit" fallbackContentWidth={fallbackContentWidth} />
 }
+

@@ -18,7 +18,7 @@ import {
   Textarea,
 } from '@/admin/components/ui'
 import type { CustomerWithReservations } from '@/shared/domain/customers/types'
-import { cn } from '@/shared/lib/utils'
+import { cn } from '@/shared/lib/cn'
 import { useKanaInput } from '@/admin/hooks'
 
 type CustomerEditFormProps = {

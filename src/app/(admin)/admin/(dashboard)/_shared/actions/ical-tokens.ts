@@ -8,16 +8,11 @@ import { updateTag } from "next/cache";
 import { z } from "zod";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { createValidationError } from "@/shared/lib/action-helpers";
-import { checkReadPermissionFor } from "@/admin/lib/permissions";
 import { executeAdminMutation } from "@/admin/lib/admin-action";
 import {
   createSuccess,
   type ActionResult,
 } from "@/admin/types/server-actions";
-import {
-  getICalFeedSettings as getICalFeedSettingsQuery,
-  getICalTokens as getICalTokensQuery,
-} from "@/shared/domain/settings/admin-queries";
 import {
   createICalToken as createICalTokenCommand,
   deleteICalToken as deleteICalTokenCommand,
@@ -43,18 +38,8 @@ const deleteTokenSchema = z.object({
   id: z.string().uuid({ error: "トークンIDの形式が不正です" }),
 });
 
-const checkReadPermission = checkReadPermissionFor("settings");
-
 function invalidateSettingsCache(): void {
   updateTag(CACHE_TAGS.SETTINGS);
-}
-
-export async function getICalTokens(): Promise<ICalTokenWithRelations[]> {
-  if (!(await checkReadPermission())) {
-    return [];
-  }
-
-  return getICalTokensQuery();
 }
 
 export async function createICalToken(
@@ -112,14 +97,6 @@ export async function updateICalFeedSettings(
     success: () => createSuccess("設定を保存しました"),
     afterSuccess: invalidateSettingsCache,
   });
-}
-
-export async function getICalFeedSettings(): Promise<ICalFeedSettingsData> {
-  if (!(await checkReadPermission())) {
-    return { icalFeedEnabled: false, icalFeedIncludeCustomerInfo: false };
-  }
-
-  return getICalFeedSettingsQuery();
 }
 
 export type { ICalTokenWithRelations };

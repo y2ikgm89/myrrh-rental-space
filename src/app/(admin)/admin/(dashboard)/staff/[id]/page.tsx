@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation";
-import { connection } from "next/server";
+import { headers } from "next/headers";
 import { Pencil } from "lucide-react";
 import Link from "next/link";
-import { getUser, deleteUser } from "@/admin/actions/user";
+import { deleteUser } from "@/admin/actions/user";
+import { getUser } from "@/admin/queries/user";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { DetailSection } from "@/admin/components/DetailSection";
 import { DetailField } from "@/admin/components/DetailField";
@@ -26,7 +27,7 @@ type Props = {
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  await connection();
+  await headers();
   const { id } = await params;
   const user = await getUser(id);
   if (!user) {
@@ -38,7 +39,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function StaffDetailPage({ params }: Props) {
-  await connection();
   const { id } = await params;
   const user = await getUser(id);
 
@@ -162,3 +162,4 @@ function RoleBadge({ role }: { role: Role }) {
       return <Badge variant="outline">{role}</Badge>;
   }
 }
+

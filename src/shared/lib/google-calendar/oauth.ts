@@ -7,9 +7,9 @@ import {
   ErrorSeverity,
   normalizeError,
 } from "@/shared/lib/errors/server";
+import { serverEnv } from "@/shared/lib/env/server";
 import { getGoogleOAuthAccount } from "@/shared/domain/auth/queries";
 import { updateGoogleOAuthAccountTokens } from "@/shared/domain/auth/commands";
-import { getGoogleOAuthCredentials } from "@/shared/lib/google-oauth-credentials";
 import type { CalendarConnectionTestResult } from "./types";
 import { formatGoogleApiError } from "./helpers";
 
@@ -26,14 +26,13 @@ export async function getOAuthClient(
   }
 
   try {
-    const credentials = await getGoogleOAuthCredentials();
-    if (!credentials) {
+    if (!serverEnv.GOOGLE_CLIENT_ID || !serverEnv.GOOGLE_CLIENT_SECRET) {
       return null;
     }
 
     const oauth2Client = new google.auth.OAuth2(
-      credentials.clientId,
-      credentials.clientSecret,
+      serverEnv.GOOGLE_CLIENT_ID,
+      serverEnv.GOOGLE_CLIENT_SECRET,
     );
 
     oauth2Client.setCredentials({

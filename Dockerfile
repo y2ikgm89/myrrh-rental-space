@@ -1,6 +1,6 @@
 # syntax=docker.io/docker/dockerfile:1
 
-FROM oven/bun:1.3.9-alpine AS base
+FROM oven/bun:1.3.10-alpine AS base
 WORKDIR /app
 
 # --- Stage 1: Dependencies ---
@@ -11,11 +11,12 @@ COPY prisma ./prisma/
 RUN bun install --frozen-lockfile && \
     bunx --bun prisma generate --schema=./prisma/schema.prisma
 
-# --- Stage 2: Build ---
-FROM base AS builder
+# --- Stage 2: Build Prep ---
+FROM base AS builder-base
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/src/shared/generated ./src/shared/generated
+COPY --from=deps /app/generated ./generated
 COPY . .
+RUN bun install --frozen-lockfile
 
 ENV NEXT_TELEMETRY_DISABLED=1 \
     NODE_ENV=production \
@@ -30,9 +31,12 @@ ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
 ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY
 ARG NEXT_PUBLIC_GA_MEASUREMENT_ID
 
-RUN bun run validate && bun run build
+# --- Stage 3: Build ---
+FROM builder-base AS builder
+RUN --mount=type=secret,id=next_server_actions_encryption_key \
+    sh -lc 'export NEXT_SERVER_ACTIONS_ENCRYPTION_KEY="$(cat /run/secrets/next_server_actions_encryption_key)"; bun run type-check && bun run lint && bun run build'
 
-# --- Stage 3: Runner ---
+# --- Stage 4: Runner ---
 FROM base AS runner
 
 RUN apk add --no-cache libc6-compat && \

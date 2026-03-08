@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
-import { connection } from "next/server";
+import { headers } from "next/headers";
 import {
   getReservationById,
   getSpacesForReservation,
-} from "@/admin/actions/reservation";
+} from "@/admin/queries/reservation";
 import { ReservationEditForm } from "../../_components/ReservationEditForm";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import type { Metadata } from "next";
@@ -17,7 +17,7 @@ type PageProps = {
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
-  await connection();
+  await headers();
   const { id } = await params;
   const reservation = await getReservationById(id);
 
@@ -31,7 +31,6 @@ export async function generateMetadata({
 }
 
 export default async function ReservationEditPage({ params }: PageProps) {
-  await connection();
   const { id } = await params;
 
   const [reservation, spaces] = await Promise.all([
@@ -55,3 +54,4 @@ export default async function ReservationEditPage({ params }: PageProps) {
     </AdminDetailLayout>
   );
 }
+

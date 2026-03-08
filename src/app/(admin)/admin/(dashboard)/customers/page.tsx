@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
-import { getCustomers } from "@/admin/actions/customer";
+import { getCustomers } from "@/admin/queries/customer";
 import { CustomerFilters } from "./_components/CustomerFilters";
 import { CustomerTable } from "./_components/CustomerTable";
 import { Pagination, Button } from "@/admin/components/ui";
@@ -9,7 +9,6 @@ import { LoadingState } from "@/admin/components/LoadingState";
 import { parseCustomerStatusFilter } from "@/shared/lib/validations/enums";
 import { loadAdminCustomerSearchParams } from "@/shared/lib/nuqs";
 import type { Metadata } from "next";
-import { connection } from "next/server";
 
 export const metadata: Metadata = {
   title: "顧客管理 | Myrrh Rental Space",
@@ -43,7 +42,6 @@ async function CustomerList({ searchParams }: { searchParams: SearchParams }) {
 }
 
 export default async function CustomersPage({ searchParams }: PageProps) {
-  await connection();
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
@@ -74,3 +72,4 @@ export default async function CustomersPage({ searchParams }: PageProps) {
     </div>
   );
 }
+

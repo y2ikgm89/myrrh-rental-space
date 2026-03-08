@@ -25,7 +25,7 @@ import type {
   SelectedMedia,
   MediaPickerTab,
 } from "@/admin/types/media-picker";
-import { cn } from "@/shared/lib/utils";
+import { cn } from "@/shared/lib/cn";
 
 export interface MediaPickerDialogProps {
   isOpen: boolean;

@@ -1,31 +1,18 @@
 /**
  * 権限管理ライブラリ
  *
- * DBベースのRBAC（Role-Based Access Control）
+ * コード定義RBAC（Role-Based Access Control）
  * - ロール別の権限定義
- * - 権限チェック関数（cache()でメモ化）
- * - EDITOR用のリソース単位アクセス制御
+ * - 権限チェック関数
+ * - EDITOR用のページ割り当てアクセス制御
  */
 
 import 'server-only'
 
-import { cacheLife, cacheTag } from 'next/cache'
 import { Role } from '@/shared/db/enums'
 import { getSession, getRoleFromSession, type User } from '@/shared/lib/auth'
-import {
-  assignPermissionToRole,
-  upsertPermissionDefinition,
-} from '@/shared/domain/permissions/commands'
-import {
-  checkRolePermissionRecord,
-  findPermissionId,
-  getAssignedPageIdsForUser,
-  getRolePermissionRecords,
-} from '@/shared/domain/permissions/queries'
+import { getAssignedPageIdsForUser } from '@/shared/domain/user-page-assignments/queries'
 import { logPermissionDenied } from '@/admin/lib/audit'
-import { entriesOf } from '@/shared/lib/serialize'
-import { logError, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors/server'
-import { CACHE_TAGS, CACHE_LIFE } from '@/shared/lib/constants'
 import { isEditorRole } from './role-guards'
 
 // =============================================================================
@@ -324,145 +311,6 @@ export function checkReadPermissionFor(resource: Resource): () => Promise<boolea
     }
     return true
   }
-}
-
-// =============================================================================
-// Permission Key Parsing
-// =============================================================================
-
-/**
- * Resource型の型ガード（RESOURCE_LABELSから自動導出 — Single Source of Truth）
- */
-const VALID_RESOURCES = new Set<string>(Object.keys(RESOURCE_LABELS))
-function isValidResource(value: string): value is Resource {
-  return VALID_RESOURCES.has(value)
-}
-
-/**
- * Action型の型ガード（ACTION_LABELSから自動導出 — Single Source of Truth）
- */
-const VALID_ACTIONS = new Set<string>(Object.keys(ACTION_LABELS))
-function isValidAction(value: string): value is Action {
-  return VALID_ACTIONS.has(value)
-}
-
-/**
- * PermissionKeyをパースして型安全なresourceとactionを返す
- *
- * @param permKey - パースするPermissionKey（例: "page:read"）
- * @returns パース結果。無効な場合はnull
- */
-function parsePermissionKey(permKey: PermissionKey): { resource: Resource; action: Action } | null {
-  const parts = permKey.split(':')
-  if (parts.length !== 2) return null
-
-  const resource = parts[0]
-  const action = parts[1]
-  if (!resource || !action) return null
-  if (!isValidResource(resource) || !isValidAction(action)) return null
-
-  return { resource, action }
-}
-
-// =============================================================================
-// DB同期関数（初期化・シード用）
-// =============================================================================
-
-/**
- * 権限定義をDBに同期
- *
- * ROLE_PERMISSIONSの内容をPermission/RolePermissionテーブルに反映
- * 既存データはそのまま、新規のみ追加
- */
-export async function syncPermissionsToDb(): Promise<void> {
-  // 全権限キーを収集
-  const allPermissions = new Set<PermissionKey>()
-  for (const permissions of Object.values(ROLE_PERMISSIONS)) {
-    for (const perm of permissions) {
-      allPermissions.add(perm)
-    }
-  }
-
-  // Permission テーブルに upsert
-  for (const permKey of allPermissions) {
-    const parsed = parsePermissionKey(permKey)
-    if (!parsed) {
-      logError(new Error(`Invalid permission key: ${permKey}`), {
-        category: ErrorCategory.VALIDATION,
-        severity: ErrorSeverity.MEDIUM,
-        context: { operation: 'syncPermissionsToDb', permKey },
-      })
-      continue
-    }
-
-    const { resource, action } = parsed
-    await upsertPermissionDefinition({
-      resource,
-      action,
-      description: `${RESOURCE_LABELS[resource]}の${ACTION_LABELS[action]}`,
-    })
-  }
-
-  // RolePermission テーブルに upsert
-  const roleEntries = entriesOf(ROLE_PERMISSIONS)
-  for (const [role, permissions] of roleEntries) {
-    for (const permKey of permissions) {
-      const parsed = parsePermissionKey(permKey)
-      if (!parsed) {
-        logError(new Error(`Invalid permission key: ${permKey}`), {
-        category: ErrorCategory.VALIDATION,
-        severity: ErrorSeverity.MEDIUM,
-        context: { operation: 'syncPermissionsToDb', permKey },
-      })
-        continue
-      }
-
-      const { resource, action } = parsed
-      const permissionId = await findPermissionId(resource, action)
-      if (permissionId) {
-        await assignPermissionToRole(role, permissionId)
-      }
-    }
-  }
-}
-
-// =============================================================================
-// キャッシュ付き権限チェック（Server Components用）
-// =============================================================================
-
-/**
- * DBから権限をチェック（'use cache' でクロスリクエストキャッシュ）
- *
- * コードベース定義と併用する場合、DB優先
- * 権限更新時は updateTag(CACHE_TAGS.PERMISSIONS) で無効化
- */
-export async function checkPermissionFromDb(
-  role: Role, resource: Resource, action: Action
-): Promise<boolean> {
-  'use cache'
-  cacheLife(CACHE_LIFE.STATIC_SETTINGS)
-  cacheTag(CACHE_TAGS.PERMISSIONS)
-
-  return checkRolePermissionRecord(role, resource, action)
-}
-
-/**
- * ユーザーの全権限を取得（'use cache' でクロスリクエストキャッシュ）
- *
- * 権限更新時は updateTag(CACHE_TAGS.PERMISSIONS) で無効化
- */
-export async function getUserPermissions(role: Role): Promise<PermissionKey[]> {
-  'use cache'
-  cacheLife(CACHE_LIFE.STATIC_SETTINGS)
-  cacheTag(CACHE_TAGS.PERMISSIONS)
-
-  const rolePermissions = await getRolePermissionRecords(role)
-  return rolePermissions.flatMap((permission) => {
-    const { resource, action } = permission
-    if (!isValidResource(resource) || !isValidAction(action)) return []
-    const key: PermissionKey = `${resource}:${action}`
-    return [key]
-  })
 }
 
 // =============================================================================

@@ -22,8 +22,8 @@ next-env.d.ts
 *.tsbuildinfo
 
 # Prisma (generated)
+generated/
 src/shared/generated/
-prisma/migrations/*.sql
 !prisma/migrations/.gitkeep
 
 # Testing

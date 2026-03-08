@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
-import { getFaqCategories } from '@/admin/actions/faq'
+import { getFaqCategories } from '@/admin/queries/faq'
 import { FaqItemInlineEditor } from '../../_components/FaqItemInlineEditor'
-import { connection } from "next/server";
 
 export const metadata: Metadata = {
   title: '質問作成 | FAQ管理 | Myrrh Rental Space',
@@ -16,7 +15,6 @@ type PageProps = {
 }
 
 export default async function NewFaqItemPage({ searchParams }: PageProps) {
-  await connection();
   const params = await searchParams
   const { categories } = await getFaqCategories()
 
@@ -28,3 +26,4 @@ export default async function NewFaqItemPage({ searchParams }: PageProps) {
     />
   )
 }
+

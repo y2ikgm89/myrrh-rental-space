@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: "新規顧客 | Myrrh Rental Space",
 };
 
-export default function NewCustomerPage() {
+export default async function NewCustomerPage() {
   return (
     <AdminDetailLayout
       backHref="/admin/customers"
@@ -17,3 +17,4 @@ export default function NewCustomerPage() {
     </AdminDetailLayout>
   );
 }
+

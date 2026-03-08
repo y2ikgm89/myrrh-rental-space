@@ -1,7 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import { cn } from "@/shared/lib/utils";
+import { cn } from "@/shared/lib/cn";
 import { getStatusColorClass } from "@/admin/lib/calendar";
 import type { CalendarEvent, PositionedEvent } from "@/admin/lib/calendar";
 

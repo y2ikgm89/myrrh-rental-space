@@ -28,6 +28,7 @@ export async function getHomepageLastUpdatedQuery(): Promise<Date | null> {
 
 export async function getPagesListQuery(
   params: PageListQueryParams = {},
+  allowedPageIds?: readonly string[],
 ): Promise<PageListResult> {
   const {
     query,
@@ -39,10 +40,18 @@ export async function getPagesListQuery(
     sortOrder = "desc",
   } = params;
 
+  if (allowedPageIds && allowedPageIds.length === 0) {
+    return { pages: [], total: 0, page, perPage };
+  }
+
   const where: Prisma.PageWhereInput = {
     isActive: true,
     slug: { notIn: [...PAGES_MANAGED_ELSEWHERE] },
   };
+
+  if (allowedPageIds) {
+    where.id = { in: [...allowedPageIds] };
+  }
 
   if (query) {
     where.OR = [
@@ -100,20 +109,36 @@ export async function getPageForPublicQuery(
   return toPlainObject(page);
 }
 
-export async function getDeletedPagesListQuery(): Promise<PageData[]> {
+export async function getDeletedPagesListQuery(
+  allowedPageIds?: readonly string[],
+): Promise<PageData[]> {
+  if (allowedPageIds && allowedPageIds.length === 0) {
+    return [];
+  }
+
   const pages = await prisma.page.findMany({
-    where: { isActive: false },
+    where: {
+      isActive: false,
+      ...(allowedPageIds ? { id: { in: [...allowedPageIds] } } : {}),
+    },
     orderBy: { updatedAt: "desc" },
   });
 
   return toPlainArray(pages);
 }
 
-export async function getSystemPagesListQuery(): Promise<PageData[]> {
+export async function getSystemPagesListQuery(
+  allowedPageIds?: readonly string[],
+): Promise<PageData[]> {
+  if (allowedPageIds && allowedPageIds.length === 0) {
+    return [];
+  }
+
   const pages = await prisma.page.findMany({
     where: {
       isActive: true,
       isSystemPage: true,
+      ...(allowedPageIds ? { id: { in: [...allowedPageIds] } } : {}),
     },
     orderBy: { slug: "asc" },
   });

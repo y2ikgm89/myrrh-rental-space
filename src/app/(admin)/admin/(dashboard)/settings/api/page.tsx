@@ -5,86 +5,82 @@
  * Next.js 16 PPR対応
  */
 
-import { Suspense } from 'react'
-import { connection } from 'next/server'
+import { Suspense } from "react";
 import {
   getResendConfig,
   getTurnstileConfig,
   getGoogleMapsConfig,
-  getGoogleOAuthConfig,
   getCloudflareConfig,
   getCustomApiKeys,
-} from '@/admin/actions/api-keys'
-import { getInstagramConfig } from '@/admin/actions/instagram'
-import { getSettings } from '@/admin/actions/settings'
-import { SettingsLayout } from '../_components/SettingsLayout'
-import { SettingsTabs } from '../_components/SettingsTabs'
+} from "@/admin/queries/api-keys";
+import { getInstagramConfig } from "@/admin/queries/instagram";
+import { getSettings } from "@/admin/queries/settings";
+import { SettingsLayout } from "../_components/SettingsLayout";
+import { SettingsTabs } from "../_components/SettingsTabs";
 import {
   ResendSection,
   TurnstileSection,
   GoogleMapsSection,
-  GoogleOAuthSection,
   CloudflareSection,
   CustomApiKeysSection,
   GoogleCalendarSection,
   ICalFeedSection,
   TwoWaySyncSection,
   InstagramSection,
-} from '../_components/sections'
-import type { ReactElement } from 'react'
+} from "../_components/sections";
+import type { ReactElement } from "react";
 
 /**
  * 動的コンテンツ: API設定
  */
 async function ApiSettingsContent(): Promise<ReactElement> {
-  await connection()
-
-  const [resendConfig, turnstileConfig, googleMapsConfig, googleOAuthConfig, cloudflareConfig, customApiKeys, settings, instagramConfig] =
-    await Promise.all([
-      getResendConfig(),
-      getTurnstileConfig(),
-      getGoogleMapsConfig(),
-      getGoogleOAuthConfig(),
-      getCloudflareConfig(),
-      getCustomApiKeys(),
-      getSettings(),
-      getInstagramConfig(),
-    ])
+  const [
+    resendConfig,
+    turnstileConfig,
+    googleMapsConfig,
+    cloudflareConfig,
+    customApiKeys,
+    settings,
+    instagramConfig,
+  ] = await Promise.all([
+    getResendConfig(),
+    getTurnstileConfig(),
+    getGoogleMapsConfig(),
+    getCloudflareConfig(),
+    getCustomApiKeys(),
+    getSettings(),
+    getInstagramConfig(),
+  ]);
 
   const tabs = [
     // メール
     {
-      value: 'resend',
-      label: 'Resend',
+      value: "resend",
+      label: "Resend",
       content: <ResendSection config={resendConfig} />,
     },
     // Cloudflare系
     {
-      value: 'turnstile',
-      label: 'Turnstile',
+      value: "turnstile",
+      label: "Turnstile",
       content: <TurnstileSection config={turnstileConfig} />,
     },
     {
-      value: 'cloudflare',
-      label: 'Cloudflare',
+      value: "cloudflare",
+      label: "Cloudflare",
       content: <CloudflareSection config={cloudflareConfig} />,
     },
     // Google系
     {
-      value: 'google-maps',
-      label: 'Google Maps',
+      value: "google-maps",
+      label: "Google Maps",
       content: <GoogleMapsSection config={googleMapsConfig} />,
-    },
-    {
-      value: 'google-oauth',
-      label: 'Google OAuth',
-      content: <GoogleOAuthSection config={googleOAuthConfig} />,
     },
     ...(settings
       ? [
           {
-            value: 'calendar',
-            label: 'カレンダー',
+            value: "calendar",
+            label: "カレンダー",
             content: (
               <div className="space-y-6">
                 <GoogleCalendarSection settings={settings} />
@@ -97,17 +93,17 @@ async function ApiSettingsContent(): Promise<ReactElement> {
       : []),
     // SNS
     {
-      value: 'instagram',
-      label: 'Instagram',
+      value: "instagram",
+      label: "Instagram",
       content: <InstagramSection config={instagramConfig} />,
     },
     // 拡張
     {
-      value: 'custom',
-      label: 'カスタム',
+      value: "custom",
+      label: "カスタム",
       content: <CustomApiKeysSection keys={customApiKeys} />,
     },
-  ]
+  ];
 
   return (
     <>
@@ -118,7 +114,7 @@ async function ApiSettingsContent(): Promise<ReactElement> {
       </div>
       <SettingsTabs tabs={tabs} defaultTab="resend" />
     </>
-  )
+  );
 }
 
 /**
@@ -143,10 +139,10 @@ function ApiSettingsLoading(): ReactElement {
         <div className="h-48 bg-muted rounded" />
       </div>
     </div>
-  )
+  );
 }
 
-export default function ApiSettingsPage(): ReactElement {
+export default async function ApiSettingsPage(): Promise<ReactElement> {
   return (
     <SettingsLayout
       title="外部連携"
@@ -156,5 +152,5 @@ export default function ApiSettingsPage(): ReactElement {
         <ApiSettingsContent />
       </Suspense>
     </SettingsLayout>
-  )
+  );
 }

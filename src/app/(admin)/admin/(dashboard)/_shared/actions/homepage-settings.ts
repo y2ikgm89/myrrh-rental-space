@@ -2,7 +2,6 @@
 
 import { updateTag } from "next/cache";
 import { executeAdminMutation } from "@/admin/lib/admin-action";
-import { checkReadPermissionFor } from "@/admin/lib/permissions";
 import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
 import { createSuccess } from "@/admin/types/server-actions";
 import { createValidationError } from "@/shared/lib/action-helpers";
@@ -18,12 +17,6 @@ import {
   updateHomepageSectionCommand,
   updateHomepageSectionOrderCommand,
 } from "@/shared/domain/sections/commands";
-import {
-  getHomepageSectionByTypeQuery,
-  getHomepageSectionQuery,
-  getHomepageSectionsQuery,
-  getPublicHomepageSectionsQuery,
-} from "@/shared/domain/sections/admin-queries";
 import {
   SectionType,
   createSectionSchema,
@@ -49,8 +42,6 @@ export type HomepageSectionData = {
   updatedAt: Date;
 };
 
-const checkReadPermission = checkReadPermissionFor("settings");
-
 function revalidateHomepage() {
   updateTag(CACHE_TAGS.SECTIONS);
   updateTag(CACHE_TAGS.HOMEPAGE_SECTIONS);
@@ -62,38 +53,6 @@ function revalidateHomepage() {
     category: ErrorCategory.EXTERNAL_API,
     severity: ErrorSeverity.LOW,
   });
-}
-
-export async function getHomepageSections(): Promise<
-  HomepageSectionData[] | null
-> {
-  if (!(await checkReadPermission())) {
-    return null;
-  }
-
-  return getHomepageSectionsQuery();
-}
-
-export async function getPublicHomepageSections(): Promise<
-  HomepageSectionData[]
-> {
-  return getPublicHomepageSectionsQuery();
-}
-
-export async function getHomepageSection(
-  id: string,
-): Promise<HomepageSectionData | null> {
-  if (!(await checkReadPermission())) {
-    return null;
-  }
-
-  return getHomepageSectionQuery(id);
-}
-
-export async function getHomepageSectionByType(
-  type: SectionType,
-): Promise<HomepageSectionData | null> {
-  return getHomepageSectionByTypeQuery(type);
 }
 
 export const createHomepageSection = async (input: CreateSectionInput) => {
@@ -195,24 +154,24 @@ export const deleteHomepageSection = async (id: string) =>
   });
 
 export const initializeDefaultSections = async () =>
-  {
-    let initializedDefaultSectionsCreated = false;
+{
+  let initializedDefaultSectionsCreated = false;
 
-    return executeAdminMutation<void>({
-      resource: "settings",
-      action: "update",
-      execute: async () => {
-        initializedDefaultSectionsCreated =
-          await initializeDefaultHomepageSectionsCommand();
-      },
-      success: () =>
-        createSuccess(
-          initializedDefaultSectionsCreated
-            ? "デフォルトセクションを作成しました"
-            : "既にセクションが存在します",
-        ),
-      afterSuccess: () => {
-        revalidateHomepage();
-      },
-    });
-  };
+  return executeAdminMutation<void>({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      initializedDefaultSectionsCreated =
+        await initializeDefaultHomepageSectionsCommand();
+    },
+    success: () =>
+      createSuccess(
+        initializedDefaultSectionsCreated
+          ? "デフォルトセクションを作成しました"
+          : "既にセクションが存在します",
+      ),
+    afterSuccess: () => {
+      revalidateHomepage();
+    },
+  });
+};

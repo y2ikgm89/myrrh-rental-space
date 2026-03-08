@@ -20,13 +20,12 @@ import {
   InlineEditorShell,
 } from "@/admin/components/editor/inline";
 import { LazyLexicalEditor } from "@/admin/components/editor/lexical";
+import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import {
   createTermsWithVersion,
   updateTerms,
   updateTermsVersion,
   deleteTerms,
-  getDefaultsForTermsType,
-  getTermsVersionById,
   createTermsVersion,
   publishTermsVersion,
   archiveTermsVersion,
@@ -117,6 +116,21 @@ interface TermsInlineEditorProps {
   mode?: "create" | "edit";
   initialAgreements?: TermsAgreementItem[];
   initialTotal?: number;
+}
+
+async function fetchTermsDefaultsForType(type: string): Promise<{
+  title: string;
+  slug: string;
+} | null> {
+  return fetchAdminJson(
+    `/admin/api/terms/defaults/${encodeURIComponent(type)}`,
+  );
+}
+
+async function fetchTermsVersionById(
+  versionId: string,
+): Promise<TermsVersionDetail> {
+  return fetchAdminJson(`/admin/api/terms/versions/${versionId}`);
 }
 
 // =============================================================================
@@ -227,7 +241,7 @@ export function TermsInlineEditor({
   const handleTypeChange = async (newType: string) => {
     setValue("type", newType, { shouldDirty: true });
     if (mode !== "create") return;
-    const defaults = await getDefaultsForTermsType(newType);
+    const defaults = await fetchTermsDefaultsForType(newType);
     if (!defaults) return;
     setValue("title", defaults.title, { shouldDirty: true });
     setValue("slug", defaults.slug, { shouldDirty: true });
@@ -275,22 +289,16 @@ export function TermsInlineEditor({
 
     setIsLoadingVersion(true);
     try {
-      const result = await getTermsVersionById(newVersionId);
-      if (result.success && result.data) {
-        setValue(
-          "contentJson",
-          result.data.contentJson
-            ? JSON.stringify(result.data.contentJson)
-            : "",
-          { shouldDirty: false },
-        );
-        setSelectedVersionContent(result.data);
-        setSelectedVersionId(newVersionId);
-        setEditorKey((k) => k + 1);
-        setHasEditorChanges(false);
-      } else {
-        toast.error("バージョンの読み込みに失敗しました");
-      }
+      const version = await fetchTermsVersionById(newVersionId);
+      setValue(
+        "contentJson",
+        version.contentJson ? JSON.stringify(version.contentJson) : "",
+        { shouldDirty: false },
+      );
+      setSelectedVersionContent(version);
+      setSelectedVersionId(newVersionId);
+      setEditorKey((k) => k + 1);
+      setHasEditorChanges(false);
     } catch (error) {
       logger.error("バージョン切り替えに失敗しました", {
         error: getErrorMessage(error),

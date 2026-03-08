@@ -6,105 +6,95 @@
  * @module shared/types/api-keys
  */
 
-export type ConnectionStatus = 'connected' | 'error' | null
+export type ConnectionStatus = "connected" | "error" | null;
 
 /**
  * API接続テスト結果
  */
 export type ApiKeyTestResult = {
-  success: boolean
-  error?: string
-  message?: string
-  metadata?: Record<string, unknown>
-}
+  success: boolean;
+  error?: string;
+  message?: string;
+  metadata?: Record<string, unknown>;
+};
 
 /**
  * Resend設定
  */
 export type ResendConfig = {
-  apiKeyMasked: string | null
-  lastTestedAt: Date | null
-  connectionStatus: ConnectionStatus
-}
+  apiKeyMasked: string | null;
+  lastTestedAt: Date | null;
+  connectionStatus: ConnectionStatus;
+};
 
 /**
  * Turnstile設定
  */
 export type TurnstileConfig = {
-  siteKey: string | null
-  secretKeyMasked: string | null
-  lastTestedAt: Date | null
-  connectionStatus: ConnectionStatus
-}
+  siteKey: string | null;
+  secretKeyMasked: string | null;
+  lastTestedAt: Date | null;
+  connectionStatus: ConnectionStatus;
+};
 
 /**
  * Google Maps設定
  */
 export type GoogleMapsConfig = {
-  apiKeyMasked: string | null
-  lastTestedAt: Date | null
-  connectionStatus: ConnectionStatus
-}
+  apiKeyMasked: string | null;
+  lastTestedAt: Date | null;
+  connectionStatus: ConnectionStatus;
+};
 
 /**
  * Cloudflare CDN設定
  */
 export type CloudflareConfig = {
-  zoneId: string | null
-  apiTokenMasked: string | null
-  lastTestedAt: Date | null
-  connectionStatus: ConnectionStatus
-}
-
-/**
- * Google OAuth設定
- */
-export type GoogleOAuthConfig = {
-  clientId: string | null
-  clientSecretMasked: string | null
-  lastTestedAt: Date | null
-  connectionStatus: ConnectionStatus
-}
+  zoneId: string | null;
+  apiTokenMasked: string | null;
+  lastTestedAt: Date | null;
+  connectionStatus: ConnectionStatus;
+};
 
 /**
  * カスタムAPIキー（汎用）
  */
 export type CustomApiKeyData = {
-  id: string
-  name: string
-  keyName: string
-  description?: string
-  lastTestedAt?: Date
-  connectionStatus?: ConnectionStatus
-  createdAt: Date
-  updatedAt: Date
-}
+  id: string;
+  name: string;
+  keyName: string;
+  description?: string;
+  lastTestedAt?: Date;
+  connectionStatus?: ConnectionStatus;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 /**
  * カスタムAPIキーの入力形式
  */
 export type CustomApiKeyInput = {
-  name: string
-  keyName: string
-  keyValue: string
-  description?: string
-}
+  name: string;
+  keyName: string;
+  keyValue: string;
+  description?: string;
+};
 
 /**
  * カスタムAPIキーのDB保存形式
  */
 export type CustomApiKeyStored = {
-  name: string
-  keyName: string
-  keyValue: string // encrypted
-  description?: string
-  lastTestedAt?: string
-  connectionStatus?: ConnectionStatus
-  createdAt: string
-  updatedAt: string
-}
+  name: string;
+  keyName: string;
+  keyValue: string; // encrypted
+  description?: string;
+  lastTestedAt?: string;
+  connectionStatus?: ConnectionStatus;
+  createdAt: string;
+  updatedAt: string;
+};
 
 /**
  * カスタムAPIキーのマップ形式
  */
-export type CustomApiKeysMap = Record<string, CustomApiKeyStored>
+export type CustomApiKeysMap = Record<string, CustomApiKeyStored>;

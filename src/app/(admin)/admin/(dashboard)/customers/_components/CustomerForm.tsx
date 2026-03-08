@@ -17,7 +17,7 @@ import {
   Card,
   Textarea,
 } from '@/admin/components/ui'
-import { cn } from '@/shared/lib/utils'
+import { cn } from '@/shared/lib/cn'
 import { useKanaInput } from '@/admin/hooks'
 import {
   getFormString,

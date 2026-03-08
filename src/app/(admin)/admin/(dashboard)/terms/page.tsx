@@ -1,11 +1,10 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { getTermsList } from "@/admin/actions/terms";
+import { getTermsList } from "@/admin/queries/terms";
 import { TermsTable } from "./_components/TermsTable";
 import { Button } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
 import type { Metadata } from "next";
-import { connection } from "next/server";
 
 export const metadata: Metadata = {
   title: "利用規約管理 | Myrrh Rental Space",
@@ -24,7 +23,6 @@ async function TermsListContent() {
 }
 
 export default async function TermsPage() {
-  await connection();
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -46,3 +44,4 @@ export default async function TermsPage() {
     </div>
   );
 }
+

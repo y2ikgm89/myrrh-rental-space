@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: "新規クーポン作成 | Myrrh Rental Space",
 };
 
-export default function NewCouponPage() {
+export default async function NewCouponPage() {
   return (
     <AdminDetailLayout
       backHref="/admin/coupons"
@@ -17,3 +17,4 @@ export default function NewCouponPage() {
     </AdminDetailLayout>
   );
 }
+

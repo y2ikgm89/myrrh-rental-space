@@ -43,7 +43,7 @@ import {
 } from "@/admin/lib/validations/location";
 import { createLocation, updateLocation } from "@/admin/actions/location";
 import type { LocationWithStats } from "@/shared/domain/locations/types";
-import { cn } from "@/shared/lib/utils";
+import { cn } from "@/shared/lib/cn";
 import {
   useSingleMediaPicker,
   useMultipleMediaPicker,
@@ -211,7 +211,7 @@ export function LocationForm({ location, mode }: LocationFormProps) {
       } else if (location) {
         const result = await updateLocation(location.id, data);
         if (result.success) {
-          router.push("/admin/locations");
+          router.push("/admin/spaces?tab=locations");
         } else {
           toast.error(result.error);
         }

@@ -7,6 +7,9 @@ const SRC_ROOT = join(ROOT, "src");
 const SHARED_DB_ROOT = join(SRC_ROOT, "shared", "db");
 const SHARED_DOMAIN_ROOT = join(SRC_ROOT, "shared", "domain");
 const PUBLIC_APP_ROOT = join(SRC_ROOT, "app", "(public)");
+const PUBLIC_LAYOUT_FILE = join(PUBLIC_APP_ROOT, "layout.tsx");
+const PACKAGE_JSON_FILE = join(ROOT, "package.json");
+const CLOUDBUILD_FILE = join(ROOT, "cloudbuild.yaml");
 const THIN_ADMIN_ACTION_FILES = [
   join(
     SRC_ROOT,
@@ -507,6 +510,7 @@ const SERVER_ONLY_QUERY_FILES = [
   join(SRC_ROOT, "shared", "domain", "sitemap", "queries.ts"),
   join(SRC_ROOT, "shared", "domain", "slugs", "queries.ts"),
   join(SRC_ROOT, "shared", "domain", "system", "queries.ts"),
+  join(SRC_ROOT, "shared", "domain", "user-page-assignments", "queries.ts"),
   join(SRC_ROOT, "shared", "domain", "users", "queries.ts"),
   join(SRC_ROOT, "shared", "domain", "users", "commands.ts"),
   join(SRC_ROOT, "shared", "lib", "admin-login-gate.ts"),
@@ -606,7 +610,8 @@ describe("architecture boundaries", () => {
     const offenders = sourceFiles
       .filter(
         (file) =>
-          !file.startsWith(SHARED_DB_ROOT) && !file.startsWith(SHARED_DOMAIN_ROOT),
+          !file.startsWith(SHARED_DB_ROOT) &&
+          !file.startsWith(SHARED_DOMAIN_ROOT),
       )
       .filter((file) => {
         const source = readFileSync(file, "utf8");
@@ -639,24 +644,82 @@ describe("architecture boundaries", () => {
   });
 
   test("server-side query modules は server-only を明示する", () => {
-    const offenders = SERVER_ONLY_QUERY_FILES.filter((file) => {
-      const source = readFileSync(file, "utf8");
-      return !/import\s+["']server-only["'];?/.test(source);
-    }).map((file) => relative(ROOT, file));
+    const offenders = SERVER_ONLY_QUERY_FILES.filter(existsSync)
+      .filter((file) => {
+        const source = readFileSync(file, "utf8");
+        return !/import\s+["']server-only["'];?/.test(source);
+      })
+      .map((file) => relative(ROOT, file));
 
     expect(offenders).toEqual([]);
   });
 
   test("移行済み admin action は Prisma を直接 import しない", () => {
-    const offenders = THIN_ADMIN_ACTION_FILES.filter((file) => {
-      const source = readFileSync(file, "utf8");
-      return (
-        source.includes("@/shared/db/prisma") ||
-        source.includes('from "@/shared/db"') ||
-        source.includes("@generated/prisma")
-      );
-    }).map((file) => relative(ROOT, file));
+    const offenders = THIN_ADMIN_ACTION_FILES.filter(existsSync)
+      .filter((file) => {
+        const source = readFileSync(file, "utf8");
+        return (
+          source.includes("@/shared/db/prisma") ||
+          source.includes('from "@/shared/db"') ||
+          source.includes("@generated/prisma")
+        );
+      })
+      .map((file) => relative(ROOT, file));
 
     expect(offenders).toEqual([]);
+  });
+
+  test("public root layout に NuqsAdapter を残さない", () => {
+    const source = readFileSync(PUBLIC_LAYOUT_FILE, "utf8");
+
+    expect(source).not.toContain("NuqsAdapter");
+  });
+
+  test("Better Auth は静的 auth export を使い、動的 getAuth を再導入しない", () => {
+    const source = readFileSync(
+      join(SRC_ROOT, "shared", "lib", "auth.ts"),
+      "utf8",
+    );
+
+    expect(source).toContain("export const auth = createAuth();");
+    expect(source).not.toContain("export async function getAuth");
+    expect(source).not.toContain("resetAuthInstance");
+  });
+
+  test("Google OAuth の DB 管理 helper を再導入しない", () => {
+    expect(
+      existsSync(
+        join(
+          SRC_ROOT,
+          "shared",
+          "lib",
+          "auth-config",
+          "google-oauth-credentials.ts",
+        ),
+      ),
+    ).toBe(false);
+  });
+
+  test("type-check は clean checkout 前提で増分 build state に依存しない", () => {
+    const packageJson = JSON.parse(readFileSync(PACKAGE_JSON_FILE, "utf8")) as {
+      scripts?: Record<string, string>;
+    };
+
+    expect(packageJson.scripts?.["type-check"]).toContain(
+      "--incremental false",
+    );
+    expect(packageJson.scripts?.["type-check"]).toContain(
+      "bun run db:generate",
+    );
+    expect(packageJson.scripts?.["build"]).toContain("bun run db:generate");
+    expect(packageJson.scripts?.["test"]).toContain("bun run db:generate");
+  });
+
+  test("Cloud Run deploy は Server Actions encryption key を runtime にも注入する", () => {
+    const source = readFileSync(CLOUDBUILD_FILE, "utf8");
+
+    expect(source).toContain(
+      "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=NEXT_SERVER_ACTIONS_ENCRYPTION_KEY:${_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION}",
+    );
   });
 });

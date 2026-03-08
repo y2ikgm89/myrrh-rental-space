@@ -55,7 +55,7 @@ import {
   type DragEndEvent,
 } from "@/admin/components/ui";
 import { createSpace, updateSpace } from "@/admin/actions/space";
-import { cn } from "@/shared/lib/utils";
+import { cn } from "@/shared/lib/cn";
 import {
   useSingleMediaPicker,
   useMultipleMediaPicker,

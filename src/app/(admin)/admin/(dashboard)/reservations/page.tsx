@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { Calendar, Plus } from "lucide-react";
-import { getReservations } from "@/admin/actions/reservation";
+import { getReservations } from "@/admin/queries/reservation";
 import { ReservationFilters } from "./_components/ReservationFilters";
 import { ReservationTable } from "./_components/ReservationTable";
 import { Pagination, Button } from "@/admin/components/ui";
@@ -9,7 +9,6 @@ import { LoadingState } from "@/admin/components/LoadingState";
 import { parseReservationStatusFilter } from "@/shared/lib/validations/enums";
 import { loadAdminReservationSearchParams } from "@/shared/lib/nuqs";
 import type { Metadata } from "next";
-import { connection } from "next/server";
 
 export const metadata: Metadata = {
   title: "予約管理 | Myrrh Rental Space",
@@ -47,7 +46,6 @@ async function ReservationList({
 }
 
 export default async function ReservationsPage({ searchParams }: PageProps) {
-  await connection();
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
@@ -86,3 +84,4 @@ export default async function ReservationsPage({ searchParams }: PageProps) {
     </div>
   );
 }
+

@@ -13,6 +13,7 @@ import { startTransition, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { MessageSquare, Plus, X } from "lucide-react";
 import { Button } from "@/admin/components/ui/button";
+import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import {
   Tabs,
   TabsContent,
@@ -20,8 +21,6 @@ import {
   TabsTrigger,
 } from "@/admin/components/ui/tabs";
 import {
-  getCommentThreads,
-  getThreadDetail,
   resolveThread,
   reopenThread,
   deleteThread,
@@ -58,6 +57,25 @@ function isTabValue(value: string): value is TabValue {
   return TAB_VALUE_SET.has(value);
 }
 
+async function fetchCommentThreads(params: {
+  contentType: CommentableContentType;
+  contentId: string;
+  status: "ACTIVE" | "RESOLVED";
+}): Promise<ThreadListItem[]> {
+  const searchParams = new URLSearchParams({
+    contentType: params.contentType,
+    contentId: params.contentId,
+    status: params.status,
+  });
+  return fetchAdminJson(
+    `/admin/api/editor-comments/threads?${searchParams.toString()}`,
+  );
+}
+
+async function fetchThreadDetail(threadId: string): Promise<EditorCommentThread> {
+  return fetchAdminJson(`/admin/api/editor-comments/threads/${threadId}`);
+}
+
 /**
  * コメントパネルコンポーネント
  *
@@ -82,27 +100,29 @@ export function CommentPanel({
 
   // スレッド選択
   const handleSelectThread = async (threadId: string) => {
-    const result = await getThreadDetail(threadId);
-    if (result.success) {
-      setExpandedThread(result.data);
+    try {
+      const thread = await fetchThreadDetail(threadId);
+      setExpandedThread(thread);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "スレッドの取得に失敗しました");
     }
   };
 
   // スレッド一覧を取得
   const loadThreads = async () => {
     setIsLoading(true);
-    const result = await getCommentThreads({
-      contentType,
-      contentId,
-      status: tab === "active" ? "ACTIVE" : "RESOLVED",
-    });
-
-    if (result.success) {
-      setThreads(result.data);
-    } else {
-      toast.error(result.error);
+    try {
+      const data = await fetchCommentThreads({
+        contentType,
+        contentId,
+        status: tab === "active" ? "ACTIVE" : "RESOLVED",
+      });
+      setThreads(data);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "スレッド一覧の取得に失敗しました");
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   // 初回ロード・タブ変更時に再取得
@@ -111,20 +131,29 @@ export function CommentPanel({
 
     startTransition(async () => {
       setIsLoading(true);
-      const result = await getCommentThreads({
-        contentType,
-        contentId,
-        status: tab === "active" ? "ACTIVE" : "RESOLVED",
-      });
+      try {
+        const data = await fetchCommentThreads({
+          contentType,
+          contentId,
+          status: tab === "active" ? "ACTIVE" : "RESOLVED",
+        });
 
-      if (ignore) return;
-
-      if (result.success) {
-        setThreads(result.data);
-      } else {
-        toast.error(result.error);
+        if (!ignore) {
+          setThreads(data);
+        }
+      } catch (error) {
+        if (!ignore) {
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "スレッド一覧の取得に失敗しました",
+          );
+        }
+      } finally {
+        if (!ignore) {
+          setIsLoading(false);
+        }
       }
-      setIsLoading(false);
     });
 
     return () => {
@@ -141,11 +170,13 @@ export function CommentPanel({
 
     // 非同期でスレッド詳細を取得
     const loadActiveThread = async () => {
-      const result = await getThreadDetail(thread.id);
-      if (result.success) {
+      try {
+        const detail = await fetchThreadDetail(thread.id);
         startTransition(() => {
-          setExpandedThread(result.data);
+          setExpandedThread(detail);
         });
+      } catch {
+        // active mark 追従は best-effort
       }
     };
     loadActiveThread();
@@ -207,10 +238,8 @@ export function CommentPanel({
     const result = await addComment({ threadId, content });
     if (result.success) {
       // スレッドを再取得して更新
-      const detailResult = await getThreadDetail(threadId);
-      if (detailResult.success) {
-        setExpandedThread(detailResult.data);
-      }
+      const detail = await fetchThreadDetail(threadId);
+      setExpandedThread(detail);
       await loadThreads();
     } else {
       toast.error(result.error);
@@ -222,10 +251,8 @@ export function CommentPanel({
     const result = await deleteComment(commentId);
     if (result.success) {
       // スレッドを再取得して更新
-      const detailResult = await getThreadDetail(threadId);
-      if (detailResult.success) {
-        setExpandedThread(detailResult.data);
-      }
+      const detail = await fetchThreadDetail(threadId);
+      setExpandedThread(detail);
       await loadThreads();
     } else {
       toast.error(result.error);

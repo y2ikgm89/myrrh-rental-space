@@ -36,9 +36,27 @@ import {
   TableHeader,
   TableRow,
 } from '@/admin/components/ui/table'
-import { getDeletedPagesList, restorePage, deletePagePermanently } from '@/admin/actions/page'
+import { restorePage, deletePagePermanently } from '@/admin/actions/page'
 import type { PageData } from '@/shared/domain/pages/types'
 import { formatDateTimeShort } from '@/shared/lib/utils'
+
+async function fetchDeletedPages(): Promise<PageData[]> {
+  const response = await fetch('/admin/api/pages/deleted', {
+    credentials: 'same-origin',
+  })
+
+  if (!response.ok) {
+    const body: unknown = await response.json().catch(() => null)
+    const message =
+      body && typeof body === 'object' && 'error' in body && typeof body.error === 'string'
+        ? body.error
+        : '削除済みページの取得に失敗しました'
+    throw new Error(message)
+  }
+
+  const data: PageData[] = await response.json()
+  return data
+}
 
 export function DeletedPagesDialog() {
   const router = useRouter()
@@ -51,8 +69,12 @@ export function DeletedPagesDialog() {
   useEffect(() => {
     if (isOpen) {
       startTransition(() => setIsLoading(true))
-      getDeletedPagesList()
+      fetchDeletedPages()
         .then(setPages)
+        .catch((error: unknown) => {
+          const message = error instanceof Error ? error.message : '削除済みページの取得に失敗しました'
+          toast.error(message)
+        })
         .finally(() => startTransition(() => setIsLoading(false)))
     }
   }, [isOpen])

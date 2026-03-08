@@ -10,9 +10,10 @@ import { EmptyState } from "@/admin/components/EmptyState";
 import {
   CouponTypeBadge,
   CouponStatusBadge,
-} from "@/admin/components/status-badges";
+} from "./CouponStatusBadge";
 import type { CouponData } from "@/shared/domain/coupons/types";
-import { formatDateShort, formatPrice } from "@/shared/lib/utils";
+import { formatDateShort } from "@/shared/lib/date-format";
+import { formatPrice } from "@/shared/lib/price-format";
 import { CouponActionCell } from "./CouponActionCell";
 
 // =============================================================================

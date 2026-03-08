@@ -1,11 +1,13 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
+import type { LayoutWidth } from "@/shared/db/enums";
 import type { NewsWhereInput } from "@/shared/types/prisma";
 import type {
   GetNewsListResult,
   NewsData,
   NewsFilters,
+  NewsListItem,
   NewsPagination,
   NewsVersionData,
 } from "@/shared/domain/news/types";
@@ -27,6 +29,44 @@ function buildNewsWhere(filters: NewsFilters): NewsWhereInput {
   }
 
   return where;
+}
+
+const adminDateTimeFormatter = new Intl.DateTimeFormat("ja-JP", {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+function toNewsListItem(item: {
+  id: string;
+  slug: string;
+  title: string;
+  contentHtml: string;
+  contentJson: unknown;
+  isPublished: boolean;
+  publishedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  contentWidth: LayoutWidth | null;
+  contentWidthCustom: number | null;
+  metaDescription: string | null;
+  metaKeywords: string | null;
+  ogpTitle: string | null;
+  ogpDescription: string | null;
+  ogpImageUrl: string | null;
+}): NewsListItem {
+  return {
+    ...item,
+    publishedAt: item.publishedAt?.toISOString() ?? null,
+    createdAt: item.createdAt.toISOString(),
+    updatedAt: item.updatedAt.toISOString(),
+    publishedAtLabel: item.publishedAt
+      ? adminDateTimeFormatter.format(item.publishedAt)
+      : null,
+    createdAtLabel: adminDateTimeFormatter.format(item.createdAt),
+  };
 }
 
 export async function getNewsList(
@@ -72,12 +112,7 @@ export async function getNewsList(
   ]);
 
   return {
-    news: news.map((item) => ({
-      ...item,
-      publishedAt: item.publishedAt?.toISOString() ?? null,
-      createdAt: item.createdAt.toISOString(),
-      updatedAt: item.updatedAt.toISOString(),
-    })),
+    news: news.map(toNewsListItem),
     total,
     page,
     limit,

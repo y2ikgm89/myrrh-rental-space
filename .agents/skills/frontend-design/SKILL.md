@@ -45,7 +45,9 @@ description: 公開ページの新規 UI や大幅なリデザイン前に使う
 ```
 
 7. 実装では既存トークン、既存 UI、既存 animation primitive を優先して使う
-8. 新しい project-wide 規約が必要になったら、承認後に `project-design-config.md` か関連 `codex-rules` を更新する
+8. データ取得が必要なら `src/shared/domain/*` を正本にし、公開側には必要最小限の `src/app/(public)/_shared/data/*` だけを置く
+9. 強い演出が必要なら global layout を重くせず `ExperienceShell` の opt-in で閉じ込める
+10. 新しい project-wide 規約が必要になったら、承認後に `project-design-config.md` か関連 `codex-rules` を更新する
 
 ## 検索コマンド例
 
@@ -62,6 +64,10 @@ python3 .agents/skills/ui-ux-pro-max/scripts/search.py "layout responsive" --sta
 - Generic hero、均一カードグリッド、過剰な gradient をデフォルトにしない
 - モーションの定数は共有実装を使い、マジックナンバーを増やさない
 - `prefers-reduced-motion` を無視しない
+- `src/app/(public)/layout.tsx` に新しい effect provider や scroll provider を直接積まない
+- `src/app/(public)/layout.tsx` に `NuqsAdapter` や URL state provider を戻さない
+- 公開 UI のために `@/shared/db/prisma` や新規 `public/_shared/actions` を足さない
+- 履歴資料の `docs/plans/*` を現行ルールとして引用しない
 - 永続化が必要な判断を hidden state に置かず、ドキュメントに残す
 
 ## Done

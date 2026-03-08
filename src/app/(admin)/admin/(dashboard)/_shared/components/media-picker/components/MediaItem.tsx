@@ -7,7 +7,7 @@
  */
 
 import { Check } from 'lucide-react'
-import { cn } from '@/shared/lib/utils'
+import { cn } from '@/shared/lib/cn'
 import type { MediaData } from '@/admin/types/media-picker'
 
 interface MediaItemProps {

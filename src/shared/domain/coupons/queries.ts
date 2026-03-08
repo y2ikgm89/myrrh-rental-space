@@ -8,6 +8,7 @@ import {
 } from "@/shared/db/prisma";
 import type {
   CouponData,
+  CouponDetailData,
   CouponFilters,
   CouponPagination,
   CouponStatusFilter,
@@ -23,6 +24,12 @@ const SORT_COLUMN_MAP = {
   validFrom: PrismaNamespace.raw('"validFrom"'),
   usageCount: PrismaNamespace.raw('"usageCount"'),
 } satisfies Record<NonNullable<CouponPagination["sortBy"]>, Prisma.Sql>;
+
+const couponDateFormatter = new Intl.DateTimeFormat("ja-JP", {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
 
 function formatCoupon(
   coupon: Pick<
@@ -52,6 +59,36 @@ function formatCoupon(
     createdAt: coupon.createdAt.toISOString(),
     updatedAt: coupon.updatedAt.toISOString(),
   });
+}
+
+function formatCouponDetail(
+  coupon: Pick<
+    Coupon,
+    | "id"
+    | "code"
+    | "name"
+    | "description"
+    | "type"
+    | "discountValue"
+    | "minReservationAmount"
+    | "maxDiscountAmount"
+    | "validFrom"
+    | "validUntil"
+    | "usageLimit"
+    | "usageCount"
+    | "isActive"
+    | "canCombineWithDurationDiscount"
+    | "createdAt"
+    | "updatedAt"
+  >,
+): CouponDetailData {
+  return {
+    ...formatCoupon(coupon),
+    validFromLabel: couponDateFormatter.format(coupon.validFrom),
+    validUntilLabel: coupon.validUntil
+      ? couponDateFormatter.format(coupon.validUntil)
+      : null,
+  };
 }
 
 function buildStatusWhereClause(
@@ -215,7 +252,7 @@ export async function getCoupons(
   };
 }
 
-export async function getCouponById(id: string): Promise<CouponData | null> {
+export async function getCouponById(id: string): Promise<CouponDetailData | null> {
   const coupon = await prisma.coupon.findUnique({
     where: { id },
   });
@@ -224,7 +261,7 @@ export async function getCouponById(id: string): Promise<CouponData | null> {
     return null;
   }
 
-  return formatCoupon(coupon);
+  return formatCouponDetail(coupon);
 }
 
 export type ValidatedCouponData = {

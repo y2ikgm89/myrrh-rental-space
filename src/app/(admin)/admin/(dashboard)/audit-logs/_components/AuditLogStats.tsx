@@ -1,4 +1,4 @@
-import { getAuditLogStats } from "@/admin/actions/audit-log";
+import { getAuditLogStats } from "@/admin/queries/audit-log";
 import {
   Card,
   CardContent,

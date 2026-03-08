@@ -3,7 +3,7 @@
  */
 
 import Link from 'next/link'
-import { getRecentReservations, getRecentInquiries } from '@/admin/actions/dashboard'
+import { getRecentReservations, getRecentInquiries } from '@/admin/queries/dashboard'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/admin/components/ui/card'
 import { Button } from '@/admin/components/ui/button'
 import {

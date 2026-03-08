@@ -17,7 +17,7 @@ import {
   CSS,
 } from '@/admin/components/ui'
 import { DragHandle } from '@/admin/components/ui/sortable'
-import { cn } from '@/shared/lib/utils'
+import { cn } from '@/shared/lib/cn'
 import type { NavigationItemData, SocialLinkData } from './types'
 import { platformLabels } from './types'
 

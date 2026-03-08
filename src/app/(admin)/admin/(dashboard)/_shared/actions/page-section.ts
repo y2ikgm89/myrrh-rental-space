@@ -2,7 +2,6 @@
 
 import { updateTag } from 'next/cache'
 import { executeAdminMutation } from '@/admin/lib/admin-action'
-import { checkReadPermissionFor } from '@/admin/lib/permissions'
 import { renderEditorStateToHtmlLazy } from '@/admin/lib/lazy-renderer'
 import { createSuccess } from '@/admin/types/server-actions'
 import { createValidationError } from '@/shared/lib/action-helpers'
@@ -15,13 +14,6 @@ import {
   updatePageSectionCommand,
   updatePageSectionOrderCommand,
 } from '@/shared/domain/sections/commands'
-import {
-  getPageForEditQuery,
-  getPublicPageSectionsQuery,
-  getPageSectionQuery,
-  getPageSectionsQuery,
-  getPageWithSectionsQuery,
-} from '@/shared/domain/sections/admin-queries'
 import {
   SectionType,
   createSectionSchema,
@@ -69,8 +61,6 @@ export type PageForEdit = {
   sections: PageSectionData[]
 }
 
-const checkReadPermission = checkReadPermissionFor('page')
-
 function revalidatePages(pageId?: string) {
   updateTag(CACHE_TAGS.SECTIONS)
   updateTag(CACHE_TAGS.PAGE_SECTIONS)
@@ -78,42 +68,6 @@ function revalidatePages(pageId?: string) {
   if (pageId) {
     updateTag(getCacheTag.pages.detail(pageId))
   }
-}
-
-export async function getPageSections(pageId: string): Promise<PageSectionData[] | null> {
-  if (!(await checkReadPermission())) {
-    return null
-  }
-
-  return getPageSectionsQuery(pageId)
-}
-
-export async function getPageWithSections(slug: string): Promise<PageWithSections | null> {
-  if (!(await checkReadPermission())) {
-    return null
-  }
-
-  return getPageWithSectionsQuery(slug)
-}
-
-export async function getPageForEdit(slug: string): Promise<PageForEdit | null> {
-  if (!(await checkReadPermission())) {
-    return null
-  }
-
-  return getPageForEditQuery(slug)
-}
-
-export async function getPublicPageSections(pageId: string): Promise<PageSectionData[]> {
-  return getPublicPageSectionsQuery(pageId)
-}
-
-export async function getPageSection(id: string): Promise<PageSectionData | null> {
-  if (!(await checkReadPermission())) {
-    return null
-  }
-
-  return getPageSectionQuery(id)
 }
 
 export async function createPageSection(input: CreateSectionInput) {

@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: "カテゴリ作成 | FAQ管理 | Myrrh Rental Space",
 };
 
-export default function NewFaqCategoryPage() {
+export default async function NewFaqCategoryPage() {
   return (
     <AdminDetailLayout
       backHref="/admin/faq"
@@ -17,3 +17,4 @@ export default function NewFaqCategoryPage() {
     </AdminDetailLayout>
   );
 }
+

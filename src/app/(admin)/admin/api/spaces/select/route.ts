@@ -2,13 +2,14 @@
  * スペース選択用API（管理画面）
  *
  * エディタなどのクライアントコンポーネントから参照するため、
- * Server Actions を直接 import せず Route Handler 経由で提供する。
+ * Route Handler 経由で提供する。
  */
 
 import { NextResponse } from 'next/server'
-import { headers } from 'next/headers'
+import { unstable_rethrow } from 'next/navigation'
 import { checkPermission } from '@/admin/lib/action-auth'
-import { getSpacesForSelect } from '@/admin/actions/space'
+import { createSuccess } from '@/admin/types/server-actions'
+import { getSpacesForSelectQuery } from '@/shared/domain/spaces/queries'
 import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors/server'
 
 function getErrorStatus(message: string): number {
@@ -18,12 +19,9 @@ function getErrorStatus(message: string): number {
   return 400
 }
 
-export async function GET(): Promise<NextResponse> {
-  // headers() を呼び出すことで Next.js に動的ルートと認識させる
-  await headers()
-
+export async function GET(request: Request): Promise<NextResponse> {
   try {
-    const auth = await checkPermission('space', 'read')
+    const auth = await checkPermission('space', 'read', request.headers)
     if (!auth.success) {
       return NextResponse.json(
         { success: false, error: auth.error.error },
@@ -31,10 +29,10 @@ export async function GET(): Promise<NextResponse> {
       )
     }
 
-    const result = await getSpacesForSelect()
-    const status = result.success ? 200 : getErrorStatus(result.error)
-    return NextResponse.json(result, { status })
+    const result = createSuccess('取得しました', await getSpacesForSelectQuery())
+    return NextResponse.json(result)
   } catch (error: unknown) {
+    unstable_rethrow(error)
     logError(normalizeError(error), {
       category: ErrorCategory.UNKNOWN,
       severity: ErrorSeverity.MEDIUM,

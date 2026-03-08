@@ -15,21 +15,14 @@
 import { updateTag } from "next/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { createValidationError } from "@/shared/lib/action-helpers";
-import { checkReadPermissionFor } from "@/admin/lib/permissions";
 import { executeAdminMutation } from "@/admin/lib/admin-action";
 import {
   createSuccess,
   type ActionResult,
 } from "@/admin/types/server-actions";
 import {
-  getAnnouncementBarCarouselSettings as getAnnouncementBarCarouselSettingsQuery,
   updateAnnouncementBarCarouselSettings as updateAnnouncementBarCarouselSettingsCommand,
 } from "@/shared/domain/settings/announcement-bar";
-import {
-  getAdminPermalinkSettings as getAdminPermalinkSettingsQuery,
-  getCancellationPolicies as getCancellationPoliciesQuery,
-  getTermsAgreementSettings as getTermsAgreementSettingsQuery,
-} from "@/shared/domain/settings/admin-queries";
 import {
   updateCookieConsentSettings as updateCookieConsentSettingsCommand,
   updateHeaderSettings as updateHeaderSettingsCommand,
@@ -39,10 +32,6 @@ import {
   updateSidebarSettings as updateSidebarSettingsCommand,
   updateTermsAgreementSettings as updateTermsAgreementSettingsCommand,
 } from "@/shared/domain/settings/commands";
-import type {
-  CancellationPolicyOption,
-  TermsAgreementSettingsData,
-} from "@/shared/domain/settings/types";
 
 import { sidebarSettingsSchema } from "@/shared/lib/validations/sidebar";
 import {
@@ -62,8 +51,6 @@ import {
   type HeaderSettingsInput,
   type SidebarSettingsInput,
 } from "./schemas";
-
-const checkReadPermission = checkReadPermissionFor("settings");
 
 function invalidateSettingsCache(): void {
   updateTag(CACHE_TAGS.SETTINGS);
@@ -87,34 +74,6 @@ function invalidatePermalinkCache(): void {
 function invalidateLayoutCache(): void {
   updateTag(CACHE_TAGS.SETTINGS);
   updateTag(CACHE_TAGS.LAYOUT_SETTINGS);
-}
-
-export async function getTermsAgreementSettings(): Promise<TermsAgreementSettingsData | null> {
-  if (!(await checkReadPermission())) {
-    return null;
-  }
-
-  return getTermsAgreementSettingsQuery();
-}
-
-export async function getCancellationPolicies(): Promise<
-  CancellationPolicyOption[]
-> {
-  if (!(await checkReadPermission())) {
-    return [];
-  }
-
-  return getCancellationPoliciesQuery();
-}
-
-export async function getAnnouncementBarCarouselSettings(): Promise<AnnouncementBarCarouselSettingsInput> {
-  return getAnnouncementBarCarouselSettingsQuery();
-}
-
-export async function getPermalinkSettings(): Promise<{
-  postPermalinkStructure: string;
-}> {
-  return getAdminPermalinkSettingsQuery();
 }
 
 export async function updateMaintenanceSettings(

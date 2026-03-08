@@ -3,7 +3,6 @@
 import { updateTag } from "next/cache";
 import { z } from "zod";
 import { executeAdminMutation } from "@/admin/lib/admin-action";
-import { checkReadPermissionFor } from "@/admin/lib/permissions";
 import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
 import {
   createSuccess,
@@ -20,20 +19,6 @@ import {
   updateFaqCategory as updateFaqCategoryCommand,
   updateFaqItem as updateFaqItemCommand,
 } from "@/shared/domain/faq/commands";
-import {
-  getFaqCategories as getFaqCategoriesQuery,
-  getFaqCategoryById as getFaqCategoryByIdQuery,
-  getFaqItemById as getFaqItemByIdQuery,
-  getFaqItems as getFaqItemsQuery,
-} from "@/shared/domain/faq/queries";
-import type {
-  FaqCategoryListResult,
-  FaqCategoryWithItems,
-  FaqItemFilters,
-  FaqItemListResult,
-  FaqItemPagination,
-  FaqItemWithCategory,
-} from "@/shared/domain/faq/types";
 import { createValidationError } from "@/shared/lib/action-helpers";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { purgeFaqCache } from "@/shared/lib/cloudflare";
@@ -56,7 +41,6 @@ export type {
   FaqItemWithCategory,
 } from "@/shared/domain/faq/types";
 
-const checkReadPermission = checkReadPermissionFor("faq");
 const idSchema = z.string().uuid({ error: "IDが不正です" });
 const orderedIdsSchema = z.array(z.string().uuid({ error: "IDが不正です" }));
 
@@ -70,55 +54,6 @@ function purgeFaqCaches(): void {
     category: ErrorCategory.EXTERNAL_API,
     severity: ErrorSeverity.LOW,
   });
-}
-
-export async function getFaqCategories(): Promise<FaqCategoryListResult> {
-  if (!(await checkReadPermission())) {
-    return { categories: [], total: 0 };
-  }
-
-  return getFaqCategoriesQuery();
-}
-
-export async function getFaqCategoryById(
-  id: string,
-): Promise<FaqCategoryWithItems | null> {
-  if (!(await checkReadPermission())) {
-    return null;
-  }
-
-  const validated = idSchema.safeParse(id);
-  if (!validated.success) {
-    return null;
-  }
-
-  return getFaqCategoryByIdQuery(validated.data);
-}
-
-export async function getFaqItems(
-  filters: FaqItemFilters = {},
-  pagination: FaqItemPagination = {},
-): Promise<FaqItemListResult> {
-  if (!(await checkReadPermission())) {
-    return { items: [], total: 0, page: 1, limit: 20, totalPages: 0 };
-  }
-
-  return getFaqItemsQuery(filters, pagination);
-}
-
-export async function getFaqItemById(
-  id: string,
-): Promise<FaqItemWithCategory | null> {
-  if (!(await checkReadPermission())) {
-    return null;
-  }
-
-  const validated = idSchema.safeParse(id);
-  if (!validated.success) {
-    return null;
-  }
-
-  return getFaqItemByIdQuery(validated.data);
 }
 
 export async function createFaqCategory(

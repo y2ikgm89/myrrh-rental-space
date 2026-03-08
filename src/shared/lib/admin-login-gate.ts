@@ -1,6 +1,10 @@
 import "server-only";
 
 import { serverEnv } from "@/shared/lib/env/server";
+import {
+  ADMIN_GATE_COOKIE_NAME,
+  getAdminGateCookieOptions,
+} from "@/shared/lib/admin-login-gate-cookie";
 
 const ADMIN_GATE_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const ADMIN_GATE_TOKEN_PATTERN = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
@@ -145,3 +149,5 @@ export async function verifyAdminGateToken(
 export function isSignedAdminGateToken(token: string): boolean {
   return ADMIN_GATE_TOKEN_PATTERN.test(token);
 }
+
+export { ADMIN_GATE_COOKIE_NAME, getAdminGateCookieOptions };

@@ -24,11 +24,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/admin/components/ui";
-import {
-  updateReservationSettings,
-  getCancellationPolicies,
-} from "@/admin/actions/settings";
-import type { SettingsData } from "@/admin/actions/settings";
+import { updateReservationSettings } from "@/admin/actions/settings";
+import { fetchAdminJson } from "@/admin/lib/admin-api-client";
+import type { SettingsData } from "@/shared/domain/settings/types";
 import { useRefreshOnSuccess } from "../hooks";
 import { ExternalLink, AlertCircle } from "lucide-react";
 import { logger } from "@/shared/lib/logger";
@@ -41,7 +39,11 @@ interface ReservationSectionProps {
 interface CancellationPolicy {
   id: string;
   title: string;
-  updatedAt: Date;
+  updatedAt: string;
+}
+
+async function fetchCancellationPolicies(): Promise<CancellationPolicy[]> {
+  return fetchAdminJson("/admin/api/settings/cancellation-policies");
 }
 
 export function ReservationSection({ settings }: ReservationSectionProps) {
@@ -63,7 +65,7 @@ export function ReservationSection({ settings }: ReservationSectionProps) {
   useEffect(() => {
     async function fetchPolicies() {
       try {
-        const policies = await getCancellationPolicies();
+        const policies = await fetchCancellationPolicies();
         setCancellationPolicies(policies);
       } catch (error) {
         logger.error("Failed to fetch cancellation policies", {

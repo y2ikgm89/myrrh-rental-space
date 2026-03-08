@@ -3,16 +3,7 @@ export type {
   GetReservationsResult,
   ReservationFilters,
   ReservationPagination,
-} from "./queries";
-
-export {
-  getReservations,
-  getReservationById,
-  getReservationsForCalendar,
-  getSpacesForCalendar,
-  getReservationStats,
-  getSpacesForReservation,
-} from "./queries";
+} from "../../queries/reservation";
 
 export {
   updateReservationStatus,

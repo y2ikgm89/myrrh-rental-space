@@ -9,22 +9,16 @@
 import { updateTag } from "next/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { createValidationError } from "@/shared/lib/action-helpers";
-import { checkReadPermissionFor } from "@/admin/lib/permissions";
 import { executeAdminMutation } from "@/admin/lib/admin-action";
 import {
   createSuccess,
   type ActionResult,
 } from "@/admin/types/server-actions";
 import {
-  getAdminSettings as getAdminSettingsQuery,
-  getPublicSettings as getPublicSettingsQuery,
-} from "@/shared/domain/settings/admin-queries";
-import {
   updateBasicInfo as updateBasicInfoCommand,
   updateLayoutSettings as updateLayoutSettingsCommand,
   updateSeoSettings as updateSeoSettingsCommand,
 } from "@/shared/domain/settings/commands";
-import type { SettingsData } from "@/shared/domain/settings/types";
 
 import {
   basicInfoSchema,
@@ -35,22 +29,8 @@ import {
   type SeoSettingsInput,
 } from "./schemas";
 
-const checkReadPermission = checkReadPermissionFor("settings");
-
 function invalidateSettingsCache(): void {
   updateTag(CACHE_TAGS.SETTINGS);
-}
-
-export async function getPublicSettings(): Promise<SettingsData> {
-  return getPublicSettingsQuery();
-}
-
-export async function getSettings(): Promise<SettingsData | null> {
-  if (!(await checkReadPermission())) {
-    return null;
-  }
-
-  return getAdminSettingsQuery();
 }
 
 export async function updateBasicInfo(

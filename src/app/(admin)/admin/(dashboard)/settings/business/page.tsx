@@ -9,9 +9,8 @@
  */
 
 import { Suspense } from 'react'
-import { connection } from 'next/server'
-import { getSettings, getDiscountSettings, getTaxSettings } from '@/admin/actions/settings'
-import { getSocialLinks } from '@/admin/actions/navigation'
+import { getSettings, getDiscountSettings, getTaxSettings } from '@/admin/queries/settings'
+import { getSocialLinks } from '@/admin/queries/navigation'
 import { SettingsLayout } from '../_components/SettingsLayout'
 import { SettingsTabs } from '../_components/SettingsTabs'
 import {
@@ -29,8 +28,6 @@ import type { ReactElement } from 'react'
  * 動的コンテンツ: ビジネス設定
  */
 async function BusinessSettingsContent(): Promise<ReactElement> {
-  await connection()
-
   const [settings, discountSettings, taxSettings, socialLinks] = await Promise.all([
     getSettings(),
     getDiscountSettings(),
@@ -120,10 +117,13 @@ function BusinessSettingsLoading(): ReactElement {
   )
 }
 
-export default function BusinessSettingsPage(): ReactElement {
+export default async function BusinessSettingsPage(): Promise<ReactElement> {
   return (
     <Suspense fallback={<BusinessSettingsLoading />}>
       <BusinessSettingsContent />
     </Suspense>
   )
 }
+
+
+

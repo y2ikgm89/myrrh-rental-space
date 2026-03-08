@@ -37,8 +37,6 @@ import {
 } from '@/admin/components/ui'
 import {
   createBlockTemplate,
-  getBlockTemplates,
-  getBlockTemplateById,
   deleteBlockTemplate,
 } from '@/admin/actions/block-template'
 import type { BlockTemplateListItem } from '@/shared/domain/block-template/types'
@@ -63,6 +61,42 @@ const serializedNodeArraySchema = z.array(serializedNodeSchema)
 
 export const SAVE_BLOCK_TEMPLATE_COMMAND: LexicalCommand<undefined> = createCommand('SAVE_BLOCK_TEMPLATE')
 export const INSERT_BLOCK_TEMPLATE_COMMAND: LexicalCommand<undefined> = createCommand('INSERT_BLOCK_TEMPLATE')
+
+async function fetchBlockTemplates(): Promise<BlockTemplateListItem[]> {
+  const response = await fetch('/admin/api/block-templates', {
+    credentials: 'same-origin',
+  })
+
+  if (!response.ok) {
+    const body: unknown = await response.json().catch(() => null)
+    const message =
+      body && typeof body === 'object' && 'error' in body && typeof body.error === 'string'
+        ? body.error
+        : 'テンプレートの取得に失敗しました'
+    throw new Error(message)
+  }
+
+  const data: BlockTemplateListItem[] = await response.json()
+  return data
+}
+
+async function fetchBlockTemplateById(id: string): Promise<{ nodeJson: unknown }> {
+  const response = await fetch(`/admin/api/block-templates/${id}`, {
+    credentials: 'same-origin',
+  })
+
+  if (!response.ok) {
+    const body: unknown = await response.json().catch(() => null)
+    const message =
+      body && typeof body === 'object' && 'error' in body && typeof body.error === 'string'
+        ? body.error
+        : 'テンプレートの取得に失敗しました'
+    throw new Error(message)
+  }
+
+  const data: { nodeJson: unknown } = await response.json()
+  return data
+}
 
 // =============================================================================
 // Save Dialog
@@ -226,19 +260,22 @@ function InsertTemplateDialog({
         setTemplates(null)
       }
     }
-    void getBlockTemplates().then(setTemplates)
+    void fetchBlockTemplates()
+      .then(setTemplates)
+      .catch((error: unknown) => {
+        const message =
+          error instanceof Error ? error.message : 'テンプレートの取得に失敗しました'
+        toast.error(message)
+        setTemplates([])
+      })
   }, [isOpen])
 
   const handleInsert = (templateId: string) => {
     setIsInserting(true)
-    void getBlockTemplateById(templateId).then((result) => {
+    void fetchBlockTemplateById(templateId).then((result) => {
       setIsInserting(false)
-      if (!result.success) {
-        toast.error(result.error)
-        return
-      }
 
-      const parsed = serializedNodeArraySchema.safeParse(result.data.nodeJson)
+      const parsed = serializedNodeArraySchema.safeParse(result.nodeJson)
       if (!parsed.success) {
         toast.error('テンプレートデータが不正です')
         return
@@ -253,6 +290,11 @@ function InsertTemplateDialog({
 
       toast.success('テンプレートを挿入しました')
       onClose()
+    }).catch((error: unknown) => {
+      setIsInserting(false)
+      const message =
+        error instanceof Error ? error.message : 'テンプレートの取得に失敗しました'
+      toast.error(message)
     })
   }
 

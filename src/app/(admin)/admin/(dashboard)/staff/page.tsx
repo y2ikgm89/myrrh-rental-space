@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { getUsers } from "@/admin/actions/user";
-import { getPendingInvitations } from "@/admin/actions/staff-invitation";
+import { getUsers } from "@/admin/queries/user";
+import { getPendingInvitations } from "@/admin/queries/staff-invitation";
 import { loadAdminUserSearchParams } from "@/shared/lib/nuqs";
 import { getRoleFilterOrAll } from "@/shared/lib/validations/enums";
 import { Button, Pagination } from "@/admin/components/ui";
@@ -13,7 +13,6 @@ import {
   InvitationTable,
 } from "./_components";
 import type { Metadata } from "next";
-import { connection } from "next/server";
 
 export const metadata: Metadata = {
   title: "スタッフ管理 | Myrrh Rental Space",
@@ -88,7 +87,6 @@ async function InvitationSection() {
 // =============================================================================
 
 export default async function StaffPage({ searchParams }: PageProps) {
-  await connection();
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
@@ -126,3 +124,4 @@ export default async function StaffPage({ searchParams }: PageProps) {
     </div>
   );
 }
+

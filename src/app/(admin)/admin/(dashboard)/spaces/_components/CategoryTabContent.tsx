@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { getSpaceCategories } from "@/admin/actions/space-category";
+import { getSpaceCategories } from "@/admin/queries/space-category";
 import { CategoryFilters } from "../../space-categories/_components/CategoryFilters";
 import { CategoryTable } from "../../space-categories/_components/CategoryTable";
 import { LoadingState } from "@/admin/components/LoadingState";

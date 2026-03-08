@@ -4,11 +4,12 @@ import { randomUUID } from "node:crypto";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import { encrypt } from "@/shared/lib/crypto";
-import { resetAuthInstance } from "@/shared/lib/auth";
 import type { CustomApiKeyInput } from "@/shared/types/api-keys";
 import { parseCustomApiKeysMap } from "@/shared/domain/settings/api-key-helpers";
 
-async function upsertSettings(updateData: Record<string, unknown>): Promise<void> {
+async function upsertSettings(
+  updateData: Record<string, unknown>,
+): Promise<void> {
   await prisma.settings.upsert({
     where: { id: "singleton" },
     create: { id: "singleton", ...updateData },
@@ -211,44 +212,4 @@ export async function deleteCustomApiKey(id: string): Promise<void> {
   delete existing[id];
 
   await upsertSettings({ customApiKeys: existing });
-}
-
-export async function updateGoogleOAuthSettings(data: {
-  googleOAuthClientId?: string | null;
-  googleOAuthClientSecret?: string | null;
-}): Promise<void> {
-  const updateData: Record<string, unknown> = {};
-
-  if (data.googleOAuthClientId !== undefined) {
-    updateData["googleOAuthClientId"] = data.googleOAuthClientId;
-  }
-
-  if (data.googleOAuthClientSecret) {
-    updateData["googleOAuthClientSecret"] = encryptSecret(
-      data.googleOAuthClientSecret,
-      "Client Secretの暗号化に失敗しました",
-    );
-  }
-
-  await upsertSettings(updateData);
-  resetAuthInstance();
-}
-
-export async function recordGoogleOAuthConnectionStatus(
-  status: "connected" | "error",
-): Promise<void> {
-  await upsertSettings({
-    googleOAuthLastTestedAt: new Date(),
-    googleOAuthConnectionStatus: status,
-  });
-}
-
-export async function clearGoogleOAuthSettings(): Promise<void> {
-  await upsertSettings({
-    googleOAuthClientId: null,
-    googleOAuthClientSecret: null,
-    googleOAuthLastTestedAt: null,
-    googleOAuthConnectionStatus: null,
-  });
-  resetAuthInstance();
 }

@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { getTermsAgreements } from "@/admin/actions/terms";
 import type { TermsAgreementItem } from "@/shared/lib/validations/terms";
 import {
   Table,
@@ -34,6 +33,50 @@ interface Props {
   initialTotal: number;
 }
 
+async function fetchTermsAgreements(
+  termsId: string,
+  page: number,
+): Promise<{ agreements: TermsAgreementItem[]; total: number }> {
+  const response = await fetch(`/admin/api/terms/${termsId}/agreements?page=${page}`, {
+    credentials: "same-origin",
+  });
+
+  const body: unknown = await response.json().catch(() => null);
+
+  if (
+    !response.ok ||
+    !body ||
+    typeof body !== "object" ||
+    !("success" in body) ||
+    body.success !== true ||
+    !("data" in body) ||
+    !body.data ||
+    typeof body.data !== "object"
+  ) {
+    const message =
+      body && typeof body === "object" && "error" in body && typeof body.error === "string"
+        ? body.error
+        : "同意記録の取得に失敗しました";
+    throw new Error(message);
+  }
+
+  if (
+    !("agreements" in body.data) ||
+    !Array.isArray(body.data.agreements) ||
+    !("total" in body.data) ||
+    typeof body.data.total !== "number"
+  ) {
+    throw new Error("同意記録の取得に失敗しました");
+  }
+
+  const agreements: TermsAgreementItem[] = body.data.agreements;
+
+  return {
+    agreements,
+    total: body.data.total,
+  };
+}
+
 export function TermsAgreementsTab({
   termsId,
   initialAgreements,
@@ -49,13 +92,15 @@ export function TermsAgreementsTab({
 
   const loadPage = (newPage: number) => {
     startTransition(async () => {
-      const result = await getTermsAgreements(termsId, newPage);
-      if (result.success) {
-        setAgreements(result.data.agreements);
-        setTotal(result.data.total);
+      try {
+        const result = await fetchTermsAgreements(termsId, newPage);
+        setAgreements(result.agreements);
+        setTotal(result.total);
         setPage(newPage);
-      } else {
-        toast.error(result.error);
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "同意記録の取得に失敗しました";
+        toast.error(message);
       }
     });
   };

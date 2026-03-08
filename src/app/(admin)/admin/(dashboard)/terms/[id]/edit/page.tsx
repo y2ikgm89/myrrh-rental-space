@@ -1,10 +1,9 @@
-import { connection } from "next/server";
 import { notFound } from "next/navigation";
 import {
   getTermsById,
   getTermsVersionById,
   getTermsAgreements,
-} from "@/admin/actions/terms";
+} from "@/admin/queries/terms";
 import { TermsInlineEditor } from "../../_components/TermsInlineEditor";
 import { TermsStatus } from "@/shared/db/enums";
 
@@ -13,7 +12,6 @@ interface PageProps {
 }
 
 export default async function TermsEditPage({ params }: PageProps) {
-  await connection();
   const { id } = await params;
 
   const termsResult = await getTermsById(id);
@@ -62,3 +60,4 @@ export default async function TermsEditPage({ params }: PageProps) {
     />
   );
 }
+

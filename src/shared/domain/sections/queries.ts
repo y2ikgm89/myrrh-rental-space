@@ -5,6 +5,11 @@ import { prisma } from "@/shared/db/prisma";
 import { SectionType } from "@/shared/db/enums";
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
 import { DEFAULT_PAGE_SECTIONS } from "@/shared/lib/constants/default-page-sections";
+import {
+  ErrorCategory,
+  ErrorSeverity,
+  safeFetch,
+} from "@/shared/lib/errors/server";
 import { toPlainArray } from "@/shared/lib/serialize";
 import { idParamSchema, slugParamSchema } from "@/shared/lib/validations/params";
 import { getPublicPage } from "@/shared/domain/pages/queries";
@@ -20,27 +25,52 @@ export type PublicSection = {
   readonly order: number;
 };
 
+function getDefaultSections(slug: string): PublicSection[] {
+  const defaults = DEFAULT_PAGE_SECTIONS[slug];
+  if (!defaults || defaults.length === 0) {
+    return [];
+  }
+
+  return defaults.map((section, index) => ({
+    id: `default-${slug}-${index}`,
+    type: section.type,
+    title: section.title,
+    contentHtml: section.content,
+    contentJson: null,
+    config: section.config,
+    design: section.design ?? {},
+    order: section.order,
+  }));
+}
+
 export async function getHomepageSections(): Promise<readonly PublicSection[]> {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.SECTIONS, CACHE_TAGS.HOMEPAGE_SECTIONS);
 
-  const sections = await prisma.section.findMany({
-    where: {
-      pageId: null,
-      isActive: true,
-    },
-    select: {
-      id: true,
-      type: true,
-      title: true,
-      contentHtml: true,
-      contentJson: true,
-      config: true,
-      design: true,
-      order: true,
-    },
-    orderBy: { order: "asc" },
+  const sections = await safeFetch({
+    fetch: () =>
+      prisma.section.findMany({
+        where: {
+          pageId: null,
+          isActive: true,
+        },
+        select: {
+          id: true,
+          type: true,
+          title: true,
+          contentHtml: true,
+          contentJson: true,
+          config: true,
+          design: true,
+          order: true,
+        },
+        orderBy: { order: "asc" },
+      }),
+    fallback: getDefaultSections("home"),
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getHomepageSections",
   });
 
   return toPlainArray(sections);
@@ -54,23 +84,30 @@ export async function getShowcaseSpaces(
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.SPACES);
 
-  const spaces = await prisma.space.findMany({
-    where: {
-      isActive: true,
-      ...(showOnlyPublished ? { isPublished: true } : {}),
-    },
-    select: {
-      id: true,
-      slug: true,
-      name: true,
-      description: true,
-      capacity: true,
-      hourlyPrice: true,
-      area: true,
-      mainImageUrl: true,
-    },
-    orderBy: { createdAt: "desc" },
-    take: maxItems,
+  const spaces = await safeFetch({
+    fetch: () =>
+      prisma.space.findMany({
+        where: {
+          isActive: true,
+          ...(showOnlyPublished ? { isPublished: true } : {}),
+        },
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          description: true,
+          capacity: true,
+          hourlyPrice: true,
+          area: true,
+          mainImageUrl: true,
+        },
+        orderBy: { createdAt: "desc" },
+        take: maxItems,
+      }),
+    fallback: [],
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getShowcaseSpaces",
   });
 
   return toPlainArray(spaces);
@@ -85,22 +122,29 @@ export async function getPageSections(
 
   if (!idParamSchema.safeParse(pageId).success) return [];
 
-  const sections = await prisma.section.findMany({
-    where: {
-      pageId,
-      isActive: true,
-    },
-    select: {
-      id: true,
-      type: true,
-      title: true,
-      contentHtml: true,
-      contentJson: true,
-      config: true,
-      design: true,
-      order: true,
-    },
-    orderBy: { order: "asc" },
+  const sections = await safeFetch({
+    fetch: () =>
+      prisma.section.findMany({
+        where: {
+          pageId,
+          isActive: true,
+        },
+        select: {
+          id: true,
+          type: true,
+          title: true,
+          contentHtml: true,
+          contentJson: true,
+          config: true,
+          design: true,
+          order: true,
+        },
+        orderBy: { order: "asc" },
+      }),
+    fallback: [],
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getPageSections",
   });
 
   return toPlainArray(sections);
@@ -117,19 +161,7 @@ export async function getPageSectionsWithFallback(
     if (sections.length > 0) return sections;
   }
 
-  const defaults = DEFAULT_PAGE_SECTIONS[slug];
-  if (!defaults || defaults.length === 0) return [];
-
-  return defaults.map((section, index) => ({
-    id: `default-${slug}-${index}`,
-    type: section.type,
-    title: section.title,
-    contentHtml: section.content,
-    contentJson: null,
-    config: section.config,
-    design: section.design ?? {},
-    order: section.order,
-  }));
+  return getDefaultSections(slug);
 }
 
 export async function getPublishedFaqItems(
@@ -140,19 +172,26 @@ export async function getPublishedFaqItems(
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.FAQ);
 
-  const items = await prisma.faqItem.findMany({
-    where: {
-      isPublished: true,
-      ...(categoryId ? { categoryId } : {}),
-    },
-    select: {
-      id: true,
-      question: true,
-      answerHtml: true,
-      answerJson: true,
-    },
-    orderBy: { order: "asc" },
-    take: maxItems,
+  const items = await safeFetch({
+    fetch: () =>
+      prisma.faqItem.findMany({
+        where: {
+          isPublished: true,
+          ...(categoryId ? { categoryId } : {}),
+        },
+        select: {
+          id: true,
+          question: true,
+          answerHtml: true,
+          answerJson: true,
+        },
+        orderBy: { order: "asc" },
+        take: maxItems,
+      }),
+    fallback: [],
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getPublishedFaqItems",
   });
 
   return toPlainArray(items);

@@ -20,7 +20,6 @@ import 'dotenv/config'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { PrismaClient, Prisma, Role } from '../generated/prisma/client'
 import { hashPassword } from 'better-auth/crypto'
-import { syncPermissionsToDb } from '../src/app/(admin)/admin/(dashboard)/_shared/lib/permissions'
 
 // Prisma アダプター（PrismaPg が Pool ライフサイクルを内部管理）
 const adapter = new PrismaPg({
@@ -80,10 +79,6 @@ async function clearAllData() {
     prisma.navigationItem.deleteMany(),
     prisma.announcementBar.deleteMany(),
     prisma.socialLink.deleteMany(),
-
-    // RBAC権限
-    prisma.rolePermission.deleteMany(),
-    prisma.permission.deleteMany(),
 
     // 認証関連
     prisma.auditLog.deleteMany(),
@@ -281,16 +276,6 @@ async function seedSettings() {
   })
 
   console.log('✅ Settings configured')
-}
-
-// =============================================================================
-// Permissions (RBAC)
-// =============================================================================
-
-async function seedPermissions() {
-  console.log('🔐 Syncing permissions...')
-  await syncPermissionsToDb()
-  console.log('✅ Permissions synced')
 }
 
 // =============================================================================
@@ -1627,9 +1612,8 @@ async function seedAll(email: string, password: string, name: string) {
   console.log('📦 Creating demo data...')
   console.log('')
 
-  // Phase 1: 基本設定・権限
+  // Phase 1: 基本設定
   await seedSettings()
-  await seedPermissions()
 
   // Phase 2: マスターデータ
   await seedLocations()
@@ -1668,7 +1652,6 @@ async function seedDemo() {
 
   // 基本設定
   await seedSettings()
-  await seedPermissions()
 
   // マスターデータ
   await seedLocations()

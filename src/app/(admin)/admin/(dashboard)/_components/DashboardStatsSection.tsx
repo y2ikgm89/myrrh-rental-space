@@ -4,7 +4,7 @@
  * 各種KPIカードを表示
  */
 
-import { getDashboardStats } from '@/admin/actions/dashboard'
+import { getDashboardStats } from '@/admin/queries/dashboard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/admin/components/ui/card'
 import { formatCurrency } from '@/shared/lib/utils'
 import { formatChange, getChangeColor } from '@/admin/lib/utils'

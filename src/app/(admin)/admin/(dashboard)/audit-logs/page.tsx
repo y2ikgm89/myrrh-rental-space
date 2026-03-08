@@ -1,6 +1,5 @@
-import { connection } from "next/server";
 import { Suspense } from "react";
-import { getAuditLogs } from "@/admin/actions/audit-log";
+import { getAuditLogs } from "@/admin/queries/audit-log";
 import { loadAdminAuditLogSearchParams } from "@/shared/lib/nuqs";
 import { getAuditActionFilterOrAll } from "@/shared/lib/validations/enums";
 import { Pagination } from "@/admin/components/ui";
@@ -48,9 +47,6 @@ async function AuditLogList({ searchParams }: PageProps) {
 }
 
 export default async function AuditLogsPage({ searchParams }: PageProps) {
-  // Opt into dynamic rendering for Next.js 16 PPR (connection() is official for new Date())
-  await connection();
-
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
@@ -80,3 +76,4 @@ export default async function AuditLogsPage({ searchParams }: PageProps) {
     </div>
   );
 }
+

@@ -12,8 +12,8 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/admin/components/ui'
+import { fetchAdminJson } from '@/admin/lib/admin-api-client'
 import {
-  getAnnouncementBars,
   createAnnouncementBar,
   updateAnnouncementBar,
   deleteAnnouncementBar,
@@ -60,6 +60,13 @@ const barFormSchema = z.object({
 type AnnouncementBarManagerProps = {
   initialBars: AnnouncementBarData[]
   initialCarouselSettings: AnnouncementBarCarouselSettingsInput
+}
+
+async function fetchAnnouncementBars(): Promise<{
+  items: AnnouncementBarData[]
+  total: number
+}> {
+  return fetchAdminJson('/admin/api/announcement-bars')
 }
 
 // =============================================================================
@@ -117,7 +124,7 @@ export function AnnouncementBarManager({
   })
 
   const loadBars = async () => {
-    const result = await getAnnouncementBars()
+    const result = await fetchAnnouncementBars()
     setBars(result.items)
   }
 

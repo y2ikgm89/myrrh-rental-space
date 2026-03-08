@@ -1,10 +1,8 @@
 "use server";
 
 import { updateTag } from "next/cache";
-import type { NavigationType } from "@/shared/db/enums";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { createValidationError } from "@/shared/lib/action-helpers";
-import { checkReadPermissionFor } from "@/admin/lib/permissions";
 import {
   createSuccess,
   type ActionResult,
@@ -13,13 +11,6 @@ import { executeAdminMutation } from "@/admin/lib/admin-action";
 import { purgeHomeCache } from "@/shared/lib/cloudflare";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
-import {
-  getNavigationItems as getNavigationItemsQuery,
-  getSocialLinks as getSocialLinksQuery,
-  type GetSocialLinksOptions,
-  type NavigationItemData,
-  type SocialLinkData,
-} from "@/shared/domain/navigation/queries";
 import {
   createNavigationItem as createNavigationItemCommand,
   createSocialLink as createSocialLinkCommand,
@@ -37,8 +28,6 @@ import {
   updateSocialLinkOrder as updateSocialLinkOrderCommand,
 } from "@/shared/domain/navigation/commands";
 
-const checkReadPermission = checkReadPermissionFor("navigation");
-
 function invalidateNavigationCache(): void {
   updateTag(CACHE_TAGS.NAVIGATION);
   fireAndForget(purgeHomeCache(), {
@@ -46,26 +35,6 @@ function invalidateNavigationCache(): void {
     category: ErrorCategory.EXTERNAL_API,
     severity: ErrorSeverity.LOW,
   });
-}
-
-export async function getNavigationItems(
-  type?: NavigationType,
-): Promise<NavigationItemData[]> {
-  if (!(await checkReadPermission())) {
-    return [];
-  }
-
-  return getNavigationItemsQuery(type);
-}
-
-export async function getSocialLinks(
-  options: GetSocialLinksOptions = {},
-): Promise<SocialLinkData[]> {
-  if (!(await checkReadPermission())) {
-    return [];
-  }
-
-  return getSocialLinksQuery(options);
 }
 
 export async function createNavigationItem(

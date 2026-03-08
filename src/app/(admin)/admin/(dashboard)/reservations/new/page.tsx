@@ -1,5 +1,4 @@
-import { connection } from "next/server";
-import { getSpacesForReservation } from "@/admin/actions/reservation";
+import { getSpacesForReservation } from "@/admin/queries/reservation";
 import { ReservationForm } from "../_components/ReservationForm";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import type { Metadata } from "next";
@@ -9,7 +8,6 @@ export const metadata: Metadata = {
 };
 
 export default async function NewReservationPage() {
-  await connection();
   const spaces = await getSpacesForReservation();
 
   return (
@@ -22,3 +20,4 @@ export default async function NewReservationPage() {
     </AdminDetailLayout>
   );
 }
+

@@ -3,17 +3,11 @@
 import { updateTag } from "next/cache";
 import { z } from "zod";
 import { executeAdminMutation } from "@/admin/lib/admin-action";
-import { checkReadPermissionFor } from "@/admin/lib/permissions";
 import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
 import {
   createSuccess,
   type ActionResult,
 } from "@/admin/types/server-actions";
-import {
-  getNewsById as getNewsByIdQuery,
-  getNewsList as getNewsListQuery,
-  getNewsVersions as getNewsVersionsQuery,
-} from "@/shared/domain/news/admin-queries";
 import {
   createNews as createNewsCommand,
   createNewsBackup as createNewsBackupCommand,
@@ -23,13 +17,6 @@ import {
   unpublishNews as unpublishNewsCommand,
   updateNews as updateNewsCommand,
 } from "@/shared/domain/news/commands";
-import type {
-  GetNewsListResult,
-  NewsData,
-  NewsFilters,
-  NewsPagination,
-  NewsVersionData,
-} from "@/shared/domain/news/types";
 import { createValidationError } from "@/shared/lib/action-helpers";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { purgeNewsCache } from "@/shared/lib/cloudflare";
@@ -51,7 +38,6 @@ export type {
   NewsVersionData,
 } from "@/shared/domain/news/types";
 
-const checkReadPermission = checkReadPermissionFor("news");
 const idSchema = z.string().uuid({ error: "お知らせIDが不正です" });
 const versionSchema = z.object({
   newsId: z.string().uuid({ error: "お知らせIDが不正です" }),
@@ -74,45 +60,6 @@ function purgeNewsCaches(...slugs: Array<string | undefined>): void {
 
 function invalidateNewsCollectionCaches(): void {
   updateTag(CACHE_TAGS.NEWS);
-}
-
-export async function getNewsList(
-  filters: NewsFilters = {},
-  pagination: NewsPagination = {},
-): Promise<GetNewsListResult> {
-  if (!(await checkReadPermission())) {
-    return { news: [], total: 0, page: 1, limit: 10, totalPages: 0 };
-  }
-
-  return getNewsListQuery(filters, pagination);
-}
-
-export async function getNewsById(id: string): Promise<NewsData | null> {
-  if (!(await checkReadPermission())) {
-    return null;
-  }
-
-  const validated = idSchema.safeParse(id);
-  if (!validated.success) {
-    return null;
-  }
-
-  return getNewsByIdQuery(validated.data);
-}
-
-export async function getNewsVersions(
-  newsId: string,
-): Promise<NewsVersionData[]> {
-  if (!(await checkReadPermission())) {
-    return [];
-  }
-
-  const validated = idSchema.safeParse(newsId);
-  if (!validated.success) {
-    return [];
-  }
-
-  return getNewsVersionsQuery(validated.data);
 }
 
 export async function createNews(

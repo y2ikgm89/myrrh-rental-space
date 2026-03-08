@@ -6,7 +6,7 @@
  * 検索・フィルター・ページネーション・一括操作・ゴミ箱復元対応
  */
 
-import { getPagesList, getHomepageLastUpdated } from "@/admin/actions/page";
+import { getPagesList, getHomepageLastUpdated } from "@/admin/queries/page";
 import { loadAdminPageSearchParams } from "@/shared/lib/nuqs";
 import {
   CreatePageDialog,
@@ -16,7 +16,6 @@ import {
 } from "./_components";
 import type { Metadata } from "next";
 import type { ReactElement } from "react";
-import { connection } from "next/server";
 
 export const metadata: Metadata = {
   title: "ページ管理",
@@ -29,7 +28,6 @@ type PageProps = {
 export default async function PagesManagementPage({
   searchParams,
 }: PageProps): Promise<ReactElement> {
-  await connection();
   const params = await loadAdminPageSearchParams(searchParams);
 
   const [result, homepageLastUpdated] = await Promise.all([
@@ -74,3 +72,4 @@ export default async function PagesManagementPage({
     </div>
   );
 }
+

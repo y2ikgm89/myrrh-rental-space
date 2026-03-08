@@ -61,8 +61,6 @@ export type {
 // =============================================================================
 
 export {
-  getSettings,
-  getPublicSettings,
   updateBasicInfo,
   updateLayoutSettings,
   updateSeoSettings,
@@ -98,7 +96,6 @@ export {
   testGoogleCalendarOAuthAction,
   clearGoogleCalendarServiceAccount,
   disconnectGoogleCalendarOAuth,
-  getGoogleCalendarSettings,
   updateTwoWaySyncSettings,
   setupCalendarWebhook,
   stopCalendarWebhook,
@@ -124,14 +121,10 @@ export type { StripeSettingsInput } from '@/admin/lib/validations/stripe'
 export {
   updateMaintenanceSettings,
   updateCookieConsentSettings,
-  getTermsAgreementSettings,
   updateTermsAgreementSettings,
-  getCancellationPolicies,
   updateReservationSettings,
   updateSidebarSettings,
-  getAnnouncementBarCarouselSettings,
   updateAnnouncementBarCarouselSettings,
-  getPermalinkSettings,
   updatePermalinkSettings,
   updateHeaderSettings,
 } from './other'
@@ -141,7 +134,6 @@ export {
 // =============================================================================
 
 export {
-  getDiscountSettings,
   updateDiscountSettings,
 } from './discount'
 
@@ -153,9 +145,7 @@ export type { DurationDiscountRuleInput as DurationDiscountRule } from './schema
 // =============================================================================
 
 export {
-  getTaxSettings,
   updateTaxSettings,
-  getPublicTaxSettings,
 } from './tax'
 
 export type { TaxSettingsData } from '@/shared/domain/settings/types'
@@ -166,7 +156,6 @@ export type { TaxSettingsInput } from './schemas'
 // =============================================================================
 
 export {
-  getRobotsTxtSettings,
   updateRobotsTxtSettings,
   resetRobotsTxtToDefault,
 } from './robots-txt'

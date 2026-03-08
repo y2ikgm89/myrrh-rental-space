@@ -63,3 +63,10 @@ skill を変更したら次も確認する。
 - `scripts/` や `reference/` の相対パスが正しいか
 - DoD がこの repo の検証コマンドに合っているか
 - 追加 skill が既存 skill の責務を侵食していないか
+- `docs/plans/*` の履歴メモを現行ルールとして参照していないか
+- 現在の route/data 境界に追従しているか（`[...segments]`, preview 専用 route, `ExperienceShell` opt-in）
+- `shared/domain` / `shared/db/prisma` 境界を壊す指示や、削除済み shim の参照を含めていないか
+- `generated/prisma/*` を編集・commit する前提や、`shared/generated` の古いパスを含めていないか
+- Better Auth の静的 `auth` export 前提を壊す指示や、動的 auth bootstrap の再導入を促していないか
+- admin 向け task で `@/admin/queries/*` read、`/admin/api/*` client read、`@/admin/actions/*` mutation only の境界を崩していないか
+- public 向け task で `src/app/(public)/layout.tsx` に URL state provider や effect provider を戻していないか

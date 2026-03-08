@@ -54,8 +54,10 @@ export type PermissionResult =
  * }
  * ```
  */
-export async function checkAdminAuth(): Promise<AuthResult> {
-  const session = await getSession();
+export async function checkAdminAuth(
+  requestHeaders?: Headers,
+): Promise<AuthResult> {
+  const session = await getSession(requestHeaders);
   const user = getSessionUser(session);
 
   if (!user) {
@@ -85,8 +87,9 @@ export async function checkAdminAuth(): Promise<AuthResult> {
 export async function checkPermission(
   resource: Resource,
   action: Action,
+  requestHeaders?: Headers,
 ): Promise<PermissionResult> {
-  const auth = await checkAdminAuth();
+  const auth = await checkAdminAuth(requestHeaders);
   if (!auth.success) return auth;
 
   const { user } = auth;
@@ -109,8 +112,9 @@ export async function checkResourceAccess(
   resource: Resource,
   action: Action,
   resourceId?: string,
+  requestHeaders?: Headers,
 ): Promise<PermissionResult> {
-  const permResult = await checkPermission(resource, action);
+  const permResult = await checkPermission(resource, action, requestHeaders);
   if (!permResult.success) return permResult;
 
   const { user } = permResult;
@@ -131,8 +135,11 @@ export async function checkResourceAccess(
 /**
  * ロールチェック
  */
-export async function checkRole(requiredRole: Role): Promise<AuthResult> {
-  const auth = await checkAdminAuth();
+export async function checkRole(
+  requiredRole: Role,
+  requestHeaders?: Headers,
+): Promise<AuthResult> {
+  const auth = await checkAdminAuth(requestHeaders);
   if (!auth.success) return auth;
 
   const { user } = auth;

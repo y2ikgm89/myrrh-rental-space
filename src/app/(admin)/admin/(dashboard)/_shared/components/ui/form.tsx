@@ -11,7 +11,7 @@ import {
   type FieldValues,
 } from 'react-hook-form'
 import { Slot } from '@radix-ui/react-slot'
-import { cn } from '@/shared/lib/utils'
+import { cn } from '@/shared/lib/cn'
 import { Label } from '@/admin/components/ui/label'
 
 // =============================================================================

@@ -2,7 +2,7 @@
 
 import { format, isSameDay, isToday } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { cn } from '@/shared/lib/utils'
+import { cn } from '@/shared/lib/cn'
 import {
   generateTimeSlots,
   layoutOverlappingEvents,

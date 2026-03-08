@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
-import { getCoupons } from "@/admin/actions/coupon";
+import { getCoupons } from "@/admin/queries/coupon";
 import { CouponFilters } from "./_components/CouponFilters";
 import { CouponTable } from "./_components/CouponTable";
 import { Pagination, Button } from "@/admin/components/ui";
@@ -9,7 +9,6 @@ import { LoadingState } from "@/admin/components/LoadingState";
 import { isValidCouponType } from "@/shared/lib/validations/enums";
 import { loadAdminCouponSearchParams } from "@/shared/lib/nuqs";
 import type { Metadata } from "next";
-import { connection } from "next/server";
 
 export const metadata: Metadata = {
   title: "クーポン管理 | Myrrh Rental Space",
@@ -63,7 +62,6 @@ async function CouponList({ searchParams }: { searchParams: SearchParams }) {
 }
 
 export default async function CouponsPage({ searchParams }: PageProps) {
-  await connection();
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
@@ -94,3 +92,4 @@ export default async function CouponsPage({ searchParams }: PageProps) {
     </div>
   );
 }
+

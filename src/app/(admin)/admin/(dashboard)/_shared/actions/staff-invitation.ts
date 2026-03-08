@@ -3,7 +3,6 @@
 import { updateTag } from 'next/cache'
 import { z } from 'zod'
 import { executeAdminMutation } from '@/admin/lib/admin-action'
-import { checkReadPermissionFor } from '@/admin/lib/permissions'
 import {
   createFailure,
   createSuccess,
@@ -22,17 +21,11 @@ import {
   sendInvitation as sendInvitationCommand,
   setupPassword as setupPasswordCommand,
 } from '@/shared/domain/staff-invitations/commands'
-import {
-  getPendingInvitations as getPendingInvitationsQuery,
-  validateInvitationToken as validateInvitationTokenQuery,
-} from '@/shared/domain/staff-invitations/queries'
 import { isDomainError } from '@/shared/domain/domain-error'
 import type { InvitationData } from '@/shared/domain/staff-invitations/types'
 import { CACHE_TAGS } from '@/shared/lib/constants'
 
-const checkReadPermission = checkReadPermissionFor('user')
 const invitationIdSchema = z.string().uuid({ error: '招待IDが不正です' })
-const invitationTokenSchema = z.string().min(1, { error: '招待トークンが必要です' })
 
 export async function sendInvitation(
   input: CreateInvitationInput,
@@ -55,30 +48,6 @@ export async function sendInvitation(
   })
 }
 
-export async function validateInvitationToken(
-  token: string,
-): Promise<ActionResult<InvitationData>> {
-  const validated = invitationTokenSchema.safeParse(token)
-  if (!validated.success) {
-    return createValidationError(validated.error)
-  }
-
-  const invitation = await validateInvitationTokenQuery(validated.data)
-  if (!invitation) {
-    return createFailure('無効な招待リンクです')
-  }
-
-  if (invitation.usedAt) {
-    return createFailure('この招待は既に使用されています')
-  }
-
-  if (new Date(invitation.expiresAt) < new Date()) {
-    return createFailure('この招待は有効期限が切れています')
-  }
-
-  return createSuccess('有効な招待です', invitation)
-}
-
 export async function setupPassword(
   input: SetupPasswordInput,
 ): Promise<ActionResult<{ userId: string }>> {
@@ -99,14 +68,6 @@ export async function setupPassword(
 
     throw error
   }
-}
-
-export async function getPendingInvitations(): Promise<InvitationData[]> {
-  if (!(await checkReadPermission())) {
-    return []
-  }
-
-  return getPendingInvitationsQuery()
 }
 
 export async function deleteInvitation(id: string): Promise<ActionResult<void>> {

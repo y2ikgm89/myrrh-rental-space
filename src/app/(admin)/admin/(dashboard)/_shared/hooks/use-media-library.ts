@@ -8,7 +8,6 @@
  */
 
 import { useState, useRef, useEffect, startTransition } from 'react'
-import { getMediaList } from '@/admin/actions/media'
 import type { MediaFilters, MediaPagination, GetMediaResult } from '@/admin/types/media-picker'
 
 interface UseMediaLibraryOptions {
@@ -52,14 +51,38 @@ function fetchMediaData(
   page: number,
   limit: number
 ): Promise<GetMediaResult> {
-  return getMediaList(
-    {
-      type: filters.type,
-      usage: filters.usage,
-      search: filters.search,
-    },
-    { page, limit }
-  )
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  })
+
+  if (filters.type) {
+    params.set('type', filters.type)
+  }
+
+  if (filters.usage) {
+    params.set('usage', filters.usage)
+  }
+
+  if (filters.search) {
+    params.set('search', filters.search)
+  }
+
+  return fetch(`/admin/api/media?${params.toString()}`, {
+    credentials: 'same-origin',
+  }).then(async (response) => {
+    if (!response.ok) {
+      const body: unknown = await response.json().catch(() => null)
+      const message =
+        body && typeof body === 'object' && 'error' in body && typeof body.error === 'string'
+          ? body.error
+          : 'メディアの取得に失敗しました'
+      throw new Error(message)
+    }
+
+    const data: GetMediaResult = await response.json()
+    return data
+  })
 }
 
 /**
@@ -73,7 +96,6 @@ function createEmptyPromise(limit: number): Promise<GetMediaResult> {
     page: 1,
     limit,
     totalPages: 0,
-    hasMore: false,
   })
 }
 

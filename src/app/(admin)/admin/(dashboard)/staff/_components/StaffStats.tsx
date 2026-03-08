@@ -1,4 +1,4 @@
-import { getUserStats } from "@/admin/actions/user";
+import { getUserStats } from "@/admin/queries/user";
 import {
   Card,
   CardContent,

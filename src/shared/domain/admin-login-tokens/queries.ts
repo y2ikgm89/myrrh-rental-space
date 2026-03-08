@@ -14,6 +14,7 @@ export async function getActiveAdminLoginTokens(
 ): Promise<ActiveAdminLoginToken[]> {
   return prisma.loginToken.findMany({
     where: {
+      usedAt: null,
       expiresAt: {
         gt: new Date(),
       },

@@ -29,7 +29,7 @@ import { CharacterLimitPlugin } from '@lexical/react/LexicalCharacterLimitPlugin
 import type { EditorState, LexicalEditor as LexicalEditorType } from 'lexical'
 
 import { useMediaQuery } from '@/shared/hooks'
-import { cn } from '@/shared/lib/utils'
+import { cn } from '@/shared/lib/cn'
 import { EDITOR_TRANSFORMERS } from './MarkdownTransformers'
 import { EDITOR_NODES } from './config/nodes'
 import { MATCHERS, validateUrl } from './config/url-matchers'

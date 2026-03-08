@@ -1,4 +1,4 @@
-import { cn } from '@/shared/lib/utils'
+import { cn } from '@/shared/lib/cn'
 
 type DivProps = React.HTMLAttributes<HTMLDivElement> & {
   ref?: React.Ref<HTMLDivElement>

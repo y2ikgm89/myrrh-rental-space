@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { format, isSameDay, isSameMonth, isToday } from "date-fns";
-import { cn } from "@/shared/lib/utils";
+import { cn } from "@/shared/lib/cn";
 import { getWeekdayHeaders, getWeekdayColorClass } from "@/admin/lib/calendar";
 import type { CalendarEvent, CalendarDateRange } from "@/admin/lib/calendar";
 import { EventBadge } from "../EventCell";

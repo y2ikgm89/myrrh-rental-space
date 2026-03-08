@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
-import { connection } from "next/server";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { Pencil } from "lucide-react";
 import {
-  getReservationById,
   deleteReservation,
 } from "@/admin/actions/reservation";
+import { getReservationById } from "@/admin/queries/reservation";
 import { ReservationDetail } from "./_components/ReservationDetail";
 import { Button } from "@/admin/components/ui";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
@@ -21,7 +21,7 @@ type PageProps = {
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
-  await connection();
+  await headers();
   const { id } = await params;
   const reservation = await getReservationById(id);
 
@@ -35,7 +35,6 @@ export async function generateMetadata({
 }
 
 export default async function ReservationDetailPage({ params }: PageProps) {
-  await connection();
   const { id } = await params;
   const reservation = await getReservationById(id);
 
@@ -67,3 +66,4 @@ export default async function ReservationDetailPage({ params }: PageProps) {
     </AdminDetailLayout>
   );
 }
+

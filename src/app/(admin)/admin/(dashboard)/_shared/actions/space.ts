@@ -2,12 +2,9 @@
 
 import { updateTag } from "next/cache";
 import { executeAdminMutation } from "@/admin/lib/admin-action";
-import { checkReadPermissionFor } from "@/admin/lib/permissions";
 import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
 import {
-  createFailure,
   createSuccess,
-  type ActionResult,
 } from "@/admin/types/server-actions";
 import { createValidationError } from "@/shared/lib/action-helpers";
 import { fireAndForget } from "@/shared/lib/async-utils";
@@ -22,18 +19,8 @@ import {
   updateSpacePublishCommand,
 } from "@/shared/domain/spaces/commands";
 import {
-  getSpaceByIdQuery,
-  getSpacesForSelectQuery,
-  getSpaceStatsQuery,
-  getSpacesQuery,
-} from "@/shared/domain/spaces/queries";
-import {
   spaceFormSchema,
   type SpaceFormData,
-  type SpaceWithStats,
-  type GetSpacesResult,
-  type SpaceFilters,
-  type SpacePagination,
 } from "@/admin/lib/validations/space";
 
 async function renderDescriptionHtml(
@@ -51,8 +38,6 @@ async function renderDescriptionHtml(
 
   return value;
 }
-
-const checkReadPermission = checkReadPermissionFor("space");
 
 export type SpaceSelectOption = {
   id: string;
@@ -81,49 +66,6 @@ async function buildSpaceCommandInput(data: SpaceFormData) {
     description:
       (await renderDescriptionHtml(data.description)) ?? data.description,
   };
-}
-
-export async function getSpaces(
-  filters: SpaceFilters = {},
-  pagination: SpacePagination = {},
-): Promise<GetSpacesResult> {
-  if (!(await checkReadPermission())) {
-    return { spaces: [], total: 0, page: 1, limit: 10, totalPages: 0 };
-  }
-
-  return getSpacesQuery(filters, pagination);
-}
-
-export async function getSpaceById(id: string): Promise<SpaceWithStats | null> {
-  if (!(await checkReadPermission())) {
-    return null;
-  }
-
-  return getSpaceByIdQuery(id);
-}
-
-export async function getSpaceStats(): Promise<{
-  total: number;
-  published: number;
-  unpublished: number;
-  totalCapacity: number;
-}> {
-  if (!(await checkReadPermission())) {
-    return { total: 0, published: 0, unpublished: 0, totalCapacity: 0 };
-  }
-
-  return getSpaceStatsQuery();
-}
-
-export async function getSpacesForSelect(): Promise<
-  ActionResult<SpaceSelectOption[]>
-> {
-  if (!(await checkReadPermission())) {
-    return createFailure("権限がありません");
-  }
-
-  const spaces = await getSpacesForSelectQuery();
-  return createSuccess("取得しました", spaces);
 }
 
 export const createSpace = async (input: SpaceFormData) => {

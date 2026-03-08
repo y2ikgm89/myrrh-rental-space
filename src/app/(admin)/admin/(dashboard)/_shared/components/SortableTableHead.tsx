@@ -9,7 +9,7 @@
 import type { ReactNode } from 'react'
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import { TableHead } from '@/admin/components/ui'
-import { cn } from '@/shared/lib/utils'
+import { cn } from '@/shared/lib/cn'
 
 type SortableTableHeadProps<T extends string> = {
   field: T

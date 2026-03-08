@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation";
-import { connection } from "next/server";
+import { headers } from "next/headers";
 import { Pencil, ExternalLink } from "lucide-react";
 import Link from "next/link";
-import { getSpaceById, deleteSpace } from "@/admin/actions/space";
+import { deleteSpace } from "@/admin/actions/space";
+import { getSpaceById } from "@/admin/queries/space";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { DangerZone } from "@/admin/components/DangerZone";
 import { Button } from "@/admin/components/ui";
@@ -18,7 +19,7 @@ type PageProps = {
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
-  await connection();
+  await headers();
   const { id } = await params;
   const space = await getSpaceById(id);
 
@@ -34,7 +35,6 @@ export async function generateMetadata({
 }
 
 export default async function SpaceDetailPage({ params }: PageProps) {
-  await connection();
   const { id } = await params;
   const space = await getSpaceById(id);
 
@@ -74,3 +74,4 @@ export default async function SpaceDetailPage({ params }: PageProps) {
     </AdminDetailLayout>
   );
 }
+

@@ -11,7 +11,7 @@
  */
 
 import * as TabsPrimitive from '@radix-ui/react-tabs'
-import { cn } from '@/shared/lib/utils'
+import { cn } from '@/shared/lib/cn'
 
 // =============================================================================
 // Tabs Root

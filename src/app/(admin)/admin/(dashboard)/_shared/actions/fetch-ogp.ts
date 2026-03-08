@@ -1,7 +1,7 @@
 'use server'
 
 import { z } from 'zod'
-import { withPermission } from '@/admin/lib/server-action-helpers'
+import { checkPermission } from '@/admin/lib/action-auth'
 import { createSuccess, createFailure } from '@/admin/types/server-actions'
 
 // =============================================================================
@@ -251,11 +251,12 @@ function resolveUrl(baseUrl: string, relativeUrl: string): string {
  * @param url - 取得対象のURL
  * @returns OGP情報またはエラー
  */
-export const fetchOgp = withPermission<[string], OgpData>(
-  'media',
-  'read',
-  { audit: false }
-)(async (_user, url) => {
+export async function fetchOgp(url: string) {
+  const auth = await checkPermission('media', 'read')
+  if (!auth.success) {
+    return auth.error
+  }
+
   // バリデーション
   const validated = urlSchema.safeParse(url)
   if (!validated.success) {
@@ -304,4 +305,4 @@ export const fetchOgp = withPermission<[string], OgpData>(
     }
     return createFailure('URLの取得に失敗しました')
   }
-})
+}

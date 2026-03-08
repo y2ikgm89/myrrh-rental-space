@@ -2,7 +2,7 @@
 
 import { updateTag } from "next/cache";
 import { executeAdminMutation } from "@/admin/lib/admin-action";
-import { checkReadPermissionFor, isEditorRole } from "@/admin/lib/permissions";
+import { isEditorRole } from "@/admin/lib/permissions";
 import {
   createFailure,
   createSuccess,
@@ -17,21 +17,12 @@ import {
   uploadMediaCommand,
 } from "@/shared/domain/media/commands";
 import {
-  getMediaByIdQuery,
-  getMediaListQuery,
-} from "@/shared/domain/media/queries";
-import {
   inferMediaType,
-  mediaFiltersSchema,
-  mediaPaginationSchema,
   mediaUpdateSchema,
   mediaUploadSchema,
   validateFile,
-  type MediaFilters,
-  type MediaPagination,
   type MediaUpdateInput,
 } from "@/admin/lib/validations/media";
-import type { MediaData, GetMediaResult } from "@/admin/types/media-picker";
 
 function getFormString(formData: FormData, key: string): string | null {
   const value = formData.get(key);
@@ -56,42 +47,11 @@ function getFormStringArray(formData: FormData, key: string): string[] {
   }
 }
 
-const checkReadPermission = checkReadPermissionFor("media");
-
 function revalidateMedia(...ids: string[]): void {
   updateTag(CACHE_TAGS.MEDIA);
   for (const id of [...new Set(ids)]) {
     updateTag(getCacheTag.media.detail(id));
   }
-}
-
-export async function getMediaList(
-  filters: MediaFilters = {},
-  pagination: MediaPagination = { page: 1, limit: 24 },
-): Promise<GetMediaResult> {
-  if (!(await checkReadPermission())) {
-    return { items: [], total: 0, page: 1, limit: 24, totalPages: 0 };
-  }
-
-  const validatedFilters = mediaFiltersSchema.safeParse(filters);
-  if (!validatedFilters.success) {
-    return { items: [], total: 0, page: 1, limit: 24, totalPages: 0 };
-  }
-
-  const validatedPagination = mediaPaginationSchema.safeParse(pagination);
-  if (!validatedPagination.success) {
-    return { items: [], total: 0, page: 1, limit: 24, totalPages: 0 };
-  }
-
-  return getMediaListQuery(validatedFilters.data, validatedPagination.data);
-}
-
-export async function getMediaById(id: string): Promise<MediaData | null> {
-  if (!(await checkReadPermission())) {
-    return null;
-  }
-
-  return getMediaByIdQuery(id);
 }
 
 export async function uploadMedia(

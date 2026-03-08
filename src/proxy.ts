@@ -7,10 +7,7 @@
 
 import { getSessionCookie } from "better-auth/cookies";
 import { NextResponse, type NextRequest } from "next/server";
-import {
-  getAdminLoginToken,
-  verifyAdminGateToken,
-} from "@/shared/lib/admin-login-gate";
+import { ADMIN_GATE_COOKIE_NAME } from "@/shared/lib/admin-login-gate-cookie";
 import { serverEnv } from "@/shared/lib/env/server";
 import { apiRateLimiter, getClientIp } from "@/shared/lib/rate-limit";
 
@@ -66,26 +63,6 @@ function createResponse(req: NextRequest, pathname: string): NextResponse {
   return response;
 }
 
-function createAdminGateRedirect(
-  req: NextRequest,
-  redirectUrl: string,
-  pathname: string,
-): NextResponse {
-  const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
-  const cspValue = buildCsp(nonce);
-  const response = NextResponse.redirect(new URL(redirectUrl, req.url));
-  response.cookies.set("admin-gate", "1", {
-    httpOnly: true,
-    secure: serverEnv.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: 60 * 60,
-    path: "/admin",
-  });
-  response.headers.set("x-pathname", pathname);
-  applySecurityHeaders(response.headers, cspValue);
-  return response;
-}
-
 export async function proxy(req: NextRequest): Promise<NextResponse> {
   const { pathname, searchParams } = req.nextUrl;
 
@@ -127,35 +104,25 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
   }
 
   if (pathname.startsWith("/admin")) {
+    const sessionCookie = getSessionCookie(req);
+
     if (pathname === "/admin/login") {
-      const adminGateCookie = req.cookies.get("admin-gate");
-      if (adminGateCookie?.value === "1") {
+      const adminGateCookie = req.cookies.get(ADMIN_GATE_COOKIE_NAME);
+      if (
+        adminGateCookie?.value === "1" ||
+        !!sessionCookie ||
+        searchParams.has("token")
+      ) {
         return createResponse(req, pathname);
       }
 
-      const token = searchParams.get("token");
-      if (!token) return new NextResponse(null, { status: 404 });
-
-      const isAllowed =
-        token === getAdminLoginToken() || (await verifyAdminGateToken(token));
-
-      if (!isAllowed) {
-        return new NextResponse(null, { status: 404 });
-      }
-
-      const cleanUrl = new URL(pathname, req.url);
-      searchParams.forEach((value, key) => {
-        if (key !== "token") cleanUrl.searchParams.set(key, value);
-      });
-
-      return createAdminGateRedirect(
-        req,
-        cleanUrl.pathname + cleanUrl.search,
-        pathname,
-      );
+      return new NextResponse(null, { status: 404 });
     }
 
-    const sessionCookie = getSessionCookie(req);
+    if (pathname.startsWith("/admin/setup/")) {
+      return createResponse(req, pathname);
+    }
+
     if (!sessionCookie) {
       return NextResponse.redirect(new URL("/admin/login", req.url));
     }

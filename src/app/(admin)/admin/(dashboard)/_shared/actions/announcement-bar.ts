@@ -3,7 +3,6 @@
 import { updateTag } from "next/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { createValidationError } from "@/shared/lib/action-helpers";
-import { checkReadPermissionFor } from "@/admin/lib/permissions";
 import {
   createSuccess,
   type ActionResult,
@@ -16,20 +15,10 @@ import {
   announcementBarInputSchema,
   createAnnouncementBar as createAnnouncementBarCommand,
   deleteAnnouncementBar as deleteAnnouncementBarCommand,
-  getAnnouncementBarById as getAnnouncementBarByIdQuery,
-  getAnnouncementBars as getAnnouncementBarsQuery,
-  type AnnouncementBarData,
   type AnnouncementBarInput,
   toggleAnnouncementBarActive as toggleAnnouncementBarActiveCommand,
   updateAnnouncementBar as updateAnnouncementBarCommand,
 } from "@/shared/domain/settings/announcement-bar";
-
-export type GetAnnouncementBarsResult = {
-  items: AnnouncementBarData[];
-  total: number;
-};
-
-const checkReadPermission = checkReadPermissionFor("announcementBar");
 
 function invalidateAnnouncementBarCache(): void {
   updateTag(CACHE_TAGS.ANNOUNCEMENT_BAR);
@@ -38,29 +27,6 @@ function invalidateAnnouncementBarCache(): void {
     category: ErrorCategory.EXTERNAL_API,
     severity: ErrorSeverity.LOW,
   });
-}
-
-export async function getAnnouncementBars(): Promise<GetAnnouncementBarsResult> {
-  if (!(await checkReadPermission())) {
-    return { items: [], total: 0 };
-  }
-
-  const items = await getAnnouncementBarsQuery();
-
-  return {
-    items,
-    total: items.length,
-  };
-}
-
-export async function getAnnouncementBarById(
-  id: string,
-): Promise<AnnouncementBarData | null> {
-  if (!(await checkReadPermission())) {
-    return null;
-  }
-
-  return getAnnouncementBarByIdQuery(id);
 }
 
 export async function createAnnouncementBar(

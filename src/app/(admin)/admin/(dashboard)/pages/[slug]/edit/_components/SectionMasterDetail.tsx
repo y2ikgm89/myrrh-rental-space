@@ -7,7 +7,7 @@
  * 右: 設定パネル（コンテンツ/デザイン タブ）
  *
  * 状態:
- * - sections: useEffect で初期ロード、ミューテーション後リロード
+ * - sections: props 初期値 + API リロード
  * - selectedId: nuqs URL状態 (?section=<id>)
  * - showAddDialog: セクション追加ダイアログ
  */
@@ -17,23 +17,23 @@ import { useQueryState, parseAsString } from "nuqs";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 import { useConfirm } from "@/admin/contexts/confirm-context";
-import { cn } from "@/shared/lib/utils";
+import { fetchAdminJson } from "@/admin/lib/admin-api-client";
+import { cn } from "@/shared/lib/cn";
 import {
-  getPageSections,
   updatePageSectionOrder,
   togglePageSection,
   deletePageSection,
   duplicatePageSection,
   createPageSection,
-  type PageSectionData,
 } from "@/admin/actions/page-section";
-import type { PageForEdit } from "@/admin/actions/page-section";
+import type {
+  PageForEdit,
+  PageSectionData,
+} from "@/admin/queries/page-section";
 import {
   SectionType,
   defaultSectionConfigs,
 } from "@/shared/lib/validations/section";
-import { logger } from "@/shared/lib/logger";
-import { getErrorMessage } from "@/shared/lib/errors";
 import { SectionSidebar, SEO_SELECTION_ID } from "./SectionSidebar";
 import { SectionDetailPanel } from "./SectionDetailPanel";
 import { PageSeoForm } from "../../seo/_components/PageSeoForm";
@@ -43,9 +43,16 @@ interface SectionMasterDetailProps {
   page: PageForEdit;
 }
 
+async function fetchPageSections(pageId: string): Promise<PageSectionData[]> {
+  const searchParams = new URLSearchParams({ pageId });
+  return fetchAdminJson(`/admin/api/page-sections?${searchParams.toString()}`);
+}
+
 export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
   const [isPending, startTransition] = useTransition();
-  const [sections, setSections] = useState<PageSectionData[] | null>(null);
+  const [sections, setSections] = useState<PageSectionData[] | null>(
+    page.sections,
+  );
   const [selectedId, setSelectedId] = useQueryState("section", parseAsString);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -59,37 +66,6 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
 
   // Mobile responsive: list/detail toggle
   const [showMobileList, setShowMobileList] = useState(true);
-  // =========================================================================
-  // Data Loading
-  // =========================================================================
-
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const data = await getPageSections(page.id);
-        if (!cancelled) {
-          const sectionList = data ?? [];
-          setSections(sectionList);
-          // 初回ロード: セクションがあり未選択なら最初を自動選択
-          const firstSection = sectionList[0];
-          if (!selectedId && firstSection) {
-            setSelectedId(firstSection.id);
-          }
-        }
-      } catch (error) {
-        logger.error("Failed to load sections", {
-          error: getErrorMessage(error),
-        });
-        if (!cancelled) toast.error("セクションの読み込みに失敗しました");
-      }
-    }
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [page.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
   useEffect(() => {
     const timer = undoTimerRef.current;
     return () => {
@@ -98,8 +74,8 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
   }, []);
 
   function reloadSections() {
-    getPageSections(page.id)
-      .then((data) => setSections(data ?? []))
+    fetchPageSections(page.id)
+      .then((data) => setSections(data))
       .catch(() => {
         /* best-effort */
       });
@@ -127,7 +103,9 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
     setShowMobileList(true);
   }
 
-  const selectedSection = sections?.find((s) => s.id === selectedId) ?? null;
+  const effectiveSelectedId = selectedId ?? sections?.[0]?.id ?? null;
+  const selectedSection =
+    sections?.find((s) => s.id === effectiveSelectedId) ?? null;
 
   // =========================================================================
   // Section CRUD
@@ -207,8 +185,7 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
       if (result.success) {
         toast.success(result.message);
         // リロードして新しいセクションを取得 & 自動選択
-        const data = await getPageSections(page.id);
-        const sectionList = data ?? [];
+        const sectionList = await fetchPageSections(page.id);
         setSections(sectionList);
         // 複製されたセクションは末尾に追加されるので最後を選択
         const lastSection = sectionList[sectionList.length - 1];
@@ -237,8 +214,7 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
       }
       toast.success(result.message);
       // リロードして新しいセクションを自動選択
-      const data = await getPageSections(page.id);
-      const sectionList = data ?? [];
+      const sectionList = await fetchPageSections(page.id);
       setSections(sectionList);
       const lastNewSection = sectionList[sectionList.length - 1];
       if (lastNewSection) {
@@ -291,7 +267,7 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
   // Render
   // =========================================================================
 
-  const isSeoSelected = selectedId === SEO_SELECTION_ID;
+  const isSeoSelected = effectiveSelectedId === SEO_SELECTION_ID;
 
   return (
     <>
@@ -306,7 +282,7 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
         >
           <SectionSidebar
             sections={sections}
-            selectedId={selectedId}
+            selectedId={effectiveSelectedId}
             onSelect={handleSelect}
             onReorder={handleReorder}
             onToggle={handleToggle}

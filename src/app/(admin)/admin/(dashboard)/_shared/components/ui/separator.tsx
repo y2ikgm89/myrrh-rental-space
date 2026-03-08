@@ -1,7 +1,7 @@
 'use client'
 
 import type { HTMLAttributes, Ref } from 'react'
-import { cn } from '@/shared/lib/utils'
+import { cn } from '@/shared/lib/cn'
 
 type SeparatorProps = HTMLAttributes<HTMLDivElement> & {
   ref?: Ref<HTMLDivElement>

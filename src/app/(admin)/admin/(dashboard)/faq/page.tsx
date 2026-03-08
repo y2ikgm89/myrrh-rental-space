@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { connection } from "next/server";
-import { getFaqCategories } from "@/admin/actions/faq";
+import { getFaqCategories } from "@/admin/queries/faq";
 import { FaqCategoryList } from "./_components/FaqCategoryList";
 import { Button } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
@@ -18,8 +17,6 @@ async function FaqContent() {
 }
 
 export default async function FaqPage() {
-  await connection();
-
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
@@ -47,3 +44,4 @@ export default async function FaqPage() {
     </div>
   );
 }
+

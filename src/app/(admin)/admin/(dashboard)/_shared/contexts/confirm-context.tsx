@@ -19,7 +19,7 @@ import {
   AlertDialogCancel,
 } from "@/admin/components/ui";
 import { buttonVariants } from "@/admin/components/ui";
-import { cn } from "@/shared/lib/utils";
+import { cn } from "@/shared/lib/cn";
 
 type ConfirmOptions = {
   title: string;

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { connection } from "next/server";
-import { getLocationById } from "@/admin/actions/location";
+import { headers } from "next/headers";
+import { getLocationById } from "@/admin/queries/location";
 import { LocationForm } from "../../_components/LocationForm";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import type { Metadata } from "next";
@@ -14,7 +14,7 @@ type PageProps = {
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
-  await connection();
+  await headers();
   const { id } = await params;
   const result = await getLocationById(id);
 
@@ -30,7 +30,6 @@ export async function generateMetadata({
 }
 
 export default async function EditLocationPage({ params }: PageProps) {
-  await connection();
   const { id } = await params;
   const result = await getLocationById(id);
 
@@ -51,3 +50,4 @@ export default async function EditLocationPage({ params }: PageProps) {
     </AdminDetailLayout>
   );
 }
+

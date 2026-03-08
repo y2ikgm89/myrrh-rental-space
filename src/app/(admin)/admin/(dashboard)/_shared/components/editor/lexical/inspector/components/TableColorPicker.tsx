@@ -9,7 +9,7 @@
 
 import { useState, useEffect } from "react";
 import { Button, Input, Label } from "@/admin/components/ui";
-import { cn } from "@/shared/lib/utils";
+import { cn } from "@/shared/lib/cn";
 
 // =============================================================================
 // パレット定義

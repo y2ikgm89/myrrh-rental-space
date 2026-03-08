@@ -3,14 +3,10 @@
 import { updateTag } from "next/cache";
 import { z } from "zod";
 import { executeAdminMutation } from "@/admin/lib/admin-action";
-import {
-  createSuccess,
-  type ActionResult,
-} from "@/admin/types/server-actions";
+import { createSuccess, type ActionResult } from "@/admin/types/server-actions";
 import {
   testCloudflareConnection,
   testGoogleMapsConnection,
-  testGoogleOAuthConnection,
   testResendConnection,
   testTurnstileConnection,
 } from "@/admin/lib/api-keys";
@@ -18,13 +14,11 @@ import {
   cloudflareSettingsSchema,
   customApiKeySchema,
   googleMapsSettingsSchema,
-  googleOAuthSettingsSchema,
   resendSettingsSchema,
   turnstileSettingsSchema,
   type CloudflareSettingsInput,
   type CustomApiKeyInput,
   type GoogleMapsSettingsInput,
-  type GoogleOAuthSettingsInput,
   type ResendSettingsInput,
   type TurnstileSettingsInput,
 } from "@/admin/lib/validations/api-keys";
@@ -33,18 +27,15 @@ import {
   addCustomApiKey as addCustomApiKeyCommand,
   clearCloudflareSettings as clearCloudflareSettingsCommand,
   clearGoogleMapsSettings as clearGoogleMapsSettingsCommand,
-  clearGoogleOAuthSettings as clearGoogleOAuthSettingsCommand,
   clearResendSettings as clearResendSettingsCommand,
   clearTurnstileSettings as clearTurnstileSettingsCommand,
   deleteCustomApiKey as deleteCustomApiKeyCommand,
   recordCloudflareConnectionStatus,
   recordGoogleMapsConnectionStatus,
-  recordGoogleOAuthConnectionStatus,
   recordResendConnectionStatus,
   recordTurnstileConnectionStatus,
   updateCloudflareSettings as updateCloudflareSettingsCommand,
   updateGoogleMapsSettings as updateGoogleMapsSettingsCommand,
-  updateGoogleOAuthSettings as updateGoogleOAuthSettingsCommand,
   updateResendSettings as updateResendSettingsCommand,
   updateTurnstileSettings as updateTurnstileSettingsCommand,
 } from "@/shared/domain/settings/api-key-commands";
@@ -84,7 +75,9 @@ export async function testResendConnectionAction(
     action: "update",
     execute: async () => {
       const result = await testResendConnection(apiKey);
-      await recordResendConnectionStatus(result.success ? "connected" : "error");
+      await recordResendConnectionStatus(
+        result.success ? "connected" : "error",
+      );
       refreshSettingsCache();
 
       if (!result.success) {
@@ -258,7 +251,9 @@ export async function updateCloudflareSettings(
 export async function testCloudflareConnectionAction(
   zoneId: string,
   apiToken: string,
-): Promise<ActionResult<{ message: string; zoneName?: string; plan?: string }>> {
+): Promise<
+  ActionResult<{ message: string; zoneName?: string; plan?: string }>
+> {
   return executeAdminMutation({
     resource: "settings",
     action: "update",
@@ -338,65 +333,6 @@ export async function deleteCustomApiKey(
       await deleteCustomApiKeyCommand(validated.data);
     },
     success: () => createSuccess("APIキーを削除しました"),
-    afterSuccess: refreshSettingsCache,
-  });
-}
-
-export async function updateGoogleOAuthSettings(
-  input: GoogleOAuthSettingsInput,
-): Promise<ActionResult<void>> {
-  const parsed = googleOAuthSettingsSchema.safeParse(input);
-  if (!parsed.success) {
-    return createValidationError(parsed.error);
-  }
-
-  return executeAdminMutation({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      await updateGoogleOAuthSettingsCommand(parsed.data);
-    },
-    success: () => createSuccess("Google OAuth設定を更新しました"),
-    afterSuccess: refreshSettingsCache,
-  });
-}
-
-export async function testGoogleOAuthConnectionAction(
-  clientId: string,
-  clientSecret: string,
-): Promise<ActionResult<{ message: string }>> {
-  return executeAdminMutation({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      const result = await testGoogleOAuthConnection(clientId, clientSecret);
-      await recordGoogleOAuthConnectionStatus(
-        result.success ? "connected" : "error",
-      );
-      refreshSettingsCache();
-
-      if (!result.success) {
-        throw new DomainError(
-          result.error || "接続テストに失敗しました",
-          "VALIDATION",
-        );
-      }
-
-      return { message: result.message || "" };
-    },
-    success: (result) =>
-      createSuccess(result.message || "接続に成功しました", result),
-  });
-}
-
-export async function clearGoogleOAuthKeys(): Promise<ActionResult<void>> {
-  return executeAdminMutation({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      await clearGoogleOAuthSettingsCommand();
-    },
-    success: () => createSuccess("Google OAuth設定をクリアしました"),
     afterSuccess: refreshSettingsCache,
   });
 }

@@ -32,9 +32,13 @@ type NewsVersionRecord = {
 
 export type NewsData = Serialized<NewsRecord>;
 export type NewsVersionData = Serialized<NewsVersionRecord>;
+export type NewsListItem = NewsData & {
+  publishedAtLabel: string | null;
+  createdAtLabel: string;
+};
 
 export type GetNewsListResult = {
-  news: NewsData[];
+  news: NewsListItem[];
   total: number;
   page: number;
   limit: number;

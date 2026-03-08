@@ -8,7 +8,7 @@
 
 import { useState } from 'react'
 import { Upload } from 'lucide-react'
-import { cn } from '@/shared/lib/utils'
+import { cn } from '@/shared/lib/cn'
 
 interface DropZoneProps {
   onDrop: (file: File) => void

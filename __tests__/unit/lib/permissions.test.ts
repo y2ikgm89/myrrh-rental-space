@@ -7,15 +7,13 @@
 import { describe, test, expect, mock, beforeEach } from 'bun:test'
 import { Role } from '@/shared/db/enums'
 
-// prismaのモック — 空配列は never[] と推論されるため明示的に型付け
+// page assignment query のモック
 const mockFindMany = mock<() => Promise<{ pageId: string }[]>>(() => Promise.resolve([]))
-mock.module('@/shared/db/prisma', () => ({
-  prisma: {
-    userPageAssignment: {
-      findMany: mockFindMany,
-    },
+mock.module('@/shared/domain/user-page-assignments/queries', () => ({
+  getAssignedPageIdsForUser: async () => {
+    const rows = await mockFindMany()
+    return rows.map((row) => row.pageId)
   },
-  Role,
 }))
 
 import {

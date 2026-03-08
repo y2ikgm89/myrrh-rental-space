@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   title: "スタッフを招待 | 管理画面",
 };
 
-export default function InviteStaffPage() {
+export default async function InviteStaffPage() {
   return (
     <AdminDetailLayout
       backHref="/admin/staff"
@@ -34,3 +34,4 @@ export default function InviteStaffPage() {
     </AdminDetailLayout>
   );
 }
+

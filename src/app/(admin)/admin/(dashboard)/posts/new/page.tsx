@@ -1,17 +1,15 @@
-import { getPostCategories, getPostTags } from '@/admin/actions/post'
+import { getPostCategories, getPostTags } from '@/admin/queries/post'
 import { PostEditor } from '../_components/PostEditor'
 import { getLayoutSettings } from '@/shared/domain/settings/queries'
 import { getValidLayoutWidth, LayoutWidth } from '@/shared/lib/validations/enums'
 import type { ContentWidth } from '@/shared/types'
 import type { Metadata } from 'next'
-import { connection } from "next/server";
 
 export const metadata: Metadata = {
   title: '投稿作成 | Myrrh Rental Space',
 }
 
 export default async function NewPostPage() {
-  await connection();
   const [categories, tags, settings] = await Promise.all([
     getPostCategories(),
     getPostTags(),
@@ -32,3 +30,4 @@ export default async function NewPostPage() {
     />
   )
 }
+

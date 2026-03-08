@@ -1,15 +1,14 @@
 import { notFound } from "next/navigation";
-import { connection } from "next/server";
-import { getCouponById, deleteCoupon } from "@/admin/actions/coupon";
+import { headers } from "next/headers";
+import { deleteCoupon } from "@/admin/actions/coupon";
+import { getCouponById } from "@/admin/queries/coupon";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { DangerZone } from "@/admin/components/DangerZone";
 import { CouponForm } from "../_components/CouponForm";
 import { DetailSection } from "@/admin/components/DetailSection";
 import { DetailField } from "@/admin/components/DetailField";
-import { formatDateShort, formatPrice } from "@/shared/lib/utils";
+import { formatPrice } from "@/shared/lib/price-format";
 import type { Metadata } from "next";
-
-// 管理画面の動的ルートはビルド時プリレンダリングをスキップ
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -18,7 +17,7 @@ type PageProps = {
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
-  await connection();
+  await headers();
   const { id } = await params;
   const coupon = await getCouponById(id);
 
@@ -32,7 +31,6 @@ export async function generateMetadata({
 }
 
 export default async function EditCouponPage({ params }: PageProps) {
-  await connection();
   const { id } = await params;
   const coupon = await getCouponById(id);
 
@@ -77,19 +75,13 @@ export default async function EditCouponPage({ params }: PageProps) {
           <DetailField
             label="開始日"
             value={
-              <span className="text-lg">
-                {formatDateShort(coupon.validFrom)}
-              </span>
+              <span className="text-lg">{coupon.validFromLabel}</span>
             }
           />
           <DetailField
             label="終了日"
             value={
-              <span className="text-lg">
-                {coupon.validUntil
-                  ? formatDateShort(coupon.validUntil)
-                  : "無期限"}
-              </span>
+              <span className="text-lg">{coupon.validUntilLabel ?? "無期限"}</span>
             }
           />
         </div>
@@ -107,3 +99,4 @@ export default async function EditCouponPage({ params }: PageProps) {
     </AdminDetailLayout>
   );
 }
+

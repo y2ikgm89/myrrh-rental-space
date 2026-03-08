@@ -25,7 +25,8 @@ import {
 import { Input } from "@/admin/components/ui/input";
 import { Label } from "@/admin/components/ui/label";
 import { Textarea } from "@/admin/components/ui/textarea";
-import { createPage, checkPageSlugAvailability } from "@/admin/actions/page";
+import { createPage } from "@/admin/actions/page";
+import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import { logger } from "@/shared/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
 
@@ -64,6 +65,18 @@ function generateSlugFromTitle(title: string): string {
 }
 
 type SlugStatus = "idle" | "checking" | "available" | "unavailable";
+
+type SlugAvailabilityResult = {
+  available: boolean;
+  message?: string;
+};
+
+async function fetchSlugAvailability(
+  slug: string,
+): Promise<SlugAvailabilityResult> {
+  const params = new URLSearchParams({ slug });
+  return fetchAdminJson(`/admin/api/pages/slug-availability?${params.toString()}`);
+}
 
 export function CreatePageDialog() {
   const router = useRouter();
@@ -121,7 +134,7 @@ export function CreatePageDialog() {
       setSlugStatus("checking");
     });
     slugCheckRef.current = setTimeout(async () => {
-      const result = await checkPageSlugAvailability(slug);
+      const result = await fetchSlugAvailability(slug);
       if (result.available) {
         setSlugStatus("available");
         setSlugMessage("");

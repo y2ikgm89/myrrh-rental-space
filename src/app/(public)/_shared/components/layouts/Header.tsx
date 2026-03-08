@@ -23,7 +23,7 @@ import { gsap, ScrollTrigger } from '@/public/lib/gsap-config'
 import { useMotionPreference } from '@/public/hooks/use-motion-preference'
 import type { PublicNavItem } from '@/shared/domain/navigation/queries'
 import { HeaderScrollBehavior, HeaderBackgroundMode } from '@/shared/db/enums'
-import { cn } from '@/shared/lib/utils'
+import { cn } from '@/shared/lib/cn'
 
 interface HeaderProps {
   readonly brandName?: string

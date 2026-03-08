@@ -13,7 +13,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { X, Plus, Check } from 'lucide-react'
 import { Input, Label, Badge } from '@/admin/components/ui'
-import { cn } from '@/shared/lib/utils'
+import { cn } from '@/shared/lib/cn'
 
 // =============================================================================
 // Types

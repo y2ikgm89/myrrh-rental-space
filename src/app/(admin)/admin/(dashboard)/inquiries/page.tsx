@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { getInquiries } from "@/admin/actions/inquiry";
+import { getInquiries } from "@/admin/queries/inquiry";
 import { InquiryFilters } from "./_components/InquiryFilters";
 import { InquiryTable } from "./_components/InquiryTable";
 import { Pagination } from "@/admin/components/ui";
@@ -7,7 +7,6 @@ import { LoadingState } from "@/admin/components/LoadingState";
 import { parseInquiryStatusFilter } from "@/shared/lib/validations/enums";
 import { loadAdminInquirySearchParams } from "@/shared/lib/nuqs";
 import type { Metadata } from "next";
-import { connection } from "next/server";
 
 export const metadata: Metadata = {
   title: "お問い合わせ管理 | Myrrh Rental Space",
@@ -41,7 +40,6 @@ async function InquiryList({ searchParams }: { searchParams: SearchParams }) {
 }
 
 export default async function InquiriesPage({ searchParams }: PageProps) {
-  await connection();
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
@@ -66,3 +64,4 @@ export default async function InquiriesPage({ searchParams }: PageProps) {
     </div>
   );
 }
+

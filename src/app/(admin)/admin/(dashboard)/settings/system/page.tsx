@@ -5,8 +5,7 @@
  */
 
 import { Suspense } from 'react'
-import { connection } from 'next/server'
-import { getSettings } from '@/admin/actions/settings'
+import { getSettings } from '@/admin/queries/settings'
 import { SettingsLayout } from '../_components/SettingsLayout'
 import { SettingsTabs } from '../_components/SettingsTabs'
 import { MaintenanceSection } from '../_components/sections/MaintenanceSection'
@@ -23,8 +22,6 @@ export const metadata = {
 // =============================================================================
 
 async function SystemSettingsContent(): Promise<ReactElement> {
-  await connection()
-
   const settings = await getSettings()
 
   if (!settings) {
@@ -77,7 +74,7 @@ function SystemSettingsLoading(): ReactElement {
 // ページ
 // =============================================================================
 
-export default function SystemSettingsPage(): ReactElement {
+export default async function SystemSettingsPage(): Promise<ReactElement> {
   return (
     <SettingsLayout title="システム管理" description="システム全体の設定を管理">
       <Suspense fallback={<SystemSettingsLoading />}>
@@ -86,3 +83,6 @@ export default function SystemSettingsPage(): ReactElement {
     </SettingsLayout>
   )
 }
+
+
+

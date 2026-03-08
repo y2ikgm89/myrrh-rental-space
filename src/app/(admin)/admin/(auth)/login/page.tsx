@@ -7,8 +7,9 @@
  */
 
 import type { Metadata } from 'next'
-import { headers } from 'next/headers'
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { ADMIN_GATE_COOKIE_NAME } from '@/shared/lib/admin-login-gate-cookie'
 import { getSession } from '@/shared/lib/auth'
 import { LoginForm } from './LoginForm'
 import { CopyrightYear } from './CopyrightYear'
@@ -18,14 +19,26 @@ export const metadata: Metadata = {
   title: 'ログイン | 管理画面',
 }
 
-export default async function LoginPage(): Promise<ReactElement> {
-  // Force dynamic rendering by reading headers (nextConfig.cacheComponents compatible)
-  await headers()
+type Props = {
+  searchParams: Promise<{ token?: string }>
+}
+
+export default async function LoginPage({
+  searchParams,
+}: Props): Promise<ReactElement> {
+  const cookieStore = await cookies()
+  const params = await searchParams
   const session = await getSession()
 
   // 既にログイン済みならダッシュボードへ
   if (session?.user) {
     redirect('/admin')
+  }
+
+  const token = params.token
+  const adminGateCookie = cookieStore.get(ADMIN_GATE_COOKIE_NAME)?.value
+  if (token && adminGateCookie !== '1') {
+    redirect(`/api/admin/login-tokens/authorize?token=${encodeURIComponent(token)}`)
   }
 
   return (
@@ -132,3 +145,4 @@ export default async function LoginPage(): Promise<ReactElement> {
     </div>
   )
 }
+

@@ -9,7 +9,7 @@ import {
 } from "react";
 import { tv } from "tailwind-variants";
 import { getAvailableTimeSlots, type TimeSlot } from "@/shared/lib/reservation";
-import { cn } from "@/shared/lib/utils";
+import { cn } from "@/shared/lib/cn";
 import { Input } from "@/admin/components/ui/input";
 import { Label } from "@/admin/components/ui/label";
 import { logger } from "@/shared/lib/logger";

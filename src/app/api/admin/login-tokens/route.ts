@@ -1,17 +1,18 @@
 /**
  * 管理画面ログインゲート用トークン生成API
  *
- * 管理者がスタッフにログインURLを共有するための署名付きトークンを生成します。
- * トークンは30日間有効で、Proxy で stateless に検証されます。
+ * 管理者がスタッフにログインURLを共有するための署名付きワンタイムトークンを生成します。
+ * トークンは30日間有効で、Route Handler で署名検証 + DB消費を行います。
  *
  * ## 機能
  * - トークン生成（POST）
- * - アクティブなトークン一覧取得（GET）
+ * - 未使用トークン一覧取得（GET）
  *
  * @module api/admin/login-tokens
  */
 
 import { NextResponse } from 'next/server'
+import { unstable_rethrow } from 'next/navigation'
 import { getSession, getRoleFromSession } from '@/shared/lib/auth'
 import { createAdminLoginTokenRecord } from '@/shared/domain/admin-login-tokens/commands'
 import { getActiveAdminLoginTokens } from '@/shared/domain/admin-login-tokens/queries'
@@ -23,10 +24,10 @@ import { isAdminRole, isSuperAdminRole } from '@/admin/lib/role-guards'
 /**
  * 署名付きログイントークンを生成
  */
-export async function POST(): Promise<NextResponse> {
+export async function POST(request: Request): Promise<NextResponse> {
   try {
     // 認証チェック
-    const session = await getSession()
+    const session = await getSession(request.headers)
     const role = getRoleFromSession(session)
     if (!session?.user || !role || (!isAdminRole(role) && !isSuperAdminRole(role))) {
       return NextResponse.json(
@@ -52,6 +53,7 @@ export async function POST(): Promise<NextResponse> {
       expiresAt: loginToken.expiresAt.toISOString(),
     })
   } catch (error: unknown) {
+    unstable_rethrow(error)
     logError(normalizeError(error), {
       category: ErrorCategory.DATABASE,
       severity: ErrorSeverity.HIGH,
@@ -67,10 +69,10 @@ export async function POST(): Promise<NextResponse> {
 /**
  * アクティブなトークン一覧を取得
  */
-export async function GET(): Promise<NextResponse> {
+export async function GET(request: Request): Promise<NextResponse> {
   try {
     // 認証チェック
-    const session = await getSession()
+    const session = await getSession(request.headers)
     const role = getRoleFromSession(session)
     if (!session?.user || !role || (!isAdminRole(role) && !isSuperAdminRole(role))) {
       return NextResponse.json(
@@ -79,7 +81,7 @@ export async function GET(): Promise<NextResponse> {
       )
     }
 
-    // 有効期限が切れていないトークンを取得（有効期限内であれば複数回使用可能）
+    // 未使用かつ有効期限内のトークンのみ取得
     const tokens = await getActiveAdminLoginTokens()
 
     return NextResponse.json({
@@ -91,6 +93,7 @@ export async function GET(): Promise<NextResponse> {
       })),
     })
   } catch (error: unknown) {
+    unstable_rethrow(error)
     logError(normalizeError(error), {
       category: ErrorCategory.DATABASE,
       severity: ErrorSeverity.MEDIUM,

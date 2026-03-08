@@ -9,7 +9,7 @@
 import type { Metadata } from "next";
 import type { ReactElement } from "react";
 import { Suspense } from "react";
-import { connection } from "next/server";
+import { headers } from "next/headers";
 import { DashboardHeader } from "./_components/DashboardHeader";
 import { DashboardStatsSection } from "./_components/DashboardStatsSection";
 import { DashboardChartSection } from "./_components/DashboardChartSection";
@@ -43,11 +43,10 @@ function DashboardHeaderSkeleton() {
 }
 
 export default async function AdminDashboard(): Promise<ReactElement> {
-  await connection();
-
+  await headers();
   return (
     <div className="space-y-6">
-      {/* ヘッダー: 動的コンテンツ（connection()使用のためSuspense必須） */}
+      {/* ヘッダー */}
       <Suspense fallback={<DashboardHeaderSkeleton />}>
         <DashboardHeader />
       </Suspense>
@@ -81,3 +80,4 @@ export default async function AdminDashboard(): Promise<ReactElement> {
     </div>
   );
 }
+

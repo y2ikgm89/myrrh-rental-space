@@ -66,14 +66,14 @@ import {
   Instagram,
 } from "lucide-react";
 import {
-  getHomepageSections,
   updateSectionOrder,
   toggleHomepageSection,
   deleteHomepageSection,
   createHomepageSection,
   initializeDefaultSections,
-  type HomepageSectionData,
 } from "@/admin/actions/homepage-settings";
+import type { HomepageSectionData } from "@/admin/queries/homepage-settings";
+import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import {
   SectionType,
   sectionTypeLabels,
@@ -81,6 +81,10 @@ import {
 } from "@/admin/lib/validations/homepage-section";
 import { logger } from "@/shared/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
+
+async function fetchHomepageSections(): Promise<HomepageSectionData[]> {
+  return fetchAdminJson("/admin/api/homepage-sections");
+}
 
 // =============================================================================
 // Icons Mapping
@@ -337,7 +341,7 @@ export function HomepageTab({
 
     async function load() {
       try {
-        const data = await getHomepageSections();
+        const data = await fetchHomepageSections();
         if (!cancelled) setSections(data);
       } catch (error) {
         logger.error("Failed to load sections", {
@@ -355,7 +359,7 @@ export function HomepageTab({
 
   // Reload sections from server (used to revert optimistic updates on error)
   function reloadSections() {
-    getHomepageSections()
+    fetchHomepageSections()
       .then(setSections)
       .catch(() => {
         /* best-effort reload after optimistic revert */
@@ -375,7 +379,7 @@ export function HomepageTab({
       const result = await action();
       if (result.success) {
         toast.success(result.message);
-        const data = await getHomepageSections();
+        const data = await fetchHomepageSections();
         startTransition(() => {
           setSections(data);
         });

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Search, User, Mail, Phone, Plus, X } from "lucide-react";
-import { searchCustomers } from "@/admin/actions/customer";
+import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import { Input, Button, Label, Card, CardContent } from "@/admin/components/ui";
 import type { CustomerSearchResult } from "@/shared/domain/customers/types";
 import { logger } from "@/shared/lib/logger";
@@ -25,6 +25,13 @@ interface CustomerSelectorProps {
   onToggleNewCustomer: (isNew: boolean) => void;
   errors?: Record<string, string[] | undefined>;
   allowNewCustomer?: boolean;
+}
+
+async function fetchCustomerSearchResults(
+  query: string,
+): Promise<CustomerSearchResult[]> {
+  const params = new URLSearchParams({ q: query });
+  return fetchAdminJson(`/admin/api/customers/search?${params.toString()}`);
 }
 
 export function CustomerSelector({
@@ -78,7 +85,7 @@ export function CustomerSelector({
     searchTimeoutRef.current = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const results = await searchCustomers(searchQuery);
+        const results = await fetchCustomerSearchResults(searchQuery);
         setSearchResults(results);
       } catch (error) {
         logger.error("顧客検索エラー", {

@@ -3,7 +3,6 @@
 import { updateTag } from "next/cache";
 import { z } from "zod";
 import { executeAdminMutation } from "@/admin/lib/admin-action";
-import { checkReadPermissionFor } from "@/admin/lib/permissions";
 import {
   createSuccess,
   type ActionResult,
@@ -22,37 +21,11 @@ import {
   updateCustomerNotes as updateCustomerNotesCommand,
   updateCustomerStatus as updateCustomerStatusCommand,
 } from "@/shared/domain/customers/commands";
-import {
-  getCustomerById as getCustomerByIdQuery,
-  getCustomerStats as getCustomerStatsQuery,
-  getCustomers as getCustomersQuery,
-  searchCustomers as searchCustomersQuery,
-} from "@/shared/domain/customers/queries";
-import type {
-  CustomerFilters,
-  CustomerPagination,
-  CustomerSearchResult,
-  CustomerStats,
-  CustomerWithReservations,
-  GetCustomersResult,
-} from "@/shared/domain/customers/types";
 import { createValidationError } from "@/shared/lib/action-helpers";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { CustomerStatus } from "@/shared/lib/validations/enums";
 
-const checkReadPermission = checkReadPermissionFor("customer");
 const idSchema = z.string().uuid({ error: "顧客IDが不正です" });
-
-export async function getCustomers(
-  filters: CustomerFilters = {},
-  pagination: CustomerPagination = {},
-): Promise<GetCustomersResult> {
-  if (!(await checkReadPermission())) {
-    return { customers: [], total: 0, page: 1, limit: 10, totalPages: 0 };
-  }
-
-  return getCustomersQuery(filters, pagination);
-}
 
 export async function createCustomer(
   input: CustomerFormInput,
@@ -72,21 +45,6 @@ export async function createCustomer(
     },
     resolveAuditResourceId: (result) => result.id,
   });
-}
-
-export async function getCustomerById(
-  id: string,
-): Promise<CustomerWithReservations | null> {
-  if (!(await checkReadPermission())) {
-    return null;
-  }
-
-  const validated = idSchema.safeParse(id);
-  if (!validated.success) {
-    return null;
-  }
-
-  return getCustomerByIdQuery(validated.data);
 }
 
 export async function updateCustomerStatus(
@@ -189,14 +147,6 @@ export async function updateCustomer(
   });
 }
 
-export async function getCustomerStats(): Promise<CustomerStats> {
-  if (!(await checkReadPermission())) {
-    return { total: 0, new: 0, regular: 0, vip: 0, inactive: 0, blacklist: 0 };
-  }
-
-  return getCustomerStatsQuery();
-}
-
 export async function deleteCustomer(id: string): Promise<ActionResult<void>> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) {
@@ -215,14 +165,4 @@ export async function deleteCustomer(id: string): Promise<ActionResult<void>> {
       updateTag(CACHE_TAGS.CUSTOMERS);
     },
   });
-}
-
-export async function searchCustomers(
-  query: string,
-): Promise<CustomerSearchResult[]> {
-  if (!(await checkReadPermission())) {
-    return [];
-  }
-
-  return searchCustomersQuery(query);
 }

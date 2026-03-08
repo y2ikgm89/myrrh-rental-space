@@ -8,7 +8,6 @@ import { loadAdminMediaSearchParams } from "@/shared/lib/nuqs";
 import { MediaFilters } from "./_components/MediaFilters";
 import { MediaListWrapper } from "./_components/MediaListWrapper";
 import { LoadingState } from "@/admin/components/LoadingState";
-import { connection } from "next/server";
 
 export const metadata: Metadata = {
   title: "メディア管理",
@@ -30,7 +29,6 @@ async function MediaListWithLoader({
 }
 
 export default async function MediaPage({ searchParams }: PageProps) {
-  await connection();
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
@@ -69,3 +67,4 @@ function MediaGridSkeleton() {
     </div>
   );
 }
+

@@ -13,15 +13,19 @@ import {
   Switch,
   Textarea,
 } from '@/admin/components/ui'
+import { fetchAdminJson } from '@/admin/lib/admin-api-client'
 import {
-  getRobotsTxtSettings,
   updateRobotsTxtSettings,
   resetRobotsTxtToDefault,
-  type RobotsTxtData,
 } from '@/admin/actions/settings'
+import type { RobotsTxtData } from '@/shared/domain/settings/types'
 import { checkRobotsTxtWarnings } from '@/admin/actions/settings/schemas'
 import { useRefreshOnSuccess } from '../hooks'
 import { AlertTriangle, RotateCcw, Info } from 'lucide-react'
+
+async function fetchRobotsTxtSettings(): Promise<RobotsTxtData> {
+  return fetchAdminJson('/admin/api/settings/robots-txt')
+}
 
 export function RobotsTxtSection() {
   const confirm = useConfirm()
@@ -33,17 +37,18 @@ export function RobotsTxtSection() {
   const [warnings, setWarnings] = useState<string[]>([])
 
   useEffect(() => {
-    getRobotsTxtSettings().then((result) => {
-      if (result) {
+    fetchRobotsTxtSettings()
+      .then((result) => {
         setData(result)
         setFormData({
           robotsTxtEnabled: result.robotsTxtEnabled,
           robotsTxtCustom: result.robotsTxtCustom ?? result.defaultRobotsTxt,
         })
         setWarnings(result.warnings)
-      }
-      setIsLoading(false)
-    })
+      })
+      .finally(() => {
+        setIsLoading(false)
+      })
   }, [])
 
   function handleTextChange(text: string) {

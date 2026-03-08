@@ -61,7 +61,7 @@ export const CLICK_MARK_COMMAND: LexicalCommand<string> =
  * ユニークなマークIDを生成
  */
 export function generateMarkId(): string {
-  return `mark_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
+  return `mark_${crypto.randomUUID()}`
 }
 
 /**

@@ -26,7 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/admin/components/ui";
-import { cn } from "@/shared/lib/utils";
+import { cn } from "@/shared/lib/cn";
 import {
   CouponType,
   isValidCouponType,
@@ -105,8 +105,8 @@ export function CouponForm({ coupon }: CouponFormProps): ReactElement {
       minReservationAmount:
         getFormNumber(formData, "minReservationAmount") ?? null,
       maxDiscountAmount: getFormNumber(formData, "maxDiscountAmount") ?? null,
-      validFrom: new Date(getFormString(formData, "validFrom") ?? ""),
-      validUntil: validUntilStr ? new Date(validUntilStr) : null,
+      validFrom: getFormString(formData, "validFrom") ?? "",
+      validUntil: validUntilStr ?? null,
       usageLimit: getFormNumber(formData, "usageLimit") ?? null,
       isActive: getFormBoolean(formData, "isActive"),
       canCombineWithDurationDiscount: getFormBoolean(
@@ -132,12 +132,7 @@ export function CouponForm({ coupon }: CouponFormProps): ReactElement {
 
   const [state, formAction, isPending] = useActionState(submitAction, null);
 
-  const {
-    register,
-    control,
-    setValue,
-    formState: { errors },
-  } = useForm<CouponFormInput>({
+  const form = useForm<CouponFormInput>({
     resolver: zodResolver(couponFormSchema),
     defaultValues: coupon
       ? {
@@ -148,8 +143,10 @@ export function CouponForm({ coupon }: CouponFormProps): ReactElement {
           discountValue: coupon.discountValue,
           minReservationAmount: coupon.minReservationAmount ?? undefined,
           maxDiscountAmount: coupon.maxDiscountAmount ?? undefined,
-          validFrom: coupon.validFrom,
-          validUntil: coupon.validUntil ?? undefined,
+          validFrom: formatDateForInput(coupon.validFrom),
+          validUntil: coupon.validUntil
+            ? formatDateForInput(coupon.validUntil)
+            : undefined,
           usageLimit: coupon.usageLimit ?? undefined,
           isActive: coupon.isActive,
           canCombineWithDurationDiscount: coupon.canCombineWithDurationDiscount,
@@ -160,11 +157,18 @@ export function CouponForm({ coupon }: CouponFormProps): ReactElement {
           description: "",
           type: CouponType.PERCENTAGE,
           discountValue: 10,
-          validFrom: new Date(),
+          validFrom: "",
           isActive: true,
           canCombineWithDurationDiscount: true,
         },
   });
+
+  const {
+    register,
+    control,
+    setValue,
+    formState: { errors },
+  } = form;
 
   // useWatch: React Compiler互換（watch()は非推奨）
   const couponType = useWatch({ control, name: "type" });
@@ -365,11 +369,6 @@ export function CouponForm({ coupon }: CouponFormProps): ReactElement {
                   id="validFrom"
                   type="datetime-local"
                   {...register("validFrom")}
-                  defaultValue={
-                    coupon
-                      ? formatDateForInput(coupon.validFrom)
-                      : formatDateForInput(new Date().toISOString())
-                  }
                   aria-invalid={!!errors.validFrom}
                   aria-describedby={
                     errors.validFrom ? "validFrom-error" : undefined
@@ -388,11 +387,6 @@ export function CouponForm({ coupon }: CouponFormProps): ReactElement {
                   id="validUntil"
                   type="datetime-local"
                   {...register("validUntil")}
-                  defaultValue={
-                    coupon?.validUntil
-                      ? formatDateForInput(coupon.validUntil)
-                      : ""
-                  }
                 />
                 <p className="text-xs text-muted-foreground">
                   空欄の場合は無期限

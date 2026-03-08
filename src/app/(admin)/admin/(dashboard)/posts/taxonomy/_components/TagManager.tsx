@@ -36,8 +36,8 @@ import {
 } from '@/admin/components/ui'
 import { DeleteConfirmDialog } from '@/admin/components/DeleteConfirmDialog'
 import { SortableTableHead } from '@/admin/components/SortableTableHead'
+import { fetchAdminJson } from '@/admin/lib/admin-api-client'
 import {
-  getPostTags,
   createPostTag,
   updatePostTag,
   deletePostTag,
@@ -63,6 +63,10 @@ const tagFormSchema = z.object({
     .max(50)
     .regex(/^[a-z0-9-]+$/, { error: 'スラッグは小文字英数字とハイフンのみ' }),
 }) satisfies z.ZodType<TagFormData>
+
+async function fetchPostTags(): Promise<PostTagData[]> {
+  return fetchAdminJson('/admin/api/post-tags')
+}
 
 // =============================================================================
 // Tag Row
@@ -220,26 +224,26 @@ export function TagManager({ initialTags }: TagManagerProps) {
     startTransition(async () => {
       const payload: PostTagInput = { name: data.name, slug: data.slug }
 
-      if (editingTag) {
-        const result = await updatePostTag(editingTag.id, payload)
-        if (result.success) {
-          toast.success(result.message)
-          const newTags = await getPostTags()
-          startTransition(() => {
-            setIsDialogOpen(false)
-            setTags(newTags)
+        if (editingTag) {
+          const result = await updatePostTag(editingTag.id, payload)
+          if (result.success) {
+            toast.success(result.message)
+            const newTags = await fetchPostTags()
+            startTransition(() => {
+              setIsDialogOpen(false)
+              setTags(newTags)
           })
         } else {
           toast.error(result.error)
         }
-      } else {
-        const result = await createPostTag(payload)
-        if (result.success) {
-          toast.success(result.message)
-          const newTags = await getPostTags()
-          startTransition(() => {
-            setIsDialogOpen(false)
-            setTags(newTags)
+        } else {
+          const result = await createPostTag(payload)
+          if (result.success) {
+            toast.success(result.message)
+            const newTags = await fetchPostTags()
+            startTransition(() => {
+              setIsDialogOpen(false)
+              setTags(newTags)
           })
         } else {
           toast.error(result.error)
@@ -253,7 +257,7 @@ export function TagManager({ initialTags }: TagManagerProps) {
       const result = await deletePostTag(id)
       if (result.success) {
         toast.success(result.message)
-        const newTags = await getPostTags()
+        const newTags = await fetchPostTags()
         startTransition(() => {
           setTags(newTags)
         })

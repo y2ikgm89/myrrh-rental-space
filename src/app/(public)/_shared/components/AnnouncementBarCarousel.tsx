@@ -17,7 +17,7 @@ import { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { gsap } from "@/public/lib/gsap-config";
-import { cn } from "@/shared/lib/utils";
+import { cn } from "@/shared/lib/cn";
 import {
   TYPE_STYLES,
   DEFAULT_TYPE_STYLE,

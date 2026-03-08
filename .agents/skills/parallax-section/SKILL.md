@@ -45,9 +45,10 @@ description: 公開ページのスクロール演出セクションを追加す�
 3. `ui-ux-pro-max` が必要なら `style`, `ux`, `nextjs` だけ検索する
 4. `gsap.matchMedia()` 前提で desktop / mobile / reduced-motion の 3 条件を先に決める
 5. 実装は `useGSAP` + `scope`、`@/public/.../gsap-config` 経由 import、共有 animation 定数の使用を守る
-6. WebGL を使う場合は `VisualEffectsProvider` と effect level gate を入れる
-7. index export や呼び出し側統合を更新する
-8. reduced motion、モバイル、パフォーマンスを確認する
+6. ページ全体の演出基盤が必要な場合だけ `ExperienceShell` に opt-in し、public root layout は触らない
+7. WebGL を使う場合は `ExperienceShell` 配下で `VisualEffectsProvider` と effect level gate を前提にする
+8. index export や呼び出し側統合を更新する
+9. reduced motion、モバイル、パフォーマンスを確認する
 
 ## 検索コマンド例
 
@@ -63,7 +64,10 @@ python3 .agents/skills/ui-ux-pro-max/scripts/search.py "scroll animation perform
 - モバイルではパララックス量を縮小し、`pin: true` を安易に使わない
 - `Math.random()` を使わず決定的な値でレイアウトや粒子を生成する
 - Three.js / PixiJS はフォールバックなしで入れない
+- `SmoothScrollProvider` / `ScrollOrchestratorProvider` / `VisualEffectsProvider` を global layout に戻さない
+- `NuqsAdapter` や URL state provider を public root layout に戻さない
 - z-index、effect level、WebGL context 管理を local rule から逸脱させない
+- 履歴資料の `docs/plans/*` を実装ルールとして扱わない
 
 ## Done
 

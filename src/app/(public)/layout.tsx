@@ -20,7 +20,6 @@ import type { ReactElement, ReactNode } from "react";
 import { Suspense } from "react";
 import { headers } from "next/headers";
 import { Noto_Sans_JP, Noto_Serif_JP } from "next/font/google";
-import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { Header } from "@/public/components/layouts/Header";
 import { Footer } from "@/public/components/layouts/Footer";
 import {
@@ -208,45 +207,42 @@ export default async function PublicRootLayout({
         <Suspense fallback={null}>
           <StructuredDataContent />
         </Suspense>
-        {/* NuqsAdapter は内部で useSearchParams を使用するため Suspense でラップ（Next.js 16 PPR対応） */}
         <Suspense fallback={null}>
-          <NuqsAdapter>
-            <AriaLiveProvider>
-              <div className="flex min-h-screen flex-col">
-                {/* アクセシビリティ: スキップリンク（初回Tabで表示） */}
-                <SkipLink />
+          <AriaLiveProvider>
+            <div className="flex min-h-screen flex-col">
+              {/* アクセシビリティ: スキップリンク（初回Tabで表示） */}
+              <SkipLink />
 
-                {/* キャッシュされたコンテンツ - 静的シェルに含まれる */}
-                <AnnouncementBarWrapper />
-                <Suspense fallback={null}>
-                  <HeaderWithData headerSettings={headerSettings} />
-                </Suspense>
+              {/* キャッシュされたコンテンツ - 静的シェルに含まれる */}
+              <AnnouncementBarWrapper />
+              <Suspense fallback={null}>
+                <HeaderWithData headerSettings={headerSettings} />
+              </Suspense>
 
-                <main
-                  id="main-content"
-                  className="flex-1"
-                  {...(isTransparent && {
-                    "data-header-transparent": "",
-                    style: {
-                      marginTop: "calc(var(--header-height, 0px) * -1)",
-                    },
-                  })}
-                >
-                  {children}
-                </main>
+              <main
+                id="main-content"
+                className="flex-1"
+                {...(isTransparent && {
+                  "data-header-transparent": "",
+                  style: {
+                    marginTop: "calc(var(--header-height, 0px) * -1)",
+                  },
+                })}
+              >
+                {children}
+              </main>
 
-                <Footer />
+              <Footer />
 
-                {/* 動的コンテンツ - リクエスト時にストリーミング */}
-                <Suspense fallback={null}>
-                  <DynamicContent />
-                </Suspense>
+              {/* 動的コンテンツ - リクエスト時にストリーミング */}
+              <Suspense fallback={null}>
+                <DynamicContent />
+              </Suspense>
 
-                {/* アクセシビリティ: スクリーンリーダー向け通知領域 */}
-                <AriaLiveRegion />
-              </div>
-            </AriaLiveProvider>
-          </NuqsAdapter>
+              {/* アクセシビリティ: スクリーンリーダー向け通知領域 */}
+              <AriaLiveRegion />
+            </div>
+          </AriaLiveProvider>
         </Suspense>
       </body>
     </html>

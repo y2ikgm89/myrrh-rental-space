@@ -12,9 +12,8 @@
  * @module api/cron/calendar-sync
  */
 
-import { connection } from 'next/server'
-import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { unstable_rethrow } from 'next/navigation'
 import { revalidateTag } from 'next/cache'
 import { CACHE_TAGS, CACHE_LIFE, getCacheTag } from '@/shared/lib/constants'
 import { syncFromCalendar } from '@/shared/lib/calendar-sync'
@@ -38,14 +37,9 @@ import { serverEnv } from '@/shared/lib/env/server'
  *
  * セキュリティ: CRON_SECRET環境変数による認証
  */
-export async function GET() {
-  // Next.js 16: connection() でプリレンダリングをオプトアウト
-  await connection()
-
+export async function GET(request: Request) {
   try {
-    // Next.js 16: headers() で動的にヘッダーを取得
-    const headersList = await headers()
-    const authHeader = headersList.get('authorization')
+    const authHeader = request.headers.get('authorization')
     const cronSecret = serverEnv.CRON_SECRET
 
     // 本番環境ではCRON_SECRETを必須とする
@@ -184,6 +178,7 @@ export async function GET() {
       timestamp: new Date().toISOString(),
     })
   } catch (error) {
+    unstable_rethrow(error)
     logError(normalizeError(error), {
       category: ErrorCategory.UNKNOWN,
       severity: ErrorSeverity.HIGH,

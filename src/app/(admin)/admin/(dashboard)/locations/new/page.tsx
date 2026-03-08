@@ -6,10 +6,10 @@ export const metadata: Metadata = {
   title: "場所新規作成 | Myrrh Rental Space",
 };
 
-export default function NewLocationPage() {
+export default async function NewLocationPage() {
   return (
     <AdminDetailLayout
-      backHref="/admin/locations"
+      backHref="/admin/spaces?tab=locations"
       title="場所新規作成"
       subtitle="新しい場所（建物・施設）を作成します"
     >
@@ -17,3 +17,4 @@ export default function NewLocationPage() {
     </AdminDetailLayout>
   );
 }
+

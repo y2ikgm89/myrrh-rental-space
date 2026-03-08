@@ -37,14 +37,10 @@ import {
   DialogTrigger,
 } from '@/admin/components/ui/dialog'
 import {
-  getICalTokens,
   createICalToken,
   deleteICalToken,
   updateICalFeedSettings,
-  getICalFeedSettings,
-  type ICalTokenWithRelations,
 } from '@/admin/actions/ical-tokens'
-import { getSpaces } from '@/admin/actions/space'
 import { Copy, Trash2, Plus, ExternalLink, Calendar } from 'lucide-react'
 
 // =============================================================================
@@ -60,6 +56,44 @@ interface SpaceOption {
   name: string
 }
 
+type ICalFeedResponse = {
+  tokens: Array<{
+    id: string
+    token: string
+    name: string
+    spaceId: string | null
+    spaceName: string | null
+    createdBy: string
+    createdByName: string | null
+    createdAt: string
+    expiresAt: string | null
+    lastUsedAt: string | null
+  }>
+  settings: {
+    icalFeedEnabled: boolean
+    icalFeedIncludeCustomerInfo: boolean
+  }
+  spaces: SpaceOption[]
+}
+
+async function fetchICalFeedData(): Promise<ICalFeedResponse> {
+  const response = await fetch('/admin/api/ical-feed', {
+    credentials: 'same-origin',
+  })
+
+  if (!response.ok) {
+    const body: unknown = await response.json().catch(() => null)
+    const message =
+      body && typeof body === 'object' && 'error' in body && typeof body.error === 'string'
+        ? body.error
+        : 'iCalフィード設定の取得に失敗しました'
+    throw new Error(message)
+  }
+
+  const data: ICalFeedResponse = await response.json()
+  return data
+}
+
 // =============================================================================
 // Main Component
 // =============================================================================
@@ -67,7 +101,7 @@ interface SpaceOption {
 export function ICalFeedSection({ onUpdate }: ICalFeedSectionProps) {
   const confirm = useConfirm()
   const [isPending, startTransition] = useTransition()
-  const [tokens, setTokens] = useState<ICalTokenWithRelations[]>([])
+  const [tokens, setTokens] = useState<ICalFeedResponse['tokens']>([])
   const [spaces, setSpaces] = useState<SpaceOption[]>([])
   const [settings, setSettings] = useState({
     icalFeedEnabled: false,
@@ -88,21 +122,23 @@ export function ICalFeedSection({ onUpdate }: ICalFeedSectionProps) {
   // 初回読み込み
   useEffect(() => {
     const loadInitialData = async () => {
-      const [tokensData, settingsData, spacesResult] = await Promise.all([
-        getICalTokens(),
-        getICalFeedSettings(),
-        getSpaces({ isPublished: true }, { limit: 100 }),
-      ])
-      setTokens(tokensData)
-      setSettings(settingsData)
-      setSpaces(spacesResult.spaces.map((s) => ({ id: s.id, name: s.name })))
+      try {
+        const data = await fetchICalFeedData()
+        setTokens(data.tokens)
+        setSettings(data.settings)
+        setSpaces(data.spaces)
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'iCalフィード設定の取得に失敗しました'
+        toast.error(message)
+      }
     }
-    loadInitialData()
+    void loadInitialData()
   }, [])
 
   const refreshTokens = async () => {
-    const tokensData = await getICalTokens()
-    setTokens(tokensData)
+    const data = await fetchICalFeedData()
+    setTokens(data.tokens)
   }
 
   const handleSettingsChange = (key: keyof typeof settings, value: boolean) => {

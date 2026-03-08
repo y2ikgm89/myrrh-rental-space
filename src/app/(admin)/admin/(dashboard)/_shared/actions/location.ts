@@ -3,10 +3,8 @@
 import { updateTag } from "next/cache";
 import { z } from "zod";
 import { executeAdminMutation } from "@/admin/lib/admin-action";
-import { checkReadPermissionFor } from "@/admin/lib/permissions";
 import {
   createSuccess,
-  createFailure,
   type ActionResult,
 } from "@/admin/types/server-actions";
 import {
@@ -21,20 +19,9 @@ import {
   updateLocation as updateLocationCommand,
   updateLocationOrder as updateLocationOrderCommand,
 } from "@/shared/domain/locations/commands";
-import {
-  getLocationById as getLocationByIdQuery,
-  getLocations as getLocationsQuery,
-  getPublishedLocations as getPublishedLocationsQuery,
-} from "@/shared/domain/locations/queries";
-import type {
-  GetLocationsResult,
-  LocationWithStats,
-  PublishedLocationOption,
-} from "@/shared/domain/locations/types";
 import { createValidationError } from "@/shared/lib/action-helpers";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 
-const checkReadPermission = checkReadPermissionFor("location");
 const idSchema = z.string().uuid({ error: "場所IDが不正です" });
 const publishSchema = z.object({
   id: z.string().uuid({ error: "場所IDが不正です" }),
@@ -46,51 +33,6 @@ const locationOrderSchema = z.array(
     sortOrder: z.number().int().min(0, { error: "並び順が不正です" }),
   }),
 );
-
-export async function getLocations(options?: {
-  includeInactive?: boolean;
-  search?: string;
-}): Promise<GetLocationsResult> {
-  const hasPermission = await checkReadPermission();
-  if (!hasPermission) {
-    return { locations: [], total: 0 };
-  }
-
-  return getLocationsQuery(options);
-}
-
-export async function getLocationById(
-  id: string,
-): Promise<ActionResult<LocationWithStats>> {
-  const hasPermission = await checkReadPermission();
-  if (!hasPermission) {
-    return createFailure("権限がありません");
-  }
-
-  const validated = idSchema.safeParse(id);
-  if (!validated.success) {
-    return createValidationError(validated.error);
-  }
-
-  const location = await getLocationByIdQuery(validated.data);
-  if (!location) {
-    return createFailure("場所が見つかりません");
-  }
-
-  return createSuccess("取得しました", location);
-}
-
-export async function getPublishedLocations(): Promise<
-  ActionResult<PublishedLocationOption[]>
-> {
-  const hasPermission = await checkReadPermission();
-  if (!hasPermission) {
-    return createFailure("権限がありません");
-  }
-
-  const locations = await getPublishedLocationsQuery();
-  return createSuccess("取得しました", locations);
-}
 
 export async function createLocation(
   input: LocationFormInput,

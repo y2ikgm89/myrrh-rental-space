@@ -21,6 +21,10 @@ type CouponRecord = {
 };
 
 export type CouponData = Serialized<CouponRecord>;
+export type CouponDetailData = CouponData & {
+  validFromLabel: string;
+  validUntilLabel: string | null;
+};
 
 export type GetCouponsResult = {
   coupons: CouponData[];

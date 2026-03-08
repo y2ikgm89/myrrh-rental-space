@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 
-export default function PostTaxonomyPage() {
+export default async function PostTaxonomyPage() {
   redirect('/admin/posts?tab=categories')
 }
+

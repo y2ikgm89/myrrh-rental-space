@@ -9,8 +9,7 @@
  */
 
 import { Suspense } from 'react'
-import { connection } from 'next/server'
-import { getNavigationItems, getSocialLinks } from '@/admin/actions/navigation'
+import { getNavigationItems, getSocialLinks } from '@/admin/queries/navigation'
 import { SettingsLayout } from '../_components/SettingsLayout'
 import { NavigationManager } from '../site/_components/navigation'
 import type { ReactElement } from 'react'
@@ -19,8 +18,6 @@ import type { ReactElement } from 'react'
  * 動的コンテンツ: ナビゲーション管理
  */
 async function NavigationContent(): Promise<ReactElement> {
-  await connection()
-
   const [desktopItems, mobileItems, footerItems, socialLinks] = await Promise.all([
     getNavigationItems('HEADER_DESKTOP'),
     getNavigationItems('HEADER_MOBILE'),
@@ -60,7 +57,7 @@ function NavigationLoading(): ReactElement {
   )
 }
 
-export default function NavigationSettingsPage(): ReactElement {
+export default async function NavigationSettingsPage(): Promise<ReactElement> {
   return (
     <SettingsLayout
       title="ナビゲーション管理"
@@ -72,3 +69,6 @@ export default function NavigationSettingsPage(): ReactElement {
     </SettingsLayout>
   )
 }
+
+
+

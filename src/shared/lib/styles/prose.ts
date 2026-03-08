@@ -8,7 +8,7 @@
  * @see https://medium.com/design-bootcamp/ux-golden-tip-1-the-magic-number-for-line-height-aae93cd1a35
  */
 
-import { cn } from '@/shared/lib/utils'
+import { cn } from '@/shared/lib/cn'
 
 /**
  * Medium/Notion品質の統一タイポグラフィ

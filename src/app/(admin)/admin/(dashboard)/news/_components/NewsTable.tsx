@@ -9,15 +9,14 @@ import {
 import { EmptyState } from "@/admin/components/EmptyState";
 import { NewsStatusBadge } from "@/admin/components/status-badges";
 import { NewsActionCell } from "./NewsActionCell";
-import { formatDateTimeShort } from "@/shared/lib/utils";
-import type { NewsData } from "@/shared/domain/news/types";
+import type { NewsListItem } from "@/shared/domain/news/types";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type NewsTableProps = {
-  news: NewsData[];
+  news: NewsListItem[];
 };
 
 // =============================================================================
@@ -59,12 +58,10 @@ export function NewsTable({ news }: NewsTableProps) {
                   </div>
                 </TableCell>
                 <TableCell className="hidden text-muted-foreground md:table-cell">
-                  {item.publishedAt
-                    ? formatDateTimeShort(item.publishedAt)
-                    : "-"}
+                  {item.publishedAtLabel ?? "-"}
                 </TableCell>
                 <TableCell className="hidden text-muted-foreground lg:table-cell">
-                  {formatDateTimeShort(item.createdAt)}
+                  {item.createdAtLabel}
                 </TableCell>
                 <TableCell>
                   <NewsActionCell

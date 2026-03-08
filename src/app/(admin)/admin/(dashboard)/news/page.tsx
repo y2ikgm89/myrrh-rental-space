@@ -5,8 +5,8 @@
  */
 
 import { Suspense } from "react";
-import { getNewsList } from "@/admin/actions/news";
-import { getPageBySlug } from "@/admin/actions/page";
+import { getNewsList } from "@/admin/queries/news";
+import { getPageBySlug } from "@/admin/queries/page";
 import { NewsFilters } from "./_components/NewsFilters";
 import { NewsTable } from "./_components/NewsTable";
 import { NewsManagementTabs } from "./_components/NewsManagementTabs";
@@ -16,7 +16,6 @@ import { LoadingState } from "@/admin/components/LoadingState";
 import { parseNewsStatusFilter } from "@/shared/lib/validations/enums";
 import { loadAdminNewsSearchParams } from "@/shared/lib/nuqs";
 import type { Metadata } from "next";
-import { connection } from "next/server";
 
 export const metadata: Metadata = {
   title: "お知らせ管理 | Myrrh Rental Space",
@@ -90,8 +89,6 @@ async function SeoContent() {
 // ==============================================================================
 
 export default async function NewsPage({ searchParams }: PageProps) {
-  await connection();
-
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
@@ -124,3 +121,4 @@ export default async function NewsPage({ searchParams }: PageProps) {
     </div>
   );
 }
+

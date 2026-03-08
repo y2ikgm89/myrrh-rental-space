@@ -4,6 +4,11 @@ import { cacheLife, cacheTag } from "next/cache";
 import { prisma } from "@/shared/db/prisma";
 import type { NavigationType, SocialPlatform } from "@/shared/db/enums";
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
+import {
+  ErrorCategory,
+  ErrorSeverity,
+  safeFetch,
+} from "@/shared/lib/errors/server";
 import { toPlainArray } from "@/shared/lib/serialize";
 
 export type PublicNavItem = {
@@ -56,29 +61,36 @@ export async function getPublicNavigation(
   cacheLife(CACHE_LIFE.STATIC_SETTINGS);
   cacheTag(CACHE_TAGS.NAVIGATION);
 
-  const items = await prisma.navigationItem.findMany({
-    where: {
-      type,
-      parentId: null,
-      isActive: true,
-    },
-    select: {
-      id: true,
-      label: true,
-      url: true,
-      isExternal: true,
-      children: {
-        where: { isActive: true },
-        orderBy: { order: "asc" },
+  const items = await safeFetch({
+    fetch: () =>
+      prisma.navigationItem.findMany({
+        where: {
+          type,
+          parentId: null,
+          isActive: true,
+        },
         select: {
           id: true,
           label: true,
           url: true,
           isExternal: true,
+          children: {
+            where: { isActive: true },
+            orderBy: { order: "asc" },
+            select: {
+              id: true,
+              label: true,
+              url: true,
+              isExternal: true,
+            },
+          },
         },
-      },
-    },
-    orderBy: { order: "asc" },
+        orderBy: { order: "asc" },
+      }),
+    fallback: [],
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getPublicNavigation",
   });
 
   return items.map((item) => ({
@@ -154,25 +166,32 @@ export async function getSocialLinks(
   const { showOnDesktop, showOnMobile, activeOnly = false } = options;
 
   return toPlainArray(
-    await prisma.socialLink.findMany({
-      where: {
-        ...(activeOnly ? { isActive: true } : {}),
-        ...(showOnDesktop !== undefined ? { showOnDesktop } : {}),
-        ...(showOnMobile !== undefined ? { showOnMobile } : {}),
-      },
-      select: {
-        id: true,
-        platform: true,
-        url: true,
-        iconUrl: true,
-        order: true,
-        isActive: true,
-        showOnDesktop: true,
-        showOnMobile: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-      orderBy: { order: "asc" },
+    await safeFetch({
+      fetch: () =>
+        prisma.socialLink.findMany({
+          where: {
+            ...(activeOnly ? { isActive: true } : {}),
+            ...(showOnDesktop !== undefined ? { showOnDesktop } : {}),
+            ...(showOnMobile !== undefined ? { showOnMobile } : {}),
+          },
+          select: {
+            id: true,
+            platform: true,
+            url: true,
+            iconUrl: true,
+            order: true,
+            isActive: true,
+            showOnDesktop: true,
+            showOnMobile: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+          orderBy: { order: "asc" },
+        }),
+      fallback: [],
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.LOW,
+      operationName: "getSocialLinks",
     }),
   );
 }

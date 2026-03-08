@@ -10,6 +10,11 @@ import {
 } from "@/shared/db/enums";
 import { DomainError } from "@/shared/domain/domain-error";
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
+import {
+  ErrorCategory,
+  ErrorSeverity,
+  safeFetch,
+} from "@/shared/lib/errors/server";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 
 export type AnnouncementBarData = {
@@ -187,10 +192,17 @@ export async function getActiveAnnouncementBars(): Promise<AnnouncementBarData[]
   cacheLife(CACHE_LIFE.DYNAMIC_DATA);
   cacheTag(CACHE_TAGS.ANNOUNCEMENT_BAR);
 
-  const items = await prisma.announcementBar.findMany({
-    where: { isActive: true },
-    select: announcementBarSelect,
-    orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
+  const items = await safeFetch({
+    fetch: () =>
+      prisma.announcementBar.findMany({
+        where: { isActive: true },
+        select: announcementBarSelect,
+        orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
+      }),
+    fallback: [],
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getActiveAnnouncementBars",
   });
 
   return toPlainArray(items);
@@ -201,24 +213,31 @@ export async function getAnnouncementBarCarouselSettings(): Promise<Announcement
   cacheLife(CACHE_LIFE.STATIC_SETTINGS);
   cacheTag(CACHE_TAGS.ANNOUNCEMENT_BAR, CACHE_TAGS.SETTINGS);
 
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: {
-      announcementBarAnimation: true,
-      announcementBarDuration: true,
-      announcementBarAutoPlay: true,
-      announcementBarPauseOnHover: true,
-      announcementBarShowArrows: true,
-      announcementBarShowIndicator: true,
-      announcementBarDesignStyle: true,
-      announcementBarBgColor: true,
-      announcementBarTextColor: true,
-      announcementBarStripeColor: true,
-      announcementBarStripeAnimation: true,
-      announcementBarGradientAnimation: true,
-      announcementBarGlassAnimation: true,
-      announcementBarSticky: true,
-    },
+  const settings = await safeFetch({
+    fetch: () =>
+      prisma.settings.findUnique({
+        where: { id: "singleton" },
+        select: {
+          announcementBarAnimation: true,
+          announcementBarDuration: true,
+          announcementBarAutoPlay: true,
+          announcementBarPauseOnHover: true,
+          announcementBarShowArrows: true,
+          announcementBarShowIndicator: true,
+          announcementBarDesignStyle: true,
+          announcementBarBgColor: true,
+          announcementBarTextColor: true,
+          announcementBarStripeColor: true,
+          announcementBarStripeAnimation: true,
+          announcementBarGradientAnimation: true,
+          announcementBarGlassAnimation: true,
+          announcementBarSticky: true,
+        },
+      }),
+    fallback: null,
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getAnnouncementBarCarouselSettings",
   });
 
   if (!settings) {

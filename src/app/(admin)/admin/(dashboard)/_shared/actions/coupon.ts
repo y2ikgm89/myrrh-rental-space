@@ -3,7 +3,6 @@
 import { updateTag } from "next/cache";
 import { z } from "zod";
 import { executeAdminMutation } from "@/admin/lib/admin-action";
-import { checkReadPermissionFor } from "@/admin/lib/permissions";
 import {
   createSuccess,
   type ActionResult,
@@ -17,46 +16,11 @@ import {
   updateCoupon as updateCouponCommand,
 } from "@/shared/domain/coupons/commands";
 import {
-  getCouponById as getCouponByIdQuery,
-  getCoupons as getCouponsQuery,
-} from "@/shared/domain/coupons/queries";
-import type {
-  CouponData,
-  CouponFilters,
-  CouponPagination,
-  GetCouponsResult,
-} from "@/shared/domain/coupons/types";
-import {
   couponFormSchema,
   type CouponFormInput,
 } from "@/shared/lib/validations/coupon";
 
-const checkReadPermission = checkReadPermissionFor("coupon");
 const idSchema = z.string().uuid({ error: "クーポンIDが不正です" });
-
-export async function getCoupons(
-  filters: CouponFilters = {},
-  pagination: CouponPagination = {},
-): Promise<GetCouponsResult> {
-  if (!(await checkReadPermission())) {
-    return { coupons: [], total: 0, page: 1, limit: 10, totalPages: 0 };
-  }
-
-  return getCouponsQuery(filters, pagination);
-}
-
-export async function getCouponById(id: string): Promise<CouponData | null> {
-  if (!(await checkReadPermission())) {
-    return null;
-  }
-
-  const validated = idSchema.safeParse(id);
-  if (!validated.success) {
-    return null;
-  }
-
-  return getCouponByIdQuery(validated.data);
-}
 
 export async function createCoupon(
   input: CouponFormInput,

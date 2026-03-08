@@ -18,47 +18,13 @@ import {
   deleteComments as deleteCommentsCommand,
   restoreComment as restoreCommentCommand,
 } from '@/shared/domain/post-comments/commands'
-import {
-  getAdminComments as getAdminCommentsQuery,
-  getCommentCountByPost as getCommentCountByPostQuery,
-  getCommentStats as getCommentStatsQuery,
-} from '@/shared/domain/post-comments/queries'
-import type {
-  CommentFilters,
-  CommentStats,
-  GetCommentsResult,
-} from '@/shared/domain/post-comments/types'
 import { createValidationError } from '@/shared/lib/action-helpers'
 import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
-import { verifyAdminSession } from '@/shared/lib/auth'
 
 const commentIdSchema = z.string().uuid({ error: 'コメントIDが不正です' })
 const commentIdsSchema = z
   .array(commentIdSchema)
   .min(1, { error: '削除するコメントを選択してください' })
-
-export async function getAdminComments(
-  filters: CommentFilters = {},
-  pagination: { page?: number; limit?: number } = {},
-): Promise<GetCommentsResult> {
-  await verifyAdminSession()
-  return getAdminCommentsQuery(filters, pagination)
-}
-
-export async function getCommentStats(): Promise<CommentStats> {
-  await verifyAdminSession()
-  return getCommentStatsQuery()
-}
-
-export async function getCommentCountByPost(postId: string): Promise<number> {
-  const validated = commentIdSchema.safeParse(postId)
-  if (!validated.success) {
-    return 0
-  }
-
-  await verifyAdminSession()
-  return getCommentCountByPostQuery(validated.data)
-}
 
 export async function deleteCommentAdmin(
   commentId: string,
@@ -127,7 +93,4 @@ export async function restoreCommentAdmin(
 
 export type {
   AdminCommentData,
-  CommentFilters,
-  CommentStats,
-  GetCommentsResult,
 } from '@/shared/domain/post-comments/types'

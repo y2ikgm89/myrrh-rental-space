@@ -17,13 +17,13 @@ paths:
 Cloud Run (Gen2) + Artifact Registry + Cloud Build によるデプロイ。
 Bun ランタイム + Prisma 7 WASM エンジン。
 
-| コンポーネント | 技術 |
-|---------------|------|
-| コンテナランタイム | Bun 1.3.x（Cold Start 高速） |
-| Prisma エンジン | `engineType = "client"` + `runtime = "bun"`（WASM ベース） |
-| Docker ビルド | 3-stage multi-stage（deps → builder → runner） |
-| キャッシュ | BuildKit + BUILDKIT_INLINE_CACHE |
-| CI/CD | Cloud Build → Artifact Registry → Cloud Run |
+| コンポーネント     | 技術                                                       |
+| ------------------ | ---------------------------------------------------------- |
+| コンテナランタイム | Bun 1.3.x（Cold Start 高速）                               |
+| Prisma エンジン    | `engineType = "client"` + `runtime = "bun"`（WASM ベース） |
+| Docker ビルド      | 3-stage multi-stage（deps → builder → runner）             |
+| キャッシュ         | BuildKit + BUILDKIT_INLINE_CACHE                           |
+| CI/CD              | Cloud Build → Artifact Registry → Cloud Run                |
 
 ## Dockerfile パターン
 
@@ -47,18 +47,18 @@ RUN bun install --frozen-lockfile && \
     bunx --bun prisma generate --schema=./prisma/schema.prisma
 ```
 
-**注意**: Prisma 7 の `output = "../src/shared/generated/prisma"` により、生成物は `src/shared/generated/prisma/` に出力される（`node_modules/.prisma/` ではない）。
+**注意**: Prisma 7 の `output = "../generated/prisma"` により、生成物は `generated/prisma/` に出力される（`node_modules/.prisma/` ではない）。
 
 ### builder ステージ
 
 ```dockerfile
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/src/shared/generated ./src/shared/generated  # 必須
+COPY --from=deps /app/generated ./generated  # 必須
 COPY . .
 ```
 
-**CRITICAL**: `.gitignore` が `src/shared/generated/` を除外しているため、Cloud Build ソースアップロードにはこのディレクトリが含まれない。deps ステージから明示的にコピーが必要。
+**CRITICAL**: `.gitignore` が `generated/` を除外しているため、Cloud Build ソースアップロードにはこのディレクトリが含まれない。deps ステージから明示的にコピーが必要。
 
 ### STANDALONE 環境変数
 
@@ -78,7 +78,7 @@ ENV NEXT_TELEMETRY_DISABLED=1 \
 
 **理由**: Windows + Turbopack で standalone コピー時にファイル名の `node:` プロトコルがコロンを含み `EINVAL` エラーになる。ローカル開発では standalone 不要のため Docker ビルド時のみ有効化。
 
-### NEXT_PUBLIC_* のビルド時注入
+### NEXT*PUBLIC*\* のビルド時注入
 
 Next.js は `NEXT_PUBLIC_*` をビルド時にクライアント JS へインライン化する。Docker ARG で注入:
 
@@ -156,13 +156,13 @@ Cloud Run デプロイでは `--update-*`（マージ）を使用。`--set-*`（
 - --set-env-vars=NODE_ENV=production,...
 ```
 
-### NEXT_PUBLIC_* の二重注入
+### NEXT*PUBLIC*\* の二重注入
 
 `NEXT_PUBLIC_*` はビルド時（Docker ARG）とランタイム（Cloud Run env var）の両方で必要:
 
-| 用途 | 注入方法 | 理由 |
-|------|---------|------|
-| ビルド時 | `--build-arg` | クライアント JS へインライン化 |
+| 用途       | 注入方法            | 理由                                      |
+| ---------- | ------------------- | ----------------------------------------- |
+| ビルド時   | `--build-arg`       | クライアント JS へインライン化            |
 | ランタイム | `--update-env-vars` | Server Components / Server Actions で使用 |
 
 ### サーバー専用環境変数
@@ -174,11 +174,11 @@ Cloud Run デプロイでは `--update-*`（マージ）を使用。`--set-*`（
 - --update-env-vars=NODE_ENV=production,NEXT_TELEMETRY_DISABLED=1,...,BETTER_AUTH_URL=${_BETTER_AUTH_URL}
 ```
 
-| 変数 | 用途 |
-|------|------|
-| `BETTER_AUTH_URL` | Better Auth のベース URL（ランタイムのみ） |
-| `NODE_ENV` | production 設定 |
-| `NEXT_TELEMETRY_DISABLED` | Next.js テレメトリー無効化 |
+| 変数                      | 用途                                       |
+| ------------------------- | ------------------------------------------ |
+| `BETTER_AUTH_URL`         | Better Auth のベース URL（ランタイムのみ） |
+| `NODE_ENV`                | production 設定                            |
+| `NEXT_TELEMETRY_DISABLED` | Next.js テレメトリー無効化                 |
 
 ### シークレットバージョン固定
 
@@ -234,13 +234,13 @@ e2e/
 
 ### 必須シークレット（cloudbuild.yaml で管理）
 
-| シークレット | 用途 |
-|-------------|------|
-| `DATABASE_URL` | PostgreSQL 接続 |
-| `BETTER_AUTH_SECRET` | Better Auth 署名キー |
-| `ENCRYPTION_KEY` | API キー暗号化 (64 hex chars) |
-| `CRON_SECRET` | CRON エンドポイント認証 |
-| `ADMIN_LOGIN_TOKEN` | 管理画面アクセス制限 |
+| シークレット         | 用途                          |
+| -------------------- | ----------------------------- |
+| `DATABASE_URL`       | PostgreSQL 接続               |
+| `BETTER_AUTH_SECRET` | Better Auth 署名キー          |
+| `ENCRYPTION_KEY`     | API キー暗号化 (64 hex chars) |
+| `CRON_SECRET`        | CRON エンドポイント認証       |
+| `ADMIN_LOGIN_TOKEN`  | 管理画面アクセス制限          |
 
 ### 任意シークレット（手動追加）
 
@@ -252,11 +252,11 @@ gcloud run services update myrrh-rental-space \
   --update-secrets=RESEND_API_KEY=RESEND_API_KEY:1
 ```
 
-| シークレット | 用途 |
-|-------------|------|
-| `RESEND_API_KEY` | メール送信 |
-| `TURNSTILE_SECRET_KEY` | CAPTCHA |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth |
+| シークレット                                | 用途          |
+| ------------------------------------------- | ------------- |
+| `RESEND_API_KEY`                            | メール送信    |
+| `TURNSTILE_SECRET_KEY`                      | CAPTCHA       |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth  |
 | `INSTAGRAM_APP_ID` / `INSTAGRAM_APP_SECRET` | Instagram API |
 
 ## マイグレーション
@@ -319,15 +319,15 @@ gcloud run jobs execute prisma-migrate --region asia-northeast1 --wait
 
 ## ファイル配置
 
-| パス | 内容 |
-|------|------|
-| `Dockerfile` | 3-stage multi-stage build |
-| `cloudbuild.yaml` | Cloud Build + Cloud Run deploy |
-| `.dockerignore` | Docker ビルドコンテキスト除外 |
-| `.gcloudignore` | Cloud Build ソースアップロード除外 |
-| `docs/operations/deployment.md` | デプロイ手順・IAM・シークレット管理 |
-| `src/shared/lib/env/server.ts` | サーバー環境変数定義 |
-| `src/shared/lib/env/client.ts` | クライアント環境変数定義（NEXT_PUBLIC_*） |
+| パス                            | 内容                                       |
+| ------------------------------- | ------------------------------------------ |
+| `Dockerfile`                    | 3-stage multi-stage build                  |
+| `cloudbuild.yaml`               | Cloud Build + Cloud Run deploy             |
+| `.dockerignore`                 | Docker ビルドコンテキスト除外              |
+| `.gcloudignore`                 | Cloud Build ソースアップロード除外         |
+| `docs/operations/deployment.md` | デプロイ手順・IAM・シークレット管理        |
+| `src/shared/lib/env/server.ts`  | サーバー環境変数定義                       |
+| `src/shared/lib/env/client.ts`  | クライアント環境変数定義（NEXT*PUBLIC*\*） |
 
 ## 参考
 

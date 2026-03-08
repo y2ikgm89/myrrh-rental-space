@@ -24,8 +24,8 @@ import {
   publishPost,
   unpublishPost,
 } from "@/admin/actions/post";
-import { generatePreviewHtml } from "@/admin/actions/preview";
 import { createPreviewHandlers } from "@/admin/hooks";
+import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import type { PostData } from "@/shared/domain/posts/types";
 import { logger } from "@/shared/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
@@ -58,6 +58,21 @@ type UsePostEditorOptions = {
   onCreateCategory?: (name: string) => Promise<CategoryOption | null>;
   onCreateTag?: (name: string) => Promise<TagOption | null>;
 };
+
+async function fetchPreviewHtml(contentJson: string): Promise<string> {
+  const response = await fetchAdminJson<{ html: string }>("/admin/api/preview/html", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      contentJson,
+      resource: "post",
+    }),
+  });
+
+  return response.html;
+}
 
 // =============================================================================
 // Transforms (Type-safe)
@@ -292,14 +307,7 @@ export function usePostEditor({
       const values = getValues();
       const identifier =
         mode === "create" ? "preview-new" : slug || "preview-new";
-      const contentHtml = await generatePreviewHtml(
-        values.contentJson || "",
-        "post",
-      );
-      if (contentHtml === null) {
-        toast.error("プレビューの生成に失敗しました");
-        return;
-      }
+      const contentHtml = await fetchPreviewHtml(values.contentJson || "");
       const previewData = toPreviewData(values, categories, contentHtml);
       saveAndOpenPreview(identifier, previewData, "/posts");
     } catch (error) {

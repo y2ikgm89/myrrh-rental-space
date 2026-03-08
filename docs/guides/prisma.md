@@ -38,7 +38,7 @@ Bun公式ドキュメントでは、generator設定に`runtime = "bun"`を追加
 ```prisma
 generator client {
   provider = "prisma-client"
-  output   = "../src/shared/generated/prisma"
+  output   = "../generated/prisma"
   runtime  = "bun"  // オプション：Bunランタイム最適化
 }
 ```
@@ -65,10 +65,10 @@ generator client {
 
 Prisma 7 では新しい `prisma-client` ジェネレーターが推奨されます。
 
-| ジェネレーター | 状態 | Rust エンジン | バンドルサイズ |
-|---------------|------|--------------|---------------|
-| `prisma-client` | **最新（推奨）** | 不使用 | 小さい |
-| `prisma-client-js` | レガシー | 使用 | 大きい |
+| ジェネレーター     | 状態             | Rust エンジン | バンドルサイズ |
+| ------------------ | ---------------- | ------------- | -------------- |
+| `prisma-client`    | **最新（推奨）** | 不使用        | 小さい         |
+| `prisma-client-js` | レガシー         | 使用          | 大きい         |
 
 ### 4. Turbopack 互換性
 
@@ -97,17 +97,18 @@ generator client {
 
 ```typescript
 // ✅ Prisma 7の推奨: カスタム出力パスからインポート
-import { PrismaClient, Prisma } from '@/generated/prisma/client'
-import type { StockStatus } from '@/generated/prisma/client'
+import { PrismaClient, Prisma } from "@/generated/prisma/client";
+import type { StockStatus } from "@/generated/prisma/client";
 
 // PrismaClientのインスタンス化
-const prisma = new PrismaClient()
+const prisma = new PrismaClient();
 
 // 型の使用
-const where: Prisma.CustomerWhereInput = {}
+const where: Prisma.CustomerWhereInput = {};
 ```
 
 **利点:**
+
 - Prisma 7の最新推奨に準拠
 - プロジェクト構造が明確
 - バンドルサイズの最適化
@@ -117,10 +118,11 @@ const where: Prisma.CustomerWhereInput = {}
 
 ```typescript
 // ❌ Prisma 7では非推奨（カスタム出力パス指定時は動作しない）
-import { PrismaClient, Prisma } from '@prisma/client'
+import { PrismaClient, Prisma } from "@prisma/client";
 ```
 
 **問題点:**
+
 - カスタム出力パスを指定した場合、動作しない
 - Prisma 7の推奨に反する
 - 将来のバージョンで完全に削除される可能性
@@ -136,6 +138,7 @@ import { PrismaClient, Prisma } from '@prisma/client'
 ### 推奨される対応
 
 1. **スキーマファイルの確認と設定**
+
    ```prisma
    // prisma/schema.prisma
    generator client {
@@ -150,17 +153,18 @@ import { PrismaClient, Prisma } from '@prisma/client'
 
 2. **prisma.config.ts の設定（マイグレーション用）**
    Prisma 7 ではマイグレーション用の接続URLを `prisma.config.ts` で設定します:
+
    ```typescript
    // prisma/prisma.config.ts
-   import 'dotenv/config'
-   import { defineConfig, env } from 'prisma/config'
+   import "dotenv/config";
+   import { defineConfig, env } from "prisma/config";
 
    export default defineConfig({
-     schema: 'schema.prisma',
+     schema: "schema.prisma",
      datasource: {
-       url: env('DATABASE_URL'),
+       url: env("DATABASE_URL"),
      },
-   })
+   });
    ```
 
    **重要なポイント:**
@@ -174,14 +178,15 @@ import { PrismaClient, Prisma } from '@prisma/client'
 
    ```typescript
    // ✅ 推奨: シンプルなインポートパス
-   import { PrismaClient } from '@/generated/prisma/client'
+   import { PrismaClient } from "@/generated/prisma/client";
    ```
 
 4. **すべてのインポートを統一**
+
    ```typescript
    // ✅ 統一されたインポートパターン
-   import { PrismaClient, Prisma } from '@/generated/prisma/client'
-   import type { StockStatus } from '@/generated/prisma/client'
+   import { PrismaClient, Prisma } from "@/generated/prisma/client";
+   import type { StockStatus } from "@/generated/prisma/client";
    ```
 
 5. **ドキュメントの更新**
@@ -195,28 +200,31 @@ import { PrismaClient, Prisma } from '@prisma/client'
 
 ```typescript
 // src/lib/prisma.ts
-import { PrismaPg } from '@prisma/adapter-pg'
-import { PrismaClient, Prisma } from '@/generated/prisma/client'
-import { Pool } from 'pg'
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient, Prisma } from "@/generated/prisma/client";
+import { Pool } from "pg";
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-})
+});
 
-const adapter = new PrismaPg(pool)
+const adapter = new PrismaPg(pool);
 
 const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined
-}
+  prisma: PrismaClient | undefined;
+};
 
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
     adapter,
-    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-  })
+    log:
+      process.env.NODE_ENV === "development"
+        ? ["query", "error", "warn"]
+        : ["error"],
+  });
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 ```
 
 **重要**: Prisma 7では、データベース接続にdriver adaptersが**必須**です。PostgreSQLの場合は`@prisma/adapter-pg`を使用します。
@@ -242,9 +250,9 @@ bun add -d @types/pg
 
 ```typescript
 // src/lib/prisma.ts
-import { PrismaPg } from '@prisma/adapter-pg'
-import { PrismaClient } from '@/generated/prisma/client'
-import { Pool } from 'pg'
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "@/generated/prisma/client";
+import { Pool } from "pg";
 
 // 接続プーリングの設定
 const pool = new Pool({
@@ -253,23 +261,26 @@ const pool = new Pool({
   max: 20, // 最大接続数
   idleTimeoutMillis: 30000, // アイドル接続のタイムアウト（30秒）
   connectionTimeoutMillis: 2000, // 接続タイムアウト（2秒）
-})
+});
 
 // Driver adapterの作成
-const adapter = new PrismaPg(pool)
+const adapter = new PrismaPg(pool);
 
 const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined
-}
+  prisma: PrismaClient | undefined;
+};
 
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
     adapter,
-    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-  })
+    log:
+      process.env.NODE_ENV === "development"
+        ? ["query", "error", "warn"]
+        : ["error"],
+  });
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 ```
 
 #### 接続プーリングの設定
@@ -285,7 +296,7 @@ const pool = new Pool({
   max: 20, // 最大接続数（Supabaseのプランに応じて調整）
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
-})
+});
 ```
 
 **接続プーリングの設定パラメータ**:
@@ -306,21 +317,21 @@ const pool = new Pool({
 
 ```typescript
 // src/app/(admin)/admin/customers/page.tsx
-import { prisma } from '@/lib/prisma'
-import type { Prisma } from '@/generated/prisma/client'
+import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@/generated/prisma/client";
 
 // 型安全なwhere条件の構築
-const where: Prisma.CustomerWhereInput = {}
-const customers = await prisma.customer.findMany({ where })
+const where: Prisma.CustomerWhereInput = {};
+const customers = await prisma.customer.findMany({ where });
 ```
 
 ### パターン3: Enum型のインポート
 
 ```typescript
 // ✅ Enum型のインポート
-import type { StockStatus } from '@/generated/prisma/client'
+import type { StockStatus } from "@/generated/prisma/client";
 
-const status: StockStatus = 'IN_STOCK'
+const status: StockStatus = "IN_STOCK";
 ```
 
 ---
@@ -376,13 +387,13 @@ Prisma 7では、カスタム出力パスの指定が必須となり、`@prisma/
 
 ```typescript
 // PrismaClientのインポート
-import { PrismaClient } from '@/generated/prisma/client'
+import { PrismaClient } from "@/generated/prisma/client";
 
 // Prisma型のインポート（型のみ使用する場合）
-import type { Prisma } from '@/generated/prisma/client'
+import type { Prisma } from "@/generated/prisma/client";
 
 // Enum型のインポート
-import type { StockStatus } from '@/generated/prisma/client'
+import type { StockStatus } from "@/generated/prisma/client";
 ```
 
 #### ✅ 整合性チェック

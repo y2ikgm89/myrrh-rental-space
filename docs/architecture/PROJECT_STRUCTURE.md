@@ -34,8 +34,11 @@ myrrh-rental-space/
 │   │   │       └── lib/
 │   │   ├── (admin)/
 │   │   │   ├── layout.tsx
+│   │   │   ├── admin/api/            # client read 専用 Route Handlers
 │   │   │   └── admin/(dashboard)/
 │   │   │       ├── _shared/
+│   │   │       │   ├── actions/      # mutation only
+│   │   │       │   ├── queries/      # private DAL / Server Component read
 │   │   │       └── ...
 │   │   ├── api/
 │   │   ├── sitemap.ts
@@ -96,6 +99,7 @@ myrrh-rental-space/
 │       │   │   ├── commands.ts
 │       │   │   ├── queries.ts
 │       │   │   └── types.ts
+│       │   ├── user-page-assignments/
 │       │   ├── settings/
 │       │   │   ├── admin-queries.ts
 │       │   │   ├── api-key-commands.ts
@@ -138,6 +142,7 @@ myrrh-rental-space/
 ### `generated/prisma/*`
 
 - Prisma generator の出力先
+- git 管理しない
 - lint / type-check の主対象から外す
 - アプリからの直接 import は `src/shared/db/*` に限定する
 
@@ -224,7 +229,7 @@ myrrh-rental-space/
 - `admin-action.ts` を薄い write adapter の共通入口にする
 - action から Prisma を直接読まず、domain command / query を呼ぶ
 - `settings/google-calendar.ts` と `ical-tokens.ts` も thin adapter 化済みで、Google Calendar 設定・Webhook 状態・双方向同期設定・iCal トークン/フィード設定は `src/shared/domain/settings/*` を正本にする
-- `api-keys/queries.ts` と `api-keys/mutations.ts` は admin adapter としてのみ残し、Resend / Turnstile / Google Maps / Cloudflare / Google OAuth / custom API key は `src/shared/domain/settings/api-key-queries.ts` と `src/shared/domain/settings/api-key-commands.ts` を正本にする
+- `api-keys/queries.ts` と `api-keys/mutations.ts` は admin adapter としてのみ残し、Resend / Turnstile / Google Maps / Cloudflare / custom API key は `src/shared/domain/settings/api-key-queries.ts` と `src/shared/domain/settings/api-key-commands.ts` を正本にする
 - `dashboard.ts` と `audit-log.ts` は read adapter としてのみ残し、集計/一覧 query は `src/shared/domain/dashboard/*` と `src/shared/domain/audit-log/*` を正本にする
 - `block-template.ts` は block template の read/write adapter としてのみ残し、一覧・詳細・削除は `src/shared/domain/block-template/*` を正本にする
 - `coupon.ts` と `customer.ts` は read/write adapter としてのみ残し、一覧・詳細・状態変更は `src/shared/domain/coupons/*` と `src/shared/domain/customers/*` を正本にする
@@ -272,7 +277,8 @@ myrrh-rental-space/
 
 ### 管理
 
-- `/admin/login` signed gate + sign in
+- `/admin/login` optimistic gate + sign in
+- `/api/admin/login-tokens/authorize` signed one-time token authorization
 - `/admin/*` dashboard
 
 ## 命名ルール

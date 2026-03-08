@@ -4,7 +4,7 @@ import { List } from "lucide-react";
 import {
   getReservationsForCalendar,
   getSpacesForCalendar,
-} from "@/admin/actions/reservation";
+} from "@/admin/queries/reservation";
 import {
   getCalendarDateRange,
   getValidCalendarView,
@@ -14,7 +14,6 @@ import { loadAdminCalendarSearchParams } from "@/shared/lib/nuqs";
 import { CalendarViewWrapper } from "../_components/calendar";
 import { Button, Breadcrumb } from "@/admin/components/ui";
 import type { Metadata } from "next";
-import { connection } from "next/server";
 
 export const metadata: Metadata = {
   title: "予約カレンダー | Myrrh Rental Space",
@@ -55,7 +54,6 @@ async function CalendarData({ searchParams }: { searchParams: SearchParams }) {
 export default async function ReservationCalendarPage({
   searchParams,
 }: PageProps) {
-  await connection();
   return (
     <div className="flex h-[calc(100vh-8rem)] flex-col space-y-6">
       <Breadcrumb
@@ -92,3 +90,4 @@ export default async function ReservationCalendarPage({
     </div>
   );
 }
+

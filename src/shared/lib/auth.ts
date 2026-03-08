@@ -10,16 +10,12 @@
  * - **複数認証方式**: Email/Password、Google OAuth
  * - **監査ログ**: ログイン成功/失敗の自動記録
  *
- * ## 遅延非同期初期化パターン
- * Better Auth の `betterAuth()` はモジュールロード時に同期的にシングルトン生成される。
- * Google OAuth 資格情報は DB に保存されるため非同期読取が必要。
+ * ## 静的初期化パターン
+ * Better Auth の公式推奨に合わせ、auth インスタンスはモジュールロード時に
+ * env ベースで同期的に 1 回だけ初期化する。
  *
- * - `baseAuth`: 型推論専用（socialProviders なしで同期生成）
- * - `getAuth()`: 実リクエスト用（DB から資格情報を読み、キャッシュ済みインスタンスを返す）
- * - `resetAuthInstance()`: 管理画面で設定変更時にキャッシュ破棄
- *
- * 開発環境のホットリロード時も単一インスタンスを維持し、
- * AsyncLocalStorage の重複初期化警告を回避
+ * Google OAuth provider 設定も env / Secret Manager を正本とし、
+ * 管理画面からの動的上書きは持たない。
  *
  * @see https://www.better-auth.com/docs
  * @module shared/lib/auth
@@ -45,7 +41,6 @@ import {
   normalizeError,
 } from "./errors/server";
 import { serverEnv } from "./env/server";
-import type { GoogleOAuthCredentials } from "./google-oauth-credentials";
 
 /**
  * 監査ログを記録（非同期、失敗無視）
@@ -74,10 +69,26 @@ async function logAuthEvent(
 
 /**
  * Better Auth インスタンス作成関数
- *
- * @param credentials - Google OAuth 資格情報（nullの場合はsocialProvidersなし）
  */
-function createAuth(credentials?: GoogleOAuthCredentials | null) {
+function createAuth() {
+  const googleClientId = serverEnv.GOOGLE_CLIENT_ID;
+  const googleClientSecret = serverEnv.GOOGLE_CLIENT_SECRET;
+  const socialProviders =
+    googleClientId && googleClientSecret
+      ? {
+          google: {
+            clientId: googleClientId,
+            clientSecret: googleClientSecret,
+            scope: [
+              "openid",
+              "email",
+              "profile",
+              "https://www.googleapis.com/auth/calendar.events",
+            ],
+          },
+        }
+      : undefined;
+
   return betterAuth({
     database: createBetterAuthDatabaseAdapter(),
     session: {
@@ -91,22 +102,7 @@ function createAuth(credentials?: GoogleOAuthCredentials | null) {
     emailAndPassword: {
       enabled: true,
     },
-    ...(credentials
-      ? {
-          socialProviders: {
-            google: {
-              clientId: credentials.clientId,
-              clientSecret: credentials.clientSecret,
-              scope: [
-                "openid",
-                "email",
-                "profile",
-                "https://www.googleapis.com/auth/calendar.events",
-              ],
-            },
-          },
-        }
-      : {}),
+    ...(socialProviders ? { socialProviders } : {}),
     user: {
       additionalFields: {
         role: {
@@ -142,56 +138,7 @@ function createAuth(credentials?: GoogleOAuthCredentials | null) {
  */
 type AuthInstance = ReturnType<typeof createAuth>;
 
-// グローバル変数の型定義
-declare global {
-  var authInstance: AuthInstance | undefined;
-}
-
-const globalForAuth = globalThis;
-
-/**
- * Better Auth インスタンスを非同期で取得（遅延初期化）
- *
- * DB から Google OAuth 資格情報を読み、キャッシュ済みインスタンスを返す。
- * 初回呼出し時のみ DB 読取が発生し、以降はキャッシュを使用。
- */
-export async function getAuth(): Promise<AuthInstance> {
-  if (globalForAuth.authInstance) {
-    return globalForAuth.authInstance;
-  }
-
-  let credentials: GoogleOAuthCredentials | null = null;
-  try {
-    // 動的インポートでcircular dependency回避
-    const { getGoogleOAuthCredentials } =
-      await import("./google-oauth-credentials");
-    credentials = await getGoogleOAuthCredentials();
-  } catch (error) {
-    // ビルド時やDB不可の場合はcredentialsなしで初期化
-    logError(normalizeError(error), {
-      category: ErrorCategory.DATABASE,
-      severity: ErrorSeverity.LOW,
-      context: {
-        operation: "getAuth",
-        note: "initializing without Google OAuth",
-      },
-    });
-  }
-
-  const instance = createAuth(credentials);
-  globalForAuth.authInstance = instance;
-  return instance;
-}
-
-/**
- * Auth インスタンスのキャッシュを破棄
- *
- * 管理画面で Google OAuth 設定を変更した後に呼び出し、
- * 次回リクエストで新しい資格情報で再構築させる。
- */
-export function resetAuthInstance(): void {
-  globalForAuth.authInstance = undefined;
-}
+export const auth = createAuth();
 
 /**
  * セッション型
@@ -257,22 +204,33 @@ export function getSessionUser(session: Session | null): User | null {
   return { ...rest, role };
 }
 
+async function resolveRequestHeaders(
+  requestHeaders?: Headers,
+): Promise<Headers> {
+  if (requestHeaders) {
+    return requestHeaders;
+  }
+
+  return await headers();
+}
+
 /**
  * セッション検証（cache()でリクエスト単位でメモ化）
  *
  * Next.js公式ベストプラクティス: Data Access Layer (DAL) パターン
  */
-export const verifySession = cache(async (): Promise<User> => {
-  const auth = await getAuth();
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  const user = getSessionUser(session);
-  if (!user) {
-    redirect("/admin/login");
-  }
-  return user;
-});
+export const verifySession = cache(
+  async (requestHeaders?: Headers): Promise<User> => {
+    const session = await auth.api.getSession({
+      headers: await resolveRequestHeaders(requestHeaders),
+    });
+    const user = getSessionUser(session);
+    if (!user) {
+      redirect("/admin/login");
+    }
+    return user;
+  },
+);
 
 /**
  * 管理者セッション検証（cache()でメモ化）
@@ -280,45 +238,56 @@ export const verifySession = cache(async (): Promise<User> => {
  * ADMIN と SUPER_ADMIN の両方を管理者として扱う。
  * SUPER_ADMIN は全権限を持つため ADMIN と同等以上のアクセスを許可する。
  */
-export const verifyAdminSession = cache(async (): Promise<User> => {
-  const user = await verifySession();
-  if (user.role !== Role.ADMIN && user.role !== Role.SUPER_ADMIN) {
-    redirect("/admin/login");
-  }
-  return user;
-});
+export const verifyAdminSession = cache(
+  async (requestHeaders?: Headers): Promise<User> => {
+    const user = await verifySession(requestHeaders);
+    if (
+      user.role !== Role.ADMIN &&
+      user.role !== Role.SUPER_ADMIN &&
+      user.role !== Role.EDITOR &&
+      user.role !== Role.VIEWER
+    ) {
+      redirect("/admin/login");
+    }
+    return user;
+  },
+);
 
 /**
  * 現在のユーザーを取得（cache()でメモ化）
  *
  * リダイレクトなし版（オプショナル認証用）
  */
-export const getCurrentUser = cache(async (): Promise<User | undefined> => {
-  const auth = await getAuth();
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  return getSessionUser(session) ?? undefined;
-});
+export const getCurrentUser = cache(
+  async (requestHeaders?: Headers): Promise<User | undefined> => {
+    const session = await auth.api.getSession({
+      headers: await resolveRequestHeaders(requestHeaders),
+    });
+    return getSessionUser(session) ?? undefined;
+  },
+);
 
 /**
  * 管理者権限チェック（cache()でメモ化）
  *
  * ADMIN と SUPER_ADMIN の両方を管理者として扱う。
  */
-export const isAdmin = cache(async (): Promise<boolean> => {
-  const user = await getCurrentUser();
-  return user?.role === Role.ADMIN || user?.role === Role.SUPER_ADMIN;
-});
+export const isAdmin = cache(
+  async (requestHeaders?: Headers): Promise<boolean> => {
+    const user = await getCurrentUser(requestHeaders);
+    return user?.role === Role.ADMIN || user?.role === Role.SUPER_ADMIN;
+  },
+);
 
 /**
  * セッション取得（キャッシュなし）
  *
  * Server Actions など cache() が適さない場所で使用
  */
-export async function getSession(): Promise<Session | null> {
-  const auth = await getAuth();
+export async function getSession(
+  requestHeaders?: Headers,
+): Promise<Session | null> {
   return auth.api.getSession({
-    headers: await headers(),
+    headers: await resolveRequestHeaders(requestHeaders),
   });
 }

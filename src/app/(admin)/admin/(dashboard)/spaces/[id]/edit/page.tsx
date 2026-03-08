@@ -1,13 +1,13 @@
 import { notFound } from "next/navigation";
-import { connection } from "next/server";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
-import { getSpaceById } from "@/admin/actions/space";
 import { deleteSpace } from "@/admin/actions/space";
-import { getActiveTermsForSelect } from "@/admin/actions/terms";
-import { getPublishedLocations } from "@/admin/actions/location";
-import { getActiveSpaceCategories } from "@/admin/actions/space-category";
-import { getTaxSettings } from "@/admin/actions/settings";
+import { getSpaceById } from "@/admin/queries/space";
+import { getActiveTermsForSelect } from "@/admin/queries/terms";
+import { getPublishedLocations } from "@/admin/queries/location";
+import { getActiveSpaceCategories } from "@/admin/queries/space-category";
+import { getTaxSettings } from "@/admin/queries/settings";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { DangerZone } from "@/admin/components/DangerZone";
 import { Button } from "@/admin/components/ui";
@@ -20,7 +20,7 @@ type PageProps = { params: Params };
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
-  await connection();
+  await headers();
   const { id } = await params;
   const space = await getSpaceById(id);
   if (!space) return { title: "スペースが見つかりません | Myrrh Rental Space" };
@@ -28,7 +28,6 @@ export async function generateMetadata({
 }
 
 export default async function EditSpacePage({ params }: PageProps) {
-  await connection();
   const { id } = await params;
 
   const [
@@ -90,3 +89,4 @@ export default async function EditSpacePage({ params }: PageProps) {
     </AdminDetailLayout>
   );
 }
+
