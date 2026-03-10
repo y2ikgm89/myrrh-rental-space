@@ -13,9 +13,10 @@
  * @module shared/lib/action-helpers
  */
 
-import type { ZodError, ZodSchema } from 'zod'
-import { verifyTurnstileToken, isTurnstileEnabled } from './turnstile'
-import type { ActionFailure } from '@/shared/types/server-actions'
+import type { ZodError, ZodSchema } from "zod";
+import { verifyTurnstileToken, isTurnstileEnabled } from "./turnstile";
+import type { ActionFailure } from "@/shared/types/server-actions";
+import type { MutationError } from "@/shared/lib/mutation-result";
 
 /**
  * ZodErrorをフィールドエラーマップに変換
@@ -30,17 +31,17 @@ import type { ActionFailure } from '@/shared/types/server-actions'
  * }
  */
 export function extractFieldErrors(error: ZodError): Record<string, string[]> {
-  const fieldErrors: Record<string, string[]> = {}
+  const fieldErrors: Record<string, string[]> = {};
 
   for (const issue of error.issues) {
-    const field = issue.path[0]
-    if (typeof field === 'string') {
-      fieldErrors[field] ??= []
-      fieldErrors[field].push(issue.message)
+    const field = issue.path[0];
+    if (typeof field === "string") {
+      fieldErrors[field] ??= [];
+      fieldErrors[field].push(issue.message);
     }
   }
 
-  return fieldErrors
+  return fieldErrors;
 }
 
 /**
@@ -51,21 +52,38 @@ export function extractFieldErrors(error: ZodError): Record<string, string[]> {
  */
 export function createValidationError(
   error: ZodError,
-  message = '入力内容に誤りがあります'
+  message = "入力内容に誤りがあります",
 ): ActionFailure {
   return {
     success: false,
     error: message,
     fieldErrors: extractFieldErrors(error),
-  }
+  };
+}
+
+/**
+ * ZodErrorをMutationErrorに直接変換
+ *
+ * executeAdminMutationResult パターンで ActionFailure を経由せず
+ * MutationError を生成するためのヘルパー。
+ *
+ * @param error - ZodError
+ * @param message - ユーザー向けエラーメッセージ
+ */
+export function createValidationMutationError(
+  error: ZodError,
+  message = "入力内容に誤りがあります",
+): MutationError {
+  return {
+    error: message,
+    fieldErrors: extractFieldErrors(error),
+  };
 }
 
 /**
  * Turnstile検証結果
  */
-type TurnstileResult =
-  | { success: true }
-  | { success: false; error: string }
+type TurnstileResult = { success: true } | { success: false; error: string };
 
 /**
  * Turnstile検証の共通フロー
@@ -77,29 +95,29 @@ type TurnstileResult =
  */
 export async function validateTurnstile(
   token?: string,
-  options?: { skipEnabledCheck?: boolean }
+  options?: { skipEnabledCheck?: boolean },
 ): Promise<TurnstileResult> {
   if (!options?.skipEnabledCheck && !(await isTurnstileEnabled())) {
-    return { success: true }
+    return { success: true };
   }
 
   if (!token) {
     return {
       success: false,
-      error: 'セキュリティ検証が必要です。ページを再読み込みしてください。',
-    }
+      error: "セキュリティ検証が必要です。ページを再読み込みしてください。",
+    };
   }
 
-  const isValid = await verifyTurnstileToken(token)
+  const isValid = await verifyTurnstileToken(token);
   if (!isValid) {
     return {
       success: false,
       error:
-        'セキュリティ検証に失敗しました。しばらく経ってから再度お試しください。',
-    }
+        "セキュリティ検証に失敗しました。しばらく経ってから再度お試しください。",
+    };
   }
 
-  return { success: true }
+  return { success: true };
 }
 
 /**
@@ -117,15 +135,15 @@ export async function validateTurnstile(
  */
 export async function withTurnstile<T>(
   token: string | undefined,
-  handler: () => Promise<T>
+  handler: () => Promise<T>,
 ): Promise<T | ActionFailure> {
-  const result = await validateTurnstile(token)
+  const result = await validateTurnstile(token);
 
   if (!result.success) {
-    return { success: false, error: result.error }
+    return { success: false, error: result.error };
   }
 
-  return handler()
+  return handler();
 }
 
 /**
@@ -145,15 +163,18 @@ export async function withTurnstile<T>(
 export async function withValidation<Input, Output>(
   schema: ZodSchema<Input>,
   input: unknown,
-  handler: (data: Input) => Promise<Output>
+  handler: (data: Input) => Promise<Output>,
 ): Promise<Output | ActionFailure> {
-  const result = schema.safeParse(input)
+  const result = schema.safeParse(input);
 
   if (!result.success) {
-    return createValidationError(result.error, 'バリデーションエラーが発生しました')
+    return createValidationError(
+      result.error,
+      "バリデーションエラーが発生しました",
+    );
   }
 
-  return handler(result.data)
+  return handler(result.data);
 }
 
 /**
@@ -176,16 +197,16 @@ export async function withTurnstileAndValidation<Input, Output>(
   token: string | undefined,
   schema: ZodSchema<Input>,
   input: unknown,
-  handler: (data: Input) => Promise<Output>
+  handler: (data: Input) => Promise<Output>,
 ): Promise<Output | ActionFailure> {
   // Turnstile検証
-  const turnstileResult = await validateTurnstile(token)
+  const turnstileResult = await validateTurnstile(token);
   if (!turnstileResult.success) {
-    return { success: false, error: turnstileResult.error }
+    return { success: false, error: turnstileResult.error };
   }
 
   // バリデーション + ハンドラ実行
-  return withValidation(schema, input, handler)
+  return withValidation(schema, input, handler);
 }
 
 // =============================================================================
@@ -197,14 +218,14 @@ export async function withTurnstileAndValidation<Input, Output>(
  */
 export type RetryOptions = {
   /** 最大リトライ回数（デフォルト: 3） */
-  maxRetries?: number
+  maxRetries?: number;
   /** 初期遅延（ミリ秒、デフォルト: 100） */
-  initialDelayMs?: number
+  initialDelayMs?: number;
   /** 最大遅延（ミリ秒、デフォルト: 5000） */
-  maxDelayMs?: number
+  maxDelayMs?: number;
   /** リトライ対象のエラー判定（デフォルト: 全てのエラー） */
-  shouldRetry?: (error: unknown) => boolean
-}
+  shouldRetry?: (error: unknown) => boolean;
+};
 
 /**
  * 一時的な障害かどうかを判定
@@ -212,22 +233,22 @@ export type RetryOptions = {
  * Prisma/データベースの接続エラー、ネットワークエラーなどを判定
  */
 export function isTransientError(error: unknown): boolean {
-  if (!(error instanceof Error)) return false
+  if (!(error instanceof Error)) return false;
 
-  const message = error.message.toLowerCase()
+  const message = error.message.toLowerCase();
   const transientPatterns = [
-    'connection',
-    'timeout',
-    'econnreset',
-    'econnrefused',
-    'socket',
-    'network',
-    'temporarily unavailable',
-    'too many connections',
-    'deadlock',
-  ]
+    "connection",
+    "timeout",
+    "econnreset",
+    "econnrefused",
+    "socket",
+    "network",
+    "temporarily unavailable",
+    "too many connections",
+    "deadlock",
+  ];
 
-  return transientPatterns.some((pattern) => message.includes(pattern))
+  return transientPatterns.some((pattern) => message.includes(pattern));
 }
 
 /**
@@ -246,35 +267,35 @@ export function isTransientError(error: unknown): boolean {
  */
 export async function withRetry<T>(
   fn: () => Promise<T>,
-  options: RetryOptions = {}
+  options: RetryOptions = {},
 ): Promise<T> {
   const {
     maxRetries = 3,
     initialDelayMs = 100,
     maxDelayMs = 5000,
     shouldRetry = () => true,
-  } = options
+  } = options;
 
-  let lastError: unknown
-  let delay = initialDelayMs
+  let lastError: unknown;
+  let delay = initialDelayMs;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      return await fn()
+      return await fn();
     } catch (error) {
-      lastError = error
+      lastError = error;
 
       // 最後の試行、またはリトライ対象外のエラー
       if (attempt === maxRetries || !shouldRetry(error)) {
-        throw error
+        throw error;
       }
 
       // 指数バックオフ + ジッター
-      const jitter = Math.random() * delay * 0.1
-      await new Promise((resolve) => setTimeout(resolve, delay + jitter))
-      delay = Math.min(delay * 2, maxDelayMs)
+      const jitter = Math.random() * delay * 0.1;
+      await new Promise((resolve) => setTimeout(resolve, delay + jitter));
+      delay = Math.min(delay * 2, maxDelayMs);
     }
   }
 
-  throw lastError
+  throw lastError;
 }
