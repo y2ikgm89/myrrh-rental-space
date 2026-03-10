@@ -1,14 +1,14 @@
 "use server";
 
 import { z } from "zod";
-import { executeAdminMutation } from "@/admin/lib/admin-action";
-import { createSuccess } from "@/admin/types/server-actions";
+import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import type {
   AddCommentInput,
   CreateThreadInput,
 } from "@/admin/types/editor-comment";
 import { isCommentableContentType } from "@/admin/types/editor-comment";
-import { createValidationError } from "@/shared/lib/action-helpers";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
+import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
   addCommentCommand,
   createCommentThreadCommand,
@@ -46,78 +46,87 @@ const addCommentSchema = z.object({
     .max(5000, { error: "コメントは5000文字以内" }),
 });
 
-export const createCommentThread = async (input: CreateThreadInput) => {
+export async function createCommentThread(
+  input: CreateThreadInput,
+): Promise<
+  MutationResult<Awaited<ReturnType<typeof createCommentThreadCommand>>>
+> {
   const validation = createThreadSchema.safeParse(input);
   if (!validation.success) {
-    return createValidationError(validation.error);
+    return createValidationMutationError(validation.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "post",
     action: "update",
     execute: async (user) =>
       createCommentThreadCommand(user.id, validation.data),
-    success: (thread) =>
-      createSuccess("コメントスレッドを作成しました", thread),
     resolveAuditResourceId: (thread) => thread.id,
   });
-};
+}
 
-export const addComment = async (input: AddCommentInput) => {
+export async function addComment(
+  input: AddCommentInput,
+): Promise<MutationResult<Awaited<ReturnType<typeof addCommentCommand>>>> {
   const validation = addCommentSchema.safeParse(input);
   if (!validation.success) {
-    return createValidationError(validation.error);
+    return createValidationMutationError(validation.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "post",
     action: "update",
     execute: async (user) => addCommentCommand(user.id, validation.data),
-    success: (comment) => createSuccess("コメントを追加しました", comment),
     resolveAuditResourceId: (comment) => comment.id,
   });
-};
+}
 
-export const resolveThread = async (threadId: string) =>
-  executeAdminMutation<void>({
+export async function resolveThread(threadId: string): Promise<MutationResult> {
+  return executeAdminMutationResult({
     resource: "post",
     action: "update",
     resourceId: threadId,
     execute: async (user) => {
       await resolveThreadCommand(user.id, threadId);
+      return null;
     },
-    success: () => createSuccess("スレッドを解決しました"),
   });
+}
 
-export const reopenThread = async (threadId: string) =>
-  executeAdminMutation<void>({
+export async function reopenThread(threadId: string): Promise<MutationResult> {
+  return executeAdminMutationResult({
     resource: "post",
     action: "update",
     resourceId: threadId,
     execute: async () => {
       await reopenThreadCommand(threadId);
+      return null;
     },
-    success: () => createSuccess("スレッドを再オープンしました"),
   });
+}
 
-export const deleteThread = async (threadId: string) =>
-  executeAdminMutation<void>({
+export async function deleteThread(threadId: string): Promise<MutationResult> {
+  return executeAdminMutationResult({
     resource: "post",
     action: "delete",
     resourceId: threadId,
     execute: async () => {
       await deleteThreadCommand(threadId);
+      return null;
     },
-    success: () => createSuccess("スレッドを削除しました"),
   });
+}
 
-export const deleteComment = async (commentId: string) =>
-  executeAdminMutation<void>({
+export async function deleteComment(
+  commentId: string,
+): Promise<MutationResult> {
+  return executeAdminMutationResult({
     resource: "post",
     action: "delete",
     resourceId: commentId,
     execute: async (user) => {
       await deleteCommentCommand(user.id, commentId);
+      return null;
     },
-    success: () => createSuccess("コメントを削除しました"),
   });
+}

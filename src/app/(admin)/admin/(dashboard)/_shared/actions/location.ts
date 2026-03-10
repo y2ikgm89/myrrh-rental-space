@@ -2,11 +2,7 @@
 
 import { updateTag } from "next/cache";
 import { z } from "zod";
-import { executeAdminMutation } from "@/admin/lib/admin-action";
-import {
-  createSuccess,
-  type ActionResult,
-} from "@/admin/types/server-actions";
+import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import {
   locationFormSchema,
   type LocationFormInput,
@@ -19,8 +15,9 @@ import {
   updateLocation as updateLocationCommand,
   updateLocationOrder as updateLocationOrderCommand,
 } from "@/shared/domain/locations/commands";
-import { createValidationError } from "@/shared/lib/action-helpers";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { CACHE_TAGS } from "@/shared/lib/constants";
+import type { MutationResult } from "@/shared/lib/mutation-result";
 
 const idSchema = z.string().uuid({ error: "場所IDが不正です" });
 const publishSchema = z.object({
@@ -36,17 +33,16 @@ const locationOrderSchema = z.array(
 
 export async function createLocation(
   input: LocationFormInput,
-): Promise<ActionResult<{ id: string }>> {
+): Promise<MutationResult<{ id: string }>> {
   const parsed = locationFormSchema.safeParse(input);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "location",
     action: "create",
     execute: async () => createLocationCommand(parsed.data),
-    success: (result) => createSuccess("場所を作成しました", result),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.LOCATIONS);
     },
@@ -57,23 +53,22 @@ export async function createLocation(
 export async function updateLocation(
   id: string,
   input: LocationFormInput,
-): Promise<ActionResult<{ id: string }>> {
+): Promise<MutationResult<{ id: string }>> {
   const validatedId = idSchema.safeParse(id);
   if (!validatedId.success) {
-    return createValidationError(validatedId.error);
+    return createValidationMutationError(validatedId.error);
   }
 
   const parsed = locationFormSchema.safeParse(input);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "location",
     action: "update",
     resourceId: validatedId.data,
     execute: async () => updateLocationCommand(validatedId.data, parsed.data),
-    success: (result) => createSuccess("場所を更新しました", result),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.LOCATIONS);
     },
@@ -84,19 +79,18 @@ export async function updateLocation(
 export async function toggleLocationPublish(
   id: string,
   isPublished: boolean,
-): Promise<ActionResult<{ id: string; isPublished: boolean }>> {
+): Promise<MutationResult<{ id: string; isPublished: boolean }>> {
   const parsed = publishSchema.safeParse({ id, isPublished });
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "location",
     action: "publish",
     resourceId: parsed.data.id,
     execute: async () =>
       toggleLocationPublishCommand(parsed.data.id, parsed.data.isPublished),
-    success: (result) => createSuccess("公開状態を更新しました", result),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.LOCATIONS);
     },
@@ -106,17 +100,16 @@ export async function toggleLocationPublish(
 
 export async function updateLocationOrder(
   items: { id: string; sortOrder: number }[],
-): Promise<ActionResult<{ updated: number }>> {
+): Promise<MutationResult<{ updated: number }>> {
   const parsed = locationOrderSchema.safeParse(items);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "location",
     action: "update",
     execute: async () => updateLocationOrderCommand(parsed.data),
-    success: (result) => createSuccess("並び順を更新しました", result),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.LOCATIONS);
     },
@@ -125,18 +118,17 @@ export async function updateLocationOrder(
 
 export async function deleteLocation(
   id: string,
-): Promise<ActionResult<{ id: string }>> {
+): Promise<MutationResult<{ id: string }>> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) {
-    return createValidationError(validated.error);
+    return createValidationMutationError(validated.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "location",
     action: "delete",
     resourceId: validated.data,
     execute: async () => deleteLocationCommand(validated.data),
-    success: (result) => createSuccess("場所を削除しました", result),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.LOCATIONS);
     },
@@ -146,18 +138,17 @@ export async function deleteLocation(
 
 export async function hardDeleteLocation(
   id: string,
-): Promise<ActionResult<{ id: string }>> {
+): Promise<MutationResult<{ id: string }>> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) {
-    return createValidationError(validated.error);
+    return createValidationMutationError(validated.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "location",
     action: "delete",
     resourceId: validated.data,
     execute: async () => hardDeleteLocationCommand(validated.data),
-    success: (result) => createSuccess("場所を完全に削除しました", result),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.LOCATIONS);
     },

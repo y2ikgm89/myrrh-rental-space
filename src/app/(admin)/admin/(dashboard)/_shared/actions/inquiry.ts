@@ -2,15 +2,15 @@
 
 import { updateTag } from "next/cache";
 import { z } from "zod";
-import { executeAdminMutation } from "@/admin/lib/admin-action";
+import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import {
-  createSuccess,
-  type ActionResult,
-} from "@/admin/types/server-actions";
-import { updateInquiryStatus as updateInquiryStatusCommand, deleteInquiry as deleteInquiryCommand } from "@/shared/domain/inquiries/commands";
-import { createValidationError } from "@/shared/lib/action-helpers";
+  updateInquiryStatus as updateInquiryStatusCommand,
+  deleteInquiry as deleteInquiryCommand,
+} from "@/shared/domain/inquiries/commands";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { InquiryStatus } from "@/shared/db/enums";
+import type { MutationResult } from "@/shared/lib/mutation-result";
 
 const updateStatusSchema = z.object({
   id: z.string().uuid({ error: "お問い合わせIDが不正です" }),
@@ -22,20 +22,20 @@ const idSchema = z.string().uuid({ error: "お問い合わせIDが不正です" 
 export async function updateInquiryStatus(
   id: string,
   status: InquiryStatus,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = updateStatusSchema.safeParse({ id, status });
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "inquiry",
     action: "update",
     resourceId: parsed.data.id,
     execute: async () => {
       await updateInquiryStatusCommand(parsed.data.id, parsed.data.status);
+      return null;
     },
-    success: () => createSuccess("ステータスを更新しました"),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.INQUIRIES);
       updateTag(getCacheTag.inquiries.detail(parsed.data.id));
@@ -43,20 +43,20 @@ export async function updateInquiryStatus(
   });
 }
 
-export async function deleteInquiry(id: string): Promise<ActionResult<void>> {
+export async function deleteInquiry(id: string): Promise<MutationResult> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) {
-    return createValidationError(validated.error);
+    return createValidationMutationError(validated.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "inquiry",
     action: "delete",
     resourceId: validated.data,
     execute: async () => {
       await deleteInquiryCommand(validated.data);
+      return null;
     },
-    success: () => createSuccess("お問い合わせを削除しました"),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.INQUIRIES);
     },

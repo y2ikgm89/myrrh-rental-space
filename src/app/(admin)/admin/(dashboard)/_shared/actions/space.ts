@@ -1,16 +1,15 @@
 "use server";
 
 import { updateTag } from "next/cache";
-import { executeAdminMutation } from "@/admin/lib/admin-action";
+import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
-import {
-  createSuccess,
-} from "@/admin/types/server-actions";
-import { createValidationError } from "@/shared/lib/action-helpers";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { purgeSpaceCache } from "@/shared/lib/cloudflare";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
+import type { MutationResult } from "@/shared/lib/mutation-result";
+import { lexicalJsonSchema } from "@/shared/lib/validations/lexical";
 import {
   createSpaceCommand,
   deleteSpaceCommand,
@@ -27,13 +26,8 @@ async function renderDescriptionHtml(
   value: string | null | undefined,
 ): Promise<string | null> {
   if (!value) return value ?? null;
-  try {
-    const parsed: unknown = JSON.parse(value);
-    if (parsed && typeof parsed === "object" && "root" in parsed) {
-      return renderEditorStateToHtmlLazy(value);
-    }
-  } catch {
-    return value;
+  if (lexicalJsonSchema.safeParse(value).success) {
+    return renderEditorStateToHtmlLazy(value);
   }
 
   return value;
@@ -68,95 +62,98 @@ async function buildSpaceCommandInput(data: SpaceFormData) {
   };
 }
 
-export const createSpace = async (input: SpaceFormData) => {
+export async function createSpace(
+  input: SpaceFormData,
+): Promise<MutationResult<Awaited<ReturnType<typeof createSpaceCommand>>>> {
   const parsed = spaceFormSchema.safeParse(input);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "space",
     action: "create",
     execute: async () => {
       const commandInput = await buildSpaceCommandInput(parsed.data);
       return createSpaceCommand(commandInput);
     },
-    success: (result) => createSuccess("スペースを作成しました", result),
     afterSuccess: (result) => {
       revalidateSpaces(result.id);
     },
     resolveAuditResourceId: (result) => result.id,
   });
-};
+}
 
-export const updateSpace = async (id: string, input: SpaceFormData) => {
+export async function updateSpace(
+  id: string,
+  input: SpaceFormData,
+): Promise<MutationResult> {
   const parsed = spaceFormSchema.safeParse(input);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "space",
     action: "update",
     resourceId: id,
     execute: async () => {
       const commandInput = await buildSpaceCommandInput(parsed.data);
       await updateSpaceCommand(id, commandInput);
+      return null;
     },
-    success: () => createSuccess("スペースを更新しました"),
     afterSuccess: () => {
       revalidateSpaces(id);
     },
   });
-};
+}
 
-export const updateSpacePublish = async (id: string, isPublished: boolean) =>
-  executeAdminMutation({
+export async function updateSpacePublish(
+  id: string,
+  isPublished: boolean,
+): Promise<MutationResult> {
+  return executeAdminMutationResult({
     resource: "space",
     action: "publish",
     resourceId: id,
     execute: async () => {
       await updateSpacePublishCommand(id, isPublished);
+      return null;
     },
-    success: () => createSuccess("公開状態を更新しました"),
     afterSuccess: () => {
       revalidateSpaces(id);
     },
   });
+}
 
-export const deleteSpace = async (id: string) =>
-  executeAdminMutation({
+export async function deleteSpace(id: string): Promise<MutationResult> {
+  return executeAdminMutationResult({
     resource: "space",
     action: "delete",
     resourceId: id,
     execute: async () => {
       await deleteSpaceCommand(id);
+      return null;
     },
-    success: () => createSuccess("スペースを削除しました"),
     afterSuccess: () => {
       revalidateSpaces(id);
     },
   });
+}
 
-export const toggleSpacePublished = async (id: string) => {
-  let isPublished = false;
-
-  return executeAdminMutation({
+export async function toggleSpacePublished(
+  id: string,
+): Promise<MutationResult> {
+  return executeAdminMutationResult({
     resource: "space",
     action: "publish",
     resourceId: id,
     execute: async () => {
-      const result = await toggleSpacePublishedCommand(id);
-      isPublished = result.isPublished;
+      await toggleSpacePublishedCommand(id);
+      return null;
     },
-    success: () =>
-      createSuccess(
-        isPublished
-          ? "スペースを公開しました"
-          : "スペースを非公開にしました",
-      ),
     afterSuccess: () => {
       revalidateSpaces(id);
     },
   });
-};
+}

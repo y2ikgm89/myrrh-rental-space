@@ -2,14 +2,9 @@
 
 import { updateTag } from "next/cache";
 import { z } from "zod";
-import { executeAdminMutation } from "@/admin/lib/admin-action";
+import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { checkRole } from "@/admin/lib/action-auth";
 import { logRoleChange } from "@/admin/lib/audit";
-import {
-  createFailure,
-  createSuccess,
-  type ActionResult,
-} from "@/admin/types/server-actions";
 import {
   createUserSchema,
   updateUserSchema,
@@ -24,8 +19,9 @@ import {
   updateUserRole as updateUserRoleCommand,
 } from "@/shared/domain/users/commands";
 import { isDomainError } from "@/shared/domain/domain-error";
-import { createValidationError } from "@/shared/lib/action-helpers";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import type { MutationResult } from "@/shared/lib/mutation-result";
 
 const idSchema = z.string().uuid({ error: "ユーザーIDが不正です" });
 const updateRoleSchema = z.object({
@@ -35,17 +31,16 @@ const updateRoleSchema = z.object({
 
 export async function createUser(
   input: CreateUserInput,
-): Promise<ActionResult<{ id: string }>> {
+): Promise<MutationResult<{ id: string }>> {
   const parsed = createUserSchema.safeParse(input);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "user",
     action: "create",
     execute: async () => createUserCommand(parsed.data),
-    success: (result) => createSuccess("ユーザーを作成しました", result),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.STAFF);
     },
@@ -56,25 +51,25 @@ export async function createUser(
 export async function updateUser(
   id: string,
   input: UpdateUserInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const validatedId = idSchema.safeParse(id);
   if (!validatedId.success) {
-    return createValidationError(validatedId.error);
+    return createValidationMutationError(validatedId.error);
   }
 
   const parsed = updateUserSchema.safeParse(input);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "user",
     action: "update",
     resourceId: validatedId.data,
     execute: async () => {
       await updateUserCommand(validatedId.data, parsed.data);
+      return null;
     },
-    success: () => createSuccess("ユーザーを更新しました"),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.STAFF);
       updateTag(getCacheTag.staff.detail(validatedId.data));
@@ -82,20 +77,20 @@ export async function updateUser(
   });
 }
 
-export async function deleteUser(id: string): Promise<ActionResult<void>> {
+export async function deleteUser(id: string): Promise<MutationResult> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) {
-    return createValidationError(validated.error);
+    return createValidationMutationError(validated.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "user",
     action: "delete",
     resourceId: validated.data,
     execute: async (user) => {
       await deleteUserCommand(validated.data, user.id);
+      return null;
     },
-    success: () => createSuccess("ユーザーを削除しました"),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.STAFF);
     },
@@ -105,29 +100,37 @@ export async function deleteUser(id: string): Promise<ActionResult<void>> {
 export async function updateUserRole(
   id: string,
   role: Role,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const auth = await checkRole(Role.SUPER_ADMIN);
   if (!auth.success) {
-    return auth.error;
+    return { error: auth.error.error };
   }
 
   const parsed = updateRoleSchema.safeParse({ id, role });
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
   try {
-    const result = await updateUserRoleCommand(parsed.data.id, parsed.data.role);
+    const result = await updateUserRoleCommand(
+      parsed.data.id,
+      parsed.data.role,
+    );
 
-    void logRoleChange(auth.user.id, parsed.data.id, result.oldRole, result.newRole);
+    void logRoleChange(
+      auth.user.id,
+      parsed.data.id,
+      result.oldRole,
+      result.newRole,
+    );
 
     updateTag(CACHE_TAGS.STAFF);
     updateTag(getCacheTag.staff.detail(parsed.data.id));
 
-    return createSuccess("ロールを更新しました");
+    return null;
   } catch (error) {
     if (isDomainError(error)) {
-      return createFailure(error.message);
+      return { error: error.message };
     }
 
     throw error;
