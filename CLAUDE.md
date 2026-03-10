@@ -105,16 +105,16 @@ Skill ツールで明示的に呼び出す。1% でも該当する可能性が�
 
 ### 技術スタック
 
-| 技術         | バージョン | 重要な注意点                                                             |
-| ------------ | ---------- | ------------------------------------------------------------------------ |
-| Next.js      | 16.1.6     | `'use cache'`, `updateTag`, PPR (`cacheComponents: true`)                |
-| React        | 19.2.4     | React Compiler 1.0, `use()`, `useEffectEvent` (stable)                   |
-| TypeScript   | 6.0-beta   | `erasableSyntaxOnly`, `verbatimModuleSyntax` → type-safety.md            |
-| Prisma       | 7.4.2      | WASM エンジン, mapped enums（`as const` オブジェクト）                   |
-| Tailwind CSS | 4.2.1      | CSS-first, `@theme`, セマンティックカラートークン必須                    |
-| Zod          | 4.3.6      | `{ error: }` パラメータ（`message:` は非推奨）                           |
-| Better Auth  | 1.5.3      | RBAC, `executeAdminMutation` / `executeAdminMutationResult` パターン必須 |
-| Bun          | 1.3.10     | テストランナー (`bun:test`), `bunx --bun` でネイティブ実行               |
+| 技術         | バージョン | 重要な注意点                                                  |
+| ------------ | ---------- | ------------------------------------------------------------- |
+| Next.js      | 16.1.6     | `'use cache'`, `updateTag`, PPR (`cacheComponents: true`)     |
+| React        | 19.2.4     | React Compiler 1.0, `use()`, `useEffectEvent` (stable)        |
+| TypeScript   | 6.0.1-rc   | `erasableSyntaxOnly`, `verbatimModuleSyntax` → type-safety.md |
+| Prisma       | 7.4.2      | WASM エンジン, mapped enums（`as const` オブジェクト）        |
+| Tailwind CSS | 4.2.1      | CSS-first, `@theme`, セマンティックカラートークン必須         |
+| Zod          | 4.3.6      | `{ error: }` パラメータ（`message:` は非推奨）                |
+| Better Auth  | 1.5.3      | RBAC, `executeAdminMutationResult` パターン必須               |
+| Bun          | 1.3.10     | テストランナー (`bun:test`), `bunx --bun` でネイティブ実行    |
 
 ### 構造
 

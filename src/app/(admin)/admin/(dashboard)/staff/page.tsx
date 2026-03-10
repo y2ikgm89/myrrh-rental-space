@@ -4,6 +4,7 @@ import { getUsers } from "@/admin/queries/user";
 import { getPendingInvitations } from "@/admin/queries/staff-invitation";
 import { loadAdminUserSearchParams } from "@/shared/lib/nuqs";
 import { getRoleFilterOrAll } from "@/shared/lib/validations/enums";
+import { omitUndefined } from "@/shared/lib/serialize";
 import { Button, Pagination } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
 import {
@@ -55,14 +56,16 @@ type PageProps = {
 
 async function StaffList({ searchParams }: PageProps) {
   const params = await loadAdminUserSearchParams(searchParams);
-  const result = await getUsers({
-    page: params.page,
-    perPage: params.perPage,
-    search: params.search || undefined,
-    role: getRoleFilterOrAll(params.role),
-    sortBy: validateSortBy(params.sortBy),
-    sortOrder: validateSortOrder(params.sortOrder),
-  });
+  const result = await getUsers(
+    omitUndefined({
+      page: params.page,
+      perPage: params.perPage,
+      search: params.search || undefined,
+      role: getRoleFilterOrAll(params.role),
+      sortBy: validateSortBy(params.sortBy),
+      sortOrder: validateSortOrder(params.sortOrder),
+    }),
+  );
 
   return (
     <>

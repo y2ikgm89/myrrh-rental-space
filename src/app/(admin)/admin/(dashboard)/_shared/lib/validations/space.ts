@@ -235,8 +235,8 @@ export type GetSpacesResult = {
  * スペースフィルター
  */
 export type SpaceFilters = {
-  isPublished?: boolean | "ALL";
-  search?: string;
+  isPublished?: boolean | "ALL" | undefined;
+  search?: string | undefined;
 };
 
 /**

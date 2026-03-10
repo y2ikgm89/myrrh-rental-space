@@ -4,6 +4,7 @@ import { PostStatus } from "@/shared/db/enums";
 import { parsePrismaInputJson } from "@/shared/db/json";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
+import { omitUndefined } from "@/shared/lib/serialize";
 import {
   checkSlugAvailability,
   getSlugErrorMessage,
@@ -104,10 +105,10 @@ async function ensurePostCategoryUnique(
   currentId?: string,
 ): Promise<void> {
   const duplicate = await prisma.postCategory.findFirst({
-    where: {
+    where: omitUndefined({
       id: currentId ? { not: currentId } : undefined,
       OR: [{ name: input.name }, { slug: input.slug }],
-    },
+    }),
     select: { name: true, slug: true },
   });
 
@@ -127,10 +128,10 @@ async function ensurePostTagUnique(
   currentId?: string,
 ): Promise<void> {
   const duplicate = await prisma.postTag.findFirst({
-    where: {
+    where: omitUndefined({
       id: currentId ? { not: currentId } : undefined,
       OR: [{ name: input.name }, { slug: input.slug }],
-    },
+    }),
     select: { name: true, slug: true },
   });
 
@@ -173,7 +174,7 @@ export async function createPost(
 
   const post = await prisma.post.create({
     data: {
-      ...buildPostData(input),
+      ...omitUndefined(buildPostData(input)),
       status: PostStatus.DRAFT,
       authorId: input.authorId,
       postTags: {
@@ -204,7 +205,7 @@ export async function updatePost(
   await prisma.post.update({
     where: { id },
     data: {
-      ...buildPostData(input),
+      ...omitUndefined(buildPostData(input)),
       contentWidth: input.contentWidth,
       contentWidthCustom: input.contentWidthCustom,
       postTags: {
@@ -269,13 +270,13 @@ export async function publishPost(
       },
     }),
     prisma.postVersion.create({
-      data: {
+      data: omitUndefined({
         postId: id,
         version,
         contentHtml: post.contentHtml,
         contentJson: post.contentJson ?? undefined,
         createdBy: userId,
-      },
+      }),
     }),
   ]);
 
@@ -323,13 +324,13 @@ export async function createPostBackup(
   const version = (latestVersion?.version ?? 0) + 1;
 
   await prisma.postVersion.create({
-    data: {
+    data: omitUndefined({
       postId: id,
       version,
       contentHtml: post.contentHtml,
       contentJson: post.contentJson ?? undefined,
       createdBy: userId,
-    },
+    }),
   });
 
   return { version };
@@ -362,11 +363,11 @@ export async function restorePostVersion(
 
   await prisma.post.update({
     where: { id: postId },
-    data: {
+    data: omitUndefined({
       contentHtml: versionData.contentHtml,
       contentJson: versionData.contentJson ?? undefined,
       status: PostStatus.DRAFT,
-    },
+    }),
   });
 
   return {

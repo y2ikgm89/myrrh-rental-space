@@ -3,6 +3,7 @@ import "server-only";
 import { parsePrismaInputJson } from "@/shared/db/json";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
+import { omitUndefined } from "@/shared/lib/serialize";
 import {
   checkSlugAvailability,
   getSlugErrorMessage,
@@ -80,10 +81,10 @@ export async function createNews(
   await ensureNewsSlugAvailable(input.slug);
 
   const news = await prisma.news.create({
-    data: {
+    data: omitUndefined({
       ...buildNewsData(input),
       isPublished: false,
-    },
+    }),
     select: {
       id: true,
       slug: true,
@@ -102,7 +103,7 @@ export async function updateNews(
 
   await prisma.news.update({
     where: { id },
-    data: {
+    data: omitUndefined({
       ...buildNewsData(input),
       contentWidth: input.contentWidth,
       contentWidthCustom: input.contentWidthCustom,
@@ -111,7 +112,7 @@ export async function updateNews(
       ogpTitle: normalizeNullableString(input.ogpTitle),
       ogpDescription: normalizeNullableString(input.ogpDescription),
       ogpImageUrl: normalizeNullableString(input.ogpImageUrl),
-    },
+    }),
   });
 
   return {
@@ -169,13 +170,13 @@ export async function publishNews(
       },
     }),
     prisma.newsVersion.create({
-      data: {
+      data: omitUndefined({
         newsId: id,
         version,
         contentHtml: news.contentHtml,
         contentJson: news.contentJson ?? undefined,
         createdBy: userId,
-      },
+      }),
     }),
   ]);
 
@@ -223,13 +224,13 @@ export async function createNewsBackup(
   const version = (latestVersion?.version ?? 0) + 1;
 
   await prisma.newsVersion.create({
-    data: {
+    data: omitUndefined({
       newsId: id,
       version,
       contentHtml: news.contentHtml,
       contentJson: news.contentJson ?? undefined,
       createdBy: userId,
-    },
+    }),
   });
 
   return { version };
@@ -262,11 +263,11 @@ export async function restoreNewsVersion(
 
   await prisma.news.update({
     where: { id: newsId },
-    data: {
+    data: omitUndefined({
       contentHtml: versionData.contentHtml,
       contentJson: versionData.contentJson ?? undefined,
       isPublished: false,
-    },
+    }),
   });
 
   return {

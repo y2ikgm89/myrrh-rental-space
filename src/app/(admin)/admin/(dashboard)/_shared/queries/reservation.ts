@@ -53,11 +53,11 @@ export type GetReservationsResult = {
 };
 
 export type ReservationFilters = {
-  status?: ReservationStatus | "ALL";
-  search?: string;
-  startDate?: string;
-  endDate?: string;
-  spaceId?: string;
+  status?: ReservationStatus | "ALL" | undefined;
+  search?: string | undefined;
+  startDate?: string | undefined;
+  endDate?: string | undefined;
+  spaceId?: string | undefined;
 };
 
 export type ReservationPagination = {

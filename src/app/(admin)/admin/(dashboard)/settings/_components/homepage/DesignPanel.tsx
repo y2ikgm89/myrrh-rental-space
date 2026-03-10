@@ -293,7 +293,7 @@ export function DesignPanel(props: DesignPanelProps) {
           <div className="space-y-2">
             <Label>タイトルサイズ</Label>
             <Select
-              value={titleSize}
+              {...(titleSize !== undefined && { value: titleSize })}
               onValueChange={(val) => {
                 if (isTitleSize(val)) setValue("titleSize", val);
               }}
@@ -375,7 +375,7 @@ export function DesignPanel(props: DesignPanelProps) {
           <div className="space-y-2">
             <Label>アニメーション</Label>
             <Select
-              value={animation}
+              {...(animation !== undefined && { value: animation })}
               onValueChange={(val) => {
                 if (isSectionAnimation(val)) setValue("animation", val);
               }}

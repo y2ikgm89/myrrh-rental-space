@@ -146,7 +146,7 @@ export function PostListConfigForm({
         <div className="flex items-center gap-2">
           <Switch
             id="posts-view-all"
-            checked={showViewAllLink}
+            checked={showViewAllLink ?? false}
             onCheckedChange={(checked) => setValue("showViewAllLink", checked)}
             disabled={isPending}
           />

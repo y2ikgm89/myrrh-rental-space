@@ -24,10 +24,11 @@ import type { ContentWidth } from "@/shared/types/layout";
 // =============================================================================
 
 type UseContentWidthStylesOptions<T extends FieldValues> = {
-  control: Control<T>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  control: Control<T, any>;
   widthFieldName: Path<T>;
   customFieldName: Path<T>;
-  fallback?: ContentWidth;
+  fallback?: ContentWidth | undefined;
 };
 
 const DEFAULT_FALLBACK: ContentWidth = {

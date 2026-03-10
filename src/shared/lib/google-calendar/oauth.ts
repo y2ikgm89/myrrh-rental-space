@@ -10,6 +10,7 @@ import {
 import { serverEnv } from "@/shared/lib/env/server";
 import { getGoogleOAuthAccount } from "@/shared/domain/auth/queries";
 import { updateGoogleOAuthAccountTokens } from "@/shared/domain/auth/commands";
+import { omitUndefined } from "@/shared/lib/serialize";
 import type { CalendarConnectionTestResult } from "./types";
 import { formatGoogleApiError } from "./helpers";
 
@@ -35,24 +36,28 @@ export async function getOAuthClient(
       serverEnv.GOOGLE_CLIENT_SECRET,
     );
 
-    oauth2Client.setCredentials({
-      access_token: account.accessToken,
-      refresh_token: account.refreshToken ?? undefined,
-      expiry_date: account.accessTokenExpiresAt
-        ? account.accessTokenExpiresAt.getTime()
-        : undefined,
-    });
+    oauth2Client.setCredentials(
+      omitUndefined({
+        access_token: account.accessToken,
+        refresh_token: account.refreshToken ?? undefined,
+        expiry_date: account.accessTokenExpiresAt
+          ? account.accessTokenExpiresAt.getTime()
+          : undefined,
+      }),
+    );
 
     // トークンリフレッシュのハンドラー
     const accountId = account.id;
     oauth2Client.on("tokens", async (tokens) => {
       if (tokens.access_token) {
-        await updateGoogleOAuthAccountTokens({
-          accountId,
-          accessToken: tokens.access_token,
-          refreshToken: tokens.refresh_token ?? undefined,
-          expiryDate: tokens.expiry_date ?? undefined,
-        });
+        await updateGoogleOAuthAccountTokens(
+          omitUndefined({
+            accountId,
+            accessToken: tokens.access_token,
+            refreshToken: tokens.refresh_token ?? undefined,
+            expiryDate: tokens.expiry_date ?? undefined,
+          }),
+        );
       }
     });
 
@@ -83,10 +88,10 @@ export async function testOAuthConnection(
       calendarId: "primary",
     });
 
-    return {
+    return omitUndefined({
       success: true,
       calendarName: response.data.summary ?? undefined,
-    };
+    });
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,

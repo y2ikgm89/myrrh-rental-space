@@ -70,9 +70,9 @@ export interface SelectedMedia {
   /** メディアURL */
   url: string;
   /** 代替テキスト */
-  alt?: string;
+  alt?: string | undefined;
   /** ファイル名 */
-  filename?: string;
+  filename?: string | undefined;
   /** 選択元 */
   source: "library" | "url" | "upload";
 }
@@ -97,19 +97,19 @@ export interface MediaPickerConfig {
  * メディアメタデータ（アップロード時）
  */
 export interface MediaMetadata {
-  alt?: string;
-  title?: string;
-  description?: string;
-  tags?: string[];
+  alt?: string | undefined;
+  title?: string | undefined;
+  description?: string | undefined;
+  tags?: string[] | undefined;
 }
 
 /**
  * フィルター条件
  */
 export interface MediaFilters {
-  type?: MediaType;
-  usage?: MediaUsage;
-  search?: string;
+  type?: MediaType | undefined;
+  usage?: MediaUsage | undefined;
+  search?: string | undefined;
 }
 
 /**

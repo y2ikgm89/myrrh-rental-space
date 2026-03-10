@@ -69,7 +69,7 @@ function DropdownMenuCheckboxItem({
     <DropdownMenuPrimitive.CheckboxItem
       ref={ref}
       className={cn(dropdownMenuItemVariants(), "pl-8", className)}
-      checked={checked}
+      {...(checked !== undefined && { checked })}
       {...props}
     >
       <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">

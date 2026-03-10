@@ -7,13 +7,13 @@ import type { PageData, PageListResult } from "./types";
 const PAGES_MANAGED_ELSEWHERE = ["home", "posts", "news", "terms"];
 
 export type PageListQueryParams = {
-  query?: string;
-  status?: string;
-  type?: string;
-  page?: number;
-  perPage?: number;
-  sortBy?: "updatedAt" | "title" | "slug";
-  sortOrder?: "asc" | "desc";
+  query?: string | undefined;
+  status?: string | undefined;
+  type?: string | undefined;
+  page?: number | undefined;
+  perPage?: number | undefined;
+  sortBy?: "updatedAt" | "title" | "slug" | undefined;
+  sortOrder?: "asc" | "desc" | undefined;
 };
 
 export async function getHomepageLastUpdatedQuery(): Promise<Date | null> {

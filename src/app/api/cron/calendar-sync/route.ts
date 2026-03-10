@@ -83,7 +83,9 @@ export async function GET(request: Request) {
         fireAndForget(
           sendWebhookRenewalNotification({
             success: true,
-            newExpiration: renewalResult.newExpiration,
+            ...(renewalResult.newExpiration != null
+              ? { newExpiration: renewalResult.newExpiration }
+              : {}),
           }),
           {
             operation: "sendWebhookRenewalNotificationSuccess",
@@ -101,7 +103,9 @@ export async function GET(request: Request) {
         fireAndForget(
           sendWebhookRenewalNotification({
             success: false,
-            error: renewalResult.error,
+            ...(renewalResult.error != null
+              ? { error: renewalResult.error }
+              : {}),
           }),
           {
             operation: "sendWebhookRenewalNotificationFailure",

@@ -49,7 +49,7 @@ export function UploadTab({
 
     const result = await uploadFile(
       file,
-      { alt: alt.trim() || undefined },
+      alt.trim() ? { alt: alt.trim() } : {},
       usage,
     );
 

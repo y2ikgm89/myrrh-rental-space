@@ -18,7 +18,7 @@ export interface ConfigFormProps {
   section: PageSectionData;
   onSave: (payload: ConfigFormSavePayload) => void;
   isPending: boolean;
-  onDirtyChange?: (dirty: boolean) => void;
+  onDirtyChange?: ((dirty: boolean) => void) | undefined;
 }
 
 export function FormActions({
@@ -28,7 +28,7 @@ export function FormActions({
 }: {
   isDirty: boolean;
   isPending: boolean;
-  onDirtyChange?: (dirty: boolean) => void;
+  onDirtyChange?: ((dirty: boolean) => void) | undefined;
 }) {
   useEffect(() => {
     if (!isDirty) return;

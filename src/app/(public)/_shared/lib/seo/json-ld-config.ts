@@ -9,7 +9,7 @@ import {
   getOrganizationSettings,
   getSocialLinkUrls,
 } from "@/shared/domain/settings/queries";
-import { isRecord } from "@/shared/lib/serialize";
+import { isRecord, omitUndefined } from "@/shared/lib/serialize";
 
 const BASE_URL = getBaseUrl();
 
@@ -125,7 +125,7 @@ export async function getOrganizationJsonLdData(): Promise<OrganizationJsonLdDat
     .filter(Boolean)
     .join(" ");
 
-  return {
+  return omitUndefined({
     name: settings?.businessName || settings?.siteName || SITE_DEFAULTS.name,
     description:
       settings?.businessDescription || settings?.siteDescription || undefined,
@@ -135,15 +135,15 @@ export async function getOrganizationJsonLdData(): Promise<OrganizationJsonLdDat
     email: settings?.email || undefined,
     address:
       settings?.postalCode || settings?.prefecture
-        ? {
+        ? omitUndefined({
             postalCode: settings?.postalCode || undefined,
             addressRegion: settings?.prefecture || undefined,
             addressLocality: settings?.city || undefined,
             streetAddress: streetAddress || undefined,
             addressCountry: "JP",
-          }
+          })
         : undefined,
-  };
+  });
 }
 
 // =============================================================================
@@ -333,7 +333,7 @@ export async function getLocalBusinessJsonLdData(): Promise<LocalBusinessJsonLdD
       undefined)
     : undefined;
 
-  return {
+  return omitUndefined({
     name: settings?.businessName || settings?.siteName || SITE_DEFAULTS.name,
     description:
       settings?.businessDescription || settings?.siteDescription || undefined,
@@ -343,13 +343,13 @@ export async function getLocalBusinessJsonLdData(): Promise<LocalBusinessJsonLdD
     email: settings?.email || undefined,
     address:
       settings?.postalCode || settings?.prefecture
-        ? {
+        ? omitUndefined({
             postalCode: settings?.postalCode || undefined,
             addressRegion: settings?.prefecture || undefined,
             addressLocality: settings?.city || undefined,
             streetAddress: streetAddress || undefined,
             addressCountry: "JP",
-          }
+          })
         : undefined,
     openingHoursSpecification: convertToOpeningHoursSpecification(
       settings?.businessHours,
@@ -367,7 +367,7 @@ export async function getLocalBusinessJsonLdData(): Promise<LocalBusinessJsonLdD
     image: settings?.headerLogoUrl ? [settings.headerLogoUrl] : undefined,
     sameAs: sameAs.length > 0 ? sameAs : undefined,
     amenityFeature: convertToAmenityFeatures(settings?.businessAttributes),
-  };
+  });
 }
 
 /**

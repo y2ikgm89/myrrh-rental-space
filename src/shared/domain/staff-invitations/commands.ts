@@ -5,6 +5,7 @@ import { hashPassword } from "better-auth/crypto";
 import type { Role } from "@/shared/db/enums";
 import { Prisma, prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
+import { omitUndefined } from "@/shared/lib/serialize";
 import type { InvitationData } from "@/shared/domain/staff-invitations/types";
 import { getAppUrl } from "@/shared/lib/constants";
 import { sendStaffInvitationEmail } from "@/shared/lib/email-service";
@@ -175,14 +176,14 @@ export async function sendInvitation(
 
   try {
     invitation = await prisma.staffInvitation.create({
-      data: {
+      data: omitUndefined({
         email: input.email,
         token,
         role: input.role,
         name: input.name,
         expiresAt: getExpiryDate(),
         createdBy,
-      },
+      }),
     });
   } catch (error) {
     if (

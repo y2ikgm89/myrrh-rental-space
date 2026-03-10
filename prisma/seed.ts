@@ -432,8 +432,8 @@ async function seedSpaces() {
       ],
       isPublished: true,
       isActive: true,
-      locationId: mainBuilding?.id,
-      categoryId: meetingRoom?.id,
+      ...(mainBuilding?.id != null ? { locationId: mainBuilding.id } : {}),
+      ...(meetingRoom?.id != null ? { categoryId: meetingRoom.id } : {}),
     },
     {
       slug: "seminar-room",
@@ -473,8 +473,8 @@ async function seedSpaces() {
       ],
       isPublished: true,
       isActive: true,
-      locationId: mainBuilding?.id,
-      categoryId: seminarRoom?.id,
+      ...(mainBuilding?.id != null ? { locationId: mainBuilding.id } : {}),
+      ...(seminarRoom?.id != null ? { categoryId: seminarRoom.id } : {}),
     },
     {
       slug: "coworking-space",
@@ -515,8 +515,8 @@ async function seedSpaces() {
       ],
       isPublished: true,
       isActive: true,
-      locationId: annex?.id,
-      categoryId: coworking?.id,
+      ...(annex?.id != null ? { locationId: annex.id } : {}),
+      ...(coworking?.id != null ? { categoryId: coworking.id } : {}),
     },
   ];
 
@@ -1619,7 +1619,7 @@ async function seedReservations() {
           couponDiscountAmount: couponDiscountAmount
             ? new Prisma.Decimal(couponDiscountAmount)
             : null,
-          notes: res.notes,
+          ...(res.notes != null ? { notes: res.notes } : {}),
         },
       });
       console.log(

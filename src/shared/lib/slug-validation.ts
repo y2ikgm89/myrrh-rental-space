@@ -78,7 +78,7 @@ type CheckOptions = {
   /** 現在のコンテンツタイプ（自分自身のチェックを除外） */
   currentType: ContentType;
   /** 更新時の現在のID（自分自身を除外） */
-  currentId?: string;
+  currentId?: string | undefined;
 };
 
 /**

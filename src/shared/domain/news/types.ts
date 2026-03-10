@@ -46,8 +46,8 @@ export type GetNewsListResult = {
 };
 
 export type NewsFilters = {
-  status?: "ALL" | "PUBLISHED" | "DRAFT";
-  search?: string;
+  status?: "ALL" | "PUBLISHED" | "DRAFT" | undefined;
+  search?: string | undefined;
 };
 
 export type NewsPagination = {

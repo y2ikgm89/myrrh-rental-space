@@ -26,13 +26,13 @@ export type AuditLogItem = {
 };
 
 export type AuditLogFilters = {
-  page?: number;
-  perPage?: number;
-  action?: AuditAction | "ALL";
-  resource?: string;
-  userId?: string;
-  dateFrom?: string;
-  dateTo?: string;
+  page?: number | undefined;
+  perPage?: number | undefined;
+  action?: AuditAction | "ALL" | undefined;
+  resource?: string | undefined;
+  userId?: string | undefined;
+  dateFrom?: string | undefined;
+  dateTo?: string | undefined;
 };
 
 export type AuditLogResult = {
@@ -83,7 +83,7 @@ function parseAuditLogMetadata(value: unknown): AuditLogMetadata {
 function buildAuditLogWhere(filters: Required<AuditLogFilters>): AuditLogWhere {
   const where: AuditLogWhere = {};
 
-  if (filters.action !== "ALL") {
+  if (filters.action !== "ALL" && filters.action !== undefined) {
     where.action = filters.action;
   }
 
@@ -112,6 +112,8 @@ export async function getAuditLogs(
   filters: Required<AuditLogFilters>,
 ): Promise<AuditLogResult> {
   const where = buildAuditLogWhere(filters);
+  const page = filters.page ?? 1;
+  const perPage = filters.perPage ?? 20;
 
   const [logs, total] = await Promise.all([
     prisma.auditLog.findMany({
@@ -135,8 +137,8 @@ export async function getAuditLogs(
         },
       },
       orderBy: { createdAt: "desc" },
-      skip: (filters.page - 1) * filters.perPage,
-      take: filters.perPage,
+      skip: (page - 1) * perPage,
+      take: perPage,
     }),
     prisma.auditLog.count({ where }),
   ]);
@@ -148,8 +150,8 @@ export async function getAuditLogs(
       metadata: parseAuditLogMetadata(log.metadata),
     })),
     total,
-    page: filters.page,
-    totalPages: Math.ceil(total / filters.perPage),
+    page,
+    totalPages: Math.ceil(total / perPage),
   });
 }
 

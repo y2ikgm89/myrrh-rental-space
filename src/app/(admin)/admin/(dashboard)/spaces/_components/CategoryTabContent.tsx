@@ -4,6 +4,7 @@ import { CategoryFilters } from "../../space-categories/_components/CategoryFilt
 import { CategoryTable } from "../../space-categories/_components/CategoryTable";
 import { LoadingState } from "@/admin/components/LoadingState";
 import { loadAdminSpaceSearchParams } from "@/shared/lib/nuqs";
+import { omitUndefined } from "@/shared/lib/serialize";
 import type { SearchParams } from "nuqs/server";
 
 // =============================================================================
@@ -26,10 +27,12 @@ async function CategoryList({
   const params = await loadAdminSpaceSearchParams(searchParams);
   const includeInactive = params.includeInactive === "true";
 
-  const result = await getSpaceCategories({
-    includeInactive,
-    search: params.search || undefined,
-  });
+  const result = await getSpaceCategories(
+    omitUndefined({
+      includeInactive,
+      search: params.search || undefined,
+    }),
+  );
 
   return <CategoryTable categories={result.categories} />;
 }

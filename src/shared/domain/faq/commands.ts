@@ -3,6 +3,7 @@ import "server-only";
 import { parsePrismaInputJson } from "@/shared/db/json";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
+import { omitUndefined } from "@/shared/lib/serialize";
 import type {
   CreateFaqCategoryResult,
   CreateFaqItemResult,
@@ -41,10 +42,10 @@ async function ensureFaqCategoryUnique(
   currentId?: string,
 ): Promise<void> {
   const existing = await prisma.faqCategory.findFirst({
-    where: {
+    where: omitUndefined({
       slug,
       id: currentId ? { not: currentId } : undefined,
-    },
+    }),
     select: { id: true },
   });
 

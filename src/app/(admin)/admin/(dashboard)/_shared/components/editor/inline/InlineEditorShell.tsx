@@ -49,7 +49,7 @@ export function InlineEditorShell({
   useFullscreenMode();
 
   // キーボードショートカット
-  useKeyboardShortcuts({ onSave });
+  useKeyboardShortcuts(onSave ? { onSave } : {});
 
   // 離脱警告
   useBeforeUnload({ isDirty });

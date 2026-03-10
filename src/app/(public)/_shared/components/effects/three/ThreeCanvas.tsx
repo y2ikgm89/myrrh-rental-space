@@ -76,11 +76,11 @@ export function ThreeCanvas({
         <ScrollRefContext value={scrollRef}>
           <ThreeCanvasInner
             id={id}
-            className={className}
+            {...(className != null ? { className } : {})}
             frameloop={frameloop}
-            fov={fov}
-            cameraPosition={cameraPosition}
-            fallback={fallback}
+            {...(fov != null ? { fov } : {})}
+            {...(cameraPosition != null ? { cameraPosition } : {})}
+            {...(fallback != null ? { fallback } : {})}
             scrollRef={scrollRef}
             degradeTo={degradeTo}
           >

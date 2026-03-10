@@ -106,7 +106,7 @@ export async function GET(
           uid: `reservation-${r.id}@myrrh-rental-space`,
           title: `【予約】${r.spaceName}${settings.includeCustomerInfo ? ` - ${customerInfo}` : ""}`,
           description,
-          location: r.spaceAddress ?? undefined,
+          ...(r.spaceAddress != null ? { location: r.spaceAddress } : {}),
           startTime: r.startTime,
           endTime: r.endTime,
         };

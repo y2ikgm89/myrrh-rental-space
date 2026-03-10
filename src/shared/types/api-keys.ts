@@ -63,9 +63,9 @@ export type CustomApiKeyData = {
   id: string;
   name: string;
   keyName: string;
-  description?: string;
-  lastTestedAt?: Date;
-  connectionStatus?: ConnectionStatus;
+  description?: string | undefined;
+  lastTestedAt?: Date | undefined;
+  connectionStatus?: ConnectionStatus | undefined;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -87,9 +87,9 @@ export type CustomApiKeyStored = {
   name: string;
   keyName: string;
   keyValue: string; // encrypted
-  description?: string;
-  lastTestedAt?: string;
-  connectionStatus?: ConnectionStatus;
+  description?: string | undefined;
+  lastTestedAt?: string | undefined;
+  connectionStatus?: ConnectionStatus | undefined;
   createdAt: string;
   updatedAt: string;
 };

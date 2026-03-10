@@ -115,7 +115,7 @@ export function SortableItemWrapper({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id, disabled });
+  } = useSortable({ id, ...(disabled !== undefined && { disabled }) });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -159,7 +159,7 @@ export function SortableTableRow({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id, disabled });
+  } = useSortable({ id, ...(disabled !== undefined && { disabled }) });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -225,7 +225,7 @@ export function SortableList<T extends SortableItem>({
       <SortableContext
         items={items.map((item) => item.id)}
         strategy={verticalListSortingStrategy}
-        disabled={disabled}
+        {...(disabled !== undefined && { disabled })}
       >
         <div className={className}>
           {items.map((item, index) => renderItem(item, index))}

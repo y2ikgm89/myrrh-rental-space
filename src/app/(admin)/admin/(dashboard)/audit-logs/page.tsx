@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { getAuditLogs } from "@/admin/queries/audit-log";
 import { loadAdminAuditLogSearchParams } from "@/shared/lib/nuqs";
 import { getAuditActionFilterOrAll } from "@/shared/lib/validations/enums";
+import { omitUndefined } from "@/shared/lib/serialize";
 import { Pagination } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
 import { AuditLogStats } from "./_components/AuditLogStats";
@@ -19,15 +20,17 @@ type PageProps = {
 
 async function AuditLogList({ searchParams }: PageProps) {
   const params = await loadAdminAuditLogSearchParams(searchParams);
-  const logs = await getAuditLogs({
-    page: params.page,
-    perPage: params.perPage,
-    action: getAuditActionFilterOrAll(params.action),
-    resource: params.resource || undefined,
-    userId: params.userId || undefined,
-    dateFrom: params.dateFrom || undefined,
-    dateTo: params.dateTo || undefined,
-  });
+  const logs = await getAuditLogs(
+    omitUndefined({
+      page: params.page,
+      perPage: params.perPage,
+      action: getAuditActionFilterOrAll(params.action),
+      resource: params.resource || undefined,
+      userId: params.userId || undefined,
+      dateFrom: params.dateFrom || undefined,
+      dateTo: params.dateTo || undefined,
+    }),
+  );
 
   return (
     <>

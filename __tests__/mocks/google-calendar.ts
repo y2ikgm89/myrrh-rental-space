@@ -13,10 +13,10 @@ import { mock } from "bun:test";
 export interface MockCalendarEvent {
   id: string;
   summary: string;
-  description?: string;
-  start: { dateTime: string; timeZone?: string };
-  end: { dateTime: string; timeZone?: string };
-  location?: string;
+  description?: string | undefined;
+  start: { dateTime: string; timeZone?: string | undefined };
+  end: { dateTime: string; timeZone?: string | undefined };
+  location?: string | undefined;
 }
 
 export interface MockCalendarInsertResult {

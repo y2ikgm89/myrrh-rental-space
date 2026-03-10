@@ -21,7 +21,7 @@ import { CommentStats } from "./comments/_components/CommentStats";
 import { Pagination } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
 import { parsePostStatusFilter } from "@/shared/lib/validations/enums";
-import { createTypeGuard } from "@/shared/lib/serialize";
+import { createTypeGuard, omitUndefined } from "@/shared/lib/serialize";
 import { loadAdminPostSearchParams } from "@/shared/lib/nuqs";
 import type { CommentFilters as CommentFiltersType } from "@/shared/domain/post-comments/types";
 import type { Metadata } from "next";
@@ -53,11 +53,11 @@ async function PostList({ searchParams }: { searchParams: SearchParams }) {
   const status = parsePostStatusFilter(params.status);
 
   const result = await getPosts(
-    {
+    omitUndefined({
       status,
       categoryId: params.categoryId || undefined,
       search: params.search || undefined,
-    },
+    }),
     { page: params.page, limit: 10 },
   );
 

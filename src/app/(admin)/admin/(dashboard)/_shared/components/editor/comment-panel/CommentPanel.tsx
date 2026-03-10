@@ -410,7 +410,7 @@ export function CommentPanel({
             <ThreadList
               threads={threads}
               expandedThread={expandedThread}
-              activeMarkId={activeMarkId}
+              {...(activeMarkId !== undefined && { activeMarkId })}
               isLoading={isLoading}
               emptyMessage="未解決のコメントはありません"
               onSelectThread={handleSelectThread}
@@ -425,7 +425,7 @@ export function CommentPanel({
             <ThreadList
               threads={threads}
               expandedThread={expandedThread}
-              activeMarkId={activeMarkId}
+              {...(activeMarkId !== undefined && { activeMarkId })}
               isLoading={isLoading}
               emptyMessage="解決済みのコメントはありません"
               onSelectThread={handleSelectThread}
@@ -501,21 +501,21 @@ function ThreadList({
           <CommentThread
             thread={expandedThread}
             isActive={expandedThread.markId === activeMarkId}
-            onResolve={
-              onResolve ? () => onResolve(expandedThread.id) : undefined
-            }
-            onReopen={onReopen ? () => onReopen(expandedThread.id) : undefined}
+            {...(onResolve && {
+              onResolve: () => onResolve(expandedThread.id),
+            })}
+            {...(onReopen && {
+              onReopen: () => onReopen(expandedThread.id),
+            })}
             onDelete={() => onDelete(expandedThread.id)}
-            onAddReply={
-              onAddReply
-                ? (content) => onAddReply(expandedThread.id, content)
-                : undefined
-            }
-            onDeleteComment={
-              onDeleteComment
-                ? (commentId) => onDeleteComment(commentId, expandedThread.id)
-                : undefined
-            }
+            {...(onAddReply && {
+              onAddReply: (content: string) =>
+                onAddReply(expandedThread.id, content),
+            })}
+            {...(onDeleteComment && {
+              onDeleteComment: (commentId: string) =>
+                onDeleteComment(commentId, expandedThread.id),
+            })}
           />
         </div>
       </div>

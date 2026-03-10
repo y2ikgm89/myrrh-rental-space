@@ -198,13 +198,13 @@ const plain: unknown = result;
 expect(plain).toEqual({ id: 1 });
 ```
 
-### 5. `executeAdminMutation` の型推論
+### 5. `executeAdminMutationResult` の型推論
 
-`executeAdminMutation` はジェネリクスで戻り値型を推論する。`execute` コールバックの戻り値型が複雑な場合、TypeScript が `unknown` に推論することがある。明示的な型引数で解決する。
+`executeAdminMutationResult` はジェネリクスで戻り値型を推論する。`execute` コールバックの戻り値型が複雑な場合、TypeScript が `unknown` に推論することがある。明示的な型引数で解決する。
 
 ```typescript
 // NG: 戻り値型が unknown に推論される
-const result = await executeAdminMutation({
+const result = await executeAdminMutationResult({
   resource: "space",
   action: "create",
   execute: async () => {
@@ -213,7 +213,7 @@ const result = await executeAdminMutation({
 });
 
 // OK: 型引数を明示
-const result = await executeAdminMutation<{ name: string }>({
+const result = await executeAdminMutationResult<{ name: string }>({
   resource: "space",
   action: "create",
   execute: async () => {

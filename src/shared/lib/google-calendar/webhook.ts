@@ -17,6 +17,7 @@ import {
 import { serverEnv } from "@/shared/lib/env/server";
 import { clientEnv } from "@/shared/lib/env/client";
 import { CalendarSyncMethod } from "@/shared/db/enums";
+import { omitUndefined } from "@/shared/lib/serialize";
 import type { WebhookSetupResult, WebhookRenewalResult } from "./types";
 import { formatGoogleApiError } from "./helpers";
 import { getServiceAccountClient } from "./service-account";
@@ -68,14 +69,14 @@ export async function setupWebhookWatch(
 
     await saveGoogleCalendarWebhookToken(webhookToken);
 
-    return {
+    return omitUndefined({
       success: true,
       channelId: registeredChannelId,
       resourceId: registeredResourceId,
       expiration: response.data.expiration
         ? new Date(parseInt(response.data.expiration))
         : undefined,
-    };
+    });
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
@@ -190,7 +191,11 @@ export async function renewWebhookIfNeeded(): Promise<WebhookRenewalResult> {
     const result = await setupWebhookWatch(webhookUrl);
 
     if (!result.success) {
-      return { success: false, renewed: false, error: result.error };
+      return omitUndefined({
+        success: false,
+        renewed: false,
+        error: result.error,
+      });
     }
 
     if (!result.channelId || !result.resourceId) {
@@ -207,11 +212,11 @@ export async function renewWebhookIfNeeded(): Promise<WebhookRenewalResult> {
       expiration: result.expiration,
     });
 
-    return {
+    return omitUndefined({
       success: true,
       renewed: true,
       newExpiration: result.expiration,
-    };
+    });
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,

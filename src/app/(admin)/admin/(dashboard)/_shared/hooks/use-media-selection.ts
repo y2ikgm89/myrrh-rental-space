@@ -57,7 +57,7 @@ export function useMediaSelection({
         {
           id: media.id,
           url: media.url,
-          alt: media.alt ?? undefined,
+          ...(media.alt != null && { alt: media.alt }),
           filename: media.filename,
           source: "library",
         },
@@ -79,7 +79,7 @@ export function useMediaSelection({
           {
             id: media.id,
             url: media.url,
-            alt: media.alt ?? undefined,
+            ...(media.alt != null && { alt: media.alt }),
             filename: media.filename,
             source: "library",
           },
@@ -92,7 +92,7 @@ export function useMediaSelection({
     const urlMedia: SelectedMedia = {
       id: null,
       url,
-      alt,
+      ...(alt !== undefined && { alt }),
       source: "url",
     };
 

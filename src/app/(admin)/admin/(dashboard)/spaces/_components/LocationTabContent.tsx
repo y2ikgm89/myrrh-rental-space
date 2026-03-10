@@ -4,6 +4,7 @@ import { LocationFilters } from "../../locations/_components/LocationFilters";
 import { LocationTable } from "../../locations/_components/LocationTable";
 import { LoadingState } from "@/admin/components/LoadingState";
 import { loadAdminSpaceSearchParams } from "@/shared/lib/nuqs";
+import { omitUndefined } from "@/shared/lib/serialize";
 import type { SearchParams } from "nuqs/server";
 
 // =============================================================================
@@ -26,10 +27,12 @@ async function LocationList({
   const params = await loadAdminSpaceSearchParams(searchParams);
   const includeInactive = params.published !== "true";
 
-  const result = await getLocations({
-    includeInactive,
-    search: params.search || undefined,
-  });
+  const result = await getLocations(
+    omitUndefined({
+      includeInactive,
+      search: params.search || undefined,
+    }),
+  );
 
   return <LocationTable locations={result.locations} />;
 }

@@ -8,6 +8,7 @@ import { Pagination, Button } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
 import { isValidCouponType } from "@/shared/lib/validations/enums";
 import { loadAdminCouponSearchParams } from "@/shared/lib/nuqs";
+import { omitUndefined } from "@/shared/lib/serialize";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -45,7 +46,7 @@ async function CouponList({ searchParams }: { searchParams: SearchParams }) {
   const type = isValidCouponType(params.type) ? params.type : undefined;
 
   const result = await getCoupons(
-    { status, type, search: params.search || undefined },
+    omitUndefined({ status, type, search: params.search || undefined }),
     { page: params.page, limit: 10 },
   );
 

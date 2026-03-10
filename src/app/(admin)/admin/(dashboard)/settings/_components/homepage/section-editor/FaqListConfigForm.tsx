@@ -173,7 +173,7 @@ export function FaqListConfigForm({
         <div className="flex items-center gap-2">
           <Switch
             id="faq-view-all"
-            checked={showViewAllLink}
+            checked={showViewAllLink ?? false}
             onCheckedChange={(checked) => setValue("showViewAllLink", checked)}
             disabled={isPending}
           />

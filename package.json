@@ -131,7 +131,7 @@
     "tailwindcss": "4.2.1",
     "typedoc": "^0.28.17",
     "typedoc-plugin-markdown": "^4.10.0",
-    "typescript": "6.0.0-dev.20260228",
+    "typescript": "^6.0.1-rc",
     "typescript-eslint": "^8.57.0"
   },
   "trustedDependencies": [

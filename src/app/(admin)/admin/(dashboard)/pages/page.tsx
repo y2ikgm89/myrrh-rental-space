@@ -8,6 +8,7 @@
 
 import { getPagesList, getHomepageLastUpdated } from "@/admin/queries/page";
 import { loadAdminPageSearchParams } from "@/shared/lib/nuqs";
+import { omitUndefined } from "@/shared/lib/serialize";
 import {
   CreatePageDialog,
   PageFilters,
@@ -31,14 +32,16 @@ export default async function PagesManagementPage({
   const params = await loadAdminPageSearchParams(searchParams);
 
   const [result, homepageLastUpdated] = await Promise.all([
-    getPagesList({
-      query: params.q || undefined,
-      status: params.status === "all" ? undefined : params.status,
-      type: params.type === "all" ? undefined : params.type,
-      page: params.page,
-      perPage: params.perPage,
-      sortOrder: params.sort,
-    }),
+    getPagesList(
+      omitUndefined({
+        query: params.q || undefined,
+        status: params.status === "all" ? undefined : params.status,
+        type: params.type === "all" ? undefined : params.type,
+        page: params.page,
+        perPage: params.perPage,
+        sortOrder: params.sort,
+      }),
+    ),
     getHomepageLastUpdated(),
   ]);
 

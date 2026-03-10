@@ -126,13 +126,15 @@ export type EditorHeaderProps = {
   onToggleSidePanel?: () => void;
   /** プレビューコールバック（省略時はプレビューボタン非表示） */
   onPreview?: () => void;
-  extraActions?: ReactNode;
+  extraActions?: ReactNode | undefined;
   /** 公開/非公開ボタンの表示（status方式: PostStatus, isPublished方式: boolean） */
-  publishActions?: {
-    status: PostStatus | boolean;
-    onPublish: () => void;
-    onUnpublish: () => void;
-  };
+  publishActions?:
+    | {
+        status: PostStatus | boolean;
+        onPublish: () => void;
+        onUnpublish: () => void;
+      }
+    | undefined;
   /** コメントボタンの表示 */
   showCommentButton?: boolean;
   /** コメントパネルの開閉状態 */

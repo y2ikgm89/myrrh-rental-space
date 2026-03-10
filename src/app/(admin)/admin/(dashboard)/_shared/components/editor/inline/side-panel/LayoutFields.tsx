@@ -86,7 +86,7 @@ export function LayoutFields({
               setValue?.("contentWidthCustom", undefined);
             }
           }}
-          disabled={disabled}
+          {...(disabled !== undefined && { disabled })}
         >
           <SelectTrigger id="contentWidth">
             <SelectValue placeholder="デフォルト（サイト設定を使用）" />
@@ -144,7 +144,7 @@ export function LayoutFields({
             const booleanValue = value === "default" ? null : value === "true";
             setValue?.("showSidebar", booleanValue);
           }}
-          disabled={disabled}
+          {...(disabled !== undefined && { disabled })}
         >
           <SelectTrigger id="showSidebar">
             <SelectValue placeholder="デフォルト（非表示）" />

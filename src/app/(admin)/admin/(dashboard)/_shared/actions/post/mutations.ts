@@ -36,6 +36,7 @@ import { purgePostCache } from "@/shared/lib/cloudflare";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
 import type { MutationResult } from "@/shared/lib/mutation-result";
+import { omitUndefined } from "@/shared/lib/serialize";
 
 const idSchema = z.string().uuid({ error: "投稿IDが不正です" });
 const versionSchema = z.object({
@@ -102,11 +103,13 @@ export async function createPost(
     resource: "post",
     action: "create",
     execute: async (user) => {
-      const result = await createPostCommand({
-        ...parsed.data,
-        contentHtml,
-        authorId: user.id,
-      });
+      const result = await createPostCommand(
+        omitUndefined({
+          ...parsed.data,
+          contentHtml,
+          authorId: user.id,
+        }),
+      );
       createdPostSlug = result.slug;
       return { id: result.id };
     },
@@ -142,12 +145,15 @@ export async function updatePost(
     action: "update",
     resourceId: validatedId.data,
     execute: async () => {
-      updatedPost = await updatePostCommand(validatedId.data, {
-        ...parsed.data,
-        contentHtml,
-        contentWidth: parsed.data.contentWidth ?? null,
-        contentWidthCustom: parsed.data.contentWidthCustom ?? null,
-      });
+      updatedPost = await updatePostCommand(
+        validatedId.data,
+        omitUndefined({
+          ...parsed.data,
+          contentHtml,
+          contentWidth: parsed.data.contentWidth ?? null,
+          contentWidthCustom: parsed.data.contentWidthCustom ?? null,
+        }),
+      );
       return null;
     },
     afterSuccess: () => {
@@ -315,7 +321,7 @@ export async function createPostCategory(
   return executeAdminMutationResult({
     resource: "post",
     action: "create",
-    execute: async () => createPostCategoryCommand(parsed.data),
+    execute: async () => createPostCategoryCommand(omitUndefined(parsed.data)),
     afterSuccess: () => {
       invalidatePostCategoryCaches();
       purgePostArchive();
@@ -343,7 +349,10 @@ export async function updatePostCategory(
     action: "update",
     resourceId: validatedId.data,
     execute: async () => {
-      await updatePostCategoryCommand(validatedId.data, parsed.data);
+      await updatePostCategoryCommand(
+        validatedId.data,
+        omitUndefined(parsed.data),
+      );
       return null;
     },
     afterSuccess: () => {
@@ -407,7 +416,7 @@ export async function createPostTag(
   return executeAdminMutationResult({
     resource: "post",
     action: "create",
-    execute: async () => createPostTagCommand(parsed.data),
+    execute: async () => createPostTagCommand(omitUndefined(parsed.data)),
     afterSuccess: () => {
       invalidatePostTagCaches();
     },
@@ -434,7 +443,7 @@ export async function updatePostTag(
     action: "update",
     resourceId: validatedId.data,
     execute: async () => {
-      await updatePostTagCommand(validatedId.data, parsed.data);
+      await updatePostTagCommand(validatedId.data, omitUndefined(parsed.data));
       return null;
     },
     afterSuccess: () => {

@@ -34,7 +34,7 @@ export type EditorComment = {
   createdAt: DateLike;
   updatedAt: DateLike;
   createdBy: string | null;
-  createdByUser?: CommentUserSummary;
+  createdByUser?: CommentUserSummary | undefined;
   deletedByUser?: CommentUserSummary | null;
 };
 
@@ -51,8 +51,8 @@ export type EditorCommentThread = {
   updatedAt: DateLike;
   createdBy: string | null;
   comments: EditorComment[];
-  createdByUser?: CommentUserSummary;
-  resolvedByUser?: CommentUserSummary | null;
+  createdByUser?: CommentUserSummary | undefined;
+  resolvedByUser?: CommentUserSummary | null | undefined;
 };
 
 export type CreateThreadInput = {
@@ -80,11 +80,13 @@ export type ThreadListItem = {
   quotedText: string;
   status: EditorCommentStatus;
   commentCount: number;
-  latestComment?: {
-    content: string;
-    createdAt: DateLike;
-    createdByName: string;
-  };
+  latestComment?:
+    | {
+        content: string;
+        createdAt: DateLike;
+        createdByName: string;
+      }
+    | undefined;
   createdAt: DateLike;
   createdByName: string;
 };

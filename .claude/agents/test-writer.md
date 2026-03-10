@@ -60,7 +60,7 @@ mock.restore(); // NOT vi.restoreAllMocks()
 
 ## Integration Action Test パターン
 
-Server Action の統合テストは Prisma をモック、`executeAdminMutation` の認証をバイパスして
+Server Action の統合テストは Prisma をモック、`executeAdminMutationResult` の認証をバイパスして
 バリデーション・ビジネスロジックをテストする:
 
 ```typescript
@@ -78,7 +78,7 @@ mock.module("@/shared/lib/prisma", () => ({
   },
 }));
 
-// auth モック（executeAdminMutation をバイパス）
+// auth モック（executeAdminMutationResult をバイパス）
 mock.module("@/shared/lib/auth", () => ({
   auth: {
     api: {

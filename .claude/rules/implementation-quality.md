@@ -28,9 +28,9 @@ export async function deleteItem(id: string) {
   return { success: true }; // 実際の削除処理がない
 }
 
-// OK: executeAdminMutation パターンで完全な実装
+// OK: executeAdminMutationResult パターンで完全な実装
 export async function deleteItem(id: string) {
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "item",
     action: "delete",
     execute: async () => {
@@ -157,4 +157,4 @@ try {
 
 ## Server Action 実装パターン
 
-→ `error-handling.md` の `executeAdminMutation` パターンを参照。
+→ `error-handling.md` の `executeAdminMutationResult` パターンを参照。

@@ -11,6 +11,7 @@ import {
   getMediaByIdQuery,
   getMediaListQuery,
 } from "@/shared/domain/media/queries";
+import { omitUndefined } from "@/shared/lib/serialize";
 import { requireAdminPermission } from "./_helpers";
 
 export async function getMediaList(
@@ -29,7 +30,10 @@ export async function getMediaList(
     return { items: [], total: 0, page: 1, limit: 24, totalPages: 0 };
   }
 
-  return getMediaListQuery(validatedFilters.data, validatedPagination.data);
+  return getMediaListQuery(
+    omitUndefined(validatedFilters.data),
+    validatedPagination.data,
+  );
 }
 
 export async function getMediaById(id: string): Promise<MediaData | null> {

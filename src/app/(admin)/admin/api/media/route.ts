@@ -30,6 +30,7 @@ import {
   jsonSuccess,
   jsonValidationError,
 } from "@/shared/lib/route-responses";
+import { omitUndefined } from "@/shared/lib/serialize";
 
 export async function GET(request: Request): Promise<NextResponse> {
   try {
@@ -60,7 +61,7 @@ export async function GET(request: Request): Promise<NextResponse> {
     }
 
     const result = await getMediaListQuery(
-      filtersResult.data,
+      omitUndefined(filtersResult.data),
       paginationResult.data,
     );
     return jsonSuccess(result);

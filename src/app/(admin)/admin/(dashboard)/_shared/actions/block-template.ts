@@ -5,6 +5,7 @@ import { updateTag } from "next/cache";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import type { MutationResult } from "@/shared/lib/mutation-result";
+import { omitUndefined } from "@/shared/lib/serialize";
 import {
   createBlockTemplate as createBlockTemplateCommand,
   deleteBlockTemplate as deleteBlockTemplateCommand,
@@ -38,7 +39,7 @@ export async function createBlockTemplate(
     resource: "blockTemplate",
     action: "create",
     execute: async (user) =>
-      createBlockTemplateCommand(validated.data, user.id),
+      createBlockTemplateCommand(omitUndefined(validated.data), user.id),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.BLOCK_TEMPLATES);
     },

@@ -28,6 +28,11 @@ export async function buildPostMetadata(slug: string): Promise<Metadata> {
     return { title: "記事が見つかりません" };
   }
 
+  const options: { canonicalUrl: string; siteName?: string } = {
+    canonicalUrl: `${getBaseUrl()}${post.url}`,
+  };
+  if (settings?.siteName) options.siteName = settings.siteName;
+
   return generateArticleMetadata(
     {
       title: post.title,
@@ -37,10 +42,7 @@ export async function buildPostMetadata(slug: string): Promise<Metadata> {
       ogpDescription: post.ogpDescription,
       metaKeywords: post.metaKeywords,
     },
-    {
-      canonicalUrl: `${getBaseUrl()}${post.url}`,
-      siteName: settings?.siteName ?? undefined,
-    },
+    options,
   );
 }
 
@@ -75,7 +77,7 @@ export async function PostDetailPageContent({
         image={post.thumbnailUrl}
         url={`${baseUrl}${post.url}`}
         datePublished={datePublished}
-        author={post.author ? { name: post.author.name } : undefined}
+        {...(post.author ? { author: { name: post.author.name } } : {})}
       />
 
       <ArticleDetailHero

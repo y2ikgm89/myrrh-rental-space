@@ -7,6 +7,7 @@ import { fireAndForget } from "@/shared/lib/async-utils";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
 import type { MutationResult } from "@/shared/lib/mutation-result";
+import { omitUndefined } from "@/shared/lib/serialize";
 import {
   createAdminReservationCommand,
   updateAdminReservationCommand,
@@ -43,7 +44,15 @@ export const createAdminReservation = async (
     resource: "reservation",
     action: "create",
     execute: async () => {
-      result = await createAdminReservationCommand(validation.data);
+      const { customerData, ...restData } = validation.data;
+      result = await createAdminReservationCommand(
+        omitUndefined({
+          ...restData,
+          ...(customerData && {
+            customerData: omitUndefined(customerData),
+          }),
+        }),
+      );
       return { id: result.id };
     },
     afterSuccess: () => {
@@ -51,12 +60,13 @@ export const createAdminReservation = async (
         return;
       }
 
-      const calendarData: ReservationSyncData = { ...result.calendar };
+      const calendarData: ReservationSyncData = omitUndefined(result.calendar);
+      const notificationData = omitUndefined(result.notification);
       if (validation.data.sendEmail) {
         fireAndForget(
           Promise.all([
-            sendReservationConfirmationEmail(result.notification),
-            sendReservationAdminNotification(result.notification, "new"),
+            sendReservationConfirmationEmail(notificationData),
+            sendReservationAdminNotification(notificationData, "new"),
             syncReservationToCalendar(calendarData),
           ]),
           {
@@ -103,7 +113,10 @@ export const updateAdminReservation = async (
     action: "update",
     resourceId: id,
     execute: async () => {
-      result = await updateAdminReservationCommand(id, validation.data);
+      result = await updateAdminReservationCommand(
+        id,
+        omitUndefined(validation.data),
+      );
       return null;
     },
     afterSuccess: () => {
@@ -111,7 +124,9 @@ export const updateAdminReservation = async (
         return;
       }
 
-      const calendarData: ReservationSyncData = { ...result.notification };
+      const calendarData: ReservationSyncData = omitUndefined(
+        result.notification,
+      );
       if (result.googleCalendarEventId) {
         fireAndForget(
           updateCalendarSync(calendarData, result.googleCalendarEventId),
@@ -132,12 +147,15 @@ export const updateAdminReservation = async (
       }
 
       if (validation.data.sendNotificationEmail) {
-        fireAndForget(sendReservationConfirmationEmail(result.notification), {
-          operation: "sendNotificationEmail",
-          category: ErrorCategory.EXTERNAL_API,
-          severity: ErrorSeverity.LOW,
-          context: { reservationId: id },
-        });
+        fireAndForget(
+          sendReservationConfirmationEmail(omitUndefined(result.notification)),
+          {
+            operation: "sendNotificationEmail",
+            category: ErrorCategory.EXTERNAL_API,
+            severity: ErrorSeverity.LOW,
+            context: { reservationId: id },
+          },
+        );
       }
 
       updateTag(CACHE_TAGS.RESERVATIONS);

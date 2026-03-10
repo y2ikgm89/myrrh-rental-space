@@ -402,6 +402,58 @@ export function filterTruthy<T>(
 }
 
 // =============================================================================
+// exactOptionalPropertyTypes Utilities
+// =============================================================================
+
+/**
+ * オブジェクトから `undefined` 値のプロパティを除去する型
+ *
+ * `exactOptionalPropertyTypes: true` 環境で、Zod の `.optional()` が生成する
+ * `T | undefined` を `?: Exclude<T, undefined>` に変換します。
+ *
+ * @example
+ * ```typescript
+ * type Input = { title: string; ogpTitle?: string | null | undefined }
+ * type Result = OmitUndefined<Input>
+ * // = { title: string; ogpTitle?: string | null }
+ * ```
+ */
+export type OmitUndefined<T> = {
+  [K in keyof T as undefined extends T[K] ? never : K]: T[K];
+} & {
+  [K in keyof T as undefined extends T[K] ? K : never]?: Exclude<
+    T[K],
+    undefined
+  >;
+};
+
+/**
+ * オブジェクトから `undefined` 値のプロパティを実行時に除去
+ *
+ * `{ field: undefined }` → `{}` に変換し、`exactOptionalPropertyTypes` で
+ * `field?: T | null` に代入可能にします。
+ *
+ * Zod の `.optional()` / `.nullable().optional()` の出力を
+ * ドメインコマンド型に渡す境界で使用します。
+ *
+ * @example
+ * ```typescript
+ * const zodOutput = schema.parse(input);
+ * // { title: "Hello", ogpTitle: undefined }
+ *
+ * const clean = omitUndefined(zodOutput);
+ * // { title: "Hello" } — ogpTitle プロパティが除去される
+ *
+ * await createPost(clean); // exactOptionalPropertyTypes で型安全
+ * ```
+ */
+export function omitUndefined<T extends object>(obj: T): OmitUndefined<T> {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([, v]) => v !== undefined),
+  ) as OmitUndefined<T>;
+}
+
+// =============================================================================
 // Type Guard Generators
 // =============================================================================
 

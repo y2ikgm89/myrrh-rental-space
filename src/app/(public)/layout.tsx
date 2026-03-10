@@ -161,14 +161,14 @@ async function HeaderWithData({
     getBusinessInfo(),
   ]);
 
-  return (
-    <Header
-      brandName={businessInfo.name.split(" ")[0]?.toUpperCase() ?? "MYRRH"}
-      navItems={navItems.length > 0 ? navItems : undefined}
-      scrollBehavior={headerSettings.scrollBehavior}
-      backgroundMode={headerSettings.backgroundMode}
-    />
-  );
+  const headerProps = {
+    brandName: businessInfo.name.split(" ")[0]?.toUpperCase() ?? "MYRRH",
+    scrollBehavior: headerSettings.scrollBehavior,
+    backgroundMode: headerSettings.backgroundMode,
+    ...(navItems.length > 0 ? { navItems } : {}),
+  };
+
+  return <Header {...headerProps} />;
 }
 
 export default async function PublicRootLayout({

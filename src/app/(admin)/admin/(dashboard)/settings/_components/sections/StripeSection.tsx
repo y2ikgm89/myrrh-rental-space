@@ -125,7 +125,7 @@ export function StripeSection({ settings }: StripeSectionProps) {
           message: result.accountId
             ? `接続成功 (アカウントID: ${result.accountId})`
             : "接続成功",
-          mode: result.mode,
+          ...(result.mode !== undefined && { mode: result.mode }),
         });
         refresh();
       } else {

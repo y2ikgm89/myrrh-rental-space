@@ -62,11 +62,11 @@ export function PostTagFields<T extends FieldValues>({
       value={tagsArray}
       onChange={handleChange}
       availableTags={availableTags}
-      onCreateTag={onCreateTag}
+      {...(onCreateTag && { onCreateTag })}
       label={label}
       placeholder={placeholder}
-      disabled={disabled}
-      error={tagsError ? getErrorMessage(tagsError) : undefined}
+      {...(disabled !== undefined && { disabled })}
+      {...(tagsError && { error: getErrorMessage(tagsError) })}
     />
   );
 }

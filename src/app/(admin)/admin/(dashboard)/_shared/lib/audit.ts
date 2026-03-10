@@ -13,6 +13,7 @@ import "server-only";
 import { headers } from "next/headers";
 import { AuditAction } from "@/shared/db/enums";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
+import { omitUndefined } from "@/shared/lib/serialize";
 import {
   logError,
   ErrorCategory,
@@ -35,18 +36,18 @@ export type AuditUser = {
 };
 
 export type AuditLogInput = {
-  userId?: string;
+  userId?: string | undefined;
   action: AuditAction;
   resource: string;
-  resourceId?: string;
-  oldValue?: object;
-  newValue?: object;
-  metadata?: object;
+  resourceId?: string | undefined;
+  oldValue?: object | undefined;
+  newValue?: object | undefined;
+  metadata?: object | undefined;
 };
 
 export type AuditLogMetadata = {
-  ipAddress?: string;
-  userAgent?: string;
+  ipAddress?: string | undefined;
+  userAgent?: string | undefined;
   [key: string]: unknown;
 };
 
@@ -60,12 +61,12 @@ export type AuditLogMetadata = {
 async function getRequestMetadata(): Promise<AuditLogMetadata> {
   try {
     const headersList = await headers();
+    const ipAddress =
+      headersList.get("x-forwarded-for") ?? headersList.get("x-real-ip");
+    const userAgent = headersList.get("user-agent");
     return {
-      ipAddress:
-        headersList.get("x-forwarded-for") ??
-        headersList.get("x-real-ip") ??
-        undefined,
-      userAgent: headersList.get("user-agent") ?? undefined,
+      ...(ipAddress !== null && { ipAddress }),
+      ...(userAgent !== null && { userAgent }),
     };
   } catch {
     return {};
@@ -84,15 +85,17 @@ async function getRequestMetadata(): Promise<AuditLogMetadata> {
 export async function createAuditLog(input: AuditLogInput): Promise<void> {
   try {
     const metadata = await getRequestMetadata();
-    await createAuditLogRecord({
-      userId: input.userId,
-      action: input.action,
-      resource: input.resource,
-      resourceId: input.resourceId,
-      oldValue: input.oldValue,
-      newValue: input.newValue,
-      metadata: { ...metadata, ...input.metadata },
-    });
+    await createAuditLogRecord(
+      omitUndefined({
+        userId: input.userId,
+        action: input.action,
+        resource: input.resource,
+        resourceId: input.resourceId,
+        oldValue: input.oldValue,
+        newValue: input.newValue,
+        metadata: { ...metadata, ...input.metadata },
+      }),
+    );
   } catch (error) {
     // ログ記録失敗は無視（本番ではSentry等に送信推奨）
     logError(normalizeError(error), {

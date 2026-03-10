@@ -8,6 +8,7 @@ import { Pagination, Button } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
 import { parseCustomerStatusFilter } from "@/shared/lib/validations/enums";
 import { loadAdminCustomerSearchParams } from "@/shared/lib/nuqs";
+import { omitUndefined } from "@/shared/lib/serialize";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -25,7 +26,7 @@ async function CustomerList({ searchParams }: { searchParams: SearchParams }) {
   const status = parseCustomerStatusFilter(params.status);
 
   const result = await getCustomers(
-    { status, search: params.search || undefined },
+    omitUndefined({ status, search: params.search || undefined }),
     { page: params.page, limit: 10 },
   );
 

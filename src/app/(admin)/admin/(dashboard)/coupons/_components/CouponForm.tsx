@@ -430,7 +430,7 @@ export function CouponForm({ coupon }: CouponFormProps): ReactElement {
               <Switch
                 id="isActive"
                 name="isActive"
-                checked={isActive}
+                checked={isActive ?? false}
                 onCheckedChange={(checked) => setValue("isActive", checked)}
               />
             </div>
@@ -447,7 +447,7 @@ export function CouponForm({ coupon }: CouponFormProps): ReactElement {
               <Switch
                 id="canCombineWithDurationDiscount"
                 name="canCombineWithDurationDiscount"
-                checked={canCombine}
+                checked={canCombine ?? false}
                 onCheckedChange={(checked) =>
                   setValue("canCombineWithDurationDiscount", checked)
                 }

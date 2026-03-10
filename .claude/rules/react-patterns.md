@@ -422,6 +422,8 @@ export default async function Page() {
 
 **注意**: `headers()` でも回避できるが意味的に誤り。`audit.ts` など実際にヘッダー値を読む箇所は `headers()` のまま。
 
+**適用範囲**: `connection()` は**公開ページ（`src/app/(public)/`）のみ**。管理画面（`src/app/(admin)/`）では `connection()` を使用しない。`new Date()` が必要な管理画面コンポーネントは Client Component にする。
+
 ---
 
 ## useSyncExternalStore — 外部ストア読み取り（React 19 公式推奨）

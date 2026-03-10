@@ -73,7 +73,7 @@ import {
 import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
 import { logger } from "@/shared/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
-import type { FaqEditorFormData } from "@/admin/components/editor/inline/types";
+
 import { isMutationError } from "@/shared/lib/mutation-result";
 
 // =============================================================================
@@ -96,7 +96,7 @@ const formSchema = z.object({
   ogpImageUrl: z.string().optional(),
 });
 
-type FormData = z.infer<typeof formSchema> & FaqEditorFormData;
+type FormData = z.infer<typeof formSchema>;
 
 // =============================================================================
 // Types
@@ -108,10 +108,10 @@ type Category = {
 };
 
 type FaqItemInlineEditorProps = {
-  item?: FaqItemWithCategory;
+  item?: FaqItemWithCategory | undefined;
   categories: Category[];
-  mode?: "create" | "edit";
-  defaultCategoryId?: string;
+  mode?: "create" | "edit" | undefined;
+  defaultCategoryId?: string | undefined;
 };
 
 // =============================================================================
@@ -138,7 +138,7 @@ export function FaqItemInlineEditor({
     setValue,
     reset,
     formState: { errors, isDirty },
-  } = useForm<FormData>({
+  } = useForm<FormData, unknown, FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: item
       ? {
@@ -500,7 +500,7 @@ export function FaqItemInlineEditor({
           回答
         </Label>
         <LexicalEditor
-          contentJson={answerJson || undefined}
+          contentJson={answerJson || null}
           contentHtml={item?.answerHtml ?? ""}
           onChange={handleJsonChange}
           disabled={isPending}

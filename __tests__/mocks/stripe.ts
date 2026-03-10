@@ -13,8 +13,8 @@ import { mock } from "bun:test";
 export interface MockCustomer {
   id: string;
   email: string;
-  name?: string;
-  metadata?: Record<string, string>;
+  name?: string | undefined;
+  metadata?: Record<string, string> | undefined;
 }
 
 export interface MockPaymentIntent {
@@ -26,8 +26,8 @@ export interface MockPaymentIntent {
     | "requires_confirmation"
     | "succeeded"
     | "canceled";
-  customer?: string;
-  metadata?: Record<string, string>;
+  customer?: string | undefined;
+  metadata?: Record<string, string> | undefined;
 }
 
 export interface MockSubscription {

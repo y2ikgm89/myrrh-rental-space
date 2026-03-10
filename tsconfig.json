@@ -4,10 +4,18 @@
     "lib": ["dom", "esnext"],
     "skipLibCheck": true,
     "noEmit": true,
+    // TS 6.0: types のデフォルトが [] に変更。@types/node を明示して Node.js グローバル型を有効化。
+    "types": ["node"],
     // ── Strict type-checking ──────────────────────────────────────────────
     // Next.js が自動注入するが strict: true は明示必須（未指定だと false が注入される）
+    // TS 6.0 でデフォルト true になったが Next.js の挙動を考慮し明示を維持。
     "strict": true,
     "noUncheckedIndexedAccess": true,
+    // TS 6.0 tsc --init 推奨: optional プロパティの undefined 代入を禁止。
+    // `{ field?: T | null }` に `{ field: undefined }` を渡すとエラー。
+    "exactOptionalPropertyTypes": true,
+    // TS 6.0: 副作用のみの import のタイポを検出。6.0 デフォルト true。
+    "noUncheckedSideEffectImports": true,
     // TS 6.0: non-erasable TypeScript syntax (enum, namespace, parameter properties) をエラーにする。
     // TS 7.0 + Node.js native TypeScript 実行に向けた準備。
     "erasableSyntaxOnly": true,
@@ -43,6 +51,7 @@
     // ── Next.js 自動注入（Next.js が上書きするが明示して意図を示す） ───────
     "allowJs": true,
     "module": "esnext",
+    // esModuleInterop: TS 6.0 で常時有効。Next.js が自動注入するため明示。
     "esModuleInterop": true
   },
   "include": [

@@ -70,7 +70,9 @@ export function MediaPickerDialog({
   const handleUrlAdd = (url: string, alt?: string) => {
     addUrlMedia(url, alt);
     if (selectionMode === "single") {
-      onSelect([{ id: null, url, alt, source: "url" }]);
+      onSelect([
+        { id: null, url, ...(alt !== undefined && { alt }), source: "url" },
+      ]);
       onClose();
     }
   };

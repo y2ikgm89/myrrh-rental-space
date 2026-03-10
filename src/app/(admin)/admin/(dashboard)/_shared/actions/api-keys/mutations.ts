@@ -22,6 +22,7 @@ import {
   type TurnstileSettingsInput,
 } from "@/admin/lib/validations/api-keys";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
+import { omitUndefined } from "@/shared/lib/serialize";
 import {
   addCustomApiKey as addCustomApiKeyCommand,
   clearCloudflareSettings as clearCloudflareSettingsCommand,
@@ -60,7 +61,7 @@ export async function updateResendSettings(
     resource: "settings",
     action: "update",
     execute: async () => {
-      await updateResendSettingsCommand(parsed.data);
+      await updateResendSettingsCommand(omitUndefined(parsed.data));
       return null;
     },
     afterSuccess: refreshSettingsCache,
@@ -116,7 +117,7 @@ export async function updateTurnstileSettings(
     resource: "settings",
     action: "update",
     execute: async () => {
-      await updateTurnstileSettingsCommand(parsed.data);
+      await updateTurnstileSettingsCommand(omitUndefined(parsed.data));
       return null;
     },
     afterSuccess: refreshSettingsCache,
@@ -144,12 +145,12 @@ export async function testTurnstileConnectionAction(
         );
       }
 
-      return {
+      return omitUndefined({
         note:
           typeof result.metadata?.["note"] === "string"
             ? result.metadata["note"]
             : undefined,
-      };
+      });
     },
   });
 }
@@ -178,7 +179,7 @@ export async function updateGoogleMapsSettings(
     resource: "settings",
     action: "update",
     execute: async () => {
-      await updateGoogleMapsSettingsCommand(parsed.data);
+      await updateGoogleMapsSettingsCommand(omitUndefined(parsed.data));
       return null;
     },
     afterSuccess: refreshSettingsCache,
@@ -234,7 +235,7 @@ export async function updateCloudflareSettings(
     resource: "settings",
     action: "update",
     execute: async () => {
-      await updateCloudflareSettingsCommand(parsed.data);
+      await updateCloudflareSettingsCommand(omitUndefined(parsed.data));
       return null;
     },
     afterSuccess: refreshSettingsCache,
@@ -262,7 +263,7 @@ export async function testCloudflareConnectionAction(
         );
       }
 
-      return {
+      return omitUndefined({
         zoneName:
           typeof result.metadata?.["zoneName"] === "string"
             ? result.metadata["zoneName"]
@@ -271,7 +272,7 @@ export async function testCloudflareConnectionAction(
           typeof result.metadata?.["plan"] === "string"
             ? result.metadata["plan"]
             : undefined,
-      };
+      });
     },
   });
 }
@@ -299,7 +300,7 @@ export async function addCustomApiKey(
   return executeAdminMutationResult({
     resource: "settings",
     action: "update",
-    execute: async () => addCustomApiKeyCommand(parsed.data),
+    execute: async () => addCustomApiKeyCommand(omitUndefined(parsed.data)),
     afterSuccess: refreshSettingsCache,
     resolveAuditResourceId: (result) => result.id,
   });

@@ -66,13 +66,6 @@ import { useCategoryFilters } from "../_hooks/use-taxonomy-filters";
 // Types & Schemas
 // =============================================================================
 
-type CategoryFormData = {
-  name: string;
-  slug: string;
-  description?: string;
-  order: number;
-};
-
 const categoryFormSchema = z.object({
   name: z
     .string()
@@ -85,7 +78,9 @@ const categoryFormSchema = z.object({
     .regex(/^[a-z0-9-]+$/, { error: "スラッグは小文字英数字とハイフンのみ" }),
   description: z.string().max(200).optional(),
   order: z.number().int().min(0),
-}) satisfies z.ZodType<CategoryFormData>;
+});
+
+type CategoryFormData = z.infer<typeof categoryFormSchema>;
 
 async function fetchPostCategories(): Promise<PostCategoryData[]> {
   return fetchAdminJson("/admin/api/post-categories");
@@ -230,7 +225,7 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
   );
 
   // Form
-  const form = useForm<CategoryFormData>({
+  const form = useForm<CategoryFormData, unknown, CategoryFormData>({
     resolver: zodResolver(categoryFormSchema),
     defaultValues: { name: "", slug: "", description: "", order: 0 },
   });

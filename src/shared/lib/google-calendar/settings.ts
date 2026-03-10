@@ -16,6 +16,7 @@ import type {
   TwoWaySyncSettings,
   CalendarConnectionTestResult,
 } from "./types";
+import { omitUndefined } from "@/shared/lib/serialize";
 import { formatGoogleApiError } from "./helpers";
 import { parseServiceAccountCredentials } from "./service-account";
 
@@ -46,11 +47,11 @@ export async function testServiceAccountConnection(params: {
       calendarId: params.calendarId,
     });
 
-    return {
+    return omitUndefined({
       success: true,
       calendarName: response.data.summary ?? undefined,
       accountEmail: credentials.client_email,
-    };
+    });
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,

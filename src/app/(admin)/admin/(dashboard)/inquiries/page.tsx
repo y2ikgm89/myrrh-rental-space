@@ -6,6 +6,7 @@ import { Pagination } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
 import { parseInquiryStatusFilter } from "@/shared/lib/validations/enums";
 import { loadAdminInquirySearchParams } from "@/shared/lib/nuqs";
+import { omitUndefined } from "@/shared/lib/serialize";
 import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "お問い合わせ管理 | Myrrh Rental Space",
@@ -22,7 +23,7 @@ async function InquiryList({ searchParams }: { searchParams: SearchParams }) {
   const status = parseInquiryStatusFilter(params.status);
 
   const result = await getInquiries(
-    { status, search: params.search || undefined },
+    omitUndefined({ status, search: params.search || undefined }),
     { page: params.page, limit: 10 },
   );
 

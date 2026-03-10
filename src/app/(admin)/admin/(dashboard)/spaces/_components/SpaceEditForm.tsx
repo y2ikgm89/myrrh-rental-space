@@ -292,7 +292,7 @@ function SortableImageItem({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id, disabled });
+  } = useSortable({ id, ...(disabled !== undefined && { disabled }) });
 
   return (
     <div

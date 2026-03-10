@@ -8,6 +8,7 @@ import {
   normalizeError,
 } from "@/shared/lib/errors/server";
 import { getGoogleCalendarSettings } from "@/shared/domain/settings/admin-queries";
+import { omitUndefined } from "@/shared/lib/serialize";
 import type { CalendarChange, SyncChangesResult } from "./types";
 import { formatGoogleApiError } from "./helpers";
 import { getServiceAccountClient } from "./service-account";
@@ -81,7 +82,7 @@ export async function fetchCalendarChanges(
         const isReservationEvent = event.description?.includes("予約ID:");
 
         if (isReservationEvent) {
-          changes.push({
+          const change: CalendarChange = {
             eventId: event.id,
             status:
               event.status === "cancelled"
@@ -89,16 +90,17 @@ export async function fetchCalendarChanges(
                 : event.status === "tentative"
                   ? "tentative"
                   : "confirmed",
-            summary: event.summary ?? undefined,
-            startTime: event.start?.dateTime
-              ? new Date(event.start.dateTime)
-              : undefined,
-            endTime: event.end?.dateTime
-              ? new Date(event.end.dateTime)
-              : undefined,
             updatedAt: event.updated ? new Date(event.updated) : new Date(),
             deleted: event.status === "cancelled",
-          });
+            ...(event.summary != null && { summary: event.summary }),
+            ...(event.start?.dateTime != null && {
+              startTime: new Date(event.start.dateTime),
+            }),
+            ...(event.end?.dateTime != null && {
+              endTime: new Date(event.end.dateTime),
+            }),
+          };
+          changes.push(change);
         }
       }
 
@@ -106,11 +108,11 @@ export async function fetchCalendarChanges(
       newSyncToken = response.data.nextSyncToken ?? undefined;
     } while (pageToken);
 
-    return {
+    return omitUndefined({
       success: true,
       changes,
       newSyncToken,
-    };
+    });
   } catch (error) {
     // syncTokenが期限切れの場合はフルシンク
     if (error instanceof Error && error.message.includes("410")) {

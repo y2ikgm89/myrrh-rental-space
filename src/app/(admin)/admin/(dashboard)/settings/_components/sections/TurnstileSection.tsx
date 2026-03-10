@@ -97,7 +97,7 @@ export function TurnstileSection({ config }: TurnstileSectionProps) {
         setTestResult({
           success: true,
           message: "検証成功",
-          note: result.note,
+          ...(result.note !== undefined && { note: result.note }),
         });
         refresh();
       } else {

@@ -42,22 +42,20 @@ export function AnalyticsProvider({ config, nonce }: AnalyticsProviderProps) {
 
   // GA4の場合
   if (config.analyticsType === AnalyticsType.ga4 && config.googleAnalyticsId) {
-    return (
-      <GoogleAnalytics
-        gaId={config.googleAnalyticsId}
-        nonce={nonce ?? undefined}
-      />
-    );
+    const gaProps: { gaId: string; nonce?: string } = {
+      gaId: config.googleAnalyticsId,
+    };
+    if (nonce != null) gaProps.nonce = nonce;
+    return <GoogleAnalytics {...gaProps} />;
   }
 
   // GTMの場合
   if (config.analyticsType === AnalyticsType.gtm && config.googleTagManagerId) {
-    return (
-      <GoogleTagManager
-        gtmId={config.googleTagManagerId}
-        nonce={nonce ?? undefined}
-      />
-    );
+    const gtmProps: { gtmId: string; nonce?: string } = {
+      gtmId: config.googleTagManagerId,
+    };
+    if (nonce != null) gtmProps.nonce = nonce;
+    return <GoogleTagManager {...gtmProps} />;
   }
 
   return null;

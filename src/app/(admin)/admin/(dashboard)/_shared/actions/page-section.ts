@@ -87,7 +87,7 @@ export async function createPageSection(
   return executeAdminMutationResult({
     resource: "page",
     action: "update",
-    resourceId: parsed.data.pageId,
+    ...(parsed.data.pageId != null && { resourceId: parsed.data.pageId }),
     execute: async () => createPageSectionCommand(parsed.data, contentHtml),
     afterSuccess: () => {
       if (parsed.data.pageId) {

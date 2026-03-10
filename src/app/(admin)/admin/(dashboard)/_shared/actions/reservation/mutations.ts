@@ -9,6 +9,7 @@ import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
 import { ReservationStatus } from "@/shared/db/enums";
 import type { MutationResult } from "@/shared/lib/mutation-result";
+import { omitUndefined } from "@/shared/lib/serialize";
 import {
   deleteReservationCommand,
   updateReservationNotesCommand,
@@ -62,7 +63,7 @@ export const updateReservationStatus = async (
         return;
       }
 
-      const notification = result.notification;
+      const notification = omitUndefined(result.notification);
       const calendarData: ReservationSyncData = { ...notification };
 
       if (

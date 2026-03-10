@@ -11,6 +11,7 @@
 
 import { ArrowUp, ArrowDown, Trash2, Plus } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
+import { omitUndefined } from "@/shared/lib/serialize";
 import type {
   CTAButtonItem,
   CTAButtonVariant,
@@ -295,14 +296,18 @@ function ButtonItemEditor({
             <ColorInput
               label="背景色"
               value={button.backgroundColor ?? ""}
-              onChange={(v) => onUpdate({ backgroundColor: v || undefined })}
+              onChange={(v) =>
+                onUpdate(omitUndefined({ backgroundColor: v || undefined }))
+              }
               disabled={disabled}
               compact={compact}
             />
             <ColorInput
               label="文字色"
               value={button.textColor ?? ""}
-              onChange={(v) => onUpdate({ textColor: v || undefined })}
+              onChange={(v) =>
+                onUpdate(omitUndefined({ textColor: v || undefined }))
+              }
               disabled={disabled}
               compact={compact}
             />

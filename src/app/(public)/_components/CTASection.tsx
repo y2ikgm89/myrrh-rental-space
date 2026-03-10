@@ -66,14 +66,14 @@ export function CTASection({ config, design }: CTASectionProps): ReactElement {
   const primaryButton = config.buttons.find((b) => b.variant === "primary");
   const secondaryButton = config.buttons.find((b) => b.variant === "secondary");
   const variant = config.variant;
-  const bgStyle = config.backgroundColor
-    ? { backgroundColor: config.backgroundColor }
-    : undefined;
+  const styleProps = config.backgroundColor
+    ? { style: { backgroundColor: config.backgroundColor } }
+    : {};
 
   // split: 2-column layout (text left, buttons right)
   if (variant === "split") {
     return (
-      <SectionWrapper design={design} style={bgStyle}>
+      <SectionWrapper design={design} {...styleProps}>
         <div className="flex flex-col items-center gap-8 md:flex-row md:gap-16">
           <div className="flex-1">
             <ScrollReveal>
@@ -113,7 +113,7 @@ export function CTASection({ config, design }: CTASectionProps): ReactElement {
   // centered: larger typography + horizontal buttons
   // default: standard center-aligned with vertical buttons
   return (
-    <SectionWrapper design={design} style={bgStyle}>
+    <SectionWrapper design={design} {...styleProps}>
       <div className="text-center">
         <ScrollReveal>
           {config.sectionLabel && (

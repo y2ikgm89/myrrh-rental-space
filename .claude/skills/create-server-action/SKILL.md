@@ -2,7 +2,7 @@
 name: create-server-action
 description: >
   管理画面の Server Action ファイルをフルスキャフォールドで生成する。
-  executeAdminMutation パターンに準拠した CRUD アクションと Zod スキーマを一括作成する。
+  executeAdminMutationResult パターンに準拠した CRUD アクションと Zod スキーマを一括作成する。
   新しいリソース（モデル）を管理画面に追加する際に使用。
 argument-hint: "<resource-name>"
 ---
@@ -74,15 +74,15 @@ export type <ResourcePascal>FormOutput = z.output<typeof <name>FormSchema>
 
 ### `src/app/(admin)/admin/(dashboard)/_shared/actions/<name>.ts`
 
-executeAdminMutation CRUD のテンプレート:
+executeAdminMutationResult CRUD のテンプレート:
 
 ```typescript
 'use server'
 
 import { updateTag } from 'next/cache'
-import { executeAdminMutation } from '@/admin/lib/admin-action'
-import { createSuccess } from '@/admin/types/server-actions'
-import { createValidationError } from '@/shared/lib/action-helpers'
+import { executeAdminMutationResult } from '@/admin/lib/admin-action'
+import { createValidationMutationError } from '@/shared/lib/action-helpers'
+import type { MutationResult } from '@/shared/lib/mutation-result'
 import { CACHE_TAGS } from '@/shared/lib/constants'
 import {
   create<ResourcePascal>Command,
@@ -98,43 +98,48 @@ import {
 // Write Actions
 // =============================================================================
 
-export const create<ResourcePascal> = async (input: <ResourcePascal>FormInput) => {
+export async function create<ResourcePascal>(
+  input: <ResourcePascal>FormInput,
+): Promise<MutationResult<{ id: string }>> {
   const parsed = <name>FormSchema.safeParse(input)
-  if (!parsed.success) return createValidationError(parsed.error)
+  if (!parsed.success) return createValidationMutationError(parsed.error)
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: '<name>',
     action: 'create',
     execute: async () => create<ResourcePascal>Command(parsed.data),
-    success: (result) => createSuccess('<ResourceLabel>を作成しました', result),
     afterSuccess: () => { updateTag(CACHE_TAGS.<NAME_UPPER>) },
     resolveAuditResourceId: (data) => data.id,
   })
 }
 
-export const update<ResourcePascal> = async (id: string, input: <ResourcePascal>FormInput) => {
+export async function update<ResourcePascal>(
+  id: string,
+  input: <ResourcePascal>FormInput,
+): Promise<MutationResult<null>> {
   const parsed = <name>FormSchema.safeParse(input)
-  if (!parsed.success) return createValidationError(parsed.error)
+  if (!parsed.success) return createValidationMutationError(parsed.error)
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: '<name>',
     action: 'update',
     resourceId: id,
     execute: async () => update<ResourcePascal>Command(id, parsed.data),
-    success: () => createSuccess('<ResourceLabel>を更新しました'),
     afterSuccess: () => { updateTag(CACHE_TAGS.<NAME_UPPER>) },
   })
 }
 
-export const delete<ResourcePascal> = async (id: string) =>
-  executeAdminMutation({
+export async function delete<ResourcePascal>(
+  id: string,
+): Promise<MutationResult<null>> {
+  return executeAdminMutationResult({
     resource: '<name>',
     action: 'delete',
     resourceId: id,
     execute: async () => delete<ResourcePascal>Command(id),
-    success: () => createSuccess('<ResourceLabel>を削除しました'),
     afterSuccess: () => { updateTag(CACHE_TAGS.<NAME_UPPER>) },
   })
+}
 ```
 
 ## Step 5: テンプレート変数の置換
@@ -169,5 +174,5 @@ export const delete<ResourcePascal> = async (id: string) =>
 
 - **`'use server'` ファイルは `import 'server-only'` 不要** — `'use server'` ディレクティブで境界制御済み
 - **Date フィールドは `string` 型で宣言** — Server→Client 境界シリアライゼーション（`prisma-patterns.md` 参照）
-- **`executeAdminMutation` の `resource` / `action` は `permissions.ts` の定義と一致させる**
+- **`executeAdminMutationResult` の `resource` / `action` は `permissions.ts` の定義と一致させる**
 - **`CACHE_TAGS.<NAME_UPPER>` が存在しない場合は `cache.ts` に追加してから `updateTag` を呼ぶ**

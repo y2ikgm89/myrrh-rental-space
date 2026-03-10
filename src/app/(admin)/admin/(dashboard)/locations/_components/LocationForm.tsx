@@ -113,7 +113,7 @@ function SortableImageItem({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id, disabled });
+  } = useSortable({ id, ...(disabled !== undefined && { disabled }) });
 
   const style = {
     transform: CSS.Transform.toString(transform),

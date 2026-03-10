@@ -34,12 +34,12 @@ actions/<name>/
 
 ### Step 2: 振り分け基準
 
-| queries.ts                            | mutations.ts                         |
-| ------------------------------------- | ------------------------------------ |
-| `get*`, `getPublic*`, `getActive*` 系 | `create*`, `update*`, `delete*` 系   |
-| 読み取り権限チェック（該当時）        | `publish*`, `archive*`, `toggle*` 系 |
-| Public 型（`PublicPost` 等）          | `restore*`, `reorder*` 系            |
-| `ITEMS_PER_PAGE` 等の定数             | `executeAdminMutation` を使う関数    |
+| queries.ts                            | mutations.ts                            |
+| ------------------------------------- | --------------------------------------- |
+| `get*`, `getPublic*`, `getActive*` 系 | `create*`, `update*`, `delete*` 系      |
+| 読み取り権限チェック（該当時）        | `publish*`, `archive*`, `toggle*` 系    |
+| Public 型（`PublicPost` 等）          | `restore*`, `reorder*` 系               |
+| `ITEMS_PER_PAGE` 等の定数             | `executeAdminMutationResult` を使う関数 |
 
 ### Step 3: queries.ts を作成
 
@@ -58,16 +58,18 @@ export async function get<Resource>(...) { ... }
 "use server";
 
 import { prisma } from "@/shared/lib/prisma";
-import { executeAdminMutation } from "@/admin/lib/admin-action";
+import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 // ... 必要な import のみ
 
-export const create<Resource> = async (...) =>
-  executeAdminMutation({
+export async function create<Resource>(...): Promise<MutationResult<{ id: string }>> {
+  return executeAdminMutationResult({
     resource: "<resource>",
     action: "create",
     execute: async () => { ... },
-    success: (result) => createSuccess("作成しました", result),
+    afterSuccess: () => { updateTag(CACHE_TAGS.<RESOURCES>); },
+    resolveAuditResourceId: (data) => data.id,
   });
+}
 ```
 
 ### Step 5: index.ts（barrel）を作成
@@ -95,7 +97,7 @@ git add ... && git commit -m "refactor(actions): split <name>.ts into queries/mu
 ## プロジェクト固有の注意点
 
 - 読み取り系はレイアウトの認証ガードに依存（個別の権限チェック不要）
-- mutations.ts 内の関数はすべて `executeAdminMutation` / `executeAdminMutationResult` 経由
+- mutations.ts 内の関数はすべて `executeAdminMutationResult` 経由
 - 両ファイルで使う型は queries.ts で export（mutations.ts は queries.ts から import 可）
 - `toPlainObject` / `toPlainArray` は必ず使う（Prisma オブジェクトを直接 return 禁止）
 - helpers が必要な場合（shared 型ガード等）は `helpers.ts` に抽出（`"use server"` なし）

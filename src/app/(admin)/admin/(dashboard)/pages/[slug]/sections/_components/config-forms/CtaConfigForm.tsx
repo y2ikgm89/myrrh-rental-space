@@ -23,7 +23,7 @@ import {
   type CTAButtonItem,
 } from "@/shared/lib/validations/section";
 import { ctaVariantLabels } from "@/shared/lib/validations/section-options";
-import { keysOf } from "@/shared/lib/serialize";
+import { keysOf, omitUndefined } from "@/shared/lib/serialize";
 import { FormActions, type ConfigFormProps } from "./shared";
 
 export default function CtaConfigForm({
@@ -44,7 +44,9 @@ export default function CtaConfigForm({
     defaultValues: config,
   });
 
-  const [buttons, setButtons] = useState<CTAButtonItem[]>(config.buttons);
+  const [buttons, setButtons] = useState<CTAButtonItem[]>(
+    config.buttons.map((b) => omitUndefined(b)),
+  );
   const handleButtonsChange = (newButtons: CTAButtonItem[]) => {
     setButtons(newButtons);
     setValue("buttons", newButtons);

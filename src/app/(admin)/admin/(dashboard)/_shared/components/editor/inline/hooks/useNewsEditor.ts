@@ -47,7 +47,7 @@ import {
 // =============================================================================
 
 type UseNewsEditorOptions = {
-  news?: NewsData;
+  news?: NewsData | undefined;
   mode: "create" | "edit";
 };
 
@@ -145,7 +145,7 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
   const { saveAndOpenPreview } = createPreviewHandlers("news");
 
   // フォーム（型アサーション不要）
-  const form = useForm<NewsFormData>({
+  const form = useForm<NewsFormData, unknown, NewsFormData>({
     resolver: zodResolver(newsFormSchema),
     defaultValues: toFormData(news),
   });

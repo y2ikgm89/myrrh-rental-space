@@ -8,6 +8,7 @@
  */
 
 import { format } from "date-fns";
+import { omitUndefined } from "@/shared/lib/serialize";
 
 // =============================================================================
 // Types
@@ -16,10 +17,10 @@ import { format } from "date-fns";
 export interface CalendarEvent {
   title: string;
   description: string;
-  location?: string;
+  location?: string | undefined;
   startTime: Date;
   endTime: Date;
-  url?: string;
+  url?: string | undefined;
 }
 
 export interface AddToCalendarLinks {
@@ -327,13 +328,13 @@ export function createReservationEvent(params: {
     .filter(Boolean)
     .join("\n");
 
-  return {
+  return omitUndefined({
     title: `【予約】${params.spaceName}`,
     description,
     location: params.location,
     startTime: params.startTime,
     endTime: params.endTime,
-  };
+  });
 }
 
 /**

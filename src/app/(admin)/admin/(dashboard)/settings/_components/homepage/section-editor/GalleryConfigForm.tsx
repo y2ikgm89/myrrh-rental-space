@@ -184,7 +184,7 @@ export function GalleryConfigForm({
         <div className="flex items-center gap-2">
           <Switch
             id="gallery-lightbox"
-            checked={enableLightbox}
+            checked={enableLightbox ?? false}
             onCheckedChange={(checked) => setValue("enableLightbox", checked)}
             disabled={isPending}
           />

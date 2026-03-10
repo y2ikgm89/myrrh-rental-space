@@ -73,14 +73,14 @@ if (!parsed.success) {
 
 ## Server Actions エラーパターン
 
-### 認証エラー（executeAdminMutation — 推奨パターン）
+### 認証エラー（executeAdminMutationResult — 推奨パターン）
 
-`executeAdminMutation` は認証・認可・DomainError ハンドリング・監査ログを一括処理する。管理画面の書き込み系 Server Actions では必ず使用:
+`executeAdminMutationResult` は認証・認可・DomainError ハンドリング・監査ログを一括処理する。管理画面の書き込み系 Server Actions では必ず使用:
 
 ```typescript
 "use server";
 
-import { executeAdminMutation } from "@/admin/lib/admin-action";
+import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { createSuccess } from "@/admin/types/server-actions";
 import { createValidationError } from "@/shared/lib/action-helpers";
 
@@ -88,7 +88,7 @@ export const createPost = async (input: CreatePostInput) => {
   const parsed = createPostSchema.safeParse(input);
   if (!parsed.success) return createValidationError(parsed.error);
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "post",
     action: "create",
     execute: async () => createPostCommand(parsed.data),
@@ -101,7 +101,7 @@ export const createPost = async (input: CreatePostInput) => {
 };
 ```
 
-`executeAdminMutation` が自動処理する内容:
+`executeAdminMutationResult` が自動処理する内容:
 
 - 認証チェック（`checkPermission` / `checkResourceAccess`）
 - 権限チェック（resource + action ベース）
@@ -110,10 +110,9 @@ export const createPost = async (input: CreatePostInput) => {
 
 関数の種類:
 
-| 関数                         | 用途                                                      |
-| ---------------------------- | --------------------------------------------------------- |
-| `executeAdminMutation`       | 書き込み系 Server Actions（`ActionResult<TData>` を返す） |
-| `executeAdminMutationResult` | 書き込み系で `MutationResult<TData>` を返す場合           |
+| 関数                         | 用途                                                        |
+| ---------------------------- | ----------------------------------------------------------- |
+| `executeAdminMutationResult` | 書き込み系 Server Actions（`MutationResult<TData>` を返す） |
 
 オプション:
 
@@ -124,13 +123,12 @@ export const createPost = async (input: CreatePostInput) => {
 | `resourceId`             | `string`                               | No   | リソースアクセスチェック・監査ログ用 ID |
 | `checkResourceAccess`    | `boolean`                              | No   | `true` で `checkResourceAccess` を使用  |
 | `execute`                | `(user: User) => Promise<TData>`       | Yes  | ビジネスロジック実行関数                |
-| `success`                | `(data: TData) => ActionSuccess`       | Yes  | 成功レスポンス生成関数                  |
 | `afterSuccess`           | `(data: TData) => void \| Promise`     | No   | キャッシュ無効化等の後処理              |
 | `resolveAuditResourceId` | `(data: TData) => string \| undefined` | No   | 実行結果から監査ログ用 ID を解決        |
 
 ### 直接認証チェック（checkPermission — API Routes 専用）
 
-`checkPermission` を直接使用するのは API Routes のみ。Server Actions では `executeAdminMutation` を使用する:
+`checkPermission` を直接使用するのは API Routes のみ。Server Actions では `executeAdminMutationResult` を使用する:
 
 ```typescript
 // API Route でのみ使用
@@ -147,7 +145,7 @@ export async function DELETE(req: Request) {
 
 ### データベースエラー
 
-`executeAdminMutation` は DomainError を自動キャッチするが、それ以外の例外（DB エラー等）は再スローされる。ドメインコマンド層で try/catch + `logError` + `createFailure` を行う:
+`executeAdminMutationResult` は DomainError を自動キャッチするが、それ以外の例外（DB エラー等）は再スローされる。ドメインコマンド層で try/catch + `logError` + `createFailure` を行う:
 
 ```typescript
 import {
@@ -156,12 +154,12 @@ import {
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
 
-// Server Action（executeAdminMutation がDomainErrorを自動処理）
+// Server Action（executeAdminMutationResult がDomainErrorを自動処理）
 export const updateSpace = async (id: string, input: SpaceInput) => {
   const parsed = spaceFormSchema.safeParse(input);
   if (!parsed.success) return createValidationError(parsed.error);
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "space",
     action: "update",
     resourceId: id,
@@ -183,7 +181,7 @@ async function updateSpaceCommand(id: string, data: SpaceData) {
       severity: ErrorSeverity.HIGH,
       context: { operation: "updateSpace", spaceId: id },
     });
-    throw error; // executeAdminMutation に再スローされ、呼び出し元でハンドリング
+    throw error; // executeAdminMutationResult に再スローされ、呼び出し元でハンドリング
   }
 }
 ```
@@ -192,7 +190,7 @@ async function updateSpaceCommand(id: string, data: SpaceData) {
 
 ```typescript
 export const publishPost = async (id: string) => {
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "post",
     action: "publish",
     resourceId: id,
@@ -204,7 +202,7 @@ export const publishPost = async (id: string) => {
   });
 };
 
-// ドメインコマンド層で DomainError を throw → executeAdminMutation が自動キャッチ
+// ドメインコマンド層で DomainError を throw → executeAdminMutationResult が自動キャッチ
 async function publishPostCommand(id: string) {
   const post = await prisma.post.findUnique({ where: { id } });
   if (!post) {
@@ -463,7 +461,7 @@ try {
    - `createSuccess()` / `createFailure()` を使用
 
 5. **認証チェック漏れ禁止**
-   - 管理画面 Server Actions は必ず `executeAdminMutation` を使用。`checkPermission` の直接使用は API Routes のみ
+   - 管理画面 Server Actions は必ず `executeAdminMutationResult` を使用。`checkPermission` の直接使用は API Routes のみ
 
 6. **safeFetch の fallback に `undefined` 指定禁止**
    - `undefined` は React 19 シリアライゼーション対象外。`null` または具体的な値を使用
@@ -485,12 +483,12 @@ try {
 
 ## ファイル配置
 
-| パス                            | 内容                                                                                                                                                                                  |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@/shared/types/server-actions` | `ActionResult`, `createSuccess`, `createFailure`, `isActionSuccess`                                                                                                                   |
-| `@/shared/lib/errors`           | `ErrorCategory`, `ErrorSeverity`, `normalizeError`, `getErrorMessage`, `ReservationOverlapError`, `isReservationOverlapError`（クライアントセーフ — Client Component から import 可） |
-| `@/shared/lib/errors/server`    | `logError`, `createErrorLogger`, `safeFetch`, `criticalFetch`（サーバー専用）+ 上記を全て re-export。Server Actions / API Routes / `'use cache'` 関数で使用                           |
-| `@/shared/lib/logger`           | `logger`（汎用ロガー）                                                                                                                                                                |
-| `@/shared/lib/action-helpers`   | `createValidationError`, `withValidation`, `withTurnstile`, `withRetry`, `isTransientError`                                                                                           |
-| `@/admin/lib/admin-action`      | `executeAdminMutation`, `executeAdminMutationResult`（認証・権限・監査ログ・DomainError 一括処理）                                                                                    |
-| `@/admin/lib/action-auth`       | `checkAdminAuth`, `checkPermission`, `checkResourceAccess`, `logAction`                                                                                                               |
+| パス                           | 内容                                                                                                                                                                                  |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@/shared/lib/mutation-result` | `MutationResult<T>`, `isMutationError()`                                                                                                                                              |
+| `@/shared/lib/errors`          | `ErrorCategory`, `ErrorSeverity`, `normalizeError`, `getErrorMessage`, `ReservationOverlapError`, `isReservationOverlapError`（クライアントセーフ — Client Component から import 可） |
+| `@/shared/lib/errors/server`   | `logError`, `createErrorLogger`, `safeFetch`, `criticalFetch`（サーバー専用）+ 上記を全て re-export。Server Actions / API Routes / `'use cache'` 関数で使用                           |
+| `@/shared/lib/logger`          | `logger`（汎用ロガー）                                                                                                                                                                |
+| `@/shared/lib/action-helpers`  | `createValidationMutationError`, `withValidation`, `withTurnstile`, `withRetry`, `isTransientError`                                                                                   |
+| `@/admin/lib/admin-action`     | `executeAdminMutationResult`（認証・権限・監査ログ・DomainError 一括処理）                                                                                                            |
+| `@/admin/lib/action-auth`      | `checkAdminAuth`, `checkPermission`, `checkResourceAccess`, `logAction`                                                                                                               |

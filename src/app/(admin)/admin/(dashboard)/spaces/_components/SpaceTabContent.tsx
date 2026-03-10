@@ -5,6 +5,7 @@ import { SpaceTable } from "./SpaceTable";
 import { Pagination } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
 import { loadAdminSpaceSearchParams } from "@/shared/lib/nuqs";
+import { omitUndefined } from "@/shared/lib/serialize";
 import type { SearchParams } from "nuqs/server";
 
 // =============================================================================
@@ -34,7 +35,7 @@ async function SpaceList({
   }
 
   const result = await getSpaces(
-    { isPublished, search: params.search || undefined },
+    omitUndefined({ isPublished, search: params.search || undefined }),
     { page: params.page, limit: 10 },
   );
 

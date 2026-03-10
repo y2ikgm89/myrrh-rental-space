@@ -34,15 +34,15 @@ type TagInputProps = {
   /** 既存タグのリスト（サジェスト用） */
   availableTags: TagOption[];
   /** 新規タグ作成時のコールバック（スラッグも含めて作成） */
-  onCreateTag?: (name: string) => Promise<TagOption | null>;
+  onCreateTag?: ((name: string) => Promise<TagOption | null>) | undefined;
   /** ラベル */
-  label?: string;
+  label?: string | undefined;
   /** プレースホルダー */
-  placeholder?: string;
+  placeholder?: string | undefined;
   /** 無効状態 */
-  disabled?: boolean;
+  disabled?: boolean | undefined;
   /** エラーメッセージ */
-  error?: string;
+  error?: string | undefined;
   /** よく使うタグの最大表示数 */
   mostUsedLimit?: number;
 };

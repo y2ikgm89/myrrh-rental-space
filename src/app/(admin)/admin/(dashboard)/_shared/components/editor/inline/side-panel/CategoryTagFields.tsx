@@ -53,7 +53,7 @@ export function CategoryTagFields({
           onValueChange={(value) =>
             setValue("categoryId", value, { shouldDirty: true })
           }
-          disabled={disabled}
+          {...(disabled !== undefined && { disabled })}
         >
           <SelectTrigger>
             <SelectValue placeholder="カテゴリを選択" />

@@ -23,9 +23,9 @@ export type GetCommentsResult = {
 };
 
 export type CommentFilters = {
-  postId?: string;
+  postId?: string | undefined;
   status?: "ALL" | "ACTIVE" | "DELETED";
-  search?: string;
+  search?: string | undefined;
 };
 
 export type CommentStats = {

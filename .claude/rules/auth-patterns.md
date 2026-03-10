@@ -126,20 +126,20 @@ type PermissionKey = `${Resource}:${Action}`;
 
 ## Server Action の認証パターン
 
-### executeAdminMutation（書き込み系 — 標準パターン）
+### executeAdminMutationResult（書き込み系 — 標準パターン）
 
 権限チェック・実行・監査ログ・DomainError ハンドリングを一括処理する。
 `@/admin/lib/admin-action` から import。**Server Actions の書き込み操作は原則これを使用**:
 
 ```typescript
-import { executeAdminMutation } from "@/admin/lib/admin-action";
+import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { createSuccess } from "@/admin/types/server-actions";
 
 export const createSpace = async (input: SpaceFormData) => {
   const parsed = spaceFormSchema.safeParse(input);
   if (!parsed.success) return createValidationError(parsed.error);
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "space",
     action: "create",
     execute: async () => createSpaceCommand(parsed.data),
@@ -172,7 +172,7 @@ export const updateItem = async (id: string, input: ItemInput) =>
 **EDITOR ロール用リソース単位アクセス制御**:
 
 ```typescript
-return executeAdminMutation({
+return executeAdminMutationResult({
   resource: "page",
   action: "update",
   resourceId: id,
@@ -184,7 +184,7 @@ return executeAdminMutation({
 
 ### checkPermission（API Route 用 — 直接呼び出し）
 
-API Route は `executeAdminMutation` を使わず `checkPermission` を直接呼び出す。
+API Route は `executeAdminMutationResult` を使わず `checkPermission` を直接呼び出す。
 `request.headers` を第3引数に渡す（Server Actions と異なり `headers()` が使えないため）:
 
 ```typescript
@@ -215,7 +215,7 @@ export async function deleteSpace(id: string) {
     return createFailure("権限がありません");
 }
 
-// NG: Server Actions で checkPermission 直接呼び出し（executeAdminMutation を使う）
+// NG: Server Actions で checkPermission 直接呼び出し（executeAdminMutationResult を使う）
 export async function createItem(input: ItemInput) {
   const auth = await checkPermission("item", "create");
   if (!auth.success) return auth.error;
@@ -281,14 +281,13 @@ export default async function Page() {
 
 ### セッション取得関数の使い分け
 
-| 関数                           | キャッシュ     | 未認証時               | 用途                                             |
-| ------------------------------ | -------------- | ---------------------- | ------------------------------------------------ |
-| `verifySession()`              | `cache()` あり | リダイレクト           | Server Components（認証必須）                    |
-| `verifyAdminSession()`         | `cache()` あり | リダイレクト           | Server Components（SUPER_ADMIN 必須）            |
-| `getCurrentUser()`             | `cache()` あり | `undefined` を返す     | Server Components（オプショナル）                |
-| `executeAdminMutation()`       | なし           | `ActionFailure` を返す | Server Actions（書き込み系 — **標準パターン**）  |
-| `executeAdminMutationResult()` | なし           | `MutationError` を返す | Server Actions（`MutationResult<T>` を返す変種） |
-| `checkPermission()`            | なし           | `ActionFailure` を返す | API Route（`request.headers` を第3引数に渡す）   |
+| 関数                           | キャッシュ     | 未認証時               | 用途                                            |
+| ------------------------------ | -------------- | ---------------------- | ----------------------------------------------- |
+| `verifySession()`              | `cache()` あり | リダイレクト           | Server Components（認証必須）                   |
+| `verifyAdminSession()`         | `cache()` あり | リダイレクト           | Server Components（SUPER_ADMIN 必須）           |
+| `getCurrentUser()`             | `cache()` あり | `undefined` を返す     | Server Components（オプショナル）               |
+| `executeAdminMutationResult()` | なし           | `MutationError` を返す | Server Actions（書き込み系 — **標準パターン**） |
+| `checkPermission()`            | なし           | `ActionFailure` を返す | API Route（`request.headers` を第3引数に渡す）  |
 
 ---
 
@@ -329,11 +328,11 @@ export type User = Omit<Session["user"], "role"> & {
 
 ## 監査ログ
 
-`executeAdminMutation` は `logAction()` を内部で自動呼び出しするため、手動呼び出し不要。
+`executeAdminMutationResult` は `logAction()` を内部で自動呼び出しするため、手動呼び出し不要。
 `resolveAuditResourceId` でリソース ID を動的解決できる:
 
 ```typescript
-return executeAdminMutation({
+return executeAdminMutationResult({
   resource: "space",
   action: "create",
   execute: async () => createSpaceCommand(parsed.data),
@@ -343,7 +342,7 @@ return executeAdminMutation({
 });
 ```
 
-API Route 等で `executeAdminMutation` を使わない場合のみ `logAction()` を直接呼び出す:
+API Route 等で `executeAdminMutationResult` を使わない場合のみ `logAction()` を直接呼び出す:
 
 ```typescript
 function logAction(
@@ -359,11 +358,11 @@ function logAction(
 ## 禁止事項
 
 1. **認証チェック漏れ禁止**
-   - 管理画面の書き込み系 Server Actions は `executeAdminMutation` / `executeAdminMutationResult` を使用
+   - 管理画面の書き込み系 Server Actions は `executeAdminMutationResult` / `executeAdminMutationResult` を使用
    - API Route は `checkPermission()` を直接呼び出す
 
 2. **Server Actions での `checkPermission` 直接呼び出し禁止**
-   - `executeAdminMutation` が権限チェック・監査ログ・DomainError ハンドリングを一括処理する
+   - `executeAdminMutationResult` が権限チェック・監査ログ・DomainError ハンドリングを一括処理する
    - 直接 `checkPermission` を使うと監査ログが漏れる
 
 3. **直接的な role アクセス禁止**
@@ -375,7 +374,7 @@ function logAction(
    - Server Components では `verifySession()` / `getCurrentUser()` を使用（`cache()` あり）
 
 5. **権限ハードコード禁止**
-   - `user.role === 'ADMIN'` → `executeAdminMutation` の `resource`/`action` で宣言的に指定
+   - `user.role === 'ADMIN'` → `executeAdminMutationResult` の `resource`/`action` で宣言的に指定
    - `user.role === Role.ADMIN` の直接比較禁止
 
 6. **HOF（`withPermission` / `withReadPermission`）パターン禁止**
@@ -389,7 +388,7 @@ function logAction(
 | ----------------------------- | -------------------------------------------------------------------------------------------------------- |
 | `@/shared/lib/auth.ts`        | Better Auth 設定・遅延初期化・セッション検証ユーティリティ                                               |
 | `@/shared/lib/auth-client.ts` | クライアント用認証フック（`authClient`）                                                                 |
-| `@/admin/lib/admin-action.ts` | `executeAdminMutation` / `executeAdminMutationResult`（Server Actions 標準認証パターン）                 |
+| `@/admin/lib/admin-action.ts` | `executeAdminMutationResult`（Server Actions 標準認証パターン）                                          |
 | `@/admin/lib/action-auth.ts`  | 認証プリミティブ（`checkAdminAuth`, `checkPermission`, `checkResourceAccess`, `checkRole`, `logAction`） |
 | `@/admin/lib/permissions.ts`  | 権限定義（`ROLE_PERMISSIONS`, `hasPermission`, `userHasResourceAccess`）                                 |
 | `@/admin/lib/audit.ts`        | 監査ログ記録（`logUserAction`, `logPermissionDenied`）                                                   |

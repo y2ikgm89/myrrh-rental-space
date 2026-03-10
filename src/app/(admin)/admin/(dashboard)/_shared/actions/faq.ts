@@ -21,6 +21,7 @@ import { purgeFaqCache } from "@/shared/lib/cloudflare";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
 import type { MutationResult } from "@/shared/lib/mutation-result";
+import { omitUndefined } from "@/shared/lib/serialize";
 import {
   faqCategoryFormSchema,
   faqItemFormSchema,
@@ -67,7 +68,7 @@ export async function createFaqCategory(
   return executeAdminMutationResult({
     resource: "faq",
     action: "create",
-    execute: async () => createFaqCategoryCommand(parsed.data),
+    execute: async () => createFaqCategoryCommand(omitUndefined(parsed.data)),
     afterSuccess: () => {
       invalidateFaqCaches();
       purgeFaqCaches();
@@ -95,7 +96,10 @@ export async function updateFaqCategory(
     action: "update",
     resourceId: validatedId.data,
     execute: async () => {
-      await updateFaqCategoryCommand(validatedId.data, parsed.data);
+      await updateFaqCategoryCommand(
+        validatedId.data,
+        omitUndefined(parsed.data),
+      );
       return null;
     },
     afterSuccess: () => {
@@ -162,10 +166,12 @@ export async function createFaqItem(
     resource: "faq",
     action: "create",
     execute: async () =>
-      createFaqItemCommand({
-        ...parsed.data,
-        answerHtml,
-      }),
+      createFaqItemCommand(
+        omitUndefined({
+          ...parsed.data,
+          answerHtml,
+        }),
+      ),
     afterSuccess: () => {
       invalidateFaqCaches();
       purgeFaqCaches();
@@ -195,10 +201,13 @@ export async function updateFaqItem(
     action: "update",
     resourceId: validatedId.data,
     execute: async () => {
-      await updateFaqItemCommand(validatedId.data, {
-        ...parsed.data,
-        answerHtml,
-      });
+      await updateFaqItemCommand(
+        validatedId.data,
+        omitUndefined({
+          ...parsed.data,
+          answerHtml,
+        }),
+      );
       return null;
     },
     afterSuccess: () => {

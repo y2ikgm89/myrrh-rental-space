@@ -195,7 +195,11 @@ function EditorInner({
 
         {/* カスタムプラグイン */}
         {/* contentJson がない場合のみ HTML フォールバック初期化 */}
-        {!contentJson && <HtmlInitializerPlugin content={contentHtml} />}
+        {!contentJson && (
+          <HtmlInitializerPlugin
+            {...(contentHtml !== undefined && { content: contentHtml })}
+          />
+        )}
         <DisablePlugin disabled={disabled} />
         <DraggableBlockPlugin anchorElem={contentWidthRef} />
         <TableActionMenuPlugin anchorElem={contentWidthRef} />
@@ -205,13 +209,13 @@ function EditorInner({
             setIsLinkEditMode={(isEditMode) => {
               if (isEditMode) dialogManager.openDialog("link");
             }}
-            onAddComment={onAddComment ? handleAddComment : undefined}
+            {...(onAddComment && { onAddComment: handleAddComment })}
             onOpenRuby={() => dialogManager.openDialog("ruby")}
             onOpenTooltip={() => dialogManager.openDialog("tooltip")}
           />
         )}
         <LinkHoverPreviewPlugin />
-        <CommentPlugin onMarkClick={onMarkClick} />
+        <CommentPlugin {...(onMarkClick && { onMarkClick })} />
         <PageBreakPlugin />
         <ComponentPickerPlugin openDialog={dialogManager.openDialog} />
         <ImageDropPlugin />
@@ -222,8 +226,8 @@ function EditorInner({
         <CodeBlockPlugin anchorElem={contentWrapperRef} />
         {(onAutoSave ?? autoSaveKey) && (
           <AutoSavePlugin
-            onAutoSave={onAutoSave}
-            autoSaveKey={autoSaveKey}
+            {...(onAutoSave && { onAutoSave })}
+            {...(autoSaveKey !== undefined && { autoSaveKey })}
             onStatusChange={setSaveStatus}
           />
         )}
@@ -266,8 +270,10 @@ export function LexicalEditor(props: LexicalEditorProps) {
   if (!isDesktop) {
     return (
       <MobileEditorFallback
-        contentHtml={props.contentHtml}
-        height={props.height}
+        {...(props.contentHtml !== undefined && {
+          contentHtml: props.contentHtml,
+        })}
+        {...(props.height !== undefined && { height: props.height })}
       />
     );
   }

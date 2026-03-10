@@ -24,35 +24,35 @@ export type AddCommentPayload = {
  */
 export type LexicalEditorProps = {
   /** EditorState JSON 文字列（プライマリ） */
-  contentJson?: string | null;
+  contentJson?: string | null | undefined;
   /** レガシー HTML コンテンツ（contentJson がない場合のフォールバック） */
-  contentHtml?: string;
+  contentHtml?: string | undefined;
   /** コンテンツ変更時のコールバック（JSON文字列を返す） */
-  onChange?: (json: string) => void;
+  onChange?: ((json: string) => void) | undefined;
   /** エディタを無効化するかどうか */
-  disabled?: boolean;
+  disabled?: boolean | undefined;
   /** エディタのCSSクラス */
-  className?: string;
+  className?: string | undefined;
   /** ツールバーを表示するかどうか */
-  showToolbar?: boolean;
+  showToolbar?: boolean | undefined;
   /** インスペクターサイドバーを表示するかどうか */
-  showInspector?: boolean;
+  showInspector?: boolean | undefined;
   /** エディタの高さ */
-  height?: string;
+  height?: string | undefined;
   /** プレースホルダーテキスト */
-  placeholder?: string;
+  placeholder?: string | undefined;
   /** マークノードクリック時のコールバック */
-  onMarkClick?: (markId: string) => void;
+  onMarkClick?: ((markId: string | null) => void) | undefined;
   /** コメント追加時のコールバック（FloatingToolbarからのコメントボタンクリック） */
-  onAddComment?: (payload: AddCommentPayload) => void;
+  onAddComment?: ((payload: AddCommentPayload) => void) | undefined;
   /** コンテンツ幅制御用クラス名（公開ページと同じ幅を適用） */
-  contentWidthClassName?: string;
+  contentWidthClassName?: string | undefined;
   /** コンテンツ幅制御用スタイル（カスタム幅用） */
-  contentWidthStyle?: CSSProperties;
+  contentWidthStyle?: CSSProperties | undefined;
   /** オートセーブコールバック（Server Action経由保存） */
-  onAutoSave?: (json: string) => Promise<void>;
+  onAutoSave?: ((json: string) => Promise<void>) | undefined;
   /** オートセーブのstorageキー（LocalStorage保存用） */
-  autoSaveKey?: string;
+  autoSaveKey?: string | undefined;
   /** 文字数制限（指定時のみ CharacterLimitPlugin をマウント） */
-  characterLimit?: number;
+  characterLimit?: number | undefined;
 };

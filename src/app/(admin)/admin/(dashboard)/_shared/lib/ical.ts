@@ -14,10 +14,10 @@ import { format } from "date-fns";
 export interface CalendarEvent {
   title: string;
   description: string;
-  location?: string;
+  location?: string | undefined;
   startTime: Date;
   endTime: Date;
-  url?: string;
+  url?: string | undefined;
 }
 
 export interface AddToCalendarLinks {

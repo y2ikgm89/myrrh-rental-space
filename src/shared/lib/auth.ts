@@ -33,7 +33,7 @@ import { createBetterAuthDatabaseAdapter } from "@/shared/db/better-auth-adapter
 import { AuditAction, Role } from "@/shared/db/enums";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { SESSION_CONFIG, getAppUrl } from "./constants";
-import { isRecord } from "./serialize";
+import { isRecord, omitUndefined } from "./serialize";
 import {
   logError,
   ErrorCategory,
@@ -51,12 +51,14 @@ async function logAuthEvent(
   metadata: Record<string, unknown>,
 ): Promise<void> {
   try {
-    await createAuditLogRecord({
-      userId,
-      action,
-      resource: "auth",
-      metadata,
-    });
+    await createAuditLogRecord(
+      omitUndefined({
+        userId,
+        action,
+        resource: "auth",
+        metadata,
+      }),
+    );
   } catch (error) {
     // ログ記録失敗は無視（本番ではSentry等に送信推奨）
     logError(normalizeError(error), {

@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/admin/components/ui";
 import { Save } from "lucide-react";
-import { keysOf } from "@/shared/lib/serialize";
+import { keysOf, omitUndefined } from "@/shared/lib/serialize";
 import {
   ctaConfigSchema,
   parseCtaVariant,
@@ -35,7 +35,9 @@ export function CtaConfigForm({
   onSave: (config: CtaConfig) => void;
   isPending: boolean;
 }) {
-  const [buttons, setButtons] = useState<CTAButtonItem[]>(config.buttons);
+  const [buttons, setButtons] = useState<CTAButtonItem[]>(
+    config.buttons.map((b) => omitUndefined(b)),
+  );
 
   const {
     register,

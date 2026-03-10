@@ -84,7 +84,10 @@ function formatSpaceToPlain(s: {
 }
 
 export async function getSpacesQuery(
-  filters: { isPublished?: boolean | "ALL"; search?: string } = {},
+  filters: {
+    isPublished?: boolean | "ALL" | undefined;
+    search?: string | undefined;
+  } = {},
   pagination: {
     page?: number;
     limit?: number;

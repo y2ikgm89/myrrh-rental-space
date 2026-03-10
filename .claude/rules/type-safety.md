@@ -6,36 +6,40 @@ paths:
 
 # 型安全ルール
 
-> TypeScript 6.0-beta / noUncheckedIndexedAccess 有効
+> TypeScript 6.0 / noUncheckedIndexedAccess 有効
 
 ## noUncheckedIndexedAccess（有効）
 
 `tsconfig.json` で `noUncheckedIndexedAccess: true` を有効化済み。配列・オブジェクトのインデックスアクセスは `T | undefined` を返す（`strict` フラグには含まれないため明示的に有効化）。
 
-## TypeScript 6.0 beta 主な変更点
+## TypeScript 6.0 RC 主な変更点
 
 ### デフォルト設定の変更
 
-TypeScript 6.0 から以下のデフォルト値が変更された。Next.js が tsconfig を自動管理するため実害は少ないが把握しておく:
+TypeScript 6.0 から以下のデフォルト値が変更された。本プロジェクトでは `tsconfig.json` に明示設定済み:
 
-| オプション | 旧デフォルト       | 新デフォルト | 影響                                                   |
-| ---------- | ------------------ | ------------ | ------------------------------------------------------ |
-| `strict`   | `false`            | **`true`**   | Next.js が注入するため明示設定が重要（MEMORY.md 参照） |
-| `module`   | `commonjs`         | `esnext`     | Next.js が `bundler` を注入                            |
-| `target`   | `es2020`           | `es2025`     | Next.js が管理                                         |
-| `types`    | 自動（`@types/*`） | `[]`         | Next.js が管理                                         |
+| オプション                     | 旧デフォルト       | 新デフォルト | 本プロジェクトの対応                                  |
+| ------------------------------ | ------------------ | ------------ | ----------------------------------------------------- |
+| `strict`                       | `false`            | **`true`**   | 明示 `true`（Next.js が注入するため）                 |
+| `module`                       | `commonjs`         | `esnext`     | 明示 `esnext`（Next.js が上書き）                     |
+| `target`                       | `es2020`           | `es2025`     | `ESNext`（常に最新）                                  |
+| `types`                        | 自動（`@types/*`） | `[]`         | 明示 `["node"]`（`@types/node` のグローバル型に必要） |
+| `noUncheckedSideEffectImports` | `false`            | `true`       | デフォルトに従う                                      |
+| `libReplacement`               | `true`             | `false`      | デフォルトに従う（パフォーマンス改善）                |
 
-### 禁止オプション（TS 6.0 で使用不可）
+### 非推奨・削除オプション（TS 6.0）
 
-```typescript
-// NG: tsconfig.json で設定するとコンパイルエラー
-{
-  "compilerOptions": {
-    "esModuleInterop": false,           // 禁止（true のみ許可）
-    "allowSyntheticDefaultImports": false  // 禁止（true のみ許可）
-  }
-}
-```
+| オプション                          | ステータス           | 備考                                            |
+| ----------------------------------- | -------------------- | ----------------------------------------------- |
+| `esModuleInterop`                   | 常時有効（明示不要） | `false` は設定不可。`true` は冗長なので削除済み |
+| `allowSyntheticDefaultImports`      | 常時有効（明示不要） | 同上                                            |
+| `moduleResolution: "node"` (node10) | 非推奨               | `nodenext` か `bundler` を使う                  |
+| `target: "es5"`                     | 非推奨               | `es2015` 以上を使う                             |
+| `baseUrl`                           | 非推奨               | `paths` で相対パスを明示する                    |
+| `outFile`                           | 削除                 | 外部バンドラーを使う                            |
+| `import ... assert {}`              | 非推奨               | `import ... with {}` に移行                     |
+
+> `"ignoreDeprecations": "6.0"` で非推奨警告を抑制可能だが、TS 7.0 で完全削除されるため使用しない。
 
 ### 新組み込み型（ES2025 / Stage 3 対応）
 

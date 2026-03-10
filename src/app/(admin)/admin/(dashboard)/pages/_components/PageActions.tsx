@@ -23,9 +23,9 @@ type PageActionsProps = {
   slug: string;
   title: string;
   isPublished: boolean;
-  isSystemPage?: boolean;
-  isHomepage?: boolean;
-  editHref?: string;
+  isSystemPage?: boolean | undefined;
+  isHomepage?: boolean | undefined;
+  editHref?: string | undefined;
 };
 
 export function PageActions({

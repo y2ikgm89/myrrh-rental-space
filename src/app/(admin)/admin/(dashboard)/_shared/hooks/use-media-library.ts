@@ -204,7 +204,8 @@ export function useMediaLibrary(
     }
 
     searchTimeoutRef.current = setTimeout(() => {
-      const newFilters = { ...currentFilters, search: searchTerm || undefined };
+      const { search: _prev, ...rest } = currentFilters;
+      const newFilters = searchTerm ? { ...rest, search: searchTerm } : rest;
       fetchMedia(newFilters, 1);
     }, 300);
   };

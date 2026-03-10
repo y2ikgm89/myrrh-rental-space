@@ -55,7 +55,8 @@ type UseFormActionOptions<TInput extends FieldValues, TOutput> = {
 
 type UseFormActionReturn<TInput extends FieldValues, TOutput> = {
   /** react-hook-form の form オブジェクト */
-  form: UseFormReturn<TInput>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  form: UseFormReturn<TInput, any>;
   /** 送信中かどうか */
   isPending: boolean;
   /** フォーム送信ハンドラ（form の onSubmit に渡す） */
@@ -107,7 +108,9 @@ export function useFormAction<TInput extends FieldValues, TOutput = null>(
   // Zod 4 は Standard Schema 仕様を実装しているため、standardSchemaResolver を使用
   const form = useForm<TInput>({
     resolver: standardSchemaResolver(schema),
-    defaultValues: options?.defaultValues,
+    ...(options?.defaultValues !== undefined && {
+      defaultValues: options.defaultValues,
+    }),
   });
 
   const execute = async (data: TInput): Promise<MutationResult<TOutput>> => {
@@ -131,9 +134,10 @@ export function useFormAction<TInput extends FieldValues, TOutput = null>(
             hasTopLevelField(currentValues, field)
           ) {
             const registeredField = form.register(field);
+            const firstError = errors[0];
             form.setError(registeredField.name, {
               type: "server",
-              message: errors[0],
+              ...(firstError !== undefined && { message: firstError }),
             });
           }
         }
@@ -161,7 +165,7 @@ export function useFormAction<TInput extends FieldValues, TOutput = null>(
     return result;
   };
 
-  const onSubmit = form.handleSubmit((data) => {
+  const onSubmit = form.handleSubmit((data: TInput) => {
     startTransition(async () => {
       await execute(data);
     });

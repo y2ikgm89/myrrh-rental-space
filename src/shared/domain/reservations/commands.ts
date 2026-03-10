@@ -98,8 +98,8 @@ type ReservationNotificationPayload = {
   startTime: Date;
   endTime: Date;
   totalPrice: number | null;
-  notes?: string;
-  location?: string;
+  notes?: string | undefined;
+  location?: string | undefined;
 };
 
 type ReservationCalendarPayload = ReservationNotificationPayload;
@@ -109,19 +109,19 @@ export async function createAdminReservationCommand(input: {
   date: string;
   startTime: string;
   endTime: string;
-  customerId?: string;
+  customerId?: string | undefined;
   customerData?: {
     lastName: string;
     firstName: string;
     email: string;
-    phoneNumber?: string | null;
+    phoneNumber?: string | null | undefined;
   };
-  totalPrice?: number;
-  couponCode?: string | null;
-  manualDiscountAmount?: number;
-  manualDiscountReason?: string | null;
+  totalPrice?: number | undefined;
+  couponCode?: string | null | undefined;
+  manualDiscountAmount?: number | undefined;
+  manualDiscountReason?: string | null | undefined;
   status: ReservationStatus;
-  notes?: string | null;
+  notes?: string | null | undefined;
 }) {
   const startDateTime = buildDateTime(input.date, input.startTime);
   const endDateTime = buildDateTime(input.date, input.endTime);
@@ -318,10 +318,10 @@ export async function updateAdminReservationCommand(
     startTime: string;
     endTime: string;
     customerId: string;
-    totalPrice?: number;
-    couponCode?: string | null;
+    totalPrice?: number | undefined;
+    couponCode?: string | null | undefined;
     status: ReservationStatus;
-    notes?: string | null;
+    notes?: string | null | undefined;
   },
 ) {
   const startDateTime = buildDateTime(input.date, input.startTime);

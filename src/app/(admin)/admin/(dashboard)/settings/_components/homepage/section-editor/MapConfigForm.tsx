@@ -170,7 +170,7 @@ export function MapConfigForm({
         <div className="flex items-center gap-2">
           <Switch
             id="map-show-address"
-            checked={showAddressBelow}
+            checked={showAddressBelow ?? false}
             onCheckedChange={(checked) => setValue("showAddressBelow", checked)}
             disabled={isPending}
           />

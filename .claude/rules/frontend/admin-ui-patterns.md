@@ -153,32 +153,35 @@ import { createSuccess, createFailure } from "@/shared/types/server-actions";
 
 ## Server Actions の認証パターン
 
-管理画面の書き込み系 Server Actions は `executeAdminMutation` を使用（認証・権限チェック・監査ログ・DomainError ハンドリングを一括処理）:
+管理画面の書き込み系 Server Actions は `executeAdminMutationResult` を使用（認証・権限チェック・監査ログ・DomainError ハンドリングを一括処理）:
 
 ```typescript
-import { executeAdminMutation } from "@/admin/lib/admin-action";
-import { createSuccess } from "@/admin/types/server-actions";
-import { createValidationError } from "@/shared/lib/action-helpers";
+import { executeAdminMutationResult } from "@/admin/lib/admin-action";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
+import type { MutationResult } from "@/shared/lib/mutation-result";
 
-// OK: executeAdminMutation パターン
-export const createItem = async (input: ItemInput) => {
+// OK: executeAdminMutationResult パターン
+export async function createItem(
+  input: ItemInput,
+): Promise<MutationResult<{ id: string }>> {
   const parsed = schema.safeParse(input);
-  if (!parsed.success) return createValidationError(parsed.error);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "item",
     action: "create",
     execute: async () => createItemCommand(parsed.data),
-    success: (result) => createSuccess("作成しました", result),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.ITEMS);
     },
     resolveAuditResourceId: (data) => data.id,
   });
-};
+}
 
-// NG: 直接 checkPermission（executeAdminMutation を使う）
-export async function createItem(input: ItemInput): Promise<ActionResult> {
+// NG: 直接 checkPermission（executeAdminMutationResult を使う）
+export async function createItem(
+  input: ItemInput,
+): Promise<MutationResult<{ id: string }>> {
   const auth = await checkPermission("item", "create");
   if (!auth.success) return auth.error;
   // ...
@@ -374,14 +377,12 @@ export function CategoryActionCell({ id, name }: { id: string; name: string }) {
 
 ```tsx
 // reservations/[id]/page.tsx (Server Component)
-import { connection } from "next/server";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { DetailSection } from "@/admin/components/DetailSection";
 import { DetailField } from "@/admin/components/DetailField";
 import { DangerZone } from "@/admin/components/DangerZone";
 
 export default async function ReservationDetailPage({ params }) {
-  await connection(); // PPR opt-in — ページ関数で1回のみ
   const { id } = await params;
   const reservation = await getReservationById(id);
   if (!reservation) notFound();
@@ -443,8 +444,6 @@ onDelete={deleteReservation.bind(null, id)}
 ```tsx
 // locations/new/page.tsx (Server Component)
 export default async function NewLocationPage() {
-  await connection(); // PPR opt-in — ページ関数で1回のみ
-
   return (
     <AdminDetailLayout
       backHref="/admin/locations"
@@ -471,7 +470,6 @@ export default async function NewLocationPage() {
 ```tsx
 // customers/[id]/edit/page.tsx (Server Component)
 export default async function CustomerEditPage({ params }) {
-  await connection(); // PPR opt-in — ページ関数で1回のみ
   const { id } = await params;
   const customer = await getCustomerById(id);
   if (!customer) notFound();
@@ -489,26 +487,28 @@ export default async function CustomerEditPage({ params }) {
 }
 ```
 
-**`connection()` の使い方**:
+**`connection()` は管理画面では不要**:
 
-`connection()` は PPR 動的 opt-in のため、export されるコンポーネント関数（`page.tsx` / `generateMetadata`）で各1回のみ呼ぶ。同一関数内での複数呼び出しは禁止:
+`connection()` は PPR 動的 opt-in のため**公開ページ（`src/app/(public)/`）のみ**で使用する。管理画面（`src/app/(admin)/`）の page.tsx には配置しない。`new Date()` 等の動的データが必要なコンポーネントは Client Component にする。
 
 ```tsx
-// NG: 同一関数内で2回以上
-export default async function Page({ params }) {
+// NG: 管理画面で connection() を使う
+import { connection } from "next/server";
+export default async function AdminPage() {
   await connection();
-  const { id } = await params;
-  await connection(); // NG: 重複
   ...
 }
 
-// OK: generateMetadata + page 関数でそれぞれ1回（別の RSC エントリーポイント）
-export async function generateMetadata({ params }) {
-  await connection();
+// OK: 管理画面では connection() なし
+export default async function AdminPage() {
+  const { id } = await params;
   ...
 }
-export default async function Page({ params }) {
-  await connection(); // OK: 別の async 関数
+
+// OK: new Date() が必要な場合は Client Component にする
+"use client";
+export function DashboardHeader() {
+  const today = new Date();
   ...
 }
 ```
@@ -602,7 +602,7 @@ export default async function Page({ params }) {
 6. **テーブル操作列インライン Button+Link 禁止** — `ActionDropdown` の `*ActionCell` コンポーネントを使用（`@/admin/components/ActionDropdown`）
 7. **削除ボタンをヘッダー・CardHeader 内に配置禁止** — `DangerZone` コンポーネントをページ最下部に配置
 8. **詳細・編集ページのバックボタンを詳細コンポーネント内に配置禁止** — `AdminDetailLayout backHref` で左上固定
-9. **`connection()` を同一 async 関数内で複数回呼び出し禁止** — PPR opt-in は各 RSC エントリーポイントで1回のみ
+9. **管理画面ページで `connection()` 使用禁止** — `connection()` は公開ページ（`src/app/(public)/`）専用。管理画面では不要
 10. **新規作成ページで手動ヘッダー実装禁止** — `new/page.tsx` も `AdminDetailLayout` を使用（`locations/new` がテンプレート。`Link`+`ArrowLeft`+`Button` の手動実装禁止）
 11. **`backLabel` にエンティティ名を含めること禁止** — `"クーポン一覧に戻る"` NG → `"一覧に戻る"`（デフォルト）/ `"詳細に戻る"` のみ使用
 12. **バックナビゲーションに `ChevronLeft` 禁止** — `ArrowLeft` は `AdminDetailLayout` 内部で自動提供。手動実装が必要な場合も `ArrowLeft` のみ

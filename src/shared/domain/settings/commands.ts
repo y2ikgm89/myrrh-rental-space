@@ -15,6 +15,7 @@ import type {
 } from "@/shared/db/enums";
 import { TermsStatus, TermsType } from "@/shared/db/enums";
 import { DomainError } from "@/shared/domain/domain-error";
+import { omitUndefined } from "@/shared/lib/serialize";
 import type { SidebarSettings } from "@/shared/lib/validations/sidebar";
 import { encrypt } from "@/shared/lib/crypto";
 import { encryptServiceAccountJson } from "@/shared/lib/google-calendar/service-account";
@@ -175,9 +176,9 @@ export type RobotsTxtSettingsInput = {
 export type StripeSettingsInput = {
   stripeEnabled: boolean;
   stripeTestMode: boolean;
-  stripePublishableKey?: string | null;
-  stripeSecretKey?: string | null;
-  stripeWebhookSecret?: string | null;
+  stripePublishableKey?: string | null | undefined;
+  stripeSecretKey?: string | null | undefined;
+  stripeWebhookSecret?: string | null | undefined;
   stripeCurrency: string;
 };
 
@@ -561,17 +562,17 @@ export async function recordStripeConnectionSuccess(
 ): Promise<void> {
   await prisma.settings.upsert({
     where: { id: "singleton" },
-    create: {
+    create: omitUndefined({
       id: "singleton",
       stripeLastTestedAt: new Date(),
       stripeConnectionStatus: "connected",
       stripeAccountId: accountId,
-    },
-    update: {
+    }),
+    update: omitUndefined({
       stripeLastTestedAt: new Date(),
       stripeConnectionStatus: "connected",
       stripeAccountId: accountId,
-    },
+    }),
   });
 }
 

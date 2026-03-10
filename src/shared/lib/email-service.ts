@@ -42,6 +42,7 @@ import {
   generateICalContent,
 } from "@/shared/lib/ical";
 import { getAdminUrl, SITE_DEFAULTS } from "./constants";
+import { omitUndefined } from "./serialize";
 
 // =============================================================================
 // Types
@@ -131,15 +132,17 @@ export async function sendReservationConfirmationEmail(
     const calendarSettings = await getCalendarEmailSettings();
 
     // カレンダーイベントを生成
-    const calendarEvent = createReservationEvent({
-      reservationId: data.reservationId,
-      spaceName: data.spaceName,
-      customerName: data.customerName,
-      startTime: data.startTime,
-      endTime: data.endTime,
-      location: data.location,
-      notes: data.notes,
-    });
+    const calendarEvent = createReservationEvent(
+      omitUndefined({
+        reservationId: data.reservationId,
+        spaceName: data.spaceName,
+        customerName: data.customerName,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        location: data.location,
+        notes: data.notes,
+      }),
+    );
 
     // Add to Calendarリンクを生成
     const addToCalendarLinks = calendarSettings.addToCalendarLinksEnabled
@@ -169,23 +172,27 @@ export async function sendReservationConfirmationEmail(
       }
     }
 
-    const { error: sendError } = await resend.emails.send({
-      from: getFromAddress(),
-      to: data.customerEmail,
-      subject: `【ご予約確認】${data.spaceName} - ${reservationDate}`,
-      react: ReservationConfirmationEmail({
-        customerName: data.customerName,
-        spaceName: data.spaceName,
-        reservationDate,
-        startTime,
-        endTime,
-        totalPrice: formatPrice(data.totalPrice),
-        reservationId: data.reservationId.slice(0, 8).toUpperCase(),
-        notes: data.notes,
-        addToCalendarLinks,
+    const { error: sendError } = await resend.emails.send(
+      omitUndefined({
+        from: getFromAddress(),
+        to: data.customerEmail,
+        subject: `【ご予約確認】${data.spaceName} - ${reservationDate}`,
+        react: ReservationConfirmationEmail(
+          omitUndefined({
+            customerName: data.customerName,
+            spaceName: data.spaceName,
+            reservationDate,
+            startTime,
+            endTime,
+            totalPrice: formatPrice(data.totalPrice),
+            reservationId: data.reservationId.slice(0, 8).toUpperCase(),
+            notes: data.notes,
+            addToCalendarLinks,
+          }),
+        ),
+        attachments,
       }),
-      attachments,
-    });
+    );
 
     if (sendError) {
       logError(new Error(sendError.message), {

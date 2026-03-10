@@ -8,6 +8,7 @@ import { Pagination, Button } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
 import { parseReservationStatusFilter } from "@/shared/lib/validations/enums";
 import { loadAdminReservationSearchParams } from "@/shared/lib/nuqs";
+import { omitUndefined } from "@/shared/lib/serialize";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -29,7 +30,7 @@ async function ReservationList({
   const status = parseReservationStatusFilter(params.status);
 
   const result = await getReservations(
-    { status, search: params.search || undefined },
+    omitUndefined({ status, search: params.search || undefined }),
     { page: params.page, limit: 10 },
   );
 

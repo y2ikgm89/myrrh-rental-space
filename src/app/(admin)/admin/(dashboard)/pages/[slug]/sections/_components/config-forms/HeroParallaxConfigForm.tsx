@@ -33,7 +33,7 @@ import {
   overlayStyleLabels,
   heroParallaxHeightLabels,
 } from "@/shared/lib/validations/section-options";
-import { keysOf } from "@/shared/lib/serialize";
+import { keysOf, omitUndefined } from "@/shared/lib/serialize";
 import { FormActions, type ConfigFormProps } from "./shared";
 
 export default function HeroParallaxConfigForm({
@@ -57,7 +57,9 @@ export default function HeroParallaxConfigForm({
 
   const backgroundImageUrl = useWatch({ control, name: "backgroundImageUrl" });
 
-  const [buttons, setButtons] = useState<CTAButtonItem[]>(config.buttons);
+  const [buttons, setButtons] = useState<CTAButtonItem[]>(
+    config.buttons.map((b) => omitUndefined(b)),
+  );
   const handleButtonsChange = (newButtons: CTAButtonItem[]) => {
     setButtons(newButtons);
     setValue("buttons", newButtons);

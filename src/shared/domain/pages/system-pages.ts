@@ -1,5 +1,6 @@
 import "server-only";
 
+import { clonePrismaInputJson } from "@/shared/db/json";
 import { prisma } from "@/shared/db/prisma";
 import { SYSTEM_PAGES } from "@/shared/lib/validations/page";
 import { DEFAULT_PAGE_SECTIONS } from "@/shared/lib/constants/default-page-sections";
@@ -94,9 +95,11 @@ export async function ensureHomepageSectionsCommand(): Promise<number> {
 
         const created = await tx.section.createMany({
           data: defaultHomepageSectionOrder.map((type, index) => ({
-            pageId: undefined,
             type,
-            config: defaultSectionConfigs[type],
+            config: clonePrismaInputJson(
+              defaultSectionConfigs[type],
+              "セクション設定が不正です",
+            ),
             design: {},
             order: index,
             isActive: true,

@@ -13,7 +13,7 @@ import { getBaseUrl } from "@/shared/lib/constants";
 
 interface PurgeResult {
   success: boolean;
-  error?: string;
+  error?: string | undefined;
   purgedFiles?: number;
 }
 

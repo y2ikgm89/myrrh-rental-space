@@ -9,6 +9,7 @@ import {
 } from "@/shared/lib/errors/server";
 import { getGoogleCalendarSettings } from "@/shared/domain/settings/admin-queries";
 import type { CalendarEventParams, CalendarEventResult } from "./types";
+import { omitUndefined } from "@/shared/lib/serialize";
 import { formatGoogleApiError } from "./helpers";
 import { getServiceAccountClient } from "./service-account";
 import { getOAuthClient } from "./oauth";
@@ -31,7 +32,7 @@ export async function createCalendarEvent(
   }
 
   try {
-    const event: calendar_v3.Schema$Event = {
+    const event: calendar_v3.Schema$Event = omitUndefined({
       summary: params.summary,
       description: params.description,
       location: params.location,
@@ -46,7 +47,7 @@ export async function createCalendarEvent(
       attendees: params.attendeeEmail
         ? [{ email: params.attendeeEmail }]
         : undefined,
-    };
+    });
 
     const response = await client.events.insert({
       calendarId: settings.calendarId,
@@ -54,11 +55,11 @@ export async function createCalendarEvent(
       sendUpdates: "none",
     });
 
-    return {
+    return omitUndefined({
       success: true,
       eventId: response.data.id ?? undefined,
       eventUrl: response.data.htmlLink ?? undefined,
-    };
+    });
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
@@ -91,7 +92,7 @@ export async function updateCalendarEvent(
   }
 
   try {
-    const event: calendar_v3.Schema$Event = {
+    const event: calendar_v3.Schema$Event = omitUndefined({
       summary: params.summary,
       description: params.description,
       location: params.location,
@@ -103,7 +104,7 @@ export async function updateCalendarEvent(
         dateTime: params.endTime.toISOString(),
         timeZone: "Asia/Tokyo",
       },
-    };
+    });
 
     const response = await client.events.update({
       calendarId: settings.calendarId,
@@ -112,11 +113,11 @@ export async function updateCalendarEvent(
       sendUpdates: "none",
     });
 
-    return {
+    return omitUndefined({
       success: true,
       eventId: response.data.id ?? undefined,
       eventUrl: response.data.htmlLink ?? undefined,
-    };
+    });
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
@@ -181,7 +182,7 @@ export async function createOAuthCalendarEvent(
   }
 
   try {
-    const event: calendar_v3.Schema$Event = {
+    const event: calendar_v3.Schema$Event = omitUndefined({
       summary: params.summary,
       description: params.description,
       location: params.location,
@@ -193,18 +194,18 @@ export async function createOAuthCalendarEvent(
         dateTime: params.endTime.toISOString(),
         timeZone: "Asia/Tokyo",
       },
-    };
+    });
 
     const response = await client.events.insert({
       calendarId: "primary",
       requestBody: event,
     });
 
-    return {
+    return omitUndefined({
       success: true,
       eventId: response.data.id ?? undefined,
       eventUrl: response.data.htmlLink ?? undefined,
-    };
+    });
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,

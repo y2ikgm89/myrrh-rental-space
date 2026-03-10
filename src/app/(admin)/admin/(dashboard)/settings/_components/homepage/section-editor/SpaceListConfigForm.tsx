@@ -108,7 +108,7 @@ export function SpaceListConfigForm({
         <div className="flex items-center gap-2">
           <Switch
             id="space-view-all"
-            checked={showViewAllLink}
+            checked={showViewAllLink ?? false}
             onCheckedChange={(checked) => setValue("showViewAllLink", checked)}
             disabled={isPending}
           />

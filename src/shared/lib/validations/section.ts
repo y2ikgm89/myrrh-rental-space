@@ -12,7 +12,7 @@ import {
   createSafeUrlSchema,
   createCtaSchemas,
   createCtaButtonItemSchema,
-  transformCtaFields,
+  transformLegacyCtaToButtons,
 } from "./section-design";
 import {
   imageAspectValues,
@@ -110,8 +110,15 @@ const heroConfigRawSchema = z.object({
   parallaxSpeed: z.number().min(0).max(1).default(0.5),
 });
 /** Hero セクション設定（出力: レガシーCTA → buttons[] 統一） */
-export const heroConfigSchema =
-  heroConfigRawSchema.transform(transformCtaFields);
+export const heroConfigSchema = heroConfigRawSchema.transform(
+  ({ ctaPrimary, ctaSecondary, buttons, ...rest }) => ({
+    ...rest,
+    buttons:
+      buttons && buttons.length > 0
+        ? buttons
+        : transformLegacyCtaToButtons(ctaPrimary, ctaSecondary),
+  }),
+);
 
 /** Hero Parallax セクション設定（v3） */
 export const heroParallaxConfigSchema = z.object({
@@ -436,7 +443,15 @@ const ctaConfigRawSchema = z.object({
   variant: z.enum(ctaVariantValues).default("default"),
 });
 /** CTA セクション設定（出力: レガシーCTA → buttons[] 統一） */
-export const ctaConfigSchema = ctaConfigRawSchema.transform(transformCtaFields);
+export const ctaConfigSchema = ctaConfigRawSchema.transform(
+  ({ ctaPrimary, ctaSecondary, buttons, ...rest }) => ({
+    ...rest,
+    buttons:
+      buttons && buttons.length > 0
+        ? buttons
+        : transformLegacyCtaToButtons(ctaPrimary, ctaSecondary),
+  }),
+);
 
 /** ContactForm セクション設定 */
 export const contactFormConfigSchema = z.object({

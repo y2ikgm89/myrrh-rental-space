@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/admin/components/ui";
 import { Save, ImagePlus } from "lucide-react";
-import { keysOf } from "@/shared/lib/serialize";
+import { keysOf, omitUndefined } from "@/shared/lib/serialize";
 import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
 import { CTAButtonEditor } from "@/admin/components/cta-button-editor";
 import {
@@ -44,7 +44,9 @@ export function HeroParallaxConfigForm({
   onSave: (config: HeroParallaxConfig) => void;
   isPending: boolean;
 }) {
-  const [buttons, setButtons] = useState<CTAButtonItem[]>(config.buttons);
+  const [buttons, setButtons] = useState<CTAButtonItem[]>(
+    config.buttons.map((b) => omitUndefined(b)),
+  );
 
   const {
     register,

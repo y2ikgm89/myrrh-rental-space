@@ -15,6 +15,7 @@ import { Pagination } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
 import { parseNewsStatusFilter } from "@/shared/lib/validations/enums";
 import { loadAdminNewsSearchParams } from "@/shared/lib/nuqs";
+import { omitUndefined } from "@/shared/lib/serialize";
 import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "お知らせ管理 | Myrrh Rental Space",
@@ -35,7 +36,7 @@ async function NewsList({ searchParams }: { searchParams: SearchParams }) {
   const status = parseNewsStatusFilter(params.status);
 
   const result = await getNewsList(
-    { status, search: params.search || undefined },
+    omitUndefined({ status, search: params.search || undefined }),
     { page: params.page, limit: 10 },
   );
 

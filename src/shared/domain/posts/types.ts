@@ -101,9 +101,9 @@ export type GetPostsResult = {
 };
 
 export type PostFilters = {
-  status?: "ALL" | "PUBLISHED" | "DRAFT" | "ARCHIVED";
-  categoryId?: string;
-  search?: string;
+  status?: "ALL" | "PUBLISHED" | "DRAFT" | "ARCHIVED" | undefined;
+  categoryId?: string | undefined;
+  search?: string | undefined;
 };
 
 export type PostPagination = {

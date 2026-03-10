@@ -28,6 +28,7 @@ import {
   normalizeError,
 } from "@/shared/lib/errors/server";
 import type { MutationResult } from "@/shared/lib/mutation-result";
+import { omitUndefined } from "@/shared/lib/serialize";
 
 // =============================================================================
 // Actions
@@ -48,7 +49,7 @@ export async function updateStripeSettings(
     resource: "settings",
     action: "update",
     execute: async () => {
-      await updateStripeSettingsCommand(parsed.data);
+      await updateStripeSettingsCommand(omitUndefined(parsed.data));
       return null;
     },
     afterSuccess: () => {
@@ -86,8 +87,8 @@ export async function testStripeConnectionAction(
       }
 
       return {
-        accountId: result.accountId,
-        mode: result.mode,
+        ...(result.accountId !== undefined && { accountId: result.accountId }),
+        ...(result.mode !== undefined && { mode: result.mode }),
       };
     },
     afterSuccess: () => {

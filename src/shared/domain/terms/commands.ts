@@ -4,6 +4,7 @@ import { TermsStatus } from "@/shared/db/enums";
 import { parsePrismaInputJson } from "@/shared/db/json";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
+import { omitUndefined } from "@/shared/lib/serialize";
 import type {
   CreateTermsInput,
   CreateTermsVersionInput,
@@ -67,7 +68,7 @@ export async function createTerms(
   await ensureUniqueSlug(input.slug);
 
   const terms = await prisma.terms.create({
-    data: input,
+    data: omitUndefined(input),
   });
 
   return { id: terms.id };
@@ -83,12 +84,12 @@ export async function createTermsWithVersion(
 
   return prisma.$transaction(async (tx) => {
     const terms = await tx.terms.create({
-      data: {
+      data: omitUndefined({
         type: input.type,
         title: input.title,
         slug: input.slug,
         isActive: input.isActive,
-      },
+      }),
     });
 
     const version = await tx.termsVersion.create({
@@ -118,7 +119,7 @@ export async function updateTerms(
 
   await prisma.terms.update({
     where: { id },
-    data: input,
+    data: omitUndefined(input),
   });
 }
 

@@ -138,7 +138,7 @@ export function CategoryFields<T extends FieldValues>({
             const newValue = value === SELECT_NONE_VALUE ? "" : value;
             categoryField.field.onChange(newValue);
           }}
-          disabled={disabled}
+          {...(disabled !== undefined && { disabled })}
         >
           <SelectTrigger className="flex-1">
             <SelectValue placeholder={placeholder} />

@@ -174,7 +174,7 @@ export function SortableInspectorList({
                 position={i + 1}
                 canRemove={canRemove}
                 onRemove={onRemove}
-                minMessage={minMessage}
+                {...(minMessage !== undefined && { minMessage })}
               />
             ))}
           </div>

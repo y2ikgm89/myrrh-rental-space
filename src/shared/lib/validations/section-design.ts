@@ -124,8 +124,8 @@ export type CTAButtonItem = {
   variant: CTAButtonVariant;
   size: CTAButtonSize;
   openInNewTab: boolean;
-  backgroundColor?: string;
-  textColor?: string;
+  backgroundColor?: string | undefined;
+  textColor?: string | undefined;
 };
 
 /**
@@ -133,7 +133,9 @@ export type CTAButtonItem = {
  */
 export function transformLegacyCtaToButtons(
   ctaPrimary?: { text: string; url: string } | undefined,
-  ctaSecondary?: { text?: string; url?: string } | undefined,
+  ctaSecondary?:
+    | { text?: string | undefined; url?: string | undefined }
+    | undefined,
 ): CTAButtonItem[] {
   const buttons: CTAButtonItem[] = [];
   if (ctaPrimary?.text && ctaPrimary?.url) {
@@ -169,9 +171,11 @@ export function transformLegacyCtaToButtons(
  */
 export function transformCtaFields<
   T extends {
-    ctaPrimary?: { text: string; url: string };
-    ctaSecondary?: { text?: string; url?: string };
-    buttons?: CTAButtonItem[];
+    ctaPrimary?: { text: string; url: string } | undefined;
+    ctaSecondary?:
+      | { text?: string | undefined; url?: string | undefined }
+      | undefined;
+    buttons?: CTAButtonItem[] | undefined;
   },
 >(input: T) {
   const { ctaPrimary, ctaSecondary, buttons, ...rest } = input;

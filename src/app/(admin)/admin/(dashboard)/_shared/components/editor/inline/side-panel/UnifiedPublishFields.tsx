@@ -86,7 +86,7 @@ export function UnifiedPublishFields<T extends FieldValues>({
                   onStatusChange(value);
                 }
               }}
-              disabled={disabled}
+              {...(disabled !== undefined && { disabled })}
             >
               <SelectTrigger id="status">
                 <SelectValue placeholder="ステータスを選択" />

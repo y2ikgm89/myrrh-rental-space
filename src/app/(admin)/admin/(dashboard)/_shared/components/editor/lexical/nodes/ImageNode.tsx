@@ -26,6 +26,7 @@ import {
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { useLexicalNodeSelection } from "@lexical/react/useLexicalNodeSelection";
 import { createEnumGuard, parseString } from "../config/type-guards";
+import { omitUndefined } from "@/shared/lib/serialize";
 
 // =============================================================================
 // Types
@@ -190,9 +191,12 @@ function $convertImageElement(
     const src = element.getAttribute("src");
     if (src) {
       const alt = element.getAttribute("alt") ?? "";
-      const width = element.width || undefined;
-      const height = element.height || undefined;
-      const node = $createImageNode({ src, alt, width, height });
+      const node = $createImageNode({
+        src,
+        alt,
+        ...(element.width && { width: element.width }),
+        ...(element.height && { height: element.height }),
+      });
       return { node };
     }
   }
@@ -266,17 +270,16 @@ export class ImageNode extends DecoratorNode<ReactElement> {
   }
 
   override decorate(): ReactElement {
-    return (
-      <ImageComponent
-        src={$getState(this, srcState)}
-        alt={$getState(this, altState)}
-        width={$getState(this, widthState)}
-        height={$getState(this, heightState)}
-        alignment={$getState(this, alignmentState)}
-        caption={$getState(this, captionState)}
-        nodeKey={this.getKey()}
-      />
-    );
+    const props = omitUndefined({
+      src: $getState(this, srcState),
+      alt: $getState(this, altState),
+      width: $getState(this, widthState),
+      height: $getState(this, heightState),
+      alignment: $getState(this, alignmentState),
+      caption: $getState(this, captionState),
+      nodeKey: this.getKey(),
+    });
+    return <ImageComponent {...props} />;
   }
 }
 

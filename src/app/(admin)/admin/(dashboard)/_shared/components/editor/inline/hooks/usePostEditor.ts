@@ -52,12 +52,14 @@ import type { CategoryOption, TagOption } from "./shared";
 // =============================================================================
 
 type UsePostEditorOptions = {
-  post?: PostData;
+  post?: PostData | undefined;
   mode: "create" | "edit";
-  initialCategories?: CategoryOption[];
-  initialTags?: TagOption[];
-  onCreateCategory?: (name: string) => Promise<CategoryOption | null>;
-  onCreateTag?: (name: string) => Promise<TagOption | null>;
+  initialCategories?: CategoryOption[] | undefined;
+  initialTags?: TagOption[] | undefined;
+  onCreateCategory?:
+    | ((name: string) => Promise<CategoryOption | null>)
+    | undefined;
+  onCreateTag?: ((name: string) => Promise<TagOption | null>) | undefined;
 };
 
 async function fetchPreviewHtml(contentJson: string): Promise<string> {
@@ -189,7 +191,7 @@ export function usePostEditor({
   const { saveAndOpenPreview } = createPreviewHandlers("post");
 
   // フォーム（型アサーション不要）
-  const form = useForm<PostFormData>({
+  const form = useForm<PostFormData, unknown, PostFormData>({
     resolver: zodResolver(postFormSchema),
     defaultValues: toFormData(post),
   });

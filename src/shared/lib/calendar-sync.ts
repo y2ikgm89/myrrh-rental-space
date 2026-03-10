@@ -49,6 +49,7 @@ import {
   type CalendarChange,
 } from "@/shared/lib/google-calendar";
 import { sendCalendarSyncRejectionEmail } from "@/shared/lib/email-service";
+import { omitUndefined } from "@/shared/lib/serialize";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 
@@ -109,14 +110,14 @@ function formatCalendarEvent(data: ReservationSyncData): CalendarEventParams {
     descriptionLines.push(`備考: ${data.notes}`);
   }
 
-  return {
+  return omitUndefined({
     summary: `【予約】${data.spaceName} - ${data.customerName}様`,
     description: descriptionLines.join("\n"),
     location: data.location,
     startTime: data.startTime,
     endTime: data.endTime,
     attendeeEmail: data.customerEmail,
-  };
+  });
 }
 
 // =============================================================================
@@ -167,7 +168,7 @@ export async function syncReservationToCalendar(
         reservationId: data.reservationId,
       },
     });
-    return { success: false, error: result.error };
+    return omitUndefined({ success: false, error: result.error });
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
@@ -226,7 +227,7 @@ export async function updateCalendarSync(
       error: result.error || "Update failed",
     });
 
-    return { success: false, error: result.error };
+    return omitUndefined({ success: false, error: result.error });
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
@@ -265,7 +266,7 @@ export async function deleteCalendarSync(
       return { success: true };
     }
 
-    return { success: false, error: result.error };
+    return omitUndefined({ success: false, error: result.error });
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
@@ -310,7 +311,7 @@ export async function syncToAdminCalendar(
       return { success: true, oauthEventId: result.eventId };
     }
 
-    return { success: false, error: result.error };
+    return omitUndefined({ success: false, error: result.error });
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
@@ -347,17 +348,19 @@ export async function retryFailedSyncs(): Promise<{
 
   for (const reservation of failedReservations) {
     const customerName = `${reservation.customer.lastName} ${reservation.customer.firstName}`;
-    const result = await syncReservationToCalendar({
-      reservationId: reservation.id,
-      spaceName: reservation.space.name,
-      customerName,
-      customerEmail: reservation.customer.email,
-      startTime: reservation.startTime,
-      endTime: reservation.endTime,
-      location: reservation.space.address ?? undefined,
-      notes: reservation.notes ?? undefined,
-      totalPrice: reservation.totalPrice,
-    });
+    const result = await syncReservationToCalendar(
+      omitUndefined({
+        reservationId: reservation.id,
+        spaceName: reservation.space.name,
+        customerName,
+        customerEmail: reservation.customer.email,
+        startTime: reservation.startTime,
+        endTime: reservation.endTime,
+        location: reservation.space.address ?? undefined,
+        notes: reservation.notes ?? undefined,
+        totalPrice: reservation.totalPrice,
+      }),
+    );
 
     if (result.success) {
       succeeded++;

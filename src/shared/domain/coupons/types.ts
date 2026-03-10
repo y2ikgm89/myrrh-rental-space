@@ -42,9 +42,9 @@ export type CouponStatusFilter =
   | "notStarted";
 
 export type CouponFilters = {
-  status?: CouponStatusFilter;
-  type?: CouponType;
-  search?: string;
+  status?: CouponStatusFilter | undefined;
+  type?: CouponType | undefined;
+  search?: string | undefined;
 };
 
 export type CouponPagination = {

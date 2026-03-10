@@ -194,7 +194,7 @@ export function CommentThread({
                 <CommentItem
                   key={comment.id}
                   comment={comment}
-                  onDelete={onDeleteComment}
+                  {...(onDeleteComment && { onDelete: onDeleteComment })}
                   canDelete={thread.comments.length > 1}
                 />
               ))}

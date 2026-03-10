@@ -68,7 +68,9 @@ export function BarDialog({
             <div className="space-y-2">
               <Label htmlFor="type">タイプ</Label>
               <Select
-                value={formValues.type}
+                {...(formValues.type !== undefined && {
+                  value: formValues.type,
+                })}
                 onValueChange={(value) => {
                   if (isValidAnnouncementBarType(value)) {
                     setValue("type", value);
@@ -175,7 +177,7 @@ export function BarDialog({
             </div>
             <Switch
               id="isActive"
-              checked={formValues.isActive}
+              checked={formValues.isActive ?? false}
               onCheckedChange={(checked) => setValue("isActive", checked)}
               disabled={isPending}
             />

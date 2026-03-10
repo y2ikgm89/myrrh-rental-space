@@ -9,6 +9,7 @@ import { purgeSpaceCache } from "@/shared/lib/cloudflare";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
 import type { MutationResult } from "@/shared/lib/mutation-result";
+import { omitUndefined } from "@/shared/lib/serialize";
 import { lexicalJsonSchema } from "@/shared/lib/validations/lexical";
 import {
   createSpaceCommand,
@@ -55,11 +56,11 @@ function revalidateSpaces(...ids: string[]): void {
 }
 
 async function buildSpaceCommandInput(data: SpaceFormData) {
-  return {
+  return omitUndefined({
     ...data,
     description:
       (await renderDescriptionHtml(data.description)) ?? data.description,
-  };
+  });
 }
 
 export async function createSpace(

@@ -124,7 +124,7 @@ export function ContactFormConfigForm({
           <div className="flex items-center gap-2">
             <Switch
               id="contact-show-name"
-              checked={showNameField}
+              checked={showNameField ?? false}
               onCheckedChange={(checked) => setValue("showNameField", checked)}
               disabled={isPending}
             />
@@ -133,7 +133,7 @@ export function ContactFormConfigForm({
           <div className="flex items-center gap-2">
             <Switch
               id="contact-show-phone"
-              checked={showPhoneField}
+              checked={showPhoneField ?? false}
               onCheckedChange={(checked) => setValue("showPhoneField", checked)}
               disabled={isPending}
             />
@@ -142,7 +142,7 @@ export function ContactFormConfigForm({
           <div className="flex items-center gap-2">
             <Switch
               id="contact-show-subject"
-              checked={showSubjectField}
+              checked={showSubjectField ?? false}
               onCheckedChange={(checked) =>
                 setValue("showSubjectField", checked)
               }

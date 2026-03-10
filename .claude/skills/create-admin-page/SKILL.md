@@ -18,7 +18,7 @@ description: >
 1. **リソース名**: 英語 camelCase（例: `coupon`, `spaceCategory`）
 2. **Prisma モデル名**: 同名または異なる場合（例: `Coupon`）
 3. **主要フィールド**: 一覧表示に使うカラム（name, title, status 等）
-4. **権限設定**: `executeAdminMutation` の resource 名（通常リソース名と同じ）
+4. **権限設定**: `executeAdminMutationResult` の resource 名（通常リソース名と同じ）
 5. **既存 Server Action**: `_shared/actions/` に既存ファイルがあるか確認
 6. **ルートパス**: `/admin/<resource>` のパス（複数形が一般的）
 
@@ -48,7 +48,6 @@ src/app/(admin)/admin/(dashboard)/
 ### 一覧ページ（`page.tsx`）
 
 ```tsx
-import { connection } from "next/server";
 import type { Metadata } from "next";
 import { Button } from "@/shared/components/ui/button";
 import Link from "next/link";
@@ -67,7 +66,6 @@ export default async function <Resource>ListPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  await connection();
   const params = await loadAdmin<Resource>SearchParams(searchParams);
 
   return (
@@ -114,7 +112,6 @@ async function <Resource>TableWrapper({
 ### 詳細ページ（`[id]/page.tsx`）
 
 ```tsx
-import { connection } from "next/server";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
@@ -128,7 +125,6 @@ import { get<Resource>ById, delete<Resource> } from "@/admin/actions/<resources>
 type Props = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  await connection();
   const { id } = await params;
   const item = await get<Resource>ById(id);
   return {
@@ -137,7 +133,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function <Resource>DetailPage({ params }: Props) {
-  await connection();
   const { id } = await params;
   const item = await get<Resource>ById(id);
   if (!item) notFound();
@@ -174,7 +169,6 @@ export default async function <Resource>DetailPage({ params }: Props) {
 ### 編集ページ（`[id]/edit/page.tsx`）
 
 ```tsx
-import { connection } from "next/server";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
@@ -184,7 +178,6 @@ import { <Resource>Form } from "./_components/<Resource>Form";
 type Props = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  await connection();
   const { id } = await params;
   const item = await get<Resource>ById(id);
   return {
@@ -193,7 +186,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function <Resource>EditPage({ params }: Props) {
-  await connection();
   const { id } = await params;
   const item = await get<Resource>ById(id);
   if (!item) notFound();
@@ -214,7 +206,6 @@ export default async function <Resource>EditPage({ params }: Props) {
 ### 新規作成ページ（`new/page.tsx`）
 
 ```tsx
-import { connection } from "next/server";
 import type { Metadata } from "next";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { <Resource>Form } from "../[id]/_components/<Resource>Form";
@@ -224,8 +215,6 @@ export const metadata: Metadata = {
 };
 
 export default async function New<Resource>Page() {
-  await connection();
-
   return (
     <AdminDetailLayout
       backHref="/admin/<resources>"
@@ -372,13 +361,16 @@ export function <Resource>ActionCell({ id, name }: Props) {
 "use server";
 
 import { updateTag } from "next/cache";
-import { executeAdminMutation } from "@/admin/lib/admin-action";
-import { createSuccess } from "@/admin/types/server-actions";
-import { createValidationError } from "@/shared/lib/action-helpers";
+import { executeAdminMutationResult } from "@/admin/lib/admin-action";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
+import type { MutationResult } from "@/shared/lib/mutation-result";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import prisma from "@/shared/lib/prisma";
 import { toPlainObject, toPlainArray } from "@/shared/lib/serialize";
-import { <resource>Schema } from "./<resource>-validation";
+import {
+  <resource>FormSchema,
+  type <Resource>FormInput,
+} from "@/shared/lib/validations/<resource>";
 
 export async function get<Resource>List({
   q,
@@ -415,45 +407,50 @@ export async function get<Resource>ById(id: string) {
   return toPlainObject({ ...item, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() });
 }
 
-export const create<Resource> = async (data: FormData) => {
-  const parsed = <resource>Schema.safeParse(data);
-  if (!parsed.success) return createValidationError(parsed.error);
+export async function create<Resource>(
+  input: <Resource>FormInput,
+): Promise<MutationResult<{ id: string }>> {
+  const parsed = <resource>FormSchema.safeParse(input);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "<resource>",
     action: "create",
     execute: async () => prisma.<resource>.create({ data: parsed.data }),
-    success: (item) => createSuccess("作成しました", { id: item.id }),
     afterSuccess: () => { updateTag(CACHE_TAGS.<RESOURCES>); },
     resolveAuditResourceId: (data) => data.id,
   });
-};
+}
 
-export const update<Resource> = async (id: string, data: FormData) => {
-  const parsed = <resource>Schema.safeParse(data);
-  if (!parsed.success) return createValidationError(parsed.error);
+export async function update<Resource>(
+  id: string,
+  input: <Resource>FormInput,
+): Promise<MutationResult<null>> {
+  const parsed = <resource>FormSchema.safeParse(input);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "<resource>",
     action: "update",
     resourceId: id,
     execute: async () => {
       await prisma.<resource>.update({ where: { id }, data: parsed.data });
     },
-    success: () => createSuccess("更新しました"),
     afterSuccess: () => { updateTag(CACHE_TAGS.<RESOURCES>); },
   });
-};
+}
 
-export const delete<Resource> = async (id: string) =>
-  executeAdminMutation({
+export async function delete<Resource>(
+  id: string,
+): Promise<MutationResult<null>> {
+  return executeAdminMutationResult({
     resource: "<resource>",
     action: "delete",
     resourceId: id,
     execute: async () => { await prisma.<resource>.delete({ where: { id } }); },
-    success: () => createSuccess("削除しました"),
     afterSuccess: () => { updateTag(CACHE_TAGS.<RESOURCES>); },
   });
+}
 ```
 
 ## nuqs パーサー追加（`@/shared/lib/nuqs/parsers.ts`）
@@ -485,9 +482,8 @@ export const load<Resource>SearchParams = createSearchParamsCache(admin<Resource
 
 ## 禁止事項（admin-ui-patterns.md 準拠）
 
-- `@/shared/types/server-actions` の直接 import（`@/admin/types/server-actions` を使用）
 - `DangerZone` をページ最下部以外に配置
-- `connection()` を同一 async 関数内で複数回呼び出し
+- 管理画面ページでの `connection()` 使用（公開ページ専用）
 - `backLabel` に「<Resource>一覧に戻る」のような具体名（「一覧に戻る」のみ）
 - テーブル操作列の Button+Link 直書き（`ActionDropdown` の `*ActionCell` を使用）
 - `DangerZone.onDelete` にクロージャ（`.bind(null, id)` を使用）

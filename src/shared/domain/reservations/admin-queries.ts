@@ -7,17 +7,17 @@ import type { ReservationWhereInput } from "@/shared/types/prisma";
 
 export async function getReservationsQuery(
   filters: {
-    status?: ReservationStatus | "ALL";
-    search?: string;
-    startDate?: string;
-    endDate?: string;
-    spaceId?: string;
+    status?: ReservationStatus | "ALL" | undefined;
+    search?: string | undefined;
+    startDate?: string | undefined;
+    endDate?: string | undefined;
+    spaceId?: string | undefined;
   } = {},
   pagination: {
-    page?: number;
-    limit?: number;
-    sortBy?: "startTime" | "createdAt";
-    sortOrder?: "asc" | "desc";
+    page?: number | undefined;
+    limit?: number | undefined;
+    sortBy?: "startTime" | "createdAt" | undefined;
+    sortOrder?: "asc" | "desc" | undefined;
   } = {},
 ) {
   const { status, search, startDate, endDate, spaceId } = filters;

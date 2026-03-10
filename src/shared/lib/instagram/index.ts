@@ -11,6 +11,7 @@ import { z } from "zod";
 import type { ApiKeyTestResult } from "@/shared/types/api-keys";
 import { isValidInstagramToken } from "@/shared/lib/validations/instagram";
 import { maskApiKey } from "@/shared/lib/api-keys";
+import { omitUndefined } from "@/shared/lib/serialize";
 
 // =============================================================================
 // Zod Schemas for API Responses
@@ -167,15 +168,17 @@ export async function fetchInstagramFeed(
     );
   }
 
-  return parseResult.data.data.map((item) => ({
-    id: item.id,
-    caption: item.caption,
-    mediaType: item.media_type,
-    mediaUrl: item.media_url,
-    permalink: item.permalink,
-    thumbnailUrl: item.thumbnail_url,
-    timestamp: item.timestamp,
-  }));
+  return parseResult.data.data.map((item) =>
+    omitUndefined({
+      id: item.id,
+      caption: item.caption,
+      mediaType: item.media_type,
+      mediaUrl: item.media_url,
+      permalink: item.permalink,
+      thumbnailUrl: item.thumbnail_url,
+      timestamp: item.timestamp,
+    }),
+  );
 }
 
 // =============================================================================
@@ -219,13 +222,13 @@ export async function fetchInstagramOembed(
     );
   }
 
-  return {
+  return omitUndefined({
     html: parseResult.data.html,
     width: parseResult.data.width,
     height: parseResult.data.height,
     authorName: parseResult.data.author_name,
     providerName: parseResult.data.provider_name,
-  };
+  });
 }
 
 // =============================================================================
@@ -411,12 +414,12 @@ export async function fetchInstagramUserInfo(
     throw new Error(`Invalid user info response: ${parseResult.error.message}`);
   }
 
-  return {
+  return omitUndefined({
     id: parseResult.data.id,
     username: parseResult.data.username,
     accountType: parseResult.data.account_type,
     mediaCount: parseResult.data.media_count,
-  };
+  });
 }
 
 // =============================================================================

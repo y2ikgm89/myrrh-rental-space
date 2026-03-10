@@ -3,6 +3,7 @@ import "server-only";
 import { clonePrismaInputJson, parsePrismaInputJson } from "@/shared/db/json";
 import { Prisma, prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
+import { omitUndefined } from "@/shared/lib/serialize";
 import { ensureHomepageSections } from "@/shared/lib/section-defaults";
 import {
   SectionType,
@@ -105,17 +106,17 @@ export async function createHomepageSectionCommand(
   });
 
   const section = await prisma.section.create({
-    data: {
+    data: omitUndefined({
       pageId: null,
       type: input.type,
       title: input.title,
-      config,
+      config: cloneJsonValue(config),
       design: cloneJsonValue(input.design ?? {}),
       contentJson: parseJsonValue(input.contentJson),
       contentHtml,
       order: input.order ?? (maxOrder._max.order ?? -1) + 1,
       isActive: input.isActive,
-    },
+    }),
     select: { id: true },
   });
 
@@ -136,7 +137,7 @@ export async function updateHomepageSectionCommand(
 
   await prisma.section.update({
     where: { id },
-    data: {
+    data: omitUndefined({
       title: input.title,
       config: config === undefined ? undefined : cloneJsonValue(config),
       design:
@@ -148,7 +149,7 @@ export async function updateHomepageSectionCommand(
           }
         : {}),
       isActive: input.isActive,
-    },
+    }),
   });
 }
 
@@ -206,7 +207,7 @@ export async function initializeDefaultHomepageSectionsCommand(): Promise<boolea
         data: {
           pageId: null,
           type,
-          config: defaultSectionConfigs[type],
+          config: cloneJsonValue(defaultSectionConfigs[type]),
           design: {},
           order: index,
           isActive: true,
@@ -235,17 +236,17 @@ export async function createPageSectionCommand(
   });
 
   const section = await prisma.section.create({
-    data: {
+    data: omitUndefined({
       pageId: input.pageId,
       type: input.type,
       title: input.title,
-      config,
+      config: cloneJsonValue(config),
       design: cloneJsonValue(input.design ?? {}),
       contentJson: parseJsonValue(input.contentJson),
       contentHtml,
       order: input.order ?? (maxOrder._max.order ?? -1) + 1,
       isActive: input.isActive,
-    },
+    }),
     select: { id: true },
   });
 
@@ -266,7 +267,7 @@ export async function updatePageSectionCommand(
 
   await prisma.section.update({
     where: { id },
-    data: {
+    data: omitUndefined({
       title: input.title,
       config: config === undefined ? undefined : cloneJsonValue(config),
       design:
@@ -278,7 +279,7 @@ export async function updatePageSectionCommand(
           }
         : {}),
       isActive: input.isActive,
-    },
+    }),
   });
 
   return { pageId: existing.pageId };
@@ -343,7 +344,7 @@ export async function duplicatePageSectionCommand(id: string) {
   });
 
   const duplicated = await prisma.section.create({
-    data: {
+    data: omitUndefined({
       pageId: section.pageId,
       type: section.type,
       title: section.title ? `コピー - ${section.title}` : null,
@@ -353,7 +354,7 @@ export async function duplicatePageSectionCommand(id: string) {
       contentJson: section.contentJson ?? undefined,
       order: (maxOrderSection?.order ?? 0) + 1,
       isActive: section.isActive,
-    },
+    }),
   });
 
   return {

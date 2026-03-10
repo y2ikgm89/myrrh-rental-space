@@ -30,6 +30,11 @@ export async function buildNewsMetadata(slug: string): Promise<Metadata> {
     return { title: "お知らせが見つかりません" };
   }
 
+  const options: { canonicalUrl: string; siteName?: string } = {
+    canonicalUrl: `${getBaseUrl()}${newsItem.url}`,
+  };
+  if (settings?.siteName) options.siteName = settings.siteName;
+
   return generateArticleMetadata(
     {
       title: newsItem.title,
@@ -39,10 +44,7 @@ export async function buildNewsMetadata(slug: string): Promise<Metadata> {
       ogpDescription: newsItem.ogpDescription,
       metaKeywords: newsItem.metaKeywords,
     },
-    {
-      canonicalUrl: `${getBaseUrl()}${newsItem.url}`,
-      siteName: settings?.siteName ?? undefined,
-    },
+    options,
   );
 }
 
@@ -74,7 +76,9 @@ export async function NewsDetailPageContent({
       <NewsArticleJsonLd
         headline={newsItem.title}
         description={newsItem.metaDescription ?? newsItem.title}
-        image={newsItem.ogpImageUrl ?? undefined}
+        {...(newsItem.ogpImageUrl != null
+          ? { image: newsItem.ogpImageUrl }
+          : {})}
         url={`${baseUrl}${newsItem.url}`}
         datePublished={datePublished}
       />

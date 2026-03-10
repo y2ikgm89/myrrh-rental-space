@@ -19,12 +19,12 @@ type UserRecord = {
 export type UserData = Serialized<UserRecord>;
 
 export type UserListParams = {
-  page?: number;
-  perPage?: number;
-  search?: string;
-  role?: Role | "ALL";
-  sortBy?: "name" | "email" | "role" | "createdAt";
-  sortOrder?: "asc" | "desc";
+  page?: number | undefined;
+  perPage?: number | undefined;
+  search?: string | undefined;
+  role?: Role | "ALL" | undefined;
+  sortBy?: "name" | "email" | "role" | "createdAt" | undefined;
+  sortOrder?: "asc" | "desc" | undefined;
 };
 
 export type UserListResult = {

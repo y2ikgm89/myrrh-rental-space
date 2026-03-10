@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import type { AuditAction } from "@/shared/db/enums";
+import { omitUndefined } from "@/shared/lib/serialize";
 
 export type CreateAuditLogRecordInput = {
   userId?: string;
@@ -17,7 +18,7 @@ export async function createAuditLogRecord(
   input: CreateAuditLogRecordInput,
 ): Promise<void> {
   await prisma.auditLog.create({
-    data: {
+    data: omitUndefined({
       userId: input.userId,
       action: input.action,
       resource: input.resource,
@@ -27,6 +28,6 @@ export async function createAuditLogRecord(
       metadata: input.metadata
         ? JSON.parse(JSON.stringify(input.metadata))
         : undefined,
-    },
+    }),
   });
 }

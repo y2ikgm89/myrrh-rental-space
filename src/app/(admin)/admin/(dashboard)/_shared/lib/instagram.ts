@@ -27,11 +27,11 @@ function isValidMediaType(value: unknown): value is InstagramMediaType {
 
 export interface InstagramMediaItem {
   id: string;
-  caption?: string;
+  caption?: string | undefined;
   mediaType: InstagramMediaType;
   mediaUrl: string;
   permalink: string;
-  thumbnailUrl?: string;
+  thumbnailUrl?: string | undefined;
   timestamp: string;
 }
 
@@ -39,14 +39,14 @@ export interface InstagramUserInfo {
   id: string;
   username: string;
   accountType: string;
-  mediaCount?: number;
+  mediaCount?: number | undefined;
 }
 
 export interface InstagramOembedResponse {
   html: string;
   width: number;
-  height?: number;
-  authorName?: string;
+  height?: number | undefined;
+  authorName?: string | undefined;
   providerName: string;
 }
 
@@ -144,11 +144,13 @@ export async function fetchInstagramFeed(
     }
     return {
       id: item.id,
-      caption: item.caption,
+      ...(item.caption !== undefined && { caption: item.caption }),
       mediaType: item.media_type,
       mediaUrl: item.media_url,
       permalink: item.permalink,
-      thumbnailUrl: item.thumbnail_url,
+      ...(item.thumbnail_url !== undefined && {
+        thumbnailUrl: item.thumbnail_url,
+      }),
       timestamp: item.timestamp,
     };
   });

@@ -4,6 +4,7 @@ import { checkPermission } from "@/admin/lib/action-auth";
 import { isCommentableContentType } from "@/admin/types/editor-comment";
 import { getCommentThreadsQuery } from "@/shared/domain/editor-comments/queries";
 import { jsonError, jsonValidationError } from "@/shared/lib/route-responses";
+import { omitUndefined } from "@/shared/lib/serialize";
 
 const searchSchema = z.object({
   contentType: z
@@ -32,6 +33,6 @@ export async function GET(request: Request) {
     return jsonValidationError(parsed.error, "クエリが不正です");
   }
 
-  const threads = await getCommentThreadsQuery(parsed.data);
+  const threads = await getCommentThreadsQuery(omitUndefined(parsed.data));
   return NextResponse.json(threads);
 }

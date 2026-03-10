@@ -200,9 +200,9 @@ type FloatingToolbarProps = {
   textColor: TextColor;
   currentTextColorValue: string;
   setIsLinkEditMode: (isLinkEditMode: boolean) => void;
-  onAddComment?: () => void;
-  onOpenRuby?: () => void;
-  onOpenTooltip?: () => void;
+  onAddComment?: (() => void) | undefined;
+  onOpenRuby?: (() => void) | undefined;
+  onOpenTooltip?: (() => void) | undefined;
 };
 
 function FloatingToolbar({
@@ -740,9 +740,9 @@ function useFloatingToolbar(
       textColor={textColor}
       currentTextColorValue={currentTextColorValue}
       setIsLinkEditMode={setIsLinkEditMode}
-      onAddComment={onAddComment}
-      onOpenRuby={onOpenRuby}
-      onOpenTooltip={onOpenTooltip}
+      {...(onAddComment && { onAddComment })}
+      {...(onOpenRuby && { onOpenRuby })}
+      {...(onOpenTooltip && { onOpenTooltip })}
     />,
     anchorElem,
   );
@@ -806,9 +806,9 @@ export function FloatingToolbarPlugin({
     <FloatingToolbarInner
       anchorElem={anchorElem}
       setIsLinkEditMode={handleSetIsLinkEditMode}
-      onAddComment={onAddComment}
-      onOpenRuby={onOpenRuby}
-      onOpenTooltip={onOpenTooltip}
+      {...(onAddComment && { onAddComment })}
+      {...(onOpenRuby && { onOpenRuby })}
+      {...(onOpenTooltip && { onOpenTooltip })}
     />
   );
 }

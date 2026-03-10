@@ -19,6 +19,7 @@ import { purgeNewsCache } from "@/shared/lib/cloudflare";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
 import type { MutationResult } from "@/shared/lib/mutation-result";
+import { omitUndefined } from "@/shared/lib/serialize";
 import {
   createNewsSchema,
   updateNewsSchema,
@@ -118,12 +119,15 @@ export async function updateNews(
     action: "update",
     resourceId: validatedId.data,
     execute: async () => {
-      updatedNews = await updateNewsCommand(validatedId.data, {
-        ...parsed.data,
-        contentHtml,
-        contentWidth: parsed.data.contentWidth ?? null,
-        contentWidthCustom: parsed.data.contentWidthCustom ?? null,
-      });
+      updatedNews = await updateNewsCommand(
+        validatedId.data,
+        omitUndefined({
+          ...parsed.data,
+          contentHtml,
+          contentWidth: parsed.data.contentWidth ?? null,
+          contentWidthCustom: parsed.data.contentWidthCustom ?? null,
+        }),
+      );
       return null;
     },
     afterSuccess: () => {

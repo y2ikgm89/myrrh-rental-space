@@ -66,7 +66,7 @@ export function DangerZone({
       <DeleteConfirmDialog
         open={open}
         onOpenChange={setOpen}
-        itemName={itemName}
+        {...(itemName !== undefined && { itemName })}
         onConfirm={handleConfirm}
         isPending={isPending}
       />

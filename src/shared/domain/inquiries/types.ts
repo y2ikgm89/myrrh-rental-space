@@ -20,8 +20,8 @@ export type GetInquiriesResult = {
 };
 
 export type InquiryFilters = {
-  status?: InquiryStatus | "ALL";
-  search?: string;
+  status?: InquiryStatus | "ALL" | undefined;
+  search?: string | undefined;
 };
 
 export type InquiryPagination = {

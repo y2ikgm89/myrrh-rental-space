@@ -23,7 +23,7 @@ interface CustomerSelectorProps {
   ) => void;
   isNewCustomer: boolean;
   onToggleNewCustomer: (isNew: boolean) => void;
-  errors?: Record<string, string[] | undefined>;
+  errors?: Record<string, string[] | undefined> | undefined;
   allowNewCustomer?: boolean;
 }
 
