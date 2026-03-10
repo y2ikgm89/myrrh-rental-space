@@ -23,6 +23,7 @@ import {
   Textarea,
   Checkbox,
   SelectionBox,
+  SubmitButton,
 } from "@/admin/components/ui";
 import {
   updateReservationSchema,
@@ -460,9 +461,11 @@ export function ReservationEditForm({
         >
           キャンセル
         </Button>
-        <Button type="submit" disabled={isPending}>
-          {isPending ? "更新中..." : "予約を更新"}
-        </Button>
+        <SubmitButton
+          isPending={isPending}
+          label="予約を更新"
+          pendingLabel="更新中..."
+        />
       </div>
     </form>
   );

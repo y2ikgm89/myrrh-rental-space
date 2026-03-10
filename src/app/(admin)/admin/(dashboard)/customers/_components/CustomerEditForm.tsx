@@ -10,7 +10,14 @@ import {
   customerFormSchema,
   type CustomerFormData,
 } from "@/admin/lib/validations/customer";
-import { Button, Card, Input, Label, Textarea } from "@/admin/components/ui";
+import {
+  Button,
+  Card,
+  Input,
+  Label,
+  Textarea,
+  SubmitButton,
+} from "@/admin/components/ui";
 import type { CustomerWithReservations } from "@/shared/domain/customers/types";
 import { cn } from "@/shared/lib/cn";
 import { useKanaInput } from "@/admin/hooks";
@@ -248,13 +255,12 @@ export function CustomerEditForm({
             >
               キャンセル
             </Button>
-            <Button
-              type="submit"
-              disabled={isPending}
+            <SubmitButton
+              isPending={isPending}
+              label="顧客情報を更新"
+              pendingLabel="更新中..."
               className={cn(isPending && "opacity-50")}
-            >
-              {isPending ? "更新中..." : "顧客情報を更新"}
-            </Button>
+            />
           </div>
         </div>
       </Card>

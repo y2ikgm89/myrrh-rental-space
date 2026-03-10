@@ -24,6 +24,7 @@ import {
   Input,
   Textarea,
   Label,
+  SubmitButton,
 } from "@/admin/components/ui";
 import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
 import {
@@ -260,9 +261,7 @@ export function ListPageSeoForm({ slug, seoData }: ListPageSeoFormProps) {
 
       {/* 送信ボタン */}
       <div className="flex justify-end">
-        <Button type="submit" disabled={isPending}>
-          {isPending ? "保存中..." : "保存"}
-        </Button>
+        <SubmitButton isPending={isPending} label="保存" />
       </div>
 
       {/* メディアピッカーダイアログ */}

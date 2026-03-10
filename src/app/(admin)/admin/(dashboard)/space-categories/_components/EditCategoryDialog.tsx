@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  SubmitButton,
 } from "@/admin/components/ui";
 import { updateSpaceCategory } from "@/admin/actions/space-category";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -67,9 +68,12 @@ export function EditCategoryDialog({ category }: EditCategoryDialogProps) {
           >
             キャンセル
           </Button>
-          <Button type="submit" form="category-form" disabled={isPending}>
-            {isPending ? "更新中..." : "更新"}
-          </Button>
+          <SubmitButton
+            isPending={isPending}
+            label="更新"
+            pendingLabel="更新中..."
+            form="category-form"
+          />
         </DialogFooter>
       </DialogContent>
     </Dialog>

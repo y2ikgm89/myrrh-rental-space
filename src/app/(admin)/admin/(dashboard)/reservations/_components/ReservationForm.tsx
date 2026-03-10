@@ -22,6 +22,7 @@ import {
   Textarea,
   Checkbox,
   SelectionBox,
+  SubmitButton,
 } from "@/admin/components/ui";
 import {
   adminReservationSchema,
@@ -470,9 +471,11 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
         >
           キャンセル
         </Button>
-        <Button type="submit" disabled={isPending}>
-          {isPending ? "作成中..." : "予約を作成"}
-        </Button>
+        <SubmitButton
+          isPending={isPending}
+          label="予約を作成"
+          pendingLabel="作成中..."
+        />
       </div>
     </form>
   );

@@ -10,7 +10,14 @@ import {
   type CustomerFormData,
   type CustomerFormInput,
 } from "@/admin/lib/validations/customer";
-import { Button, Input, Label, Card, Textarea } from "@/admin/components/ui";
+import {
+  Button,
+  Input,
+  Label,
+  Card,
+  Textarea,
+  SubmitButton,
+} from "@/admin/components/ui";
 import { cn } from "@/shared/lib/cn";
 import { useKanaInput } from "@/admin/hooks";
 import {
@@ -279,13 +286,12 @@ export function CustomerForm(): ReactElement {
             >
               キャンセル
             </Button>
-            <Button
-              type="submit"
-              disabled={isPending}
+            <SubmitButton
+              isPending={isPending}
+              label="顧客を作成"
+              pendingLabel="作成中..."
               className={cn(isPending && "opacity-50")}
-            >
-              {isPending ? "作成中..." : "顧客を作成"}
-            </Button>
+            />
           </div>
         </div>
       </Card>

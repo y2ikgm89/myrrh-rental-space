@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  Button,
   Input,
   Label,
   Textarea,
@@ -13,8 +12,9 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SubmitButton,
 } from "@/admin/components/ui";
-import { Save } from "lucide-react";
+
 import { keysOf, omitUndefined } from "@/shared/lib/serialize";
 import {
   ctaConfigSchema,
@@ -123,10 +123,7 @@ export function CtaConfigForm({
         </div>
       </div>
 
-      <Button type="submit" disabled={isPending}>
-        <Save className="h-4 w-4 mr-2" />
-        {isPending ? "保存中..." : "保存"}
-      </Button>
+      <SubmitButton isPending={isPending} label="保存" />
     </form>
   );
 }

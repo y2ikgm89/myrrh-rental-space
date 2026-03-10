@@ -157,6 +157,10 @@ export type { SelectionBoxProps, SelectionBoxOption } from "./selection-box";
 // Breadcrumb
 export { Breadcrumb } from "./breadcrumb";
 
+// SubmitButton
+export { SubmitButton } from "./SubmitButton";
+export type { SubmitButtonProps } from "./SubmitButton";
+
 // CharCount
 export { CharCount } from "./CharCount";
 

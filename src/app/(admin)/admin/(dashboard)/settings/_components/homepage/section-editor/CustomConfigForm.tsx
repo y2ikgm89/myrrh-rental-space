@@ -4,8 +4,8 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Button, Input, Label } from "@/admin/components/ui";
-import { Save } from "lucide-react";
+import { Input, Label, SubmitButton } from "@/admin/components/ui";
+
 import {
   customConfigSchema,
   type CustomConfig,
@@ -102,10 +102,7 @@ export function CustomConfigForm({
         </div>
       </div>
 
-      <Button type="submit" disabled={isPending}>
-        <Save className="h-4 w-4 mr-2" />
-        {isPending ? "保存中..." : "保存"}
-      </Button>
+      <SubmitButton isPending={isPending} label="保存" />
     </form>
   );
 }

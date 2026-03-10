@@ -15,8 +15,9 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SubmitButton,
 } from "@/admin/components/ui";
-import { Save, ImagePlus } from "lucide-react";
+import { ImagePlus } from "lucide-react";
 import { keysOf, omitUndefined } from "@/shared/lib/serialize";
 import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
 import { CTAButtonEditor } from "@/admin/components/cta-button-editor";
@@ -285,10 +286,7 @@ export function HeroParallaxConfigForm({
         </div>
       </div>
 
-      <Button type="submit" disabled={isPending}>
-        <Save className="h-4 w-4 mr-2" />
-        {isPending ? "保存中..." : "保存"}
-      </Button>
+      <SubmitButton isPending={isPending} label="保存" />
 
       {/* メディアピッカーダイアログ */}
       <bgPicker.MediaPicker />
