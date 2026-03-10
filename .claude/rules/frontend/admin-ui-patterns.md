@@ -190,6 +190,31 @@ export async function createItem(
 
 詳細は `auth-patterns.md` を参照。
 
+## フォーム送信ボタン（SubmitButton）
+
+フォームの送信ボタンは `SubmitButton` コンポーネントに統一する。インラインの `isPending ? "X中..." : "X"` パターンは禁止:
+
+```tsx
+import { SubmitButton } from "@/admin/components/ui";
+
+// OK: SubmitButton（Loader2 スピナー + disabled 自動管理）
+<SubmitButton isPending={isPending} label="保存" />
+<SubmitButton isPending={isPending} label="予約を作成" pendingLabel="作成中..." />
+<SubmitButton isPending={isPending} label="削除" variant="destructive" pendingLabel="削除中..." />
+
+// NG: インライン isPending パターン（禁止）
+<Button type="submit" disabled={isPending}>
+  {isPending ? "保存中..." : "保存"}
+</Button>
+```
+
+**`pendingLabel` ルール**:
+
+- 単純ラベル（「保存」「更新」「削除」「作成」）→ 省略可（デフォルト: `label + "中..."`）
+- 複合ラベル（「予約を作成」「顧客情報を更新」）→ `pendingLabel` 明示指定（デフォルトだと「予約を作成中...」になる）
+
+**適用対象外**: `DeleteConfirmDialog`（内部 isPending 管理）、`onClick` ハンドラのボタン、`disabled={isPending || !isDirty}` 等の複合条件ボタン
+
 ## テーブルレスポンシブ対応パターン
 
 管理画面の全テーブルは **2層ラッパー** + **カラム Progressive Disclosure** で実装する。

@@ -174,6 +174,7 @@ bun update                                      # semver 範囲内の依存パ�
 
 - Server Components 優先、Server Actions
 - Zod バリデーション必須
+- フォーム送信ボタン: `<SubmitButton isPending={isPending} label="保存" />` — `@/admin/components/ui`（インライン `isPending ? "X中..." : "X"` パターン禁止）
 - 命名: コンポーネント `PascalCase.tsx`、その他 `kebab-case.ts`
 - コミット: `<type>(<scope>): <subject>`
 

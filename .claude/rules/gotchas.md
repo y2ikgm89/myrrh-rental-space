@@ -76,6 +76,7 @@
 - **sessionStorage / localStorage 読み取りに `useState` lazy initializer 禁止** — React 19 公式は `useSyncExternalStore` を推奨（`subscribe` = no-op、`getSnapshot` は `useRef` キャッシュ必須）→ `react-patterns.md §useSyncExternalStore`
 - **Prisma オブジェクトを `{ ...prismaObj }` で Client Component に渡すと Symbol エラー** — `nodejs.util.inspect.custom` 等の Symbol プロパティが混入し `Only plain objects can be passed to Client Components` エラーが発生。`toPlainObject({ ...prismaObj, customFields })` でラップして返す（`@/shared/lib/serialize`）。`Date` フィールドは実行時 ISO 文字列になるため表示には `toISOString()` / `formatSerializedDate()` を使用
 - **管理者入力 HTML は `SanitizedHtml` 必須** — 生の HTML 直接レンダリング禁止。`import { SanitizedHtml } from "@/shared/components/SanitizedHtml"` を使う（isomorphic-dompurify, ADD_TAGS: ['iframe']）。例外: JSON-LD の `<script type="application/ld+json">` は JSON.stringify() 経由のため安全で変更不要
+- **`useFormStatus` は react-hook-form の `onSubmit` パターンと非互換** — `useFormStatus` は `<form action={}>` でのみ動作する。`useFormAction` フック（react-hook-form + `useTransition`）を使うフォームでは `isPending` を prop で受け取る `SubmitButton` を使用する。`useFormStatus` への移行は不要
 
 ## 管理画面 UI
 
@@ -103,6 +104,11 @@
 - **`Permissions-Policy` に `interest-cohort=()` 追加禁止** — Google FLoC は2022年廃止済み。不要（削除済み）
 - **セキュリティヘッダーは `proxy.ts` に一元化（`next.config.ts` への追加禁止）** — nonce のリクエスト毎生成が必須なため。Cache-Control のみ `next.config.ts` で管理。CSP nonce: `Buffer.from(crypto.randomUUID()).toString('base64')`
 - **`proxy.ts` の rewrite パスは `createResponse()` と同一ヘッダーセット必須** — `NextResponse.rewrite()` を追加する際は requestHeaders に `x-nonce` / `x-pathname` / `Content-Security-Policy`、レスポンスに `response.headers.set("x-pathname", pathname)` + `applySecurityHeaders()` を必ず設定。欠落するとその URL パスでのみ nonce 伝播が壊れる
+
+## Rate Limiting
+
+- **API レート制限は `checkRateLimit(pathname, clientIp)` に一元化** — `proxy.ts` で呼び出す。エンドポイント別: `/api/auth` → 10/15分（ブルートフォース対策）、`/api/admin/login-tokens` → 30/分、その他 → 100/分。個別の `apiRateLimiter.check()` 直接呼び出しは禁止
+- **Webhook・Cron はレート制限対象外** — `/api/webhooks` と `/api/cron` は `checkRateLimit` の前に早期リターンする（`proxy.ts` の条件分岐で除外済み）
 
 ## 環境変数
 
