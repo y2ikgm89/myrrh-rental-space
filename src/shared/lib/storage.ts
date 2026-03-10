@@ -18,25 +18,34 @@
  * @module shared/lib/storage
  */
 
-import { supabase, isSupabaseConfigured, STORAGE_BUCKETS, type StorageBucket } from './supabase'
-import { v4 as uuid } from 'uuid'
-import { logError, ErrorCategory, ErrorSeverity, normalizeError } from './errors/server'
+import {
+  supabase,
+  isSupabaseConfigured,
+  STORAGE_BUCKETS,
+  type StorageBucket,
+} from "./supabase";
+import {
+  logError,
+  ErrorCategory,
+  ErrorSeverity,
+  normalizeError,
+} from "./errors/server";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 export type UploadResult = {
-  success: boolean
-  url?: string
-  path?: string
-  error?: string
-}
+  success: boolean;
+  url?: string;
+  path?: string;
+  error?: string;
+};
 
 export type FileValidation = {
-  maxSize: number // bytes
-  allowedTypes: string[]
-}
+  maxSize: number; // bytes
+  allowedTypes: string[];
+};
 
 // =============================================================================
 // Constants
@@ -44,43 +53,48 @@ export type FileValidation = {
 
 const DEFAULT_VALIDATION: FileValidation = {
   maxSize: 5 * 1024 * 1024, // 5MB
-  allowedTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
-}
+  allowedTypes: ["image/jpeg", "image/png", "image/webp", "image/gif"],
+};
 
 const IMAGE_VALIDATION: FileValidation = {
   maxSize: 10 * 1024 * 1024, // 10MB
-  allowedTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
-}
+  allowedTypes: ["image/jpeg", "image/png", "image/webp", "image/gif"],
+};
 
-const SUPABASE_NOT_CONFIGURED_ERROR = 'ファイルアップロード機能が設定されていません'
+const SUPABASE_NOT_CONFIGURED_ERROR =
+  "ファイルアップロード機能が設定されていません";
 
 // =============================================================================
 // Helper Functions
 // =============================================================================
 
 function getFileExtension(filename: string): string {
-  return filename.split('.').pop()?.toLowerCase() || ''
+  return filename.split(".").pop()?.toLowerCase() || "";
 }
 
-function generateFilePath(bucket: StorageBucket, filename: string, folder?: string): string {
-  const ext = getFileExtension(filename)
-  const uniqueId = uuid()
-  const timestamp = Date.now()
-  const basePath = folder ? `${folder}/` : ''
-  return `${basePath}${timestamp}-${uniqueId}.${ext}`
+function generateFilePath(
+  bucket: StorageBucket,
+  filename: string,
+  folder?: string,
+): string {
+  const ext = getFileExtension(filename);
+  const uniqueId = crypto.randomUUID();
+  const timestamp = Date.now();
+  const basePath = folder ? `${folder}/` : "";
+  return `${basePath}${timestamp}-${uniqueId}.${ext}`;
 }
 
 function validateFile(file: File, validation: FileValidation): string | null {
   if (file.size > validation.maxSize) {
-    const maxSizeMB = Math.round(validation.maxSize / (1024 * 1024))
-    return `ファイルサイズは${maxSizeMB}MB以下にしてください`
+    const maxSizeMB = Math.round(validation.maxSize / (1024 * 1024));
+    return `ファイルサイズは${maxSizeMB}MB以下にしてください`;
   }
 
   if (!validation.allowedTypes.includes(file.type)) {
-    return `対応していないファイル形式です。対応形式: ${validation.allowedTypes.join(', ')}`
+    return `対応していないファイル形式です。対応形式: ${validation.allowedTypes.join(", ")}`;
   }
 
-  return null
+  return null;
 }
 
 // =============================================================================
@@ -94,58 +108,58 @@ export async function uploadFile(
   file: File,
   bucket: StorageBucket,
   options?: {
-    folder?: string
-    validation?: FileValidation
-  }
+    folder?: string;
+    validation?: FileValidation;
+  },
 ): Promise<UploadResult> {
   if (!isSupabaseConfigured() || !supabase) {
-    return { success: false, error: SUPABASE_NOT_CONFIGURED_ERROR }
+    return { success: false, error: SUPABASE_NOT_CONFIGURED_ERROR };
   }
 
-  const validation = options?.validation || DEFAULT_VALIDATION
+  const validation = options?.validation || DEFAULT_VALIDATION;
 
   // バリデーション
-  const validationError = validateFile(file, validation)
+  const validationError = validateFile(file, validation);
   if (validationError) {
-    return { success: false, error: validationError }
+    return { success: false, error: validationError };
   }
 
   try {
-    const filePath = generateFilePath(bucket, file.name, options?.folder)
+    const filePath = generateFilePath(bucket, file.name, options?.folder);
 
     const { error } = await supabase.storage
       .from(bucket)
       .upload(filePath, file, {
-        cacheControl: '3600',
+        cacheControl: "3600",
         upsert: false,
-      })
+      });
 
     if (error) {
       logError(new Error(error.message), {
         category: ErrorCategory.EXTERNAL_API,
         severity: ErrorSeverity.MEDIUM,
-        context: { operation: 'uploadFile', bucket, filePath },
-      })
-      return { success: false, error: 'ファイルのアップロードに失敗しました' }
+        context: { operation: "uploadFile", bucket, filePath },
+      });
+      return { success: false, error: "ファイルのアップロードに失敗しました" };
     }
 
     // 公開URLを取得
     const { data: urlData } = supabase.storage
       .from(bucket)
-      .getPublicUrl(filePath)
+      .getPublicUrl(filePath);
 
     return {
       success: true,
       url: urlData.publicUrl,
       path: filePath,
-    }
+    };
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.MEDIUM,
-      context: { operation: 'uploadFile', bucket },
-    })
-    return { success: false, error: 'ファイルのアップロードに失敗しました' }
+      context: { operation: "uploadFile", bucket },
+    });
+    return { success: false, error: "ファイルのアップロードに失敗しました" };
   }
 }
 
@@ -156,30 +170,34 @@ export async function uploadFiles(
   files: File[],
   bucket: StorageBucket,
   options?: {
-    folder?: string
-    validation?: FileValidation
-  }
+    folder?: string;
+    validation?: FileValidation;
+  },
 ): Promise<{ success: boolean; results: UploadResult[]; error?: string }> {
   if (!isSupabaseConfigured()) {
-    return { success: false, results: [], error: SUPABASE_NOT_CONFIGURED_ERROR }
+    return {
+      success: false,
+      results: [],
+      error: SUPABASE_NOT_CONFIGURED_ERROR,
+    };
   }
 
-  const results: UploadResult[] = []
+  const results: UploadResult[] = [];
 
   for (const file of files) {
-    const result = await uploadFile(file, bucket, options)
-    results.push(result)
+    const result = await uploadFile(file, bucket, options);
+    results.push(result);
 
     if (!result.success) {
       return {
         success: false,
         results,
         error: `ファイル "${file.name}" のアップロードに失敗しました: ${result.error}`,
-      }
+      };
     }
   }
 
-  return { success: true, results }
+  return { success: true, results };
 }
 
 /**
@@ -187,34 +205,32 @@ export async function uploadFiles(
  */
 export async function deleteFile(
   path: string,
-  bucket: StorageBucket
+  bucket: StorageBucket,
 ): Promise<{ success: boolean; error?: string }> {
   if (!isSupabaseConfigured() || !supabase) {
-    return { success: false, error: SUPABASE_NOT_CONFIGURED_ERROR }
+    return { success: false, error: SUPABASE_NOT_CONFIGURED_ERROR };
   }
 
   try {
-    const { error } = await supabase.storage
-      .from(bucket)
-      .remove([path])
+    const { error } = await supabase.storage.from(bucket).remove([path]);
 
     if (error) {
       logError(new Error(error.message), {
         category: ErrorCategory.EXTERNAL_API,
         severity: ErrorSeverity.MEDIUM,
-        context: { operation: 'deleteFile', bucket, path },
-      })
-      return { success: false, error: 'ファイルの削除に失敗しました' }
+        context: { operation: "deleteFile", bucket, path },
+      });
+      return { success: false, error: "ファイルの削除に失敗しました" };
     }
 
-    return { success: true }
+    return { success: true };
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.MEDIUM,
-      context: { operation: 'deleteFile', bucket, path },
-    })
-    return { success: false, error: 'ファイルの削除に失敗しました' }
+      context: { operation: "deleteFile", bucket, path },
+    });
+    return { success: false, error: "ファイルの削除に失敗しました" };
   }
 }
 
@@ -223,34 +239,32 @@ export async function deleteFile(
  */
 export async function deleteFiles(
   paths: string[],
-  bucket: StorageBucket
+  bucket: StorageBucket,
 ): Promise<{ success: boolean; error?: string }> {
   if (!isSupabaseConfigured() || !supabase) {
-    return { success: false, error: SUPABASE_NOT_CONFIGURED_ERROR }
+    return { success: false, error: SUPABASE_NOT_CONFIGURED_ERROR };
   }
 
   try {
-    const { error } = await supabase.storage
-      .from(bucket)
-      .remove(paths)
+    const { error } = await supabase.storage.from(bucket).remove(paths);
 
     if (error) {
       logError(new Error(error.message), {
         category: ErrorCategory.EXTERNAL_API,
         severity: ErrorSeverity.MEDIUM,
-        context: { operation: 'deleteFiles', bucket, pathCount: paths.length },
-      })
-      return { success: false, error: 'ファイルの削除に失敗しました' }
+        context: { operation: "deleteFiles", bucket, pathCount: paths.length },
+      });
+      return { success: false, error: "ファイルの削除に失敗しました" };
     }
 
-    return { success: true }
+    return { success: true };
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.MEDIUM,
-      context: { operation: 'deleteFiles', bucket, pathCount: paths.length },
-    })
-    return { success: false, error: 'ファイルの削除に失敗しました' }
+      context: { operation: "deleteFiles", bucket, pathCount: paths.length },
+    });
+    return { success: false, error: "ファイルの削除に失敗しました" };
   }
 }
 
@@ -263,12 +277,12 @@ export async function deleteFiles(
  */
 export async function uploadSpaceImage(
   file: File,
-  spaceId: string
+  spaceId: string,
 ): Promise<UploadResult> {
   return uploadFile(file, STORAGE_BUCKETS.SPACES, {
     folder: spaceId,
     validation: IMAGE_VALIDATION,
-  })
+  });
 }
 
 /**
@@ -276,12 +290,12 @@ export async function uploadSpaceImage(
  */
 export async function uploadPostImage(
   file: File,
-  postId?: string
+  postId?: string,
 ): Promise<UploadResult> {
   return uploadFile(file, STORAGE_BUCKETS.POSTS, {
-    folder: postId || 'general',
+    folder: postId || "general",
     validation: IMAGE_VALIDATION,
-  })
+  });
 }
 
 /**
@@ -289,17 +303,18 @@ export async function uploadPostImage(
  */
 export async function uploadSiteImage(
   file: File,
-  type: 'logo' | 'favicon' | 'ogp'
+  type: "logo" | "favicon" | "ogp",
 ): Promise<UploadResult> {
   return uploadFile(file, STORAGE_BUCKETS.SITE, {
     folder: type,
     validation: {
       maxSize: 2 * 1024 * 1024, // 2MB
-      allowedTypes: type === 'favicon'
-        ? ['image/x-icon', 'image/png', 'image/svg+xml']
-        : ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'],
+      allowedTypes:
+        type === "favicon"
+          ? ["image/x-icon", "image/png", "image/svg+xml"]
+          : ["image/jpeg", "image/png", "image/webp", "image/svg+xml"],
     },
-  })
+  });
 }
 
 // =============================================================================
@@ -309,19 +324,27 @@ export async function uploadSiteImage(
 /**
  * Supabase Storage URLからパスを抽出
  */
-export function extractPathFromUrl(url: string, bucket: StorageBucket): string | null {
-  const pattern = new RegExp(`/storage/v1/object/public/${RegExp.escape(bucket)}/(.+)$`)
-  const match = url.match(pattern)
-  return match?.[1] ?? null
+export function extractPathFromUrl(
+  url: string,
+  bucket: StorageBucket,
+): string | null {
+  const pattern = new RegExp(
+    `/storage/v1/object/public/${RegExp.escape(bucket)}/(.+)$`,
+  );
+  const match = url.match(pattern);
+  return match?.[1] ?? null;
 }
 
 /**
  * パスからSupabase Storage URLを生成
  */
-export function getPublicUrl(path: string, bucket: StorageBucket): string | null {
+export function getPublicUrl(
+  path: string,
+  bucket: StorageBucket,
+): string | null {
   if (!isSupabaseConfigured() || !supabase) {
-    return null
+    return null;
   }
-  const { data } = supabase.storage.from(bucket).getPublicUrl(path)
-  return data.publicUrl
+  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+  return data.publicUrl;
 }
