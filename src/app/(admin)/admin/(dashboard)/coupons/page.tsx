@@ -1,5 +1,4 @@
 import { Suspense } from "react";
-import { connection } from "next/server";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { getCoupons } from "@/admin/queries/coupon";
@@ -63,7 +62,6 @@ async function CouponList({ searchParams }: { searchParams: SearchParams }) {
 }
 
 export default async function CouponsPage({ searchParams }: PageProps) {
-  await connection();
   return (
     <div className="space-y-6">
       {/* ヘッダー */}

@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { connection } from "next/server";
 import type { Metadata } from "next";
 import { getPostTagById } from "@/admin/queries/post";
 import { TagEditor } from "../_components/TagEditor";
@@ -9,7 +8,6 @@ export async function generateMetadata({
 }: {
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
-  await connection();
   const { id } = await params;
   const tag = await getPostTagById(id);
   return {
@@ -22,7 +20,6 @@ type PageProps = {
 };
 
 export default async function EditTagPage({ params }: PageProps) {
-  await connection();
   const { id } = await params;
   const tag = await getPostTagById(id);
 

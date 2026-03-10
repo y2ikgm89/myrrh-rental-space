@@ -7,7 +7,6 @@
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { connection } from "next/server";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { getInstagramConfig } from "@/admin/queries/instagram";
 import { getPageBySlug } from "@/admin/queries/page";
@@ -21,7 +20,6 @@ export const metadata: Metadata = {
 };
 
 export default async function HomepageEditPage(): Promise<ReactElement> {
-  await connection();
   const homePage = await getPageBySlug("home");
   if (!homePage) {
     notFound();

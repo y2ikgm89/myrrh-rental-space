@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * ダッシュボードヘッダー
  *
@@ -7,7 +9,7 @@
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 
-export async function DashboardHeader() {
+export function DashboardHeader() {
   const today = new Date();
 
   return (

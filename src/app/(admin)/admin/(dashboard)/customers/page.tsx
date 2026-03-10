@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { connection } from "next/server";
 import { Plus } from "lucide-react";
 import { getCustomers } from "@/admin/queries/customer";
 import { CustomerFilters } from "./_components/CustomerFilters";
@@ -43,7 +42,6 @@ async function CustomerList({ searchParams }: { searchParams: SearchParams }) {
 }
 
 export default async function CustomersPage({ searchParams }: PageProps) {
-  await connection();
   return (
     <div className="space-y-6">
       {/* ヘッダー */}

@@ -16,8 +16,6 @@ import {
 } from "lucide-react";
 import { SettingsCard } from "./_components/SettingsCard";
 import type { SettingsCardProps } from "./_components/SettingsCard";
-import { connection } from "next/server";
-
 const SETTINGS_CATEGORIES: SettingsCardProps[] = [
   {
     title: "サイト設定",
@@ -71,7 +69,6 @@ const SETTINGS_CATEGORIES: SettingsCardProps[] = [
 ];
 
 export default async function SettingsPage() {
-  await connection();
   return (
     <div className="space-y-6">
       {/* ヘッダー */}

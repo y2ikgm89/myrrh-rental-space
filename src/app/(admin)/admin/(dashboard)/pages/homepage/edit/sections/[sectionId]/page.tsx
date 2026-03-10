@@ -7,7 +7,6 @@
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { connection } from "next/server";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { getHomepageSection } from "@/admin/queries/homepage-settings";
 import { sectionTypeLabels } from "@/admin/lib/validations/homepage-section";
@@ -28,7 +27,6 @@ interface PageProps {
 export default async function HomepageSectionEditPage({
   params,
 }: PageProps): Promise<ReactElement> {
-  await connection();
   const { sectionId } = await params;
   const section = await getHomepageSection(sectionId);
 

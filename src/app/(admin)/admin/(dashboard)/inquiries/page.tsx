@@ -7,8 +7,6 @@ import { LoadingState } from "@/admin/components/LoadingState";
 import { parseInquiryStatusFilter } from "@/shared/lib/validations/enums";
 import { loadAdminInquirySearchParams } from "@/shared/lib/nuqs";
 import type { Metadata } from "next";
-import { connection } from "next/server";
-
 export const metadata: Metadata = {
   title: "お問い合わせ管理 | Myrrh Rental Space",
 };
@@ -41,7 +39,6 @@ async function InquiryList({ searchParams }: { searchParams: SearchParams }) {
 }
 
 export default async function InquiriesPage({ searchParams }: PageProps) {
-  await connection();
   return (
     <div className="space-y-6">
       {/* ヘッダー */}

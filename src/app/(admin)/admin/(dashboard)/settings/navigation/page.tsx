@@ -9,7 +9,6 @@
  */
 
 import { Suspense } from "react";
-import { connection } from "next/server";
 import { getNavigationItems, getSocialLinks } from "@/admin/queries/navigation";
 import { SettingsLayout } from "../_components/SettingsLayout";
 import { NavigationManager } from "../site/_components/navigation";
@@ -60,7 +59,6 @@ function NavigationLoading(): ReactElement {
 }
 
 export default async function NavigationSettingsPage(): Promise<ReactElement> {
-  await connection();
   return (
     <SettingsLayout
       title="ナビゲーション管理"

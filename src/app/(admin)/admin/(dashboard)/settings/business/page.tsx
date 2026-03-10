@@ -9,7 +9,6 @@
  */
 
 import { Suspense } from "react";
-import { connection } from "next/server";
 import {
   getSettings,
   getDiscountSettings,
@@ -126,7 +125,6 @@ function BusinessSettingsLoading(): ReactElement {
 }
 
 export default async function BusinessSettingsPage(): Promise<ReactElement> {
-  await connection();
   return (
     <Suspense fallback={<BusinessSettingsLoading />}>
       <BusinessSettingsContent />

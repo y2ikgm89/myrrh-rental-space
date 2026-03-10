@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { connection } from "next/server";
 import { getUser } from "@/admin/queries/user";
 import { UserForm } from "../../_components/UserForm";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
@@ -11,7 +10,6 @@ type Props = {
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  await connection();
   const { id } = await params;
   const user = await getUser(id);
   if (!user) {
@@ -23,7 +21,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function EditStaffPage({ params }: Props) {
-  await connection();
   const { id } = await params;
   const user = await getUser(id);
 

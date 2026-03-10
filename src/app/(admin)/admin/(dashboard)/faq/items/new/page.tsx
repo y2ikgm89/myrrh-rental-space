@@ -1,4 +1,3 @@
-import { connection } from "next/server";
 import type { Metadata } from "next";
 import { getFaqCategories } from "@/admin/queries/faq";
 import { FaqItemInlineEditor } from "../../_components/FaqItemInlineEditor";
@@ -16,7 +15,6 @@ type PageProps = {
 };
 
 export default async function NewFaqItemPage({ searchParams }: PageProps) {
-  await connection();
   const params = await searchParams;
   const { categories } = await getFaqCategories();
 

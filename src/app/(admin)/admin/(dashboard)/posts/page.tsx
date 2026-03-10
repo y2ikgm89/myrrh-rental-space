@@ -25,8 +25,6 @@ import { createTypeGuard } from "@/shared/lib/serialize";
 import { loadAdminPostSearchParams } from "@/shared/lib/nuqs";
 import type { CommentFilters as CommentFiltersType } from "@/shared/domain/post-comments/types";
 import type { Metadata } from "next";
-import { connection } from "next/server";
-
 export const metadata: Metadata = {
   title: "投稿管理 | Myrrh Rental Space",
 };
@@ -136,7 +134,6 @@ async function CommentList({ searchParams }: { searchParams: SearchParams }) {
 // ==============================================================================
 
 export default async function PostsPage({ searchParams }: PageProps) {
-  await connection();
   return (
     <div className="space-y-6">
       {/* ヘッダー */}

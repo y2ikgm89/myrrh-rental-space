@@ -1,4 +1,3 @@
-import { connection } from "next/server";
 import { getSettings } from "@/admin/queries/settings";
 import { TermsInlineEditor } from "../_components/TermsInlineEditor";
 import type { BusinessInfo } from "@/shared/lib/terms-templates";
@@ -9,7 +8,6 @@ export const metadata: Metadata = {
 };
 
 export default async function NewTermsPage() {
-  await connection();
   const settings = await getSettings();
 
   // 事業者情報を抽出

@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { connection } from "next/server";
 import type { Metadata } from "next";
 import { getFaqCategoryById } from "@/admin/queries/faq";
 import { FaqCategoryForm } from "../../../_components/FaqCategoryForm";
@@ -12,7 +11,6 @@ type PageProps = {
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
-  await connection();
   const { id } = await params;
   const category = await getFaqCategoryById(id);
   if (!category) {
@@ -24,7 +22,6 @@ export async function generateMetadata({
 }
 
 export default async function EditFaqCategoryPage({ params }: PageProps) {
-  await connection();
   const { id } = await params;
   const category = await getFaqCategoryById(id);
 

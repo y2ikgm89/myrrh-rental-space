@@ -9,7 +9,6 @@
  */
 
 import { Suspense } from "react";
-import { connection } from "next/server";
 import { getAnnouncementBars } from "@/admin/queries/announcement-bar";
 import { getAnnouncementBarCarouselSettings } from "@/admin/queries/settings";
 import { SettingsLayout } from "../_components/SettingsLayout";
@@ -54,7 +53,6 @@ function AnnouncementBarLoading(): ReactElement {
 }
 
 export default async function AnnouncementBarPage(): Promise<ReactElement> {
-  await connection();
   return (
     <SettingsLayout
       title="お知らせバー管理"

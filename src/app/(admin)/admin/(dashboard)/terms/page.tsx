@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { connection } from "next/server";
 import { getTermsList } from "@/admin/queries/terms";
 import { TermsTable } from "./_components/TermsTable";
 import { Button } from "@/admin/components/ui";
@@ -17,7 +16,6 @@ async function TermsListContent() {
 }
 
 export default async function TermsPage() {
-  await connection();
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { connection } from "next/server";
 import { Pencil } from "lucide-react";
 import Link from "next/link";
 import { deleteUser } from "@/admin/actions/user";
@@ -27,7 +26,6 @@ type Props = {
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  await connection();
   const { id } = await params;
   const user = await getUser(id);
   if (!user) {
@@ -39,7 +37,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function StaffDetailPage({ params }: Props) {
-  await connection();
   const { id } = await params;
   const user = await getUser(id);
 

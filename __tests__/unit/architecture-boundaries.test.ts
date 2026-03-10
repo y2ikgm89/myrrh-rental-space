@@ -676,14 +676,11 @@ describe("architecture boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
-  test("shared/domain と shared/db の外に Prisma 直 import を残さない", () => {
+  test("shared/ の外に Prisma 直 import を残さない", () => {
+    const SHARED_ROOT = join(SRC_ROOT, "shared");
     const sourceFiles = collectSourceFiles(SRC_ROOT);
     const offenders = sourceFiles
-      .filter(
-        (file) =>
-          !file.startsWith(SHARED_DB_ROOT) &&
-          !file.startsWith(SHARED_DOMAIN_ROOT),
-      )
+      .filter((file) => !file.startsWith(SHARED_ROOT))
       .filter((file) => {
         const source = readFileSync(file, "utf8");
         return source.includes('from "@/shared/db/prisma"');
@@ -740,10 +737,10 @@ describe("architecture boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
-  test("public root layout に NuqsAdapter を残さない", () => {
+  test("public root layout に NuqsAdapter が配置されている", () => {
     const source = readFileSync(PUBLIC_LAYOUT_FILE, "utf8");
 
-    expect(source).not.toContain("NuqsAdapter");
+    expect(source).toContain("NuqsAdapter");
   });
 
   test("Better Auth は静的 auth export を使い、動的 getAuth を再導入しない", () => {

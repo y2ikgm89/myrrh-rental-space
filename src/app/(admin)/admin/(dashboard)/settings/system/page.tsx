@@ -5,7 +5,6 @@
  */
 
 import { Suspense } from "react";
-import { connection } from "next/server";
 import { getSettings } from "@/admin/queries/settings";
 import { SettingsLayout } from "../_components/SettingsLayout";
 import { SettingsTabs } from "../_components/SettingsTabs";
@@ -76,7 +75,6 @@ function SystemSettingsLoading(): ReactElement {
 // =============================================================================
 
 export default async function SystemSettingsPage(): Promise<ReactElement> {
-  await connection();
   return (
     <SettingsLayout title="システム管理" description="システム全体の設定を管理">
       <Suspense fallback={<SystemSettingsLoading />}>

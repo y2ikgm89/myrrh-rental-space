@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { connection } from "next/server";
 import type { Metadata } from "next";
 import { getPostCategoryById } from "@/admin/queries/post";
 import { CategoryEditor } from "../_components/CategoryEditor";
@@ -9,7 +8,6 @@ export async function generateMetadata({
 }: {
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
-  await connection();
   const { id } = await params;
   const category = await getPostCategoryById(id);
   return {
@@ -24,7 +22,6 @@ type PageProps = {
 };
 
 export default async function EditCategoryPage({ params }: PageProps) {
-  await connection();
   const { id } = await params;
   const category = await getPostCategoryById(id);
 

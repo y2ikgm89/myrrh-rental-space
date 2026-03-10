@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { connection } from "next/server";
 import { getUsers } from "@/admin/queries/user";
 import { getPendingInvitations } from "@/admin/queries/staff-invitation";
 import { loadAdminUserSearchParams } from "@/shared/lib/nuqs";
@@ -88,7 +87,6 @@ async function InvitationSection() {
 // =============================================================================
 
 export default async function StaffPage({ searchParams }: PageProps) {
-  await connection();
   return (
     <div className="space-y-6">
       {/* ヘッダー */}

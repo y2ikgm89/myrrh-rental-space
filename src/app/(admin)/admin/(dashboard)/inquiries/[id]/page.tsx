@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { connection } from "next/server";
 import { deleteInquiry } from "@/admin/actions/inquiry";
 import { getInquiryById } from "@/admin/queries/inquiry";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
@@ -16,7 +15,6 @@ type PageProps = {
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
-  await connection();
   const { id } = await params;
   const inquiry = await getInquiryById(id);
 
@@ -32,7 +30,6 @@ export async function generateMetadata({
 }
 
 export default async function InquiryDetailPage({ params }: PageProps) {
-  await connection();
   const { id } = await params;
   const inquiry = await getInquiryById(id);
 

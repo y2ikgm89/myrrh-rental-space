@@ -6,7 +6,6 @@
  * 検索・フィルター・ページネーション・一括操作・ゴミ箱復元対応
  */
 
-import { connection } from "next/server";
 import { getPagesList, getHomepageLastUpdated } from "@/admin/queries/page";
 import { loadAdminPageSearchParams } from "@/shared/lib/nuqs";
 import {
@@ -29,7 +28,6 @@ type PageProps = {
 export default async function PagesManagementPage({
   searchParams,
 }: PageProps): Promise<ReactElement> {
-  await connection();
   const params = await loadAdminPageSearchParams(searchParams);
 
   const [result, homepageLastUpdated] = await Promise.all([

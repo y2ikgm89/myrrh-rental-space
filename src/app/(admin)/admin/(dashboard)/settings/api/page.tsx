@@ -6,7 +6,6 @@
  */
 
 import { Suspense } from "react";
-import { connection } from "next/server";
 import {
   getResendConfig,
   getTurnstileConfig,
@@ -144,7 +143,6 @@ function ApiSettingsLoading(): ReactElement {
 }
 
 export default async function ApiSettingsPage(): Promise<ReactElement> {
-  await connection();
   return (
     <SettingsLayout
       title="外部連携"

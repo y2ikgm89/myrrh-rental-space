@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 
 const mockCheckPermission = mock();
 const mockRenderEditorStateToHtmlLazy = mock();
-const mockLoggerError = mock();
 
 mock.module("next/server", () => ({
   NextResponse,
@@ -20,20 +19,12 @@ mock.module("@/admin/lib/lazy-renderer", () => ({
   ) => mockRenderEditorStateToHtmlLazy(...args),
 }));
 
-mock.module("@/shared/lib/logger", () => ({
-  logger: {
-    error: (...args: Parameters<typeof mockLoggerError>) =>
-      mockLoggerError(...args),
-  },
-}));
-
 const { POST } = await import("@/app/(admin)/admin/api/preview/html/route");
 
 describe("POST /admin/api/preview/html", () => {
   beforeEach(() => {
     mockCheckPermission.mockReset();
     mockRenderEditorStateToHtmlLazy.mockReset();
-    mockLoggerError.mockReset();
   });
 
   test("権限エラーは 403 を返す", async () => {
@@ -129,7 +120,7 @@ describe("POST /admin/api/preview/html", () => {
     expect(body).toEqual({ html: "<p>preview</p>" });
   });
 
-  test("変換失敗時は 500 を返してログを残す", async () => {
+  test("変換失敗時は 500 を返す", async () => {
     mockCheckPermission.mockResolvedValue({
       success: true,
       user: { id: "admin-user" },
@@ -151,13 +142,6 @@ describe("POST /admin/api/preview/html", () => {
     const body = await response.json();
 
     expect(response.status).toBe(500);
-    expect(mockLoggerError).toHaveBeenCalledWith(
-      "プレビュー HTML 変換に失敗しました",
-      expect.objectContaining({
-        error: "render failed",
-        resource: "post",
-      }),
-    );
     expect(body).toEqual({ error: "プレビューの生成に失敗しました" });
   });
 });

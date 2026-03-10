@@ -10,7 +10,6 @@
  */
 
 import { Suspense } from "react";
-import { connection } from "next/server";
 import { getSettings } from "@/admin/queries/settings";
 import { SettingsLayout } from "../_components/SettingsLayout";
 import { SettingsTabs } from "../_components/SettingsTabs";
@@ -118,7 +117,6 @@ function SiteSettingsLoading(): ReactElement {
 }
 
 export default async function SiteSettingsPage(): Promise<ReactElement> {
-  await connection();
   return (
     <Suspense fallback={<SiteSettingsLoading />}>
       <SiteSettingsContent />

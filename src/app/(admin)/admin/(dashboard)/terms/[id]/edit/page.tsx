@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { connection } from "next/server";
 import {
   getTermsById,
   getTermsVersionById,
@@ -13,7 +12,6 @@ interface PageProps {
 }
 
 export default async function TermsEditPage({ params }: PageProps) {
-  await connection();
   const { id } = await params;
 
   const terms = await getTermsById(id);

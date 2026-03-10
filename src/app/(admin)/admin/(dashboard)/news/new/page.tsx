@@ -1,4 +1,3 @@
-import { connection } from "next/server";
 import { NewsEditor } from "../_components/NewsEditor";
 import { getLayoutSettings } from "@/shared/domain/settings/queries";
 import {
@@ -13,7 +12,6 @@ export const metadata: Metadata = {
 };
 
 export default async function NewNewsPage() {
-  await connection();
   const settings = await getLayoutSettings();
 
   const fallbackContentWidth: ContentWidth = {

@@ -8,14 +8,11 @@ import {
 import { InviteForm } from "../_components/InviteForm";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import type { Metadata } from "next";
-import { connection } from "next/server";
-
 export const metadata: Metadata = {
   title: "スタッフを招待 | 管理画面",
 };
 
 export default async function InviteStaffPage() {
-  await connection();
   return (
     <AdminDetailLayout
       backHref="/admin/staff"

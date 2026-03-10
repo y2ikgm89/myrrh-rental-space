@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { connection } from "next/server";
 import type { Metadata } from "next";
 import { getFaqItemById, getFaqCategories } from "@/admin/queries/faq";
 import { FaqItemInlineEditor } from "../../../_components/FaqItemInlineEditor";
@@ -13,7 +12,6 @@ type PageProps = {
 };
 
 export default async function EditFaqItemPage({ params }: PageProps) {
-  await connection();
   const { id } = await params;
   const [item, { categories }] = await Promise.all([
     getFaqItemById(id),

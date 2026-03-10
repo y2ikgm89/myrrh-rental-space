@@ -9,7 +9,6 @@
  */
 
 import { Suspense } from "react";
-import { connection } from "next/server";
 import { getSettings } from "@/admin/queries/settings";
 import { SettingsLayout } from "../_components/SettingsLayout";
 import { SettingsTabs } from "../_components/SettingsTabs";
@@ -89,7 +88,6 @@ function NotifySettingsLoading(): ReactElement {
 }
 
 export default async function NotifySettingsPage(): Promise<ReactElement> {
-  await connection();
   return (
     <Suspense fallback={<NotifySettingsLoading />}>
       <NotifySettingsContent />
