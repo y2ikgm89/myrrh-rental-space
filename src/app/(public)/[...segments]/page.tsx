@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { BreadcrumbJsonLd } from "@/public/components/seo/JsonLd";
 import {
   PostDetailPageContent,
@@ -20,6 +21,8 @@ interface PageProps {
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
+  await connection();
+
   const { segments } = await params;
   const slug = segments[0];
 
@@ -44,6 +47,8 @@ export async function generateMetadata({
 }
 
 export default async function DynamicPage({ params }: PageProps) {
+  await connection();
+
   const { segments } = await params;
   const slug = segments[0];
 

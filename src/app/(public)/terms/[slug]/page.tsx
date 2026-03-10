@@ -6,6 +6,7 @@
 
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { BreadcrumbJsonLd } from "@/public/components/seo/JsonLd";
 import { generateArticleMetadata } from "@/public/lib/seo/metadata-factory";
 import { getBaseUrl } from "@/shared/lib/constants";
@@ -20,6 +21,8 @@ interface PageProps {
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
+  await connection();
+
   const { slug } = await params;
   const terms = await getPublicTermsBySlug(slug);
 
@@ -39,6 +42,8 @@ export async function generateMetadata({
 }
 
 export default async function TermsDetailPage({ params }: PageProps) {
+  await connection();
+
   const { slug } = await params;
   const terms = await getPublicTermsBySlug(slug);
 

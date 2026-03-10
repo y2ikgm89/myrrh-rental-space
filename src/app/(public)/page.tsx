@@ -10,24 +10,29 @@
  * SEO: Dynamic metadata via unified pipeline + WebSite JSON-LD
  */
 
-import type { Metadata } from 'next'
-import type { ReactElement } from 'react'
-import { ExperienceShell } from '@/public/components/effects/ExperienceShell'
-import { WebSiteJsonLd } from '@/public/components/seo/JsonLd'
-import { getWebSiteJsonLdData } from '@/public/lib/seo'
-import { generatePageMetadata } from '@/public/lib/page-metadata'
-import { getHomepageSections } from '@/shared/domain/sections/queries'
-import { SectionRenderer } from './_shared/components/sections/SectionRenderer'
+import type { Metadata } from "next";
+import type { ReactElement } from "react";
+import { connection } from "next/server";
+import { ExperienceShell } from "@/public/components/effects/ExperienceShell";
+import { WebSiteJsonLd } from "@/public/components/seo/JsonLd";
+import { getWebSiteJsonLdData } from "@/public/lib/seo";
+import { generatePageMetadata } from "@/public/lib/page-metadata";
+import { getHomepageSections } from "@/shared/domain/sections/queries";
+import { SectionRenderer } from "./_shared/components/sections/SectionRenderer";
 
 export async function generateMetadata(): Promise<Metadata> {
-  return generatePageMetadata('home')
+  await connection();
+
+  return generatePageMetadata("home");
 }
 
 export default async function HomePage(): Promise<ReactElement> {
+  await connection();
+
   const [webSiteData, sections] = await Promise.all([
     getWebSiteJsonLdData(),
     getHomepageSections(),
-  ])
+  ]);
 
   return (
     <>
@@ -42,5 +47,5 @@ export default async function HomePage(): Promise<ReactElement> {
         ))}
       </ExperienceShell>
     </>
-  )
+  );
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { NewsPreviewContent } from "../../_components/NewsPreviewContent";
 
 interface PageProps {
@@ -11,6 +12,8 @@ export const metadata: Metadata = {
 };
 
 export default async function NewsPreviewPage({ params }: PageProps) {
+  await connection();
+
   const { slug } = await params;
   return <NewsPreviewContent identifier={slug} />;
 }

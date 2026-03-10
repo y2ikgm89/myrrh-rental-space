@@ -7,27 +7,32 @@
  * SEO: generatePageMetadata + BreadcrumbList JSON-LD
  */
 
-import type { Metadata } from 'next'
-import type { ReactElement } from 'react'
-import { BreadcrumbJsonLd } from '@/public/components/seo/JsonLd'
-import { generatePageMetadata } from '@/public/lib/page-metadata'
-import { getPageSectionsWithFallback } from '@/shared/domain/sections/queries'
-import { SectionRenderer } from '@/public/components/sections/SectionRenderer'
-import { ReservationForm } from './_components/ReservationForm'
+import type { Metadata } from "next";
+import type { ReactElement } from "react";
+import { connection } from "next/server";
+import { BreadcrumbJsonLd } from "@/public/components/seo/JsonLd";
+import { generatePageMetadata } from "@/public/lib/page-metadata";
+import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
+import { SectionRenderer } from "@/public/components/sections/SectionRenderer";
+import { ReservationForm } from "./_components/ReservationForm";
 
 export async function generateMetadata(): Promise<Metadata> {
-  return generatePageMetadata('reservation')
+  await connection();
+
+  return generatePageMetadata("reservation");
 }
 
 export default async function ReservationPage(): Promise<ReactElement> {
-  const sections = await getPageSectionsWithFallback('reservation')
+  await connection();
+
+  const sections = await getPageSectionsWithFallback("reservation");
 
   return (
     <>
       <BreadcrumbJsonLd
         items={[
-          { name: 'ホーム', url: '/' },
-          { name: 'ご予約', url: '/reservation' },
+          { name: "ホーム", url: "/" },
+          { name: "ご予約", url: "/reservation" },
         ]}
       />
 
@@ -37,5 +42,5 @@ export default async function ReservationPage(): Promise<ReactElement> {
 
       <ReservationForm />
     </>
-  )
+  );
 }

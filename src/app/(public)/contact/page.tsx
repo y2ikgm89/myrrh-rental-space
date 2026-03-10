@@ -7,30 +7,35 @@
  * SEO: generatePageMetadata + BreadcrumbList JSON-LD
  */
 
-import type { Metadata } from 'next'
-import type { ReactElement } from 'react'
-import { Suspense } from 'react'
-import { ScrollReveal } from '@/public/components/animations/ScrollReveal'
-import { BreadcrumbJsonLd } from '@/public/components/seo/JsonLd'
-import { generatePageMetadata } from '@/public/lib/page-metadata'
-import { getPageSectionsWithFallback } from '@/shared/domain/sections/queries'
-import { SectionRenderer } from '@/public/components/sections/SectionRenderer'
-import { ContactForm } from './_components/ContactForm'
-import { BusinessInfo } from './_components/BusinessInfo'
+import type { Metadata } from "next";
+import type { ReactElement } from "react";
+import { connection } from "next/server";
+import { Suspense } from "react";
+import { ScrollReveal } from "@/public/components/animations/ScrollReveal";
+import { BreadcrumbJsonLd } from "@/public/components/seo/JsonLd";
+import { generatePageMetadata } from "@/public/lib/page-metadata";
+import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
+import { SectionRenderer } from "@/public/components/sections/SectionRenderer";
+import { ContactForm } from "./_components/ContactForm";
+import { BusinessInfo } from "./_components/BusinessInfo";
 
 export async function generateMetadata(): Promise<Metadata> {
-  return generatePageMetadata('contact')
+  await connection();
+
+  return generatePageMetadata("contact");
 }
 
 export default async function ContactPage(): Promise<ReactElement> {
-  const sections = await getPageSectionsWithFallback('contact')
+  await connection();
+
+  const sections = await getPageSectionsWithFallback("contact");
 
   return (
     <>
       <BreadcrumbJsonLd
         items={[
-          { name: 'ホーム', url: '/' },
-          { name: 'お問い合わせ', url: '/contact' },
+          { name: "ホーム", url: "/" },
+          { name: "お問い合わせ", url: "/contact" },
         ]}
       />
 
@@ -51,5 +56,5 @@ export default async function ContactPage(): Promise<ReactElement> {
         </div>
       </section>
     </>
-  )
+  );
 }

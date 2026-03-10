@@ -8,50 +8,56 @@
  * The content is admin-managed via Lexical editor and stored as sanitized HTML in DB.
  */
 
-import type { Metadata } from 'next'
-import type { ReactElement } from 'react'
-import { BreadcrumbJsonLd } from '@/public/components/seo/JsonLd'
-import { generatePageMetadata } from '@/public/lib/page-metadata'
+import type { Metadata } from "next";
+import type { ReactElement } from "react";
+import { connection } from "next/server";
+import { BreadcrumbJsonLd } from "@/public/components/seo/JsonLd";
+import { generatePageMetadata } from "@/public/lib/page-metadata";
 import {
   getPageSectionsWithFallback,
   getPublishedFaqItems,
-} from '@/shared/domain/sections/queries'
-import { SectionRenderer } from '@/public/components/sections/SectionRenderer'
+} from "@/shared/domain/sections/queries";
+import { SectionRenderer } from "@/public/components/sections/SectionRenderer";
 
 export async function generateMetadata(): Promise<Metadata> {
-  return generatePageMetadata('faq')
+  await connection();
+
+  return generatePageMetadata("faq");
 }
 
 export default async function FaqPage(): Promise<ReactElement> {
+  await connection();
+
   const [sections, items] = await Promise.all([
-    getPageSectionsWithFallback('faq'),
+    getPageSectionsWithFallback("faq"),
     getPublishedFaqItems(50),
-  ])
+  ]);
 
   // Strip HTML tags for plain text in JSON-LD Answer
   // Content is admin-managed via Lexical editor and stored as sanitized HTML in DB.
   // JSON.stringify escapes all special characters, making this safe for JSON-LD output.
-  const faqJsonLd = items.length > 0
-    ? {
-        '@context': 'https://schema.org',
-        '@type': 'FAQPage',
-        mainEntity: items.map((item) => ({
-          '@type': 'Question',
-          name: item.question,
-          acceptedAnswer: {
-            '@type': 'Answer',
-            text: (item.answerHtml ?? '').replace(/<[^>]*>/g, ''),
-          },
-        })),
-      }
-    : null
+  const faqJsonLd =
+    items.length > 0
+      ? {
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: items.map((item) => ({
+            "@type": "Question",
+            name: item.question,
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: (item.answerHtml ?? "").replace(/<[^>]*>/g, ""),
+            },
+          })),
+        }
+      : null;
 
   return (
     <>
       <BreadcrumbJsonLd
         items={[
-          { name: 'ホーム', url: '/' },
-          { name: 'よくある質問', url: '/faq' },
+          { name: "ホーム", url: "/" },
+          { name: "よくある質問", url: "/faq" },
         ]}
       />
 
@@ -68,5 +74,5 @@ export default async function FaqPage(): Promise<ReactElement> {
         <SectionRenderer key={section.id} section={section} />
       ))}
     </>
-  )
+  );
 }
