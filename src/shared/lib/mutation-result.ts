@@ -20,12 +20,3 @@ export function isMutationError(result: unknown): result is MutationError {
     typeof result.error === "string"
   );
 }
-
-/**
- * MutationErrorをそのまま返す（identity function）
- *
- * @deprecated Task 6 で削除予定 — createValidationMutationError に置き換え
- */
-export function toMutationError(error: MutationError): MutationError {
-  return error;
-}

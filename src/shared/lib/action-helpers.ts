@@ -43,21 +43,6 @@ export function extractFieldErrors(error: ZodError): Record<string, string[]> {
 }
 
 /**
- * ZodErrorをActionFailure互換のMutationErrorに変換
- *
- * @deprecated Task 6 で createValidationMutationError に置き換え予定
- */
-export function createValidationError(
-  error: ZodError,
-  message = "入力内容に誤りがあります",
-): MutationError {
-  return {
-    error: message,
-    fieldErrors: extractFieldErrors(error),
-  };
-}
-
-/**
  * ZodErrorをMutationErrorに直接変換
  *
  * @param error - ZodError
