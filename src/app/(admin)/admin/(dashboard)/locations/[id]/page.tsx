@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { headers } from "next/headers";
+import { connection } from "next/server";
 import { Pencil } from "lucide-react";
 import Link from "next/link";
 import { deleteLocation } from "@/admin/actions/location";
@@ -19,7 +19,7 @@ type PageProps = {
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
-  await headers();
+  await connection();
   const { id } = await params;
   const result = await getLocationById(id);
 
@@ -35,6 +35,7 @@ export async function generateMetadata({
 }
 
 export default async function LocationDetailPage({ params }: PageProps) {
+  await connection();
   const { id } = await params;
   const result = await getLocationById(id);
 
@@ -68,4 +69,3 @@ export default async function LocationDetailPage({ params }: PageProps) {
     </AdminDetailLayout>
   );
 }
-

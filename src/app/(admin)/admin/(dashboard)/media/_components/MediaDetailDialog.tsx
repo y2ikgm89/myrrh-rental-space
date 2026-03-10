@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useConfirm } from "@/admin/contexts/confirm-context";
 import { updateMedia, deleteMedia } from "@/admin/actions/media";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import type { MediaData } from "@/admin/types/media-picker";
 import { formatDate } from "@/shared/lib/utils";
 import { formatBytes } from "@/admin/lib/utils";
@@ -102,8 +103,8 @@ export function MediaDetailDialog({ item, onClose }: Props) {
         usage,
       });
 
-      if (result.success) {
-        toast.success(result.message);
+      if (!isMutationError(result)) {
+        toast.success("更新しました");
         setHasChanges(false);
         router.refresh();
       } else {
@@ -124,8 +125,8 @@ export function MediaDetailDialog({ item, onClose }: Props) {
 
     startTransition(async () => {
       const result = await deleteMedia(item.id);
-      if (result.success) {
-        toast.success(result.message);
+      if (!isMutationError(result)) {
+        toast.success("削除しました");
         onClose();
         router.refresh();
       } else {
@@ -207,7 +208,7 @@ export function MediaDetailDialog({ item, onClose }: Props) {
                     />
                     <InfoRow
                       label="アップロード者"
-                      value={item.uploader?.name ?? '削除済みユーザー'}
+                      value={item.uploader?.name ?? "削除済みユーザー"}
                     />
                   </div>
 
@@ -257,9 +258,7 @@ export function MediaDetailDialog({ item, onClose }: Props) {
                       <input
                         type="text"
                         value={formData.title}
-                        onChange={(e) =>
-                          handleChange("title", e.target.value)
-                        }
+                        onChange={(e) => handleChange("title", e.target.value)}
                         className="w-full h-9 rounded-md border bg-background px-3 text-sm"
                         placeholder="管理用タイトル"
                       />

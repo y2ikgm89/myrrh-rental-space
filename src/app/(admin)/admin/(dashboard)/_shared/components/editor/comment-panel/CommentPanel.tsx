@@ -28,6 +28,7 @@ import {
   deleteComment,
   createCommentThread,
 } from "@/admin/actions/editor-comment";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import type {
   EditorCommentThread,
   CommentableContentType,
@@ -72,7 +73,9 @@ async function fetchCommentThreads(params: {
   );
 }
 
-async function fetchThreadDetail(threadId: string): Promise<EditorCommentThread> {
+async function fetchThreadDetail(
+  threadId: string,
+): Promise<EditorCommentThread> {
   return fetchAdminJson(`/admin/api/editor-comments/threads/${threadId}`);
 }
 
@@ -104,7 +107,9 @@ export function CommentPanel({
       const thread = await fetchThreadDetail(threadId);
       setExpandedThread(thread);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "スレッドの取得に失敗しました");
+      toast.error(
+        error instanceof Error ? error.message : "スレッドの取得に失敗しました",
+      );
     }
   };
 
@@ -119,7 +124,11 @@ export function CommentPanel({
       });
       setThreads(data);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "スレッド一覧の取得に失敗しました");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "スレッド一覧の取得に失敗しました",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -186,7 +195,7 @@ export function CommentPanel({
   const handleResolve = async (threadId: string) => {
     startTransition(async () => {
       const result = await resolveThread(threadId);
-      if (result.success) {
+      if (!isMutationError(result)) {
         toast.success("スレッドを解決しました");
         // React 19: await後の状態更新は別のstartTransitionでラップ
         startTransition(() => {
@@ -203,7 +212,7 @@ export function CommentPanel({
   const handleReopen = async (threadId: string) => {
     startTransition(async () => {
       const result = await reopenThread(threadId);
-      if (result.success) {
+      if (!isMutationError(result)) {
         toast.success("スレッドを再オープンしました");
         // React 19: await後の状態更新は別のstartTransitionでラップ
         startTransition(() => {
@@ -220,7 +229,7 @@ export function CommentPanel({
   const handleDeleteThread = async (threadId: string) => {
     startTransition(async () => {
       const result = await deleteThread(threadId);
-      if (result.success) {
+      if (!isMutationError(result)) {
         toast.success("スレッドを削除しました");
         // React 19: await後の状態更新は別のstartTransitionでラップ
         startTransition(() => {
@@ -236,7 +245,7 @@ export function CommentPanel({
   // 返信追加
   const handleAddReply = async (threadId: string, content: string) => {
     const result = await addComment({ threadId, content });
-    if (result.success) {
+    if (!isMutationError(result)) {
       // スレッドを再取得して更新
       const detail = await fetchThreadDetail(threadId);
       setExpandedThread(detail);
@@ -249,7 +258,7 @@ export function CommentPanel({
   // コメント削除
   const handleDeleteComment = async (commentId: string, threadId: string) => {
     const result = await deleteComment(commentId);
-    if (result.success) {
+    if (!isMutationError(result)) {
       // スレッドを再取得して更新
       const detail = await fetchThreadDetail(threadId);
       setExpandedThread(detail);
@@ -272,7 +281,7 @@ export function CommentPanel({
       initialComment: comment,
     });
 
-    if (result.success) {
+    if (!isMutationError(result)) {
       toast.success("コメントを追加しました");
       setPendingCommentText("");
       onPendingCommentSubmit?.(comment);

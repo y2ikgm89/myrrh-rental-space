@@ -15,6 +15,7 @@ import {
 import { DetailSection } from "@/admin/components/DetailSection";
 import { DetailField } from "@/admin/components/DetailField";
 import { toggleLocationPublish } from "@/admin/actions/location";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import type { LocationWithStats } from "@/shared/domain/locations/types";
 import { formatDateTimeShort } from "@/shared/lib/utils";
 
@@ -29,10 +30,10 @@ export function LocationDetail({ location }: LocationDetailProps) {
   const handlePublishChange = async (checked: boolean) => {
     startTransition(async () => {
       const result = await toggleLocationPublish(location.id, checked);
-      if (result.success) {
+      if (!isMutationError(result)) {
         router.refresh();
       } else {
-        toast.error(result.error || "エラーが発生しました");
+        toast.error(result.error);
       }
     });
   };

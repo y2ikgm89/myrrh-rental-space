@@ -9,6 +9,7 @@ import { X, Upload, File, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { uploadMedia } from "@/admin/actions/media";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import { formatBytes } from "@/admin/lib/utils";
 import {
   Dialog,
@@ -108,9 +109,9 @@ export function MediaUploadDialog({
     startTransition(async () => {
       const result = await uploadMedia(data);
 
-      if (result.success) {
-        toast.success(result.message);
-        onUploadSuccess?.(result.data);
+      if (!isMutationError(result)) {
+        toast.success("アップロードしました");
+        onUploadSuccess?.(result);
         handleClose();
         router.refresh();
       } else {

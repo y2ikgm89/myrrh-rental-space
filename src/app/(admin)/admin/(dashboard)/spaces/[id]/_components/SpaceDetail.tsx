@@ -15,6 +15,7 @@ import {
 import { DetailSection } from "@/admin/components/DetailSection";
 import { DetailField } from "@/admin/components/DetailField";
 import { updateSpacePublish } from "@/admin/actions/space";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import type { SpaceWithStats } from "@/admin/lib/validations/space";
 import { formatDateTimeShort, formatCurrency } from "@/shared/lib/utils";
 
@@ -67,10 +68,10 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
   const handlePublishChange = async (checked: boolean) => {
     startTransition(async () => {
       const result = await updateSpacePublish(space.id, checked);
-      if (result.success) {
+      if (!isMutationError(result)) {
         router.refresh();
       } else {
-        toast.error(result.error || "エラーが発生しました");
+        toast.error(result.error);
       }
     });
   };
@@ -125,9 +126,7 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
             <DetailField label="アクセス" value={space.access} />
           )}
           <DetailField label="定員" value={`${space.capacity}名`} />
-          {space.area && (
-            <DetailField label="面積" value={`${space.area}m²`} />
-          )}
+          {space.area && <DetailField label="面積" value={`${space.area}m²`} />}
         </div>
       </DetailSection>
 

@@ -10,7 +10,7 @@ import { useState, type FormEvent, type ReactElement } from "react";
 import { useRouter } from "next/navigation";
 import { setupPassword } from "@/admin/actions/staff-invitation";
 import { signIn } from "@/shared/lib/auth-client";
-import { isActionFailure } from "@/admin/types/server-actions";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import type { InvitationData } from "@/shared/domain/staff-invitations/types";
 
 type Props = {
@@ -50,7 +50,7 @@ export function SetupForm({ invitation, token }: Props): ReactElement {
         confirmPassword,
       });
 
-      if (isActionFailure(result)) {
+      if (isMutationError(result)) {
         setError(result.error);
         setIsLoading(false);
         return;

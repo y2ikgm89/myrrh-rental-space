@@ -11,12 +11,15 @@ import {
   CardTitle,
 } from "@/admin/components/ui/card";
 import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
-import type { ActionResult } from "@/admin/types/server-actions";
+import {
+  isMutationError,
+  type MutationResult,
+} from "@/shared/lib/mutation-result";
 
 type DangerZoneProps = {
   deleteLabel: string;
   itemName?: string;
-  onDelete: () => Promise<ActionResult>;
+  onDelete: () => Promise<MutationResult<unknown>>;
   redirectTo: string;
 };
 
@@ -33,7 +36,7 @@ export function DangerZone({
   const handleConfirm = () => {
     startTransition(async () => {
       const result = await onDelete();
-      if (result.success) {
+      if (!isMutationError(result)) {
         router.push(redirectTo);
       } else {
         setOpen(false);

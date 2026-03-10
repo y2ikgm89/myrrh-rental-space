@@ -34,9 +34,9 @@ import {
 /**
  * useFormAction のオプション
  */
-type UseFormActionOptions<TOutput> = {
+type UseFormActionOptions<TInput extends FieldValues, TOutput> = {
   /** フォームの初期値 */
-  defaultValues?: DefaultValues<FieldValues>;
+  defaultValues?: DefaultValues<TInput>;
   /** 成功時のコールバック（data を直接受け取る） */
   onSuccess?: (data: TOutput) => void;
   /** エラー時のコールバック */
@@ -99,7 +99,7 @@ function hasTopLevelField<TInput extends FieldValues>(
 export function useFormAction<TInput extends FieldValues, TOutput = null>(
   schema: StandardSchemaV1<TInput, TInput>,
   action: (data: TInput) => Promise<MutationResult<TOutput>>,
-  options?: UseFormActionOptions<TOutput>,
+  options?: UseFormActionOptions<TInput, TOutput>,
 ): UseFormActionReturn<TInput, TOutput> {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();

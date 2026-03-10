@@ -55,6 +55,7 @@ import {
   type DragEndEvent,
 } from "@/admin/components/ui";
 import { createSpace, updateSpace } from "@/admin/actions/space";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import { cn } from "@/shared/lib/cn";
 import {
   useSingleMediaPicker,
@@ -555,15 +556,15 @@ export function SpaceEditForm({
 
         if (mode === "create") {
           const result = await createSpace(payload);
-          if (result.success) {
+          if (!isMutationError(result)) {
             toast.success("スペースを作成しました");
-            router.push(`/admin/spaces/${result.data.id}`);
+            router.push(`/admin/spaces/${result.id}`);
           } else {
             toast.error(result.error);
           }
         } else if (space) {
           const result = await updateSpace(space.id, payload);
-          if (result.success) {
+          if (!isMutationError(result)) {
             form.reset(data);
             router.refresh();
             toast.success("スペースを保存しました");

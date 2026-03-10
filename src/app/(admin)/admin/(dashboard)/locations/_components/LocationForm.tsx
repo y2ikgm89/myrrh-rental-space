@@ -42,6 +42,7 @@ import {
   type LocationFormInput,
 } from "@/admin/lib/validations/location";
 import { createLocation, updateLocation } from "@/admin/actions/location";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import type { LocationWithStats } from "@/shared/domain/locations/types";
 import { cn } from "@/shared/lib/cn";
 import {
@@ -203,14 +204,14 @@ export function LocationForm({ location, mode }: LocationFormProps) {
       // data.imageUrls は { url: string }[] — Server Action 側で string[] に変換する
       if (mode === "create") {
         const result = await createLocation(data);
-        if (result.success) {
-          router.push(`/admin/locations/${result.data.id}`);
+        if (!isMutationError(result)) {
+          router.push(`/admin/locations/${result.id}`);
         } else {
           toast.error(result.error);
         }
       } else if (location) {
         const result = await updateLocation(location.id, data);
-        if (result.success) {
+        if (!isMutationError(result)) {
           router.push("/admin/spaces?tab=locations");
         } else {
           toast.error(result.error);

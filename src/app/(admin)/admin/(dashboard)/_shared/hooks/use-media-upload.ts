@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * useMediaUpload
@@ -6,132 +6,133 @@
  * メディアアップロードを管理するフック
  */
 
-import { useState, useRef, useEffect } from 'react'
-import { toast } from 'sonner'
-import { uploadMedia } from '@/admin/actions/media'
+import { useState, useRef, useEffect } from "react";
+import { toast } from "sonner";
+import { uploadMedia } from "@/admin/actions/media";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import {
   validateFile,
   inferMediaType,
   type MediaUsage,
-} from '@/admin/lib/validations/media'
-import type { MediaMetadata } from '@/admin/types/media-picker'
+} from "@/admin/lib/validations/media";
+import type { MediaMetadata } from "@/admin/types/media-picker";
 
 /** アップロード結果 */
 export interface UploadResult {
-  id: string
-  url: string
+  id: string;
+  url: string;
 }
 
 interface UseMediaUploadReturn {
   uploadFile: (
     file: File,
     metadata: MediaMetadata,
-    usage: MediaUsage
-  ) => Promise<UploadResult | null>
-  isUploading: boolean
-  previewUrl: string | null
-  setPreviewFile: (file: File | null) => void
-  clearPreview: () => void
+    usage: MediaUsage,
+  ) => Promise<UploadResult | null>;
+  isUploading: boolean;
+  previewUrl: string | null;
+  setPreviewFile: (file: File | null) => void;
+  clearPreview: () => void;
 }
 
 export function useMediaUpload(): UseMediaUploadReturn {
-  const [isUploading, setIsUploading] = useState(false)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [isUploading, setIsUploading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  const fileReaderRef = useRef<FileReader | null>(null)
-  const isMountedRef = useRef(true)
+  const fileReaderRef = useRef<FileReader | null>(null);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
-    isMountedRef.current = true
+    isMountedRef.current = true;
     return () => {
-      isMountedRef.current = false
+      isMountedRef.current = false;
       if (fileReaderRef.current) {
-        fileReaderRef.current.abort()
+        fileReaderRef.current.abort();
       }
-    }
-  }, [])
+    };
+  }, []);
 
   const setPreviewFile = (file: File | null) => {
     if (!file) {
-      setPreviewUrl(null)
-      return
+      setPreviewUrl(null);
+      return;
     }
 
-    const type = inferMediaType(file.type)
-    const validation = validateFile(file, type)
+    const type = inferMediaType(file.type);
+    const validation = validateFile(file, type);
 
     if (!validation.valid) {
-      toast.error(validation.error)
-      return
+      toast.error(validation.error);
+      return;
     }
 
-    if (!file.type.startsWith('image/')) {
-      toast.error('画像ファイルを選択してください')
-      return
+    if (!file.type.startsWith("image/")) {
+      toast.error("画像ファイルを選択してください");
+      return;
     }
 
     if (fileReaderRef.current) {
-      fileReaderRef.current.abort()
+      fileReaderRef.current.abort();
     }
 
-    const reader = new FileReader()
-    fileReaderRef.current = reader
+    const reader = new FileReader();
+    fileReaderRef.current = reader;
 
     reader.onload = (e) => {
-      if (!isMountedRef.current) return
-      const result = e.target?.result
+      if (!isMountedRef.current) return;
+      const result = e.target?.result;
       // FileReader.result は string | ArrayBuffer | null
       // readAsDataURL使用時はstringのはずだが、型安全に処理
-      if (typeof result === 'string') {
-        setPreviewUrl(result)
+      if (typeof result === "string") {
+        setPreviewUrl(result);
       }
-    }
-    reader.readAsDataURL(file)
-  }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const clearPreview = () => {
-    setPreviewUrl(null)
-  }
+    setPreviewUrl(null);
+  };
 
   const uploadFile = async (
     file: File,
     metadata: MediaMetadata,
-    usage: MediaUsage
+    usage: MediaUsage,
   ): Promise<UploadResult | null> => {
-    const type = inferMediaType(file.type)
-    const validation = validateFile(file, type)
+    const type = inferMediaType(file.type);
+    const validation = validateFile(file, type);
 
     if (!validation.valid) {
-      toast.error(validation.error)
-      return null
+      toast.error(validation.error);
+      return null;
     }
 
-    setIsUploading(true)
+    setIsUploading(true);
 
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('usage', usage)
-      if (metadata.alt) formData.append('alt', metadata.alt)
-      if (metadata.title) formData.append('title', metadata.title)
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("usage", usage);
+      if (metadata.alt) formData.append("alt", metadata.alt);
+      if (metadata.title) formData.append("title", metadata.title);
       if (metadata.description)
-        formData.append('description', metadata.description)
+        formData.append("description", metadata.description);
 
-      const result = await uploadMedia(formData)
+      const result = await uploadMedia(formData);
 
-      if (!result.success) {
-        toast.error(result.error)
-        return null
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return null;
       }
 
-      toast.success('アップロードしました')
-      return result.data
+      toast.success("アップロードしました");
+      return result;
     } finally {
       if (isMountedRef.current) {
-        setIsUploading(false)
+        setIsUploading(false);
       }
     }
-  }
+  };
 
   return {
     uploadFile,
@@ -139,5 +140,5 @@ export function useMediaUpload(): UseMediaUploadReturn {
     previewUrl,
     setPreviewFile,
     clearPreview,
-  }
+  };
 }

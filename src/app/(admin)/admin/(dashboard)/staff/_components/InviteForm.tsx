@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * スタッフ招待フォーム
@@ -7,47 +7,48 @@
  * スタッフ自身がパスワードを設定するフロー
  */
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useForm, useWatch } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { Button } from '@/admin/components/ui/button'
-import { Input } from '@/admin/components/ui/input'
-import { Label } from '@/admin/components/ui/label'
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Button } from "@/admin/components/ui/button";
+import { Input } from "@/admin/components/ui/input";
+import { Label } from "@/admin/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/admin/components/ui/select'
-import { sendInvitation } from '@/admin/actions/staff-invitation'
+} from "@/admin/components/ui/select";
+import { sendInvitation } from "@/admin/actions/staff-invitation";
+import { isMutationError } from "@/shared/lib/mutation-result";
 
 // スタッフ用ロール（管理画面アクセス可能なロールのみ）
-type StaffRole = 'SUPER_ADMIN' | 'ADMIN' | 'EDITOR' | 'VIEWER'
-const STAFF_ROLES: readonly StaffRole[] = ['ADMIN', 'EDITOR', 'VIEWER']
+type StaffRole = "SUPER_ADMIN" | "ADMIN" | "EDITOR" | "VIEWER";
+const STAFF_ROLES: readonly StaffRole[] = ["ADMIN", "EDITOR", "VIEWER"];
 
 const STAFF_ROLE_LABELS: Record<StaffRole, string> = {
-  SUPER_ADMIN: 'スーパー管理者',
-  ADMIN: '管理者',
-  EDITOR: '編集者',
-  VIEWER: '閲覧者',
-}
+  SUPER_ADMIN: "スーパー管理者",
+  ADMIN: "管理者",
+  EDITOR: "編集者",
+  VIEWER: "閲覧者",
+};
 
 const inviteSchema = z.object({
-  email: z.string().email({ error: '有効なメールアドレスを入力してください' }),
+  email: z.string().email({ error: "有効なメールアドレスを入力してください" }),
   name: z.string().max(100).optional(),
-  role: z.enum(['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'VIEWER'] as const),
-})
+  role: z.enum(["SUPER_ADMIN", "ADMIN", "EDITOR", "VIEWER"] as const),
+});
 
-type InviteFormData = z.infer<typeof inviteSchema>
+type InviteFormData = z.infer<typeof inviteSchema>;
 
 export function InviteForm() {
-  const router = useRouter()
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
+  const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   const {
     register,
@@ -59,39 +60,39 @@ export function InviteForm() {
   } = useForm<InviteFormData>({
     resolver: zodResolver(inviteSchema),
     defaultValues: {
-      email: '',
-      name: '',
-      role: 'EDITOR',
+      email: "",
+      name: "",
+      role: "EDITOR",
     },
-  })
+  });
 
-  const currentRole = useWatch({ control, name: 'role' })
+  const currentRole = useWatch({ control, name: "role" });
 
   async function onSubmit(data: InviteFormData) {
-    setIsSubmitting(true)
-    setError(null)
-    setSuccess(false)
+    setIsSubmitting(true);
+    setError(null);
+    setSuccess(false);
 
     try {
       const result = await sendInvitation({
         email: data.email,
         name: data.name || undefined,
         role: data.role,
-      })
+      });
 
-      if (result.success) {
-        setSuccess(true)
-        reset()
+      if (!isMutationError(result)) {
+        setSuccess(true);
+        reset();
         // 3秒後にスタッフ一覧へ戻る
         setTimeout(() => {
-          router.push('/admin/staff')
-          router.refresh()
-        }, 3000)
+          router.push("/admin/staff");
+          router.refresh();
+        }, 3000);
       } else {
-        setError(result.error ?? 'エラーが発生しました')
+        setError(result.error);
       }
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
   }
 
@@ -113,15 +114,15 @@ export function InviteForm() {
             />
           </svg>
         </div>
-        <h3 className="text-lg font-medium text-success">招待メールを送信しました</h3>
+        <h3 className="text-lg font-medium text-success">
+          招待メールを送信しました
+        </h3>
         <p className="mt-2 text-sm text-success/80">
           スタッフにメールが届き、パスワードを設定するとログインできるようになります。
         </p>
-        <p className="mt-4 text-xs text-success">
-          スタッフ一覧に戻ります...
-        </p>
+        <p className="mt-4 text-xs text-success">スタッフ一覧に戻ります...</p>
       </div>
-    )
+    );
   }
 
   return (
@@ -146,13 +147,15 @@ export function InviteForm() {
           <Input
             id="email"
             type="email"
-            {...register('email')}
+            {...register("email")}
             placeholder="staff@example.com"
             aria-invalid={!!errors.email}
-            aria-describedby={errors.email ? 'email-error' : undefined}
+            aria-describedby={errors.email ? "email-error" : undefined}
           />
           {errors.email && (
-            <p id="email-error" className="text-xs text-destructive">{errors.email.message}</p>
+            <p id="email-error" className="text-xs text-destructive">
+              {errors.email.message}
+            </p>
           )}
         </div>
 
@@ -160,16 +163,18 @@ export function InviteForm() {
           <Label htmlFor="name">名前（任意）</Label>
           <Input
             id="name"
-            {...register('name')}
+            {...register("name")}
             placeholder="山田 太郎"
             aria-invalid={!!errors.name}
-            aria-describedby={errors.name ? 'name-error' : 'name-hint'}
+            aria-describedby={errors.name ? "name-error" : "name-hint"}
           />
           <p id="name-hint" className="text-xs text-muted-foreground">
             未入力の場合、メールアドレスから自動生成されます
           </p>
           {errors.name && (
-            <p id="name-error" className="text-xs text-destructive">{errors.name.message}</p>
+            <p id="name-error" className="text-xs text-destructive">
+              {errors.name.message}
+            </p>
           )}
         </div>
       </div>
@@ -178,7 +183,7 @@ export function InviteForm() {
         <Label htmlFor="role">ロール *</Label>
         <Select
           value={currentRole}
-          onValueChange={(value: StaffRole) => setValue('role', value)}
+          onValueChange={(value: StaffRole) => setValue("role", value)}
         >
           <SelectTrigger className="w-full md:w-1/2">
             <SelectValue placeholder="ロールを選択" />
@@ -192,10 +197,11 @@ export function InviteForm() {
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground">
-          {currentRole === 'SUPER_ADMIN' && 'システム全体の管理権限（ユーザー管理、監査ログ含む）'}
-          {currentRole === 'ADMIN' && 'コンテンツ管理全般（ユーザー管理除く）'}
-          {currentRole === 'EDITOR' && '割り当てられたページのみ編集可能'}
-          {currentRole === 'VIEWER' && '閲覧のみ（編集不可）'}
+          {currentRole === "SUPER_ADMIN" &&
+            "システム全体の管理権限（ユーザー管理、監査ログ含む）"}
+          {currentRole === "ADMIN" && "コンテンツ管理全般（ユーザー管理除く）"}
+          {currentRole === "EDITOR" && "割り当てられたページのみ編集可能"}
+          {currentRole === "VIEWER" && "閲覧のみ（編集不可）"}
         </p>
         {errors.role && (
           <p className="text-xs text-destructive">{errors.role.message}</p>
@@ -204,7 +210,7 @@ export function InviteForm() {
 
       <div className="flex gap-4">
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? '送信中...' : '招待メールを送信'}
+          {isSubmitting ? "送信中..." : "招待メールを送信"}
         </Button>
         <Button
           type="button"
@@ -216,5 +222,5 @@ export function InviteForm() {
         </Button>
       </div>
     </form>
-  )
+  );
 }

@@ -4,7 +4,10 @@ import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { toast } from "sonner";
 import { Switch } from "./switch";
-import type { ActionResult } from "@/admin/types/server-actions";
+import {
+  isMutationError,
+  type MutationResult,
+} from "@/shared/lib/mutation-result";
 
 // =============================================================================
 // Types
@@ -13,7 +16,7 @@ import type { ActionResult } from "@/admin/types/server-actions";
 type PublishSwitchProps<TData = unknown> = {
   id: string;
   isPublished: boolean;
-  onToggle: (id: string, checked: boolean) => Promise<ActionResult<TData>>;
+  onToggle: (id: string, checked: boolean) => Promise<MutationResult<TData>>;
   label?: { published: string; unpublished: string };
 };
 
@@ -33,10 +36,10 @@ export function PublishSwitch<TData = unknown>({
   const handleChange = (checked: boolean) => {
     startTransition(async () => {
       const result = await onToggle(id, checked);
-      if (result.success) {
+      if (!isMutationError(result)) {
         router.refresh();
       } else {
-        toast.error(result.error || "エラーが発生しました");
+        toast.error(result.error);
       }
     });
   };

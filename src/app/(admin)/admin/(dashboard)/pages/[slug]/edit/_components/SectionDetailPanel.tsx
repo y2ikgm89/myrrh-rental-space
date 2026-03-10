@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * 右パネル — コンテンツ/デザインのタブ切替
@@ -7,8 +7,8 @@
  * デザインタブ: 汎化版 DesignPanel
  */
 
-import { Suspense, useEffect, useState, useTransition } from 'react'
-import { toast } from 'sonner'
+import { Suspense, useEffect, useState, useTransition } from "react";
+import { toast } from "sonner";
 import {
   Input,
   Label,
@@ -16,23 +16,27 @@ import {
   TabsList,
   TabsTrigger,
   TabsContent,
-} from '@/admin/components/ui'
+} from "@/admin/components/ui";
 import {
   updatePageSection,
   type PageSectionData,
-} from '@/admin/actions/page-section'
-import type { SectionDesign } from '@/shared/lib/validations/section'
-import { SectionDetailHeader } from './SectionDetailHeader'
-import { SectionEmptyState } from './SectionEmptyState'
-import { configFormRegistry, type ConfigFormSavePayload } from '../../sections/_components/config-forms'
-import { DesignPanel } from '../../../../settings/_components/homepage/DesignPanel'
+} from "@/admin/actions/page-section";
+import type { SectionDesign } from "@/shared/lib/validations/section";
+import { isMutationError } from "@/shared/lib/mutation-result";
+import { SectionDetailHeader } from "./SectionDetailHeader";
+import { SectionEmptyState } from "./SectionEmptyState";
+import {
+  configFormRegistry,
+  type ConfigFormSavePayload,
+} from "../../sections/_components/config-forms";
+import { DesignPanel } from "../../../../settings/_components/homepage/DesignPanel";
 
 interface SectionDetailPanelProps {
-  section: PageSectionData | null
-  hasSections: boolean
-  onAddSection: () => void
-  onSectionUpdated: () => void
-  onDirtyChange?: (dirty: boolean) => void
+  section: PageSectionData | null;
+  hasSections: boolean;
+  onAddSection: () => void;
+  onSectionUpdated: () => void;
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 export function SectionDetailPanel({
@@ -42,72 +46,81 @@ export function SectionDetailPanel({
   onSectionUpdated,
   onDirtyChange,
 }: SectionDetailPanelProps) {
-  const [isPending, startTransition] = useTransition()
-  const [configDirty, setConfigDirty] = useState(false)
-  const [designDirty, setDesignDirty] = useState(false)
+  const [isPending, startTransition] = useTransition();
+  const [configDirty, setConfigDirty] = useState(false);
+  const [designDirty, setDesignDirty] = useState(false);
 
   // dirty集約: config or design のいずれかがdirtyなら通知
   useEffect(() => {
-    onDirtyChange?.(configDirty || designDirty)
-  }, [configDirty, designDirty, onDirtyChange])
+    onDirtyChange?.(configDirty || designDirty);
+  }, [configDirty, designDirty, onDirtyChange]);
 
   // セクション変更時にdirtyリセット
   useEffect(() => {
     // セクションが変更されたら、次のレンダリング時にdirtyをリセット
     return () => {
-      setConfigDirty(false)
-      setDesignDirty(false)
-    }
-  }, [section?.id])
+      setConfigDirty(false);
+      setDesignDirty(false);
+    };
+  }, [section?.id]);
 
   if (!section) {
-    return <SectionEmptyState hasSections={hasSections} onAddSection={onAddSection} />
+    return (
+      <SectionEmptyState
+        hasSections={hasSections}
+        onAddSection={onAddSection}
+      />
+    );
   }
 
-  const ConfigForm = configFormRegistry[section.type]
+  const ConfigForm = configFormRegistry[section.type];
 
   const handleConfigSave = (payload: ConfigFormSavePayload) => {
     startTransition(async () => {
       const result = await updatePageSection(section.id, {
         config: payload.config,
-        ...(payload.contentJson !== undefined ? { contentJson: payload.contentJson } : {}),
-      })
-      if (result.success) {
-        toast.success(result.message)
-        onSectionUpdated()
+        ...(payload.contentJson !== undefined
+          ? { contentJson: payload.contentJson }
+          : {}),
+      });
+      if (!isMutationError(result)) {
+        toast.success("保存しました");
+        onSectionUpdated();
       } else {
-        toast.error(result.error)
+        toast.error(result.error);
       }
-    })
-  }
+    });
+  };
 
   const handleTitleSave = (title: string) => {
     startTransition(async () => {
-      const result = await updatePageSection(section.id, { title })
-      if (result.success) {
-        toast.success('タイトルを更新しました')
-        onSectionUpdated()
+      const result = await updatePageSection(section.id, { title });
+      if (!isMutationError(result)) {
+        toast.success("タイトルを更新しました");
+        onSectionUpdated();
       } else {
-        toast.error(result.error)
+        toast.error(result.error);
       }
-    })
-  }
+    });
+  };
 
   const handleDesignSave = (design: SectionDesign) => {
     startTransition(async () => {
       // SectionDesign → Record<string, unknown>: Zodバリデーション済みデザイン設定をJSON入力形式に変換
-      const designRecord: Record<string, unknown> = Object.fromEntries(Object.entries(design))
+      const designRecord: Record<string, unknown> = Object.fromEntries(
+        Object.entries(design),
+      );
       const result = await updatePageSection(section.id, {
         design: designRecord,
-      })
-      if (result.success) {
-        toast.success('デザインを更新しました')
-        onSectionUpdated()
+      });
+      if (!isMutationError(result)) {
+        toast.success("デザインを更新しました");
+        onSectionUpdated();
       } else {
-        toast.error(result.error)
+        toast.error(result.error);
       }
-    })
-  }
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -122,7 +135,7 @@ export function SectionDetailPanel({
         <TabsContent value="content" className="mt-4 space-y-6">
           {/* セクションタイトル */}
           <SectionTitleField
-            title={section.title ?? ''}
+            title={section.title ?? ""}
             onSave={handleTitleSave}
             isPending={isPending}
           />
@@ -161,7 +174,7 @@ export function SectionDetailPanel({
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }
 
 // =============================================================================
@@ -173,9 +186,9 @@ function SectionTitleField({
   onSave,
   isPending,
 }: {
-  title: string
-  onSave: (title: string) => void
-  isPending: boolean
+  title: string;
+  onSave: (title: string) => void;
+  isPending: boolean;
 }) {
   return (
     <div className="space-y-2">
@@ -186,9 +199,9 @@ function SectionTitleField({
         placeholder="セクション名..."
         disabled={isPending}
         onBlur={(e) => {
-          const newTitle = e.target.value.trim()
+          const newTitle = e.target.value.trim();
           if (newTitle !== title) {
-            onSave(newTitle)
+            onSave(newTitle);
           }
         }}
       />
@@ -196,5 +209,5 @@ function SectionTitleField({
         管理画面でのセクション識別用。空欄時はタイプ名が表示されます
       </p>
     </div>
-  )
+  );
 }

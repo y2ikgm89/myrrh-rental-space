@@ -1,9 +1,9 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
-import { Button } from '@/admin/components/ui/button'
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Button } from "@/admin/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,72 +11,80 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/admin/components/ui'
+} from "@/admin/components/ui";
 import {
   ActionDropdown,
   ActionDropdownItem,
   ActionDropdownSeparator,
-} from '@/admin/components/ActionDropdown'
-import { DeleteConfirmDialog } from '@/admin/components/DeleteConfirmDialog'
-import { deleteUser, updateUserRole } from '@/admin/actions/user'
-import { Role, isAdminRole } from '@/admin/lib/role-guards'
-import type { UserData } from '@/shared/domain/users/types'
+} from "@/admin/components/ActionDropdown";
+import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
+import { deleteUser, updateUserRole } from "@/admin/actions/user";
+import { isMutationError } from "@/shared/lib/mutation-result";
+import { Role, isAdminRole } from "@/admin/lib/role-guards";
+import type { UserData } from "@/shared/domain/users/types";
 
 type Props = {
-  user: UserData
-}
+  user: UserData;
+};
 
 export function UserActions({ user }: Props) {
-  const router = useRouter()
-  const [isDeleting, setIsDeleting] = useState(false)
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [roleDialogOpen, setRoleDialogOpen] = useState(false)
-  const [isUpdatingRole, setIsUpdatingRole] = useState(false)
+  const router = useRouter();
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [roleDialogOpen, setRoleDialogOpen] = useState(false);
+  const [isUpdatingRole, setIsUpdatingRole] = useState(false);
 
   async function handleDelete() {
-    setIsDeleting(true)
+    setIsDeleting(true);
     try {
-      const result = await deleteUser(user.id)
-      if (result.success) {
-        setDeleteDialogOpen(false)
-        router.refresh()
+      const result = await deleteUser(user.id);
+      if (!isMutationError(result)) {
+        setDeleteDialogOpen(false);
+        router.refresh();
       } else {
-        toast.error(result.error)
+        toast.error(result.error);
       }
     } finally {
-      setIsDeleting(false)
+      setIsDeleting(false);
     }
   }
 
   async function handleRoleChange(newRole: Role) {
-    setIsUpdatingRole(true)
+    setIsUpdatingRole(true);
     try {
-      const result = await updateUserRole(user.id, newRole)
-      if (result.success) {
-        setRoleDialogOpen(false)
-        router.refresh()
+      const result = await updateUserRole(user.id, newRole);
+      if (!isMutationError(result)) {
+        setRoleDialogOpen(false);
+        router.refresh();
       } else {
-        toast.error(result.error)
+        toast.error(result.error);
       }
     } finally {
-      setIsUpdatingRole(false)
+      setIsUpdatingRole(false);
     }
   }
 
-  const newRole = isAdminRole(user.role) ? Role.USER : Role.ADMIN
-  const newRoleLabel = isAdminRole(user.role) ? 'ユーザー' : '管理者'
+  const newRole = isAdminRole(user.role) ? Role.USER : Role.ADMIN;
+  const newRoleLabel = isAdminRole(user.role) ? "ユーザー" : "管理者";
 
   return (
     <>
       <ActionDropdown>
-        <ActionDropdownItem href={`/admin/staff/${user.id}`}>詳細</ActionDropdownItem>
-        <ActionDropdownItem href={`/admin/staff/${user.id}/edit`}>編集</ActionDropdownItem>
+        <ActionDropdownItem href={`/admin/staff/${user.id}`}>
+          詳細
+        </ActionDropdownItem>
+        <ActionDropdownItem href={`/admin/staff/${user.id}/edit`}>
+          編集
+        </ActionDropdownItem>
         <ActionDropdownSeparator />
         <ActionDropdownItem onClick={() => setRoleDialogOpen(true)}>
           {newRoleLabel}に変更
         </ActionDropdownItem>
         <ActionDropdownSeparator />
-        <ActionDropdownItem destructive onClick={() => setDeleteDialogOpen(true)}>
+        <ActionDropdownItem
+          destructive
+          onClick={() => setDeleteDialogOpen(true)}
+        >
           削除
         </ActionDropdownItem>
       </ActionDropdown>
@@ -109,11 +117,11 @@ export function UserActions({ user }: Props) {
               onClick={() => handleRoleChange(newRole)}
               disabled={isUpdatingRole}
             >
-              {isUpdatingRole ? '変更中...' : '変更'}
+              {isUpdatingRole ? "変更中..." : "変更"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
-  )
+  );
 }

@@ -18,6 +18,7 @@ import {
 } from "@/admin/components/ui";
 import { InquiryStatusBadge } from "@/admin/components/status-badges";
 import { updateInquiryStatus } from "@/admin/actions/inquiry";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import type { InquiryData } from "@/shared/domain/inquiries/types";
 import {
   isValidInquiryStatus,
@@ -36,8 +37,8 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
   const handleStatusChange = async (status: InquiryStatus) => {
     startTransition(async () => {
       const result = await updateInquiryStatus(inquiry.id, status);
-      if (!result.success) {
-        toast.error(result.error || "エラーが発生しました");
+      if (isMutationError(result)) {
+        toast.error(result.error);
       }
     });
   };
