@@ -80,7 +80,7 @@
 **permissions.ts**（✅ 一部既存）
 | テストケース | 入力 | 期待出力 | 備考 |
 |-------------|------|---------|------|
-| SUPER_ADMIN全権限 | role=SUPER_ADMIN, resource=_, action=_ | true | 全アクセス可 |
+| SUPER*ADMIN全権限 | role=SUPER_ADMIN, resource=*, action=\_ | true | 全アクセス可 |
 | ADMIN制限 | role=ADMIN, resource=user, action=manage | false | ユーザー管理権限なし |
 | EDITOR制限 | role=EDITOR, resource=blog, action=delete | false | 削除権限なし |
 | VIEWER読み取りのみ | role=VIEWER, resource=\*, action=read | true | 読み取りのみ |

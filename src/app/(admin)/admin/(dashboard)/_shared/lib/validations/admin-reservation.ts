@@ -18,11 +18,9 @@ const dateStringSchema = z
   .regex(/^\d{4}-\d{2}-\d{2}$/, { error: "日付の形式が正しくありません" });
 
 // 時間文字列のバリデーション（HH:MM形式）
-const timeStringSchema = z
-  .string()
-  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, {
-    error: "時間の形式が正しくありません",
-  });
+const timeStringSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, {
+  error: "時間の形式が正しくありません",
+});
 
 /**
  * 新規顧客情報スキーマ

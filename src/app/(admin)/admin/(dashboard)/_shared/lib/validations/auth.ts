@@ -16,11 +16,9 @@ export type CredentialsData = z.output<typeof credentialsSchema>;
 /**
  * 署名付きログイントークンの形式バリデーション
  */
-export const loginTokenSchema = z
-  .string()
-  .regex(signedLoginTokenPattern, {
-    error: "有効なログイントークン形式ではありません",
-  });
+export const loginTokenSchema = z.string().regex(signedLoginTokenPattern, {
+  error: "有効なログイントークン形式ではありません",
+});
 
 export const loginTokenResponseSchema = z.object({
   token: loginTokenSchema,

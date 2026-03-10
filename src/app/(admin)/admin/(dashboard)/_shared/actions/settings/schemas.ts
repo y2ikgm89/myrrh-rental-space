@@ -75,16 +75,12 @@ const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export const timeSlotSchema = z
   .object({
-    openTime: z
-      .string()
-      .regex(TIME_REGEX, {
-        error: "正しい時刻形式（HH:mm）で入力してください",
-      }),
-    closeTime: z
-      .string()
-      .regex(TIME_REGEX, {
-        error: "正しい時刻形式（HH:mm）で入力してください",
-      }),
+    openTime: z.string().regex(TIME_REGEX, {
+      error: "正しい時刻形式（HH:mm）で入力してください",
+    }),
+    closeTime: z.string().regex(TIME_REGEX, {
+      error: "正しい時刻形式（HH:mm）で入力してください",
+    }),
   })
   .refine((data) => data.closeTime > data.openTime, {
     error: "終了時刻は開始時刻より後にしてください",

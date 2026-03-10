@@ -12,16 +12,12 @@ import { z } from "zod";
 
 // location.ts 内で使用されている locationFormSchema を再現
 const businessTimeSlotSchema = z.object({
-  openTime: z
-    .string()
-    .regex(/^\d{2}:\d{2}$/, {
-      error: "開店時刻は HH:MM 形式で入力してください",
-    }),
-  closeTime: z
-    .string()
-    .regex(/^\d{2}:\d{2}$/, {
-      error: "閉店時刻は HH:MM 形式で入力してください",
-    }),
+  openTime: z.string().regex(/^\d{2}:\d{2}$/, {
+    error: "開店時刻は HH:MM 形式で入力してください",
+  }),
+  closeTime: z.string().regex(/^\d{2}:\d{2}$/, {
+    error: "閉店時刻は HH:MM 形式で入力してください",
+  }),
 });
 
 const businessHoursDaySchema = z.object({

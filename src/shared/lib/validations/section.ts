@@ -132,17 +132,15 @@ export const heroParallaxConfigSchema = z.object({
     .url({ error: "有効なURLを入力してください" })
     .optional()
     .or(z.literal("")),
-  buttons: z
-    .array(ctaButtonItemSchema)
-    .default([
-      {
-        text: "Reserve Now",
-        url: "/reservation",
-        variant: "primary",
-        size: "lg",
-        openInNewTab: false,
-      },
-    ]),
+  buttons: z.array(ctaButtonItemSchema).default([
+    {
+      text: "Reserve Now",
+      url: "/reservation",
+      variant: "primary",
+      size: "lg",
+      openInNewTab: false,
+    },
+  ]),
   parallaxSpeed: z.number().min(0).max(1).default(0.3),
   overlayGradient: z.boolean().default(true),
   scrollIndicator: z.boolean().default(true),
