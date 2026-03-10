@@ -74,6 +74,9 @@ const eslintConfig = defineConfig([
         },
       ],
 
+      // Console
+      "no-console": ["warn", { allow: ["warn", "error", "info"] }],
+
       // jsx-a11y
       "jsx-a11y/alt-text": ["warn", { elements: ["img"], img: ["Image"] }],
       "jsx-a11y/aria-props": "warn",
@@ -182,6 +185,13 @@ const eslintConfig = defineConfig([
   },
 
   // ファイル固有設定
+  {
+    name: "console-allowed",
+    files: ["src/shared/lib/logger.ts", "prisma/seed.ts"],
+    rules: {
+      "no-console": "off",
+    },
+  },
   {
     name: "auth-lib",
     files: ["src/shared/lib/auth.ts"],
