@@ -29,6 +29,7 @@ import {
 import { CookieConsentBanner } from "@/public/components/CookieConsentBanner";
 import { AnnouncementBarWrapper } from "@/public/components/AnnouncementBarWrapper";
 import { SkipLink, AriaLiveRegion } from "@/public/components/a11y";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { AriaLiveProvider } from "@/shared/contexts";
 import { GraphJsonLd } from "@/public/components/seo/JsonLd";
 import { getGraphJsonLdData } from "@/public/lib/seo";
@@ -229,7 +230,9 @@ export default async function PublicRootLayout({
                   },
                 })}
               >
-                {children}
+                <Suspense fallback={null}>
+                  <NuqsAdapter>{children}</NuqsAdapter>
+                </Suspense>
               </main>
 
               <Footer />
