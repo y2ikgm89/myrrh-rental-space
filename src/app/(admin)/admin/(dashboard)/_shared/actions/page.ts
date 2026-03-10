@@ -1,13 +1,13 @@
 'use server'
 
 import { updateTag } from 'next/cache'
-import { executeAdminMutation } from '@/admin/lib/admin-action'
-import { createFailure, createSuccess } from '@/admin/types/server-actions'
-import { createValidationError } from '@/shared/lib/action-helpers'
+import { executeAdminMutationResult } from '@/admin/lib/admin-action'
+import { createValidationMutationError } from '@/shared/lib/action-helpers'
 import { fireAndForget } from '@/shared/lib/async-utils'
 import { purgePageCache } from '@/shared/lib/cloudflare'
 import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
 import { ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
+import type { MutationResult } from '@/shared/lib/mutation-result'
 import {
   createPageCommand,
   deletePageCommand,
@@ -22,7 +22,6 @@ import {
 import {
   createPageSchema,
   getSystemPageDefinition,
-  isSystemPageSlug,
   updatePageSchema,
   updatePageSeoSchema,
   type CreatePageInput,
@@ -52,20 +51,23 @@ function invalidatePageSeoTags(slug: string): void {
   updateTag(getCacheTag.pageSeo.detail(slug))
 }
 
-export async function updatePage(slug: string, input: UpdatePageInput) {
+export async function updatePage(
+  slug: string,
+  input: UpdatePageInput,
+): Promise<MutationResult> {
   const parsed = updatePageSchema.safeParse(input)
   if (!parsed.success) {
-    return createValidationError(parsed.error)
+    return createValidationMutationError(parsed.error)
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: 'page',
     action: 'update',
     resourceId: slug,
     execute: async () => {
       await updatePageCommand(slug, parsed.data)
+      return null
     },
-    success: () => createSuccess('ページを更新しました'),
     afterSuccess: () => {
       invalidatePageTags(slug)
       purgePageCaches(slug)
@@ -73,15 +75,17 @@ export async function updatePage(slug: string, input: UpdatePageInput) {
   })
 }
 
-export async function createPage(input: CreatePageInput) {
+export async function createPage(
+  input: CreatePageInput,
+): Promise<MutationResult<{ slug: string }>> {
   const parsed = createPageSchema.safeParse(input)
   if (!parsed.success) {
-    return createValidationError(parsed.error)
+    return createValidationMutationError(parsed.error)
   }
 
   let createdSlug = ''
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: 'page',
     action: 'create',
     execute: async () => {
@@ -89,7 +93,6 @@ export async function createPage(input: CreatePageInput) {
       createdSlug = result.slug
       return result
     },
-    success: (result) => createSuccess('ページを作成しました', result),
     afterSuccess: () => {
       invalidatePageTags(createdSlug)
       purgePageCaches(createdSlug)
@@ -98,19 +101,15 @@ export async function createPage(input: CreatePageInput) {
   })
 }
 
-export async function deletePage(slug: string) {
-  if (isSystemPageSlug(slug)) {
-    return createFailure('システムページは削除できません')
-  }
-
-  return executeAdminMutation({
+export async function deletePage(slug: string): Promise<MutationResult> {
+  return executeAdminMutationResult({
     resource: 'page',
     action: 'delete',
     resourceId: slug,
     execute: async () => {
       await deletePageCommand(slug)
+      return null
     },
-    success: () => createSuccess('ページを削除しました'),
     afterSuccess: () => {
       invalidatePageTags(slug)
       purgePageCaches(slug)
@@ -118,19 +117,17 @@ export async function deletePage(slug: string) {
   })
 }
 
-export async function deletePagePermanently(slug: string) {
-  if (isSystemPageSlug(slug)) {
-    return createFailure('システムページは削除できません')
-  }
-
-  return executeAdminMutation({
+export async function deletePagePermanently(
+  slug: string,
+): Promise<MutationResult> {
+  return executeAdminMutationResult({
     resource: 'page',
     action: 'delete',
     resourceId: slug,
     execute: async () => {
       await deletePagePermanentlyCommand(slug)
+      return null
     },
-    success: () => createSuccess('ページを完全に削除しました'),
     afterSuccess: () => {
       invalidatePageTags(slug)
       purgePageCaches(slug)
@@ -138,15 +135,15 @@ export async function deletePagePermanently(slug: string) {
   })
 }
 
-export async function restorePage(slug: string) {
-  return executeAdminMutation({
+export async function restorePage(slug: string): Promise<MutationResult> {
+  return executeAdminMutationResult({
     resource: 'page',
     action: 'update',
     resourceId: slug,
     execute: async () => {
       await restorePageCommand(slug)
+      return null
     },
-    success: () => createSuccess('ページを復元しました'),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.PAGES)
       purgePageCaches(slug)
@@ -154,21 +151,14 @@ export async function restorePage(slug: string) {
   })
 }
 
-export async function togglePagePublished(slug: string) {
-  let isPublished = false
-
-  return executeAdminMutation({
+export async function togglePagePublished(
+  slug: string,
+): Promise<MutationResult<{ isPublished: boolean }>> {
+  return executeAdminMutationResult({
     resource: 'page',
     action: 'publish',
     resourceId: slug,
-    execute: async () => {
-      const result = await togglePagePublishedCommand(slug)
-      isPublished = result.isPublished
-    },
-    success: () =>
-      createSuccess(
-        isPublished ? 'ページを公開しました' : 'ページを非公開にしました',
-      ),
+    execute: async () => togglePagePublishedCommand(slug),
     afterSuccess: () => {
       invalidatePageTags(slug)
       purgePageCaches(slug)
@@ -179,19 +169,14 @@ export async function togglePagePublished(slug: string) {
 export async function bulkTogglePagePublished(
   slugs: string[],
   publish: boolean,
-) {
-  return executeAdminMutation<void>({
+): Promise<MutationResult<{ count: number; isPublished: boolean }>> {
+  return executeAdminMutationResult({
     resource: 'page',
     action: 'publish',
     execute: async () => {
       await bulkTogglePagePublishedCommand(slugs, publish)
+      return { count: slugs.length, isPublished: publish }
     },
-    success: () =>
-      createSuccess(
-        publish
-          ? `${slugs.length}件のページを公開しました`
-          : `${slugs.length}件のページを非公開にしました`,
-      ),
     afterSuccess: () => {
       invalidatePageTags(...slugs)
       purgePageCaches(...slugs)
@@ -199,32 +184,36 @@ export async function bulkTogglePagePublished(
   })
 }
 
-export async function bulkDeletePages(slugs: string[]) {
-  let deletedSlugs: string[] = []
-
-  return executeAdminMutation<void>({
+export async function bulkDeletePages(
+  slugs: string[],
+): Promise<MutationResult<{ deletedCount: number; deletedSlugs: string[] }>> {
+  return executeAdminMutationResult({
     resource: 'page',
     action: 'delete',
     execute: async () => {
       const result = await bulkDeletePagesCommand(slugs)
-      deletedSlugs = result.deletedSlugs
+      return {
+        deletedCount: result.deletedSlugs.length,
+        deletedSlugs: result.deletedSlugs,
+      }
     },
-    success: () =>
-      createSuccess(`${deletedSlugs.length}件のページを削除しました`),
-    afterSuccess: () => {
-      invalidatePageTags(...deletedSlugs)
-      purgePageCaches(...deletedSlugs)
+    afterSuccess: (result) => {
+      invalidatePageTags(...result.deletedSlugs)
+      purgePageCaches(...result.deletedSlugs)
     },
   })
 }
 
-export async function updatePageSeo(slug: string, input: UpdatePageSeoInput) {
+export async function updatePageSeo(
+  slug: string,
+  input: UpdatePageSeoInput,
+): Promise<MutationResult> {
   const parsed = updatePageSeoSchema.safeParse(input)
   if (!parsed.success) {
-    return createValidationError(parsed.error)
+    return createValidationMutationError(parsed.error)
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: 'page',
     action: 'update',
     resourceId: slug,
@@ -234,8 +223,8 @@ export async function updatePageSeo(slug: string, input: UpdatePageSeoInput) {
         ...parsed.data,
         title: parsed.data.title || definition?.title || slug,
       })
+      return null
     },
-    success: () => createSuccess('SEO設定を更新しました'),
     afterSuccess: () => {
       invalidatePageTags(slug)
       invalidatePageSeoTags(slug)

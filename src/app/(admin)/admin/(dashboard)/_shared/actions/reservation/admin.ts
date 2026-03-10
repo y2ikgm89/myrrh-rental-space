@@ -1,12 +1,12 @@
 "use server";
 
 import { updateTag } from "next/cache";
-import { executeAdminMutation } from "@/admin/lib/admin-action";
-import { createFailure, createSuccess, type ActionResult } from "@/admin/types/server-actions";
-import { extractFieldErrors } from "@/shared/lib/action-helpers";
+import { executeAdminMutationResult } from "@/admin/lib/admin-action";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
+import type { MutationResult } from "@/shared/lib/mutation-result"
 import {
   createAdminReservationCommand,
   updateAdminReservationCommand,
@@ -29,27 +29,23 @@ import {
 
 export const createAdminReservation = async (
   input: AdminReservationInput,
-): Promise<ActionResult<{ id: string }>> => {
+): Promise<MutationResult<{ id: string }>> => {
   const validation = adminReservationSchema.safeParse(input);
   if (!validation.success) {
-    return createFailure(
-      "入力内容に誤りがあります",
-      extractFieldErrors(validation.error),
-    );
+    return createValidationMutationError(validation.error);
   }
 
   let result:
     | Awaited<ReturnType<typeof createAdminReservationCommand>>
     | undefined;
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "reservation",
     action: "create",
     execute: async () => {
       result = await createAdminReservationCommand(validation.data);
       return { id: result.id };
     },
-    success: (payload) => createSuccess("予約を作成しました", payload),
     afterSuccess: () => {
       if (!result) {
         return;
@@ -89,27 +85,24 @@ export const createAdminReservation = async (
 export const updateAdminReservation = async (
   id: string,
   input: UpdateReservationInput,
-): Promise<ActionResult<void>> => {
+): Promise<MutationResult> => {
   const validation = updateReservationSchema.safeParse(input);
   if (!validation.success) {
-    return createFailure(
-      "入力内容に誤りがあります",
-      extractFieldErrors(validation.error),
-    );
+    return createValidationMutationError(validation.error);
   }
 
   let result:
     | Awaited<ReturnType<typeof updateAdminReservationCommand>>
     | undefined;
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "reservation",
     action: "update",
     resourceId: id,
     execute: async () => {
       result = await updateAdminReservationCommand(id, validation.data);
+      return null;
     },
-    success: () => createSuccess("予約を更新しました"),
     afterSuccess: () => {
       if (!result) {
         return;

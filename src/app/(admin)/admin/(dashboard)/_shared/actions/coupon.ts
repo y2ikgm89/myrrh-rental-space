@@ -2,13 +2,10 @@
 
 import { updateTag } from "next/cache";
 import { z } from "zod";
-import { executeAdminMutation } from "@/admin/lib/admin-action";
-import {
-  createSuccess,
-  type ActionResult,
-} from "@/admin/types/server-actions";
-import { createValidationError } from "@/shared/lib/action-helpers";
+import { executeAdminMutationResult } from "@/admin/lib/admin-action";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import type { MutationResult } from "@/shared/lib/mutation-result"
 import {
   createCoupon as createCouponCommand,
   deleteCoupon as deleteCouponCommand,
@@ -24,17 +21,16 @@ const idSchema = z.string().uuid({ error: "クーポンIDが不正です" });
 
 export async function createCoupon(
   input: CouponFormInput,
-): Promise<ActionResult<{ id: string }>> {
+): Promise<MutationResult<{ id: string }>> {
   const parsed = couponFormSchema.safeParse(input);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "coupon",
     action: "create",
     execute: async () => createCouponCommand(parsed.data),
-    success: (result) => createSuccess("クーポンを作成しました", result),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.COUPONS);
     },
@@ -45,25 +41,25 @@ export async function createCoupon(
 export async function updateCoupon(
   id: string,
   input: CouponFormInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const validatedId = idSchema.safeParse(id);
   if (!validatedId.success) {
-    return createValidationError(validatedId.error);
+    return createValidationMutationError(validatedId.error);
   }
 
   const parsed = couponFormSchema.safeParse(input);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "coupon",
     action: "update",
     resourceId: validatedId.data,
     execute: async () => {
       await updateCouponCommand(validatedId.data, parsed.data);
+      return null;
     },
-    success: () => createSuccess("クーポンを更新しました"),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.COUPONS);
       updateTag(getCacheTag.coupons.detail(validatedId.data));
@@ -71,20 +67,20 @@ export async function updateCoupon(
   });
 }
 
-export async function deleteCoupon(id: string): Promise<ActionResult<void>> {
+export async function deleteCoupon(id: string): Promise<MutationResult> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) {
-    return createValidationError(validated.error);
+    return createValidationMutationError(validated.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "coupon",
     action: "delete",
     resourceId: validated.data,
     execute: async () => {
       await deleteCouponCommand(validated.data);
+      return null;
     },
-    success: () => createSuccess("クーポンを削除しました"),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.COUPONS);
       updateTag(getCacheTag.coupons.detail(validated.data));
@@ -94,22 +90,17 @@ export async function deleteCoupon(id: string): Promise<ActionResult<void>> {
 
 export async function toggleCouponActive(
   id: string,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult<{ isActive: boolean }>> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) {
-    return createValidationError(validated.error);
+    return createValidationMutationError(validated.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "coupon",
     action: "update",
     resourceId: validated.data,
     execute: async () => toggleCouponActiveCommand(validated.data),
-    success: (result) =>
-      createSuccess(
-        result.isActive ? "クーポンを有効化しました" : "クーポンを無効化しました",
-        result,
-      ),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.COUPONS);
       updateTag(getCacheTag.coupons.detail(validated.data));

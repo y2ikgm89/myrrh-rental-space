@@ -8,12 +8,8 @@
 
 import { updateTag } from "next/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
-import { createValidationError } from "@/shared/lib/action-helpers";
-import { executeAdminMutation } from "@/admin/lib/admin-action";
-import {
-  createSuccess,
-  type ActionResult,
-} from "@/admin/types/server-actions";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
+import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import {
   getGoogleCalendarWebhookState,
 } from "@/shared/domain/settings/admin-queries";
@@ -44,6 +40,7 @@ import {
 import { syncFromCalendar } from "@/shared/lib/calendar-sync";
 import { clientEnv } from "@/shared/lib/env/client";
 import { serverEnv } from "@/shared/lib/env/server";
+import type { MutationResult } from "@/shared/lib/mutation-result"
 
 import {
   googleCalendarConnectionTestSchema,
@@ -65,32 +62,32 @@ function invalidateCalendarSyncCache(): void {
 
 export async function updateGoogleCalendarSettings(
   data: GoogleCalendarSettingsInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = googleCalendarSettingsSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await updateGoogleCalendarSettingsCommand(parsed.data);
+      return null;
     },
-    success: () => createSuccess("Google Calendar設定を更新しました"),
     afterSuccess: invalidateSettingsCache,
   });
 }
 
 export async function testGoogleCalendarConnectionAction(
   params: GoogleCalendarConnectionTestInput,
-): Promise<ActionResult<{ calendarName: string; accountEmail: string }>> {
+): Promise<MutationResult<{ calendarName: string; accountEmail: string }>> {
   const parsed = googleCalendarConnectionTestSchema.safeParse(params);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
@@ -129,15 +126,14 @@ export async function testGoogleCalendarConnectionAction(
         accountEmail: result.accountEmail ?? "",
       };
     },
-    success: (result) => createSuccess("接続テストに成功しました", result),
     afterSuccess: invalidateSettingsCache,
   });
 }
 
 export async function testGoogleCalendarOAuthAction(): Promise<
-  ActionResult<{ calendarName: string }>
+  MutationResult<{ calendarName: string }>
 > {
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async (user) => {
@@ -155,59 +151,57 @@ export async function testGoogleCalendarOAuthAction(): Promise<
         calendarName: result.calendarName ?? "",
       };
     },
-    success: (result) =>
-      createSuccess("OAuth接続テストに成功しました", result),
     afterSuccess: invalidateSettingsCache,
   });
 }
 
-export async function clearGoogleCalendarServiceAccount(): Promise<ActionResult<void>> {
-  return executeAdminMutation({
+export async function clearGoogleCalendarServiceAccount(): Promise<MutationResult> {
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await clearGoogleCalendarServiceAccountCommand();
+      return null;
     },
-    success: () => createSuccess("サービスアカウント認証情報をクリアしました"),
     afterSuccess: invalidateSettingsCache,
   });
 }
 
-export async function disconnectGoogleCalendarOAuth(): Promise<ActionResult<void>> {
-  return executeAdminMutation({
+export async function disconnectGoogleCalendarOAuth(): Promise<MutationResult> {
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async (user) => {
       await disconnectGoogleCalendarOAuthCommand(user.id);
+      return null;
     },
-    success: () => createSuccess("Google Calendar OAuth連携を解除しました"),
     afterSuccess: invalidateSettingsCache,
   });
 }
 
 export async function updateTwoWaySyncSettings(
   data: TwoWaySyncSettingsInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = twoWaySyncSettingsSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await updateTwoWaySyncSettingsCommand(parsed.data);
+      return null;
     },
-    success: () => createSuccess("双方向同期設定を更新しました"),
     afterSuccess: invalidateSettingsCache,
   });
 }
 
 export async function setupCalendarWebhook(): Promise<
-  ActionResult<{ expiration: Date | undefined }>
+  MutationResult<{ expiration: Date | undefined }>
 > {
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
@@ -237,14 +231,12 @@ export async function setupCalendarWebhook(): Promise<
 
       return { expiration: result.expiration };
     },
-    success: ({ expiration }) =>
-      createSuccess("Webhookを設定しました", { expiration }),
     afterSuccess: invalidateSettingsCache,
   });
 }
 
-export async function stopCalendarWebhook(): Promise<ActionResult<void>> {
-  return executeAdminMutation({
+export async function stopCalendarWebhook(): Promise<MutationResult> {
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
@@ -265,21 +257,21 @@ export async function stopCalendarWebhook(): Promise<ActionResult<void>> {
       }
 
       await clearGoogleCalendarWebhook();
+      return null;
     },
-    success: () => createSuccess("Webhookを停止しました"),
     afterSuccess: invalidateSettingsCache,
   });
 }
 
 export async function triggerManualSync(): Promise<
-  ActionResult<{
+  MutationResult<{
     processed: number;
     deleted: number;
     updated: number;
     errors: string[];
   }>
 > {
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
@@ -298,7 +290,6 @@ export async function triggerManualSync(): Promise<
         errors: result.errors,
       };
     },
-    success: (result) => createSuccess("同期が完了しました", result),
     afterSuccess: invalidateCalendarSyncCache,
   });
 }

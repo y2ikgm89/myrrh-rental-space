@@ -8,12 +8,9 @@
 
 import { updateTag } from "next/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
-import { createValidationError } from "@/shared/lib/action-helpers";
-import { executeAdminMutation } from "@/admin/lib/admin-action";
-import {
-  createSuccess,
-  type ActionResult,
-} from "@/admin/types/server-actions";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
+import { executeAdminMutationResult } from "@/admin/lib/admin-action";
+import type { MutationResult } from "@/shared/lib/mutation-result"
 import {
   updateBusinessHoursSettings as updateBusinessHoursSettingsCommand,
   updateBusinessInfo as updateBusinessInfoCommand,
@@ -43,76 +40,76 @@ function invalidateBusinessHoursCache(): void {
 
 export async function updateBusinessInfo(
   data: BusinessInfoInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = businessInfoSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await updateBusinessInfoCommand(parsed.data);
+      return null;
     },
-    success: () => createSuccess("事業者情報を更新しました"),
     afterSuccess: invalidateSettingsCache,
   });
 }
 
 export async function updateContactInfo(
   data: ContactInfoInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = contactInfoSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await updateContactInfoCommand(parsed.data);
+      return null;
     },
-    success: () => createSuccess("連絡先情報を更新しました"),
     afterSuccess: invalidateSettingsCache,
   });
 }
 
 export async function updateBusinessHoursSettings(
   data: BusinessHoursSettingsInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = businessHoursSettingsSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await updateBusinessHoursSettingsCommand(parsed.data);
+      return null;
     },
-    success: () => createSuccess("営業時間設定を更新しました"),
     afterSuccess: invalidateBusinessHoursCache,
   });
 }
 
 export async function updateMeoSettings(
   data: MeoSettingsInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = meoSettingsSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await updateMeoSettingsCommand(parsed.data);
+      return null;
     },
-    success: () => createSuccess("MEO設定を更新しました"),
     afterSuccess: invalidateSettingsCache,
   });
 }

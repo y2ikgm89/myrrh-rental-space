@@ -1,14 +1,14 @@
 "use server";
 
 import { updateTag } from "next/cache";
-import { executeAdminMutation } from "@/admin/lib/admin-action";
+import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
-import { createSuccess } from "@/admin/types/server-actions";
-import { createValidationError } from "@/shared/lib/action-helpers";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { purgeHomeCache } from "@/shared/lib/cloudflare";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
+import type { MutationResult } from "@/shared/lib/mutation-result"
 import {
   createHomepageSectionCommand,
   deleteHomepageSectionCommand,
@@ -55,22 +55,23 @@ function revalidateHomepage() {
   });
 }
 
-export const createHomepageSection = async (input: CreateSectionInput) => {
+export const createHomepageSection = async (
+  input: CreateSectionInput,
+): Promise<MutationResult<{ id: string }>> => {
   const parsed = createSectionSchema.safeParse({ ...input, pageId: undefined });
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
   const contentHtml = parsed.data.contentJson
     ? await renderEditorStateToHtmlLazy(parsed.data.contentJson)
     : null;
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () =>
       createHomepageSectionCommand(parsed.data, contentHtml),
-    success: (result) => createSuccess("セクションを作成しました", result),
     afterSuccess: () => {
       revalidateHomepage();
     },
@@ -81,10 +82,10 @@ export const createHomepageSection = async (input: CreateSectionInput) => {
 export const updateHomepageSection = async (
   id: string,
   input: UpdateSectionInput,
-) => {
+): Promise<MutationResult> => {
   const parsed = updateSectionSchema.safeParse(input);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
   const contentHtml =
@@ -94,82 +95,87 @@ export const updateHomepageSection = async (
         ? await renderEditorStateToHtmlLazy(parsed.data.contentJson)
         : null;
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     resourceId: id,
-    execute: async () =>
-      updateHomepageSectionCommand(id, parsed.data, contentHtml),
-    success: () => createSuccess("セクションを更新しました"),
+    execute: async () => {
+      await updateHomepageSectionCommand(id, parsed.data, contentHtml);
+      return null;
+    },
     afterSuccess: () => {
       revalidateHomepage();
     },
   });
 };
 
-export const toggleHomepageSection = async (id: string, isActive: boolean) =>
-  executeAdminMutation({
+export const toggleHomepageSection = async (
+  id: string,
+  isActive: boolean,
+): Promise<MutationResult> =>
+  executeAdminMutationResult({
     resource: "settings",
     action: "update",
     resourceId: id,
-    execute: async () => toggleHomepageSectionCommand(id, isActive),
-    success: () =>
-      createSuccess(
-        isActive
-          ? "セクションを有効にしました"
-          : "セクションを無効にしました",
-      ),
+    execute: async () => {
+      await toggleHomepageSectionCommand(id, isActive);
+      return null;
+    },
     afterSuccess: () => {
       revalidateHomepage();
     },
   });
 
-export const updateSectionOrder = async (input: UpdateSectionOrderInput) => {
+export const updateSectionOrder = async (
+  input: UpdateSectionOrderInput,
+): Promise<MutationResult> => {
   const parsed = updateSectionOrderSchema.safeParse(input);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
-    execute: async () => updateHomepageSectionOrderCommand(parsed.data),
-    success: () => createSuccess("順序を更新しました"),
+    execute: async () => {
+      await updateHomepageSectionOrderCommand(parsed.data);
+      return null;
+    },
     afterSuccess: () => {
       revalidateHomepage();
     },
   });
 };
 
-export const deleteHomepageSection = async (id: string) =>
-  executeAdminMutation({
+export const deleteHomepageSection = async (
+  id: string,
+): Promise<MutationResult> =>
+  executeAdminMutationResult({
     resource: "settings",
     action: "update",
     resourceId: id,
-    execute: async () => deleteHomepageSectionCommand(id),
-    success: () => createSuccess("セクションを削除しました"),
+    execute: async () => {
+      await deleteHomepageSectionCommand(id);
+      return null;
+    },
     afterSuccess: () => {
       revalidateHomepage();
     },
   });
 
-export const initializeDefaultSections = async () =>
-{
+export const initializeDefaultSections = async (): Promise<
+  MutationResult<{ created: boolean }>
+> => {
   let initializedDefaultSectionsCreated = false;
 
-  return executeAdminMutation<void>({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       initializedDefaultSectionsCreated =
         await initializeDefaultHomepageSectionsCommand();
+      return { created: initializedDefaultSectionsCreated };
     },
-    success: () =>
-      createSuccess(
-        initializedDefaultSectionsCreated
-          ? "デフォルトセクションを作成しました"
-          : "既にセクションが存在します",
-      ),
     afterSuccess: () => {
       revalidateHomepage();
     },

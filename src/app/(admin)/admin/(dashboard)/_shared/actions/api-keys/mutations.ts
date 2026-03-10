@@ -2,8 +2,7 @@
 
 import { updateTag } from "next/cache";
 import { z } from "zod";
-import { executeAdminMutation } from "@/admin/lib/admin-action";
-import { createSuccess, type ActionResult } from "@/admin/types/server-actions";
+import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import {
   testCloudflareConnection,
   testGoogleMapsConnection,
@@ -22,7 +21,7 @@ import {
   type ResendSettingsInput,
   type TurnstileSettingsInput,
 } from "@/admin/lib/validations/api-keys";
-import { createValidationError } from "@/shared/lib/action-helpers";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import {
   addCustomApiKey as addCustomApiKeyCommand,
   clearCloudflareSettings as clearCloudflareSettingsCommand,
@@ -41,6 +40,7 @@ import {
 } from "@/shared/domain/settings/api-key-commands";
 import { DomainError } from "@/shared/domain/domain-error";
 import { CACHE_TAGS } from "@/shared/lib/constants";
+import type { MutationResult } from "@/shared/lib/mutation-result"
 
 const apiKeyIdSchema = z.string().min(1, { error: "APIキーIDが不正です" });
 
@@ -50,27 +50,27 @@ function refreshSettingsCache(): void {
 
 export async function updateResendSettings(
   input: ResendSettingsInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = resendSettingsSchema.safeParse(input);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await updateResendSettingsCommand(parsed.data);
+      return null;
     },
-    success: () => createSuccess("Resend設定を更新しました"),
     afterSuccess: refreshSettingsCache,
   });
 }
 
 export async function testResendConnectionAction(
   apiKey: string,
-): Promise<ActionResult<{ message: string }>> {
-  return executeAdminMutation({
+): Promise<MutationResult> {
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
@@ -87,40 +87,38 @@ export async function testResendConnectionAction(
         );
       }
 
-      return { message: result.message || "" };
+      return null;
     },
-    success: (result) =>
-      createSuccess(result.message || "接続に成功しました", result),
   });
 }
 
-export async function clearResendKeys(): Promise<ActionResult<void>> {
-  return executeAdminMutation({
+export async function clearResendKeys(): Promise<MutationResult> {
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await clearResendSettingsCommand();
+      return null;
     },
-    success: () => createSuccess("Resendキーをクリアしました"),
     afterSuccess: refreshSettingsCache,
   });
 }
 
 export async function updateTurnstileSettings(
   input: TurnstileSettingsInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = turnstileSettingsSchema.safeParse(input);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await updateTurnstileSettingsCommand(parsed.data);
+      return null;
     },
-    success: () => createSuccess("Turnstile設定を更新しました"),
     afterSuccess: refreshSettingsCache,
   });
 }
@@ -128,8 +126,8 @@ export async function updateTurnstileSettings(
 export async function testTurnstileConnectionAction(
   siteKey: string,
   secretKey: string,
-): Promise<ActionResult<{ message: string; note?: string }>> {
-  return executeAdminMutation({
+): Promise<MutationResult<{ note?: string }>> {
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
@@ -147,53 +145,50 @@ export async function testTurnstileConnectionAction(
       }
 
       return {
-        message: result.message || "",
         note:
           typeof result.metadata?.["note"] === "string"
             ? result.metadata["note"]
             : undefined,
       };
     },
-    success: (result) =>
-      createSuccess(result.message || "検証に成功しました", result),
   });
 }
 
-export async function clearTurnstileKeys(): Promise<ActionResult<void>> {
-  return executeAdminMutation({
+export async function clearTurnstileKeys(): Promise<MutationResult> {
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await clearTurnstileSettingsCommand();
+      return null;
     },
-    success: () => createSuccess("Turnstileキーをクリアしました"),
     afterSuccess: refreshSettingsCache,
   });
 }
 
 export async function updateGoogleMapsSettings(
   input: GoogleMapsSettingsInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = googleMapsSettingsSchema.safeParse(input);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await updateGoogleMapsSettingsCommand(parsed.data);
+      return null;
     },
-    success: () => createSuccess("Google Maps設定を更新しました"),
     afterSuccess: refreshSettingsCache,
   });
 }
 
 export async function testGoogleMapsConnectionAction(
   apiKey: string,
-): Promise<ActionResult<{ message: string }>> {
-  return executeAdminMutation({
+): Promise<MutationResult> {
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
@@ -210,40 +205,38 @@ export async function testGoogleMapsConnectionAction(
         );
       }
 
-      return { message: result.message || "" };
+      return null;
     },
-    success: (result) =>
-      createSuccess(result.message || "接続に成功しました", result),
   });
 }
 
-export async function clearGoogleMapsKeys(): Promise<ActionResult<void>> {
-  return executeAdminMutation({
+export async function clearGoogleMapsKeys(): Promise<MutationResult> {
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await clearGoogleMapsSettingsCommand();
+      return null;
     },
-    success: () => createSuccess("Google Mapsキーをクリアしました"),
     afterSuccess: refreshSettingsCache,
   });
 }
 
 export async function updateCloudflareSettings(
   input: CloudflareSettingsInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = cloudflareSettingsSchema.safeParse(input);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await updateCloudflareSettingsCommand(parsed.data);
+      return null;
     },
-    success: () => createSuccess("Cloudflare設定を更新しました"),
     afterSuccess: refreshSettingsCache,
   });
 }
@@ -251,10 +244,8 @@ export async function updateCloudflareSettings(
 export async function testCloudflareConnectionAction(
   zoneId: string,
   apiToken: string,
-): Promise<
-  ActionResult<{ message: string; zoneName?: string; plan?: string }>
-> {
-  return executeAdminMutation({
+): Promise<MutationResult<{ zoneName?: string; plan?: string }>> {
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
@@ -272,7 +263,6 @@ export async function testCloudflareConnectionAction(
       }
 
       return {
-        message: result.message || "",
         zoneName:
           typeof result.metadata?.["zoneName"] === "string"
             ? result.metadata["zoneName"]
@@ -283,36 +273,33 @@ export async function testCloudflareConnectionAction(
             : undefined,
       };
     },
-    success: (result) =>
-      createSuccess(result.message || "接続に成功しました", result),
   });
 }
 
-export async function clearCloudflareKeys(): Promise<ActionResult<void>> {
-  return executeAdminMutation({
+export async function clearCloudflareKeys(): Promise<MutationResult> {
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await clearCloudflareSettingsCommand();
+      return null;
     },
-    success: () => createSuccess("Cloudflare設定をクリアしました"),
     afterSuccess: refreshSettingsCache,
   });
 }
 
 export async function addCustomApiKey(
   input: CustomApiKeyInput,
-): Promise<ActionResult<{ id: string }>> {
+): Promise<MutationResult<{ id: string }>> {
   const parsed = customApiKeySchema.safeParse(input);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => addCustomApiKeyCommand(parsed.data),
-    success: (result) => createSuccess("APIキーを追加しました", result),
     afterSuccess: refreshSettingsCache,
     resolveAuditResourceId: (result) => result.id,
   });
@@ -320,19 +307,19 @@ export async function addCustomApiKey(
 
 export async function deleteCustomApiKey(
   id: string,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const validated = apiKeyIdSchema.safeParse(id);
   if (!validated.success) {
-    return createValidationError(validated.error);
+    return createValidationMutationError(validated.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await deleteCustomApiKeyCommand(validated.data);
+      return null;
     },
-    success: () => createSuccess("APIキーを削除しました"),
     afterSuccess: refreshSettingsCache,
   });
 }

@@ -14,12 +14,9 @@
 
 import { updateTag } from "next/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
-import { createValidationError } from "@/shared/lib/action-helpers";
-import { executeAdminMutation } from "@/admin/lib/admin-action";
-import {
-  createSuccess,
-  type ActionResult,
-} from "@/admin/types/server-actions";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
+import { executeAdminMutationResult } from "@/admin/lib/admin-action";
+import type { MutationResult } from "@/shared/lib/mutation-result"
 import {
   updateAnnouncementBarCarouselSettings as updateAnnouncementBarCarouselSettingsCommand,
 } from "@/shared/domain/settings/announcement-bar";
@@ -78,76 +75,76 @@ function invalidateLayoutCache(): void {
 
 export async function updateMaintenanceSettings(
   data: MaintenanceSettingsInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = maintenanceSettingsSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await updateMaintenanceSettingsCommand(parsed.data);
+      return null;
     },
-    success: () => createSuccess("メンテナンス設定を更新しました"),
     afterSuccess: invalidateSettingsCache,
   });
 }
 
 export async function updateCookieConsentSettings(
   data: CookieConsentSettingsInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = cookieConsentSettingsSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await updateCookieConsentSettingsCommand(parsed.data);
+      return null;
     },
-    success: () => createSuccess("Cookie同意設定を更新しました"),
     afterSuccess: invalidateSettingsCache,
   });
 }
 
 export async function updateTermsAgreementSettings(
   data: TermsAgreementSettingsInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = termsAgreementSettingsSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await updateTermsAgreementSettingsCommand(parsed.data);
+      return null;
     },
-    success: () => createSuccess("規約同意設定を更新しました"),
     afterSuccess: invalidateReservationSettingsCache,
   });
 }
 
 export async function updateReservationSettings(
   data: ReservationSettingsInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = reservationSettingsSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await updateReservationSettingsCommand(parsed.data);
+      return null;
     },
-    success: () => createSuccess("予約設定を更新しました"),
     afterSuccess: () => {
       invalidateSettingsCache();
       updateTag(CACHE_TAGS.TERMS);
@@ -157,76 +154,76 @@ export async function updateReservationSettings(
 
 export async function updateSidebarSettings(
   data: SidebarSettingsInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = sidebarSettingsSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await updateSidebarSettingsCommand(parsed.data);
+      return null;
     },
-    success: () => createSuccess("サイドバー設定を更新しました"),
     afterSuccess: invalidateSidebarSettingsCache,
   });
 }
 
 export async function updateAnnouncementBarCarouselSettings(
   data: AnnouncementBarCarouselSettingsInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = announcementBarCarouselSettingsSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await updateAnnouncementBarCarouselSettingsCommand(parsed.data);
+      return null;
     },
-    success: () => createSuccess("お知らせバーカルーセル設定を更新しました"),
     afterSuccess: invalidateSettingsCache,
   });
 }
 
 export async function updatePermalinkSettings(
   data: PermalinkSettingsInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = permalinkSettingsSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await updatePermalinkSettingsCommand(parsed.data);
+      return null;
     },
-    success: () => createSuccess("パーマリンク設定を更新しました"),
     afterSuccess: invalidatePermalinkCache,
   });
 }
 
 export async function updateHeaderSettings(
   data: HeaderSettingsInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = headerSettingsSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await updateHeaderSettingsCommand(parsed.data);
+      return null;
     },
-    success: () => createSuccess("ヘッダー設定を更新しました"),
     afterSuccess: invalidateLayoutCache,
   });
 }

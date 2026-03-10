@@ -7,12 +7,9 @@
 import { updateTag } from "next/cache";
 import { z } from "zod";
 import { CACHE_TAGS } from "@/shared/lib/constants";
-import { createValidationError } from "@/shared/lib/action-helpers";
-import { executeAdminMutation } from "@/admin/lib/admin-action";
-import {
-  createSuccess,
-  type ActionResult,
-} from "@/admin/types/server-actions";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
+import { executeAdminMutationResult } from "@/admin/lib/admin-action";
+import type { MutationResult } from "@/shared/lib/mutation-result"
 import {
   createICalToken as createICalTokenCommand,
   deleteICalToken as deleteICalTokenCommand,
@@ -44,13 +41,13 @@ function invalidateSettingsCache(): void {
 
 export async function createICalToken(
   data: z.infer<typeof createTokenSchema>,
-): Promise<ActionResult<{ id: string; token: string }>> {
+): Promise<MutationResult<{ id: string; token: string }>> {
   const parsed = createTokenSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async (user) =>
@@ -58,43 +55,42 @@ export async function createICalToken(
         ...parsed.data,
         createdBy: user.id,
       }),
-    success: (result) => createSuccess("トークンを作成しました", result),
     afterSuccess: invalidateSettingsCache,
   });
 }
 
-export async function deleteICalToken(id: string): Promise<ActionResult<void>> {
+export async function deleteICalToken(id: string): Promise<MutationResult> {
   const parsed = deleteTokenSchema.safeParse({ id });
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await deleteICalTokenCommand(parsed.data.id);
+      return null;
     },
-    success: () => createSuccess("トークンを削除しました"),
     afterSuccess: invalidateSettingsCache,
   });
 }
 
 export async function updateICalFeedSettings(
   data: ICalFeedSettingsData,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = icalFeedSettingsSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await updateICalFeedSettingsCommand(parsed.data);
+      return null;
     },
-    success: () => createSuccess("設定を保存しました"),
     afterSuccess: invalidateSettingsCache,
   });
 }

@@ -8,12 +8,11 @@
 
 import { updateTag } from "next/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
-import { createValidationError } from "@/shared/lib/action-helpers";
-import { executeAdminMutation } from "@/admin/lib/admin-action";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import {
-  createSuccess,
-  type ActionResult,
-} from "@/admin/types/server-actions";
+  executeAdminMutationResult,
+} from "@/admin/lib/admin-action";
+import type { MutationResult } from "@/shared/lib/mutation-result"
 import {
   updateBasicInfo as updateBasicInfoCommand,
   updateLayoutSettings as updateLayoutSettingsCommand,
@@ -35,57 +34,57 @@ function invalidateSettingsCache(): void {
 
 export async function updateBasicInfo(
   data: BasicInfoInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = basicInfoSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await updateBasicInfoCommand(parsed.data);
+      return null;
     },
-    success: () => createSuccess("基本情報を更新しました"),
     afterSuccess: invalidateSettingsCache,
   });
 }
 
 export async function updateLayoutSettings(
   data: LayoutSettingsInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = layoutSettingsSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await updateLayoutSettingsCommand(parsed.data);
+      return null;
     },
-    success: () => createSuccess("レイアウト設定を更新しました"),
     afterSuccess: invalidateSettingsCache,
   });
 }
 
 export async function updateSeoSettings(
   data: SeoSettingsInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = seoSettingsSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await updateSeoSettingsCommand(parsed.data);
+      return null;
     },
-    success: () => createSuccess("SEO設定を更新しました"),
     afterSuccess: invalidateSettingsCache,
   });
 }

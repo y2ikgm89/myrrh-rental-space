@@ -2,15 +2,12 @@
 
 import { updateTag } from "next/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
-import { createValidationError } from "@/shared/lib/action-helpers";
-import {
-  createSuccess,
-  type ActionResult,
-} from "@/admin/types/server-actions";
-import { executeAdminMutation } from "@/admin/lib/admin-action";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
+import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { purgeHomeCache } from "@/shared/lib/cloudflare";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
+import type { MutationResult } from "@/shared/lib/mutation-result"
 import {
   createNavigationItem as createNavigationItemCommand,
   createSocialLink as createSocialLinkCommand,
@@ -39,18 +36,16 @@ function invalidateNavigationCache(): void {
 
 export async function createNavigationItem(
   data: NavigationItemInput,
-): Promise<ActionResult<{ id: string }>> {
+): Promise<MutationResult<{ id: string }>> {
   const parsed = navigationItemInputSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "navigation",
     action: "create",
     execute: async () => createNavigationItemCommand(parsed.data),
-    success: (result) =>
-      createSuccess("ナビゲーションを作成しました", result),
     afterSuccess: invalidateNavigationCache,
     resolveAuditResourceId: (result) => result.id,
   });
@@ -59,71 +54,70 @@ export async function createNavigationItem(
 export async function updateNavigationItem(
   id: string,
   data: NavigationItemInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = navigationItemInputSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "navigation",
     action: "update",
     resourceId: id,
     execute: async () => {
       await updateNavigationItemCommand(id, parsed.data);
+      return null;
     },
-    success: () => createSuccess("ナビゲーションを更新しました"),
     afterSuccess: invalidateNavigationCache,
   });
 }
 
 export async function deleteNavigationItem(
   id: string,
-): Promise<ActionResult<void>> {
-  return executeAdminMutation({
+): Promise<MutationResult> {
+  return executeAdminMutationResult({
     resource: "navigation",
     action: "delete",
     resourceId: id,
     execute: async () => {
       await deleteNavigationItemCommand(id);
+      return null;
     },
-    success: () => createSuccess("ナビゲーションを削除しました"),
     afterSuccess: invalidateNavigationCache,
   });
 }
 
 export async function updateNavigationOrder(
   items: { id: string; order: number; parentId?: string | null }[],
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = navigationOrderInputSchema.safeParse(items);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "navigation",
     action: "update",
     execute: async () => {
       await updateNavigationOrderCommand(parsed.data);
+      return null;
     },
-    success: () => createSuccess("順序を更新しました"),
     afterSuccess: invalidateNavigationCache,
   });
 }
 
 export async function createSocialLink(
   data: SocialLinkInput,
-): Promise<ActionResult<{ id: string }>> {
+): Promise<MutationResult<{ id: string }>> {
   const parsed = socialLinkInputSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "navigation",
     action: "create",
     execute: async () => createSocialLinkCommand(parsed.data),
-    success: (result) => createSuccess("SNSリンクを作成しました", result),
     afterSuccess: invalidateNavigationCache,
     resolveAuditResourceId: (result) => result.id,
   });
@@ -132,52 +126,52 @@ export async function createSocialLink(
 export async function updateSocialLink(
   id: string,
   data: SocialLinkInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = socialLinkInputSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "navigation",
     action: "update",
     resourceId: id,
     execute: async () => {
       await updateSocialLinkCommand(id, parsed.data);
+      return null;
     },
-    success: () => createSuccess("SNSリンクを更新しました"),
     afterSuccess: invalidateNavigationCache,
   });
 }
 
-export async function deleteSocialLink(id: string): Promise<ActionResult<void>> {
-  return executeAdminMutation({
+export async function deleteSocialLink(id: string): Promise<MutationResult> {
+  return executeAdminMutationResult({
     resource: "navigation",
     action: "delete",
     resourceId: id,
     execute: async () => {
       await deleteSocialLinkCommand(id);
+      return null;
     },
-    success: () => createSuccess("SNSリンクを削除しました"),
     afterSuccess: invalidateNavigationCache,
   });
 }
 
 export async function updateSocialLinkOrder(
   items: { id: string; order: number }[],
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = socialLinkOrderInputSchema.safeParse(items);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "navigation",
     action: "update",
     execute: async () => {
       await updateSocialLinkOrderCommand(parsed.data);
+      return null;
     },
-    success: () => createSuccess("順序を更新しました"),
     afterSuccess: invalidateNavigationCache,
   });
 }

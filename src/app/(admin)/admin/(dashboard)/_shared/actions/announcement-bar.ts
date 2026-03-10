@@ -2,15 +2,14 @@
 
 import { updateTag } from "next/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
-import { createValidationError } from "@/shared/lib/action-helpers";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import {
-  createSuccess,
-  type ActionResult,
-} from "@/admin/types/server-actions";
-import { executeAdminMutation } from "@/admin/lib/admin-action";
+  executeAdminMutationResult,
+} from "@/admin/lib/admin-action";
 import { purgeHomeCache } from "@/shared/lib/cloudflare";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
+import type { MutationResult } from "@/shared/lib/mutation-result"
 import {
   announcementBarInputSchema,
   createAnnouncementBar as createAnnouncementBarCommand,
@@ -31,18 +30,16 @@ function invalidateAnnouncementBarCache(): void {
 
 export async function createAnnouncementBar(
   data: AnnouncementBarInput,
-): Promise<ActionResult<{ id: string }>> {
+): Promise<MutationResult<{ id: string }>> {
   const parsed = announcementBarInputSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "announcementBar",
     action: "create",
     execute: async () => createAnnouncementBarCommand(parsed.data),
-    success: (result) =>
-      createSuccess("お知らせバーを作成しました", result),
     afterSuccess: invalidateAnnouncementBarCache,
     resolveAuditResourceId: (result) => result.id,
   });
@@ -51,50 +48,50 @@ export async function createAnnouncementBar(
 export async function updateAnnouncementBar(
   id: string,
   data: AnnouncementBarInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = announcementBarInputSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "announcementBar",
     action: "update",
     resourceId: id,
     execute: async () => {
       await updateAnnouncementBarCommand(id, parsed.data);
+      return null;
     },
-    success: () => createSuccess("お知らせバーを更新しました"),
     afterSuccess: invalidateAnnouncementBarCache,
   });
 }
 
 export async function deleteAnnouncementBar(
   id: string,
-): Promise<ActionResult<void>> {
-  return executeAdminMutation({
+): Promise<MutationResult> {
+  return executeAdminMutationResult({
     resource: "announcementBar",
     action: "delete",
     resourceId: id,
     execute: async () => {
       await deleteAnnouncementBarCommand(id);
+      return null;
     },
-    success: () => createSuccess("お知らせバーを削除しました"),
     afterSuccess: invalidateAnnouncementBarCache,
   });
 }
 
 export async function toggleAnnouncementBarActive(
   id: string,
-): Promise<ActionResult<void>> {
-  return executeAdminMutation({
+): Promise<MutationResult> {
+  return executeAdminMutationResult({
     resource: "announcementBar",
     action: "update",
     resourceId: id,
     execute: async () => {
       await toggleAnnouncementBarActiveCommand(id);
+      return null;
     },
-    success: () => createSuccess("状態を変更しました"),
     afterSuccess: invalidateAnnouncementBarCache,
   });
 }

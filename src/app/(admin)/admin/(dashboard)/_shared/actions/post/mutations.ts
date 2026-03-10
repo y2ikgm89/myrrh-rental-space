@@ -2,11 +2,7 @@
 
 import { updateTag } from "next/cache";
 import { z } from "zod";
-import { executeAdminMutation } from "@/admin/lib/admin-action";
-import {
-  createSuccess,
-  type ActionResult,
-} from "@/admin/types/server-actions";
+import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
 import {
   createPostSchema,
@@ -18,7 +14,7 @@ import {
   type PostCategoryInput,
   type PostTagInput,
 } from "@/admin/lib/validations/post";
-import { createValidationError } from "@/shared/lib/action-helpers";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import {
   createPost as createPostCommand,
   createPostBackup as createPostBackupCommand,
@@ -39,6 +35,7 @@ import { fireAndForget } from "@/shared/lib/async-utils";
 import { purgePostCache } from "@/shared/lib/cloudflare";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
+import type { MutationResult } from "@/shared/lib/mutation-result"
 
 const idSchema = z.string().uuid({ error: "投稿IDが不正です" });
 const versionSchema = z.object({
@@ -88,10 +85,10 @@ function invalidatePostTagCaches(): void {
 
 export async function createPost(
   input: CreatePostInput,
-): Promise<ActionResult<{ id: string }>> {
+): Promise<MutationResult<{ id: string }>> {
   const parsed = createPostSchema.safeParse(input);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
   const contentHtml = parsed.data.contentJson
@@ -99,7 +96,7 @@ export async function createPost(
     : "";
   let createdPostSlug: string | null = null;
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "post",
     action: "create",
     execute: async (user) => {
@@ -111,7 +108,6 @@ export async function createPost(
       createdPostSlug = result.slug;
       return { id: result.id };
     },
-    success: (result) => createSuccess("投稿記事を作成しました", result),
     afterSuccess: () => {
       invalidatePostCollectionCaches();
       purgePostCaches(createdPostSlug ?? undefined);
@@ -123,21 +119,21 @@ export async function createPost(
 export async function updatePost(
   id: string,
   input: UpdatePostInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const validatedId = idSchema.safeParse(id);
   if (!validatedId.success) {
-    return createValidationError(validatedId.error);
+    return createValidationMutationError(validatedId.error);
   }
 
   const parsed = updatePostSchema.safeParse(input);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
   const contentHtml = await renderEditorStateToHtmlLazy(parsed.data.contentJson);
   let updatedPost: { oldSlug: string; slug: string } | null = null;
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "post",
     action: "update",
     resourceId: validatedId.data,
@@ -148,8 +144,8 @@ export async function updatePost(
         contentWidth: parsed.data.contentWidth ?? null,
         contentWidthCustom: parsed.data.contentWidthCustom ?? null,
       });
+      return null;
     },
-    success: () => createSuccess("投稿記事を保存しました"),
     afterSuccess: () => {
       if (!updatedPost) {
         return;
@@ -165,23 +161,23 @@ export async function updatePost(
   });
 }
 
-export async function deletePost(id: string): Promise<ActionResult<void>> {
+export async function deletePost(id: string): Promise<MutationResult> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) {
-    return createValidationError(validated.error);
+    return createValidationMutationError(validated.error);
   }
 
   let deletedPostSlug: string | null = null;
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "post",
     action: "delete",
     resourceId: validated.data,
     execute: async () => {
       const result = await deletePostCommand(validated.data);
       deletedPostSlug = result.slug;
+      return null;
     },
-    success: () => createSuccess("投稿記事を削除しました"),
     afterSuccess: () => {
       if (!deletedPostSlug) {
         return;
@@ -194,25 +190,24 @@ export async function deletePost(id: string): Promise<ActionResult<void>> {
   });
 }
 
-export async function publishPost(id: string): Promise<ActionResult<void>> {
+export async function publishPost(
+  id: string,
+): Promise<MutationResult<{ version: number }>> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) {
-    return createValidationError(validated.error);
+    return createValidationMutationError(validated.error);
   }
 
   let publishedPost: { slug: string; version: number } | null = null;
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "post",
     action: "publish",
     resourceId: validated.data,
     execute: async (user) => {
       publishedPost = await publishPostCommand(validated.data, user.id);
+      return { version: publishedPost.version };
     },
-    success: () =>
-      createSuccess(
-        `公開しました（バージョン ${publishedPost?.version ?? 0}）`,
-      ),
     afterSuccess: () => {
       if (!publishedPost) {
         return;
@@ -225,23 +220,23 @@ export async function publishPost(id: string): Promise<ActionResult<void>> {
   });
 }
 
-export async function unpublishPost(id: string): Promise<ActionResult<void>> {
+export async function unpublishPost(id: string): Promise<MutationResult> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) {
-    return createValidationError(validated.error);
+    return createValidationMutationError(validated.error);
   }
 
   let unpublishedPostSlug: string | null = null;
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "post",
     action: "publish",
     resourceId: validated.data,
     execute: async () => {
       const result = await unpublishPostCommand(validated.data);
       unpublishedPostSlug = result.slug;
+      return null;
     },
-    success: () => createSuccess("下書きに戻しました"),
     afterSuccess: () => {
       if (!unpublishedPostSlug) {
         return;
@@ -256,37 +251,32 @@ export async function unpublishPost(id: string): Promise<ActionResult<void>> {
 
 export async function createPostBackup(
   id: string,
-): Promise<ActionResult<{ version: number }>> {
+): Promise<MutationResult<{ version: number }>> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) {
-    return createValidationError(validated.error);
+    return createValidationMutationError(validated.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "post",
     action: "update",
     resourceId: validated.data,
     execute: async (user) => createPostBackupCommand(validated.data, user.id),
-    success: (result) =>
-      createSuccess(
-        `バックアップを作成しました（バージョン ${result.version}）`,
-        { version: result.version },
-      ),
   });
 }
 
 export async function restorePostVersion(
   postId: string,
   version: number,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult<{ version: number }>> {
   const parsed = versionSchema.safeParse({ postId, version });
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
   let restoredPostSlug: string | null = null;
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "post",
     action: "update",
     resourceId: parsed.data.postId,
@@ -296,11 +286,8 @@ export async function restorePostVersion(
         parsed.data.version,
       );
       restoredPostSlug = result.slug;
+      return { version: parsed.data.version };
     },
-    success: () =>
-      createSuccess(
-        `バージョン ${parsed.data.version} を復元しました（下書き状態）`,
-      ),
     afterSuccess: () => {
       if (!restoredPostSlug) {
         return;
@@ -315,17 +302,16 @@ export async function restorePostVersion(
 
 export async function createPostCategory(
   input: PostCategoryInput,
-): Promise<ActionResult<{ id: string }>> {
+): Promise<MutationResult<{ id: string }>> {
   const parsed = postCategorySchema.safeParse(input);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "post",
     action: "create",
     execute: async () => createPostCategoryCommand(parsed.data),
-    success: (result) => createSuccess("カテゴリを作成しました", result),
     afterSuccess: () => {
       invalidatePostCategoryCaches();
       purgePostArchive();
@@ -337,23 +323,25 @@ export async function createPostCategory(
 export async function updatePostCategory(
   id: string,
   input: PostCategoryInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const validatedId = idSchema.safeParse(id);
   if (!validatedId.success) {
-    return createValidationError(validatedId.error);
+    return createValidationMutationError(validatedId.error);
   }
 
   const parsed = postCategorySchema.safeParse(input);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "post",
     action: "update",
     resourceId: validatedId.data,
-    execute: async () => updatePostCategoryCommand(validatedId.data, parsed.data),
-    success: () => createSuccess("カテゴリを更新しました"),
+    execute: async () => {
+      await updatePostCategoryCommand(validatedId.data, parsed.data);
+      return null;
+    },
     afterSuccess: () => {
       invalidatePostCategoryCaches();
       purgePostArchive();
@@ -361,18 +349,20 @@ export async function updatePostCategory(
   });
 }
 
-export async function deletePostCategory(id: string): Promise<ActionResult<void>> {
+export async function deletePostCategory(id: string): Promise<MutationResult> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) {
-    return createValidationError(validated.error);
+    return createValidationMutationError(validated.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "post",
     action: "delete",
     resourceId: validated.data,
-    execute: async () => deletePostCategoryCommand(validated.data),
-    success: () => createSuccess("カテゴリを削除しました"),
+    execute: async () => {
+      await deletePostCategoryCommand(validated.data);
+      return null;
+    },
     afterSuccess: () => {
       invalidatePostCategoryCaches();
       purgePostArchive();
@@ -382,17 +372,19 @@ export async function deletePostCategory(id: string): Promise<ActionResult<void>
 
 export async function updatePostCategoryOrder(
   items: { id: string; order: number }[],
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = postCategoryOrderSchema.safeParse(items);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "post",
     action: "update",
-    execute: async () => updatePostCategoryOrderCommand(parsed.data),
-    success: () => createSuccess("順序を更新しました"),
+    execute: async () => {
+      await updatePostCategoryOrderCommand(parsed.data);
+      return null;
+    },
     afterSuccess: () => {
       invalidatePostCategoryCaches();
       purgePostArchive();
@@ -402,17 +394,16 @@ export async function updatePostCategoryOrder(
 
 export async function createPostTag(
   input: PostTagInput,
-): Promise<ActionResult<{ id: string }>> {
+): Promise<MutationResult<{ id: string }>> {
   const parsed = postTagSchema.safeParse(input);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "post",
     action: "create",
     execute: async () => createPostTagCommand(parsed.data),
-    success: (result) => createSuccess("タグを作成しました", result),
     afterSuccess: () => {
       invalidatePostTagCaches();
     },
@@ -423,23 +414,25 @@ export async function createPostTag(
 export async function updatePostTag(
   id: string,
   input: PostTagInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const validatedId = idSchema.safeParse(id);
   if (!validatedId.success) {
-    return createValidationError(validatedId.error);
+    return createValidationMutationError(validatedId.error);
   }
 
   const parsed = postTagSchema.safeParse(input);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "post",
     action: "update",
     resourceId: validatedId.data,
-    execute: async () => updatePostTagCommand(validatedId.data, parsed.data),
-    success: () => createSuccess("タグを更新しました"),
+    execute: async () => {
+      await updatePostTagCommand(validatedId.data, parsed.data);
+      return null;
+    },
     afterSuccess: () => {
       invalidatePostTagCaches();
       purgePostArchive();
@@ -447,18 +440,20 @@ export async function updatePostTag(
   });
 }
 
-export async function deletePostTag(id: string): Promise<ActionResult<void>> {
+export async function deletePostTag(id: string): Promise<MutationResult> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) {
-    return createValidationError(validated.error);
+    return createValidationMutationError(validated.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "post",
     action: "delete",
     resourceId: validated.data,
-    execute: async () => deletePostTagCommand(validated.data),
-    success: () => createSuccess("タグを削除しました"),
+    execute: async () => {
+      await deletePostTagCommand(validated.data);
+      return null;
+    },
     afterSuccess: () => {
       updateTag(CACHE_TAGS.POST_TAGS);
     },

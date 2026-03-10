@@ -12,12 +12,9 @@
 
 import { updateTag } from "next/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
-import { createValidationError } from "@/shared/lib/action-helpers";
-import { executeAdminMutation } from "@/admin/lib/admin-action";
-import {
-  createSuccess,
-  type ActionResult,
-} from "@/admin/types/server-actions";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
+import { executeAdminMutationResult } from "@/admin/lib/admin-action";
+import type { MutationResult } from "@/shared/lib/mutation-result"
 import {
   updateDiscountSettings as updateDiscountSettingsCommand,
 } from "@/shared/domain/settings/commands";
@@ -30,19 +27,19 @@ function invalidateSettingsCache(): void {
 
 export async function updateDiscountSettings(
   input: DiscountSettingsInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = discountSettingsSchema.safeParse(input);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await updateDiscountSettingsCommand(parsed.data);
+      return null;
     },
-    success: () => createSuccess("割引設定を更新しました"),
     afterSuccess: invalidateSettingsCache,
   });
 }

@@ -2,12 +2,8 @@
 
 import { updateTag } from "next/cache";
 import { z } from "zod";
-import { executeAdminMutation } from "@/admin/lib/admin-action";
+import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
-import {
-  createSuccess,
-  type ActionResult,
-} from "@/admin/types/server-actions";
 import {
   createNews as createNewsCommand,
   createNewsBackup as createNewsBackupCommand,
@@ -17,11 +13,12 @@ import {
   unpublishNews as unpublishNewsCommand,
   updateNews as updateNewsCommand,
 } from "@/shared/domain/news/commands";
-import { createValidationError } from "@/shared/lib/action-helpers";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { purgeNewsCache } from "@/shared/lib/cloudflare";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
+import type { MutationResult } from "@/shared/lib/mutation-result"
 import {
   createNewsSchema,
   updateNewsSchema,
@@ -64,10 +61,10 @@ function invalidateNewsCollectionCaches(): void {
 
 export async function createNews(
   input: CreateNewsInput,
-): Promise<ActionResult<{ id: string }>> {
+): Promise<MutationResult<{ id: string }>> {
   const parsed = createNewsSchema.safeParse(input);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
   const contentHtml = parsed.data.contentJson
@@ -75,7 +72,7 @@ export async function createNews(
     : "";
   let createdNewsSlug: string | null = null;
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "news",
     action: "create",
     execute: async () => {
@@ -86,7 +83,6 @@ export async function createNews(
       createdNewsSlug = result.slug;
       return { id: result.id };
     },
-    success: (result) => createSuccess("お知らせを作成しました", result),
     afterSuccess: () => {
       invalidateNewsCollectionCaches();
       purgeNewsCaches(createdNewsSlug ?? undefined);
@@ -98,21 +94,21 @@ export async function createNews(
 export async function updateNews(
   id: string,
   input: UpdateNewsInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const validatedId = idSchema.safeParse(id);
   if (!validatedId.success) {
-    return createValidationError(validatedId.error);
+    return createValidationMutationError(validatedId.error);
   }
 
   const parsed = updateNewsSchema.safeParse(input);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
   const contentHtml = await renderEditorStateToHtmlLazy(parsed.data.contentJson);
   let updatedNews: { oldSlug: string; slug: string } | null = null;
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "news",
     action: "update",
     resourceId: validatedId.data,
@@ -123,8 +119,8 @@ export async function updateNews(
         contentWidth: parsed.data.contentWidth ?? null,
         contentWidthCustom: parsed.data.contentWidthCustom ?? null,
       });
+      return null;
     },
-    success: () => createSuccess("お知らせを保存しました"),
     afterSuccess: () => {
       if (!updatedNews) {
         return;
@@ -140,23 +136,23 @@ export async function updateNews(
   });
 }
 
-export async function deleteNews(id: string): Promise<ActionResult<void>> {
+export async function deleteNews(id: string): Promise<MutationResult> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) {
-    return createValidationError(validated.error);
+    return createValidationMutationError(validated.error);
   }
 
   let deletedNewsSlug: string | null = null;
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "news",
     action: "delete",
     resourceId: validated.data,
     execute: async () => {
       const result = await deleteNewsCommand(validated.data);
       deletedNewsSlug = result.slug;
+      return null;
     },
-    success: () => createSuccess("お知らせを削除しました"),
     afterSuccess: () => {
       if (!deletedNewsSlug) {
         return;
@@ -169,25 +165,24 @@ export async function deleteNews(id: string): Promise<ActionResult<void>> {
   });
 }
 
-export async function publishNews(id: string): Promise<ActionResult<void>> {
+export async function publishNews(
+  id: string,
+): Promise<MutationResult<{ version: number }>> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) {
-    return createValidationError(validated.error);
+    return createValidationMutationError(validated.error);
   }
 
   let publishedNews: { slug: string; version: number } | null = null;
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "news",
     action: "publish",
     resourceId: validated.data,
     execute: async (user) => {
       publishedNews = await publishNewsCommand(validated.data, user.id);
+      return { version: publishedNews.version };
     },
-    success: () =>
-      createSuccess(
-        `公開しました（バージョン ${publishedNews?.version ?? 0}）`,
-      ),
     afterSuccess: () => {
       if (!publishedNews) {
         return;
@@ -200,23 +195,23 @@ export async function publishNews(id: string): Promise<ActionResult<void>> {
   });
 }
 
-export async function unpublishNews(id: string): Promise<ActionResult<void>> {
+export async function unpublishNews(id: string): Promise<MutationResult> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) {
-    return createValidationError(validated.error);
+    return createValidationMutationError(validated.error);
   }
 
   let unpublishedNewsSlug: string | null = null;
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "news",
     action: "publish",
     resourceId: validated.data,
     execute: async () => {
       const result = await unpublishNewsCommand(validated.data);
       unpublishedNewsSlug = result.slug;
+      return null;
     },
-    success: () => createSuccess("下書きに戻しました"),
     afterSuccess: () => {
       if (!unpublishedNewsSlug) {
         return;
@@ -231,37 +226,32 @@ export async function unpublishNews(id: string): Promise<ActionResult<void>> {
 
 export async function createNewsBackup(
   id: string,
-): Promise<ActionResult<{ version: number }>> {
+): Promise<MutationResult<{ version: number }>> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) {
-    return createValidationError(validated.error);
+    return createValidationMutationError(validated.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "news",
     action: "update",
     resourceId: validated.data,
     execute: async (user) => createNewsBackupCommand(validated.data, user.id),
-    success: (result) =>
-      createSuccess(
-        `バックアップを作成しました（バージョン ${result.version}）`,
-        { version: result.version },
-      ),
   });
 }
 
 export async function restoreNewsVersion(
   newsId: string,
   version: number,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult<{ version: number }>> {
   const parsed = versionSchema.safeParse({ newsId, version });
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
   let restoredNewsSlug: string | null = null;
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "news",
     action: "update",
     resourceId: parsed.data.newsId,
@@ -271,11 +261,8 @@ export async function restoreNewsVersion(
         parsed.data.version,
       );
       restoredNewsSlug = result.slug;
+      return { version: parsed.data.version };
     },
-    success: () =>
-      createSuccess(
-        `バージョン ${parsed.data.version} を復元しました（下書き状態）`,
-      ),
     afterSuccess: () => {
       if (!restoredNewsSlug) {
         return;

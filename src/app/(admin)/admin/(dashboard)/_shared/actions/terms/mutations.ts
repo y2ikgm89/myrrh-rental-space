@@ -2,12 +2,8 @@
 
 import { updateTag } from "next/cache";
 import { z } from "zod";
-import { executeAdminMutation } from "@/admin/lib/admin-action";
+import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
-import {
-  createSuccess,
-  type ActionResult,
-} from "@/admin/types/server-actions";
 import {
   archiveTermsVersion as archiveTermsVersionCommand,
   createTerms as createTermsCommand,
@@ -20,11 +16,12 @@ import {
   updateTerms as updateTermsCommand,
   updateTermsVersion as updateTermsVersionCommand,
 } from "@/shared/domain/terms/commands";
-import { createValidationError } from "@/shared/lib/action-helpers";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { purgeTermsCache } from "@/shared/lib/cloudflare";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
+import type { MutationResult } from "@/shared/lib/mutation-result"
 import { lexicalJsonSchema } from "@/shared/lib/validations/lexical";
 import {
   createTermsSchema,
@@ -58,17 +55,16 @@ function invalidateTermsCache(): void {
 
 export async function createTerms(
   input: CreateTermsInput,
-): Promise<ActionResult<{ id: string }>> {
+): Promise<MutationResult<{ id: string }>> {
   const validation = createTermsSchema.safeParse(input);
   if (!validation.success) {
-    return createValidationError(validation.error);
+    return createValidationMutationError(validation.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "terms",
     action: "create",
     execute: async () => createTermsCommand(validation.data),
-    success: (result) => createSuccess("規約を作成しました", result),
     afterSuccess: invalidateTermsCache,
     resolveAuditResourceId: (result) => result.id,
   });
@@ -76,17 +72,17 @@ export async function createTerms(
 
 export async function createTermsWithVersion(
   input: CreateTermsInput & { contentJson: string },
-): Promise<ActionResult<{ id: string; versionId: string }>> {
+): Promise<MutationResult<{ id: string; versionId: string }>> {
   const validation = createTermsWithVersionSchema.safeParse(input);
   if (!validation.success) {
-    return createValidationError(validation.error);
+    return createValidationMutationError(validation.error);
   }
 
   const contentHtml = await renderEditorStateToHtmlLazy(
     validation.data.contentJson,
   );
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "terms",
     action: "create",
     execute: async (user) =>
@@ -97,7 +93,6 @@ export async function createTermsWithVersion(
         },
         user.id,
       ),
-    success: (result) => createSuccess("規約を作成しました", result),
     afterSuccess: invalidateTermsCache,
     resolveAuditResourceId: (result) => result.id,
   });
@@ -106,43 +101,43 @@ export async function createTermsWithVersion(
 export async function updateTerms(
   id: string,
   input: UpdateTermsInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const idValidation = idSchema.safeParse(id);
   if (!idValidation.success) {
-    return createValidationError(idValidation.error);
+    return createValidationMutationError(idValidation.error);
   }
 
   const validation = updateTermsSchema.safeParse(input);
   if (!validation.success) {
-    return createValidationError(validation.error);
+    return createValidationMutationError(validation.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "terms",
     action: "update",
     resourceId: idValidation.data,
     execute: async () => {
       await updateTermsCommand(idValidation.data, validation.data);
+      return null;
     },
-    success: () => createSuccess("規約を更新しました"),
     afterSuccess: invalidateTermsCache,
   });
 }
 
-export async function deleteTerms(id: string): Promise<ActionResult<void>> {
+export async function deleteTerms(id: string): Promise<MutationResult> {
   const validation = idSchema.safeParse(id);
   if (!validation.success) {
-    return createValidationError(validation.error);
+    return createValidationMutationError(validation.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "terms",
     action: "delete",
     resourceId: validation.data,
     execute: async () => {
       await deleteTermsCommand(validation.data);
+      return null;
     },
-    success: () => createSuccess("規約を削除しました"),
     afterSuccess: invalidateTermsCache,
   });
 }
@@ -150,13 +145,13 @@ export async function deleteTerms(id: string): Promise<ActionResult<void>> {
 export async function toggleTermsActive(
   id: string,
   isActive: boolean,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const validation = toggleTermsActiveSchema.safeParse({ id, isActive });
   if (!validation.success) {
-    return createValidationError(validation.error);
+    return createValidationMutationError(validation.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "terms",
     action: "update",
     resourceId: validation.data.id,
@@ -165,30 +160,25 @@ export async function toggleTermsActive(
         validation.data.id,
         validation.data.isActive,
       );
+      return null;
     },
-    success: () =>
-      createSuccess(
-        validation.data.isActive
-          ? "規約を有効にしました"
-          : "規約を無効にしました",
-      ),
     afterSuccess: invalidateTermsCache,
   });
 }
 
 export async function createTermsVersion(
   input: CreateTermsVersionInput,
-): Promise<ActionResult<{ id: string; version: number }>> {
+): Promise<MutationResult<{ id: string; version: number }>> {
   const validation = createTermsVersionSchema.safeParse(input);
   if (!validation.success) {
-    return createValidationError(validation.error);
+    return createValidationMutationError(validation.error);
   }
 
   const contentHtml = await renderEditorStateToHtmlLazy(
     validation.data.contentJson,
   );
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "terms",
     action: "create",
     resourceId: validation.data.termsId,
@@ -200,8 +190,6 @@ export async function createTermsVersion(
         },
         user.id,
       ),
-    success: (result) =>
-      createSuccess(`バージョン ${result.version} を作成しました`, result),
     afterSuccess: invalidateTermsCache,
     resolveAuditResourceId: (result) => result.id,
   });
@@ -210,22 +198,22 @@ export async function createTermsVersion(
 export async function updateTermsVersion(
   versionId: string,
   input: UpdateTermsVersionInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const idValidation = idSchema.safeParse(versionId);
   if (!idValidation.success) {
-    return createValidationError(idValidation.error);
+    return createValidationMutationError(idValidation.error);
   }
 
   const validation = updateTermsVersionSchema.safeParse(input);
   if (!validation.success) {
-    return createValidationError(validation.error);
+    return createValidationMutationError(validation.error);
   }
 
   const contentHtml = await renderEditorStateToHtmlLazy(
     validation.data.contentJson,
   );
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "terms",
     action: "update",
     resourceId: idValidation.data,
@@ -234,8 +222,8 @@ export async function updateTermsVersion(
         ...validation.data,
         contentHtml,
       });
+      return null;
     },
-    success: () => createSuccess("バージョンを更新しました"),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.TERMS);
     },
@@ -244,60 +232,60 @@ export async function updateTermsVersion(
 
 export async function publishTermsVersion(
   versionId: string,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const validation = idSchema.safeParse(versionId);
   if (!validation.success) {
-    return createValidationError(validation.error);
+    return createValidationMutationError(validation.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "terms",
     action: "publish",
     resourceId: validation.data,
     execute: async (user) => {
       await publishTermsVersionCommand(validation.data, user.id);
+      return null;
     },
-    success: () => createSuccess("バージョンを公開しました"),
     afterSuccess: invalidateTermsCache,
   });
 }
 
 export async function archiveTermsVersion(
   versionId: string,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const validation = idSchema.safeParse(versionId);
   if (!validation.success) {
-    return createValidationError(validation.error);
+    return createValidationMutationError(validation.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "terms",
     action: "update",
     resourceId: validation.data,
     execute: async () => {
       await archiveTermsVersionCommand(validation.data);
+      return null;
     },
-    success: () => createSuccess("バージョンをアーカイブしました"),
     afterSuccess: invalidateTermsCache,
   });
 }
 
 export async function deleteTermsVersion(
   versionId: string,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const validation = idSchema.safeParse(versionId);
   if (!validation.success) {
-    return createValidationError(validation.error);
+    return createValidationMutationError(validation.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "terms",
     action: "delete",
     resourceId: validation.data,
     execute: async () => {
       await deleteTermsVersionCommand(validation.data);
+      return null;
     },
-    success: () => createSuccess("バージョンを削除しました"),
     afterSuccess: invalidateTermsCache,
   });
 }

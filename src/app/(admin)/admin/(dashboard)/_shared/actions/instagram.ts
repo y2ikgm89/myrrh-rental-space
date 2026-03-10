@@ -2,12 +2,7 @@
 
 import { updateTag } from "next/cache";
 import { z } from "zod";
-import { executeAdminMutation } from "@/admin/lib/admin-action";
-import {
-  createSuccess,
-  createFailure,
-  type ActionResult,
-} from "@/admin/types/server-actions";
+import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import {
   addInstagramPost as addInstagramPostCommand,
   disconnectInstagram as disconnectInstagramCommand,
@@ -16,7 +11,7 @@ import {
   saveInstagramToken as saveInstagramTokenCommand,
   updateInstagramSettings as updateInstagramSettingsCommand,
 } from "@/shared/domain/instagram/commands";
-import { createValidationError } from "@/shared/lib/action-helpers";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import {
   instagramSettingsSchema,
@@ -25,6 +20,8 @@ import {
   type InstagramSettingsInput,
 } from "@/shared/lib/validations/instagram";
 import { testInstagramConnection } from "@/shared/lib/instagram";
+import type { MutationResult } from "@/shared/lib/mutation-result"
+import { DomainError } from "@/shared/domain/domain-error";
 
 export type { InstagramSettingsInput } from "@/shared/lib/validations/instagram";
 export type {
@@ -41,17 +38,19 @@ function invalidateInstagramCaches(): void {
 
 export async function updateInstagramSettings(
   data: InstagramSettingsInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = instagramSettingsSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
-    execute: async () => updateInstagramSettingsCommand(parsed.data),
-    success: () => createSuccess("Instagram設定を更新しました"),
+    execute: async () => {
+      await updateInstagramSettingsCommand(parsed.data);
+      return null;
+    },
     afterSuccess: () => {
       invalidateInstagramCaches();
     },
@@ -60,19 +59,17 @@ export async function updateInstagramSettings(
 
 export async function saveManualToken(
   token: string,
-): Promise<ActionResult<{ username: string | undefined }>> {
+): Promise<MutationResult<{ username: string | undefined }>> {
   const parsed = instagramTokenSchema.safeParse(token);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => saveInstagramTokenCommand(parsed.data),
-    success: (result) =>
-      createSuccess("Instagramトークンを保存しました", result),
-  afterSuccess: () => {
+    afterSuccess: () => {
       invalidateInstagramCaches();
     },
   });
@@ -80,56 +77,61 @@ export async function saveManualToken(
 
 export async function testInstagramConnectionAction(
   token: string,
-): Promise<ActionResult<{ username: string | undefined; message: string }>> {
+): Promise<MutationResult<{ username: string | undefined }>> {
   const parsed = instagramTokenSchema.safeParse(token);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       const result = await testInstagramConnection(parsed.data);
       if (!result.success) {
-        throw new Error(result.error || "接続テストに失敗しました");
+        throw new DomainError(
+          result.error || "接続テストに失敗しました",
+          "VALIDATION",
+        );
       }
 
       const username =
         typeof result.metadata?.["username"] === "string"
           ? result.metadata["username"]
           : undefined;
-      const message = result.message || "接続テストに成功しました";
 
-      return { username, message };
+      return { username };
     },
-    success: (result) => createSuccess(result.message, result),
-  }).catch(() => createFailure("接続テストに失敗しました"));
+  });
 }
 
-export async function disconnectInstagram(): Promise<ActionResult<void>> {
-  return executeAdminMutation({
+export async function disconnectInstagram(): Promise<MutationResult> {
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
-    execute: async () => disconnectInstagramCommand(),
-    success: () => createSuccess("Instagram連携を解除しました"),
+    execute: async () => {
+      await disconnectInstagramCommand();
+      return null;
+    },
     afterSuccess: () => {
       invalidateInstagramCaches();
     },
   });
 }
 
-export async function addInstagramPost(url: string): Promise<ActionResult<void>> {
+export async function addInstagramPost(url: string): Promise<MutationResult> {
   const parsed = instagramPostUrlSchema.safeParse(url);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
-    execute: async () => addInstagramPostCommand(parsed.data),
-    success: () => createSuccess("Instagram投稿を追加しました"),
+    execute: async () => {
+      await addInstagramPostCommand(parsed.data);
+      return null;
+    },
     afterSuccess: () => {
       invalidateInstagramCaches();
     },
@@ -138,18 +140,20 @@ export async function addInstagramPost(url: string): Promise<ActionResult<void>>
 
 export async function removeInstagramPost(
   id: string,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) {
-    return createValidationError(validated.error);
+    return createValidationMutationError(validated.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     resourceId: validated.data,
-    execute: async () => removeInstagramPostCommand(validated.data),
-    success: () => createSuccess("Instagram投稿を削除しました"),
+    execute: async () => {
+      await removeInstagramPostCommand(validated.data);
+      return null;
+    },
     afterSuccess: () => {
       invalidateInstagramCaches();
     },
@@ -158,17 +162,19 @@ export async function removeInstagramPost(
 
 export async function reorderInstagramPosts(
   ids: string[],
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = orderedIdsSchema.safeParse(ids);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
-    execute: async () => reorderInstagramPostsCommand(parsed.data),
-    success: () => createSuccess("並び順を更新しました"),
+    execute: async () => {
+      await reorderInstagramPostsCommand(parsed.data);
+      return null;
+    },
     afterSuccess: () => {
       invalidateInstagramCaches();
     },

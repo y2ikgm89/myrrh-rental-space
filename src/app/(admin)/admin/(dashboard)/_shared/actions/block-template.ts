@@ -2,12 +2,9 @@
 
 import { z } from 'zod'
 import { updateTag } from 'next/cache'
-import { executeAdminMutation } from '@/admin/lib/admin-action'
-import { createValidationError } from '@/shared/lib/action-helpers'
-import {
-  createSuccess,
-  type ActionResult,
-} from '@/admin/types/server-actions'
+import { executeAdminMutationResult } from '@/admin/lib/admin-action'
+import { createValidationMutationError } from '@/shared/lib/action-helpers'
+import type { MutationResult } from '@/shared/lib/mutation-result'
 import {
   createBlockTemplate as createBlockTemplateCommand,
   deleteBlockTemplate as deleteBlockTemplateCommand,
@@ -28,17 +25,16 @@ type CreateBlockTemplateInput = z.infer<typeof createBlockTemplateSchema>
 
 export async function createBlockTemplate(
   input: CreateBlockTemplateInput
-): Promise<ActionResult<{ id: string }>> {
+): Promise<MutationResult<{ id: string }>> {
   const validated = createBlockTemplateSchema.safeParse(input)
   if (!validated.success) {
-    return createValidationError(validated.error)
+    return createValidationMutationError(validated.error)
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: 'blockTemplate',
     action: 'create',
     execute: async (user) => createBlockTemplateCommand(validated.data, user.id),
-    success: (result) => createSuccess('テンプレートを保存しました', result),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.BLOCK_TEMPLATES)
     },
@@ -48,20 +44,20 @@ export async function createBlockTemplate(
 
 export async function deleteBlockTemplate(
   id: string
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const validated = idSchema.safeParse(id)
   if (!validated.success) {
-    return createValidationError(validated.error)
+    return createValidationMutationError(validated.error)
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: 'blockTemplate',
     action: 'delete',
     resourceId: validated.data,
     execute: async () => {
       await deleteBlockTemplateCommand(validated.data)
+      return null
     },
-    success: () => createSuccess('テンプレートを削除しました'),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.BLOCK_TEMPLATES)
     },

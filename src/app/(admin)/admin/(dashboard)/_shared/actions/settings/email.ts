@@ -8,12 +8,9 @@
 
 import { updateTag } from "next/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
-import { createValidationError } from "@/shared/lib/action-helpers";
-import { executeAdminMutation } from "@/admin/lib/admin-action";
-import {
-  createSuccess,
-  type ActionResult,
-} from "@/admin/types/server-actions";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
+import { executeAdminMutationResult } from "@/admin/lib/admin-action";
+import type { MutationResult } from "@/shared/lib/mutation-result"
 import {
   updateEmailSettings as updateEmailSettingsCommand,
   updateNotificationSettings as updateNotificationSettingsCommand,
@@ -32,38 +29,38 @@ function invalidateSettingsCache(): void {
 
 export async function updateEmailSettings(
   data: EmailSettingsInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = emailSettingsSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await updateEmailSettingsCommand(parsed.data);
+      return null;
     },
-    success: () => createSuccess("メール設定を更新しました"),
     afterSuccess: invalidateSettingsCache,
   });
 }
 
 export async function updateNotificationSettings(
   data: NotificationSettingsInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = notificationSettingsSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await updateNotificationSettingsCommand(parsed.data);
+      return null;
     },
-    success: () => createSuccess("通知設定を更新しました"),
     afterSuccess: invalidateSettingsCache,
   });
 }

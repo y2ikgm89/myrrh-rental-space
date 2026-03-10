@@ -2,13 +2,13 @@
 
 import { updateTag } from "next/cache";
 import { z } from "zod";
-import { executeAdminMutation } from "@/admin/lib/admin-action";
-import { createSuccess } from "@/admin/types/server-actions";
+import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
-import { createValidationError } from "@/shared/lib/action-helpers";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
 import { ReservationStatus } from "@/shared/db/enums";
+import type { MutationResult } from "@/shared/lib/mutation-result"
 import {
   deleteReservationCommand,
   updateReservationNotesCommand,
@@ -42,21 +42,21 @@ export const updateReservationStatus = async (
 ) => {
   const parsed = updateStatusSchema.safeParse({ id, status });
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
   let result:
     | Awaited<ReturnType<typeof updateReservationStatusCommand>>
     | undefined;
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "reservation",
     action: "update",
     resourceId: id,
     execute: async () => {
       result = await updateReservationStatusCommand(id, status);
+      return null;
     },
-    success: () => createSuccess("ステータスを更新しました"),
     afterSuccess: () => {
       if (!result) {
         return;
@@ -143,20 +143,20 @@ export const updateReservationStatus = async (
 export const updateReservationNotes = async (
   id: string,
   notes: string | null,
-) => {
+): Promise<MutationResult> => {
   const parsed = updateNotesSchema.safeParse({ id, notes });
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "reservation",
     action: "update",
     resourceId: id,
     execute: async () => {
       await updateReservationNotesCommand(id, notes);
+      return null;
     },
-    success: () => createSuccess("メモを更新しました"),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.RESERVATIONS);
       updateTag(getCacheTag.reservations.detail(id));
@@ -164,18 +164,18 @@ export const updateReservationNotes = async (
   });
 };
 
-export const deleteReservation = async (id: string) => {
+export const deleteReservation = async (id: string): Promise<MutationResult> => {
   let googleCalendarEventId: string | null = null;
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "reservation",
     action: "delete",
     resourceId: id,
     execute: async () => {
       const result = await deleteReservationCommand(id);
       googleCalendarEventId = result.googleCalendarEventId;
+      return null;
     },
-    success: () => createSuccess("予約を削除しました"),
     afterSuccess: () => {
       if (googleCalendarEventId) {
         fireAndForget(deleteCalendarSync(id, googleCalendarEventId), {

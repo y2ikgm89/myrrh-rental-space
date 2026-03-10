@@ -18,6 +18,7 @@ import {
   TaxDisplayMode,
   TaxInputMode,
 } from '@/shared/db/enums'
+import { parseGoogleServiceAccountCredentials } from '@/shared/lib/validations/google-service-account'
 
 // =============================================================================
 // Basic Schemas
@@ -229,7 +230,10 @@ const requiredCalendarIdSchema = z.string().min(
 export const googleCalendarSettingsSchema = z.object({
   googleCalendarEnabled: z.boolean(),
   googleCalendarId: optionalCalendarIdSchema.nullable(),
-  serviceAccountJson: z.string().nullable(), // 新規入力時のみ
+  serviceAccountJson: z.string().nullable().refine(
+    (value) => value === null || parseGoogleServiceAccountCredentials(value) !== null,
+    { error: 'サービスアカウントJSONの形式が無効です' }
+  ), // 新規入力時のみ
   icalAttachmentEnabled: z.boolean(),
   addToCalendarLinksEnabled: z.boolean(),
 })
@@ -237,7 +241,12 @@ export const googleCalendarSettingsSchema = z.object({
 export type GoogleCalendarSettingsInput = z.infer<typeof googleCalendarSettingsSchema>
 
 export const googleCalendarConnectionTestSchema = z.object({
-  serviceAccountJson: z.string().min(1, { error: 'サービスアカウントJSONを入力してください' }),
+  serviceAccountJson: z.string()
+    .min(1, { error: 'サービスアカウントJSONを入力してください' })
+    .refine(
+      (value) => parseGoogleServiceAccountCredentials(value) !== null,
+      { error: 'サービスアカウントJSONの形式が無効です' }
+    ),
   calendarId: requiredCalendarIdSchema,
 })
 

@@ -8,12 +8,8 @@
 
 import { updateTag } from "next/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
-import {
-  createSuccess,
-  type ActionResult,
-} from "@/admin/types/server-actions";
-import { createValidationError } from "@/shared/lib/action-helpers";
-import { executeAdminMutation } from "@/admin/lib/admin-action";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
+import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { testStripeConnection as testStripeConnectionLib } from "@/admin/lib/stripe";
 import {
   stripeSettingsSchema,
@@ -31,6 +27,7 @@ import {
   ErrorSeverity,
   normalizeError,
 } from "@/shared/lib/errors/server";
+import type { MutationResult } from "@/shared/lib/mutation-result"
 
 // =============================================================================
 // Actions
@@ -41,19 +38,19 @@ import {
  */
 export async function updateStripeSettings(
   data: StripeSettingsInput,
-): Promise<ActionResult<void>> {
+): Promise<MutationResult> {
   const parsed = stripeSettingsSchema.safeParse(data);
   if (!parsed.success) {
-    return createValidationError(parsed.error);
+    return createValidationMutationError(parsed.error);
   }
 
-  return executeAdminMutation({
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await updateStripeSettingsCommand(parsed.data);
+      return null;
     },
-    success: () => createSuccess("Stripe設定を更新しました"),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.SETTINGS);
     },
@@ -65,8 +62,8 @@ export async function updateStripeSettings(
  */
 export async function testStripeConnectionAction(
   secretKey: string,
-): Promise<ActionResult<{ accountId?: string; mode?: "test" | "live" }>> {
-  return executeAdminMutation({
+): Promise<MutationResult<{ accountId?: string; mode?: "test" | "live" }>> {
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
@@ -93,7 +90,6 @@ export async function testStripeConnectionAction(
         mode: result.mode,
       };
     },
-    success: (result) => createSuccess("Stripe接続テストに成功しました", result),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.SETTINGS);
     },
@@ -103,14 +99,14 @@ export async function testStripeConnectionAction(
 /**
  * Stripeキーをクリア
  */
-export async function clearStripeKeys(): Promise<ActionResult<void>> {
-  return executeAdminMutation({
+export async function clearStripeKeys(): Promise<MutationResult> {
+  return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await clearStripeKeysCommand();
+      return null;
     },
-    success: () => createSuccess("Stripeキーをクリアしました"),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.SETTINGS);
     },
