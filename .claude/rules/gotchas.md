@@ -115,6 +115,13 @@
 - **Resend SDK v3+（v6 含む）は例外を投げない** — `resend.emails.send()` / `resend.domains.list()` 等はすべて `{ data, error }` を返す（ネットワークエラーも含む）。`try/catch` のみでは API エラーをキャッチできない。必ず `const { error } = await resend.xxx()` で `error` をチェックする。`catch` ブロックは React Email レンダリング例外の保険として保持する
 - **Stripe API version `2026-02-25.clover`** — stripe SDK v20.4.0 のデフォルトバージョン（プレビューではない）。SDK アップグレード時は `bun run type-check` の型エラーで新バージョン文字列が判明 → `stripe.ts` の `apiVersion` を更新。監査時に「余分な `.clover` サフィックス」と誤識別しないこと
 
+## ロガー（GCP 構造化ログ）
+
+- **`ErrorSeverity` と `severity` は異なる値** — `logError` 出力 JSON の `severity` は GCP LogSeverity にマッピングされる（`HIGH` → `"ERROR"`, `MEDIUM` → `"WARNING"`, `LOW` → `"INFO"`）。テストで `parsed.severity` を検証する際は GCP LogSeverity を期待すること
+- **`stack_trace` は ERROR 以上のみ** — `severity` が `"ERROR"` / `"CRITICAL"` の場合のみ `stack_trace` と `@type`（Cloud Error Reporting 用）が出力される。WARNING 以下ではスタックトレースなし
+- **`K_SERVICE` / `K_REVISION`** — Cloud Run が自動設定する環境変数。`serviceContext.service` / `serviceContext.version` に使用。ローカルでは `"myrrh-rental-space"` / `"local"` にフォールバック
+- **モジュールレベルで `process.env` をキャッシュしない** — `const isDev = process.env["NODE_ENV"] !== "production"` はテスト時に `process.env` を上書きしても反映されない。`process.env["NODE_ENV"]` をインライン評価すること
+
 ## API Routes
 
 - **設定依存エラーは 503（500 禁止）** — Webhook トークン未設定・API キー未設定等の「依存関係が未設定」は `{ status: 503 }` を返す。500 にすると Google Calendar 等の外部サービスが自動リトライを繰り返す

@@ -186,21 +186,50 @@ describe("logError", () => {
   });
 
   describe("本番環境", () => {
-    test("JSON形式で出力される", () => {
+    test("GCP構造化JSON形式で出力される", () => {
       process.env["NODE_ENV"] = "production";
       logError(new Error("本番エラー"), baseContext);
       expect(console.error).toHaveBeenCalledTimes(1);
 
-      // 引数が文字列（JSON）であることを確認
       const mockFn = console.error as ReturnType<typeof mock>;
       const firstCallArg = mockFn.mock.calls[0][0];
       expect(typeof firstCallArg).toBe("string");
 
-      // JSON.parseが成功することを確認
       const parsed = JSON.parse(firstCallArg);
       expect(parsed.message).toBe("本番エラー");
       expect(parsed.category).toBe("DATABASE");
-      expect(parsed.severity).toBe("MEDIUM");
+      // ErrorSeverity.MEDIUM → GCP LogSeverity "WARNING"
+      expect(parsed.severity).toBe("WARNING");
+      expect(parsed.serviceContext).toBeDefined();
+      expect(parsed.serviceContext.service).toBe("myrrh-rental-space");
+      expect(parsed.timestamp).toBeDefined();
+    });
+
+    test("ERROR以上でstack_traceと@typeが付与される", () => {
+      process.env["NODE_ENV"] = "production";
+      logError(new Error("重大エラー"), {
+        category: ErrorCategory.DATABASE,
+        severity: ErrorSeverity.HIGH,
+      });
+
+      const mockFn = console.error as ReturnType<typeof mock>;
+      const parsed = JSON.parse(mockFn.mock.calls[0][0]);
+      expect(parsed.severity).toBe("ERROR");
+      expect(parsed.stack_trace).toBeDefined();
+      expect(parsed["@type"]).toBe(
+        "type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent",
+      );
+    });
+
+    test("WARNING以下ではstack_traceと@typeは付与されない", () => {
+      process.env["NODE_ENV"] = "production";
+      logError(new Error("軽微エラー"), baseContext);
+
+      const mockFn = console.error as ReturnType<typeof mock>;
+      const parsed = JSON.parse(mockFn.mock.calls[0][0]);
+      expect(parsed.severity).toBe("WARNING");
+      expect(parsed.stack_trace).toBeUndefined();
+      expect(parsed["@type"]).toBeUndefined();
     });
   });
 
@@ -235,22 +264,28 @@ describe("logError", () => {
       expect(parsed.message).toBe("文字列メッセージ");
     });
 
-    test("Errorオブジェクトの場合stackが含まれる", () => {
+    test("Errorオブジェクトの場合ERROR以上でstack_traceが含まれる", () => {
       process.env["NODE_ENV"] = "production";
       const error = new Error("stackテスト");
-      logError(error, baseContext);
+      logError(error, {
+        category: ErrorCategory.DATABASE,
+        severity: ErrorSeverity.CRITICAL,
+      });
       const mockFn = console.error as ReturnType<typeof mock>;
       const parsed = JSON.parse(mockFn.mock.calls[0][0]);
-      expect(parsed.stack).toBeDefined();
-      expect(typeof parsed.stack).toBe("string");
+      expect(parsed.stack_trace).toBeDefined();
+      expect(typeof parsed.stack_trace).toBe("string");
     });
 
-    test("文字列エラーの場合stackはundefined", () => {
+    test("非ErrorでERROR以上の場合フォールバックstack_traceが生成される", () => {
       process.env["NODE_ENV"] = "production";
-      logError("string error", baseContext);
+      logError("string error", {
+        category: ErrorCategory.DATABASE,
+        severity: ErrorSeverity.HIGH,
+      });
       const mockFn = console.error as ReturnType<typeof mock>;
       const parsed = JSON.parse(mockFn.mock.calls[0][0]);
-      expect(parsed.stack).toBeUndefined();
+      expect(parsed.stack_trace).toContain("Error: string error");
     });
   });
 });
@@ -293,8 +328,8 @@ describe("createErrorLogger", () => {
 
     const mockFn = console.error as ReturnType<typeof mock>;
     const parsed = JSON.parse(mockFn.mock.calls[0][0]);
-    // 上書き後の severity が適用される
-    expect(parsed.severity).toBe("HIGH");
+    // ErrorSeverity.HIGH → GCP LogSeverity "ERROR"
+    expect(parsed.severity).toBe("ERROR");
     expect(parsed.context).toEqual({ detail: "extra" });
   });
 
@@ -311,7 +346,8 @@ describe("createErrorLogger", () => {
     const mockFn = console.error as ReturnType<typeof mock>;
     const parsed = JSON.parse(mockFn.mock.calls[0][0]);
     expect(parsed.category).toBe("EXTERNAL_API");
-    expect(parsed.severity).toBe("MEDIUM");
+    // ErrorSeverity.MEDIUM → GCP LogSeverity "WARNING"
+    expect(parsed.severity).toBe("WARNING");
     expect(parsed.userId).toBe("default-user");
   });
 });

@@ -305,7 +305,9 @@ async function getPublishedPost(slug: string) {
 
 ### logError（サーバーサイドエラーログ — 主用途）
 
-カテゴリ・深刻度付きの構造化エラーログ。Server Actions・Server Components で使用:
+GCP Cloud Logging / Cloud Error Reporting 対応の構造化エラーログ。
+本番では `severity`（GCP LogSeverity）・`stack_trace`・`serviceContext`・`@type` を含む JSON を出力。
+ERROR 以上で Cloud Error Reporting が自動グループ化する。Server Actions・Server Components で使用:
 
 ```typescript
 import {
@@ -339,7 +341,8 @@ try {
 
 ### logger（汎用ロガー — シンプルなログ用途）
 
-クライアントコンポーネント・シンプルなサーバーログ:
+クライアントコンポーネント・シンプルなサーバーログ。
+本番環境では GCP Cloud Logging 対応の構造化 JSON（`severity` フィールド付き）を出力:
 
 ```typescript
 import { logger } from "@/shared/lib/logger";
