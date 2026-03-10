@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
 
   if (!clientId || !clientSecret || !redirectUri) {
     return redirectToSettings({
-      error: "Instagram APIの設定が不完全です。環境変数を確認してください。",
+      error: "Instagram連携の設定が不完全です。管理者にお問い合わせください。",
     });
   }
 

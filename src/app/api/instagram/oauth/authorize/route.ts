@@ -35,7 +35,7 @@ export async function GET() {
     settingsUrl.searchParams.set("tab", "instagram");
     settingsUrl.searchParams.set(
       "error",
-      "Instagram APIが設定されていません。環境変数を確認してください。",
+      "Instagram連携の設定が不完全です。管理者にお問い合わせください。",
     );
     return NextResponse.redirect(settingsUrl);
   }

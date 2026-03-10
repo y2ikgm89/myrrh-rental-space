@@ -9,7 +9,7 @@ import { getSessionCookie } from "better-auth/cookies";
 import { NextResponse, type NextRequest } from "next/server";
 import { ADMIN_GATE_COOKIE_NAME } from "@/shared/lib/admin-login-gate-cookie";
 import { serverEnv } from "@/shared/lib/env/server";
-import { apiRateLimiter, getClientIp } from "@/shared/lib/rate-limit";
+import { checkRateLimit, getClientIp } from "@/shared/lib/rate-limit";
 
 const SECURITY_HEADERS: ReadonlyArray<readonly [string, string]> = [
   ["Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload"],
@@ -72,7 +72,7 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
       !pathname.startsWith("/api/cron")
     ) {
       const clientIp = getClientIp(req);
-      const rateLimitResult = apiRateLimiter.check(clientIp);
+      const rateLimitResult = checkRateLimit(pathname, clientIp);
 
       if (!rateLimitResult.success) {
         return NextResponse.json(

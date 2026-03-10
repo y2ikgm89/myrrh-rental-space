@@ -110,3 +110,31 @@ export const apiRateLimiter = createRateLimiter({
   interval: 60 * 1000, // 1分
   maxRequests: 100,
 });
+
+// 認証エンドポイント用（10リクエスト/15分/IP）— ブルートフォース対策
+export const authRateLimiter = createRateLimiter({
+  interval: 15 * 60 * 1000, // 15分
+  maxRequests: 10,
+});
+
+// ログイントークン用（30リクエスト/分/IP）
+export const tokenRateLimiter = createRateLimiter({
+  interval: 60 * 1000, // 1分
+  maxRequests: 30,
+});
+
+/**
+ * パス名に基づいて適切なレートリミッターを選択しチェックする
+ */
+export function checkRateLimit(
+  pathname: string,
+  clientIp: string,
+): RateLimitResult {
+  if (pathname.startsWith("/api/auth")) {
+    return authRateLimiter.check(clientIp);
+  }
+  if (pathname.startsWith("/api/admin/login-tokens")) {
+    return tokenRateLimiter.check(clientIp);
+  }
+  return apiRateLimiter.check(clientIp);
+}
