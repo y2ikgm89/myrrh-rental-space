@@ -7,15 +7,23 @@
 | セキュリティ   | 100    | 環境変数本番必須化, APIレート制限(100req/分/IP), Webhookトークン検証, 全Server Actions認証チェック完備。nonce-based CSP（script-src: strict-dynamic + nonce、unsafe-inline 除去）。DOMPurify XSS対策(EmbedSection/FAQ/CustomSection)。Cookie Gate パターン（ADMIN_LOGIN_TOKEN をブラウザ URL から排除）。health endpoint 情報漏洩修正、media API DoS 防止 |
 | 型安全性       | 100    | Zod 4 + TypeScript 6.0-beta strict, 型アサーション違反ゼロ, 型安全ユーティリティ統一。keysOf/entriesOf 型安全ラッパー文書化済み、as 禁止ルール完全準拠                                                                                                                                                                                                    |
 | パフォーマンス | 100    | 公開側アクション全キャッシュ化, メール送信非ブロッキング化, fireAndForget統一(30+件), 全findManyにexplicit select追加(20+ファイル), list クエリで contentHtml/contentJson 除外(PostListData), N+1ゼロ, next/image 100%                                                                                                                                    |
-| コード品質     | 100    | SectionEditor.tsx 3,222→401行分割完了, google-calendar.ts 8モジュール分割, reservation.ts 4モジュール分割, post.ts(1052L)/api-keys.ts(979L)/terms.ts(756L) queries+mutations分割, ActionResult統一完了                                                                                                                                                    |
+| コード品質     | 100    | SectionEditor.tsx 3,222→401行分割完了, google-calendar.ts 8モジュール分割, reservation.ts 4モジュール分割, post.ts(1052L)/api-keys.ts(979L)/terms.ts(756L) queries+mutations分割, ActionResult→MutationResult統一完了, uuid→crypto.randomUUID()                                                                                                           |
 | キャッシュ戦略 | 100    | 'use cache' + cacheLife + cacheTag 全公開アクションに適用, updateTag統一, getCacheTag一元管理, revalidateTag誤用ゼロ                                                                                                                                                                                                                                      |
-| テスト         | 100    | 2774 tests pass (unit 1318 + integration 1456), 全重要ドメインカバー(Stripe/Calendar/Email/iCal/Instagram), TDZ修正済み                                                                                                                                                                                                                                   |
+| テスト         | 100    | 1441 tests pass, CI テスト実行追加(cloudbuild.yaml), tsconfig テスト型チェック統合, 全重要ドメインカバー(Stripe/Calendar/Email/iCal/Instagram)                                                                                                                                                                                                            |
 
-**最終更新**: 2026-03-06（コード品質改善 — 全findMany select最適化・大規模ファイル3本分割・テスト+194件）
+**最終更新**: 2026-03-10（包括的クリーンアップ — ActionResult→MutationResult統一・PPR適合・admin connection()除去・Prettier/ESLint設定明示化・CI改善）
 
 ---
 
 ## 進行中の計画
+
+- ✅ [2026-03-10] プロジェクト包括的クリーンアップ（ActionResult→MutationResult統一・PPR適合・CI/CD改善）
+  - 計画書: `docs/plans/2026-03-10-comprehensive-cleanup.md`
+  - Phase 1: ActionResult→MutationResult 統一（Task 1-7）
+  - Phase 2: Next.js 16 PPR 適合 — NuqsAdapter追加・connection()公開ページ限定（Task 8-9）
+  - Phase 3: テスト・CI/CD改善 — tsconfig include化・cloudbuild テスト追加（Task 10-12）
+  - Phase 4: 設定明示化 — Prettier/ESLint/パッケージ更新（Task 13-15）
+  - Phase 5: 全体検証 — admin 53ページからconnection()除去・DashboardHeader Client化（Task 16）
 
 - ✅ [2026-03-05] コード品質改善（Prisma select 最適化・大規模ファイル分割・README 更新）
   - 計画書: `docs/plans/2026-03-05-code-quality-improvements.md`
