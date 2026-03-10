@@ -6,10 +6,8 @@ import { describe, test, expect, mock } from "bun:test";
 import { z, ZodError } from "zod";
 import {
   extractFieldErrors,
-  createValidationError,
   isTransientError,
   withRetry,
-  withValidation,
 } from "@/shared/lib/action-helpers";
 
 describe("action-helpers", () => {
@@ -64,36 +62,6 @@ describe("action-helpers", () => {
       const fieldErrors = extractFieldErrors(result.error);
 
       expect(fieldErrors["address"]).toBeDefined();
-    });
-  });
-
-  describe("createValidationError", () => {
-    test("ActionFailure形式のレスポンスを生成する", () => {
-      const schema = z.object({
-        name: z.string().min(1, { error: "必須" }),
-      });
-
-      const result = schema.safeParse({ name: "" });
-      if (result.success) throw new Error("Should have failed");
-
-      const errorResponse = createValidationError(result.error);
-
-      expect(errorResponse.success).toBe(false);
-      expect(errorResponse.error).toBe("入力内容に誤りがあります");
-      expect(errorResponse.fieldErrors?.["name"]).toContain("必須");
-    });
-
-    test("カスタムメッセージを設定できる", () => {
-      const schema = z.object({ field: z.string() });
-      const result = schema.safeParse({ field: 123 });
-      if (result.success) throw new Error("Should have failed");
-
-      const errorResponse = createValidationError(
-        result.error,
-        "カスタムエラー",
-      );
-
-      expect(errorResponse.error).toBe("カスタムエラー");
     });
   });
 
@@ -207,38 +175,6 @@ describe("action-helpers", () => {
       // 1回目: connection timeout (リトライ対象)
       // 2回目: validation error (リトライ対象外) -> 即座にスロー
       expect(fn).toHaveBeenCalledTimes(2);
-    });
-  });
-
-  describe("withValidation", () => {
-    test("バリデーション成功時はハンドラを実行する", async () => {
-      const schema = z.object({
-        name: z.string().min(1),
-      });
-      const handler = mock((data: { name: string }) =>
-        Promise.resolve({ success: true, data }),
-      );
-
-      const result = await withValidation(schema, { name: "Test" }, handler);
-
-      expect(result).toEqual({ success: true, data: { name: "Test" } });
-      expect(handler).toHaveBeenCalledWith({ name: "Test" });
-    });
-
-    test("バリデーション失敗時はエラーを返す", async () => {
-      const schema = z.object({
-        name: z.string().min(1, { error: "名前は必須です" }),
-      });
-      const handler = mock(() => Promise.resolve({ success: true }));
-
-      const result = await withValidation(schema, { name: "" }, handler);
-
-      expect(result).toEqual({
-        success: false,
-        error: "バリデーションエラーが発生しました",
-        fieldErrors: { name: ["名前は必須です"] },
-      });
-      expect(handler).not.toHaveBeenCalled();
     });
   });
 });

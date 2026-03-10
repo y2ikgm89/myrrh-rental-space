@@ -597,6 +597,7 @@ describe("serializeTermsWithVersion", () => {
       slug: "terms-of-use",
       isActive: true,
       currentVersion: null,
+      _count: { spaces: 0 },
     };
     const result = serializeTermsWithVersion(terms);
     expect(result).not.toBeNull();
@@ -625,6 +626,7 @@ describe("serializeTermsWithVersion", () => {
         contentJson: VALID_LEXICAL_JSON,
         publishedAt,
       },
+      _count: { spaces: 2 },
     };
     const result = serializeTermsWithVersion(terms);
     expect(result).not.toBeNull();
@@ -651,6 +653,7 @@ describe("serializeTermsWithVersion", () => {
       slug: "custom",
       isActive: false,
       currentVersion: null,
+      _count: { spaces: 0 },
     };
     const result = serializeTermsWithVersion(terms);
     if (result) {
